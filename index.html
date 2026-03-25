@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backing Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body class="min-h-screen">
+
+    <!-- Header -->
+    <div class="page-header">
+        <div class="max-w-6xl mx-auto px-4 flex items-center justify-between">
+            <div>
+                <a href="?" class="text-lg font-bold text-slate-800 hover:text-blue-600 transition-colors">Backing Monitor</a>
+                <span id="header-subtitle" class="ml-3 text-sm text-slate-500"></span>
+            </div>
+            <div id="header-timestamp" class="text-xs text-slate-400"></div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="max-w-6xl mx-auto px-4 py-6">
+        <!-- Index view (asset cards) -->
+        <div id="index-view" class="hidden">
+            <h1 class="text-2xl font-bold text-slate-800 mb-1">Asset Backing Dashboards</h1>
+            <p class="text-slate-500 mb-6">On-chain collateral analysis and risk monitoring</p>
+            <div id="asset-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="loading-pulse text-slate-400 text-sm p-8 text-center">Loading assets...</div>
+            </div>
+        </div>
+
+        <!-- Asset detail view -->
+        <div id="asset-view" class="hidden">
+            <!-- Back link -->
+            <a href="?" class="inline-flex items-center text-sm text-slate-500 hover:text-blue-600 mb-4">
+                &larr; All assets
+            </a>
+
+            <!-- Summary cards -->
+            <div id="summary-cards" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6"></div>
+
+            <!-- CR Trend Chart -->
+            <div class="panel" id="chart-panel">
+                <div class="panel-title">Collateral Ratio History</div>
+                <div class="chart-container">
+                    <canvas id="cr-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- Two columns: breakdown + risk -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                <!-- Backing breakdown -->
+                <div class="panel lg:col-span-2">
+                    <div class="panel-title">Backing Breakdown</div>
+                    <table class="data-table" id="breakdown-table">
+                        <thead>
+                            <tr>
+                                <th>Strategy</th>
+                                <th class="text-right">Value (USD)</th>
+                                <th class="text-right">%</th>
+                                <th style="width: 120px"></th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <!-- Risk flags + pie -->
+                <div>
+                    <div class="panel">
+                        <div class="panel-title">Risk Flags</div>
+                        <div id="risk-flags">
+                            <div class="text-slate-400 text-sm">Loading...</div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-title">Allocation</div>
+                        <div style="height: 200px; position: relative;">
+                            <canvas id="pie-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Asset-specific panels -->
+            <div id="asset-specific-panels"></div>
+        </div>
+
+        <!-- Error state -->
+        <div id="error-view" class="hidden text-center py-12">
+            <div class="text-slate-400 text-lg mb-2">Failed to load data</div>
+            <div id="error-message" class="text-slate-500 text-sm"></div>
+        </div>
+    </div>
+
+    <footer class="max-w-6xl mx-auto px-4 py-6 text-center text-xs text-slate-400">
+        Data refreshes every hour. Dashboard auto-refreshes every 5 minutes.
+    </footer>
+
+    <script src="js/renderers/common.js"></script>
+    <script src="js/renderers/ousd.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
