@@ -10,6 +10,21 @@ var OUSDRenderer = {
         if (!specific || specific.type !== 'ousd') return;
 
         var html = '';
+        var s = data.summary;
+
+        // TVL / POL breakdown
+        if (s.tvl_ex_pol && s.pol_self_minted) {
+            var polPct = s.pol_self_minted / s.total_supply * 100;
+            var tvlPct = 100 - polPct;
+            html += '<div class="panel">' +
+                '<div class="panel-title">Supply Breakdown (TVL vs POL)</div>' +
+                '<p class="text-sm text-slate-500 mb-3">Self-minted OUSD in Curve pools is Protocol Owned Liquidity (POL) \u2014 both asset and liability, excluded from CR (ex-POL).</p>' +
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-4">' +
+                    '<div class="summary-card"><div class="card-label">TVL (user deposits)</div><div class="card-value positive">' + CommonRenderer.formatCurrencyExact(s.tvl_ex_pol) + '</div><div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(tvlPct, 1) + ' of supply</div></div>' +
+                    '<div class="summary-card"><div class="card-label">POL (self-minted)</div><div class="card-value warning">' + CommonRenderer.formatCurrencyExact(s.pol_self_minted) + '</div><div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(polPct, 1) + ' of supply</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Total Supply</div><div class="card-value">' + CommonRenderer.formatCurrencyExact(s.total_supply) + '</div></div>' +
+                '</div></div>';
+        }
 
         // AMO Analysis
         var amo = specific.amo_analysis;
