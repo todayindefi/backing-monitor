@@ -14,20 +14,27 @@ var CrvUSDRenderer = {
 
         // Supply Reconciliation Waterfall
         var wf = specific.supply_waterfall;
-        if (wf) {
-            var total = wf.known_sources_total || 1;
+        if (wf && wf.minting_sources) {
+            var ms = wf.minting_sources;
+            var mh = wf.major_holders;
+            var total = ms.total_minted || 1;
             function pct(v) { return (v / total * 100).toFixed(1) + '%'; }
+
             html += '<div class="panel">' +
-                '<div class="panel-title">Supply Reconciliation Waterfall</div>' +
-                '<p class="text-sm text-slate-500 mb-3">Shows where crvUSD originates. Note: totalSupply() returns ' + CommonRenderer.formatCurrency(wf.total_supply_raw) + ' (includes pre-minted factory buffers).' +
+                '<div class="panel-title">Supply Reconciliation</div>' +
+                '<p class="text-sm text-slate-500 mb-3">totalSupply() returns ' + CommonRenderer.formatCurrency(wf.total_supply_raw) + ' (includes ' + CommonRenderer.formatCurrency(wf.ceiling_buffers) + ' in undeployed ceiling buffers).' +
                 (wf.cg_circulating ? ' CoinGecko circulating: ' + CommonRenderer.formatCurrency(wf.cg_circulating) + ' (excludes contract-held).' : '') + '</p>' +
-                '<table class="data-table"><thead><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">%</th></tr></thead><tbody>' +
-                '<tr><td>Minting markets (ControllerFactory)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.minting_markets) + '</td><td class="text-right">' + pct(wf.minting_markets) + '</td></tr>' +
-                '<tr><td>Lending markets (LlamaLend borrowed)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.lending_markets) + '</td><td class="text-right">' + pct(wf.lending_markets) + '</td></tr>' +
-                '<tr><td>PegKeeper mints (circular)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.pegkeeper_mints) + '</td><td class="text-right">' + pct(wf.pegkeeper_mints) + '</td></tr>' +
-                '<tr><td>YieldBasis (credit line)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.yieldbasis) + '</td><td class="text-right">' + pct(wf.yieldbasis) + '</td></tr>' +
-                '<tr><td>scrvUSD vault (savings)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.scrvusd) + '</td><td class="text-right">' + pct(wf.scrvusd) + '</td></tr>' +
-                '<tr class="font-bold border-t-2 border-slate-200"><td>Known Sources Total</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(total) + '</td><td class="text-right">100%</td></tr>' +
+
+                '<table class="data-table"><thead><tr><th colspan="3" class="text-xs uppercase tracking-wide text-slate-500">Minting Sources (where crvUSD is created)</th></tr><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">% of Minted</th></tr></thead><tbody>' +
+                '<tr><td>Minting markets (collateral-backed CDPs)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(ms.minting_markets) + '</td><td class="text-right">' + pct(ms.minting_markets) + '</td></tr>' +
+                '<tr><td>YieldBasis (credit line, $1B ceiling)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(ms.yieldbasis) + '</td><td class="text-right">' + pct(ms.yieldbasis) + '</td></tr>' +
+                '<tr><td>PegKeeper mints (circular AMO)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(ms.pegkeeper_mints) + '</td><td class="text-right">' + pct(ms.pegkeeper_mints) + '</td></tr>' +
+                '<tr class="font-bold border-t-2 border-slate-200"><td>Total Minted Supply</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(total) + '</td><td class="text-right">100%</td></tr>' +
+                '</tbody></table>' +
+
+                '<table class="data-table mt-4"><thead><tr><th colspan="2" class="text-xs uppercase tracking-wide text-slate-500">Major Holders (where minted crvUSD sits)</th></tr><tr><th>Destination</th><th class="text-right">Amount</th></tr></thead><tbody>' +
+                '<tr><td>scrvUSD savings vault</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(mh.scrvusd) + '</td></tr>' +
+                '<tr><td>LlamaLend vaults (lent to borrowers)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(mh.llamalend_borrowed) + '</td></tr>' +
                 '</tbody></table>' +
                 '</div>';
         }
