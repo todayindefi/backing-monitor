@@ -15,17 +15,19 @@ var CrvUSDRenderer = {
         // Supply Reconciliation Waterfall
         var wf = specific.supply_waterfall;
         if (wf) {
-            function pct(v) { return wf.total_supply > 0 ? (v / wf.total_supply * 100).toFixed(1) + '%' : ''; }
+            var total = wf.known_sources_total || 1;
+            function pct(v) { return (v / total * 100).toFixed(1) + '%'; }
             html += '<div class="panel">' +
                 '<div class="panel-title">Supply Reconciliation Waterfall</div>' +
-                '<p class="text-sm text-slate-500 mb-3">Shows where all crvUSD originates — collateral-backed minting, lending, AMO, and credit lines.</p>' +
-                '<table class="data-table"><thead><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">% of Supply</th></tr></thead><tbody>' +
+                '<p class="text-sm text-slate-500 mb-3">Shows where crvUSD originates. Note: totalSupply() returns ' + CommonRenderer.formatCurrency(wf.total_supply_raw) + ' (includes pre-minted factory buffers).' +
+                (wf.cg_circulating ? ' CoinGecko circulating: ' + CommonRenderer.formatCurrency(wf.cg_circulating) + ' (excludes contract-held).' : '') + '</p>' +
+                '<table class="data-table"><thead><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">%</th></tr></thead><tbody>' +
                 '<tr><td>Minting markets (ControllerFactory)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.minting_markets) + '</td><td class="text-right">' + pct(wf.minting_markets) + '</td></tr>' +
-                '<tr><td>Lending markets (LlamaLend)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.lending_markets) + '</td><td class="text-right">' + pct(wf.lending_markets) + '</td></tr>' +
+                '<tr><td>Lending markets (LlamaLend borrowed)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.lending_markets) + '</td><td class="text-right">' + pct(wf.lending_markets) + '</td></tr>' +
                 '<tr><td>PegKeeper mints (circular)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.pegkeeper_mints) + '</td><td class="text-right">' + pct(wf.pegkeeper_mints) + '</td></tr>' +
-                '<tr><td>YieldBasis credit line</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.yieldbasis) + '</td><td class="text-right">' + pct(wf.yieldbasis) + '</td></tr>' +
-                '<tr><td class="text-slate-400">Unaccounted (DEX pools, wallets, DeFi)</td><td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(wf.unaccounted) + '</td><td class="text-right text-slate-400">' + pct(wf.unaccounted) + '</td></tr>' +
-                '<tr class="font-bold border-t-2 border-slate-200"><td>Total crvUSD Supply</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.total_supply) + '</td><td class="text-right">100%</td></tr>' +
+                '<tr><td>YieldBasis (credit line)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.yieldbasis) + '</td><td class="text-right">' + pct(wf.yieldbasis) + '</td></tr>' +
+                '<tr><td>scrvUSD vault (savings)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.scrvusd) + '</td><td class="text-right">' + pct(wf.scrvusd) + '</td></tr>' +
+                '<tr class="font-bold border-t-2 border-slate-200"><td>Known Sources Total</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(total) + '</td><td class="text-right">100%</td></tr>' +
                 '</tbody></table>' +
                 '</div>';
         }
