@@ -12,17 +12,34 @@ var CrvUSDRenderer = {
         var html = '';
         var s = data.summary;
 
-        // Supply context note (crvUSD supply >> factory debt due to Curve Lending)
+        // Supply Reconciliation Waterfall
+        var wf = specific.supply_waterfall;
+        if (wf) {
+            function pct(v) { return wf.total_supply > 0 ? (v / wf.total_supply * 100).toFixed(1) + '%' : ''; }
+            html += '<div class="panel">' +
+                '<div class="panel-title">Supply Reconciliation Waterfall</div>' +
+                '<p class="text-sm text-slate-500 mb-3">Shows where all crvUSD originates — collateral-backed minting, lending, AMO, and credit lines.</p>' +
+                '<table class="data-table"><thead><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">% of Supply</th></tr></thead><tbody>' +
+                '<tr><td>Minting markets (ControllerFactory)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.minting_markets) + '</td><td class="text-right">' + pct(wf.minting_markets) + '</td></tr>' +
+                '<tr><td>Lending markets (LlamaLend)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.lending_markets) + '</td><td class="text-right">' + pct(wf.lending_markets) + '</td></tr>' +
+                '<tr><td>PegKeeper mints (circular)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.pegkeeper_mints) + '</td><td class="text-right">' + pct(wf.pegkeeper_mints) + '</td></tr>' +
+                '<tr><td>YieldBasis credit line</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.yieldbasis) + '</td><td class="text-right">' + pct(wf.yieldbasis) + '</td></tr>' +
+                '<tr><td class="text-slate-400">Unaccounted (DEX pools, wallets, DeFi)</td><td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(wf.unaccounted) + '</td><td class="text-right text-slate-400">' + pct(wf.unaccounted) + '</td></tr>' +
+                '<tr class="font-bold border-t-2 border-slate-200"><td>Total crvUSD Supply</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(wf.total_supply) + '</td><td class="text-right">100%</td></tr>' +
+                '</tbody></table>' +
+                '</div>';
+        }
+
+        // Summary cards
         html += '<div class="panel">' +
-            '<div class="panel-title">Supply Context</div>' +
-            '<div class="grid grid-cols-1 md:grid-cols-4 gap-4">' +
-                '<div class="summary-card"><div class="card-label">Total crvUSD Supply</div><div class="card-value">' + CommonRenderer.formatCurrency(s.total_supply) + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Minting Market Debt</div><div class="card-value">' + CommonRenderer.formatCurrency(s.total_market_debt) + '</div></div>' +
+            '<div class="panel-title">System Overview</div>' +
+            '<div class="grid grid-cols-2 md:grid-cols-5 gap-3">' +
+                '<div class="summary-card"><div class="card-label">Total Loans</div><div class="card-value">' + (s.total_loans || 0) + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">Minting Markets</div><div class="card-value">' + s.n_active_markets + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">Lending Markets</div><div class="card-value">' + (s.n_lending_markets || 0) + '</div></div>' +
                 '<div class="summary-card"><div class="card-label">PegKeeper Debt</div><div class="card-value">' + CommonRenderer.formatCurrency(s.total_pegkeeper_debt) + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Active Loans</div><div class="card-value">' + (s.total_loans || 0) + '</div></div>' +
-            '</div>' +
-            '<p class="text-sm text-slate-500 mt-3">crvUSD total supply includes tokens minted via Curve Lending (LlamaLend) markets which have a separate factory. The CR shown above covers only the original crvUSD minting markets.</p>' +
-            '</div>';
+                '<div class="summary-card"><div class="card-label">YieldBasis</div><div class="card-value">' + CommonRenderer.formatCurrency(s.yieldbasis_balance) + '</div></div>' +
+            '</div></div>';
 
         // Per-market table
         var markets = specific.markets;
@@ -53,8 +70,10 @@ var CrvUSDRenderer = {
                 var utilClass = m.utilization > 90 ? 'text-red-600' :
                                 m.utilization > 70 ? 'text-amber-600' : '';
 
+                var windDown = m.wind_down ? ' <span class="tag" style="background:#fef2f2;color:#dc2626">WIND-DOWN</span>' : '';
+
                 html += '<tr>' +
-                    '<td class="font-medium">' + m.collateral + '</td>' +
+                    '<td class="font-medium">' + m.collateral + windDown + '</td>' +
                     '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(m.debt) + '</td>' +
                     '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(m.debt_ceiling) + '</td>' +
                     '<td class="text-right font-mono ' + utilClass + '">' + CommonRenderer.formatPercent(m.utilization, 1) + '</td>' +
@@ -78,6 +97,21 @@ var CrvUSDRenderer = {
                 '<td></td><td></td></tr>';
 
             html += '</tbody></table></div></div>';
+        }
+
+        // LlamaLend markets
+        var lendingMarkets = specific.lending_markets;
+        if (lendingMarkets && lendingMarkets.length > 0) {
+            html += '<div class="panel">' +
+                '<div class="panel-title">LlamaLend Markets (top ' + lendingMarkets.length + ' by debt)</div>' +
+                '<p class="text-sm text-slate-500 mb-3">Isolated lending markets where crvUSD is the borrowed token. Accounts for ' + CommonRenderer.formatCurrency(data.summary.total_lending_debt) + ' of supply.</p>' +
+                '<table class="data-table"><thead><tr><th>Collateral</th><th class="text-right">Debt</th><th class="text-right">Loans</th></tr></thead><tbody>';
+            lendingMarkets.forEach(function(m) {
+                html += '<tr><td class="font-medium">' + m.collateral + '</td>' +
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(m.debt) + '</td>' +
+                    '<td class="text-right font-mono">' + m.n_loans + '</td></tr>';
+            });
+            html += '</tbody></table></div>';
         }
 
         // PegKeepers
