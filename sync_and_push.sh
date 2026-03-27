@@ -6,6 +6,8 @@ cp /home/danger/PegTracker/data/ousd_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/ousd_backing_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/frax_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/frax_backing_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/crvusd_backing.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/crvusd_backing_history.json data/ 2>/dev/null
 
 # Commit and push if changed
 git add data/

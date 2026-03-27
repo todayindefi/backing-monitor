@@ -8,7 +8,8 @@ var REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 // Asset-specific renderers registry
 var ASSET_RENDERERS = {
     ousd: typeof OUSDRenderer !== 'undefined' ? OUSDRenderer : null,
-    frax: typeof FRAXRenderer !== 'undefined' ? FRAXRenderer : null
+    frax: typeof FRAXRenderer !== 'undefined' ? FRAXRenderer : null,
+    crvusd: typeof CrvUSDRenderer !== 'undefined' ? CrvUSDRenderer : null
 };
 
 function getAssetSlug() {
