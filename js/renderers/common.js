@@ -38,7 +38,7 @@ const CommonRenderer = {
             { label: 'Total Supply', value: this.formatCurrencyExact(s.total_supply) },
             { label: 'Total Backing', value: this.formatCurrencyExact(s.total_backing) },
             { label: 'Collateral Ratio', value: this.formatPercent(s.collateral_ratio), cls: s.collateral_ratio >= 100 ? 'positive' : 'negative' },
-            { label: s.collateral_ratio_alt.label, value: this.formatPercent(s.collateral_ratio_alt.value), cls: s.collateral_ratio_alt.value >= 100 ? 'positive' : 'warning' },
+            { label: s.collateral_ratio_alt.label, value: s.collateral_ratio_alt.is_currency ? '$' + s.collateral_ratio_alt.value.toFixed(1) + 'M' : this.formatPercent(s.collateral_ratio_alt.value), cls: s.collateral_ratio_alt.is_currency ? '' : (s.collateral_ratio_alt.value >= 100 ? 'positive' : 'warning') },
             { label: 'Surplus / Deficit', value: this.formatCurrencyExact(s.surplus_deficit), cls: s.surplus_deficit >= 0 ? 'positive' : 'negative' },
         ];
 
