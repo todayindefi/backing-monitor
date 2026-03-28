@@ -135,18 +135,7 @@ var CrvUSDRenderer = {
             html += '</tbody></table></div></div>';
         }
 
-        // ====== 5. LlamaLend ======
-        var lm = specific.lending_markets;
-        if (lm && lm.length > 0) {
-            html += '<div class="panel"><div class="panel-title">LlamaLend Markets (top ' + lm.length + ')</div>' +
-                '<table class="data-table"><thead><tr><th>Collateral</th><th class="text-right">Borrowed</th><th class="text-right">Loans</th></tr></thead><tbody>';
-            lm.forEach(function(m) {
-                html += '<tr><td class="font-medium">' + m.collateral + '</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(m.debt) + '</td><td class="text-right font-mono">' + m.n_loans + '</td></tr>';
-            });
-            html += '</tbody></table></div>';
-        }
-
-        // ====== 6. PK Pool Liquidity ======
+        // ====== 5. PK Pool Liquidity ======
         var pkPools = specific.pk_pool_liquidity;
         if (pkPools && Object.keys(pkPools).length > 0) {
             var pkDebt = s.total_pegkeeper_debt || 0;
