@@ -36,22 +36,22 @@ var CrvUSDRenderer = {
 
         // ====== 2. Collateral Ratio ======
         var cb = specific.collateral_breakdown;
+        var pd = specific.peg_defense;
         if (cb) {
-            var consCls = s.collateral_ratio < 100 ? 'negative' : s.collateral_ratio < 120 ? 'warning' : 'positive';
-            var inclCls = s.collateral_ratio_alt.value < 100 ? 'negative' : s.collateral_ratio_alt.value < 130 ? 'warning' : 'positive';
+            var crCls = s.collateral_ratio < 100 ? 'negative' : s.collateral_ratio < 120 ? 'warning' : 'positive';
+            var pkCls = (pd && pd.pk_burn_capacity > 0) ? (pd.pk_burn_capacity / s.total_supply > 0.05 ? 'positive' : 'warning') : 'negative';
 
             html += '<div class="panel">' +
-                '<div class="panel-title">Collateral Ratio</div>' +
-                '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">' +
-                    '<div class="summary-card"><div class="card-label">Conservative CR</div><div class="card-value ' + consCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 1) + '</div><div class="text-xs text-slate-400 mt-1">Mint + YB collateral / supply</div></div>' +
-                    '<div class="summary-card"><div class="card-label">Inclusive CR</div><div class="card-value ' + inclCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio_alt.value, 1) + '</div><div class="text-xs text-slate-400 mt-1">+ PK pool reserves</div></div>' +
+                '<div class="panel-title">Collateral & Peg Defense</div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">' +
+                    '<div class="summary-card"><div class="card-label">Collateral Ratio</div><div class="card-value ' + crCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 1) + '</div><div class="text-xs text-slate-400 mt-1">Locked collateral / supply</div></div>' +
+                    '<div class="summary-card"><div class="card-label">PK Burn Capacity</div><div class="card-value ' + pkCls + '">' + (pd ? CommonRenderer.formatCurrency(pd.pk_burn_capacity) : '$0') + '</div><div class="text-xs text-slate-400 mt-1">Protocol-controlled supply removal</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Peg Defense Liquidity</div><div class="card-value">' + (pd ? CommonRenderer.formatCurrency(pd.pk_pool_stables) : '-') + '</div><div class="text-xs text-slate-400 mt-1">LP-owned, not guaranteed</div></div>' +
                 '</div>' +
                 '<table class="data-table"><thead><tr><th>Collateral Component</th><th class="text-right">Amount</th></tr></thead><tbody>' +
                 '<tr><td>Minting market collateral</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.mint_collateral) + '</td></tr>' +
                 '<tr><td>YB pool BTC/ETH value</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.yb_btc_collateral) + '</td></tr>' +
-                '<tr class="font-bold border-t border-slate-200"><td>Conservative total</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.conservative_total) + '</td></tr>' +
-                '<tr><td>+ PK pool stablecoins (peg defense)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.pk_stables) + '</td></tr>' +
-                '<tr class="font-bold border-t border-slate-200"><td>Inclusive total</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.inclusive_total) + '</td></tr>' +
+                '<tr class="font-bold border-t border-slate-200"><td>Total collateral</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.total) + '</td></tr>' +
                 '</tbody></table></div>';
         }
 
@@ -61,18 +61,26 @@ var CrvUSDRenderer = {
             html += '<div class="panel">' +
                 '<div class="panel-title">YieldBasis Pools</div>' +
                 '<p class="text-sm text-slate-500 mb-3">50/50 BTC/crvUSD AMM pools. The crvUSD side is supply, the BTC side is collateral.</p>' +
-                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">crvUSD (supply)</th><th class="text-right">Collateral (USD)</th></tr></thead><tbody>';
+                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">crvUSD (supply)</th><th class="text-right">Collateral (USD)</th><th class="text-right">Balance</th></tr></thead><tbody>';
             var ybTotal = {crvusd: 0, collateral: 0};
             Object.entries(ybPools).sort(function(a, b) { return b[1].crvusd - a[1].crvusd; }).forEach(function(e) {
                 ybTotal.crvusd += e[1].crvusd;
                 ybTotal.collateral += e[1].collateral_usd;
+                var poolTotal = e[1].crvusd + e[1].collateral_usd;
+                var collatPct = poolTotal > 0 ? (e[1].collateral_usd / poolTotal * 100) : 0;
+                var balCls = collatPct > 55 ? 'text-green-600' : collatPct >= 45 ? 'text-slate-500' : collatPct >= 40 ? 'text-amber-600' : 'text-red-600 font-bold';
+                var asset = e[0] === 'WETH' ? 'ETH' : 'BTC';
                 html += '<tr><td class="font-medium">' + e[0] + '</td>' +
                     '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(e[1].crvusd) + '</td>' +
-                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(e[1].collateral_usd) + '</td></tr>';
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(e[1].collateral_usd) + '</td>' +
+                    '<td class="text-right font-mono ' + balCls + '">' + collatPct.toFixed(0) + '% ' + asset + '</td></tr>';
             });
+            var totalPool = ybTotal.crvusd + ybTotal.collateral;
+            var totalColPct = totalPool > 0 ? (ybTotal.collateral / totalPool * 100) : 0;
             html += '<tr class="font-bold border-t-2 border-slate-200"><td>Total</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(ybTotal.crvusd) + '</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(ybTotal.collateral) + '</td></tr>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(ybTotal.collateral) + '</td>' +
+                '<td class="text-right font-mono">' + totalColPct.toFixed(0) + '%</td></tr>' +
                 '</tbody></table></div>';
         }
 
