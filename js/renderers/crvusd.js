@@ -20,20 +20,17 @@ var CrvUSDRenderer = {
         var sb = specific.supply_breakdown;
         if (sb) {
             var total = sb.total || 1;
-            var bottomUp = sb.bottom_up || total;
-            var diff = bottomUp - total;
 
             html += '<div class="panel">' +
-                '<div class="panel-title">Supply</div>' +
-                '<div class="summary-card mb-4" style="display:inline-block"><div class="card-label">Total crvUSD Supply (Curve)</div><div class="card-value">' + CommonRenderer.formatCurrency(total) + '</div></div>' +
-                '<p class="text-sm text-slate-500 mb-3">Authoritative supply from Curve/CoinGecko. totalSupply() returns ' + CommonRenderer.formatCurrency(sb.total_supply_raw) + ' (includes undeployed ceiling buffers).</p>' +
-                '<table class="data-table"><thead><tr><th colspan="3" class="text-xs uppercase tracking-wide text-slate-500">Bottom-up breakdown (our on-chain queries)</th></tr><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">%</th></tr></thead><tbody>' +
+                '<div class="panel-title">Supply Breakdown</div>' +
+                '<p class="text-sm text-slate-500 mb-3">On-chain supply from AMM.get_debt() + Controller debts. totalSupply() returns ' + CommonRenderer.formatCurrency(sb.total_supply_raw) + ' (includes undeployed ceiling buffers).' +
+                (sb.cg_circulating ? ' CoinGecko cross-check: ' + CommonRenderer.formatCurrency(sb.cg_circulating) + '.' : '') + '</p>' +
+                '<table class="data-table"><thead><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">%</th></tr></thead><tbody>' +
+                '<tr><td>YieldBasis deployed (AMM get_debt)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.yb_deployed) + '</td><td class="text-right">' + (sb.yb_deployed / total * 100).toFixed(1) + '%</td></tr>' +
+                '<tr><td>LlamaLend debt (Curve Lend)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.llamalend_debt) + '</td><td class="text-right">' + (sb.llamalend_debt / total * 100).toFixed(1) + '%</td></tr>' +
                 '<tr><td>Minting markets (collateral-backed CDPs)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.minting_markets) + '</td><td class="text-right">' + (sb.minting_markets / total * 100).toFixed(1) + '%</td></tr>' +
-                '<tr><td>YieldBasis deployed (crvUSD in YB pools)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.yb_deployed) + '</td><td class="text-right">' + (sb.yb_deployed / total * 100).toFixed(1) + '%</td></tr>' +
-                '<tr><td>LlamaLend debt (Curve Lend borrowed)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.llamalend_debt) + '</td><td class="text-right">' + (sb.llamalend_debt / total * 100).toFixed(1) + '%</td></tr>' +
                 '<tr><td>PegKeeper debt</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.pegkeeper_debt) + '</td><td class="text-right">' + (sb.pegkeeper_debt / total * 100).toFixed(1) + '%</td></tr>' +
-                '<tr class="border-t border-slate-200"><td>Bottom-up sum</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(bottomUp) + '</td><td></td></tr>' +
-                (Math.abs(diff) > 1e6 ? '<tr class="text-slate-400"><td>Difference (external LP in YB pools)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(diff) + '</td><td></td></tr>' : '') +
+                '<tr class="font-bold border-t-2 border-slate-200"><td>Total crvUSD Supply</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(total) + '</td><td class="text-right">100%</td></tr>' +
                 '</tbody></table></div>';
         }
 
