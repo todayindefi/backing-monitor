@@ -118,7 +118,7 @@ var CrvUSDRenderer = {
                 'crvUSD side is regular LP liquidity, not PK-controlled.</p>' +
                 '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">Stablecoins</th><th class="text-right">crvUSD (LP)</th></tr></thead><tbody>';
             var stableTotal = 0, crvTotal = 0;
-            Object.entries(pkPools).sort(function(a, b) { return b[1].stables - a[1].stables; }).forEach(function(e) {
+            Object.entries(pkPools).filter(function(e) { return e[1].stables > 1000 || e[1].crvusd > 1000; }).sort(function(a, b) { return b[1].stables - a[1].stables; }).forEach(function(e) {
                 stableTotal += e[1].stables;
                 crvTotal += e[1].crvusd;
                 html += '<tr><td>' + e[0] + '</td>' +
@@ -131,13 +131,14 @@ var CrvUSDRenderer = {
             html += '</tbody></table></div>';
         }
 
-        // ====== 7. PegKeeper Debt ======
+        // ====== 7. PegKeeper Debt (only show if debt > 0) ======
         var pks = specific.pegkeepers;
         if (pks && pks.length > 0) {
             var totalPkDebt = pks.reduce(function(a, pk) { return a + pk.debt; }, 0);
-            if (totalPkDebt === 0) {
-                html += '<div class="panel"><div class="panel-title">PegKeepers (' + pks.length + ')</div>' +
-                    '<div class="text-green-600 text-sm font-medium">All PegKeepers at $0 debt — no circular minting active</div></div>';
+            if (totalPkDebt > 0) {
+                html += '<div class="panel"><div class="panel-title">PegKeeper Debt</div>' +
+                    '<p class="text-sm text-slate-500 mb-3">PegKeepers have minted crvUSD into pools (circular supply). This debt can be withdrawn and burned.</p>' +
+                    '<div class="summary-card" style="display:inline-block"><div class="card-label">Total PK Debt</div><div class="card-value negative">' + CommonRenderer.formatCurrency(totalPkDebt) + '</div></div></div>';
             }
         }
 
