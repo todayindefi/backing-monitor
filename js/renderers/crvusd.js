@@ -113,24 +113,35 @@ var CrvUSDRenderer = {
         var pkPools = specific.pk_pool_liquidity;
         if (pkPools && Object.keys(pkPools).length > 0) {
             var pkDebt = s.total_pegkeeper_debt || 0;
+            var pkDesc = pkDebt > 0 ?
+                'PK debt: ' + CommonRenderer.formatCurrency(pkDebt) + '. PegKeepers can actively withdraw and burn crvUSD from these pools to push price up (protocol-controlled defense).' :
+                'PK debt: $0 (no protocol-controlled burn capacity). Peg defense currently relies on market arbitrage only \u2014 if crvUSD depegs below $1, arbitrageurs can buy cheap crvUSD using the stablecoin reserves (' + CommonRenderer.formatCurrency(s.pk_stables) + '). PegKeeper active defense (withdraw + burn) is unavailable until PK debt > $0.';
+
             html += '<div class="panel"><div class="panel-title">PK Pool Liquidity (' + Object.keys(pkPools).length + ' pools)</div>' +
-                '<p class="text-sm text-slate-500 mb-3">' +
-                'PK debt: ' + CommonRenderer.formatCurrency(pkDebt) + ' (protocol-controlled burn capacity). ' +
-                'The stablecoin side provides peg defense — arbitrageurs swap stables for cheap crvUSD during depegs. ' +
-                'crvUSD side is regular LP liquidity, not PK-controlled.</p>' +
-                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">Stablecoins</th><th class="text-right">crvUSD (LP)</th></tr></thead><tbody>';
+                '<p class="text-sm text-slate-500 mb-3">' + pkDesc + '</p>' +
+                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">Stablecoins</th><th class="text-right">crvUSD</th><th class="text-right">crvUSD %</th></tr></thead><tbody>';
             var stableTotal = 0, crvTotal = 0;
             Object.entries(pkPools).filter(function(e) { return e[1].stables > 1000 || e[1].crvusd > 1000; }).sort(function(a, b) { return b[1].stables - a[1].stables; }).forEach(function(e) {
                 stableTotal += e[1].stables;
                 crvTotal += e[1].crvusd;
+                var poolTotal = e[1].stables + e[1].crvusd;
+                var crvPct = poolTotal > 0 ? (e[1].crvusd / poolTotal * 100) : 0;
+                var pctClass = crvPct > 70 ? 'text-red-600 font-bold' : crvPct > 60 ? 'text-amber-600' : 'text-green-600';
                 html += '<tr><td>' + e[0] + '</td>' +
                     '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(e[1].stables) + ' <span class="text-xs text-slate-400">' + e[1].stable_symbol + '</span></td>' +
-                    '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(e[1].crvusd) + '</td></tr>';
+                    '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(e[1].crvusd) + '</td>' +
+                    '<td class="text-right font-mono ' + pctClass + '">' + crvPct.toFixed(0) + '%</td></tr>';
             });
+            var totalPct = (stableTotal + crvTotal) > 0 ? (crvTotal / (stableTotal + crvTotal) * 100) : 0;
             html += '<tr class="font-bold border-t border-slate-200"><td>Total</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(stableTotal) + '</td>' +
-                '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(crvTotal) + '</td></tr>';
-            html += '</tbody></table></div>';
+                '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(crvTotal) + '</td>' +
+                '<td class="text-right font-mono">' + totalPct.toFixed(0) + '%</td></tr>';
+            html += '</tbody></table>';
+            if (totalPct > 70) {
+                html += '<p class="text-sm text-amber-600 mt-2">Pools are ' + totalPct.toFixed(0) + '% crvUSD (balanced = 50%). Indicates persistent selling pressure \u2014 consistent with crvUSD trading slightly below peg. Stablecoin reserves (' + CommonRenderer.formatCurrency(stableTotal) + ') absorb further depeg pressure.</p>';
+            }
+            html += '</div>';
         }
 
         // ====== 7. PegKeeper Debt (only show if debt > 0) ======
