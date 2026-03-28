@@ -84,7 +84,7 @@ var CrvUSDRenderer = {
             html += '<div class="panel">' +
                 '<div class="panel-title">YieldBasis Pools</div>' +
                 '<p class="text-sm text-slate-500 mb-3">Debt = crvUSD borrowed by YB (counts as supply). Collateral = BTC/ETH in underlying Cryptoswap pools backing YB positions.</p>' +
-                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">Debt (supply)</th><th class="text-right">Collateral (USD)</th></tr></thead><tbody>';
+                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right" style="width:140px">Debt (supply)</th><th class="text-right" style="width:140px">Collateral (USD)</th></tr></thead><tbody>';
             var ybTotal = {debt: 0, collateral: 0};
             Object.entries(ybPools).sort(function(a, b) { return (b[1].debt || b[1].crvusd || 0) - (a[1].debt || a[1].crvusd || 0); }).forEach(function(e) {
                 var debt = e[1].debt || e[1].crvusd || 0;
