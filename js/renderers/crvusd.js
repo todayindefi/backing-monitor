@@ -83,25 +83,31 @@ var CrvUSDRenderer = {
         if (ybPools && Object.keys(ybPools).length > 0) {
             html += '<div class="panel">' +
                 '<div class="panel-title">YieldBasis Pools</div>' +
-                '<p class="text-sm text-slate-500 mb-3">50/50 BTC/crvUSD AMM pools. The crvUSD side is supply, the BTC side is collateral.</p>' +
-                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">crvUSD (supply)</th><th class="text-right">Collateral (USD)</th><th class="text-right">Balance</th></tr></thead><tbody>';
-            var ybTotal = {crvusd: 0, collateral: 0};
-            Object.entries(ybPools).sort(function(a, b) { return b[1].crvusd - a[1].crvusd; }).forEach(function(e) {
-                ybTotal.crvusd += e[1].crvusd;
-                ybTotal.collateral += e[1].collateral_usd;
-                var poolTotal = e[1].crvusd + e[1].collateral_usd;
-                var collatPct = poolTotal > 0 ? (e[1].collateral_usd / poolTotal * 100) : 0;
+                '<p class="text-sm text-slate-500 mb-3">Target: 50/50 BTC/crvUSD leverage. Debt = crvUSD borrowed (counts as supply). Pool crvUSD = what\'s physically in the pool (rest was traded out by arbs into wider circulation).</p>' +
+                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">Debt (supply)</th><th class="text-right">Pool crvUSD</th><th class="text-right">Pool BTC/ETH</th><th class="text-right">Pool Ratio</th></tr></thead><tbody>';
+            var ybTotal = {debt: 0, poolCrv: 0, collateral: 0};
+            Object.entries(ybPools).sort(function(a, b) { return (b[1].debt || b[1].crvusd || 0) - (a[1].debt || a[1].crvusd || 0); }).forEach(function(e) {
+                var debt = e[1].debt || e[1].crvusd || 0;
+                var poolCrv = e[1].pool_crvusd || 0;
+                var collat = e[1].collateral_usd || 0;
+                ybTotal.debt += debt;
+                ybTotal.poolCrv += poolCrv;
+                ybTotal.collateral += collat;
+                var poolTotal = poolCrv + collat;
+                var collatPct = poolTotal > 0 ? (collat / poolTotal * 100) : 0;
                 var balCls = collatPct > 55 ? 'text-green-600' : collatPct >= 45 ? 'text-slate-500' : collatPct >= 40 ? 'text-amber-600' : 'text-red-600 font-bold';
                 var asset = e[0] === 'WETH' ? 'ETH' : 'BTC';
                 html += '<tr><td class="font-medium">' + e[0] + '</td>' +
-                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(e[1].crvusd) + '</td>' +
-                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(e[1].collateral_usd) + '</td>' +
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(debt) + '</td>' +
+                    '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(poolCrv) + '</td>' +
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(collat) + '</td>' +
                     '<td class="text-right font-mono ' + balCls + '">' + collatPct.toFixed(0) + '% ' + asset + '</td></tr>';
             });
-            var totalPool = ybTotal.crvusd + ybTotal.collateral;
-            var totalColPct = totalPool > 0 ? (ybTotal.collateral / totalPool * 100) : 0;
+            var totalPoolVal = ybTotal.poolCrv + ybTotal.collateral;
+            var totalColPct = totalPoolVal > 0 ? (ybTotal.collateral / totalPoolVal * 100) : 0;
             html += '<tr class="font-bold border-t-2 border-slate-200"><td>Total</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(ybTotal.crvusd) + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(ybTotal.debt) + '</td>' +
+                '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(ybTotal.poolCrv) + '</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(ybTotal.collateral) + '</td>' +
                 '<td class="text-right font-mono">' + totalColPct.toFixed(0) + '%</td></tr>' +
                 '</tbody></table></div>';
