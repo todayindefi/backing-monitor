@@ -191,6 +191,8 @@ const CommonRenderer = {
                     },
                     y: {
                         grid: { color: '#f1f5f9' },
+                        suggestedMin: 80,
+                        suggestedMax: 150,
                         ticks: {
                             callback: function(v) { return v + '%'; },
                             font: { size: 11 }
@@ -209,7 +211,7 @@ const CommonRenderer = {
                             critical: { type: 'box', yMin: 0, yMax: 100, backgroundColor: 'rgba(220, 38, 38, 0.08)', borderWidth: 0, label: { content: 'Critical', display: true, position: 'start', font: { size: 9 }, color: '#dc2626' } },
                             thin: { type: 'box', yMin: 100, yMax: 110, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
                             amber: { type: 'box', yMin: 110, yMax: 130, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
-                            healthy: { type: 'box', yMin: 130, yMax: 999, backgroundColor: 'rgba(22, 163, 74, 0.04)', borderWidth: 0 },
+                            healthy: { type: 'box', yMin: 130, yMax: 200, backgroundColor: 'rgba(22, 163, 74, 0.04)', borderWidth: 0 },
                             line100: { type: 'line', yMin: 100, yMax: 100, borderColor: '#dc2626', borderWidth: 1, borderDash: [4, 4], label: { content: '100%', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
                             line130: { type: 'line', yMin: 130, yMax: 130, borderColor: '#16a34a', borderWidth: 1, borderDash: [4, 4], label: { content: '130%', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
                         }
