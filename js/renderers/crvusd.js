@@ -48,7 +48,7 @@ var CrvUSDRenderer = {
                 '<tr><td>Minting market collateral</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.mint_collateral) + '</td></tr>' +
                 '<tr><td>YB pool BTC/ETH value</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.yb_btc_collateral) + '</td></tr>' +
                 '<tr class="font-bold border-t border-slate-200"><td>Conservative total</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.conservative_total) + '</td></tr>' +
-                '<tr><td>+ PK pool reserves (stablecoins)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.pk_reserves) + '</td></tr>' +
+                '<tr><td>+ PK pool stablecoins (peg defense)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.pk_stables) + '</td></tr>' +
                 '<tr class="font-bold border-t border-slate-200"><td>Inclusive total</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.inclusive_total) + '</td></tr>' +
                 '</tbody></table></div>';
         }
@@ -107,18 +107,27 @@ var CrvUSDRenderer = {
             html += '</tbody></table></div>';
         }
 
-        // ====== 6. PK Pool Reserves ======
-        var pkPools = specific.pk_pool_reserves;
+        // ====== 6. PK Pool Liquidity ======
+        var pkPools = specific.pk_pool_liquidity;
         if (pkPools && Object.keys(pkPools).length > 0) {
-            html += '<div class="panel"><div class="panel-title">PK Pool Reserves (' + Object.keys(pkPools).length + ' pools)</div>' +
-                '<p class="text-sm text-slate-500 mb-3">crvUSD in PegKeeper pools acts as peg defense reserve. If crvUSD depegs below $1, these pools absorb selling pressure.</p>' +
-                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">crvUSD Balance</th></tr></thead><tbody>';
-            var pkTotal = 0;
-            Object.entries(pkPools).sort(function(a, b) { return b[1] - a[1]; }).forEach(function(e) {
-                pkTotal += e[1];
-                html += '<tr><td>' + e[0].replace('Curve.fi Factory Plain Pool: ', '') + '</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(e[1]) + '</td></tr>';
+            var pkDebt = s.total_pegkeeper_debt || 0;
+            html += '<div class="panel"><div class="panel-title">PK Pool Liquidity (' + Object.keys(pkPools).length + ' pools)</div>' +
+                '<p class="text-sm text-slate-500 mb-3">' +
+                'PK debt: ' + CommonRenderer.formatCurrency(pkDebt) + ' (protocol-controlled burn capacity). ' +
+                'The stablecoin side provides peg defense — arbitrageurs swap stables for cheap crvUSD during depegs. ' +
+                'crvUSD side is regular LP liquidity, not PK-controlled.</p>' +
+                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">Stablecoins</th><th class="text-right">crvUSD (LP)</th></tr></thead><tbody>';
+            var stableTotal = 0, crvTotal = 0;
+            Object.entries(pkPools).sort(function(a, b) { return b[1].stables - a[1].stables; }).forEach(function(e) {
+                stableTotal += e[1].stables;
+                crvTotal += e[1].crvusd;
+                html += '<tr><td>' + e[0] + '</td>' +
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(e[1].stables) + ' <span class="text-xs text-slate-400">' + e[1].stable_symbol + '</span></td>' +
+                    '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(e[1].crvusd) + '</td></tr>';
             });
-            html += '<tr class="font-bold border-t border-slate-200"><td>Total reserves</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(pkTotal) + '</td></tr>';
+            html += '<tr class="font-bold border-t border-slate-200"><td>Total</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(stableTotal) + '</td>' +
+                '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(crvTotal) + '</td></tr>';
             html += '</tbody></table></div>';
         }
 
