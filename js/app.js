@@ -99,10 +99,20 @@ async function renderAsset(slug) {
 
         // Common sections
         CommonRenderer.renderSummaryCards(data);
-        CommonRenderer.renderBreakdownTable(data);
-        CommonRenderer.renderPieChart(data);
         CommonRenderer.renderRiskFlags(data);
         CommonRenderer.renderCRChart(history);
+
+        // Breakdown table + pie: skip for crvUSD (handled in asset-specific renderer)
+        var assetType = data.asset_specific && data.asset_specific.type;
+        if (assetType !== 'crvusd') {
+            CommonRenderer.renderBreakdownTable(data);
+            CommonRenderer.renderPieChart(data);
+        } else {
+            document.querySelector('#breakdown-table tbody').innerHTML = '';
+            document.getElementById('pie-chart').parentElement.parentElement.style.display = 'none';
+            // Also hide the empty breakdown panel
+            document.getElementById('breakdown-table').closest('.panel').style.display = 'none';
+        }
 
         // Asset-specific renderer
         var renderer = ASSET_RENDERERS[data.asset_specific && data.asset_specific.type];

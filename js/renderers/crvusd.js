@@ -1,9 +1,17 @@
 /**
- * crvUSD renderer — aligned with DefiLlama methodology
+ * crvUSD renderer
  *
- * Supply = mint market debt + PK debt + YB deployed + LlamaLend debt
- * Conservative CR = (mint collateral + YB BTC) / supply
- * Inclusive CR = conservative + PK pool reserves
+ * Supply = mint markets + YB deployed + CurveLendOperator + PK debt
+ * CR = (mint collateral + YB BTC/ETH) / supply
+ *
+ * Section order:
+ * 1. Supply Breakdown (minting sources + recirculation)
+ * 2. Collateral Breakdown (all $329M — YB + mint, matching header)
+ * 3. Collateral & Peg Defense (CR, PK burn cap, peg defense liquidity)
+ * 4. YB Pools (per-pool detail with balance ratios)
+ * 5. Minting Markets (per-market detail)
+ * 6. LlamaLend (recirculation detail)
+ * 7. PK Pool Liquidity (per-pool with imbalance flags)
  */
 
 var CrvUSDRenderer = {
@@ -40,25 +48,34 @@ var CrvUSDRenderer = {
                 '</tbody></table></div>';
         }
 
-        // ====== 2. Collateral Ratio ======
+        // ====== 2. Collateral Breakdown (matches Total Backing header) ======
         var cb = specific.collateral_breakdown;
-        var pd = specific.peg_defense;
         if (cb) {
             var crCls = s.collateral_ratio < 100 ? 'negative' : s.collateral_ratio < 120 ? 'warning' : 'positive';
-            var pkCls = (pd && pd.pk_burn_capacity > 0) ? (pd.pk_burn_capacity / s.total_supply > 0.05 ? 'positive' : 'warning') : 'negative';
+            var ybPct = cb.total > 0 ? (cb.yb_btc_collateral / cb.total * 100).toFixed(1) : '0';
+            var mintPct = cb.total > 0 ? (cb.mint_collateral / cb.total * 100).toFixed(1) : '0';
 
             html += '<div class="panel">' +
-                '<div class="panel-title">Collateral & Peg Defense</div>' +
-                '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">' +
-                    '<div class="summary-card"><div class="card-label">Collateral Ratio</div><div class="card-value ' + crCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 1) + '</div><div class="text-xs text-slate-400 mt-1">Locked collateral / supply</div></div>' +
-                    '<div class="summary-card"><div class="card-label">PK Burn Capacity</div><div class="card-value ' + pkCls + '">' + (pd ? CommonRenderer.formatCurrency(pd.pk_burn_capacity) : '$0') + '</div><div class="text-xs text-slate-400 mt-1">Protocol-controlled supply removal</div></div>' +
-                    '<div class="summary-card"><div class="card-label">Peg Defense Liquidity</div><div class="card-value">' + (pd ? CommonRenderer.formatCurrency(pd.pk_pool_stables) : '-') + '</div><div class="text-xs text-slate-400 mt-1">LP-owned, not guaranteed</div></div>' +
-                '</div>' +
-                '<table class="data-table"><thead><tr><th>Collateral Component</th><th class="text-right">Amount</th></tr></thead><tbody>' +
-                '<tr><td>Minting market collateral</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.mint_collateral) + '</td></tr>' +
-                '<tr><td>YB pool BTC/ETH value</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.yb_btc_collateral) + '</td></tr>' +
-                '<tr class="font-bold border-t border-slate-200"><td>Total collateral</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.total) + '</td></tr>' +
+                '<div class="panel-title">Collateral Breakdown</div>' +
+                '<p class="text-sm text-slate-500 mb-3">All locked collateral backing crvUSD supply. CR: <span class="font-bold ' + crCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 1) + '</span></p>' +
+                '<table class="data-table"><thead><tr><th>Component</th><th class="text-right">Value</th><th class="text-right">%</th></tr></thead><tbody>' +
+                '<tr><td>YB pool BTC/ETH</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.yb_btc_collateral) + '</td><td class="text-right">' + ybPct + '%</td></tr>' +
+                '<tr><td>Minting market collateral</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.mint_collateral) + '</td><td class="text-right">' + mintPct + '%</td></tr>' +
+                '<tr class="font-bold border-t-2 border-slate-200"><td>Total Backing</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.total) + '</td><td class="text-right">100%</td></tr>' +
                 '</tbody></table></div>';
+        }
+
+        // ====== 3. Peg Defense ======
+        var pd = specific.peg_defense;
+        if (pd) {
+            var pkCls = pd.pk_burn_capacity > 0 ? (pd.pk_burn_capacity / s.total_supply > 0.05 ? 'positive' : 'warning') : 'negative';
+
+            html += '<div class="panel">' +
+                '<div class="panel-title">Peg Defense</div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+                    '<div class="summary-card"><div class="card-label">PK Burn Capacity</div><div class="card-value ' + pkCls + '">' + CommonRenderer.formatCurrency(pd.pk_burn_capacity) + '</div><div class="text-xs text-slate-400 mt-1">Protocol-controlled supply removal</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Peg Defense Liquidity</div><div class="card-value">' + CommonRenderer.formatCurrency(pd.pk_pool_stables) + '</div><div class="text-xs text-slate-400 mt-1">LP-owned stables in PK pools, not guaranteed</div></div>' +
+                '</div></div>';
         }
 
         // ====== 3. YB Pool Detail ======
