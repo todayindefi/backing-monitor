@@ -30,6 +30,7 @@ var CrvUSDRenderer = {
                 '<table class="data-table"><thead><tr><th colspan="3" class="text-xs uppercase tracking-wide text-slate-500">Minting Sources (create new crvUSD)</th></tr><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">%</th></tr></thead><tbody>' +
                 '<tr><td>YieldBasis deployed (AMM get_debt)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.yb_deployed) + '</td><td class="text-right">' + (sb.yb_deployed / total * 100).toFixed(1) + '%</td></tr>' +
                 '<tr><td>Minting markets (collateral-backed CDPs)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.minting_markets) + '</td><td class="text-right">' + (sb.minting_markets / total * 100).toFixed(1) + '%</td></tr>' +
+                (sb.operator_minted ? '<tr><td>CurveLendOperator (sreUSD market)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.operator_minted) + '</td><td class="text-right">' + (sb.operator_minted / total * 100).toFixed(1) + '%</td></tr>' : '') +
                 '<tr><td>PegKeeper debt</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.pegkeeper_debt) + '</td><td class="text-right">' + (sb.pegkeeper_debt / total * 100).toFixed(1) + '%</td></tr>' +
                 '<tr class="font-bold border-t-2 border-slate-200"><td>Total crvUSD Supply</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(total) + '</td><td class="text-right">100%</td></tr>' +
                 '</tbody></table>' +

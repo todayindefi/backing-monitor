@@ -87,11 +87,14 @@ const CommonRenderer = {
         if (!ctx) return;
 
         var items = data.backing_breakdown.filter(function(i) { return i.pct > 0.5; });
+        var palette = ['#6366f1', '#3b82f6', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16'];
+        var colorIdx = 0;
         var colors = items.map(function(i) {
-            if (i.tags.indexOf('amo') >= 0) return '#ef4444';
+            if (i.tags.indexOf('amo') >= 0 || i.tags.indexOf('circular') >= 0) return '#ef4444';
             if (i.tags.indexOf('cross-chain') >= 0) return '#3b82f6';
             if (i.tags.indexOf('idle') >= 0) return '#22c55e';
-            return '#6366f1';
+            if (i.tags.indexOf('pegkeeper') >= 0) return '#f97316';
+            return palette[colorIdx++ % palette.length];
         });
 
         if (window._pieChart) window._pieChart.destroy();
