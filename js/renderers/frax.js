@@ -49,7 +49,7 @@ var FRAXRenderer = {
             html += '<div class="panel">' +
                 '<div class="panel-title">Supply Breakdown</div>' +
                 '<table class="data-table"><tbody>' +
-                '<tr><td>FRAX + LFRAX supply (CSV)</td><td class="text-right font-mono">' + Number(supply.csv_frax_lfrax_qty).toLocaleString() + '</td></tr>' +
+                '<tr><td>FRAX + LFRAX supply</td><td class="text-right font-mono">' + Number(supply.csv_frax_lfrax_qty).toLocaleString() + '</td></tr>' +
                 '<tr><td>+ sFRAX supply (on-chain)</td><td class="text-right font-mono">' + Number(supply.sfrax_supply_qty).toLocaleString() + '</td></tr>' +
                 '<tr><td>+ sfrxUSD supply (on-chain)</td><td class="text-right font-mono">' + Number(supply.sfrxusd_supply_qty).toLocaleString() + '</td></tr>' +
                 '<tr><td>- Protocol-held</td><td class="text-right font-mono">-' + Number(supply.protocol_held_qty).toLocaleString() + '</td></tr>' +
@@ -93,9 +93,11 @@ var FRAXRenderer = {
             html += '</div></div>';
         }
 
-        // CSV snapshot note
-        if (data.csv_snapshot) {
-            html += '<div class="text-xs text-slate-400 mt-2">CSV snapshot: ' + data.csv_snapshot + ' (from facts.frax.finance)</div>';
+        // Data snapshot note
+        var snapshot = data.data_snapshot || data.csv_snapshot;
+        if (snapshot) {
+            var sourceLabel = data.data_source === 'api' ? 'API' : 'CSV';
+            html += '<div class="text-xs text-slate-400 mt-2">Data snapshot: ' + snapshot + ' (source: ' + sourceLabel + ', from facts.frax.finance)</div>';
         }
 
         container.innerHTML = html;
