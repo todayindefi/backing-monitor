@@ -146,6 +146,26 @@ const CommonRenderer = {
         }
         document.getElementById('chart-panel').style.display = '';
 
+        // Min/max CR stats
+        var crValues = historyData.entries.map(function(e) { return e.collateral_ratio; }).filter(function(v) { return v !== null && v !== undefined; });
+        if (crValues.length > 0) {
+            var minCR = Math.min.apply(null, crValues);
+            var maxCR = Math.max.apply(null, crValues);
+            var statsEl = document.getElementById('cr-chart-stats');
+            if (!statsEl) {
+                statsEl = document.createElement('div');
+                statsEl.id = 'cr-chart-stats';
+                statsEl.className = 'flex gap-4 text-xs text-slate-500 mb-2';
+                var chartPanel = document.getElementById('chart-panel');
+                var titleEl = chartPanel.querySelector('.panel-title');
+                if (titleEl) titleEl.after(statsEl);
+            }
+            var minCls = minCR < 100 ? 'text-red-600 font-semibold' : minCR < 110 ? 'text-amber-600 font-semibold' : '';
+            statsEl.innerHTML = '<span>30d Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
+                '<span>30d Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
+                '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>';
+        }
+
         var entries = historyData.entries;
         var labels = entries.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });
         var crData = entries.map(function(e) { return e.collateral_ratio; });
