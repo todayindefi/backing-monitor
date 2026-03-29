@@ -1,41 +1,41 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "asset": "OUSD",
   "asset_slug": "ousd",
   "chain": "Ethereum",
-  "timestamp": "2026-03-29T03:35:12Z",
+  "timestamp": "2026-03-29T04:35:11Z",
   "summary": {
     "total_supply": 7554890.74,
-    "total_backing": 7565684.09,
+    "total_backing": 7565701.45,
     "collateral_ratio": 100.14,
     "collateral_ratio_alt": {
       "label": "CR (ex-POL)",
       "value": 100.19,
       "note": "Excludes self-minted OUSD in Curve pools (POL) from both backing and supply"
     },
-    "surplus_deficit": 10793.35,
+    "surplus_deficit": 10810.71,
     "defillama_tvl": 7563486.89,
     "wousd_supply": 406142.7,
-    "vault_total_value": 7565682.09,
-    "tvl_ex_pol": 5630340.96,
-    "pol_self_minted": 1924549.78
+    "vault_total_value": 7565699.45,
+    "tvl_ex_pol": 5607928.6,
+    "pol_self_minted": 1946962.14
   },
   "backing_breakdown": [
     {
       "label": "Morpho v2",
-      "value": 3693353.56,
+      "value": 3693369.77,
       "pct": 48.8,
       "tags": [],
       "detail": {
         "address": "0x3643cafA6eF3dd7Fcc2ADaD1cabf708075AFFf6e",
         "balances": {
-          "USDC": 3693353.558704
+          "USDC": 3693369.768095
         }
       }
     },
     {
       "label": "Curve AMO",
-      "value": 3272023.49,
+      "value": 3272024.64,
       "pct": 43.2,
       "tags": [
         "amo",
@@ -44,7 +44,7 @@
       "detail": {
         "address": "0x26a02ec47ACC2A3442b757F45E0A82B8e993Ce11",
         "balances": {
-          "USDC": 3272023.487078
+          "USDC": 3272024.638977
         }
       }
     },
@@ -94,6 +94,10 @@
     {
       "severity": "warning",
       "message": "High AMO exposure: 43% of backing is circular"
+    },
+    {
+      "severity": "warning",
+      "message": "Self-referential risk: 62% of Morpho collateral is Origin products (OETH) \u2014 same issuer as OUSD"
     }
   ],
   "vault_status": {
@@ -104,7 +108,7 @@
   "asset_specific": {
     "type": "ousd",
     "amo_analysis": {
-      "amo_total": 3272023.49,
+      "amo_total": 3272024.64,
       "amo_pct_of_backing": 43.2,
       "curve_pools": {
         "ousd_3pool": {
@@ -113,11 +117,11 @@
         },
         "ousd_usdc": {
           "address": "0x6d18E1a7faeB1F0467A77C0d293872ab685426dc",
-          "ousd_balance": 1911254.49
+          "ousd_balance": 1933666.84
         }
       },
-      "total_ousd_in_pools": 1924549.78,
-      "pool_pct_of_supply": 25.5
+      "total_ousd_in_pools": 1946962.14,
+      "pool_pct_of_supply": 25.8
     },
     "cross_chain": {
       "strategy": "0xB1d624fc40824683e2bFBEfd19eB208DbBE00866",
@@ -127,6 +131,120 @@
       "pending_amount": 0.0,
       "is_transfer_pending": false,
       "local_usdc": 0.0
+    },
+    "morpho_allocations": {
+      "vault_address": "0x5B8b9FA8e4145eE06025F642cAdB1B47e5F39F04",
+      "vault_name": "OUSD Vault V1",
+      "total_assets_usd": 3693471.43,
+      "available_liquidity_usd": 4142647.84,
+      "origin_collateral_usd": 2299413.98,
+      "origin_collateral_pct": 62.3,
+      "markets": [
+        {
+          "collateral": "OETH",
+          "collateral_address": "0x856c4Efb76C1D1AE02e20CEB03A2A6a08b0b8dC3",
+          "vault_supply_usd": 2299413.98,
+          "pct_of_morpho": 62.3,
+          "total_supply_usd": 3473762.91,
+          "total_borrows_usd": 3083342.1,
+          "available_liquidity_usd": 390420.8,
+          "utilization_pct": 88.8,
+          "lltv": 0.86,
+          "self_referential": true
+        },
+        {
+          "collateral": "stcUSD",
+          "collateral_address": "0x88887bE419578051FF9F4eb6C858A951921D8888",
+          "vault_supply_usd": 798226.24,
+          "pct_of_morpho": 21.6,
+          "total_supply_usd": 18354442.25,
+          "total_borrows_usd": 16624119.81,
+          "available_liquidity_usd": 1730322.44,
+          "utilization_pct": 90.6,
+          "lltv": 0.915,
+          "self_referential": false
+        },
+        {
+          "collateral": "syrupUSDC",
+          "collateral_address": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+          "vault_supply_usd": 285927.2,
+          "pct_of_morpho": 7.7,
+          "total_supply_usd": 12689625.27,
+          "total_borrows_usd": 11554486.28,
+          "available_liquidity_usd": 1135138.99,
+          "utilization_pct": 91.0,
+          "lltv": 0.915,
+          "self_referential": false
+        },
+        {
+          "collateral": "PT-cUSD-23JUL2026",
+          "collateral_address": "0x928FB6ED39100a92B2480f5cbB93453f98D9F4cE",
+          "vault_supply_usd": 115688.49,
+          "pct_of_morpho": 3.1,
+          "total_supply_usd": 2621712.53,
+          "total_borrows_usd": 2373756.17,
+          "available_liquidity_usd": 247956.36,
+          "utilization_pct": 90.5,
+          "lltv": 0.915,
+          "self_referential": false
+        },
+        {
+          "collateral": "LBTC",
+          "collateral_address": "0x8236a87084f8B84306f72007F36F2618A5634494",
+          "vault_supply_usd": 106892.61,
+          "pct_of_morpho": 2.9,
+          "total_supply_usd": 3967820.66,
+          "total_borrows_usd": 3617253.39,
+          "available_liquidity_usd": 350567.26,
+          "utilization_pct": 91.2,
+          "lltv": 0.86,
+          "self_referential": false
+        },
+        {
+          "collateral": "weETH",
+          "collateral_address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+          "vault_supply_usd": 45622.42,
+          "pct_of_morpho": 1.2,
+          "total_supply_usd": 2171262.95,
+          "total_borrows_usd": 1982130.72,
+          "available_liquidity_usd": 189132.23,
+          "utilization_pct": 91.3,
+          "lltv": 0.86,
+          "self_referential": false
+        },
+        {
+          "collateral": "tBTC",
+          "collateral_address": "0x18084fbA666a33d37592fA2633fD49a74DD93a88",
+          "vault_supply_usd": 23904.79,
+          "pct_of_morpho": 0.6,
+          "total_supply_usd": 692676.52,
+          "total_borrows_usd": 630093.87,
+          "available_liquidity_usd": 62582.66,
+          "utilization_pct": 91.0,
+          "lltv": 0.77,
+          "self_referential": false
+        },
+        {
+          "collateral": "PT-stcUSD-23JUL2026",
+          "collateral_address": "0x2d3C279E5FcDF5b793c0a75ed90738D7369B0b83",
+          "vault_supply_usd": 17795.71,
+          "pct_of_morpho": 0.5,
+          "total_supply_usd": 387322.47,
+          "total_borrows_usd": 350795.37,
+          "available_liquidity_usd": 36527.1,
+          "utilization_pct": 90.6,
+          "lltv": 0.915,
+          "self_referential": false
+        }
+      ]
+    },
+    "redemption_capacity": {
+      "vault_idle_usd": 3740.32,
+      "morpho_available_usd": 4142647.84,
+      "instant_capacity_usd": 4146388.16,
+      "total_supply_usd": 7554890.74,
+      "instant_pct": 54.9,
+      "note": "Remaining requires strategy withdrawal (up to 24h for cross-chain)"
     }
   }
 }
