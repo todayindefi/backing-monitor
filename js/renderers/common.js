@@ -34,8 +34,10 @@ const CommonRenderer = {
     // ------ Summary cards ------
     renderSummaryCards(data) {
         var s = data.summary;
+        var displaySupply = s.circulating_supply || s.tvl_ex_pol || s.total_supply;
+        var supplyLabel = (s.circulating_supply || s.tvl_ex_pol) ? 'Circulating Supply' : 'Total Supply';
         var cards = [
-            { label: 'Total Supply', value: this.formatCurrencyExact(s.total_supply) },
+            { label: supplyLabel, value: this.formatCurrencyExact(displaySupply) },
             { label: 'Total Backing', value: this.formatCurrencyExact(s.total_backing) },
             { label: 'Collateral Ratio', value: this.formatPercent(s.collateral_ratio), cls: s.collateral_ratio >= 100 ? 'positive' : 'negative' },
             { label: s.collateral_ratio_alt.label, value: s.collateral_ratio_alt.is_currency ? '$' + s.collateral_ratio_alt.value.toFixed(1) + 'M' : this.formatPercent(s.collateral_ratio_alt.value), cls: s.collateral_ratio_alt.is_currency ? '' : (s.collateral_ratio_alt.value >= 100 ? 'positive' : 'warning') },
@@ -188,7 +190,7 @@ const CommonRenderer = {
                         borderWidth: 2
                     },
                     {
-                        label: 'CR (ex-AMO)',
+                        label: 'CR (gross)',
                         data: crAltData,
                         borderColor: '#f59e0b',
                         backgroundColor: 'transparent',

@@ -12,16 +12,17 @@ var OUSDRenderer = {
         var html = '';
         var s = data.summary;
 
-        // TVL / POL breakdown
-        if (s.tvl_ex_pol && s.pol_self_minted) {
+        // Supply breakdown: circulating vs POL
+        var circulating = s.circulating_supply || s.tvl_ex_pol;
+        if (circulating && s.pol_self_minted) {
             var polPct = s.pol_self_minted / s.total_supply * 100;
-            var tvlPct = 100 - polPct;
+            var circPct = 100 - polPct;
             html += '<div class="panel">' +
-                '<div class="panel-title">Supply Breakdown (TVL vs POL)</div>' +
-                '<p class="text-sm text-slate-500 mb-3">Self-minted OUSD in Curve pools is Protocol Owned Liquidity (POL) \u2014 both asset and liability, excluded from CR (ex-POL).</p>' +
+                '<div class="panel-title">Supply Breakdown</div>' +
+                '<p class="text-sm text-slate-500 mb-3">Protocol-minted OUSD in Curve pools (POL) is excluded from both backing and circulating supply in the CR calculation. Only USDC in AMO pools counts as real backing.</p>' +
                 '<div class="grid grid-cols-1 md:grid-cols-3 gap-4">' +
-                    '<div class="summary-card"><div class="card-label">TVL (user deposits)</div><div class="card-value positive">' + CommonRenderer.formatCurrencyExact(s.tvl_ex_pol) + '</div><div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(tvlPct, 1) + ' of supply</div></div>' +
-                    '<div class="summary-card"><div class="card-label">POL (self-minted)</div><div class="card-value warning">' + CommonRenderer.formatCurrencyExact(s.pol_self_minted) + '</div><div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(polPct, 1) + ' of supply</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Circulating Supply</div><div class="card-value positive">' + CommonRenderer.formatCurrencyExact(circulating) + '</div><div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(circPct, 1) + ' of total</div></div>' +
+                    '<div class="summary-card"><div class="card-label">POL (self-minted)</div><div class="card-value warning">' + CommonRenderer.formatCurrencyExact(s.pol_self_minted) + '</div><div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(polPct, 1) + ' of total</div></div>' +
                     '<div class="summary-card"><div class="card-label">Total Supply</div><div class="card-value">' + CommonRenderer.formatCurrencyExact(s.total_supply) + '</div></div>' +
                 '</div></div>';
         }
