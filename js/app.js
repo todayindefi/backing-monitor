@@ -9,7 +9,8 @@ var REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 var ASSET_RENDERERS = {
     ousd: typeof OUSDRenderer !== 'undefined' ? OUSDRenderer : null,
     frax: typeof FRAXRenderer !== 'undefined' ? FRAXRenderer : null,
-    crvusd: typeof CrvUSDRenderer !== 'undefined' ? CrvUSDRenderer : null
+    crvusd: typeof CrvUSDRenderer !== 'undefined' ? CrvUSDRenderer : null,
+    usdd: typeof USDDRenderer !== 'undefined' ? USDDRenderer : null
 };
 
 function getAssetSlug() {
