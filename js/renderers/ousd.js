@@ -29,7 +29,9 @@ var OUSDRenderer = {
 
         // AMO Analysis
         var amo = specific.amo_analysis;
-        if (amo && amo.amo_total > 0) {
+        var amoGross = amo ? (amo.amo_total_gross || amo.amo_total || 0) : 0;
+        var amoUsdc = amo ? (amo.amo_usdc_only || (amoGross - (amo.total_ousd_in_pools || 0))) : 0;
+        if (amo && amoGross > 0) {
             var poolRows = '';
             if (amo.curve_pools) {
                 var pools = Object.entries(amo.curve_pools).sort(function(a, b) { return b[1].ousd_balance - a[1].ousd_balance; });
@@ -37,19 +39,20 @@ var OUSDRenderer = {
                     return '<tr><td class="text-sm">' + p[0] + '</td>' +
                         '<td class="text-right font-mono text-sm">' + CommonRenderer.formatCurrencyExact(p[1].ousd_balance) + '</td></tr>';
                 }).join('');
-                poolRows += '<tr class="font-bold border-t border-slate-200"><td>Total OUSD in pools</td>' +
+                poolRows += '<tr class="font-bold border-t border-slate-200"><td>Total OUSD in pools (excluded)</td>' +
                     '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(amo.total_ousd_in_pools) + '</td></tr>';
             }
 
             html += '<div class="panel">' +
-                '<div class="panel-title">AMO Circular Exposure</div>' +
-                '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">' +
-                    '<div class="summary-card"><div class="card-label">AMO Value</div><div class="card-value warning">' + CommonRenderer.formatCurrency(amo.amo_total) + '</div></div>' +
-                    '<div class="summary-card"><div class="card-label">% of Backing</div><div class="card-value warning">' + CommonRenderer.formatPercent(amo.amo_pct_of_backing, 1) + '</div></div>' +
+                '<div class="panel-title">AMO Pool Breakdown</div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">' +
+                    '<div class="summary-card"><div class="card-label">AMO Gross Value</div><div class="card-value">' + CommonRenderer.formatCurrency(amoGross) + '</div></div>' +
+                    '<div class="summary-card"><div class="card-label">USDC Only (counted)</div><div class="card-value positive">' + CommonRenderer.formatCurrency(amoUsdc) + '</div></div>' +
+                    '<div class="summary-card"><div class="card-label">OUSD (excluded)</div><div class="card-value warning">' + CommonRenderer.formatCurrency(amo.total_ousd_in_pools) + '</div></div>' +
                     '<div class="summary-card"><div class="card-label">Pool % of Supply</div><div class="card-value">' + CommonRenderer.formatPercent(amo.pool_pct_of_supply, 1) + '</div></div>' +
                 '</div>' +
-                '<p class="text-sm text-slate-500 mb-3">AMO strategies mint OUSD into Curve pools. The OUSD side is protocol-created (circular). Only the stablecoin side represents real backing.</p>' +
-                (poolRows ? '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">OUSD Balance</th></tr></thead><tbody>' + poolRows + '</tbody></table>' : '') +
+                '<p class="text-sm text-slate-500 mb-3">AMO strategies mint OUSD into Curve pools. Only the USDC side counts as backing \u2014 protocol-minted OUSD is excluded from both backing and circulating supply.</p>' +
+                (poolRows ? '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">OUSD Balance (excluded)</th></tr></thead><tbody>' + poolRows + '</tbody></table>' : '') +
                 '</div>';
         }
 
