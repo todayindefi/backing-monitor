@@ -276,7 +276,7 @@ var USDDRenderer = {
                 '<div class="summary-card"><div class="card-label">SA JustLend</div><div class="card-value">' + CommonRenderer.formatCurrency(tron.sa_justlend_usdt) + '</div></div>' +
                 '</div>';
 
-            // Comparison table
+            // Comparison table (summary)
             html += '<table class="data-table"><thead><tr><th>Chain</th><th>Entity</th><th class="text-right">Aave/Spark</th><th class="text-right">JustLend</th><th class="text-right">USDD Held</th></tr></thead><tbody>' +
                 '<tr><td rowspan="2">Ethereum</td><td>HTX (' + nEthAave + ' addr) <span class="tag tag-htx">HTX</span></td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(eth.htx_aave_usdt_total) + '</td>' +
@@ -294,15 +294,60 @@ var USDDRenderer = {
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(tron.sa_justlend_usdt) + '</td><td></td></tr>' +
                 '</tbody></table>';
 
+            // Per-address detail tables (expandable)
+            var ethAaveAddrs = eth.htx_aave_usdt_addrs || [];
+            var tronJlAddrs = tron.htx_justlend_usdt_addrs || [];
+            var ethUsddAddrs = eth.htx_usdd_addrs || [];
+            var tronUsddAddrs = tron.htx_usdd_addrs || [];
+            var hasDetail = ethAaveAddrs.length > 0 || tronJlAddrs.length > 0 || ethUsddAddrs.length > 0 || tronUsddAddrs.length > 0;
+
+            if (hasDetail) {
+                html += '<details class="mt-3"><summary class="text-sm text-blue-600 cursor-pointer hover:underline">Show per-address positions (' + (ethAaveAddrs.length + tronJlAddrs.length + ethUsddAddrs.length + tronUsddAddrs.length) + ' entries)</summary>';
+
+                if (ethAaveAddrs.length > 0) {
+                    html += '<table class="data-table mt-2"><thead><tr><th colspan="3" class="text-xs uppercase tracking-wide text-slate-500">ETH: Aave aUSDT Positions</th></tr><tr><th>Address</th><th class="text-right">aUSDT</th><th></th></tr></thead><tbody>';
+                    ethAaveAddrs.forEach(function(a) {
+                        var short = a.address.slice(0, 10) + '...' + a.address.slice(-4);
+                        html += '<tr><td class="font-mono text-xs">' + short + '</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(a.aave_usdt) + '</td><td class="text-right">' + self._ethLink(a.address) + '</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                }
+
+                if (tronJlAddrs.length > 0) {
+                    html += '<table class="data-table mt-2"><thead><tr><th colspan="3" class="text-xs uppercase tracking-wide text-slate-500">Tron: JustLend USDT Positions</th></tr><tr><th>Address</th><th class="text-right">USDT (underlying)</th><th></th></tr></thead><tbody>';
+                    tronJlAddrs.forEach(function(a) {
+                        var short = a.address.slice(0, 10) + '...' + a.address.slice(-4);
+                        html += '<tr><td class="font-mono text-xs">' + short + '</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(a.justlend_usdt) + '</td><td class="text-right">' + self._tronLink(a.address) + '</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                }
+
+                if (ethUsddAddrs.length > 0 || tronUsddAddrs.length > 0) {
+                    html += '<table class="data-table mt-2"><thead><tr><th colspan="4" class="text-xs uppercase tracking-wide text-slate-500">USDD Token Holdings</th></tr><tr><th>Chain</th><th>Address</th><th class="text-right">USDD</th><th></th></tr></thead><tbody>';
+                    ethUsddAddrs.forEach(function(a) {
+                        var short = a.address.slice(0, 10) + '...' + a.address.slice(-4);
+                        html += '<tr><td>ETH</td><td class="font-mono text-xs">' + short + '</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(a.usdd) + '</td><td class="text-right">' + self._ethLink(a.address) + '</td></tr>';
+                    });
+                    tronUsddAddrs.forEach(function(a) {
+                        var short = a.address.slice(0, 10) + '...' + a.address.slice(-4);
+                        html += '<tr><td>Tron</td><td class="font-mono text-xs">' + short + '</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(a.usdd) + '</td><td class="text-right">' + self._tronLink(a.address) + '</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                }
+
+                html += '</details>';
+            }
+
             // VAT positions (if any HTX address has direct vault positions)
             var vatPos = tron.htx_vat_positions || [];
             if (vatPos.length > 0) {
                 html += '<div class="risk-flag risk-critical" style="margin-top:0.75rem"><strong>ALERT:</strong> ' + vatPos.length + ' HTX address(es) have direct positions in USDD vaults:</div>' +
-                    '<table class="data-table mt-2"><thead><tr><th>Address</th><th>Ilk</th><th class="text-right">Collateral</th><th class="text-right">Debt</th></tr></thead><tbody>';
+                    '<table class="data-table mt-2"><thead><tr><th>Address</th><th>Ilk</th><th class="text-right">Collateral</th><th class="text-right">Debt</th><th></th></tr></thead><tbody>';
                 vatPos.forEach(function(p) {
                     html += '<tr><td class="font-mono text-xs">' + p.address.slice(0, 10) + '...</td><td>' + p.ilk + '</td>' +
                         '<td class="text-right font-mono">' + p.ink.toLocaleString() + '</td>' +
-                        '<td class="text-right font-mono">' + p.art.toLocaleString() + '</td></tr>';
+                        '<td class="text-right font-mono">' + p.art.toLocaleString() + '</td>' +
+                        '<td class="text-right">' + self._tronLink(p.address) + '</td></tr>';
                 });
                 html += '</tbody></table>';
             }
