@@ -371,7 +371,51 @@ var USDDRenderer = {
             html += '<div class="' + verdictCls + '" style="margin-top:0.75rem"><strong>Verdict:</strong> ' + (htx.verdict || 'Checking...') + '</div></div>';
         }
 
-        // 8. Peg Status
+        // 8. HTX Reserve Margin
+        var margin = specific.htx_margin;
+        if (margin && margin.defillama_available) {
+            var coveragePct = margin.coverage_pct || 0;
+            var coverageCls = coveragePct >= 90 ? 'positive' : coveragePct >= 50 ? 'warning' : 'negative';
+            var shortfall = margin.shortfall_ex_usdd || 0;
+            var shortfallCls = shortfall >= 0 ? 'positive' : 'negative';
+
+            html += '<div class="panel"><div class="panel-title">HTX Reserve Margin</div>' +
+                '<p class="text-sm text-slate-500 mb-3">Can HTX cover user USDT deposits without counting USDD collateral? Live stablecoin balances from <a href="https://defillama.com/protocol/htx" target="_blank" class="text-blue-500 hover:underline">DefiLlama</a> vs HTX PoR user liabilities (snapshot: ' + (margin.por_snapshot_date || '?') + ').</p>' +
+                '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">' +
+                    '<div class="summary-card"><div class="card-label">HTX Owes Users</div><div class="card-value">' + CommonRenderer.formatCurrency(margin.por_user_usdt) + '</div><div class="text-xs text-slate-400 mt-1">USDT (PoR snapshot)</div></div>' +
+                    '<div class="summary-card"><div class="card-label">HTX Holds (Live)</div><div class="card-value ' + coverageCls + '">' + CommonRenderer.formatCurrency(margin.live_stablecoin_total) + '</div><div class="text-xs text-slate-400 mt-1">Stablecoins on-chain</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Coverage</div><div class="card-value ' + coverageCls + '">' + CommonRenderer.formatPercent(coveragePct, 0) + '</div><div class="text-xs text-slate-400 mt-1">ex-USDD collateral</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Shortfall</div><div class="card-value ' + shortfallCls + '">' + (shortfall >= 0 ? '+' : '-') + CommonRenderer.formatCurrency(Math.abs(shortfall)) + '</div><div class="text-xs text-slate-400 mt-1">ex-USDD collateral</div></div>' +
+                '</div>';
+
+            // Breakdown
+            html += '<table class="data-table"><thead><tr><th>Item</th><th class="text-right">Amount</th><th>Note</th></tr></thead><tbody>';
+            // Show individual stablecoin positions
+            var stables = margin.live_stablecoins || {};
+            Object.entries(stables).sort(function(a, b) { return b[1] - a[1]; }).forEach(function(e) {
+                if (e[1] > 100000) {
+                    var parts = e[0].split(':');
+                    html += '<tr><td>' + parts[0] + ' <span class="text-slate-400">' + parts[1] + '</span></td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(e[1]) + '</td><td class="text-xs text-slate-400">HTX wallet (DefiLlama)</td></tr>';
+                }
+            });
+            html += '<tr class="font-bold border-t-2 border-slate-200"><td>HTX Stablecoins</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(margin.live_stablecoin_total) + '</td><td></td></tr>' +
+                '<tr class="text-slate-400"><td>Less: User USDT owed</td><td class="text-right font-mono">-' + CommonRenderer.formatCurrency(margin.por_user_usdt) + '</td><td class="text-xs">PoR ' + (margin.por_snapshot_date || '') + '</td></tr>' +
+                '<tr class="font-bold border-t border-slate-200 ' + shortfallCls + '"><td>Shortfall (ex-USDD)</td><td class="text-right font-mono">' + (shortfall >= 0 ? '+' : '-') + CommonRenderer.formatCurrency(Math.abs(shortfall)) + '</td><td></td></tr>' +
+                '<tr class="text-slate-400"><td>USDD SA + PSM (separate addrs)</td><td class="text-right font-mono">+' + CommonRenderer.formatCurrency(margin.usdd_collateral_total) + '</td><td class="text-xs">Not in HTX wallets</td></tr>' +
+                '<tr class="font-bold border-t border-slate-200"><td>Combined surplus</td><td class="text-right font-mono positive">+' + CommonRenderer.formatCurrency(margin.combined_surplus) + '</td><td></td></tr>' +
+                '</tbody></table>';
+
+            // Interpretation
+            if (coveragePct < 50) {
+                html += '<div class="risk-flag risk-critical" style="margin-top:0.75rem"><strong>Finding:</strong> HTX stablecoin reserves (' + CommonRenderer.formatCurrency(margin.live_stablecoin_total) + ') cover only ' + CommonRenderer.formatPercent(coveragePct, 0) + ' of user USDT liabilities (' + CommonRenderer.formatCurrency(margin.por_user_usdt) + '). The system is only solvent if USDD collateral (' + CommonRenderer.formatCurrency(margin.usdd_collateral_total) + ') at separate addresses is included — suggesting the same capital pool backs both HTX user deposits and USDD.</div>';
+            } else if (coveragePct < 90) {
+                html += '<div class="risk-flag risk-warning" style="margin-top:0.75rem"><strong>Note:</strong> HTX reserves cover ' + CommonRenderer.formatPercent(coveragePct, 0) + ' of user liabilities. Gap may be covered by USDD collateral at separate addresses.</div>';
+            }
+
+            html += '<p class="text-xs text-slate-400 mt-2">PoR user balance from <a href="https://www.htx.com/en-us/proof-of-reserve" target="_blank" class="text-blue-500 hover:underline">htx.com/proof-of-reserve</a> (' + (margin.por_snapshot_date || '') + '). Live balances from DefiLlama. USDD collateral is at SA/PSM contract addresses, not HTX PoR wallets.</p></div>';
+        }
+
+        // 9. Peg Status
         var peg = specific.peg;
         if (peg && peg.price) {
             var deviation = Math.abs(1.0 - peg.price) * 100;
