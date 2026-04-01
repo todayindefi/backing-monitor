@@ -196,7 +196,58 @@ var USDDRenderer = {
             html += '</tbody></table></div>';
         }
 
-        // ====== 6. Peg Status ======
+        // ====== 6. PSM Drain Rate ======
+        var psmDelta = specific.psm_delta;
+        if (psmDelta) {
+            var deltaCls = psmDelta.draining ? 'negative' : (psmDelta.delta_pct < -5 ? 'warning' : (psmDelta.delta_pct > 0 ? 'positive' : ''));
+            var deltaSign = psmDelta.delta_usd >= 0 ? '+' : '';
+            html += '<div class="panel">' +
+                '<div class="panel-title">PSM Flow (Since Last Run)</div>' +
+                '<div class="grid grid-cols-2 md:grid-cols-4 gap-4">' +
+                    '<div class="summary-card"><div class="card-label">Previous</div><div class="card-value">' + CommonRenderer.formatCurrency(psmDelta.previous_usd) + '</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Current</div><div class="card-value">' + CommonRenderer.formatCurrency(psmDelta.current_usd) + '</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Change</div><div class="card-value ' + deltaCls + '">' + deltaSign + CommonRenderer.formatCurrency(psmDelta.delta_usd).replace('$-', '-$') + '</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Change %</div><div class="card-value ' + deltaCls + '">' + (psmDelta.delta_pct >= 0 ? '+' : '') + psmDelta.delta_pct.toFixed(1) + '%</div>' +
+                    (psmDelta.draining ? '<div class="text-xs text-red-500 mt-1 font-bold">DRAINING</div>' : '') + '</div>' +
+                '</div></div>';
+        }
+
+        // ====== 7. HTX Overlap Detection ======
+        var htx = specific.htx_overlap;
+        if (htx) {
+            var eth = htx.ethereum || {};
+            var tron = htx.tron || {};
+
+            html += '<div class="panel">' +
+                '<div class="panel-title">HTX Overlap Analysis</div>' +
+                '<p class="text-sm text-slate-500 mb-3">Checks whether HTX exchange positions and USDD Smart Allocator positions are the same funds (double-counted).</p>' +
+                '<table class="data-table"><thead><tr><th>Chain</th><th>Entity</th><th class="text-right">Aave/Spark</th><th class="text-right">JustLend</th></tr></thead><tbody>';
+
+            html += '<tr><td rowspan="2">Ethereum</td><td>HTX <span class="tag tag-htx">HTX</span></td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(eth.htx_aave_usdt) + ' aUSDT</td>' +
+                '<td class="text-right font-mono text-slate-400">-</td></tr>' +
+                '<tr><td>SA (USDD)</td>' +
+                '<td class="text-right font-mono">' + (eth.sa_aave_usdt > 0 ? CommonRenderer.formatCurrency(eth.sa_aave_usdt) + ' aUSDT' : '<span class="text-green-600">$0 (uses Spark)</span>') + '</td>' +
+                '<td class="text-right font-mono text-slate-400">-</td></tr>';
+
+            html += '<tr><td rowspan="2">Tron</td><td>HTX <span class="tag tag-htx">HTX</span></td>' +
+                '<td class="text-right font-mono text-slate-400">-</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(tron.htx_justlend_usdt) + '</td></tr>' +
+                '<tr><td>SA (USDD)</td>' +
+                '<td class="text-right font-mono text-slate-400">-</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(tron.sa_justlend_usdt) + '</td></tr>';
+
+            html += '</tbody></table>';
+
+            var verdictCls = htx.double_counted ? 'risk-flag risk-critical' : 'risk-flag risk-info';
+            html += '<div class="' + verdictCls + '" style="margin-top:0.75rem">' +
+                '<strong>Verdict:</strong> ' + (htx.verdict || 'Checking...') + '</div>';
+
+            html += '<p class="text-xs text-slate-400 mt-2">SA addresses: ETH <code>0xD00e...Fc</code> | Tron <code>TKVn...h5</code> (confirmed by on-chain tracing). HTX addresses from <a href="https://protos.com/usdd-assets-htx-justin-sun-justlend/" target="_blank" class="text-blue-500 hover:underline">Protos</a>.</p>' +
+                '</div>';
+        }
+
+        // ====== 8. Peg Status ======
         var peg = specific.peg;
         if (peg && peg.price) {
             var deviation = Math.abs(1.0 - peg.price) * 100;
