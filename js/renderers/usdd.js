@@ -256,41 +256,60 @@ var USDDRenderer = {
                 '</div></div>';
         }
 
-        // ====== 7. HTX Overlap Analysis ======
+        // ====== 7. HTX Overlap Analysis (all 21 addresses) ======
         var htx = specific.htx_overlap;
         if (htx) {
             var eth = htx.ethereum || {};
             var tron = htx.tron || {};
+            var nEthAave = (eth.htx_aave_usdt_addrs || []).length;
+            var nTronJl = (tron.htx_justlend_usdt_addrs || []).length;
 
             html += '<div class="panel">' +
-                '<div class="panel-title">HTX Overlap Analysis</div>' +
-                '<p class="text-sm text-slate-500 mb-3">Checks whether HTX exchange lending positions and USDD Smart Allocator positions are the same funds (double-counted).</p>' +
-                '<table class="data-table"><thead><tr><th>Chain</th><th>Entity</th><th class="text-right">Aave/Spark</th><th class="text-right">JustLend</th><th></th></tr></thead><tbody>';
+                '<div class="panel-title">HTX Overlap Analysis (All 21 PoR Addresses)</div>' +
+                '<p class="text-sm text-slate-500 mb-3">Checks all HTX proof-of-reserves addresses for lending positions and USDD contract interactions. Compares against SA positions for double-counting.</p>';
 
-            html += '<tr><td rowspan="2">Ethereum</td><td>HTX <span class="tag tag-htx">HTX</span></td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(eth.htx_aave_usdt) + ' aUSDT</td>' +
+            // Summary cards
+            html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">' +
+                '<div class="summary-card"><div class="card-label">HTX Aave USDT</div><div class="card-value">' + CommonRenderer.formatCurrency(eth.htx_aave_usdt_total) + '</div><div class="text-xs text-slate-400 mt-1">' + nEthAave + ' address(es)</div></div>' +
+                '<div class="summary-card"><div class="card-label">SA Aave USDT</div><div class="card-value ' + (eth.sa_aave_usdt > 0 ? 'negative' : 'positive') + '">' + (eth.sa_aave_usdt > 0 ? CommonRenderer.formatCurrency(eth.sa_aave_usdt) : '$0 (Spark)') + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">HTX JustLend</div><div class="card-value">' + CommonRenderer.formatCurrency(tron.htx_justlend_usdt_total) + '</div><div class="text-xs text-slate-400 mt-1">' + nTronJl + ' address(es)</div></div>' +
+                '<div class="summary-card"><div class="card-label">SA JustLend</div><div class="card-value">' + CommonRenderer.formatCurrency(tron.sa_justlend_usdt) + '</div></div>' +
+                '</div>';
+
+            // Comparison table
+            html += '<table class="data-table"><thead><tr><th>Chain</th><th>Entity</th><th class="text-right">Aave/Spark</th><th class="text-right">JustLend</th><th class="text-right">USDD Held</th></tr></thead><tbody>' +
+                '<tr><td rowspan="2">Ethereum</td><td>HTX (' + nEthAave + ' addr) <span class="tag tag-htx">HTX</span></td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(eth.htx_aave_usdt_total) + '</td>' +
                 '<td class="text-right font-mono text-slate-400">-</td>' +
-                '<td class="text-right">' + self._ethLink(CONTRACTS.htx_eth) + '</td></tr>' +
+                '<td class="text-right font-mono">' + (eth.htx_usdd_total > 0 ? CommonRenderer.formatCurrency(eth.htx_usdd_total) : '-') + '</td></tr>' +
                 '<tr><td>SA (USDD)</td>' +
-                '<td class="text-right font-mono">' + (eth.sa_aave_usdt > 0 ? CommonRenderer.formatCurrency(eth.sa_aave_usdt) + ' aUSDT' : '<span class="text-green-600">$0 (uses Spark)</span>') + '</td>' +
+                '<td class="text-right font-mono">' + (eth.sa_aave_usdt > 0 ? CommonRenderer.formatCurrency(eth.sa_aave_usdt) : '<span class="text-green-600">$0 (uses Spark)</span>') + '</td>' +
+                '<td class="text-right font-mono text-slate-400">-</td><td></td></tr>' +
+                '<tr><td rowspan="2">Tron</td><td>HTX (' + nTronJl + ' addr) <span class="tag tag-htx">HTX</span></td>' +
                 '<td class="text-right font-mono text-slate-400">-</td>' +
-                '<td class="text-right">' + self._ethLink(CONTRACTS.sa_eth) + '</td></tr>';
-
-            html += '<tr><td rowspan="2">Tron</td><td>HTX <span class="tag tag-htx">HTX</span></td>' +
-                '<td class="text-right font-mono text-slate-400">-</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(tron.htx_justlend_usdt) + '</td>' +
-                '<td class="text-right">' + self._tronLink(CONTRACTS.htx_tron) + '</td></tr>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(tron.htx_justlend_usdt_total) + '</td>' +
+                '<td class="text-right font-mono">' + (tron.htx_usdd_total > 0 ? CommonRenderer.formatCurrency(tron.htx_usdd_total) : '-') + '</td></tr>' +
                 '<tr><td>SA (USDD)</td>' +
                 '<td class="text-right font-mono text-slate-400">-</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(tron.sa_justlend_usdt) + '</td>' +
-                '<td class="text-right">' + self._tronLink(CONTRACTS.sa_tron) + '</td></tr>';
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(tron.sa_justlend_usdt) + '</td><td></td></tr>' +
+                '</tbody></table>';
 
-            html += '</tbody></table>';
+            // VAT positions (if any HTX address has direct vault positions)
+            var vatPos = tron.htx_vat_positions || [];
+            if (vatPos.length > 0) {
+                html += '<div class="risk-flag risk-critical" style="margin-top:0.75rem"><strong>ALERT:</strong> ' + vatPos.length + ' HTX address(es) have direct positions in USDD vaults:</div>' +
+                    '<table class="data-table mt-2"><thead><tr><th>Address</th><th>Ilk</th><th class="text-right">Collateral</th><th class="text-right">Debt</th></tr></thead><tbody>';
+                vatPos.forEach(function(p) {
+                    html += '<tr><td class="font-mono text-xs">' + p.address.slice(0, 10) + '...</td><td>' + p.ilk + '</td>' +
+                        '<td class="text-right font-mono">' + p.ink.toLocaleString() + '</td>' +
+                        '<td class="text-right font-mono">' + p.art.toLocaleString() + '</td></tr>';
+                });
+                html += '</tbody></table>';
+            }
 
             var verdictCls = htx.double_counted ? 'risk-flag risk-critical' : 'risk-flag risk-info';
             html += '<div class="' + verdictCls + '" style="margin-top:0.75rem">' +
-                '<strong>Verdict:</strong> ' + (htx.verdict || 'Checking...') +
-                ' <em>Note: HTX source addresses remain in HTX\'s monthly PoR. Positions are separate but originate from the same entity.</em></div>';
+                '<strong>Verdict:</strong> ' + (htx.verdict || 'Checking...') + '</div>';
 
             html += '</div>';
         }
