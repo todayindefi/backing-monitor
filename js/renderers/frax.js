@@ -222,6 +222,123 @@ var FRAXRenderer = {
                 '</details></div>';
         }
 
+        // 10. On-Chain Collateral Verification
+        var cv = data.collateral_verification;
+        if (cv && cv.addresses && cv.addresses.length > 0) {
+            // Summary cards
+            var coverageCls = cv.coverage_pct >= 80 ? 'positive' : cv.coverage_pct >= 40 ? 'warning' : 'negative';
+            html += '<div class="panel">' +
+                '<div class="panel-title">On-Chain Collateral Verification</div>' +
+                '<p class="text-sm text-slate-500 mb-4">Direct ERC20 balanceOf queries at known collateral addresses. LP, staked, and lending positions are not yet captured.</p>' +
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">' +
+                '<div class="summary-card"><div class="card-label">Verified On-Chain</div><div class="card-value">' + CommonRenderer.formatCurrency(cv.total_verified_onchain) + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">API Claimed (same addresses)</div><div class="card-value">' + CommonRenderer.formatCurrency(cv.total_api_for_verified) + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">Direct Balance Coverage</div><div class="card-value ' + coverageCls + '">' + cv.coverage_pct.toFixed(1) + '%</div></div>' +
+                '</div>';
+
+            // Chain totals bar
+            html += '<div class="mb-4">' +
+                '<div class="text-sm font-semibold text-slate-600 mb-2">By Chain</div>' +
+                '<table class="data-table"><thead><tr>' +
+                '<th>Chain</th><th class="text-right">On-Chain</th><th class="text-right">API</th><th class="text-right">Verified</th>' +
+                '</tr></thead><tbody>';
+            var chains = Object.keys(cv.chain_totals).sort(function(a, b) {
+                return (cv.chain_totals[b].api_claimed || 0) - (cv.chain_totals[a].api_claimed || 0);
+            });
+            chains.forEach(function(chain) {
+                var ct = cv.chain_totals[chain];
+                var onchain = ct.on_chain || 0;
+                var api = ct.api_claimed || 0;
+                var pct = api > 0 ? (onchain / api * 100) : 0;
+                var pctCls = pct >= 90 ? 'positive' : pct >= 40 ? 'warning' : 'negative';
+                html += '<tr>' +
+                    '<td class="capitalize">' + chain + '</td>' +
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(onchain) + '</td>' +
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(api) + '</td>' +
+                    '<td class="text-right font-mono ' + pctCls + '">' + pct.toFixed(0) + '%</td>' +
+                    '</tr>';
+            });
+            html += '</tbody></table></div>';
+
+            // DeFi protocol positions
+            var defiPos = cv.defi_positions;
+            if (defiPos && defiPos.length > 0) {
+                html += '<div class="mb-4">' +
+                    '<div class="text-sm font-semibold text-slate-600 mb-2">DeFi Protocol Positions (on-chain verified)</div>' +
+                    '<table class="data-table"><thead><tr>' +
+                    '<th>Position</th><th class="text-right">Value</th><th>Detail</th>' +
+                    '</tr></thead><tbody>';
+                defiPos.sort(function(a, b) { return Math.abs(b.usd_value) - Math.abs(a.usd_value); });
+                defiPos.forEach(function(pos) {
+                    var valCls = pos.usd_value < 0 ? 'negative' : '';
+                    html += '<tr>' +
+                        '<td>' + pos.label + '</td>' +
+                        '<td class="text-right font-mono ' + valCls + '">' + CommonRenderer.formatCurrency(pos.usd_value) + '</td>' +
+                        '<td class="text-xs text-slate-400">' + pos.detail + '</td>' +
+                        '</tr>';
+                });
+                var defiTotal = cv.defi_total || 0;
+                html += '<tr class="font-bold border-t-2 border-slate-200">' +
+                    '<td>DeFi Total</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(defiTotal) + '</td><td></td></tr>';
+                html += '</tbody></table></div>';
+            }
+
+            // Top verified addresses (collapsible)
+            var topAddrs = cv.addresses.filter(function(a) { return a.onchain_usd > 1000; }).slice(0, 15);
+            if (topAddrs.length > 0) {
+                html += '<details>' +
+                    '<summary class="text-sm font-semibold text-slate-600 cursor-pointer select-none mb-2">Top Verified Addresses <span class="text-xs font-normal text-slate-400">(click to expand)</span></summary>' +
+                    '<table class="data-table"><thead><tr>' +
+                    '<th>Chain</th><th>Address</th><th class="text-right">On-Chain</th><th class="text-right">API</th><th class="text-right">Match</th>' +
+                    '</tr></thead><tbody>';
+                topAddrs.forEach(function(a) {
+                    var shortAddr = a.address.substring(0, 8) + '...' + a.address.substring(a.address.length - 4);
+                    var pct = a.api_usd > 0 ? (a.onchain_usd / a.api_usd * 100) : 0;
+                    var pctCls = pct >= 90 ? 'positive' : pct >= 40 ? 'warning' : 'negative';
+                    var balStr = Object.keys(a.balances).map(function(sym) {
+                        var b = a.balances[sym];
+                        return sym + ': ' + CommonRenderer.formatCurrency(b.usd);
+                    }).join(', ');
+                    html += '<tr>' +
+                        '<td class="capitalize">' + a.chain + '</td>' +
+                        '<td class="font-mono text-xs" title="' + a.address + '">' + shortAddr + '</td>' +
+                        '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(a.onchain_usd) + '</td>' +
+                        '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(a.api_usd) + '</td>' +
+                        '<td class="text-right font-mono ' + pctCls + '">' + pct.toFixed(0) + '%</td>' +
+                        '</tr>';
+                    if (balStr) {
+                        html += '<tr><td colspan="5" class="text-xs text-slate-400 pl-8">' + balStr + '</td></tr>';
+                    }
+                });
+                html += '</tbody></table></details>';
+            }
+
+            // Discrepancies
+            var discreps = cv.discrepancies || [];
+            if (discreps.length > 0) {
+                html += '<details class="mt-3">' +
+                    '<summary class="text-sm font-semibold text-amber-600 cursor-pointer select-none mb-2">Discrepancies (' + discreps.length + ') <span class="text-xs font-normal text-slate-400">(click to expand)</span></summary>' +
+                    '<p class="text-xs text-slate-500 mb-2">Expected — most gaps are LP positions, staked tokens, or lending positions not captured by simple balanceOf queries.</p>' +
+                    '<table class="data-table"><thead><tr>' +
+                    '<th>Chain</th><th>Address</th><th class="text-right">On-Chain</th><th class="text-right">API</th><th class="text-right">Diff</th>' +
+                    '</tr></thead><tbody>';
+                discreps.forEach(function(d) {
+                    var shortAddr = d.address.substring(0, 8) + '...' + d.address.substring(d.address.length - 4);
+                    var diffCls = d.diff_pct > 0 ? 'positive' : 'negative';
+                    html += '<tr>' +
+                        '<td class="capitalize">' + d.chain + '</td>' +
+                        '<td class="font-mono text-xs">' + shortAddr + '</td>' +
+                        '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(d.onchain_usd) + '</td>' +
+                        '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(d.api_usd) + '</td>' +
+                        '<td class="text-right font-mono ' + diffCls + '">' + (d.diff_pct > 0 ? '+' : '') + d.diff_pct.toFixed(1) + '%</td>' +
+                        '</tr>';
+                });
+                html += '</tbody></table></details>';
+            }
+
+            html += '</div>';
+        }
+
         // Data snapshot note
         var snapshot = data.data_snapshot || data.csv_snapshot;
         if (snapshot) {
