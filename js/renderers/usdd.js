@@ -256,8 +256,9 @@ var USDDRenderer = {
             var ethUsddAddrs = eth.htx_usdd_addrs || [];
             var tronUsddAddrs = tron.htx_usdd_addrs || [];
 
+            var totalWithPositions = ethAaveAddrs.length + tronJlAddrs.length + ethUsddAddrs.length + tronUsddAddrs.length;
             html += '<div class="panel"><div class="panel-title">HTX Overlap Analysis</div>' +
-                '<p class="text-sm text-slate-500 mb-3">Does HTX count the same funds as both exchange reserves and USDD collateral? Checked across all ' + porTotal + ' HTX PoR addresses.</p>';
+                '<p class="text-sm text-slate-500 mb-3">Does HTX count the same funds as both exchange reserves and USDD collateral? All ' + porTotal + ' HTX PoR addresses scanned for Aave, JustLend, and USDD positions — ' + totalWithPositions + ' had active positions (shown below), ' + (porTotal - totalWithPositions) + ' returned $0.</p>';
 
             // --- Ethereum flow ---
             var ethOverlap = eth.sa_aave_usdt > 0;
