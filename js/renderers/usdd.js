@@ -173,12 +173,26 @@ var USDDRenderer = {
 
             var sa = coll.smart_allocator;
             if (sa && sa.total > 0) {
-                html += '<table class="data-table mt-4"><thead><tr><th>Smart Allocator</th><th class="text-right">Debt (USDD minted)</th><th></th></tr></thead><tbody>' +
-                    '<tr><td>Tron SA001-A</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sa.tron) + '</td><td class="text-right">' + self._tronLink(C.sa_tron) + '</td></tr>' +
-                    '<tr><td>Ethereum SA001-A</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sa.ethereum) + '</td><td class="text-right">' + self._ethLink(C.sa_eth) + '</td></tr>' +
-                    '<tr class="font-bold border-t-2 border-slate-200"><td>Total SA (HTX)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sa.total) + '</td><td></td></tr></tbody></table>';
+                html += '<table class="data-table mt-4"><thead><tr><th>Component</th><th class="text-right">Value</th><th>HTX Evidence</th><th></th></tr></thead><tbody>' +
+                    '<tr><td>Tron SA001-A</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sa.tron) + '</td>' +
+                    '<td class="text-xs">Operated by <span class="font-mono">TKVn...h5</span>, funded from HTX address <span class="font-mono">TDTo...A4</span> (<a href="https://protos.com/usdd-assets-htx-justin-sun-justlend/" target="_blank" class="text-blue-500 hover:underline">Protos</a> tx trace). Funding address confirmed in <a href="https://github.com/huobiapi/Tool-Node.js-VerifyAddress/blob/main/snapshot/huobi_por.csv" target="_blank" class="text-blue-500 hover:underline">HTX PoR CSV</a>.</td>' +
+                    '<td class="text-right">' + self._tronLink(C.sa_tron) + '</td></tr>' +
+                    '<tr><td>Ethereum SA001-A</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sa.ethereum) + '</td>' +
+                    '<td class="text-xs">Operated by <span class="font-mono">0xD00e...Fc</span>, pulls USDT from ETH PSM GemJoin. PSM funded from HTX address <span class="font-mono">0x1870...12e</span> (<a href="https://protos.com/usdd-assets-htx-justin-sun-justlend/" target="_blank" class="text-blue-500 hover:underline">Protos</a>). Address confirmed in HTX PoR CSV.</td>' +
+                    '<td class="text-right">' + self._ethLink(C.sa_eth) + '</td></tr>' +
+                    '<tr class="font-bold border-t-2 border-slate-200"><td>Total SA</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sa.total) + '</td><td></td><td></td></tr></tbody></table>';
             }
-            html += '<p class="text-xs text-slate-400 mt-2">SA funded from HTX addresses (<a href="https://protos.com/usdd-assets-htx-justin-sun-justlend/" target="_blank" class="text-blue-500 hover:underline">Protos</a>). Admin multisig can access all funds (zero timelock, <a href="https://usdd.io/USDD-V2-audit-report.pdf" target="_blank" class="text-blue-500 hover:underline">ChainSecurity audit</a>).</p></div>';
+
+            html += '<div class="mt-3 p-3 rounded-lg text-xs" style="background:#f8fafc;border:1px solid #e2e8f0">' +
+                '<div class="font-medium text-slate-600 mb-1">How we know this is HTX-sourced:</div>' +
+                '<ul class="text-slate-500 space-y-1 ml-3" style="list-style:disc">' +
+                    '<li><strong>Protos investigation</strong> (<a href="https://protos.com/usdd-assets-htx-justin-sun-justlend/" target="_blank" class="text-blue-500 hover:underline">June 2025</a>): traced SA funding transactions on-chain back to HTX hot wallets ' + self._ethLink(C.htx_eth) + ' ' + self._tronLink(C.htx_tron) + '</li>' +
+                    '<li><strong>HTX PoR CSV</strong> (<a href="https://github.com/huobiapi/Tool-Node.js-VerifyAddress/blob/main/snapshot/huobi_por.csv" target="_blank" class="text-blue-500 hover:underline">March 2026</a>): confirms both funding addresses (<span class="font-mono">0x1870...</span>, <span class="font-mono">TDTo...</span>) are HTX exchange wallets with balance attestations</li>' +
+                    '<li><strong>On-chain tracing</strong> (Took C, April 2026): confirmed SA operator addresses and PSM \u2192 SA \u2192 lending protocol fund flow ' + self._tronLink(C.sa_tron) + ' ' + self._ethLink(C.sa_eth) + '</li>' +
+                    '<li><strong>PSM reserves</strong>: also funded from HTX addresses via same transaction chains</li>' +
+                '</ul>' +
+                '<div class="text-slate-400 mt-2">Admin multisig can access all vault funds with zero timelock (<a href="https://usdd.io/USDD-V2-audit-report.pdf" target="_blank" class="text-blue-500 hover:underline">ChainSecurity audit</a>).</div>' +
+                '</div></div>';
         }
 
         // 4. Vault Types
