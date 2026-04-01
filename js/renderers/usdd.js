@@ -295,7 +295,58 @@ var USDDRenderer = {
             html += '</div>';
         }
 
-        // ====== 8. Peg Status ======
+        // ====== 8. HTX Wallet Monitor ======
+        var htxW = specific.htx_wallets;
+        if (htxW) {
+            var ethT = htxW.ethereum ? htxW.ethereum.totals : {};
+            var tronT = htxW.tron ? htxW.tron.totals : {};
+            var ethAddrs = htxW.ethereum ? htxW.ethereum.addresses : [];
+            var tronAddrs = htxW.tron ? htxW.tron.addresses : [];
+
+            html += '<div class="panel">' +
+                '<div class="panel-title">HTX Wallet Monitor (21 PoR Addresses)</div>' +
+                '<p class="text-sm text-slate-500 mb-3">Live balances across all HTX proof-of-reserves addresses. Source: <a href="https://github.com/huobiapi/Tool-Node.js-VerifyAddress/tree/main/snapshot" target="_blank" class="text-blue-500 hover:underline">HTX PoR CSV</a></p>' +
+                '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">' +
+                    '<div class="summary-card"><div class="card-label">Stablecoin Total</div><div class="card-value">' + CommonRenderer.formatCurrency(htxW.grand_total_usd) + '</div><div class="text-xs text-slate-400 mt-1">USDT + lending positions</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Aave aUSDT</div><div class="card-value">' + CommonRenderer.formatCurrency(ethT.aave_usdt || 0) + '</div><div class="text-xs text-slate-400 mt-1">Ethereum</div></div>' +
+                    '<div class="summary-card"><div class="card-label">TRX Holdings</div><div class="card-value">' + ((tronT.trx || 0) / 1e9).toFixed(2) + 'B TRX</div><div class="text-xs text-slate-400 mt-1">~$' + ((tronT.trx || 0) * 0.315 / 1e6).toFixed(0) + 'M</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Active Wallets</div><div class="card-value">' + (ethAddrs.length + tronAddrs.length) + ' / 21</div></div>' +
+                '</div>';
+
+            // ETH addresses table
+            if (ethAddrs.length > 0) {
+                html += '<table class="data-table"><thead><tr><th colspan="5" class="text-xs uppercase tracking-wide text-slate-500">Ethereum Addresses (' + ethAddrs.length + ')</th></tr>' +
+                    '<tr><th>Address</th><th class="text-right">USDT</th><th class="text-right">Aave aUSDT</th><th class="text-right">ETH</th><th></th></tr></thead><tbody>';
+                ethAddrs.sort(function(a, b) { return (b.aave_usdt + b.usdt) - (a.aave_usdt + a.usdt); }).forEach(function(w) {
+                    var short = w.address.slice(0, 8) + '...' + w.address.slice(-4);
+                    html += '<tr><td class="font-mono text-xs">' + short + '</td>' +
+                        '<td class="text-right font-mono">' + (w.usdt > 100 ? CommonRenderer.formatCurrency(w.usdt) : '-') + '</td>' +
+                        '<td class="text-right font-mono">' + (w.aave_usdt > 100 ? CommonRenderer.formatCurrency(w.aave_usdt) : '-') + '</td>' +
+                        '<td class="text-right font-mono">' + (w.eth > 0.1 ? w.eth.toFixed(1) : '-') + '</td>' +
+                        '<td class="text-right">' + self._ethLink(w.address) + '</td></tr>';
+                });
+                html += '</tbody></table>';
+            }
+
+            // Tron addresses table
+            if (tronAddrs.length > 0) {
+                html += '<table class="data-table mt-4"><thead><tr><th colspan="5" class="text-xs uppercase tracking-wide text-slate-500">Tron Addresses (' + tronAddrs.length + ')</th></tr>' +
+                    '<tr><th>Address</th><th class="text-right">USDT</th><th class="text-right">JustLend</th><th class="text-right">TRX</th><th></th></tr></thead><tbody>';
+                tronAddrs.sort(function(a, b) { return (b.trx + b.usdt + b.justlend_usdt) - (a.trx + a.usdt + a.justlend_usdt); }).forEach(function(w) {
+                    var short = w.address.slice(0, 8) + '...' + w.address.slice(-4);
+                    var trxM = w.trx > 1e6 ? (w.trx / 1e6).toFixed(0) + 'M' : w.trx > 1000 ? (w.trx / 1000).toFixed(0) + 'K' : w.trx.toFixed(0);
+                    html += '<tr><td class="font-mono text-xs">' + short + '</td>' +
+                        '<td class="text-right font-mono">' + (w.usdt > 100 ? CommonRenderer.formatCurrency(w.usdt) : '-') + '</td>' +
+                        '<td class="text-right font-mono">' + (w.justlend_usdt > 100 ? CommonRenderer.formatCurrency(w.justlend_usdt) : '-') + '</td>' +
+                        '<td class="text-right font-mono">' + trxM + '</td>' +
+                        '<td class="text-right">' + self._tronLink(w.address) + '</td></tr>';
+                });
+                html += '</tbody></table>';
+            }
+            html += '</div>';
+        }
+
+        // ====== 9. Peg Status ======
         var peg = specific.peg;
         if (peg && peg.price) {
             var deviation = Math.abs(1.0 - peg.price) * 100;
