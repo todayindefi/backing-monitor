@@ -250,7 +250,8 @@ var USDDRenderer = {
             var nEthAave = (eth.htx_aave_usdt_addrs || []).length;
             var nTronJl = (tron.htx_justlend_usdt_addrs || []).length;
 
-            html += '<div class="panel"><div class="panel-title">HTX Overlap Analysis (All 21 PoR Addresses)</div>' +
+            var porTotal = (specific.htx_wallets && specific.htx_wallets.por_snapshot) ? specific.htx_wallets.por_snapshot.total_addresses : 27;
+            html += '<div class="panel"><div class="panel-title">HTX Overlap Analysis (All ' + porTotal + ' PoR Addresses)</div>' +
                 '<p class="text-sm text-slate-500 mb-3">Checks all HTX PoR addresses for lending positions and USDD interactions. Compares against SA for double-counting.</p>' +
                 '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">' +
                     '<div class="summary-card"><div class="card-label">HTX Aave USDT</div><div class="card-value">' + CommonRenderer.formatCurrency(eth.htx_aave_usdt_total) + '</div><div class="text-xs text-slate-400 mt-1">' + nEthAave + ' address(es)</div></div>' +
@@ -334,37 +335,50 @@ var USDDRenderer = {
     // ================================================================
     // HTX Reserves Tab (full wallet monitor)
     // ================================================================
+    _verifyBadge: function(status) {
+        if (status === 'balance') return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" title="Balance verified in PoR CSV">Verified</span>';
+        if (status === 'signed') return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800" title="HTX-signed attestation only (no balance in CSV)">Signed</span>';
+        return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-500">Unknown</span>';
+    },
+
     _renderHtxTab: function(specific, C) {
         var html = '';
         var self = this;
         var htxW = specific.htx_wallets;
         if (!htxW) return '<div class="panel"><p class="text-slate-400">HTX wallet data not available.</p></div>';
 
+        var por = htxW.por_snapshot || {};
         var ethT = htxW.ethereum ? htxW.ethereum.totals : {};
         var tronT = htxW.tron ? htxW.tron.totals : {};
         var ethAddrs = htxW.ethereum ? htxW.ethereum.addresses : [];
         var tronAddrs = htxW.tron ? htxW.tron.addresses : [];
+        var totalAddrs = por.total_addresses || (ethAddrs.length + tronAddrs.length);
 
         // Summary
-        html += '<div class="panel"><div class="panel-title">HTX Exchange Reserves (21 PoR Addresses)</div>' +
-            '<p class="text-sm text-slate-500 mb-3">Live on-chain balances across all HTX proof-of-reserves addresses. Source: <a href="https://github.com/huobiapi/Tool-Node.js-VerifyAddress/tree/main/snapshot" target="_blank" class="text-blue-500 hover:underline">HTX PoR CSV</a> (monthly updates)</p>' +
+        html += '<div class="panel"><div class="panel-title">HTX Exchange Reserves (' + totalAddrs + ' PoR Addresses)</div>' +
+            '<p class="text-sm text-slate-500 mb-3">Live on-chain balances for all addresses from HTX proof-of-reserves. ' +
+            'Addresses verified against <a href="https://github.com/huobiapi/Tool-Node.js-VerifyAddress/blob/main/snapshot/huobi_por.csv" target="_blank" class="text-blue-500 hover:underline">huobi_por.csv</a>.' +
+            (por.date ? ' PoR snapshot: <strong>' + por.date + '</strong>' : '') +
+            (por.last_updated ? ' (CSV updated ' + por.last_updated + ').' : '.') +
+            ' Snapshot balances are point-in-time; live balances below may differ significantly.</p>' +
             '<div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">' +
                 '<div class="summary-card"><div class="card-label">Stablecoin Total</div><div class="card-value">' + CommonRenderer.formatCurrency(htxW.grand_total_usd) + '</div><div class="text-xs text-slate-400 mt-1">USDT + lending</div></div>' +
                 '<div class="summary-card"><div class="card-label">USDT (Wallet)</div><div class="card-value">' + CommonRenderer.formatCurrency((ethT.usdt || 0) + (tronT.usdt || 0)) + '</div></div>' +
                 '<div class="summary-card"><div class="card-label">Aave aUSDT</div><div class="card-value">' + CommonRenderer.formatCurrency(ethT.aave_usdt || 0) + '</div><div class="text-xs text-slate-400 mt-1">Ethereum</div></div>' +
                 '<div class="summary-card"><div class="card-label">TRX Holdings</div><div class="card-value">' + ((tronT.trx || 0) / 1e9).toFixed(2) + 'B</div><div class="text-xs text-slate-400 mt-1">~$' + ((tronT.trx || 0) * 0.315 / 1e6).toFixed(0) + 'M USD</div></div>' +
-                '<div class="summary-card"><div class="card-label">Active Wallets</div><div class="card-value">' + (ethAddrs.length + tronAddrs.length) + ' / 21</div></div>' +
+                '<div class="summary-card"><div class="card-label">Active Wallets</div><div class="card-value">' + (ethAddrs.length + tronAddrs.length) + ' / ' + totalAddrs + '</div></div>' +
             '</div></div>';
 
         // ETH addresses
         if (ethAddrs.length > 0) {
-            html += '<div class="panel"><div class="panel-title">Ethereum Addresses (' + ethAddrs.length + ' of 10)</div>' +
-                '<table class="data-table"><thead><tr><th>Address</th><th class="text-right">USDT</th><th class="text-right">Aave aUSDT</th><th class="text-right">ETH</th><th></th></tr></thead><tbody>';
+            html += '<div class="panel"><div class="panel-title">Ethereum Addresses (' + ethAddrs.length + ' of ' + (por.eth_addresses || '?') + ')</div>' +
+                '<table class="data-table"><thead><tr><th>Address</th><th class="text-right">USDT</th><th class="text-right">Aave aUSDT</th><th class="text-right">ETH</th><th>PoR</th><th></th></tr></thead><tbody>';
             ethAddrs.sort(function(a, b) { return (b.aave_usdt + b.usdt) - (a.aave_usdt + a.usdt); }).forEach(function(w) {
                 html += '<tr><td class="font-mono text-xs">' + w.address.slice(0, 8) + '...' + w.address.slice(-4) + '</td>' +
                     '<td class="text-right font-mono">' + (w.usdt > 100 ? CommonRenderer.formatCurrency(w.usdt) : '-') + '</td>' +
                     '<td class="text-right font-mono">' + (w.aave_usdt > 100 ? CommonRenderer.formatCurrency(w.aave_usdt) : '-') + '</td>' +
                     '<td class="text-right font-mono">' + (w.eth > 0.1 ? w.eth.toFixed(1) : '-') + '</td>' +
+                    '<td>' + self._verifyBadge(w.verification) + '</td>' +
                     '<td class="text-right">' + self._ethLink(w.address) + '</td></tr>';
             });
             html += '</tbody></table></div>';
@@ -372,24 +386,31 @@ var USDDRenderer = {
 
         // Tron addresses
         if (tronAddrs.length > 0) {
-            html += '<div class="panel"><div class="panel-title">Tron Addresses (' + tronAddrs.length + ' of 11)</div>' +
-                '<table class="data-table"><thead><tr><th>Address</th><th class="text-right">USDT</th><th class="text-right">JustLend</th><th class="text-right">TRX</th><th></th></tr></thead><tbody>';
+            html += '<div class="panel"><div class="panel-title">Tron Addresses (' + tronAddrs.length + ' of ' + (por.tron_addresses || '?') + ')</div>' +
+                '<table class="data-table"><thead><tr><th>Address</th><th class="text-right">USDT</th><th class="text-right">JustLend</th><th class="text-right">TRX</th><th>PoR</th><th></th></tr></thead><tbody>';
             tronAddrs.sort(function(a, b) { return (b.trx + b.usdt + b.justlend_usdt) - (a.trx + a.usdt + a.justlend_usdt); }).forEach(function(w) {
                 var trxM = w.trx > 1e6 ? (w.trx / 1e6).toFixed(0) + 'M' : w.trx > 1000 ? (w.trx / 1000).toFixed(0) + 'K' : w.trx.toFixed(0);
                 html += '<tr><td class="font-mono text-xs">' + w.address.slice(0, 8) + '...' + w.address.slice(-4) + '</td>' +
                     '<td class="text-right font-mono">' + (w.usdt > 100 ? CommonRenderer.formatCurrency(w.usdt) : '-') + '</td>' +
                     '<td class="text-right font-mono">' + (w.justlend_usdt > 100 ? CommonRenderer.formatCurrency(w.justlend_usdt) : '-') + '</td>' +
                     '<td class="text-right font-mono">' + trxM + '</td>' +
+                    '<td>' + self._verifyBadge(w.verification) + '</td>' +
                     '<td class="text-right">' + self._tronLink(w.address) + '</td></tr>';
             });
             html += '</tbody></table></div>';
         }
 
         // Significance note
-        html += '<div class="panel"><div class="panel-title">Why This Matters</div>' +
-            '<p class="text-sm text-slate-500">HTX (Justin Sun\'s exchange) is the dominant counterparty behind USDD. The Smart Allocator that provides ~60% of USDD\'s backing was funded from these addresses. ' +
-            'Monitoring all 21 PoR wallets provides early warning if HTX moves funds into or out of USDD-related contracts. ' +
-            'Key watch: <code>TZ1Ssa...nkXa</code> holds ' + ((tronT.trx || 0) > 1e8 ? ((tronT.trx || 0) / 1e6).toFixed(0) + 'M' : '0') + ' TRX that could be deposited as vault collateral at any time (zero-timelock admin).</p></div>';
+        html += '<div class="panel"><div class="panel-title">About This Data</div>' +
+            '<div class="text-sm text-slate-500">' +
+            '<p class="mb-2"><strong>Address source:</strong> All addresses from HTX\'s official proof-of-reserves CSV (<a href="https://github.com/huobiapi/Tool-Node.js-VerifyAddress/blob/main/snapshot/huobi_por.csv" target="_blank" class="text-blue-500 hover:underline">GitHub</a>). ' +
+            'Last snapshot: ' + (por.date || 'unknown') + '. CSV updated: ' + (por.last_updated || 'unknown') + '. Updates monthly (~8th-10th).</p>' +
+            '<p class="mb-2"><strong>Verification levels:</strong> ' +
+            self._verifyBadge('balance') + ' = balance published in PoR CSV with Merkle proof. ' +
+            self._verifyBadge('signed') + ' = HTX-signed attestation only (no balance disclosed).</p>' +
+            '<p><strong>Why this matters:</strong> HTX is the dominant counterparty behind USDD (~70% of backing). The Smart Allocator was funded from these addresses. ' +
+            'Monitoring all ' + totalAddrs + ' addresses provides early warning if HTX moves funds into or out of USDD contracts.</p>' +
+            '</div></div>';
 
         return html;
     }
