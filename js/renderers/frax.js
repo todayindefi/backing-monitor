@@ -227,13 +227,18 @@ var FRAXRenderer = {
         if (cv && cv.addresses && cv.addresses.length > 0) {
             // Summary cards
             var coverageCls = cv.coverage_pct >= 80 ? 'positive' : cv.coverage_pct >= 40 ? 'warning' : 'negative';
+            var hasDebank = cv.debank_total && cv.debank_total > 0;
+            var gridCols = hasDebank ? 'md:grid-cols-4' : 'md:grid-cols-3';
             html += '<div class="panel">' +
                 '<div class="panel-title">On-Chain Collateral Verification</div>' +
-                '<p class="text-sm text-slate-500 mb-4">Direct ERC20 balanceOf queries at known collateral addresses. LP, staked, and lending positions are not yet captured.</p>' +
-                '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">' +
+                '<p class="text-sm text-slate-500 mb-4">Three-way cross-check: direct on-chain queries vs Frax API vs DeBank.</p>' +
+                '<div class="grid grid-cols-1 ' + gridCols + ' gap-4 mb-4">' +
                 '<div class="summary-card"><div class="card-label">Verified On-Chain</div><div class="card-value">' + CommonRenderer.formatCurrency(cv.total_verified_onchain) + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">API Claimed (same addresses)</div><div class="card-value">' + CommonRenderer.formatCurrency(cv.total_api_for_verified) + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Direct Balance Coverage</div><div class="card-value ' + coverageCls + '">' + cv.coverage_pct.toFixed(1) + '%</div></div>' +
+                '<div class="summary-card"><div class="card-label">Frax API</div><div class="card-value">' + CommonRenderer.formatCurrency(cv.total_api_for_verified) + '</div></div>';
+            if (hasDebank) {
+                html += '<div class="summary-card"><div class="card-label">DeBank</div><div class="card-value">' + CommonRenderer.formatCurrency(cv.debank_total) + '</div></div>';
+            }
+            html += '<div class="summary-card"><div class="card-label">On-Chain Coverage</div><div class="card-value ' + coverageCls + '">' + cv.coverage_pct.toFixed(1) + '%</div></div>' +
                 '</div>';
 
             // Chain totals bar
@@ -286,10 +291,13 @@ var FRAXRenderer = {
             // Top verified addresses (collapsible)
             var topAddrs = cv.addresses.filter(function(a) { return a.onchain_usd > 1000; }).slice(0, 15);
             if (topAddrs.length > 0) {
+                var addrColSpan = hasDebank ? 6 : 5;
                 html += '<details>' +
                     '<summary class="text-sm font-semibold text-slate-600 cursor-pointer select-none mb-2">Top Verified Addresses <span class="text-xs font-normal text-slate-400">(click to expand)</span></summary>' +
                     '<table class="data-table"><thead><tr>' +
-                    '<th>Chain</th><th>Address</th><th class="text-right">On-Chain</th><th class="text-right">API</th><th class="text-right">Match</th>' +
+                    '<th>Chain</th><th>Address</th><th class="text-right">On-Chain</th><th class="text-right">API</th>' +
+                    (hasDebank ? '<th class="text-right">DeBank</th>' : '') +
+                    '<th class="text-right">Match</th>' +
                     '</tr></thead><tbody>';
                 topAddrs.forEach(function(a) {
                     var shortAddr = a.address.substring(0, 8) + '...' + a.address.substring(a.address.length - 4);
@@ -304,10 +312,11 @@ var FRAXRenderer = {
                         '<td class="font-mono text-xs" title="' + a.address + '">' + shortAddr + '</td>' +
                         '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(a.onchain_usd) + '</td>' +
                         '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(a.api_usd) + '</td>' +
+                        (hasDebank ? '<td class="text-right font-mono">' + (a.debank_usd ? CommonRenderer.formatCurrency(a.debank_usd) : '—') + '</td>' : '') +
                         '<td class="text-right font-mono ' + pctCls + '">' + pct.toFixed(0) + '%</td>' +
                         '</tr>';
                     if (balStr) {
-                        html += '<tr><td colspan="5" class="text-xs text-slate-400 pl-8">' + balStr + '</td></tr>';
+                        html += '<tr><td colspan="' + addrColSpan + '" class="text-xs text-slate-400 pl-8">' + balStr + '</td></tr>';
                     }
                 });
                 html += '</tbody></table></details>';
