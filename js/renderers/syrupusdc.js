@@ -61,6 +61,8 @@ var SyrupUSDCRenderer = {
         html += this._renderYield(specific);
         html += this._renderLoanBookComposition(data);
         html += this._renderLoanBookHealth(specific);
+        html += this._renderBorrowerConcentration(specific);
+        html += this._renderPaymentLadder(specific);
         html += this._renderExitRealism(specific, s);
         html += this._renderMultiChain(specific);
         html += this._renderGovernance(specific);
@@ -70,6 +72,8 @@ var SyrupUSDCRenderer = {
 
         // Wire up sortable columns on the loans table (if rendered)
         this._attachLoanTableSort();
+        // Render the payment-ladder bar chart now that the canvas is in the DOM
+        this._renderPaymentLadderChart(specific);
     },
 
     // ---------- 1. Vault State ----------
@@ -294,6 +298,179 @@ var SyrupUSDCRenderer = {
                 });
                 rows.forEach(function(r) { tbody.appendChild(r); });
             });
+        });
+    },
+
+    // ---------- 4b. Borrower Concentration ----------
+    _renderBorrowerConcentration: function(specific) {
+        var lb = specific.loan_book;
+        if (!lb || !lb.concentration) return '';
+        var c = lb.concentration;
+
+        if (!c.borrowers || c.borrowers.length === 0) {
+            return '<div class="panel">' +
+                '<div class="panel-title">Borrower Concentration</div>' +
+                '<div class="text-slate-400 text-sm italic">No active loans — concentration not applicable.</div>' +
+            '</div>';
+        }
+
+        var bucketCls = c.hhi_bucket === 'unconcentrated' ? 'bg-green-100 text-green-800' :
+                        c.hhi_bucket === 'moderate' ? 'bg-amber-100 text-amber-800' :
+                        'bg-red-100 text-red-800';
+        var bucketLabel = (c.hhi_bucket || '').charAt(0).toUpperCase() + (c.hhi_bucket || '').slice(1);
+        var bucketBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ' + bucketCls + '">' + bucketLabel + '</span>';
+
+        // Top-N share bars
+        function bar(label, pct) {
+            var p = pct || 0;
+            return '<div class="mb-2">' +
+                '<div class="flex justify-between text-sm mb-1">' +
+                    '<span class="text-slate-600">' + label + '</span>' +
+                    '<span class="font-mono font-semibold">' + CommonRenderer.formatPercent(p, 1) + '</span>' +
+                '</div>' +
+                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + Math.min(p, 100) + '%; background:#6366f1"></div></div>' +
+            '</div>';
+        }
+
+        var bars = bar('Top 1', c.top_1_share_pct) +
+                   bar('Top 3', c.top_3_share_pct) +
+                   bar('Top 5', c.top_5_share_pct) +
+                   bar('Top 10', c.top_10_share_pct);
+
+        var rows = c.borrowers.map(function(b) {
+            return '<tr>' +
+                '<td><span class="font-mono text-xs" title="' + b.address + '">' + SyrupUSDCRenderer._truncAddr(b.address) + '</span> ' + SyrupUSDCRenderer._ethLink(b.address) + '</td>' +
+                '<td class="text-xs text-slate-500">' + (b.firm || '—') + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(b.principal_usd) + '</td>' +
+                '<td class="text-right font-mono">' + (b.loan_count || 0) + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatPercent(b.share_pct, 2) + '</td>' +
+            '</tr>';
+        }).join('');
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Borrower Concentration</div>' +
+            '<div class="flex items-center gap-3 mb-4">' +
+                '<span class="text-sm text-slate-700"><span class="font-semibold">' + (c.total_borrowers || 0) + '</span> borrowers · HHI <span class="font-mono font-semibold">' + (c.hhi || 0) + '</span></span>' +
+                bucketBadge +
+                '<span class="text-xs text-slate-400">FTC merger-review thresholds: &lt;1500 unconcentrated · 1500-2500 moderate · &gt;2500 concentrated</span>' +
+            '</div>' +
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">' +
+                '<div>' + bars + '</div>' +
+                '<div class="text-xs text-slate-500">' +
+                    '<p class="mb-2"><strong>HHI</strong> (Herfindahl-Hirschman Index) is the sum of squared market shares — a single dominant borrower with 100% gives HHI = 10,000; perfectly even distribution gives HHI close to 0.</p>' +
+                    '<p>Top-N shares show how much of the loan book is held by the largest 1, 3, 5, 10 borrowers — a fast read for diversification of credit risk.</p>' +
+                '</div>' +
+            '</div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                '<th>Borrower</th><th>Firm</th><th class="text-right">Principal</th><th class="text-right"># Loans</th><th class="text-right">Share</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '</div>';
+    },
+
+    // ---------- 4c. Payment-Due Ladder ----------
+    _renderPaymentLadder: function(specific) {
+        var lb = specific.loan_book;
+        if (!lb || !lb.payment_ladder) return '';
+        var pl = lb.payment_ladder;
+
+        if (!pl.buckets || pl.buckets.length === 0) {
+            return '<div class="panel">' +
+                '<div class="panel-title">Payment Ladder (next ' + (pl.horizon_days || 180) + ' days)</div>' +
+                '<div class="text-slate-400 text-sm italic">No active loans — no scheduled inflows.</div>' +
+            '</div>';
+        }
+
+        var t = pl.totals || {};
+        var overdueCount = pl.overdue_loan_count || 0;
+        var overduePrincipal = pl.overdue_principal_usd || 0;
+        var overdueCls = overdueCount > 0 ? 'risk-flag risk-warning' : 'text-xs text-slate-500';
+
+        function statBlock(label, val) {
+            return '<div class="summary-card"><div class="card-label">' + label + '</div><div class="card-value">' + CommonRenderer.formatCurrency(val || 0) + '</div></div>';
+        }
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Payment Ladder (next ' + (pl.horizon_days || 180) + ' days)</div>' +
+            '<p class="text-sm text-slate-500 mb-3">Expected interest-only inflows from active open-term loans, bucketed by next payment-due date. Principal repays only on a Pool-Delegate call (24h notice + 48h grace) and is not modelled here.</p>' +
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+                statBlock('30d', t.expected_inflow_30d_usd) +
+                statBlock('60d', t.expected_inflow_60d_usd) +
+                statBlock('90d', t.expected_inflow_90d_usd) +
+                statBlock('180d', t.expected_inflow_180d_usd) +
+            '</div>' +
+            '<div style="height: 220px; position: relative;"><canvas id="syrup-ladder-chart"></canvas></div>' +
+            (overdueCount > 0 ?
+                '<div class="' + overdueCls + ' mt-3"><strong>Overdue:</strong> ' + overdueCount + ' loan' + (overdueCount > 1 ? 's' : '') + ' · ' + CommonRenderer.formatCurrencyExact(overduePrincipal) + ' principal past payment-due date</div>' :
+                '<div class="text-xs text-slate-500 mt-3">Overdue: 0 loans · $0</div>') +
+            '<div class="text-xs text-slate-400 mt-2">Method: <span class="font-mono">' + (pl.method || 'rate_estimate') + '</span></div>' +
+        '</div>';
+    },
+
+    _renderPaymentLadderChart: function(specific) {
+        var ctx = document.getElementById('syrup-ladder-chart');
+        if (!ctx) return;
+        var pl = specific.loan_book && specific.loan_book.payment_ladder;
+        if (!pl || !pl.buckets || pl.buckets.length === 0) return;
+
+        var labels = pl.buckets.map(function(b) {
+            // Trim ISO date "2026-05-30" to "May 30"
+            var d = new Date(b.period_end_iso + 'T00:00:00Z');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+        });
+        var values = pl.buckets.map(function(b) { return b.expected_inflow_usd || 0; });
+        var loanCounts = pl.buckets.map(function(b) { return b.loan_count || 0; });
+        var total = values.reduce(function(a, b) { return a + b; }, 0);
+        // Amber bar if any single bucket holds >40% of horizon total — repayment-timing concentration.
+        var maxBucket = Math.max.apply(null, values);
+        var concentrated = total > 0 && (maxBucket / total) > 0.4;
+        var color = concentrated ? '#f59e0b' : '#22c55e';
+
+        if (window._syrupLadderChart) window._syrupLadderChart.destroy();
+        window._syrupLadderChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Expected interest inflow',
+                    data: values,
+                    backgroundColor: color,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                var n = loanCounts[ctx.dataIndex];
+                                return CommonRenderer.formatCurrency(ctx.raw) + ' · ' + n + ' loan' + (n === 1 ? '' : 's');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(val, idx) {
+                                return labels[idx] + ' (' + loanCounts[idx] + ')';
+                            }
+                        }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) { return '$' + (v / 1e6).toFixed(1) + 'M'; }
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
         });
     },
 
