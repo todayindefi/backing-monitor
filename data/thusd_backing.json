@@ -3,13 +3,13 @@
   "asset": "thUSD",
   "asset_slug": "thusd",
   "chain": "Ethereum",
-  "timestamp": "2026-04-30T07:38:19Z",
+  "timestamp": "2026-04-30T08:38:36Z",
   "summary": {
     "circulating_supply": 78269540.922807,
     "total_supply": 78269540.922807,
     "sthusd_supply": 1157851.592291,
     "staking_ratio": 0.014793,
-    "sthusd_share_price": 1.003477,
+    "sthusd_share_price": 1.003484,
     "total_backing": null,
     "collateral_ratio": null,
     "backing_provenance": "off_chain_undisclosed"
@@ -24,13 +24,13 @@
     {
       "label": "thUSD locked in OFT adapter (Eth)",
       "category": "lockbox",
-      "value": 68067781.841397
+      "value": 68001141.827775
     },
     {
       "label": "thUSD on Arbitrum (OFT mirror)",
       "category": "bridged",
-      "value": 3775307.190321,
-      "note": null
+      "value": null,
+      "note": "totalSupply revert handled \u2014 value may be unreliable"
     },
     {
       "label": "sthUSD on Ethereum",
@@ -72,13 +72,14 @@
           "errors": []
         },
         "arbitrum": {
-          "thusd_supply": 3775307.190321,
+          "thusd_supply": null,
           "thusd_decimals": 6,
-          "thusd_supply_unreliable": false,
+          "thusd_supply_unreliable": true,
           "sthusd_supply": null,
           "sthusd_decimals": 6,
           "errors": [
-            "totalSupply: HTTPError"
+            "totalSupply: ValueError",
+            "totalSupply: ValueError"
           ]
         },
         "stable": {
@@ -91,20 +92,20 @@
         }
       },
       "lockbox": {
-        "thusd_locked": 68067781.841397,
+        "thusd_locked": 68001141.827775,
         "sthusd_locked": 0.5
       },
       "conservation": {
         "thusd": {
           "per_chain": {
-            "arbitrum": 3775307.190321,
+            "arbitrum": null,
             "stable": 64292474.651076
           },
-          "dest_chain_supply_sum": 68067781.841397,
-          "eth_lockbox": 68067781.841397,
-          "delta": 0.0,
-          "delta_pct": 0.0,
-          "verified": true
+          "readable_supply_sum": 64292474.651076,
+          "eth_lockbox": 68001141.827775,
+          "implied_unread_dest_chains": 3708667.176699005,
+          "verified": "partial",
+          "reason": "unreadable_chains: arbitrum"
         },
         "sthusd": {
           "per_chain": {
@@ -122,41 +123,50 @@
     },
     "tier2_peg_nav": {
       "sthusd_nav": {
-        "share_price": 1.003477,
-        "share_price_implied_from_assets": 1.0034778525510617,
-        "total_assets_thusd": 1161878.429405,
+        "share_price": 1.003484,
+        "share_price_implied_from_assets": 1.003484038334324,
+        "total_assets_thusd": 1161885.591624,
         "total_supply_sthusd": 1157851.592291,
-        "previous_share_price": 1.003471,
-        "previous_timestamp": "2026-04-30T06:38:34Z",
+        "previous_share_price": 1.003477,
+        "previous_timestamp": "2026-04-30T07:38:42Z",
         "regression": false,
-        "regression_bp": 0.0598,
+        "regression_bp": 0.0698,
         "error": null
       },
       "arb_dex_peg": {
         "canonical_token": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
         "anchor_note": "Phase-0 anchor of $1.00. Replace with NAV oracle if Theo discloses one.",
-        "weighted_price_usd": 0.9971021852250783,
-        "discount_bp_vs_one_dollar": 28.98,
+        "weighted_price_usd": 0.9958908509424289,
+        "discount_bp_vs_one_dollar": 41.09,
         "alert_threshold_bp": 75.0,
-        "total_tvl_usd": 13538.7638,
-        "total_volume_h24_usd": 10048.171499345299,
-        "pool_count": 9,
+        "total_tvl_usd": 18817.0679,
+        "total_volume_h24_usd": 12145.6597943797,
+        "pool_count": 10,
         "pools": [
           {
             "pool_address": "0xc128a61784efdbe61bddd815ac6b7648c32ec2cf",
             "dex_id": "uniswap_v3_arbitrum",
             "pair": "thUSD/USDC",
-            "thusd_price_usd": 0.9971255633,
-            "tvl_usd": 12992.4581,
-            "volume_h24_usd": 8344.8710358665,
-            "price_change_h24_pct": -0.01
+            "thusd_price_usd": 0.9959679896,
+            "tvl_usd": 12988.711,
+            "volume_h24_usd": 11616.7394630617,
+            "price_change_h24_pct": -0.16
+          },
+          {
+            "pool_address": "0xcf302ddfd536a7022dd95e5550e4e3a6ef64ce4dd7bed67c44f2f52492978757",
+            "dex_id": "uniswap-v4-arbitrum",
+            "pair": "thUSD/USDC",
+            "thusd_price_usd": 0.9956330109,
+            "tvl_usd": 5281.0256,
+            "volume_h24_usd": 400.8071135526,
+            "price_change_h24_pct": 0.0
           },
           {
             "pool_address": "0x19e4583af7f0a0e43ae9df4fd8dc2794960106853e7a037aa266084cc12c68ab",
             "dex_id": "uniswap-v4-arbitrum",
             "pair": "thUSD/USDC",
             "thusd_price_usd": 0.9977045823,
-            "tvl_usd": 327.1502,
+            "tvl_usd": 327.9334,
             "volume_h24_usd": 0,
             "price_change_h24_pct": 0.0
           },
@@ -165,7 +175,7 @@
             "dex_id": "uniswap-v4-arbitrum",
             "pair": "thUSD/USDC",
             "thusd_price_usd": 0.997238589,
-            "tvl_usd": 82.6319,
+            "tvl_usd": 82.8297,
             "volume_h24_usd": 0,
             "price_change_h24_pct": 0.0
           },
@@ -192,7 +202,7 @@
             "dex_id": "uniswap-v4-arbitrum",
             "pair": "thUSD/USDC",
             "thusd_price_usd": 0.9957399156,
-            "tvl_usd": 11.4829,
+            "tvl_usd": 11.5104,
             "volume_h24_usd": 0,
             "price_change_h24_pct": 0.0
           },
@@ -210,7 +220,7 @@
             "dex_id": "uniswap-v4-arbitrum",
             "pair": "thUSD/USDC",
             "thusd_price_usd": 0.9972926433,
-            "tvl_usd": 4.2779,
+            "tvl_usd": 4.2912,
             "volume_h24_usd": 0,
             "price_change_h24_pct": 0.0
           },
@@ -219,9 +229,9 @@
             "dex_id": "uniswap-v4-arbitrum",
             "pair": "thUSD/USDC",
             "thusd_price_usd": 0.9975698554,
-            "tvl_usd": 1.5761,
-            "volume_h24_usd": 1703.3004634788,
-            "price_change_h24_pct": 0.04
+            "tvl_usd": 1.5799,
+            "volume_h24_usd": 128.1132177654,
+            "price_change_h24_pct": 0.01
           }
         ]
       }
@@ -250,20 +260,20 @@
     "events_scan_summary": {
       "chains_scanned": {
         "Ethereum Mainnet": {
-          "head": 24991478,
-          "from_block": 24991180,
+          "head": 24991779,
+          "from_block": 24991479,
           "logs_found": 0,
           "baseline_run": false
         },
         "Arbitrum Mainnet": {
-          "head": 457850293,
-          "from_block": 457835884,
+          "head": 457864732,
+          "from_block": 457850294,
           "logs_found": 0,
           "baseline_run": false
         },
         "Stable Mainnet": {
-          "head": 22482334,
-          "from_block": 22477097,
+          "head": 22487445,
+          "from_block": 22482335,
           "logs_found": 0,
           "baseline_run": false
         }
@@ -486,11 +496,11 @@
         },
         "windows": {
           "h24": {
-            "mints_count": 10,
+            "mints_count": 8,
             "burns_count": 0,
-            "mints_volume": 113914.628404,
+            "mints_volume": 107687.062575,
             "burns_volume": 0,
-            "net_flow": 113914.628404,
+            "net_flow": 107687.062575,
             "largest_burn": null,
             "largest_mint": {
               "kind": "mint",
