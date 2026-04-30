@@ -12,6 +12,19 @@
  *   8. Stress Anchor (text panel)
  */
 
+// Static metadata shared by the Collateral Mix panel and the loan-table column renderer.
+var SYRUP_COLLATERAL_META = {
+    BTC:   { category: 'crypto',     issuer: '—',           color: '#f59e0b' },
+    cbBTC: { category: 'crypto',     issuer: 'Coinbase',    color: '#f59e0b' },
+    ETH:   { category: 'crypto',     issuer: '—',           color: '#6366f1' },
+    XRP:   { category: 'crypto',     issuer: '—',           color: '#0ea5e9' },
+    HYPE:  { category: 'crypto',     issuer: '—',           color: '#06b6d4' },
+    USDC:  { category: 'stablecoin', issuer: 'Circle',      color: '#3b82f6' },
+    USDT:  { category: 'stablecoin', issuer: 'Tether',      color: '#10b981' },
+    PYUSD: { category: 'stablecoin', issuer: 'Paxos',       color: '#a855f7' },
+    USTB:  { category: 'rwa',        issuer: 'Superstate',  color: '#ec4899' }
+};
+
 var SyrupUSDCRenderer = {
 
     // Analyzer emits deployment_ratio_pct, not free_liquidity_pct — derive it.
@@ -63,6 +76,7 @@ var SyrupUSDCRenderer = {
         html += this._renderLoanBookHealth(specific);
         html += this._renderBorrowerConcentration(specific);
         html += this._renderPaymentLadder(specific);
+        html += this._renderCollateralMix(specific);
         html += this._renderExitRealism(specific, s);
         html += this._renderMultiChain(specific);
         html += this._renderGovernance(specific);
@@ -214,16 +228,28 @@ var SyrupUSDCRenderer = {
         // Loans table
         var loans = lb.loans || [];
         if (loans.length > 0) {
+            var summary = lb.collateral_summary;
+            var hasCollateral = !!(summary && summary.data_source && summary.data_source !== 'unavailable')
+                || loans.some(function(l) { return l && l.collateral; });
             var loansSorted = loans.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).slice(0, 10);
-            var rows = loansSorted.map(SyrupUSDCRenderer._renderLoanRow).join('');
+            var rows = loansSorted.map(function(l) { return SyrupUSDCRenderer._renderLoanRow(l, hasCollateral); }).join('');
+
+            var collateralHeaders = hasCollateral ?
+                ('<th class="cursor-pointer" data-sort="collat">Collat</th>' +
+                 '<th class="text-right cursor-pointer" data-sort="collat_amount">Amount</th>' +
+                 '<th class="text-right cursor-pointer" data-sort="collat_usd">Collat USD</th>' +
+                 '<th class="text-right cursor-pointer" data-sort="level">Level</th>' +
+                 '<th class="text-right cursor-pointer" data-sort="init">Init</th>') : '';
+
             html += '<div class="overflow-x-auto"><table class="data-table" id="syrup-loans-table"><thead><tr>' +
-                '<th data-sort="borrower">Borrower</th>' +
+                '<th class="cursor-pointer" data-sort="borrower">Borrower</th>' +
                 '<th class="text-right cursor-pointer" data-sort="principal">Principal ▾</th>' +
+                collateralHeaders +
                 '<th class="text-right cursor-pointer" data-sort="rate">Rate</th>' +
                 '<th class="cursor-pointer" data-sort="funded">Funded</th>' +
                 '<th class="cursor-pointer" data-sort="due">Next Pmt</th>' +
                 '<th class="text-right cursor-pointer" data-sort="days">Days</th>' +
-                '<th data-sort="status">Status</th>' +
+                '<th class="cursor-pointer" data-sort="status">Status</th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table></div>';
         }
 
@@ -231,7 +257,7 @@ var SyrupUSDCRenderer = {
         return html;
     },
 
-    _renderLoanRow: function(loan) {
+    _renderLoanRow: function(loan, hasCollateral) {
         var addr = loan.borrower || '';
         var firmTag = loan.firm ? '<span class="text-xs text-slate-500 ml-1">' + loan.firm + '</span>' : '';
         var borrowerCell = '<span class="font-mono text-xs" title="' + addr + '">' + SyrupUSDCRenderer._truncAddr(addr) + '</span>' +
@@ -239,6 +265,7 @@ var SyrupUSDCRenderer = {
 
         // Days to due
         var days = null;
+        var dueTs = null;
         var dueText = '-';
         if (loan.payment_due_date) {
             var due = typeof loan.payment_due_date === 'number' ?
@@ -246,15 +273,20 @@ var SyrupUSDCRenderer = {
                 new Date(loan.payment_due_date.endsWith && loan.payment_due_date.endsWith('Z') ? loan.payment_due_date : loan.payment_due_date + 'Z');
             if (!isNaN(due.getTime())) {
                 days = Math.floor((due.getTime() - Date.now()) / 86400000);
+                dueTs = due.getTime();
                 dueText = due.toISOString().slice(0, 10);
             }
         }
+        var fundedTs = null;
         var fundedText = '-';
         if (loan.date_funded) {
             var fd = typeof loan.date_funded === 'number' ?
                 new Date(loan.date_funded * 1000) :
                 new Date(loan.date_funded.endsWith && loan.date_funded.endsWith('Z') ? loan.date_funded : loan.date_funded + 'Z');
-            if (!isNaN(fd.getTime())) fundedText = fd.toISOString().slice(0, 10);
+            if (!isNaN(fd.getTime())) {
+                fundedTs = fd.getTime();
+                fundedText = fd.toISOString().slice(0, 10);
+            }
         }
         var daysText = days === null ? '-' : (days + 'd');
         var daysCls = days === null ? '' : (days < 0 ? 'text-red-600 font-semibold' : days < 30 ? 'text-amber-600' : '');
@@ -262,9 +294,69 @@ var SyrupUSDCRenderer = {
         var status = loan.status || '';
         var statusCell = SyrupUSDCRenderer._statusEmoji(status) + ' <span class="' + SyrupUSDCRenderer._statusFlagClass(status) + '">' + status + '</span>';
 
-        return '<tr data-principal="' + (loan.principal || 0) + '" data-rate="' + (loan.rate_pct || 0) + '" data-days="' + (days === null ? '' : days) + '" data-status="' + status + '">' +
+        // Collateral cells (only emitted when the table includes the collateral columns)
+        var collateralCells = '';
+        var sortAttrs = {
+            principal: loan.principal || 0,
+            rate: loan.rate_pct || 0,
+            days: days === null ? '' : days,
+            funded: fundedTs === null ? '' : fundedTs,
+            due: dueTs === null ? '' : dueTs,
+            status: status,
+            borrower: addr
+        };
+        if (hasCollateral) {
+            var c = loan.collateral || {};
+            var asset = c.asset || null;
+            var assetCell = asset ?
+                ('<span class="font-mono text-xs">' + asset + '</span>' +
+                 (SYRUP_COLLATERAL_META[asset] && SYRUP_COLLATERAL_META[asset].issuer && SYRUP_COLLATERAL_META[asset].issuer !== '—' ?
+                    ' <span class="text-xs text-slate-400">(' + SYRUP_COLLATERAL_META[asset].issuer + ')</span>' : '')) :
+                '<span class="text-slate-400">—</span>';
+            var amount = c.amount;
+            var amountText = (amount === null || amount === undefined) ? '<span class="text-slate-400">—</span>' :
+                (Math.abs(amount) >= 1e6 ? (amount / 1e6).toFixed(2) + 'M' :
+                 Math.abs(amount) >= 1e3 ? (amount / 1e3).toFixed(2) + 'K' :
+                 amount.toFixed(amount < 1 ? 4 : 2)) + (asset ? ' ' + asset : '');
+            var collatUsd = c.usd;
+            var collatUsdText = (collatUsd === null || collatUsd === undefined) ? '<span class="text-slate-400">—</span>' :
+                CommonRenderer.formatCurrency(collatUsd);
+            var level = c.current_level_pct;
+            // Color: red <100, amber 100-110, slate-700 110-150, green >=150
+            var levelCls = '';
+            if (level !== null && level !== undefined) {
+                if (level < 100) levelCls = 'text-red-600 font-semibold';
+                else if (level < 110) levelCls = 'text-amber-600 font-semibold';
+                else if (level >= 150) levelCls = 'text-green-600';
+            }
+            var levelText = (level === null || level === undefined) ? '<span class="text-slate-400">—</span>' :
+                CommonRenderer.formatPercent(level, 1);
+            var initLevel = c.init_level_pct;
+            var initText = (initLevel === null || initLevel === undefined) ? '<span class="text-slate-400">—</span>' :
+                CommonRenderer.formatPercent(initLevel, 1);
+
+            collateralCells =
+                '<td>' + assetCell + '</td>' +
+                '<td class="text-right font-mono text-sm">' + amountText + '</td>' +
+                '<td class="text-right font-mono">' + collatUsdText + '</td>' +
+                '<td class="text-right font-mono ' + levelCls + '">' + levelText + '</td>' +
+                '<td class="text-right font-mono text-slate-500">' + initText + '</td>';
+
+            sortAttrs.collat = asset || '';
+            sortAttrs.collat_amount = amount === null || amount === undefined ? '' : amount;
+            sortAttrs.collat_usd = collatUsd === null || collatUsd === undefined ? '' : collatUsd;
+            sortAttrs.level = level === null || level === undefined ? '' : level;
+            sortAttrs.init = initLevel === null || initLevel === undefined ? '' : initLevel;
+        }
+
+        var dataAttrs = Object.keys(sortAttrs).map(function(k) {
+            return 'data-' + k.replace(/_/g, '-') + '="' + String(sortAttrs[k]).replace(/"/g, '&quot;') + '"';
+        }).join(' ');
+
+        return '<tr ' + dataAttrs + '>' +
             '<td>' + borrowerCell + '</td>' +
             '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(loan.principal || 0) + '</td>' +
+            collateralCells +
             '<td class="text-right font-mono">' + (loan.rate_pct !== null && loan.rate_pct !== undefined ? CommonRenderer.formatPercent(loan.rate_pct, 2) : '-') + '</td>' +
             '<td class="text-xs">' + fundedText + '</td>' +
             '<td class="text-xs">' + dueText + '</td>' +
@@ -277,24 +369,33 @@ var SyrupUSDCRenderer = {
         var table = document.getElementById('syrup-loans-table');
         if (!table) return;
         var headers = table.querySelectorAll('th[data-sort]');
+        // String-typed keys sort lexicographically; everything else (incl. timestamps) numeric.
+        var STRING_KEYS = { borrower: 1, status: 1, collat: 1 };
         headers.forEach(function(th) {
             th.addEventListener('click', function() {
                 var key = th.getAttribute('data-sort');
+                var attr = 'data-' + key.replace(/_/g, '-');
                 var tbody = table.querySelector('tbody');
                 var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
                 var dir = th.getAttribute('data-dir') === 'asc' ? 'desc' : 'asc';
                 headers.forEach(function(h) { h.removeAttribute('data-dir'); });
                 th.setAttribute('data-dir', dir);
                 rows.sort(function(a, b) {
-                    var av, bv;
-                    if (key === 'borrower' || key === 'status' || key === 'funded' || key === 'due') {
-                        av = a.querySelector('td:nth-child(' + ({borrower:1, principal:2, rate:3, funded:4, due:5, days:6, status:7}[key]) + ')').textContent.trim();
-                        bv = b.querySelector('td:nth-child(' + ({borrower:1, principal:2, rate:3, funded:4, due:5, days:6, status:7}[key]) + ')').textContent.trim();
+                    var av = a.getAttribute(attr) || '';
+                    var bv = b.getAttribute(attr) || '';
+                    if (STRING_KEYS[key]) {
                         return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
                     }
-                    av = parseFloat(a.getAttribute('data-' + key)) || 0;
-                    bv = parseFloat(b.getAttribute('data-' + key)) || 0;
-                    return dir === 'asc' ? av - bv : bv - av;
+                    // Empty values sink to the bottom regardless of direction (so '—' rows
+                    // don't pollute the top when sorting by Level on partial data).
+                    var aEmpty = av === '';
+                    var bEmpty = bv === '';
+                    if (aEmpty && bEmpty) return 0;
+                    if (aEmpty) return 1;
+                    if (bEmpty) return -1;
+                    var an = parseFloat(av);
+                    var bn = parseFloat(bv);
+                    return dir === 'asc' ? an - bn : bn - an;
                 });
                 rows.forEach(function(r) { tbody.appendChild(r); });
             });
@@ -472,6 +573,102 @@ var SyrupUSDCRenderer = {
                 }
             }
         });
+    },
+
+    // ---------- 4d. Collateral Mix ----------
+    _renderCollateralMix: function(specific) {
+        var lb = specific.loan_book;
+        if (!lb || !lb.collateral_summary) return '';
+        var cs = lb.collateral_summary;
+
+        // Degraded state — Maple GraphQL unreachable.
+        if (cs.data_source === 'unavailable') {
+            return '<div class="panel">' +
+                '<div class="panel-title">Collateral Mix</div>' +
+                '<div class="risk-flag risk-info">Collateral data temporarily unavailable from Maple API. Loan-level credit and timing fields above are unaffected.</div>' +
+            '</div>';
+        }
+
+        var setA = cs.set_a_overcollateralized || {};
+        var setB = cs.set_b_at_par || {};
+        var byAsset = cs.by_asset || [];
+
+        // Header line: pool-level cross-check from Maple GraphQL.
+        var poolLine = '';
+        if (cs.pool_collateral_value_usd != null && cs.pool_collateral_ratio_pct != null) {
+            poolLine = '<p class="text-sm text-slate-700 mb-3">Pool collateralization: <span class="font-mono font-semibold">' + CommonRenderer.formatPercent(cs.pool_collateral_ratio_pct, 1) + '</span> · <span class="font-mono">' + CommonRenderer.formatCurrency(cs.pool_collateral_value_usd) + '</span> collateral against active loan book. <span class="text-xs text-slate-400">(Maple GraphQL)</span></p>';
+        }
+
+        function bar(row, color) {
+            var pct = row.pct_of_book || 0;
+            var meta = SYRUP_COLLATERAL_META[row.asset] || {};
+            var issuerTag = meta.issuer && meta.issuer !== '—' ?
+                ' <span class="text-xs text-slate-500">' + meta.issuer + '</span>' : '';
+            var levelRange;
+            if (row.init_level_pct_min === row.init_level_pct_max) {
+                levelRange = CommonRenderer.formatPercent(row.init_level_pct_min, 0);
+            } else {
+                levelRange = CommonRenderer.formatPercent(row.init_level_pct_min, 0) + '–' + CommonRenderer.formatPercent(row.init_level_pct_max, 0);
+            }
+            return '<div class="mb-2">' +
+                '<div class="flex justify-between text-sm mb-1">' +
+                    '<span class="text-slate-700"><span class="font-mono font-semibold">' + row.asset + '</span>' + issuerTag + ' <span class="text-xs text-slate-400">' + (row.loans || 0) + ' loan' + (row.loans === 1 ? '' : 's') + ' · init ' + levelRange + '</span></span>' +
+                    '<span class="font-mono font-semibold">' + CommonRenderer.formatPercent(pct, 1) + ' · ' + CommonRenderer.formatCurrency(row.principal_usd) + '</span>' +
+                '</div>' +
+                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + Math.min(pct, 100) + '%; background:' + color + '"></div></div>' +
+            '</div>';
+        }
+
+        // Partition by_asset rows into Set A (overcoll, init > 105) and Set B (at-par, init ≤ 105)
+        var setARows = byAsset.filter(function(r) { return (r.init_level_pct_max || 0) > 105; });
+        var setBRows = byAsset.filter(function(r) { return (r.init_level_pct_max || 0) <= 105; });
+
+        var setAHtml = '<div>' +
+            '<div class="text-sm font-semibold text-slate-700 mb-2">' +
+                'Set A — crypto-overcollateralized · ' + CommonRenderer.formatPercent(setA.pct_of_book || 0, 1) +
+                ' <span class="text-xs text-slate-500 font-normal">' + CommonRenderer.formatCurrency(setA.principal_usd || 0) +
+                (setA.weighted_avg_init_level_pct ? ' · weighted init ' + CommonRenderer.formatPercent(setA.weighted_avg_init_level_pct, 1) : '') +
+                '</span>' +
+            '</div>' +
+            (setARows.length ? setARows.map(function(r) { return bar(r, '#22c55e'); }).join('') :
+                '<div class="text-xs text-slate-400 italic">No over-collateralized loans in current book.</div>') +
+        '</div>';
+
+        var setBWarning = '';
+        if (setB.principal_usd > 0) {
+            var largestPct = setB.principal_usd ? (setB.largest_position_usd / setA.principal_usd + setB.principal_usd * 0) : 0;
+            // largest_position_pct: % of total book (set_a + set_b). Compute defensively.
+            var totalPrincipal = (setA.principal_usd || 0) + (setB.principal_usd || 0);
+            var largestPctOfBook = totalPrincipal > 0 ? (setB.largest_position_usd / totalPrincipal * 100) : 0;
+            setBWarning =
+                '<div class="risk-flag risk-warning mt-3"><strong>Set B is collateralized at par.</strong> Stress binds on collateral-asset peg/issuer events, not crypto-cycle drawdowns.' +
+                (setB.largest_position_usd ?
+                    ' Largest single position: <span class="font-mono">' + CommonRenderer.formatCurrency(setB.largest_position_usd) + '</span> in <span class="font-mono">' + (setB.largest_position_asset || '?') + '</span> (' + CommonRenderer.formatPercent(largestPctOfBook, 1) + ' of book).' : '') +
+                '</div>';
+        }
+        var issuerLine = setB.named_issuers && setB.named_issuers.length ?
+            '<div class="text-xs text-slate-500 mt-2">Named issuers: ' + setB.named_issuers.join(' · ') + '</div>' : '';
+
+        var setBHtml = '<div>' +
+            '<div class="text-sm font-semibold text-slate-700 mb-2">' +
+                'Set B — at-par stablecoin / RWA · ' + CommonRenderer.formatPercent(setB.pct_of_book || 0, 1) +
+                ' <span class="text-xs text-slate-500 font-normal">' + CommonRenderer.formatCurrency(setB.principal_usd || 0) + '</span>' +
+            '</div>' +
+            (setBRows.length ? setBRows.map(function(r) { return bar(r, '#f59e0b'); }).join('') :
+                '<div class="text-xs text-slate-400 italic">No at-par loans in current book.</div>') +
+            issuerLine +
+        '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Collateral Mix</div>' +
+            poolLine +
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' +
+                setAHtml +
+                setBHtml +
+            '</div>' +
+            setBWarning +
+            '<div class="text-xs text-slate-400 mt-3">Source: Maple GraphQL · USD values computed from on-chain Chainlink feeds. <code class="font-mono">init_level_pct ≤ 105%</code> classifies as Set B.</div>' +
+        '</div>';
     },
 
     // ---------- 5. Exit Realism ----------
