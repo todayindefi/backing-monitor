@@ -36,19 +36,44 @@ const CommonRenderer = {
         var s = data.summary;
         var displaySupply = s.circulating_supply || s.tvl_ex_pol || s.total_supply;
         var supplyLabel = (s.circulating_supply || s.tvl_ex_pol) ? 'Circulating Supply' : 'Total Supply';
+        // Vault-share assets (1 unit ≠ $1) opt out of dollar formatting via summary.supply_unit.
+        var supplyValue;
+        if (s.supply_unit === 'shares') {
+            supplyValue = (displaySupply || 0).toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' shares';
+        } else {
+            supplyValue = this.formatCurrencyExact(displaySupply);
+        }
+
         var cards = [
-            { label: supplyLabel, value: this.formatCurrencyExact(displaySupply) },
+            { label: supplyLabel, value: supplyValue },
             { label: 'Total Backing', value: this.formatCurrencyExact(s.total_backing) },
             { label: 'Collateral Ratio', value: this.formatPercent(s.collateral_ratio), cls: s.collateral_ratio >= 100 ? 'positive' : 'negative' },
             { label: s.collateral_ratio_alt.label, value: s.collateral_ratio_alt.is_currency ? this.formatCurrency(s.collateral_ratio_alt.value) : this.formatPercent(s.collateral_ratio_alt.value), cls: s.collateral_ratio_alt.is_currency ? '' : (s.collateral_ratio_alt.value >= 100 ? 'positive' : 'warning') },
             { label: 'Surplus / Deficit', value: this.formatCurrencyExact(s.surplus_deficit), cls: s.surplus_deficit >= 0 ? 'positive' : 'negative' },
         ];
 
+        // Asset-specific renderers can prepend extra cards (e.g. NAV for vault shares).
+        var spec = data.asset_specific || {};
+        if (Array.isArray(spec.extra_summary_cards)) {
+            cards = spec.extra_summary_cards.concat(cards);
+        }
+        // Asset-specific renderers can override individual cards by label
+        // (e.g. relabel "Collateral Ratio" → "Pool Coverage Ratio" + add subtext).
+        var overrides = spec.card_overrides;
+        if (overrides && typeof overrides === 'object') {
+            cards = cards.map(function(c) {
+                var ov = overrides[c.label];
+                if (!ov) return c;
+                return Object.assign({}, c, ov);
+            });
+        }
+
         var container = document.getElementById('summary-cards');
         container.innerHTML = cards.map(function(c) {
             return '<div class="summary-card">' +
                 '<div class="card-label">' + c.label + '</div>' +
                 '<div class="card-value ' + (c.cls || '') + '">' + c.value + '</div>' +
+                (c.subtext ? '<div class="text-xs text-slate-400 mt-1">' + c.subtext + '</div>' : '') +
                 '</div>';
         }).join('');
     },
