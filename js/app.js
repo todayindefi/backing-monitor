@@ -7,10 +7,11 @@ var REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
 // Asset-specific renderers registry
 var ASSET_RENDERERS = {
-    ousd: typeof OUSDRenderer !== 'undefined' ? OUSDRenderer : null,
-    frax: typeof FRAXRenderer !== 'undefined' ? FRAXRenderer : null,
-    crvusd: typeof CrvUSDRenderer !== 'undefined' ? CrvUSDRenderer : null,
-    usdd: typeof USDDRenderer !== 'undefined' ? USDDRenderer : null
+    ousd:      typeof OUSDRenderer      !== 'undefined' ? OUSDRenderer      : null,
+    frax:      typeof FRAXRenderer      !== 'undefined' ? FRAXRenderer      : null,
+    crvusd:    typeof CrvUSDRenderer    !== 'undefined' ? CrvUSDRenderer    : null,
+    usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
+    syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null
 };
 
 function getAssetSlug() {
@@ -101,7 +102,46 @@ async function renderAsset(slug) {
         // Common sections
         CommonRenderer.renderSummaryCards(data);
         CommonRenderer.renderRiskFlags(data);
-        CommonRenderer.renderCRChart(history);
+        var chartOpts = {};
+        if (data.asset_specific) {
+            var rawBands = data.asset_specific.chart_bands;
+            if (rawBands) {
+                // Two accepted shapes:
+                //   verbose: {critical:[0,99], thin:[99,99.8], amber:[99.8,100], healthy:[100,101], min_line:99.8, max_line:100}
+                //   short:   {pcr:[a,b,c,d]} or {thresholds:[a,b,c,d]}  → 4 ascending breakpoints
+                var short = rawBands.pcr || rawBands.thresholds;
+                if (Array.isArray(short) && short.length === 4) {
+                    var a = short[0], b = short[1], c = short[2], d = short[3];
+                    chartOpts.bands = {
+                        critical: [0, a],
+                        thin: [a, b],
+                        amber: [b, c],
+                        healthy: [c, d],
+                        min_line: b,
+                        max_line: c
+                    };
+                    if (chartOpts.y_min === undefined) chartOpts.y_min = a;
+                    if (chartOpts.y_max === undefined) chartOpts.y_max = d;
+                    // The `pcr` key is the implicit signal for Pool Coverage Ratio framing.
+                    if (rawBands.pcr) {
+                        chartOpts.title = chartOpts.title || 'Pool Coverage Ratio — 30d';
+                        chartOpts.dataset_label = chartOpts.dataset_label || 'PCR';
+                    }
+                } else {
+                    chartOpts.bands = rawBands;
+                }
+            }
+            if (data.asset_specific.chart_title) chartOpts.title = data.asset_specific.chart_title;
+            if (data.asset_specific.chart_dataset_label) chartOpts.dataset_label = data.asset_specific.chart_dataset_label;
+            if (data.asset_specific.chart_y_min !== undefined) chartOpts.y_min = data.asset_specific.chart_y_min;
+            if (data.asset_specific.chart_y_max !== undefined) chartOpts.y_max = data.asset_specific.chart_y_max;
+        }
+        // The alt CR is a USD value (e.g. Free Liquidity), not a percentage —
+        // don't plot it on a % axis.
+        if (data.summary && data.summary.collateral_ratio_alt && data.summary.collateral_ratio_alt.is_currency) {
+            chartOpts.omit_alt = true;
+        }
+        CommonRenderer.renderCRChart(history, chartOpts);
 
         // Breakdown table + pie: skip for crvUSD (handled in asset-specific renderer)
         var assetType = data.asset_specific && data.asset_specific.type;

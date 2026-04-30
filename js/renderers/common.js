@@ -40,7 +40,7 @@ const CommonRenderer = {
             { label: supplyLabel, value: this.formatCurrencyExact(displaySupply) },
             { label: 'Total Backing', value: this.formatCurrencyExact(s.total_backing) },
             { label: 'Collateral Ratio', value: this.formatPercent(s.collateral_ratio), cls: s.collateral_ratio >= 100 ? 'positive' : 'negative' },
-            { label: s.collateral_ratio_alt.label, value: s.collateral_ratio_alt.is_currency ? '$' + s.collateral_ratio_alt.value.toFixed(1) + 'M' : this.formatPercent(s.collateral_ratio_alt.value), cls: s.collateral_ratio_alt.is_currency ? '' : (s.collateral_ratio_alt.value >= 100 ? 'positive' : 'warning') },
+            { label: s.collateral_ratio_alt.label, value: s.collateral_ratio_alt.is_currency ? this.formatCurrency(s.collateral_ratio_alt.value) : this.formatPercent(s.collateral_ratio_alt.value), cls: s.collateral_ratio_alt.is_currency ? '' : (s.collateral_ratio_alt.value >= 100 ? 'positive' : 'warning') },
             { label: 'Surplus / Deficit', value: this.formatCurrencyExact(s.surplus_deficit), cls: s.surplus_deficit >= 0 ? 'positive' : 'negative' },
         ];
 
@@ -140,13 +140,28 @@ const CommonRenderer = {
     },
 
     // ------ CR trend chart ------
-    renderCRChart(historyData) {
+    renderCRChart(historyData, opts) {
         var ctx = document.getElementById('cr-chart');
         if (!ctx || !historyData || !historyData.entries || historyData.entries.length < 2) {
             document.getElementById('chart-panel').style.display = 'none';
             return;
         }
         document.getElementById('chart-panel').style.display = '';
+
+        opts = opts || {};
+        var bands = opts.bands || {
+            critical: [0, 100], thin: [100, 110], amber: [110, 130], healthy: [130, 200],
+            min_line: 100, max_line: 130
+        };
+        var title = opts.title || 'Collateral Ratio History';
+        var datasetLabel = opts.dataset_label || 'CR';
+        var altDatasetLabel = opts.alt_dataset_label || 'CR (gross)';
+        // suggestedMin/Max default keeps the original 80-150 range; tight ratios (PCR) want to override
+        var yMin = opts.y_min !== undefined ? opts.y_min : 80;
+        var yMax = opts.y_max !== undefined ? opts.y_max : 150;
+        // Update panel title if overridden
+        var titleEl = document.querySelector('#chart-panel .panel-title');
+        if (titleEl) titleEl.textContent = title;
 
         // Min/max CR stats
         var crValues = historyData.entries.map(function(e) { return e.collateral_ratio; }).filter(function(v) { return v !== null && v !== undefined; });
@@ -173,34 +188,50 @@ const CommonRenderer = {
         var crData = entries.map(function(e) { return e.collateral_ratio; });
         var crAltData = entries.map(function(e) { return e.collateral_ratio_alt; });
 
+        // Drop the second series if explicitly suppressed, or if every value is null/undefined.
+        var altHasData = !opts.omit_alt && crAltData.some(function(v) { return v !== null && v !== undefined; });
+        var datasets = [{
+            label: datasetLabel,
+            data: crData,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2
+        }];
+        if (altHasData) {
+            datasets.push({
+                label: altDatasetLabel,
+                data: crAltData,
+                borderColor: '#f59e0b',
+                backgroundColor: 'transparent',
+                borderDash: [5, 3],
+                tension: 0.3,
+                pointRadius: 0,
+                borderWidth: 2
+            });
+        }
+
+        var minLine = bands.min_line;
+        var maxLine = bands.max_line;
+        var annotations = {
+            critical: { type: 'box', yMin: bands.critical[0], yMax: bands.critical[1], backgroundColor: 'rgba(220, 38, 38, 0.08)', borderWidth: 0, label: { content: 'Critical', display: true, position: 'start', font: { size: 9 }, color: '#dc2626' } },
+            thin: { type: 'box', yMin: bands.thin[0], yMax: bands.thin[1], backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+            amber: { type: 'box', yMin: bands.amber[0], yMax: bands.amber[1], backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+            healthy: { type: 'box', yMin: bands.healthy[0], yMax: bands.healthy[1], backgroundColor: 'rgba(22, 163, 74, 0.04)', borderWidth: 0 }
+        };
+        if (minLine !== undefined && minLine !== null) {
+            annotations.minLine = { type: 'line', yMin: minLine, yMax: minLine, borderColor: '#dc2626', borderWidth: 1, borderDash: [4, 4], label: { content: minLine + '%', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } };
+        }
+        if (maxLine !== undefined && maxLine !== null) {
+            annotations.maxLine = { type: 'line', yMin: maxLine, yMax: maxLine, borderColor: '#16a34a', borderWidth: 1, borderDash: [4, 4], label: { content: maxLine + '%', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } };
+        }
+
         if (window._crChart) window._crChart.destroy();
         window._crChart = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: labels,
-                datasets: [
-                    {
-                        label: 'CR',
-                        data: crData,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 0,
-                        borderWidth: 2
-                    },
-                    {
-                        label: 'CR (gross)',
-                        data: crAltData,
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'transparent',
-                        borderDash: [5, 3],
-                        tension: 0.3,
-                        pointRadius: 0,
-                        borderWidth: 2
-                    }
-                ]
-            },
+            data: { labels: labels, datasets: datasets },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -213,8 +244,8 @@ const CommonRenderer = {
                     },
                     y: {
                         grid: { color: '#f1f5f9' },
-                        suggestedMin: 80,
-                        suggestedMax: 150,
+                        suggestedMin: yMin,
+                        suggestedMax: yMax,
                         ticks: {
                             callback: function(v) { return v + '%'; },
                             font: { size: 11 }
@@ -228,16 +259,7 @@ const CommonRenderer = {
                             label: function(ctx) { return ctx.dataset.label + ': ' + ctx.raw.toFixed(2) + '%'; }
                         }
                     },
-                    annotation: {
-                        annotations: {
-                            critical: { type: 'box', yMin: 0, yMax: 100, backgroundColor: 'rgba(220, 38, 38, 0.08)', borderWidth: 0, label: { content: 'Critical', display: true, position: 'start', font: { size: 9 }, color: '#dc2626' } },
-                            thin: { type: 'box', yMin: 100, yMax: 110, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
-                            amber: { type: 'box', yMin: 110, yMax: 130, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
-                            healthy: { type: 'box', yMin: 130, yMax: 200, backgroundColor: 'rgba(22, 163, 74, 0.04)', borderWidth: 0 },
-                            line100: { type: 'line', yMin: 100, yMax: 100, borderColor: '#dc2626', borderWidth: 1, borderDash: [4, 4], label: { content: '100%', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
-                            line130: { type: 'line', yMin: 130, yMax: 130, borderColor: '#16a34a', borderWidth: 1, borderDash: [4, 4], label: { content: '130%', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
-                        }
-                    }
+                    annotation: { annotations: annotations }
                 },
                 interaction: { intersect: false, mode: 'index' }
             }
