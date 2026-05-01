@@ -1,18 +1,22 @@
 /**
- * syrupUSDC renderer — Maple institutional open-term lending pool.
+ * syrupUSDC renderer — v2 layout (8 visible blocks).
  *
- * Renders, in order:
- *   1. Vault State (NAV, totalAssets, totalSupply, liquidityCap, deployment %)
- *   2. Yield Decomposition (base / season-incentive / headline + delegate fee)
- *   3. Loan Book Composition (when default breakdown table is hidden)
- *   4. Loan Book Health (Phase 2 — top-10 loans + status disclaimer)
- *   5. Exit Realism (withdrawal queue + free liquidity + KyberSwap slippage)
- *   6. Multi-Chain Distribution (Phase 3 — hidden when only Ethereum populated)
- *   7. Governance Topology
- *   8. Stress Anchor (text panel)
+ * Render order:
+ *   §1 Backing            — Pool TVL / cap / NAV / fee + asset composition + 2-slice donut
+ *   §2 Loan Book Health   — 4 sub-blocks: A status · B buffer (NEW) · C collateral mix · D loan table
+ *   §3 Borrower Concentration
+ *   §4 Repayment Schedule (renamed from Payment Ladder)
+ *   §5 Liquidity & Peg    — folds Exit Realism + Stress Anchor + new Peg deviation row
+ *   §6 Trust Stack        — Governance + 1-line audit roll-up
+ *   §7 Yield (demoted)
+ *   Multi-Chain (hidden when only Ethereum)
+ *
+ * Suppresses the common-header Backing Breakdown table + Allocation pie panel for
+ * syrupUSDC only — they're replaced by §1's asset-composition table + donut.
+ * OUSD / crvUSD / USDD don't run this renderer, so they keep the common layout.
  */
 
-// Static metadata shared by the Collateral Mix panel and the loan-table column renderer.
+// Static metadata for the Collateral Mix sub-block + loan-table column.
 var SYRUP_COLLATERAL_META = {
     BTC:   { category: 'crypto',     issuer: '—',           color: '#f59e0b' },
     cbBTC: { category: 'crypto',     issuer: 'Coinbase',    color: '#f59e0b' },
@@ -25,9 +29,17 @@ var SYRUP_COLLATERAL_META = {
     USTB:  { category: 'rwa',        issuer: 'Superstate',  color: '#ec4899' }
 };
 
+// Static facts for §6 audit roll-up — sourced from the public risk report.
+var SYRUP_AUDIT_INFO = {
+    primary_audits: 'Spearbit + Trail of Bits',
+    other_audits_count: 6,
+    total_audits: '8+',
+    bug_bounty: 'Immunefi $1M+'
+};
+
 var SyrupUSDCRenderer = {
 
-    // Analyzer emits deployment_ratio_pct, not free_liquidity_pct — derive it.
+    // ----- helpers --------------------------------------------------------
     _freeLiquidityPct: function(s) {
         if (s.free_liquidity_pct !== null && s.free_liquidity_pct !== undefined) return s.free_liquidity_pct;
         if (s.deployment_ratio_pct !== null && s.deployment_ratio_pct !== undefined) return 100 - s.deployment_ratio_pct;
@@ -62,199 +74,443 @@ var SyrupUSDCRenderer = {
         return '';
     },
 
+    _suppressCommonPanels: function() {
+        // §1 Backing absorbs the breakdown-table + allocation pie. Hide the
+        // common-header panels and stretch the (now-orphan) Risk Flags wrapper
+        // to span the full row width.
+        var bd = document.getElementById('breakdown-table');
+        if (bd) {
+            var p = bd.closest('.panel');
+            if (p) p.style.display = 'none';
+        }
+        var pie = document.getElementById('pie-chart');
+        if (pie) {
+            var p2 = pie.closest('.panel');
+            if (p2) p2.style.display = 'none';
+        }
+        var risk = document.getElementById('risk-flags');
+        if (risk) {
+            var wrapper = risk.closest('.panel').parentElement;
+            if (wrapper && !wrapper.classList.contains('lg:col-span-3')) {
+                wrapper.classList.add('lg:col-span-3');
+            }
+        }
+    },
+
+    // ----- entry point ----------------------------------------------------
     render: function(data) {
         var container = document.getElementById('asset-specific-panels');
         var specific = data.asset_specific;
         if (!specific || specific.type !== 'syrupusdc') return;
 
-        var html = '';
-        var s = data.summary;
+        this._suppressCommonPanels();
 
-        html += this._renderVaultState(specific, s);
-        html += this._renderYield(specific);
-        html += this._renderLoanBookComposition(data);
-        html += this._renderLoanBookHealth(specific);
-        html += this._renderBorrowerConcentration(specific);
-        html += this._renderPaymentLadder(specific);
-        html += this._renderCollateralMix(specific);
-        html += this._renderExitRealism(specific, s);
-        html += this._renderMultiChain(specific);
-        html += this._renderGovernance(specific);
-        html += this._renderStressAnchor(specific, s);
+        var s = data.summary;
+        var html = '';
+
+        html += this._renderBacking(specific, s);                   // §1
+        html += this._renderLoanBookHealth(specific);               // §2
+        html += this._renderBorrowerConcentration(specific);        // §3
+        html += this._renderRepaymentSchedule(specific);            // §4
+        html += this._renderLiquidityAndPeg(specific, s);           // §5
+        html += this._renderTrustStack(specific);                   // §6
+        html += this._renderYield(specific);                        // §7
+        html += this._renderMultiChain(specific);                   // hidden when single-chain
 
         container.innerHTML = html;
 
-        // Wire up sortable columns on the loans table (if rendered)
+        // Post-render canvases (after innerHTML so the DOM nodes exist).
+        this._renderBackingDonut(specific);
+        this._renderRepaymentScheduleChart(specific);
         this._attachLoanTableSort();
-        // Render the payment-ladder bar chart now that the canvas is in the DOM
-        this._renderPaymentLadderChart(specific);
     },
 
-    // ---------- 1. Vault State ----------
-    _renderVaultState: function(specific, s) {
-        var v = specific.vault_state;
-        if (!v) return '';
-        var deployment = s.deployment_ratio_pct;
-        var deploymentCls = deployment >= 98 ? 'negative' : deployment >= 95 ? 'warning' : '';
+    // ----- §1 Backing -----------------------------------------------------
+    _renderBacking: function(specific, s) {
+        var v = specific.vault_state || {};
+        var totalAssets = v.total_assets;
+        var liquidityCap = v.liquidity_cap;
+        var capUtilPct = v.cap_utilization_pct;
+        if ((capUtilPct === null || capUtilPct === undefined) && totalAssets && liquidityCap) {
+            capUtilPct = totalAssets / liquidityCap * 100;
+        }
+        var nav = v.nav;
+        var fee = (s && s.delegate_management_fee_pct != null) ? s.delegate_management_fee_pct :
+                   (specific.yield && specific.yield.delegate_fee_pct);
+
+        // Asset composition rows.
+        var freeUsdc = (v.free_usdc !== null && v.free_usdc !== undefined) ?
+            v.free_usdc :
+            (s && s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency ? s.collateral_ratio_alt.value : 0);
+        var strategies = v.strategies || [];
+        var rows = [{
+            label: 'Free USDC',
+            value: freeUsdc,
+            tag: 'liquid',
+            color: '#22c55e'
+        }];
+        if (strategies.length === 0) {
+            // Fall back to backing_breakdown if vault_state.strategies is empty
+            // (older analyzer JSON).
+            rows.push({
+                label: 'Strategy AUM (deployed)',
+                value: (v.strategy_aum != null) ? v.strategy_aum : ((totalAssets || 0) - (freeUsdc || 0)),
+                tag: 'deployed',
+                color: '#6366f1'
+            });
+        } else {
+            strategies.forEach(function(st, i) {
+                if ((st.aum_usd || 0) <= 0 && i > 0 && !st.is_loan_manager) return;  // collapse zero non-LM strategies
+                var label = st.is_loan_manager ?
+                    'Strategy ' + i + ' (Loan Manager)' :
+                    'Strategy ' + i;
+                rows.push({
+                    label: label,
+                    value: st.aum_usd || 0,
+                    tag: st.is_loan_manager ? 'deployed' : 'idle',
+                    color: st.is_loan_manager ? '#6366f1' : '#94a3b8',
+                    address: st.address
+                });
+            });
+        }
+
+        var total = (totalAssets || rows.reduce(function(a, r) { return a + (r.value || 0); }, 0)) || 1;
+
+        var compRows = rows.map(function(r) {
+            var pct = (r.value || 0) / total * 100;
+            return '<tr>' +
+                '<td class="font-medium">' + r.label +
+                    (r.address ? ' ' + SyrupUSDCRenderer._ethLink(r.address) : '') +
+                '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(r.value || 0) + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatPercent(pct, 1) + '</td>' +
+                '<td><div class="pct-bar-container"><div class="pct-bar" style="width:' + Math.min(pct, 100) + '%; background:' + r.color + '"></div></div></td>' +
+            '</tr>';
+        }).join('');
+        compRows += '<tr class="font-bold border-t-2 border-slate-200">' +
+            '<td>Total</td>' +
+            '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(total) + '</td>' +
+            '<td class="text-right">100%</td>' +
+            '<td></td>' +
+        '</tr>';
 
         var pausedBadge = v.protocol_paused ?
             '<div class="risk-flag risk-critical mt-3"><strong>PROTOCOL PAUSED</strong> — deposits/withdrawals blocked at MapleGlobals</div>' : '';
+        var ulBadge = (v.unrealized_losses && v.unrealized_losses > 0) ?
+            '<div class="risk-flag risk-critical mt-3"><strong>Unrealized losses:</strong> ' + CommonRenderer.formatCurrencyExact(v.unrealized_losses) + ' — PCR_principal below 100%</div>' : '';
+
+        // Header KPI row — 4 stats split into two visual columns.
+        var kpiHeader =
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">' +
+                '<div class="grid grid-cols-2 gap-3">' +
+                    '<div class="summary-card"><div class="card-label">Pool TVL</div><div class="card-value">' + CommonRenderer.formatCurrency(totalAssets) + '</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Liquidity Cap</div><div class="card-value">' + CommonRenderer.formatCurrency(liquidityCap) + '</div>' +
+                        (capUtilPct != null ? '<div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(capUtilPct, 1) + ' used</div>' : '') +
+                    '</div>' +
+                '</div>' +
+                '<div class="grid grid-cols-2 gap-3">' +
+                    '<div class="summary-card"><div class="card-label">NAV per share</div><div class="card-value">' + (nav != null ? '$' + nav.toFixed(4) : '-') + '</div><div class="text-xs text-slate-400 mt-1">USDC per share</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Delegate fee</div><div class="card-value">' + (fee != null ? CommonRenderer.formatPercent(fee, 2) : '-') + '</div><div class="text-xs text-slate-400 mt-1">taken from gross</div></div>' +
+                '</div>' +
+            '</div>';
 
         return '<div class="panel">' +
-            '<div class="panel-title">Vault State</div>' +
-            '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">' +
-                '<div class="summary-card"><div class="card-label">NAV (USDC/share)</div><div class="card-value">$' + (v.nav !== null && v.nav !== undefined ? v.nav.toFixed(4) : '-') + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Total Assets</div><div class="card-value">' + CommonRenderer.formatCurrency(v.total_assets) + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Total Supply</div><div class="card-value">' + CommonRenderer.formatCurrency(v.total_supply) + '</div><div class="text-xs text-slate-400 mt-1">syrupUSDC shares</div></div>' +
-                '<div class="summary-card"><div class="card-label">Liquidity Cap</div><div class="card-value">' + CommonRenderer.formatCurrency(v.liquidity_cap) + '</div>' +
-                    (v.liquidity_cap && v.total_assets ? '<div class="text-xs text-slate-400 mt-1">' + (v.total_assets / v.liquidity_cap * 100).toFixed(1) + '% filled</div>' : '') +
+            '<div class="panel-title">Backing</div>' +
+            kpiHeader +
+            '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-2">' +
+                '<div class="lg:col-span-2">' +
+                    '<div class="text-sm font-semibold text-slate-700 mb-2">Asset composition</div>' +
+                    '<table class="data-table"><thead><tr>' +
+                        '<th>Source</th>' +
+                        '<th class="text-right">Value (USD)</th>' +
+                        '<th class="text-right">%</th>' +
+                        '<th style="width: 120px"></th>' +
+                    '</tr></thead><tbody>' + compRows + '</tbody></table>' +
                 '</div>' +
-                '<div class="summary-card"><div class="card-label">Deployment</div><div class="card-value ' + deploymentCls + '">' + CommonRenderer.formatPercent(deployment, 1) + '</div><div class="text-xs text-slate-400 mt-1">principal out / assets</div></div>' +
+                '<div>' +
+                    '<div class="text-sm font-semibold text-slate-700 mb-2">Allocation</div>' +
+                    '<div style="height: 220px; position: relative;"><canvas id="syrup-backing-donut"></canvas></div>' +
+                '</div>' +
             '</div>' +
-            (v.unrealized_losses && v.unrealized_losses > 0 ?
-                '<div class="risk-flag risk-critical mt-3"><strong>Unrealized losses:</strong> ' + CommonRenderer.formatCurrencyExact(v.unrealized_losses) + ' — PCR_principal below 100%</div>' : '') +
+            ulBadge +
             pausedBadge +
-            '</div>';
+        '</div>';
     },
 
-    // ---------- 2. Yield Decomposition ----------
-    _renderYield: function(specific) {
-        var y = specific.yield;
-        if (!y) return '';
-        var headline = y.headline_apy_pct;
-        var base = y.base_apy_pct;
-        var season = y.season_incentive_apy_pct;
-        var fee = y.delegate_fee_pct;
+    _renderBackingDonut: function(specific) {
+        var ctx = document.getElementById('syrup-backing-donut');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var v = specific.vault_state || {};
+        var freeUsdc = v.free_usdc || 0;
+        var deployed = (v.strategy_aum != null) ? v.strategy_aum :
+            ((v.total_assets || 0) - freeUsdc);
 
-        // Bar widths normalised to headline; fall back to a sane denominator if missing.
-        var maxApy = Math.max(headline || 0, (base || 0) + (season || 0)) || 20;
-        function bar(val, color, label, tag) {
-            if (val === null || val === undefined) return '';
-            var pct = Math.max(0, Math.min(100, val / maxApy * 100));
-            return '<div class="mb-2">' +
-                '<div class="flex justify-between text-sm mb-1">' +
-                    '<span class="text-slate-600">' + label + (tag ? ' <span class="text-xs text-slate-400">(' + tag + ')</span>' : '') + '</span>' +
-                    '<span class="font-mono font-semibold">' + CommonRenderer.formatPercent(val, 2) + '</span>' +
-                '</div>' +
-                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + pct + '%; background:' + color + '"></div></div>' +
-            '</div>';
-        }
-
-        return '<div class="panel">' +
-            '<div class="panel-title">Yield Decomposition</div>' +
-            '<p class="text-sm text-slate-500 mb-3">Base APY is durable loan interest. Season-incentive APY is paid in SYRUP token and stops when the campaign ends — it is what you give back when seasons end.</p>' +
-            bar(base, '#22c55e', 'Base APY', 'loan interest, durable') +
-            bar(season, '#a855f7', 'Season-incentive APY', y.season_label || 'SYRUP token') +
-            bar(headline, '#3b82f6', 'Headline APY', 'base + seasons') +
-            (fee !== null && fee !== undefined ?
-                '<div class="text-sm text-slate-500 mt-3">Pool Delegate management fee: <span class="font-mono font-semibold">' + CommonRenderer.formatPercent(fee, 2) + '</span> taken from gross before share-holders.</div>' : '') +
-            (y.apr_24h_pct !== null && y.apr_24h_pct !== undefined ?
-                '<div class="text-xs text-slate-400 mt-1">24h realised APR (NAV): ' + CommonRenderer.formatPercent(y.apr_24h_pct, 2) + ' — trailing window, can be noisy</div>' : '') +
-            '</div>';
-    },
-
-    // ---------- 3. Loan Book Composition ----------
-    // CommonRenderer.renderBreakdownTable already handles data.backing_breakdown
-    // — we let it run as default. If the asset wants a strategy-only secondary
-    // table (with principal_out + accounted_interest), we render that here.
-    _renderLoanBookComposition: function(data) {
-        var bb = data.backing_breakdown || [];
-        var withDetail = bb.filter(function(r) { return r.detail && (r.detail.principal_out !== undefined || r.detail.accounted_interest !== undefined); });
-        if (withDetail.length === 0) return '';
-        var rows = withDetail.map(function(r) {
-            return '<tr>' +
-                '<td class="font-medium">' + r.label + '</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(r.detail.principal_out || 0) + '</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(r.detail.accounted_interest || 0) + '</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(r.value) + '</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatPercent(r.pct, 1) + '</td>' +
-                '</tr>';
+        if (window._syrupBackingDonut) window._syrupBackingDonut.destroy();
+        window._syrupBackingDonut = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Free USDC', 'Deployed (loans + strategies)'],
+                datasets: [{
+                    data: [freeUsdc, deployed],
+                    backgroundColor: ['#22c55e', '#6366f1'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) {
+                                var total = c.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                                var pct = total > 0 ? (c.raw / total * 100).toFixed(1) : '0.0';
+                                return c.label + ': ' + CommonRenderer.formatCurrency(c.raw) + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                }
+            }
         });
-        return '<div class="panel">' +
-            '<div class="panel-title">Loan Book Composition (Strategy Detail)</div>' +
-            '<table class="data-table"><thead><tr>' +
-                '<th>Strategy</th><th class="text-right">Principal Out</th><th class="text-right">Accounted Interest</th><th class="text-right">AUM</th><th class="text-right">% of Pool</th>' +
-            '</tr></thead><tbody>' + rows.join('') + '</tbody></table></div>';
     },
 
-    // ---------- 4. Loan Book Health (Phase 2) ----------
+    // ----- §2 Loan Book Health (4 sub-blocks) -----------------------------
     _renderLoanBookHealth: function(specific) {
         var lb = specific.loan_book;
         if (!lb) return '';
 
         var disclaimer = '<div class="risk-flag risk-warning"><strong>Important:</strong> These are uncollateralized-on-chain open-term loans. Collateral is held off-chain by the Pool Delegate. On-chain enforcement = noticePeriod (24h) + gracePeriod (48h) → 72h max default lag.</div>';
 
-        // Phase 1: enumeration not yet done — show placeholder
         if (lb.active_loan_count === null || lb.active_loan_count === undefined) {
             return '<div class="panel">' +
                 '<div class="panel-title">Loan Book Health</div>' +
                 disclaimer +
                 '<div class="text-slate-400 text-sm mt-3 italic">Loan-level data pending — per-loan enumeration ships in Phase 2.</div>' +
-                '</div>';
+            '</div>';
         }
 
-        // Phase 2: aggregates + top-N table
-        var rateText = lb.weighted_avg_rate_pct !== null && lb.weighted_avg_rate_pct !== undefined ?
-            CommonRenderer.formatPercent(lb.weighted_avg_rate_pct, 2) : '-';
-        var concText = lb.top_borrower_concentration_pct !== null && lb.top_borrower_concentration_pct !== undefined ?
-            CommonRenderer.formatPercent(lb.top_borrower_concentration_pct, 1) : '-';
-        var concCls = (lb.top_borrower_concentration_pct || 0) >= 25 ? 'warning' : '';
+        return '<div class="panel">' +
+            '<div class="panel-title">Loan Book Health</div>' +
+            disclaimer +
+            this._renderLBH_status(specific, lb) +
+            this._renderLBH_buffer(lb) +
+            this._renderLBH_collateralMix(lb) +
+            this._renderLBH_loanTable(lb) +
+        '</div>';
+    },
 
-        // Analyzer doesn't emit healthy_count — derive from active - (impaired + called + default).
+    // §2 sub-block A — Status snapshot
+    _renderLBH_status: function(specific, lb) {
         var imp = lb.impaired_count || 0;
         var cal = lb.called_count || 0;
         var def = lb.default_count || 0;
         var healthy = (lb.healthy_count !== null && lb.healthy_count !== undefined) ?
             lb.healthy_count : Math.max(0, (lb.active_loan_count || 0) - imp - cal - def);
-        var counts = { healthy: healthy, impaired: imp, called: cal, default: def };
-        var sc = ['healthy', 'impaired', 'called', 'default'].map(function(k) {
-            var n = counts[k];
-            var cls = k === 'healthy' ? 'positive' : k === 'impaired' ? 'warning' : 'negative';
-            var label = k.charAt(0).toUpperCase() + k.slice(1);
-            return '<div class="summary-card"><div class="card-label">' + label + '</div><div class="card-value ' + (n > 0 ? cls : '') + '">' + n + '</div></div>';
-        }).join('');
 
-        var html = '<div class="panel">' +
-            '<div class="panel-title">Loan Book Health</div>' +
-            disclaimer +
-            '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mt-4 mb-4">' +
-                '<div class="summary-card"><div class="card-label">Active Loans</div><div class="card-value">' + (lb.active_loan_count || 0) + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Borrowers</div><div class="card-value">' + (lb.borrower_count || '-') + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Weighted Rate</div><div class="card-value">' + rateText + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Top Borrower</div><div class="card-value ' + concCls + '">' + concText + '</div><div class="text-xs text-slate-400 mt-1">% of book</div></div>' +
-            '</div>' +
-            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' + sc + '</div>';
+        var poolCR = lb.collateral_summary && lb.collateral_summary.pool_collateral_ratio_pct;
+        var rateText = (lb.weighted_avg_rate_pct != null) ? CommonRenderer.formatPercent(lb.weighted_avg_rate_pct, 2) : '—';
+        var poolCRText = (poolCR != null) ? CommonRenderer.formatPercent(poolCR, 1) : '—';
 
-        // Loans table
-        var loans = lb.loans || [];
-        if (loans.length > 0) {
-            var summary = lb.collateral_summary;
-            var hasCollateral = !!(summary && summary.data_source && summary.data_source !== 'unavailable')
-                || loans.some(function(l) { return l && l.collateral; });
-            var loansSorted = loans.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).slice(0, 10);
-            var rows = loansSorted.map(function(l) { return SyrupUSDCRenderer._renderLoanRow(l, hasCollateral); }).join('');
-
-            var collateralHeaders = hasCollateral ?
-                ('<th class="cursor-pointer" data-sort="collat">Collat</th>' +
-                 '<th class="text-right cursor-pointer" data-sort="collat_amount">Amount</th>' +
-                 '<th class="text-right cursor-pointer" data-sort="collat_usd">Collat USD</th>' +
-                 '<th class="text-right cursor-pointer" data-sort="level">Level</th>' +
-                 '<th class="text-right cursor-pointer" data-sort="init">Init</th>') : '';
-
-            html += '<div class="overflow-x-auto"><table class="data-table" id="syrup-loans-table"><thead><tr>' +
-                '<th class="cursor-pointer" data-sort="borrower">Borrower</th>' +
-                '<th class="text-right cursor-pointer" data-sort="principal">Principal ▾</th>' +
-                collateralHeaders +
-                '<th class="text-right cursor-pointer" data-sort="rate">Rate</th>' +
-                '<th class="cursor-pointer" data-sort="funded">Funded</th>' +
-                '<th class="cursor-pointer" data-sort="due">Next Pmt</th>' +
-                '<th class="text-right cursor-pointer" data-sort="days">Days</th>' +
-                '<th class="cursor-pointer" data-sort="status">Status</th>' +
-            '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+        function statusPill(label, count, cls) {
+            var color = count > 0 ? cls : 'text-slate-400';
+            return '<span class="' + color + '"><strong>' + label + '</strong> ' + count + '</span>';
         }
 
-        html += '</div>';
-        return html;
+        return '<div class="mt-4 mb-4">' +
+            '<div class="text-sm text-slate-700 mb-1">' +
+                '<span class="font-semibold">' + (lb.active_loan_count || 0) + ' loans</span> · ' +
+                '<span class="font-semibold">' + (lb.borrower_count || 0) + ' borrowers</span> · ' +
+                '<span class="font-mono">' + rateText + '</span> wtd-rate · ' +
+                'pool CR <span class="font-mono">' + poolCRText + '</span>' +
+            '</div>' +
+            '<div class="text-sm text-slate-600 flex flex-wrap gap-x-4 gap-y-1">' +
+                statusPill('Healthy', healthy, 'text-green-600') +
+                '<span class="text-slate-300">·</span>' +
+                statusPill('Impaired', imp, 'text-amber-600') +
+                '<span class="text-slate-300">·</span>' +
+                statusPill('Called', cal, 'text-orange-600') +
+                '<span class="text-slate-300">·</span>' +
+                statusPill('Default', def, 'text-red-600') +
+            '</div>' +
+        '</div>';
+    },
+
+    // §2 sub-block B — Buffer health (NEW). Reads PegTracker companion fields.
+    // Graceful-degrades to a placeholder when those fields aren't shipped yet.
+    _renderLBH_buffer: function(lb) {
+        var cs = lb.collateral_summary;
+        if (!cs) return '';  // Collateral Mix sub-block handles the unavailable case below.
+
+        var hasBuffer = cs.loans_below_init_count != null &&
+                        cs.weighted_avg_buffer_pp != null &&
+                        cs.tightest_loan;
+
+        if (!hasBuffer) {
+            return '<div class="mb-4 p-3 rounded-lg" style="background:#f8fafc;border:1px solid #e2e8f0">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-1">Buffer health</div>' +
+                '<div class="text-xs text-slate-400 italic">Buffer-health metrics pending pipeline update.</div>' +
+            '</div>';
+        }
+
+        var totalActive = lb.active_loan_count || 0;
+        var below = cs.loans_below_init_count || 0;
+        var above = Math.max(0, totalActive - below);
+        var totalPrincipal = (cs.set_a_overcollateralized && cs.set_a_overcollateralized.principal_usd || 0) +
+                             (cs.set_b_at_par && cs.set_b_at_par.principal_usd || 0);
+        if (totalPrincipal === 0 && lb.loans) {
+            totalPrincipal = lb.loans.reduce(function(s, l) { return s + (l.principal || 0); }, 0);
+        }
+        var belowUsd = cs.principal_below_init_usd || 0;
+        var aboveUsd = Math.max(0, totalPrincipal - belowUsd);
+        var belowPct = totalPrincipal > 0 ? (belowUsd / totalPrincipal * 100) : 0;
+        var abovePct = totalPrincipal > 0 ? (aboveUsd / totalPrincipal * 100) : 0;
+        var wab = cs.weighted_avg_buffer_pp;
+        var wabSign = wab >= 0 ? '+' : '';
+        var wabCls = wab >= 5 ? 'text-green-600' : wab >= 0 ? 'text-amber-600' : 'text-red-600';
+
+        var t = cs.tightest_loan;
+        var tSign = t.buffer_pp >= 0 ? '+' : '';
+        var pap = (t.points_above_par != null) ? t.points_above_par.toFixed(1) :
+            (t.current_level_pct != null ? (t.current_level_pct - 100).toFixed(1) : '?');
+        var papCls = t.points_above_par <= 5 ? 'text-amber-600 font-semibold' :
+                     t.points_above_par <= 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
+
+        return '<div class="mb-4 p-3 rounded-lg" style="background:#f8fafc;border:1px solid #e2e8f0">' +
+            '<div class="text-sm font-semibold text-slate-700 mb-2">Buffer health</div>' +
+            '<div class="text-sm text-slate-700 mb-1">' +
+                'Above init level: <strong>' + above + ' loan' + (above === 1 ? '' : 's') + '</strong> · ' +
+                CommonRenderer.formatCurrency(aboveUsd) + ' (' + CommonRenderer.formatPercent(abovePct, 1) + ')' +
+            '</div>' +
+            (below > 0 ?
+                '<div class="text-sm text-amber-700 mb-1">' +
+                    '⚠ Below init level: <strong>' + below + ' loan' + (below === 1 ? '' : 's') + '</strong> · ' +
+                    CommonRenderer.formatCurrency(belowUsd) + ' (' + CommonRenderer.formatPercent(belowPct, 1) + ')' +
+                    '<div class="text-xs text-amber-600 mt-1 ml-4">Delegate has discretion to call but has not — these are out of compliance with funding-time collateral terms.</div>' +
+                '</div>' :
+                '<div class="text-xs text-green-600 mb-1">All active loans above their funding-time required collateral level.</div>') +
+            '<div class="text-sm mt-2">' +
+                'Wtd-avg buffer: <span class="font-mono font-semibold ' + wabCls + '">' + wabSign + wab.toFixed(1) + 'pp</span>' +
+            '</div>' +
+            '<div class="text-sm mt-1">' +
+                'Tightest loan: <span class="font-mono">' + CommonRenderer.formatCurrency(t.principal_usd) + ' ' + t.asset + '</span> @ ' +
+                CommonRenderer.formatPercent(t.current_level_pct, 1) +
+                ' (init ' + CommonRenderer.formatPercent(t.init_level_pct, 0) + ', ' + tSign + t.buffer_pp.toFixed(1) + 'pp)' +
+                ' — only <span class="' + papCls + '">' + pap + 'pp above par</span>' +
+            '</div>' +
+        '</div>';
+    },
+
+    // §2 sub-block C — Collateral mix (folded in from old _renderCollateralMix)
+    _renderLBH_collateralMix: function(lb) {
+        var cs = lb.collateral_summary;
+        if (!cs) return '';
+
+        if (cs.data_source === 'unavailable') {
+            return '<div class="risk-flag risk-info mb-4">Collateral data temporarily unavailable from Maple API. Loan-level credit and timing fields above are unaffected.</div>';
+        }
+
+        var setA = cs.set_a_overcollateralized || {};
+        var setB = cs.set_b_at_par || {};
+        var byAsset = cs.by_asset || [];
+        if (byAsset.length === 0 && (setA.principal_usd || 0) === 0 && (setB.principal_usd || 0) === 0) return '';
+
+        var poolLine = '';
+        if (cs.pool_collateral_value_usd != null && cs.pool_collateral_ratio_pct != null) {
+            poolLine = '<div class="text-xs text-slate-500 mb-2">Pool collateralization: <span class="font-mono font-semibold">' + CommonRenderer.formatPercent(cs.pool_collateral_ratio_pct, 1) + '</span> · <span class="font-mono">' + CommonRenderer.formatCurrency(cs.pool_collateral_value_usd) + '</span> collateral against active loan book <span class="text-slate-400">(Maple GraphQL)</span></div>';
+        }
+
+        function bar(row, color) {
+            var pct = row.pct_of_book || 0;
+            var meta = SYRUP_COLLATERAL_META[row.asset] || {};
+            var issuerTag = meta.issuer && meta.issuer !== '—' ?
+                ' <span class="text-xs text-slate-500">' + meta.issuer + '</span>' : '';
+            var levelRange;
+            if (row.init_level_pct_min === row.init_level_pct_max) {
+                levelRange = CommonRenderer.formatPercent(row.init_level_pct_min, 0);
+            } else {
+                levelRange = CommonRenderer.formatPercent(row.init_level_pct_min, 0) + '–' + CommonRenderer.formatPercent(row.init_level_pct_max, 0);
+            }
+            return '<div class="mb-2">' +
+                '<div class="flex justify-between text-sm mb-1">' +
+                    '<span class="text-slate-700"><span class="font-mono font-semibold">' + row.asset + '</span>' + issuerTag + ' <span class="text-xs text-slate-400">' + (row.loans || 0) + ' loan' + (row.loans === 1 ? '' : 's') + ' · init ' + levelRange + '</span></span>' +
+                    '<span class="font-mono font-semibold">' + CommonRenderer.formatPercent(pct, 1) + ' · ' + CommonRenderer.formatCurrency(row.principal_usd) + '</span>' +
+                '</div>' +
+                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + Math.min(pct, 100) + '%; background:' + color + '"></div></div>' +
+            '</div>';
+        }
+
+        var setARows = byAsset.filter(function(r) { return (r.init_level_pct_max || 0) > 105; });
+        var setBRows = byAsset.filter(function(r) { return (r.init_level_pct_max || 0) <= 105; });
+
+        var setAHtml = '<div>' +
+            '<div class="text-sm font-semibold text-slate-700 mb-2">' +
+                'Set A — crypto-overcollateralized · ' + CommonRenderer.formatPercent(setA.pct_of_book || 0, 1) +
+                ' <span class="text-xs text-slate-500 font-normal">' + CommonRenderer.formatCurrency(setA.principal_usd || 0) +
+                (setA.weighted_avg_init_level_pct ? ' · wtd-init ' + CommonRenderer.formatPercent(setA.weighted_avg_init_level_pct, 1) : '') +
+                '</span>' +
+            '</div>' +
+            (setARows.length ? setARows.map(function(r) { return bar(r, '#22c55e'); }).join('') :
+                '<div class="text-xs text-slate-400 italic">No over-collateralized loans in current book.</div>') +
+        '</div>';
+
+        var setBWarning = '';
+        if (setB.principal_usd > 0) {
+            var totalPrincipal = (setA.principal_usd || 0) + (setB.principal_usd || 0);
+            var largestPctOfBook = totalPrincipal > 0 ? (setB.largest_position_usd / totalPrincipal * 100) : 0;
+            setBWarning =
+                '<div class="risk-flag risk-warning mt-3"><strong>At-par binding risk:</strong> Set B stress binds on collateral-asset peg/issuer events, NOT crypto-cycle drawdowns.' +
+                (setB.largest_position_usd ?
+                    ' <span class="font-mono">' + (setB.largest_position_asset || '?') + '</span> depeg → largest single position (<span class="font-mono">' + CommonRenderer.formatCurrency(setB.largest_position_usd) + '</span>, ' + CommonRenderer.formatPercent(largestPctOfBook, 1) + ' of book) underwater.' : '') +
+                '</div>';
+        }
+        var issuerLine = setB.named_issuers && setB.named_issuers.length ?
+            '<div class="text-xs text-slate-500 mt-2">Named issuers: ' + setB.named_issuers.join(' · ') + '</div>' : '';
+
+        var setBHtml = '<div>' +
+            '<div class="text-sm font-semibold text-slate-700 mb-2">' +
+                'Set B — at-par stablecoin / RWA ⚠ · ' + CommonRenderer.formatPercent(setB.pct_of_book || 0, 1) +
+                ' <span class="text-xs text-slate-500 font-normal">' + CommonRenderer.formatCurrency(setB.principal_usd || 0) + '</span>' +
+            '</div>' +
+            (setBRows.length ? setBRows.map(function(r) { return bar(r, '#f59e0b'); }).join('') :
+                '<div class="text-xs text-slate-400 italic">No at-par loans in current book.</div>') +
+            issuerLine +
+        '</div>';
+
+        return '<div class="mb-4">' +
+            '<div class="text-sm font-semibold text-slate-700 mb-2">Collateral mix</div>' +
+            poolLine +
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' + setAHtml + setBHtml + '</div>' +
+            setBWarning +
+        '</div>';
+    },
+
+    // §2 sub-block D — Loan-level table (9 columns including new Buffer)
+    _renderLBH_loanTable: function(lb) {
+        var loans = lb.loans || [];
+        if (loans.length === 0) return '';
+
+        var summary = lb.collateral_summary;
+        var hasCollateral = !!(summary && summary.data_source && summary.data_source !== 'unavailable')
+            || loans.some(function(l) { return l && l.collateral; });
+        var loansSorted = loans.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).slice(0, 10);
+        var rows = loansSorted.map(function(l) { return SyrupUSDCRenderer._renderLoanRow(l, hasCollateral); }).join('');
+
+        var collateralHeaders = hasCollateral ?
+            ('<th class="cursor-pointer" data-sort="collat">Collateral</th>' +
+             '<th class="text-right cursor-pointer" data-sort="init">Init</th>' +
+             '<th class="text-right cursor-pointer" data-sort="cur">Cur</th>' +
+             '<th class="text-right cursor-pointer" data-sort="buf">Buf</th>') : '';
+
+        return '<div class="text-sm font-semibold text-slate-700 mb-2 mt-2">Top loans (sortable)</div>' +
+            '<div class="overflow-x-auto"><table class="data-table" id="syrup-loans-table"><thead><tr>' +
+                '<th class="cursor-pointer" data-sort="borrower">Borrower</th>' +
+                '<th class="text-right cursor-pointer" data-sort="principal">Princ. ▾</th>' +
+                '<th class="text-right cursor-pointer" data-sort="rate">Rate</th>' +
+                '<th class="text-right cursor-pointer" data-sort="days">Days</th>' +
+                '<th class="cursor-pointer" data-sort="status">S</th>' +
+                collateralHeaders +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div>';
     },
 
     _renderLoanRow: function(loan, hasCollateral) {
@@ -263,90 +519,73 @@ var SyrupUSDCRenderer = {
         var borrowerCell = '<span class="font-mono text-xs" title="' + addr + '">' + SyrupUSDCRenderer._truncAddr(addr) + '</span>' +
             ' ' + SyrupUSDCRenderer._ethLink(addr) + firmTag;
 
-        // Days to due
         var days = null;
-        var dueTs = null;
-        var dueText = '-';
         if (loan.payment_due_date) {
             var due = typeof loan.payment_due_date === 'number' ?
                 new Date(loan.payment_due_date * 1000) :
                 new Date(loan.payment_due_date.endsWith && loan.payment_due_date.endsWith('Z') ? loan.payment_due_date : loan.payment_due_date + 'Z');
             if (!isNaN(due.getTime())) {
                 days = Math.floor((due.getTime() - Date.now()) / 86400000);
-                dueTs = due.getTime();
-                dueText = due.toISOString().slice(0, 10);
             }
         }
-        var fundedTs = null;
-        var fundedText = '-';
-        if (loan.date_funded) {
-            var fd = typeof loan.date_funded === 'number' ?
-                new Date(loan.date_funded * 1000) :
-                new Date(loan.date_funded.endsWith && loan.date_funded.endsWith('Z') ? loan.date_funded : loan.date_funded + 'Z');
-            if (!isNaN(fd.getTime())) {
-                fundedTs = fd.getTime();
-                fundedText = fd.toISOString().slice(0, 10);
-            }
+        var daysText, daysCls = '';
+        if (days === null) {
+            daysText = '—';
+        } else if (days < 0) {
+            // Convert to overdue hours (rough; abs days back to hours)
+            var overdueHours = Math.round(-days * 24);
+            daysText = 'Overdue ' + (overdueHours >= 24 ? Math.round(-days) + 'd' : overdueHours + 'h');
+            daysCls = 'text-red-600 font-semibold';
+        } else {
+            daysText = days + 'd';
+            if (days < 7) daysCls = 'text-red-600 font-semibold';
+            else if (days < 30) daysCls = 'text-amber-600';
         }
-        var daysText = days === null ? '-' : (days + 'd');
-        var daysCls = days === null ? '' : (days < 0 ? 'text-red-600 font-semibold' : days < 30 ? 'text-amber-600' : '');
 
         var status = loan.status || '';
-        var statusCell = SyrupUSDCRenderer._statusEmoji(status) + ' <span class="' + SyrupUSDCRenderer._statusFlagClass(status) + '">' + status + '</span>';
+        var statusCell = SyrupUSDCRenderer._statusEmoji(status);
 
-        // Collateral cells (only emitted when the table includes the collateral columns)
-        var collateralCells = '';
         var sortAttrs = {
             principal: loan.principal || 0,
             rate: loan.rate_pct || 0,
             days: days === null ? '' : days,
-            funded: fundedTs === null ? '' : fundedTs,
-            due: dueTs === null ? '' : dueTs,
             status: status,
             borrower: addr
         };
+
+        var collateralCells = '';
         if (hasCollateral) {
             var c = loan.collateral || {};
             var asset = c.asset || null;
-            var assetCell = asset ?
-                ('<span class="font-mono text-xs">' + asset + '</span>' +
-                 (SYRUP_COLLATERAL_META[asset] && SYRUP_COLLATERAL_META[asset].issuer && SYRUP_COLLATERAL_META[asset].issuer !== '—' ?
-                    ' <span class="text-xs text-slate-400">(' + SYRUP_COLLATERAL_META[asset].issuer + ')</span>' : '')) :
-                '<span class="text-slate-400">—</span>';
-            var amount = c.amount;
-            var amountText = (amount === null || amount === undefined) ? '<span class="text-slate-400">—</span>' :
-                (Math.abs(amount) >= 1e6 ? (amount / 1e6).toFixed(2) + 'M' :
-                 Math.abs(amount) >= 1e3 ? (amount / 1e3).toFixed(2) + 'K' :
-                 amount.toFixed(amount < 1 ? 4 : 2)) + (asset ? ' ' + asset : '');
             var collatUsd = c.usd;
-            var collatUsdText = (collatUsd === null || collatUsd === undefined) ? '<span class="text-slate-400">—</span>' :
-                CommonRenderer.formatCurrency(collatUsd);
-            var level = c.current_level_pct;
-            // Color: red <100, amber 100-110, slate-700 110-150, green >=150
-            var levelCls = '';
-            if (level !== null && level !== undefined) {
-                if (level < 100) levelCls = 'text-red-600 font-semibold';
-                else if (level < 110) levelCls = 'text-amber-600 font-semibold';
-                else if (level >= 150) levelCls = 'text-green-600';
+            // Single combined "Collateral" cell — "PYUSD $152.7M" or "BTC $254M"
+            var collatCellText;
+            if (!asset) {
+                collatCellText = '<span class="text-slate-400">—</span>';
+            } else {
+                var meta = SYRUP_COLLATERAL_META[asset] || {};
+                var usdText = (collatUsd != null) ? CommonRenderer.formatCurrency(collatUsd) : '—';
+                var issuerSuffix = meta.issuer && meta.issuer !== '—' ?
+                    ' <span class="text-xs text-slate-400">(' + meta.issuer + ')</span>' : '';
+                collatCellText = '<span class="font-mono text-xs">' + asset + '</span> ' +
+                    '<span class="font-mono text-sm">' + usdText + '</span>' + issuerSuffix;
             }
-            var levelText = (level === null || level === undefined) ? '<span class="text-slate-400">—</span>' :
-                CommonRenderer.formatPercent(level, 1);
+
             var initLevel = c.init_level_pct;
-            var initText = (initLevel === null || initLevel === undefined) ? '<span class="text-slate-400">—</span>' :
-                CommonRenderer.formatPercent(initLevel, 1);
+            var curLevel = c.current_level_pct;
+            var initText = (initLevel != null) ? CommonRenderer.formatPercent(initLevel, 0) : '—';
+            var curText = (curLevel != null) ? CommonRenderer.formatPercent(curLevel, 1) : '—';
 
             collateralCells =
-                '<td>' + assetCell + '</td>' +
-                '<td class="text-right font-mono text-sm">' + amountText + '</td>' +
-                '<td class="text-right font-mono">' + collatUsdText + '</td>' +
-                '<td class="text-right font-mono ' + levelCls + '">' + levelText + '</td>' +
-                '<td class="text-right font-mono text-slate-500">' + initText + '</td>';
+                '<td>' + collatCellText + '</td>' +
+                '<td class="text-right font-mono text-slate-500">' + initText + '</td>' +
+                '<td class="text-right font-mono">' + curText + '</td>' +
+                SyrupUSDCRenderer._renderBufferCell(c);
 
             sortAttrs.collat = asset || '';
-            sortAttrs.collat_amount = amount === null || amount === undefined ? '' : amount;
-            sortAttrs.collat_usd = collatUsd === null || collatUsd === undefined ? '' : collatUsd;
-            sortAttrs.level = level === null || level === undefined ? '' : level;
-            sortAttrs.init = initLevel === null || initLevel === undefined ? '' : initLevel;
+            sortAttrs.init = (initLevel != null) ? initLevel : '';
+            sortAttrs.cur = (curLevel != null) ? curLevel : '';
+            sortAttrs.buf = (c.buffer_pp != null) ? c.buffer_pp : '';
         }
 
         var dataAttrs = Object.keys(sortAttrs).map(function(k) {
@@ -355,21 +594,40 @@ var SyrupUSDCRenderer = {
 
         return '<tr ' + dataAttrs + '>' +
             '<td>' + borrowerCell + '</td>' +
-            '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(loan.principal || 0) + '</td>' +
-            collateralCells +
-            '<td class="text-right font-mono">' + (loan.rate_pct !== null && loan.rate_pct !== undefined ? CommonRenderer.formatPercent(loan.rate_pct, 2) : '-') + '</td>' +
-            '<td class="text-xs">' + fundedText + '</td>' +
-            '<td class="text-xs">' + dueText + '</td>' +
+            '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(loan.principal || 0) + '</td>' +
+            '<td class="text-right font-mono">' + (loan.rate_pct != null ? CommonRenderer.formatPercent(loan.rate_pct, 2) : '—') + '</td>' +
             '<td class="text-right font-mono ' + daysCls + '">' + daysText + '</td>' +
             '<td>' + statusCell + '</td>' +
+            collateralCells +
         '</tr>';
+    },
+
+    // Per-Set buffer-color decision rule (master spec §3).
+    _renderBufferCell: function(coll) {
+        var buf = coll && coll.buffer_pp;
+        if (buf === null || buf === undefined) {
+            return '<td class="text-right font-mono text-slate-400">—</td>';
+        }
+        var sign = buf >= 0 ? '+' : '';
+        var label = sign + buf.toFixed(1) + 'pp';
+
+        if (coll.is_at_par) {
+            // Set B: gray "at-par" tag unless asset has depegged below par
+            if (buf < -1) {
+                return '<td class="text-right font-mono text-red-600 font-semibold" title="Collateral asset depegged below par">' + label + ' 🔴</td>';
+            }
+            return '<td class="text-right font-mono text-slate-500" title="At par by design">' + label + ' <span class="text-xs">at-par</span></td>';
+        }
+        // Set A
+        if (buf < 0) return '<td class="text-right font-mono text-red-600 font-semibold" title="Below init level — delegate discretion to call">' + label + ' 🔴</td>';
+        if (buf < 5) return '<td class="text-right font-mono text-amber-600 font-semibold" title="Approaching init level">' + label + ' ⚠</td>';
+        return '<td class="text-right font-mono text-green-600">' + label + '</td>';
     },
 
     _attachLoanTableSort: function() {
         var table = document.getElementById('syrup-loans-table');
         if (!table) return;
         var headers = table.querySelectorAll('th[data-sort]');
-        // String-typed keys sort lexicographically; everything else (incl. timestamps) numeric.
         var STRING_KEYS = { borrower: 1, status: 1, collat: 1 };
         headers.forEach(function(th) {
             th.addEventListener('click', function() {
@@ -377,6 +635,7 @@ var SyrupUSDCRenderer = {
                 var attr = 'data-' + key.replace(/_/g, '-');
                 var tbody = table.querySelector('tbody');
                 var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+                // Default click → asc (so Buf ascending = tightest first); subsequent click toggles.
                 var dir = th.getAttribute('data-dir') === 'asc' ? 'desc' : 'asc';
                 headers.forEach(function(h) { h.removeAttribute('data-dir'); });
                 th.setAttribute('data-dir', dir);
@@ -386,8 +645,6 @@ var SyrupUSDCRenderer = {
                     if (STRING_KEYS[key]) {
                         return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
                     }
-                    // Empty values sink to the bottom regardless of direction (so '—' rows
-                    // don't pollute the top when sorting by Level on partial data).
                     var aEmpty = av === '';
                     var bEmpty = bv === '';
                     if (aEmpty && bEmpty) return 0;
@@ -402,7 +659,7 @@ var SyrupUSDCRenderer = {
         });
     },
 
-    // ---------- 4b. Borrower Concentration ----------
+    // ----- §3 Borrower Concentration (unchanged) --------------------------
     _renderBorrowerConcentration: function(specific) {
         var lb = specific.loan_book;
         if (!lb || !lb.concentration) return '';
@@ -421,7 +678,6 @@ var SyrupUSDCRenderer = {
         var bucketLabel = (c.hhi_bucket || '').charAt(0).toUpperCase() + (c.hhi_bucket || '').slice(1);
         var bucketBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ' + bucketCls + '">' + bucketLabel + '</span>';
 
-        // Top-N share bars
         function bar(label, pct) {
             var p = pct || 0;
             return '<div class="mb-2">' +
@@ -468,15 +724,15 @@ var SyrupUSDCRenderer = {
         '</div>';
     },
 
-    // ---------- 4c. Payment-Due Ladder ----------
-    _renderPaymentLadder: function(specific) {
+    // ----- §4 Repayment Schedule (renamed from Payment Ladder) ------------
+    _renderRepaymentSchedule: function(specific) {
         var lb = specific.loan_book;
         if (!lb || !lb.payment_ladder) return '';
         var pl = lb.payment_ladder;
 
         if (!pl.buckets || pl.buckets.length === 0) {
             return '<div class="panel">' +
-                '<div class="panel-title">Payment Ladder (next ' + (pl.horizon_days || 180) + ' days)</div>' +
+                '<div class="panel-title">Repayment Schedule (next ' + (pl.horizon_days || 180) + ' days)</div>' +
                 '<div class="text-slate-400 text-sm italic">No active loans — no scheduled inflows.</div>' +
             '</div>';
         }
@@ -491,7 +747,7 @@ var SyrupUSDCRenderer = {
         }
 
         return '<div class="panel">' +
-            '<div class="panel-title">Payment Ladder (next ' + (pl.horizon_days || 180) + ' days)</div>' +
+            '<div class="panel-title">Repayment Schedule (next ' + (pl.horizon_days || 180) + ' days)</div>' +
             '<p class="text-sm text-slate-500 mb-3">Expected interest-only inflows from active open-term loans, bucketed by next payment-due date. Principal repays only on a Pool-Delegate call (24h notice + 48h grace) and is not modelled here.</p>' +
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
                 statBlock('30d', t.expected_inflow_30d_usd) +
@@ -507,21 +763,19 @@ var SyrupUSDCRenderer = {
         '</div>';
     },
 
-    _renderPaymentLadderChart: function(specific) {
+    _renderRepaymentScheduleChart: function(specific) {
         var ctx = document.getElementById('syrup-ladder-chart');
-        if (!ctx) return;
+        if (!ctx || typeof Chart === 'undefined') return;
         var pl = specific.loan_book && specific.loan_book.payment_ladder;
         if (!pl || !pl.buckets || pl.buckets.length === 0) return;
 
         var labels = pl.buckets.map(function(b) {
-            // Trim ISO date "2026-05-30" to "May 30"
             var d = new Date(b.period_end_iso + 'T00:00:00Z');
             return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
         });
         var values = pl.buckets.map(function(b) { return b.expected_inflow_usd || 0; });
         var loanCounts = pl.buckets.map(function(b) { return b.loan_count || 0; });
         var total = values.reduce(function(a, b) { return a + b; }, 0);
-        // Amber bar if any single bucket holds >40% of horizon total — repayment-timing concentration.
         var maxBucket = Math.max.apply(null, values);
         var concentrated = total > 0 && (maxBucket / total) > 0.4;
         var color = concentrated ? '#f59e0b' : '#22c55e';
@@ -557,9 +811,7 @@ var SyrupUSDCRenderer = {
                         grid: { display: false },
                         ticks: {
                             font: { size: 11 },
-                            callback: function(val, idx) {
-                                return labels[idx] + ' (' + loanCounts[idx] + ')';
-                            }
+                            callback: function(val, idx) { return labels[idx] + ' (' + loanCounts[idx] + ')'; }
                         }
                     },
                     y: {
@@ -575,137 +827,38 @@ var SyrupUSDCRenderer = {
         });
     },
 
-    // ---------- 4d. Collateral Mix ----------
-    _renderCollateralMix: function(specific) {
-        var lb = specific.loan_book;
-        if (!lb || !lb.collateral_summary) return '';
-        var cs = lb.collateral_summary;
-
-        // Degraded state — Maple GraphQL unreachable.
-        if (cs.data_source === 'unavailable') {
-            return '<div class="panel">' +
-                '<div class="panel-title">Collateral Mix</div>' +
-                '<div class="risk-flag risk-info">Collateral data temporarily unavailable from Maple API. Loan-level credit and timing fields above are unaffected.</div>' +
-            '</div>';
-        }
-
-        var setA = cs.set_a_overcollateralized || {};
-        var setB = cs.set_b_at_par || {};
-        var byAsset = cs.by_asset || [];
-
-        // Header line: pool-level cross-check from Maple GraphQL.
-        var poolLine = '';
-        if (cs.pool_collateral_value_usd != null && cs.pool_collateral_ratio_pct != null) {
-            poolLine = '<p class="text-sm text-slate-700 mb-3">Pool collateralization: <span class="font-mono font-semibold">' + CommonRenderer.formatPercent(cs.pool_collateral_ratio_pct, 1) + '</span> · <span class="font-mono">' + CommonRenderer.formatCurrency(cs.pool_collateral_value_usd) + '</span> collateral against active loan book. <span class="text-xs text-slate-400">(Maple GraphQL)</span></p>';
-        }
-
-        function bar(row, color) {
-            var pct = row.pct_of_book || 0;
-            var meta = SYRUP_COLLATERAL_META[row.asset] || {};
-            var issuerTag = meta.issuer && meta.issuer !== '—' ?
-                ' <span class="text-xs text-slate-500">' + meta.issuer + '</span>' : '';
-            var levelRange;
-            if (row.init_level_pct_min === row.init_level_pct_max) {
-                levelRange = CommonRenderer.formatPercent(row.init_level_pct_min, 0);
-            } else {
-                levelRange = CommonRenderer.formatPercent(row.init_level_pct_min, 0) + '–' + CommonRenderer.formatPercent(row.init_level_pct_max, 0);
-            }
-            return '<div class="mb-2">' +
-                '<div class="flex justify-between text-sm mb-1">' +
-                    '<span class="text-slate-700"><span class="font-mono font-semibold">' + row.asset + '</span>' + issuerTag + ' <span class="text-xs text-slate-400">' + (row.loans || 0) + ' loan' + (row.loans === 1 ? '' : 's') + ' · init ' + levelRange + '</span></span>' +
-                    '<span class="font-mono font-semibold">' + CommonRenderer.formatPercent(pct, 1) + ' · ' + CommonRenderer.formatCurrency(row.principal_usd) + '</span>' +
-                '</div>' +
-                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + Math.min(pct, 100) + '%; background:' + color + '"></div></div>' +
-            '</div>';
-        }
-
-        // Partition by_asset rows into Set A (overcoll, init > 105) and Set B (at-par, init ≤ 105)
-        var setARows = byAsset.filter(function(r) { return (r.init_level_pct_max || 0) > 105; });
-        var setBRows = byAsset.filter(function(r) { return (r.init_level_pct_max || 0) <= 105; });
-
-        var setAHtml = '<div>' +
-            '<div class="text-sm font-semibold text-slate-700 mb-2">' +
-                'Set A — crypto-overcollateralized · ' + CommonRenderer.formatPercent(setA.pct_of_book || 0, 1) +
-                ' <span class="text-xs text-slate-500 font-normal">' + CommonRenderer.formatCurrency(setA.principal_usd || 0) +
-                (setA.weighted_avg_init_level_pct ? ' · weighted init ' + CommonRenderer.formatPercent(setA.weighted_avg_init_level_pct, 1) : '') +
-                '</span>' +
-            '</div>' +
-            (setARows.length ? setARows.map(function(r) { return bar(r, '#22c55e'); }).join('') :
-                '<div class="text-xs text-slate-400 italic">No over-collateralized loans in current book.</div>') +
-        '</div>';
-
-        var setBWarning = '';
-        if (setB.principal_usd > 0) {
-            var largestPct = setB.principal_usd ? (setB.largest_position_usd / setA.principal_usd + setB.principal_usd * 0) : 0;
-            // largest_position_pct: % of total book (set_a + set_b). Compute defensively.
-            var totalPrincipal = (setA.principal_usd || 0) + (setB.principal_usd || 0);
-            var largestPctOfBook = totalPrincipal > 0 ? (setB.largest_position_usd / totalPrincipal * 100) : 0;
-            setBWarning =
-                '<div class="risk-flag risk-warning mt-3"><strong>Set B is collateralized at par.</strong> Stress binds on collateral-asset peg/issuer events, not crypto-cycle drawdowns.' +
-                (setB.largest_position_usd ?
-                    ' Largest single position: <span class="font-mono">' + CommonRenderer.formatCurrency(setB.largest_position_usd) + '</span> in <span class="font-mono">' + (setB.largest_position_asset || '?') + '</span> (' + CommonRenderer.formatPercent(largestPctOfBook, 1) + ' of book).' : '') +
-                '</div>';
-        }
-        var issuerLine = setB.named_issuers && setB.named_issuers.length ?
-            '<div class="text-xs text-slate-500 mt-2">Named issuers: ' + setB.named_issuers.join(' · ') + '</div>' : '';
-
-        var setBHtml = '<div>' +
-            '<div class="text-sm font-semibold text-slate-700 mb-2">' +
-                'Set B — at-par stablecoin / RWA · ' + CommonRenderer.formatPercent(setB.pct_of_book || 0, 1) +
-                ' <span class="text-xs text-slate-500 font-normal">' + CommonRenderer.formatCurrency(setB.principal_usd || 0) + '</span>' +
-            '</div>' +
-            (setBRows.length ? setBRows.map(function(r) { return bar(r, '#f59e0b'); }).join('') :
-                '<div class="text-xs text-slate-400 italic">No at-par loans in current book.</div>') +
-            issuerLine +
-        '</div>';
-
-        return '<div class="panel">' +
-            '<div class="panel-title">Collateral Mix</div>' +
-            poolLine +
-            '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' +
-                setAHtml +
-                setBHtml +
-            '</div>' +
-            setBWarning +
-            '<div class="text-xs text-slate-400 mt-3">Source: Maple GraphQL · USD values computed from on-chain Chainlink feeds. <code class="font-mono">init_level_pct ≤ 105%</code> classifies as Set B.</div>' +
-        '</div>';
-    },
-
-    // ---------- 5. Exit Realism ----------
-    _renderExitRealism: function(specific, s) {
+    // ----- §5 Liquidity & Peg (folds Exit Realism + Stress Anchor + Peg) --
+    _renderLiquidityAndPeg: function(specific, s) {
         var wq = specific.withdrawal_queue;
         var liq = specific.liquidity;
-        if (!wq && !liq) return '';
+        var peg = specific.peg;
+        var lb = specific.loan_book || {};
 
-        var html = '<div class="panel"><div class="panel-title">Exit Realism</div>' +
-            '<p class="text-sm text-slate-500 mb-3">Two exit paths: (a) instant queue exit redeems against free USDC at NAV; (b) DEX/aggregator sell takes a slippage hit but settles immediately.</p>';
+        var html = '<div class="panel"><div class="panel-title">Liquidity &amp; Peg</div>' +
+            '<p class="text-sm text-slate-500 mb-3">Two exit paths: (a) instant queue exit redeems against free USDC at NAV; (b) DEX/aggregator sell takes a slippage hit but settles immediately. Peg deviation = market price vs theoretical NAV.</p>';
 
-        // Free liquidity + queue
+        // Free USDC + queue
         if (wq) {
-            var freeUsd = s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency ? s.collateral_ratio_alt.value : null;
+            var freeUsd = (s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency) ? s.collateral_ratio_alt.value :
+                          (specific.vault_state && specific.vault_state.free_usdc) || null;
             var freePct = SyrupUSDCRenderer._freeLiquidityPct(s);
-            // Queue depth USDC/shares are null when the queue is empty — treat as 0 so cards render cleanly.
             var queueEmpty = wq.is_empty === true;
             var depthUsd = (wq.queue_depth_usdc_est === null || wq.queue_depth_usdc_est === undefined) ? (queueEmpty ? 0 : null) : wq.queue_depth_usdc_est;
-            var depthShares = (wq.queue_depth_shares === null || wq.queue_depth_shares === undefined) ? (queueEmpty ? 0 : null) : wq.queue_depth_shares;
             var slots = wq.queue_depth_slots;
             var nextId = wq.next_request_id;
             var lastId = wq.last_request_id;
-
             var depthCls = depthUsd !== null && depthUsd > 10000000 ? 'warning' : '';
-            var depthText = depthUsd === null ? '-' : CommonRenderer.formatCurrency(depthUsd);
-            var depthSubText = depthShares === null ? 'USDC est.' :
-                (depthShares > 0 ? CommonRenderer.formatCurrency(depthShares) + ' shares' : 'USDC est.');
+            var depthText = depthUsd === null ? '—' : CommonRenderer.formatCurrency(depthUsd);
 
             html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
                 '<div class="summary-card"><div class="card-label">Free USDC</div><div class="card-value positive">' + CommonRenderer.formatCurrency(freeUsd) + '</div><div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(freePct, 1) + ' of supply</div></div>' +
-                '<div class="summary-card"><div class="card-label">Queue Depth</div><div class="card-value ' + depthCls + '">' + depthText + '</div><div class="text-xs text-slate-400 mt-1">' + depthSubText + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Queue Slots</div><div class="card-value">' + (slots !== null && slots !== undefined ? slots : '-') + '</div><div class="text-xs text-slate-400 mt-1">' + (queueEmpty ? 'empty' : 'pending') + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Request IDs</div><div class="card-value text-base font-mono">' + (lastId !== null && lastId !== undefined ? lastId : '-') + ' / ' + (nextId !== null && nextId !== undefined ? nextId : '-') + '</div><div class="text-xs text-slate-400 mt-1">last filled / next to file</div></div>' +
+                '<div class="summary-card"><div class="card-label">Queue Depth</div><div class="card-value ' + depthCls + '">' + depthText + '</div><div class="text-xs text-slate-400 mt-1">USDC est.</div></div>' +
+                '<div class="summary-card"><div class="card-label">Queue Slots</div><div class="card-value">' + (slots !== null && slots !== undefined ? slots : '—') + '</div><div class="text-xs text-slate-400 mt-1">' + (queueEmpty ? 'empty' : 'pending') + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">Request IDs</div><div class="card-value text-base font-mono">' + (lastId != null ? lastId : '—') + ' / ' + (nextId != null ? nextId : '—') + '</div><div class="text-xs text-slate-400 mt-1">last filled / next to file</div></div>' +
             '</div>';
         }
 
-        // Aggregator slippage table
+        // DEX aggregator slippage
         if (liq && liq.quotes) {
             var sizes = Object.keys(liq.quotes).sort(function(a, b) { return parseFloat(a) - parseFloat(b); });
             var rows = sizes.map(function(sz) {
@@ -714,52 +867,58 @@ var SyrupUSDCRenderer = {
                 var cls = bps > 50 ? 'text-red-600 font-semibold' : bps > 20 ? 'text-amber-600' : '';
                 return '<tr>' +
                     '<td class="font-mono">$' + Number(sz).toLocaleString() + '</td>' +
-                    '<td class="text-right font-mono ' + cls + '">' + (bps !== null && bps !== undefined ? bps.toFixed(1) + ' bps' : '-') + '</td>' +
-                    '<td class="text-right font-mono">' + (q.output_usd !== null && q.output_usd !== undefined ? '$' + q.output_usd.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '-') + '</td>' +
+                    '<td class="text-right font-mono ' + cls + '">' + (bps != null ? bps.toFixed(1) + ' bps' : '—') + '</td>' +
+                    '<td class="text-right font-mono">' + (q.output_usd != null ? '$' + q.output_usd.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—') + '</td>' +
                 '</tr>';
             }).join('');
             var sourceLabel = liq.source ? ' (' + liq.source + ')' : '';
-            html += '<div class="text-sm font-semibold text-slate-700 mt-2 mb-1">Aggregator slippage → USDC' + sourceLabel + '</div>' +
+            html += '<div class="text-sm font-semibold text-slate-700 mt-2 mb-1">DEX aggregator slippage → USDC' + sourceLabel + '</div>' +
                 '<table class="data-table"><thead><tr><th>Notional</th><th class="text-right">Slippage</th><th class="text-right">Output</th></tr></thead><tbody>' + rows + '</tbody></table>' +
                 (liq.pool_tvl ? '<div class="text-xs text-slate-400 mt-2">DEX pool TVL: ' + CommonRenderer.formatCurrency(liq.pool_tvl) + (liq.pool_count ? ' across ' + liq.pool_count + ' pools' : '') + '</div>' : '');
         }
 
-        html += '</div>';
+        // NEW: Peg deviation row
+        if (peg && (peg.market_price != null || peg.theoretical_price != null)) {
+            // premium_discount_pct is a percentage (e.g. -0.06 = -6 bps roughly).
+            // 1% = 100 bps. So bps = pct * 100.
+            var pdPct = peg.premium_discount_pct;
+            var pdBps = (pdPct != null) ? pdPct * 100 : null;
+            var pdSign = pdBps != null && pdBps >= 0 ? '+' : '';
+            var pdCls = pdBps != null && Math.abs(pdBps) > 50 ? 'text-red-600 font-semibold' :
+                        pdBps != null && Math.abs(pdBps) > 20 ? 'text-amber-600' : 'text-slate-700';
+            html += '<div class="text-sm font-semibold text-slate-700 mt-4 mb-1">Peg deviation</div>' +
+                '<div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">' +
+                    '<div class="summary-card"><div class="card-label">Market price</div><div class="card-value">' + (peg.market_price != null ? '$' + peg.market_price.toFixed(4) : '—') + '</div><div class="text-xs text-slate-400 mt-1">' + (peg.source || 'external') + '</div></div>' +
+                    '<div class="summary-card"><div class="card-label">NAV (theoretical)</div><div class="card-value">' + (peg.theoretical_price != null ? '$' + peg.theoretical_price.toFixed(4) : '—') + '</div><div class="text-xs text-slate-400 mt-1">on-chain</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Discount</div><div class="card-value ' + pdCls + '">' + (pdBps != null ? pdSign + pdBps.toFixed(1) + ' bps' : '—') + '</div><div class="text-xs text-slate-400 mt-1">market vs NAV</div></div>' +
+                '</div>';
+        }
+
+        // Stress anchor
+        var freePct2 = SyrupUSDCRenderer._freeLiquidityPct(s);
+        var freeUsd2 = (s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency) ? s.collateral_ratio_alt.value : null;
+        var paymentInterval = lb.weighted_avg_payment_interval_days;
+        if (paymentInterval == null) paymentInterval = lb.weighted_avg_remaining_days_to_due;
+        var freePctText = freePct2 != null ? freePct2.toFixed(1) + '%' : '?';
+        var freeUsdText = freeUsd2 != null ?
+            (freeUsd2 >= 1e6 ? '$' + (freeUsd2 / 1e6).toFixed(0) + 'M' : '$' + (freeUsd2 / 1e3).toFixed(0) + 'K') : '?';
+        var intervalText = paymentInterval != null ? paymentInterval.toFixed(0) + '-day' : 'multi-week';
+        var monthlyInflow = lb.payment_ladder && lb.payment_ladder.totals && lb.payment_ladder.totals.expected_inflow_30d_usd;
+        var inflowFragment = (monthlyInflow != null) ?
+            ' (interest-only ≈ <span class="font-mono">' + CommonRenderer.formatCurrency(monthlyInflow) + '/30d</span>)' : '';
+
+        html += '<div class="text-sm font-semibold text-slate-700 mt-4 mb-1">Stress anchor</div>' +
+            '<p class="text-sm text-slate-700">' +
+                'Free liquidity (<span class="font-semibold">' + freePctText + '</span>, ' + freeUsdText + ') covers redemptions to ~<span class="font-semibold">' + freeUsdText + '</span> before queueing. ' +
+                'Above that, exits depend on incoming loan repayments' + inflowFragment + '. ' +
+                'Avg loan payment interval <span class="font-semibold">' + intervalText + '</span>; the pool has 24h notice + 48h grace to call a delinquent loan.' +
+            '</p>' +
+        '</div>';
         return html;
     },
 
-    // ---------- 6. Multi-Chain Distribution ----------
-    _renderMultiChain: function(specific) {
-        var mc = specific.multi_chain;
-        if (!mc) return '';
-        var chains = Object.keys(mc);
-        var nonEthPopulated = chains.some(function(c) {
-            return c !== 'ethereum' && mc[c] && mc[c].supply !== null && mc[c].supply !== undefined;
-        });
-        if (!nonEthPopulated) return '';  // Phase 1/2: hide until Phase 3 fills it
-
-        var rows = chains.map(function(c) {
-            var d = mc[c] || {};
-            return '<tr>' +
-                '<td class="font-medium">' + c.charAt(0).toUpperCase() + c.slice(1) + '</td>' +
-                '<td class="text-right font-mono">' + (d.supply !== null && d.supply !== undefined ? CommonRenderer.formatCurrency(d.supply) : '-') + '</td>' +
-                '<td class="text-right font-mono">' + (d.share_of_supply_pct !== null && d.share_of_supply_pct !== undefined ? CommonRenderer.formatPercent(d.share_of_supply_pct, 1) : '-') + '</td>' +
-                '<td class="font-mono text-xs">' + (d.ccip_pool ? SyrupUSDCRenderer._truncAddr(d.ccip_pool) + ' ' + SyrupUSDCRenderer._ethLink(d.ccip_pool) : '-') + '</td>' +
-            '</tr>';
-        }).join('');
-
-        return '<div class="panel">' +
-            '<div class="panel-title">Multi-Chain Distribution</div>' +
-            '<table class="data-table"><thead><tr><th>Chain</th><th class="text-right">Supply</th><th class="text-right">Share</th><th>CCIP Pool</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-        '</div>';
-    },
-
-    // ---------- 7. Governance Topology ----------
-    // Analyzer emits a flat shape: governor/operational_admin/security_admin/pool_delegate
-    // are address strings; pool_delegate_firm / pool_delegate_is_eoa /
-    // pool_delegate_cover (= cover contract addr) / pool_delegate_cover_usdc /
-    // min_cover_amount / timelock_hours / protocol_paused are sibling fields.
-    _renderGovernance: function(specific) {
+    // ----- §6 Trust Stack (renamed from Governance + audit roll-up) -------
+    _renderTrustStack: function(specific) {
         var g = specific.governance;
         if (!g) return '';
 
@@ -781,7 +940,6 @@ var SyrupUSDCRenderer = {
             '</tr>';
         }
 
-        // Governor
         var govAddr = addrOf(g.governor);
         if (govAddr) {
             var govExtra = 'timelock';
@@ -789,11 +947,9 @@ var SyrupUSDCRenderer = {
             if (hrs === undefined && typeof g.governor === 'object' && g.governor.min_delay_s) {
                 hrs = g.governor.min_delay_s / 3600;
             }
-            if (hrs !== undefined && hrs !== null) govExtra += ' · min delay ' + hrs + 'h';
+            if (hrs != null) govExtra += ' · min delay ' + hrs + 'h';
             rows.push(row('Governor', govAddr, govExtra));
         }
-
-        // Operational / Security Safes
         var opAddr = addrOf(g.operational_admin);
         if (opAddr) {
             var opExtra = 'safe';
@@ -808,8 +964,6 @@ var SyrupUSDCRenderer = {
             if (secThresh) secExtra += ' · ' + secThresh;
             rows.push(row('Security Safe', secAddr, secExtra));
         }
-
-        // Pool Delegate
         var pdAddr = addrOf(g.pool_delegate);
         if (pdAddr) {
             var pdExtra = '';
@@ -820,8 +974,6 @@ var SyrupUSDCRenderer = {
             if (isEoa) pdExtra += (pdExtra ? ' · ' : '') + '<span class="text-amber-600 font-semibold">⚠ EOA</span>';
             rows.push(row('Pool Delegate', pdAddr, pdExtra || '-'));
         }
-
-        // Pool Delegate Cover — analyzer emits cover contract addr + balance + min_required as siblings.
         var coverAddr = (typeof g.pool_delegate_cover === 'string') ? g.pool_delegate_cover :
                         (g.pool_delegate_cover && g.pool_delegate_cover.address) || null;
         var coverBal = g.pool_delegate_cover_usdc;
@@ -842,8 +994,6 @@ var SyrupUSDCRenderer = {
                 '<td class="text-xs text-slate-500">Pool Delegate skin-in-the-game</td>' +
             '</tr>');
         }
-
-        // Protocol-paused row (analyzer emits this in governance, not vault_state)
         if (g.protocol_paused !== undefined) {
             var pausedCls = g.protocol_paused ? 'text-red-600 font-semibold' : 'text-green-600';
             rows.push('<tr>' +
@@ -858,36 +1008,76 @@ var SyrupUSDCRenderer = {
             lastTx = '<div class="text-xs text-slate-400 mt-2">Last admin tx: ' + CommonRenderer.formatDate(g.last_admin_tx_timestamp) + '</div>';
         }
 
+        var auditLine =
+            '<div class="text-sm text-slate-600 mt-3 pt-3 border-t border-slate-200">' +
+                'Audits: <strong>' + SYRUP_AUDIT_INFO.primary_audits + '</strong> + ' + SYRUP_AUDIT_INFO.other_audits_count + ' others (' + SYRUP_AUDIT_INFO.total_audits + ' total) · ' +
+                'Bug bounty: <strong>' + SYRUP_AUDIT_INFO.bug_bounty + '</strong>' +
+            '</div>';
+
         return '<div class="panel">' +
-            '<div class="panel-title">Governance Topology</div>' +
+            '<div class="panel-title">Trust Stack</div>' +
             '<table class="data-table"><thead><tr><th>Role</th><th>Address</th><th>Notes</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>' +
             lastTx +
+            auditLine +
         '</div>';
     },
 
-    // ---------- 8. Stress Anchor ----------
-    _renderStressAnchor: function(specific, s) {
-        var freePct = SyrupUSDCRenderer._freeLiquidityPct(s);
-        var freeUsd = s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency ? s.collateral_ratio_alt.value : null;
-        var lb = specific.loan_book || {};
-        var paymentInterval = lb.weighted_avg_payment_interval_days;
-        if (paymentInterval === null || paymentInterval === undefined) {
-            paymentInterval = lb.weighted_avg_remaining_days_to_due;
+    // ----- §7 Yield (demoted, content unchanged) --------------------------
+    _renderYield: function(specific) {
+        var y = specific.yield;
+        if (!y) return '';
+        var headline = y.headline_apy_pct;
+        var base = y.base_apy_pct;
+        var season = y.season_incentive_apy_pct;
+        var fee = y.delegate_fee_pct;
+
+        var maxApy = Math.max(headline || 0, (base || 0) + (season || 0)) || 20;
+        function bar(val, color, label, tag) {
+            if (val === null || val === undefined) return '';
+            var pct = Math.max(0, Math.min(100, val / maxApy * 100));
+            return '<div class="mb-2">' +
+                '<div class="flex justify-between text-sm mb-1">' +
+                    '<span class="text-slate-600">' + label + (tag ? ' <span class="text-xs text-slate-400">(' + tag + ')</span>' : '') + '</span>' +
+                    '<span class="font-mono font-semibold">' + CommonRenderer.formatPercent(val, 2) + '</span>' +
+                '</div>' +
+                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + pct + '%; background:' + color + '"></div></div>' +
+            '</div>';
         }
 
-        var freePctText = freePct !== null && freePct !== undefined ? freePct.toFixed(1) + '%' : '?';
-        var freeUsdText = freeUsd !== null && freeUsd !== undefined ?
-            (freeUsd >= 1e6 ? '$' + (freeUsd / 1e6).toFixed(0) + 'M' : '$' + (freeUsd / 1e3).toFixed(0) + 'K') :
-            '?';
-        var intervalText = paymentInterval !== null && paymentInterval !== undefined ?
-            paymentInterval.toFixed(0) + '-day' : 'multi-week';
+        return '<div class="panel">' +
+            '<div class="panel-title">Yield Decomposition</div>' +
+            '<p class="text-sm text-slate-500 mb-3">Base APY is durable loan interest. Season-incentive APY is paid in SYRUP token and stops when the campaign ends — it is what you give back when seasons end.</p>' +
+            bar(base, '#22c55e', 'Base APY', 'loan interest, durable') +
+            bar(season, '#a855f7', 'Season-incentive APY', y.season_label || 'SYRUP token') +
+            bar(headline, '#3b82f6', 'Headline APY', 'base + seasons') +
+            (fee != null ? '<div class="text-sm text-slate-500 mt-3">Pool Delegate management fee: <span class="font-mono font-semibold">' + CommonRenderer.formatPercent(fee, 2) + '</span> taken from gross before share-holders.</div>' : '') +
+            (y.apr_24h_pct != null ? '<div class="text-xs text-slate-400 mt-1">24h realised APR (NAV): ' + CommonRenderer.formatPercent(y.apr_24h_pct, 2) + ' — trailing window, can be noisy</div>' : '') +
+        '</div>';
+    },
+
+    // ----- Multi-Chain (Phase 3, hidden when only Ethereum) ---------------
+    _renderMultiChain: function(specific) {
+        var mc = specific.multi_chain;
+        if (!mc) return '';
+        var chains = Object.keys(mc);
+        var nonEthPopulated = chains.some(function(c) {
+            return c !== 'ethereum' && mc[c] && mc[c].supply !== null && mc[c].supply !== undefined;
+        });
+        if (!nonEthPopulated) return '';
+
+        var rows = chains.map(function(c) {
+            var d = mc[c] || {};
+            return '<tr>' +
+                '<td class="font-medium">' + c.charAt(0).toUpperCase() + c.slice(1) + '</td>' +
+                '<td class="text-right font-mono">' + (d.supply != null ? CommonRenderer.formatCurrency(d.supply) : '-') + '</td>' +
+                '<td class="text-right font-mono">' + (d.share_of_supply_pct != null ? CommonRenderer.formatPercent(d.share_of_supply_pct, 1) : '-') + '</td>' +
+                '<td class="font-mono text-xs">' + (d.ccip_pool ? SyrupUSDCRenderer._truncAddr(d.ccip_pool) + ' ' + SyrupUSDCRenderer._ethLink(d.ccip_pool) : '-') + '</td>' +
+            '</tr>';
+        }).join('');
 
         return '<div class="panel">' +
-            '<div class="panel-title">Stress Anchor</div>' +
-            '<p class="text-sm text-slate-700">' +
-                'Free liquidity (<span class="font-semibold">' + freePctText + '</span>) covers redemptions up to <span class="font-semibold">' + freeUsdText + '</span> before queueing. ' +
-                'Above that, exits depend on incoming loan repayments. Loans pay on a <span class="font-semibold">' + intervalText + '</span> cadence on average; the pool has 24h notice + 48h grace to call a delinquent loan.' +
-            '</p>' +
+            '<div class="panel-title">Multi-Chain Distribution</div>' +
+            '<table class="data-table"><thead><tr><th>Chain</th><th class="text-right">Supply</th><th class="text-right">Share</th><th>CCIP Pool</th></tr></thead><tbody>' + rows + '</tbody></table>' +
         '</div>';
     }
 };
