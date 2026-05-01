@@ -558,13 +558,30 @@ var SyrupUSDCRenderer = {
             var c = loan.collateral || {};
             var asset = c.asset || null;
             var collatUsd = c.usd;
-            // Single combined "Collateral" cell — "PYUSD $152.7M" or "BTC $254M"
+            var isAnomaly = c.usd_source === 'data_anomaly';
+            // Distinguish data_anomaly cells (Maple GraphQL returns broken
+            // currentAssetAmount) from genuinely-unavailable: same — but with
+            // a ? glyph + tooltip so readers know it's a data-quality issue,
+            // not a missing oracle.
+            var anomalyAttrs = isAnomaly ?
+                ' title="Maple GraphQL data anomaly — collateral state unverifiable" class="cursor-help"' : '';
+            var anomalyGlyph = isAnomaly ?
+                ' <span class="text-amber-500 text-xs"' + anomalyAttrs + '>?</span>' : '';
+
+            // Single combined "Collateral" cell — "PYUSD $152.7M" or "USTB — ?"
             var collatCellText;
             if (!asset) {
                 collatCellText = '<span class="text-slate-400">—</span>';
             } else {
                 var meta = SYRUP_COLLATERAL_META[asset] || {};
-                var usdText = (collatUsd != null) ? CommonRenderer.formatCurrency(collatUsd) : '—';
+                var usdText;
+                if (collatUsd != null) {
+                    usdText = CommonRenderer.formatCurrency(collatUsd);
+                } else if (isAnomaly) {
+                    usdText = '<span class="text-slate-400"' + anomalyAttrs + '>—</span>' + anomalyGlyph;
+                } else {
+                    usdText = '<span class="text-slate-400">—</span>';
+                }
                 var issuerSuffix = meta.issuer && meta.issuer !== '—' ?
                     ' <span class="text-xs text-slate-400">(' + meta.issuer + ')</span>' : '';
                 collatCellText = '<span class="font-mono text-xs">' + asset + '</span> ' +
@@ -574,7 +591,14 @@ var SyrupUSDCRenderer = {
             var initLevel = c.init_level_pct;
             var curLevel = c.current_level_pct;
             var initText = (initLevel != null) ? CommonRenderer.formatPercent(initLevel, 0) : '—';
-            var curText = (curLevel != null) ? CommonRenderer.formatPercent(curLevel, 1) : '—';
+            var curText;
+            if (curLevel != null) {
+                curText = CommonRenderer.formatPercent(curLevel, 1);
+            } else if (isAnomaly) {
+                curText = '<span' + anomalyAttrs + '>—</span>' + anomalyGlyph;
+            } else {
+                curText = '—';
+            }
 
             collateralCells =
                 '<td>' + collatCellText + '</td>' +
@@ -606,6 +630,11 @@ var SyrupUSDCRenderer = {
     _renderBufferCell: function(coll) {
         var buf = coll && coll.buffer_pp;
         if (buf === null || buf === undefined) {
+            // Distinguish data_anomaly (collateral state unverifiable) from
+            // genuinely-unavailable so readers understand the difference.
+            if (coll && coll.usd_source === 'data_anomaly') {
+                return '<td class="text-right font-mono text-slate-400 cursor-help" title="Maple GraphQL data anomaly — collateral state unverifiable">— <span class="text-amber-500 text-xs">?</span></td>';
+            }
             return '<td class="text-right font-mono text-slate-400">—</td>';
         }
         var sign = buf >= 0 ? '+' : '';
