@@ -108,6 +108,12 @@ var SyrupUSDCRenderer = {
         var s = data.summary;
         var html = '';
 
+        // Reserved div for the cross-pool family panel — async-populated below
+        // by _loadCrossPoolFamily once data/syrup_family.json resolves. Stays
+        // empty (zero-height) when the file is missing so the page doesn't
+        // visibly regress.
+        html += '<div id="syrup-family-panel"></div>';
+
         html += this._renderBacking(specific, s);                   // §1
         html += this._renderLoanBookHealth(specific);               // §2
         html += this._renderBorrowerConcentration(specific);        // §3
@@ -124,6 +130,168 @@ var SyrupUSDCRenderer = {
         this._renderRepaymentScheduleChart(specific);
         this._renderAumCoverageChart(specific);
         this._attachLoanTableSort();
+        this._loadCrossPoolFamily(data);
+    },
+
+    // ----- Cross-Pool Family panel (shared by syrupUSDC + syrupUSDT) ------
+    _loadCrossPoolFamily: function(data) {
+        var target = document.getElementById('syrup-family-panel');
+        if (!target) return;
+        fetch('data/syrup_family.json?nocache=' + Math.floor(Date.now() / 60000))
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(fam) {
+                if (!fam) {
+                    // File missing — leave the placeholder empty.
+                    target.innerHTML = '';
+                    return;
+                }
+                if (fam.data_source === 'incomplete') {
+                    target.innerHTML =
+                        '<div class="panel">' +
+                            '<div class="panel-title">Maple Syrup Family — Cross-Pool Snapshot</div>' +
+                            '<div class="risk-flag risk-info">Cross-pool family data is currently unavailable (one pool\'s analyzer is mid-cycle or stale). Per-pool dashboards continue to render correctly.</div>' +
+                        '</div>';
+                    return;
+                }
+                target.innerHTML = SyrupUSDCRenderer._renderCrossPoolFamilyContent(fam, data);
+            })
+            .catch(function() { target.innerHTML = ''; });
+    },
+
+    _renderCrossPoolFamilyContent: function(fam, data) {
+        var combined = fam.combined || {};
+        var pools = fam.pools || [];
+        var usdcPool = pools.find(function(p) { return p.slug === 'syrupusdc'; }) || {};
+        var usdtPool = pools.find(function(p) { return p.slug === 'syrupusdt'; }) || {};
+        var overlap = fam.borrower_overlap || [];
+        var gov = fam.shared_governance || {};
+        var currentSlug = data.asset_slug || 'syrupusdc';
+
+        // ---- Family aggregates row ----
+        var aggCards =
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+                '<div class="summary-card">' +
+                    '<div class="card-label">Combined family AUM</div>' +
+                    '<div class="card-value">' + CommonRenderer.formatCurrency(combined.total_aum_usd) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">USDC ' + CommonRenderer.formatCurrency(usdcPool.aum_usd) +
+                        ' + USDT ' + CommonRenderer.formatCurrency(usdtPool.aum_usd) + '</div>' +
+                '</div>' +
+                '<div class="summary-card">' +
+                    '<div class="card-label">Combined active loans</div>' +
+                    '<div class="card-value">' + (combined.active_loan_count != null ? combined.active_loan_count : '—') + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">USDC ' + (usdcPool.active_loan_count || 0) +
+                        ' + USDT ' + (usdtPool.active_loan_count || 0) + '</div>' +
+                '</div>' +
+                '<div class="summary-card">' +
+                    '<div class="card-label">Set A (crypto-overcoll)</div>' +
+                    '<div class="card-value">' + CommonRenderer.formatCurrency(combined.set_a_principal_usd) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' +
+                        (combined.set_a_pct != null ? CommonRenderer.formatPercent(combined.set_a_pct, 1) + ' of family book' : '') +
+                    '</div>' +
+                '</div>' +
+                '<div class="summary-card">' +
+                    '<div class="card-label">Set B (at-par stable / RWA)</div>' +
+                    '<div class="card-value">' + CommonRenderer.formatCurrency(combined.set_b_principal_usd) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' +
+                        (combined.set_b_pct != null ? CommonRenderer.formatPercent(combined.set_b_pct, 1) + ' of family book' : '') +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        // ---- Cross-pool borrower table ----
+        var rowsHtml = '';
+        var crossPoolBorrowers = overlap.filter(function(b) {
+            return (b.syrupusdc_total_usd || 0) > 0 && (b.syrupusdt_total_usd || 0) > 0;
+        });
+        var top3CombinedPct = 0;
+        for (var i = 0; i < Math.min(3, crossPoolBorrowers.length); i++) {
+            top3CombinedPct += crossPoolBorrowers[i].combined_pct_of_family || 0;
+        }
+        rowsHtml = (overlap.length === 0) ?
+            '<tr><td colspan="6" class="text-slate-400 text-sm italic">No cross-pool borrower exposures.</td></tr>' :
+            overlap.map(function(b) {
+                var pct = b.combined_pct_of_family || 0;
+                var pctCls = pct >= 10 ? 'text-red-600 font-semibold' :
+                             pct >= 5 ? 'text-amber-600 font-semibold' :
+                             'text-green-600';
+                var rowCls = pct >= 10 ? 'bg-red-50' : pct >= 5 ? 'bg-amber-50' : '';
+                var addrCell = '<span class="font-mono text-xs" title="' + b.borrower_address + '">' +
+                    SyrupUSDCRenderer._truncAddr(b.borrower_address) + '</span> ' +
+                    SyrupUSDCRenderer._ethLink(b.borrower_address) +
+                    (b.borrower_firm ? ' <span class="text-xs text-slate-500">' + b.borrower_firm + '</span>' : '');
+                var sharedAssetsBadges = '';
+                if (Array.isArray(b.shared_collateral_assets) && b.shared_collateral_assets.length) {
+                    sharedAssetsBadges = ' ' + b.shared_collateral_assets.map(function(a) {
+                        return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-600">' + a + '</span>';
+                    }).join(' ');
+                }
+                return '<tr class="' + rowCls + '">' +
+                    '<td>' + addrCell + sharedAssetsBadges + '</td>' +
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(b.syrupusdc_total_usd || 0) + '</td>' +
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(b.syrupusdt_total_usd || 0) + '</td>' +
+                    '<td class="text-right font-mono font-semibold">' + CommonRenderer.formatCurrency(b.combined_total_usd || 0) + '</td>' +
+                    '<td class="text-right font-mono ' + pctCls + '">' + CommonRenderer.formatPercent(pct, 2) + '</td>' +
+                '</tr>';
+            }).join('');
+
+        var crossPoolCount = crossPoolBorrowers.length;
+        var calloutText = crossPoolCount > 0 ?
+            ('Top 3 cross-pool borrowers control ~<span class="font-semibold">' + CommonRenderer.formatPercent(top3CombinedPct, 1) + '</span> of combined family book. ' +
+             'A credit event at any of these damages BOTH pools.') :
+            'No borrowers currently span both pools.';
+
+        var tableBlock =
+            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-4">Top cross-pool borrower exposures</div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                '<th>Borrower</th>' +
+                '<th class="text-right">USDC pool</th>' +
+                '<th class="text-right">USDT pool</th>' +
+                '<th class="text-right">Combined</th>' +
+                '<th class="text-right">% family</th>' +
+            '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
+            '<div class="risk-flag risk-warning mt-3">' + calloutText + '</div>';
+
+        // ---- Shared governance row ----
+        function addrCell(role) {
+            if (!role || !role.address) return '<span class="text-slate-400">—</span>';
+            return '<span class="font-mono text-xs" title="' + role.address + '">' +
+                SyrupUSDCRenderer._truncAddr(role.address) + '</span> ' +
+                SyrupUSDCRenderer._ethLink(role.address) +
+                (role.note ? ' <span class="text-xs text-slate-500">' + role.note + '</span>' : '');
+        }
+        function rowAddr(label, role) {
+            if (!role) return '';
+            return '<tr><td class="font-medium">' + label + '</td><td>' + addrCell(role) + '</td></tr>';
+        }
+        var govRows = '';
+        if (gov.governor) govRows += rowAddr('Governor (' + (gov.governor.timelock_hours || 24) + 'h timelock)', gov.governor);
+        if (gov.operational_admin) govRows += rowAddr('Operational Admin', gov.operational_admin);
+        if (gov.security_admin) govRows += rowAddr('Security Admin', gov.security_admin);
+        var delegates = gov.delegates_per_pool || {};
+        if (delegates.syrupusdc) govRows += rowAddr('Pool Delegate — syrupUSDC', delegates.syrupusdc);
+        if (delegates.syrupusdt) govRows += rowAddr('Pool Delegate — syrupUSDT', delegates.syrupusdt);
+
+        var govBlock = govRows ?
+            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-4">Shared governance</div>' +
+            '<table class="data-table"><tbody>' + govRows + '</tbody></table>' : '';
+
+        // ---- Sibling-pool link ----
+        var siblingSlug = currentSlug === 'syrupusdt' ? 'syrupusdc' : 'syrupusdt';
+        var currentLabel = currentSlug === 'syrupusdt' ? 'syrupUSDT' : 'syrupUSDC';
+        var siblingLabel = siblingSlug === 'syrupusdt' ? 'syrupUSDT' : 'syrupUSDC';
+        var siblingBlock =
+            '<div class="text-sm text-slate-600 mt-4 pt-3 border-t border-slate-200">' +
+                'Currently viewing: <strong>' + currentLabel + '</strong> · ' +
+                'Sibling pool: <a href="?asset=' + siblingSlug + '" class="text-blue-600 hover:underline font-semibold">→ ' + siblingLabel + '</a>' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Maple Syrup Family — Cross-Pool Snapshot</div>' +
+            aggCards +
+            tableBlock +
+            govBlock +
+            siblingBlock +
+        '</div>';
     },
 
     // ----- AUM-based coverage chart (replaces the common PCR chart) -------
