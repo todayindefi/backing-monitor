@@ -122,7 +122,155 @@ var SyrupUSDCRenderer = {
         // Post-render canvases (after innerHTML so the DOM nodes exist).
         this._renderBackingDonut(specific);
         this._renderRepaymentScheduleChart(specific);
+        this._renderAumCoverageChart(specific);
         this._attachLoanTableSort();
+    },
+
+    // ----- AUM-based coverage chart (replaces the common PCR chart) -------
+    // PCR sits flat at 100% by ERC-4626 design (binary impairment alarm); the
+    // live AUM-based coverage (collateralUsd / loansUsd × 100, Maple GraphQL)
+    // is what actually moves day-to-day. Override the existing #cr-chart with
+    // this series + a dashed deployment_pct overlay. Init-level commitment
+    // stays visible as a caption since they're different metrics.
+    _renderAumCoverageChart: function(specific) {
+        var h = specific.aum_history;
+        if (!h || !Array.isArray(h.entries) || h.entries.length < 2) return;
+        var ctx = document.getElementById('cr-chart');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var panel = document.getElementById('chart-panel');
+        if (!panel) return;
+        panel.style.display = '';  // unhide if common renderer suppressed it
+
+        var entries = h.entries.slice().sort(function(a, b) { return a.timestamp - b.timestamp; });
+        var labels = entries.map(function(e) { return new Date(e.timestamp * 1000); });
+        var crSeries = entries.map(function(e) { return e.collateral_ratio_pct; });
+        var deplSeries = entries.map(function(e) { return e.deployment_pct; });
+
+        // Title + 30d stats
+        var titleEl = panel.querySelector('.panel-title');
+        if (titleEl) titleEl.textContent = 'Pool Coverage (live USD) — 30d';
+
+        var statsEl = document.getElementById('cr-chart-stats');
+        if (!statsEl) {
+            statsEl = document.createElement('div');
+            statsEl.id = 'cr-chart-stats';
+            if (titleEl) titleEl.after(statsEl);
+        }
+        statsEl.className = 'flex gap-4 text-xs text-slate-500 mb-2';
+        var crNonNull = crSeries.filter(function(v) { return v != null; });
+        if (crNonNull.length > 0) {
+            var minCR = Math.min.apply(null, crNonNull);
+            var maxCR = Math.max.apply(null, crNonNull);
+            var minCls = minCR < 110 ? 'text-red-600 font-semibold' : minCR < 130 ? 'text-amber-600 font-semibold' : '';
+            statsEl.innerHTML =
+                '<span>30d Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
+                '<span>30d Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
+                '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>';
+        } else {
+            statsEl.innerHTML = '';
+        }
+
+        if (window._crChart) {
+            try { window._crChart.destroy(); } catch (e) {}
+        }
+
+        window._crChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'AUM-based Coverage',
+                        data: crSeries,
+                        yAxisID: 'y',
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 0,
+                        borderWidth: 2
+                    },
+                    {
+                        label: 'Deployment',
+                        data: deplSeries,
+                        yAxisID: 'y2',
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 3],
+                        tension: 0.3,
+                        pointRadius: 0,
+                        borderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        position: 'left',
+                        grid: { color: '#f1f5f9' },
+                        suggestedMin: 95,
+                        suggestedMax: 170,
+                        ticks: { callback: function(v) { return v + '%'; }, font: { size: 11 } },
+                        title: { display: true, text: 'Coverage', font: { size: 10 }, color: '#22c55e' }
+                    },
+                    y2: {
+                        position: 'right',
+                        grid: { drawOnChartArea: false },
+                        suggestedMin: 0,
+                        suggestedMax: 100,
+                        ticks: { callback: function(v) { return v + '%'; }, font: { size: 11 } },
+                        title: { display: true, text: 'Deployment', font: { size: 10 }, color: '#f59e0b' }
+                    }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) { return c.dataset.label + ': ' + (c.raw != null ? c.raw.toFixed(2) + '%' : '—'); }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            underwater: { type: 'box', yMin: 0,   yMax: 100, yScaleID: 'y', backgroundColor: 'rgba(220, 38, 38, 0.10)', borderWidth: 0, label: { content: 'Underwater', display: true, position: 'start', font: { size: 9 }, color: '#dc2626' } },
+                            thin:       { type: 'box', yMin: 100, yMax: 110, yScaleID: 'y', backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+                            amber:      { type: 'box', yMin: 110, yMax: 130, yScaleID: 'y', backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+                            healthy:    { type: 'box', yMin: 130, yMax: 160, yScaleID: 'y', backgroundColor: 'rgba(22, 163, 74, 0.05)', borderWidth: 0 },
+                            cushion:    { type: 'box', yMin: 160, yMax: 220, yScaleID: 'y', backgroundColor: 'rgba(14, 165, 233, 0.05)', borderWidth: 0 },
+                            line110:    { type: 'line', yMin: 110, yMax: 110, yScaleID: 'y', borderColor: '#dc2626', borderWidth: 1, borderDash: [4, 4], label: { content: '110%', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+                            line130:    { type: 'line', yMin: 130, yMax: 130, yScaleID: 'y', borderColor: '#16a34a', borderWidth: 1, borderDash: [4, 4], label: { content: '130%', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } }
+                        }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+
+        // Subtitle + init-level commitment caption below the chart.
+        var caption = panel.querySelector('.cr-source-subtitle');
+        if (!caption) {
+            caption = document.createElement('div');
+            caption.className = 'cr-source-subtitle text-xs text-slate-400 mt-2';
+            panel.appendChild(caption);
+        }
+        var poolCR = ((specific.loan_book || {}).collateral_summary || {}).pool_collateral_ratio_pct;
+        var asOfText = '';
+        if (h.as_of) {
+            var d = new Date(h.as_of * 1000);
+            if (!isNaN(d.getTime())) asOfText = ' · as of ' + d.toISOString().slice(0, 10);
+        }
+        var sourceLine = 'Source: <span class="font-mono">poolV2.aumTimeSeries</span> (Maple GraphQL) · collateralUsd ÷ loansUsd' + asOfText + '.';
+        var initLine = (poolCR != null) ?
+            ('<br>Init-level commitment: <span class="font-mono font-semibold text-slate-600">' + poolCR.toFixed(1) + '%</span> ' +
+             '(from <span class="font-mono">poolV2.collateralRatio</span>) — the chart above shows live AUM-based coverage, which can sit below init-level when collateral prices drift.') : '';
+        caption.innerHTML = sourceLine + initLine;
     },
 
     // ----- §1 Backing -----------------------------------------------------
