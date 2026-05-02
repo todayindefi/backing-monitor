@@ -1052,18 +1052,22 @@ var SyrupUSDCRenderer = {
     },
 
     // ----- §7 Yield (demoted) ---------------------------------------------
-    // SYRUP-token "Drips" boost campaign ended Feb 2026 → ongoing yield is the
-    // organic loan-interest stream only. The analyzer still emits a stale
-    // headline (manual_season_constant) for backwards-compat; renderer treats
-    // boost as 0 going forward and surfaces the historical context as a small
-    // zero-line so a reader who saw the page during Seasons isn't disoriented.
+    // PegTracker now sources yield live from Maple's syrupGlobals.apyTimeSeries
+    // (headline_apy_source: "syrup_graphql"). core_apy_pct = organic loan
+    // interest; boost_apy_pct = SYRUP-token Drips boost (0 since campaign ended
+    // Feb 2026, but live-sourced so a future Season 2 would render correctly).
     _renderYield: function(specific) {
         var y = specific.yield;
         if (!y) return '';
-        var liveApy = y.base_apy_pct;       // organic loan interest, durable
+        // Prefer live core/headline; fall back to base_apy_pct for older snapshots.
+        var liveApy = y.core_apy_pct;
+        if (liveApy == null) liveApy = y.headline_apy_pct;
+        if (liveApy == null) liveApy = y.base_apy_pct;
+        var boost = (y.boost_apy_pct != null) ? y.boost_apy_pct : 0;
         var fee = y.delegate_fee_pct;
+        var isLiveSource = y.headline_apy_source === 'syrup_graphql';
 
-        var maxApy = Math.max(liveApy || 0, 1) * 1.2;  // small headroom
+        var maxApy = Math.max((liveApy || 0) + (boost || 0), 1) * 1.2;
         function bar(val, color, label, tag) {
             if (val === null || val === undefined) return '';
             var pct = Math.max(0, Math.min(100, val / maxApy * 100));
@@ -1076,23 +1080,42 @@ var SyrupUSDCRenderer = {
             '</div>';
         }
 
-        // Drips boost zero-line — small, gray, historical.
-        var dripsLine =
-            '<div class="mt-3 pt-3 border-t border-slate-200">' +
+        // Drips boost: render as a regular secondary bar when > 0 (future
+        // campaign), otherwise as a small gray zero-line with historical note.
+        var boostBlock;
+        if (boost > 0) {
+            boostBlock = '<div class="mt-3 pt-3 border-t border-slate-200">' +
+                bar(boost, '#a855f7', 'Drips boost', 'SYRUP token, live') +
+            '</div>';
+        } else {
+            boostBlock = '<div class="mt-3 pt-3 border-t border-slate-200">' +
                 '<div class="flex justify-between text-xs text-slate-400 mb-1">' +
                     '<span>Drips boost <span class="text-slate-400">(SYRUP token campaign — ended Feb 2026)</span></span>' +
-                    '<span class="font-mono">0.00%</span>' +
+                    '<span class="font-mono">' + CommonRenderer.formatPercent(boost, 2) + '</span>' +
                 '</div>' +
                 '<div class="pct-bar-container"><div class="pct-bar" style="width:0%; background:#cbd5e1"></div></div>' +
             '</div>';
+        }
+
+        // "as of" timestamp + source tag — small footer line.
+        var sourceLine = '';
+        if (isLiveSource) {
+            var asOfText = '';
+            if (y.apy_as_of) {
+                var d = new Date(y.apy_as_of * 1000);
+                if (!isNaN(d.getTime())) asOfText = ' · as of ' + d.toISOString().slice(0, 10);
+            }
+            sourceLine = '<div class="text-xs text-slate-400 mt-1">Source: <span class="font-mono">syrupGlobals.apyTimeSeries</span> (Maple GraphQL)' + asOfText + '</div>';
+        }
 
         return '<div class="panel">' +
             '<div class="panel-title">Yield Decomposition</div>' +
             '<p class="text-sm text-slate-500 mb-3">Live APY is the organic loan-interest stream — the durable yield depositors receive going forward.</p>' +
             bar(liveApy, '#22c55e', 'Live APY', 'organic loan interest') +
-            dripsLine +
+            boostBlock +
             (fee != null ? '<div class="text-sm text-slate-500 mt-3">Pool Delegate management fee: <span class="font-mono font-semibold">' + CommonRenderer.formatPercent(fee, 2) + '</span> taken from gross before share-holders.</div>' : '') +
             (y.apr_24h_pct != null ? '<div class="text-xs text-slate-400 mt-1">24h realised APR (NAV): ' + CommonRenderer.formatPercent(y.apr_24h_pct, 2) + ' — trailing window, can be noisy</div>' : '') +
+            sourceLine +
         '</div>';
     },
 
