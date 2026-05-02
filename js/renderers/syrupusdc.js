@@ -156,14 +156,25 @@ var SyrupUSDCRenderer = {
             statsEl.id = 'cr-chart-stats';
             if (titleEl) titleEl.after(statsEl);
         }
-        statsEl.className = 'flex gap-4 text-xs text-slate-500 mb-2';
+        statsEl.className = 'flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mb-2';
         var crNonNull = crSeries.filter(function(v) { return v != null; });
         if (crNonNull.length > 0) {
             var minCR = Math.min.apply(null, crNonNull);
             var maxCR = Math.max.apply(null, crNonNull);
             var minCls = minCR < 110 ? 'text-red-600 font-semibold' : minCR < 130 ? 'text-amber-600 font-semibold' : '';
+            // Caveat the min when it's anomalously low (< 100%) — that's the
+            // Maple aumTimeSeries aggregation transient, not real undercollateralization.
+            var minIdx = crSeries.indexOf(minCR);
+            var minDateText = '';
+            if (minIdx >= 0 && labels[minIdx]) {
+                minDateText = labels[minIdx].toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+            }
+            var minAnnotation = '';
+            if (minCR < 100 && minDateText) {
+                minAnnotation = ' <span class="text-xs text-slate-400 font-normal">on ' + minDateText + ' — likely Maple aggregation transient, not a real undercollateralization event</span>';
+            }
             statsEl.innerHTML =
-                '<span>30d Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
+                '<span>30d Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span>' + minAnnotation + '</span>' +
                 '<span>30d Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
                 '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>';
         } else {
@@ -270,7 +281,18 @@ var SyrupUSDCRenderer = {
         var initLine = (poolCR != null) ?
             ('<br>Init-level commitment: <span class="font-mono font-semibold text-slate-600">' + poolCR.toFixed(1) + '%</span> ' +
              '(from <span class="font-mono">poolV2.collateralRatio</span>) — the chart above shows live AUM-based coverage, which can sit below init-level when collateral prices drift.') : '';
-        caption.innerHTML = sourceLine + initLine;
+        // Data-quality footnote — Maple's aumTimeSeries aggregates the at-par
+        // stablecoin/RWA positions inconsistently across days (same root cause
+        // as the per-loan currentAssetAmount anomaly). Include a check on
+        // unrealizedLosses so the credit-alarm framing only fires when it's 0.
+        var ul = (specific.vault_state || {}).unrealized_losses;
+        var ulFragment = (ul === 0 || ul == null) ?
+            ' <span class="font-mono">unrealizedLosses</span> (the on-chain credit alarm) stayed at 0 throughout the displayed window.' :
+            '';
+        var noteLine = '<div class="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-400 leading-relaxed">' +
+            '<strong class="text-slate-500">Note:</strong> Maple\'s <span class="font-mono">aumTimeSeries</span> has documented aggregation inconsistencies (correlated with the per-loan <span class="font-mono">currentAssetAmount</span> anomaly affecting at-par stablecoin/RWA positions). Day-to-day swings &gt;10pp may reflect data-quality variance rather than real composition shifts.' + ulFragment +
+        '</div>';
+        caption.innerHTML = sourceLine + initLine + noteLine;
     },
 
     // ----- §1 Backing -----------------------------------------------------
