@@ -1051,34 +1051,46 @@ var SyrupUSDCRenderer = {
         '</div>';
     },
 
-    // ----- §7 Yield (demoted, content unchanged) --------------------------
+    // ----- §7 Yield (demoted) ---------------------------------------------
+    // SYRUP-token "Drips" boost campaign ended Feb 2026 → ongoing yield is the
+    // organic loan-interest stream only. The analyzer still emits a stale
+    // headline (manual_season_constant) for backwards-compat; renderer treats
+    // boost as 0 going forward and surfaces the historical context as a small
+    // zero-line so a reader who saw the page during Seasons isn't disoriented.
     _renderYield: function(specific) {
         var y = specific.yield;
         if (!y) return '';
-        var headline = y.headline_apy_pct;
-        var base = y.base_apy_pct;
-        var season = y.season_incentive_apy_pct;
+        var liveApy = y.base_apy_pct;       // organic loan interest, durable
         var fee = y.delegate_fee_pct;
 
-        var maxApy = Math.max(headline || 0, (base || 0) + (season || 0)) || 20;
+        var maxApy = Math.max(liveApy || 0, 1) * 1.2;  // small headroom
         function bar(val, color, label, tag) {
             if (val === null || val === undefined) return '';
             var pct = Math.max(0, Math.min(100, val / maxApy * 100));
             return '<div class="mb-2">' +
                 '<div class="flex justify-between text-sm mb-1">' +
-                    '<span class="text-slate-600">' + label + (tag ? ' <span class="text-xs text-slate-400">(' + tag + ')</span>' : '') + '</span>' +
-                    '<span class="font-mono font-semibold">' + CommonRenderer.formatPercent(val, 2) + '</span>' +
+                    '<span class="text-slate-700 font-semibold">' + label + (tag ? ' <span class="text-xs text-slate-400 font-normal">(' + tag + ')</span>' : '') + '</span>' +
+                    '<span class="font-mono font-semibold text-slate-700">' + CommonRenderer.formatPercent(val, 2) + '</span>' +
                 '</div>' +
                 '<div class="pct-bar-container"><div class="pct-bar" style="width:' + pct + '%; background:' + color + '"></div></div>' +
             '</div>';
         }
 
+        // Drips boost zero-line — small, gray, historical.
+        var dripsLine =
+            '<div class="mt-3 pt-3 border-t border-slate-200">' +
+                '<div class="flex justify-between text-xs text-slate-400 mb-1">' +
+                    '<span>Drips boost <span class="text-slate-400">(SYRUP token campaign — ended Feb 2026)</span></span>' +
+                    '<span class="font-mono">0.00%</span>' +
+                '</div>' +
+                '<div class="pct-bar-container"><div class="pct-bar" style="width:0%; background:#cbd5e1"></div></div>' +
+            '</div>';
+
         return '<div class="panel">' +
             '<div class="panel-title">Yield Decomposition</div>' +
-            '<p class="text-sm text-slate-500 mb-3">Base APY is durable loan interest. Season-incentive APY is paid in SYRUP token and stops when the campaign ends — it is what you give back when seasons end.</p>' +
-            bar(base, '#22c55e', 'Base APY', 'loan interest, durable') +
-            bar(season, '#a855f7', 'Season-incentive APY', y.season_label || 'SYRUP token') +
-            bar(headline, '#3b82f6', 'Headline APY', 'base + seasons') +
+            '<p class="text-sm text-slate-500 mb-3">Live APY is the organic loan-interest stream — the durable yield depositors receive going forward.</p>' +
+            bar(liveApy, '#22c55e', 'Live APY', 'organic loan interest') +
+            dripsLine +
             (fee != null ? '<div class="text-sm text-slate-500 mt-3">Pool Delegate management fee: <span class="font-mono font-semibold">' + CommonRenderer.formatPercent(fee, 2) + '</span> taken from gross before share-holders.</div>' : '') +
             (y.apr_24h_pct != null ? '<div class="text-xs text-slate-400 mt-1">24h realised APR (NAV): ' + CommonRenderer.formatPercent(y.apr_24h_pct, 2) + ' — trailing window, can be noisy</div>' : '') +
         '</div>';
