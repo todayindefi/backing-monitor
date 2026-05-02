@@ -144,7 +144,6 @@ var SyrupUSDCRenderer = {
         var entries = h.entries.slice().sort(function(a, b) { return a.timestamp - b.timestamp; });
         var labels = entries.map(function(e) { return new Date(e.timestamp * 1000); });
         var crSeries = entries.map(function(e) { return e.collateral_ratio_pct; });
-        var deplSeries = entries.map(function(e) { return e.deployment_pct; });
 
         // Title + 30d stats
         var titleEl = panel.querySelector('.panel-title');
@@ -189,30 +188,16 @@ var SyrupUSDCRenderer = {
             type: 'line',
             data: {
                 labels: labels,
-                datasets: [
-                    {
-                        label: 'AUM-based Coverage',
-                        data: crSeries,
-                        yAxisID: 'y',
-                        borderColor: '#22c55e',
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 0,
-                        borderWidth: 2
-                    },
-                    {
-                        label: 'Deployment',
-                        data: deplSeries,
-                        yAxisID: 'y2',
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'transparent',
-                        borderDash: [5, 3],
-                        tension: 0.3,
-                        pointRadius: 0,
-                        borderWidth: 2
-                    }
-                ]
+                datasets: [{
+                    label: 'AUM-based Coverage',
+                    data: crSeries,
+                    borderColor: '#22c55e',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    borderWidth: 2
+                }]
             },
             options: {
                 responsive: true,
@@ -225,24 +210,14 @@ var SyrupUSDCRenderer = {
                         ticks: { maxTicksLimit: 8, font: { size: 11 } }
                     },
                     y: {
-                        position: 'left',
                         grid: { color: '#f1f5f9' },
                         suggestedMin: 95,
                         suggestedMax: 170,
-                        ticks: { callback: function(v) { return v + '%'; }, font: { size: 11 } },
-                        title: { display: true, text: 'Coverage', font: { size: 10 }, color: '#22c55e' }
-                    },
-                    y2: {
-                        position: 'right',
-                        grid: { drawOnChartArea: false },
-                        suggestedMin: 0,
-                        suggestedMax: 100,
-                        ticks: { callback: function(v) { return v + '%'; }, font: { size: 11 } },
-                        title: { display: true, text: 'Deployment', font: { size: 10 }, color: '#f59e0b' }
+                        ticks: { callback: function(v) { return v + '%'; }, font: { size: 11 } }
                     }
                 },
                 plugins: {
-                    legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    legend: { display: false },
                     tooltip: {
                         callbacks: {
                             label: function(c) { return c.dataset.label + ': ' + (c.raw != null ? c.raw.toFixed(2) + '%' : '—'); }
@@ -250,13 +225,13 @@ var SyrupUSDCRenderer = {
                     },
                     annotation: {
                         annotations: {
-                            underwater: { type: 'box', yMin: 0,   yMax: 100, yScaleID: 'y', backgroundColor: 'rgba(220, 38, 38, 0.10)', borderWidth: 0, label: { content: 'Underwater', display: true, position: 'start', font: { size: 9 }, color: '#dc2626' } },
-                            thin:       { type: 'box', yMin: 100, yMax: 110, yScaleID: 'y', backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
-                            amber:      { type: 'box', yMin: 110, yMax: 130, yScaleID: 'y', backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
-                            healthy:    { type: 'box', yMin: 130, yMax: 160, yScaleID: 'y', backgroundColor: 'rgba(22, 163, 74, 0.05)', borderWidth: 0 },
-                            cushion:    { type: 'box', yMin: 160, yMax: 220, yScaleID: 'y', backgroundColor: 'rgba(14, 165, 233, 0.05)', borderWidth: 0 },
-                            line110:    { type: 'line', yMin: 110, yMax: 110, yScaleID: 'y', borderColor: '#dc2626', borderWidth: 1, borderDash: [4, 4], label: { content: '110%', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
-                            line130:    { type: 'line', yMin: 130, yMax: 130, yScaleID: 'y', borderColor: '#16a34a', borderWidth: 1, borderDash: [4, 4], label: { content: '130%', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } }
+                            underwater: { type: 'box', yMin: 0,   yMax: 100, backgroundColor: 'rgba(220, 38, 38, 0.10)', borderWidth: 0, label: { content: 'Underwater', display: true, position: 'start', font: { size: 9 }, color: '#dc2626' } },
+                            thin:       { type: 'box', yMin: 100, yMax: 110, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+                            amber:      { type: 'box', yMin: 110, yMax: 130, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+                            healthy:    { type: 'box', yMin: 130, yMax: 160, backgroundColor: 'rgba(22, 163, 74, 0.05)', borderWidth: 0 },
+                            cushion:    { type: 'box', yMin: 160, yMax: 220, backgroundColor: 'rgba(14, 165, 233, 0.05)', borderWidth: 0 },
+                            line110:    { type: 'line', yMin: 110, yMax: 110, borderColor: '#dc2626', borderWidth: 1, borderDash: [4, 4], label: { content: '110%', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+                            line130:    { type: 'line', yMin: 130, yMax: 130, borderColor: '#16a34a', borderWidth: 1, borderDash: [4, 4], label: { content: '130%', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } }
                         }
                     }
                 },
@@ -293,6 +268,127 @@ var SyrupUSDCRenderer = {
             '<strong class="text-slate-500">Note:</strong> Maple\'s <span class="font-mono">aumTimeSeries</span> has documented aggregation inconsistencies (correlated with the per-loan <span class="font-mono">currentAssetAmount</span> anomaly affecting at-par stablecoin/RWA positions). Day-to-day swings &gt;10pp may reflect data-quality variance rather than real composition shifts.' + ulFragment +
         '</div>';
         caption.innerHTML = sourceLine + initLine + noteLine;
+
+        // Second stacked chart in the same panel — deployment ratio.
+        this._renderDeploymentChart(panel, labels, entries);
+    },
+
+    // ----- Deployment ratio chart (stacked below AUM coverage) ------------
+    _renderDeploymentChart: function(panel, labels, entries) {
+        if (typeof Chart === 'undefined') return;
+        var deplSeries = entries.map(function(e) { return e.deployment_pct; });
+
+        // Build / find the deployment chart subsection — title, stats,
+        // canvas, caption. Reuse on re-renders so we don't duplicate.
+        var deplTitle = panel.querySelector('.syrup-depl-title');
+        if (!deplTitle) {
+            deplTitle = document.createElement('div');
+            deplTitle.className = 'syrup-depl-title panel-title mt-6 pt-4 border-t border-slate-200';
+            deplTitle.textContent = 'Pool Deployment Ratio — 30d';
+            panel.appendChild(deplTitle);
+        }
+
+        var deplStats = panel.querySelector('#syrup-depl-stats');
+        if (!deplStats) {
+            deplStats = document.createElement('div');
+            deplStats.id = 'syrup-depl-stats';
+            deplStats.className = 'flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mb-2';
+            panel.appendChild(deplStats);
+        }
+        var deplNonNull = deplSeries.filter(function(v) { return v != null; });
+        if (deplNonNull.length > 0) {
+            var minD = Math.min.apply(null, deplNonNull);
+            var maxD = Math.max.apply(null, deplNonNull);
+            var lastD = deplNonNull[deplNonNull.length - 1];
+            var lastCls = lastD >= 95 ? 'text-red-600 font-semibold' :
+                          lastD >= 80 ? 'text-amber-600 font-semibold' :
+                          lastD < 50 ? 'text-green-600' : '';
+            deplStats.innerHTML =
+                '<span>30d Min: <span class="font-mono">' + minD.toFixed(2) + '%</span></span>' +
+                '<span>30d Max: <span class="font-mono">' + maxD.toFixed(2) + '%</span></span>' +
+                '<span>Latest: <span class="font-mono ' + lastCls + '">' + lastD.toFixed(2) + '%</span></span>' +
+                '<span>Free buffer: <span class="font-mono">' + (100 - lastD).toFixed(2) + '%</span></span>';
+        } else {
+            deplStats.innerHTML = '';
+        }
+
+        var deplContainer = panel.querySelector('.syrup-depl-container');
+        if (!deplContainer) {
+            deplContainer = document.createElement('div');
+            deplContainer.className = 'chart-container syrup-depl-container';
+            var deplCanvas = document.createElement('canvas');
+            deplCanvas.id = 'syrup-depl-chart';
+            deplContainer.appendChild(deplCanvas);
+            panel.appendChild(deplContainer);
+        }
+
+        var deplCaption = panel.querySelector('.syrup-depl-caption');
+        if (!deplCaption) {
+            deplCaption = document.createElement('div');
+            deplCaption.className = 'syrup-depl-caption text-xs text-slate-400 mt-2';
+            deplCaption.innerHTML = 'Share of pool deployed into loans + DeFi strategies. Higher = less free USDC buffer for redemptions. <span class="font-mono">&lt;2%</span> buffer triggers a risk flag on this page.';
+            panel.appendChild(deplCaption);
+        }
+
+        var ctx = document.getElementById('syrup-depl-chart');
+        if (!ctx) return;
+        if (window._syrupDeplChart) {
+            try { window._syrupDeplChart.destroy(); } catch (e) {}
+        }
+
+        window._syrupDeplChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Deployment',
+                    data: deplSeries,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        suggestedMin: 50,
+                        suggestedMax: 100,
+                        ticks: { callback: function(v) { return v + '%'; }, font: { size: 11 } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) { return 'Deployment: ' + (c.raw != null ? c.raw.toFixed(2) + '%' : '—'); }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            green:    { type: 'box', yMin: 0,  yMax: 50,  backgroundColor: 'rgba(22, 163, 74, 0.05)', borderWidth: 0 },
+                            amber:    { type: 'box', yMin: 50, yMax: 80,  backgroundColor: 'rgba(245, 158, 11, 0.05)', borderWidth: 0 },
+                            redAmber: { type: 'box', yMin: 80, yMax: 95,  backgroundColor: 'rgba(239, 68, 68, 0.07)', borderWidth: 0 },
+                            red:      { type: 'box', yMin: 95, yMax: 100, backgroundColor: 'rgba(220, 38, 38, 0.12)', borderWidth: 0, label: { content: 'Fully deployed', display: true, position: 'start', font: { size: 9 }, color: '#dc2626' } },
+                            line80:   { type: 'line', yMin: 80, yMax: 80, borderColor: '#d97706', borderWidth: 1, borderDash: [4, 4], label: { content: '80%', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+                            line95:   { type: 'line', yMin: 95, yMax: 95, borderColor: '#dc2626', borderWidth: 1, borderDash: [4, 4], label: { content: '95%', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } }
+                        }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
     },
 
     // ----- §1 Backing -----------------------------------------------------
