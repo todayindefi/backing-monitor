@@ -34,10 +34,16 @@ var SYRUP_COLLATERAL_META = {
 // implementation's `name()` getter when available). Used by the Backing
 // panel's dormant-sleeve sub-block; unknown impls degrade to "configured
 // DeFi sleeve" with the truncated address.
+// Editorial descriptions for known strategy implementation contracts.
+// FixedTermLoanManager is a Maple-internal alternate loan-type slot
+// (fixed-term + amortization), NOT an external-DeFi sleeve — keep its
+// description distinct from Aave/Sky to avoid mislabeling its activation
+// risk profile. Maple v1 (2021-22) was all fixed-term; Syrup standardized
+// on OpenTermLoanManager to avoid the v1 refinancing-cliff dynamics.
 var SYRUP_STRATEGY_IMPL_INFO = {
-    'MapleAaveStrategy':       'Aave V3 stablecoin pool wrapper',
-    'MapleSkyStrategy':        'Sky / sUSDS DSR wrapper',
-    'FixedTermLoanManager':    'unused fixed-term loan-type slot'
+    'MapleAaveStrategy':    'Aave V3 stablecoin pool wrapper',
+    'MapleSkyStrategy':     'Sky / sUSDS DSR wrapper',
+    'FixedTermLoanManager': 'alternate loan-type slot — fixed-term loans within Maple; currently unused (Syrup standardized on open-term)'
 };
 
 // Active-vs-dormant threshold for non-LoanManager DeFi sleeves. Below this
