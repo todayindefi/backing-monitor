@@ -29,6 +29,22 @@ var SYRUP_COLLATERAL_META = {
     USTB:  { category: 'rwa',        issuer: 'Superstate',  color: '#ec4899' }
 };
 
+// Editorial descriptions for known strategy implementation contracts.
+// Keyed by `strategy_impl_name` (the analyzer reads this from the strategy
+// implementation's `name()` getter when available). Used by the Backing
+// panel's dormant-sleeve sub-block; unknown impls degrade to "configured
+// DeFi sleeve" with the truncated address.
+var SYRUP_STRATEGY_IMPL_INFO = {
+    'MapleAaveStrategy': 'Aave V3 stablecoin pool wrapper',
+    'MapleSkyStrategy':  'Sky / sUSDS DSR wrapper'
+};
+
+// Active-vs-dormant threshold for non-LoanManager DeFi sleeves. Below this
+// the sleeve renders as DORMANT in its own muted sub-block; at-or-above it
+// rounds back into the main strategy table. PegTracker fires a risk flag
+// at the same threshold so activation is also visible in §Risk Flags.
+var SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD = 100000;
+
 // Static facts for §6 audit roll-up — sourced from the public risk report.
 var SYRUP_AUDIT_INFO = {
     primary_audits: 'Spearbit + Trail of Bits',
@@ -114,7 +130,7 @@ var SyrupUSDCRenderer = {
         // visibly regress.
         html += '<div id="syrup-family-panel"></div>';
 
-        html += this._renderBacking(specific, s);                   // §1
+        html += this._renderBacking(specific, s, data.asset_slug);  // §1
         html += this._renderLoanBookHealth(specific);               // §2
         html += this._renderBorrowerConcentration(specific);        // §3
         html += this._renderRepaymentSchedule(specific);            // §4
@@ -625,7 +641,7 @@ var SyrupUSDCRenderer = {
     },
 
     // ----- §1 Backing -----------------------------------------------------
-    _renderBacking: function(specific, s) {
+    _renderBacking: function(specific, s, slug) {
         var v = specific.vault_state || {};
         var totalAssets = v.total_assets;
         var liquidityCap = v.liquidity_cap;
@@ -648,6 +664,12 @@ var SyrupUSDCRenderer = {
             tag: 'liquid',
             color: '#22c55e'
         }];
+
+        // Split strategies into active vs dormant. LoanManager is always active;
+        // a non-LM sleeve below the activation threshold renders as a dormant
+        // policy slot in its own sub-block (preserves visibility of latent
+        // DeFi-counterparty surface even when AUM is zero).
+        var dormantStrategies = [];
         if (strategies.length === 0) {
             // Fall back to backing_breakdown if vault_state.strategies is empty
             // (older analyzer JSON).
@@ -659,13 +681,18 @@ var SyrupUSDCRenderer = {
             });
         } else {
             strategies.forEach(function(st, i) {
-                if ((st.aum_usd || 0) <= 0 && i > 0 && !st.is_loan_manager) return;  // collapse zero non-LM strategies
+                var aum = st.aum_usd || 0;
+                var isActive = st.is_loan_manager || aum >= SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD;
+                if (!isActive) {
+                    dormantStrategies.push({ st: st, index: i });
+                    return;
+                }
                 var label = st.is_loan_manager ?
                     'Strategy ' + i + ' (Loan Manager)' :
                     'Strategy ' + i;
                 rows.push({
                     label: label,
-                    value: st.aum_usd || 0,
+                    value: aum,
                     tag: st.is_loan_manager ? 'deployed' : 'idle',
                     color: st.is_loan_manager ? '#6366f1' : '#94a3b8',
                     address: st.address
@@ -697,6 +724,49 @@ var SyrupUSDCRenderer = {
             '<div class="risk-flag risk-critical mt-3"><strong>PROTOCOL PAUSED</strong> — deposits/withdrawals blocked at MapleGlobals</div>' : '';
         var ulBadge = (v.unrealized_losses && v.unrealized_losses > 0) ?
             '<div class="risk-flag risk-critical mt-3"><strong>Unrealized losses:</strong> ' + CommonRenderer.formatCurrencyExact(v.unrealized_losses) + ' — PCR_principal below 100%</div>' : '';
+
+        // ---- Dormant DeFi sleeves sub-block ----
+        // Surface configured-but-empty DeFi sleeves (delegate-discretionary,
+        // no timelock) so the latent counterparty surface is visible to
+        // allocators even at $0 AUM. Hidden when there are no dormant
+        // sleeves or strategies[] is missing entirely.
+        var dormantBlock = '';
+        if (dormantStrategies.length > 0) {
+            var sleeveItems = dormantStrategies.map(function(d) {
+                var st = d.st;
+                var implName = st.strategy_impl_name;
+                var nameLabel;
+                if (implName) {
+                    var desc = SYRUP_STRATEGY_IMPL_INFO[implName] || 'configured DeFi sleeve';
+                    nameLabel = '<span class="font-mono">' + implName + '</span>' +
+                        ' <span class="text-slate-400">(' + desc + ')</span>';
+                } else {
+                    nameLabel = '<span class="font-mono text-xs" title="' + st.address + '">' +
+                        SyrupUSDCRenderer._truncAddr(st.address) + '</span>';
+                }
+                return '<li class="flex items-center gap-2 py-1">' +
+                    '<span class="text-slate-500">Strategy ' + d.index + ' —</span> ' +
+                    nameLabel + ' ' +
+                    SyrupUSDCRenderer._ethLink(st.address) +
+                    ' <span class="ml-auto text-xs font-semibold uppercase tracking-wide text-slate-400">Dormant · $0</span>' +
+                '</li>';
+            }).join('');
+
+            var historicalNote = (slug === 'syrupusdc') ?
+                ' Historical context: Strategy 2 (Aave V3 sleeve) was deployed at $26–42M scale March–April 2026, wound down before the Kelp DAO/rsETH incident.' :
+                '';
+            dormantBlock =
+                '<div class="mt-4 pt-3 border-t border-slate-200">' +
+                    '<div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">' +
+                        'DeFi allocation sleeves <span class="font-normal text-slate-400">(delegate-discretionary; no timelock)</span>' +
+                    '</div>' +
+                    '<ul class="text-sm text-slate-600 mb-2">' + sleeveItems + '</ul>' +
+                    '<div class="text-xs text-slate-500 italic leading-relaxed">' +
+                        '↺ Configured policy slots. Pool Delegate has on-chain authority to deploy capital ' +
+                        'into these venues at any time without governance approval.' + historicalNote +
+                    '</div>' +
+                '</div>';
+        }
 
         // Header KPI row — 4 stats split into two visual columns.
         var kpiHeader =
@@ -731,6 +801,7 @@ var SyrupUSDCRenderer = {
                     '<div style="height: 220px; position: relative;"><canvas id="syrup-backing-donut"></canvas></div>' +
                 '</div>' +
             '</div>' +
+            dormantBlock +
             ulBadge +
             pausedBadge +
         '</div>';
