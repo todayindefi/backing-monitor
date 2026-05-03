@@ -166,6 +166,9 @@ var SyrupUSDCRenderer = {
         var overlap = fam.borrower_overlap || [];
         var gov = fam.shared_governance || {};
         var currentSlug = data.asset_slug || 'syrupusdc';
+        // Pool-level total assets — analyzer emits `total_assets_usd`; older
+        // fixture-style emits `aum_usd`. Accept either.
+        function poolAum(p) { return p.aum_usd != null ? p.aum_usd : p.total_assets_usd; }
 
         // ---- Family aggregates row ----
         var aggCards =
@@ -173,8 +176,8 @@ var SyrupUSDCRenderer = {
                 '<div class="summary-card">' +
                     '<div class="card-label">Combined family AUM</div>' +
                     '<div class="card-value">' + CommonRenderer.formatCurrency(combined.total_aum_usd) + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">USDC ' + CommonRenderer.formatCurrency(usdcPool.aum_usd) +
-                        ' + USDT ' + CommonRenderer.formatCurrency(usdtPool.aum_usd) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">USDC ' + CommonRenderer.formatCurrency(poolAum(usdcPool)) +
+                        ' + USDT ' + CommonRenderer.formatCurrency(poolAum(usdtPool)) + '</div>' +
                 '</div>' +
                 '<div class="summary-card">' +
                     '<div class="card-label">Combined active loans</div>' +
@@ -252,19 +255,34 @@ var SyrupUSDCRenderer = {
             '<div class="risk-flag risk-warning mt-3">' + calloutText + '</div>';
 
         // ---- Shared governance row ----
+        // Accept either { address, note } object form or a plain address string
+        // (analyzer emits the latter).
+        function normRole(role) {
+            if (!role) return null;
+            if (typeof role === 'string') return { address: role, note: null };
+            if (typeof role === 'object' && role.address) return role;
+            return null;
+        }
         function addrCell(role) {
-            if (!role || !role.address) return '<span class="text-slate-400">—</span>';
-            return '<span class="font-mono text-xs" title="' + role.address + '">' +
-                SyrupUSDCRenderer._truncAddr(role.address) + '</span> ' +
-                SyrupUSDCRenderer._ethLink(role.address) +
-                (role.note ? ' <span class="text-xs text-slate-500">' + role.note + '</span>' : '');
+            var n = normRole(role);
+            if (!n) return '<span class="text-slate-400">—</span>';
+            return '<span class="font-mono text-xs" title="' + n.address + '">' +
+                SyrupUSDCRenderer._truncAddr(n.address) + '</span> ' +
+                SyrupUSDCRenderer._ethLink(n.address) +
+                (n.note ? ' <span class="text-xs text-slate-500">' + n.note + '</span>' : '');
         }
         function rowAddr(label, role) {
-            if (!role) return '';
+            var n = normRole(role);
+            if (!n) return '';
             return '<tr><td class="font-medium">' + label + '</td><td>' + addrCell(role) + '</td></tr>';
         }
+        // Timelock hours: prefer governor.timelock_hours, fall back to
+        // shared_governance.min_delay_seconds (analyzer's flat shape).
+        var timelockHours = (gov.governor && gov.governor.timelock_hours) ||
+            (gov.min_delay_seconds ? Math.round(gov.min_delay_seconds / 3600) : null) ||
+            (gov.timelock_hours ? gov.timelock_hours : 24);
         var govRows = '';
-        if (gov.governor) govRows += rowAddr('Governor (' + (gov.governor.timelock_hours || 24) + 'h timelock)', gov.governor);
+        if (gov.governor) govRows += rowAddr('Governor (' + timelockHours + 'h timelock)', gov.governor);
         if (gov.operational_admin) govRows += rowAddr('Operational Admin', gov.operational_admin);
         if (gov.security_admin) govRows += rowAddr('Security Admin', gov.security_admin);
         var delegates = gov.delegates_per_pool || {};
