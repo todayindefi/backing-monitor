@@ -88,6 +88,13 @@ var SyrupUSDCRenderer = {
         return '';
     },
 
+    // Underlying-asset symbol for the pool — drives "USDT per share",
+    // "Free USDT", "USDT est." labels on the syrupUSDT page so they match
+    // the actual deposit token rather than hardcoding "USDC".
+    _underlying: function(slug) {
+        return slug === 'syrupusdt' ? 'USDT' : 'USDC';
+    },
+
     _statusFlagClass: function(status) {
         var s = (status || '').toLowerCase();
         if (s === 'healthy' || s === 'active') return 'text-green-600';
@@ -176,6 +183,10 @@ var SyrupUSDCRenderer = {
             prefix_html: bannerHtml,
             extra_html: pillHtml
         };
+        // Surplus / Deficit is total_assets - (free + strategy_aum) — a
+        // sanity check that should always be 0; the few-dollar non-zero
+        // values are float-rounding noise, not a real signal. Hide it.
+        specific.card_overrides['Surplus / Deficit'] = { hidden: true };
     },
 
     // ----- entry point ----------------------------------------------------
@@ -195,11 +206,11 @@ var SyrupUSDCRenderer = {
         // visibly regress.
         html += '<div id="syrup-family-panel"></div>';
 
-        html += this._renderBacking(specific, s, data.asset_slug);  // §1
-        html += this._renderLoanBookHealth(specific);               // §2
-        html += this._renderBorrowerConcentration(specific);        // §3
-        html += this._renderRepaymentSchedule(specific);            // §4
-        html += this._renderLiquidityAndPeg(specific, s);           // §5
+        html += this._renderBacking(specific, s, data.asset_slug);          // §1
+        html += this._renderLoanBookHealth(specific);                       // §2
+        html += this._renderBorrowerConcentration(specific);                // §3
+        html += this._renderRepaymentSchedule(specific);                    // §4
+        html += this._renderLiquidityAndPeg(specific, s, data.asset_slug);  // §5
         html += this._renderTrustStack(specific);                   // §6
         html += this._renderYield(specific);                        // §7
         html += this._renderMultiChain(specific);                   // hidden when single-chain
@@ -207,9 +218,9 @@ var SyrupUSDCRenderer = {
         container.innerHTML = html;
 
         // Post-render canvases (after innerHTML so the DOM nodes exist).
-        this._renderBackingDonut(specific);
+        this._renderBackingDonut(specific, data.asset_slug);
         this._renderRepaymentScheduleChart(specific);
-        this._renderAumCoverageChart(specific);
+        this._renderAumCoverageChart(specific, data.asset_slug);
         this._attachLoanTableSort();
         this._loadCrossPoolFamily(data);
     },
@@ -488,7 +499,8 @@ var SyrupUSDCRenderer = {
     // is what actually moves day-to-day. Override the existing #cr-chart with
     // this series + a dashed deployment_pct overlay. Init-level commitment
     // stays visible as a caption since they're different metrics.
-    _renderAumCoverageChart: function(specific) {
+    _renderAumCoverageChart: function(specific, slug) {
+        var underlying = SyrupUSDCRenderer._underlying(slug);
         var h = specific.aum_history;
         if (!h || !Array.isArray(h.entries) || h.entries.length < 2) return;
         var ctx = document.getElementById('cr-chart');
@@ -620,8 +632,8 @@ var SyrupUSDCRenderer = {
         var ulFragment = (ul === 0 || ul == null) ?
             ' <span class="font-mono">unrealizedLosses</span> (the on-chain credit alarm) stayed at 0 throughout the displayed window.' :
             '';
-        var noteLine = '<div class="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-400 leading-relaxed">' +
-            '<strong class="text-slate-500">Note:</strong> Maple\'s <span class="font-mono">aumTimeSeries</span> has documented aggregation inconsistencies (correlated with the per-loan <span class="font-mono">currentAssetAmount</span> anomaly affecting at-par stablecoin/RWA positions). Day-to-day swings &gt;10pp may reflect data-quality variance rather than real composition shifts.' + ulFragment +
+        var noteLine = '<div id="syrup-data-anomaly-note" class="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-400 leading-relaxed scroll-mt-4">' +
+            '<strong class="text-slate-500">Note:</strong> Maple\'s <span class="font-mono">aumTimeSeries</span> has documented aggregation inconsistencies (correlated with the per-loan <span class="font-mono">currentAssetAmount</span> anomaly affecting at-par stablecoin/RWA positions). Day-to-day swings &gt;10pp may reflect data-quality variance rather than real composition shifts. Loan-level cells flagged with <span class="text-amber-500 font-semibold">?</span> share this root cause — Maple GraphQL returns a broken <span class="font-mono">currentAssetAmount</span> for at-par stablecoin/RWA positions, leaving current-value and buffer cells unverifiable.' + ulFragment +
         '</div>';
         caption.innerHTML = sourceLine + initLine + noteLine;
 
@@ -682,7 +694,7 @@ var SyrupUSDCRenderer = {
         if (!deplCaption) {
             deplCaption = document.createElement('div');
             deplCaption.className = 'syrup-depl-caption text-xs text-slate-400 mt-2';
-            deplCaption.innerHTML = 'Share of pool deployed into loans + DeFi strategies. Higher = less free USDC buffer for redemptions. <span class="font-mono">&lt;2%</span> buffer triggers a risk flag on this page.';
+            deplCaption.innerHTML = 'Share of pool deployed into loans + DeFi strategies. Higher = less free ' + underlying + ' buffer for redemptions. <span class="font-mono">&lt;2%</span> buffer triggers a risk flag on this page.';
             panel.appendChild(deplCaption);
         }
 
@@ -764,9 +776,10 @@ var SyrupUSDCRenderer = {
         var freeUsdc = (v.free_usdc !== null && v.free_usdc !== undefined) ?
             v.free_usdc :
             (s && s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency ? s.collateral_ratio_alt.value : 0);
+        var underlying = SyrupUSDCRenderer._underlying(slug);
         var strategies = v.strategies || [];
         var rows = [{
-            label: 'Free USDC',
+            label: 'Free ' + underlying,
             value: freeUsdc,
             tag: 'liquid',
             color: '#22c55e'
@@ -885,7 +898,7 @@ var SyrupUSDCRenderer = {
                     '</div>' +
                 '</div>' +
                 '<div class="grid grid-cols-2 gap-3">' +
-                    '<div class="summary-card"><div class="card-label">NAV per share</div><div class="card-value">' + (nav != null ? '$' + nav.toFixed(4) : '-') + '</div><div class="text-xs text-slate-400 mt-1">USDC per share</div></div>' +
+                    '<div class="summary-card"><div class="card-label">NAV per share</div><div class="card-value">' + (nav != null ? '$' + nav.toFixed(4) : '-') + '</div><div class="text-xs text-slate-400 mt-1">' + underlying + ' per share</div></div>' +
                     '<div class="summary-card"><div class="card-label">Delegate fee</div><div class="card-value">' + (fee != null ? CommonRenderer.formatPercent(fee, 2) : '-') + '</div><div class="text-xs text-slate-400 mt-1">taken from gross</div></div>' +
                 '</div>' +
             '</div>';
@@ -914,19 +927,20 @@ var SyrupUSDCRenderer = {
         '</div>';
     },
 
-    _renderBackingDonut: function(specific) {
+    _renderBackingDonut: function(specific, slug) {
         var ctx = document.getElementById('syrup-backing-donut');
         if (!ctx || typeof Chart === 'undefined') return;
         var v = specific.vault_state || {};
         var freeUsdc = v.free_usdc || 0;
         var deployed = (v.strategy_aum != null) ? v.strategy_aum :
             ((v.total_assets || 0) - freeUsdc);
+        var underlying = SyrupUSDCRenderer._underlying(slug);
 
         if (window._syrupBackingDonut) window._syrupBackingDonut.destroy();
         window._syrupBackingDonut = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Free USDC', 'Deployed (loans + strategies)'],
+                labels: ['Free ' + underlying, 'Deployed (loans + strategies)'],
                 datasets: [{
                     data: [freeUsdc, deployed],
                     backgroundColor: ['#22c55e', '#6366f1'],
@@ -1241,9 +1255,11 @@ var SyrupUSDCRenderer = {
             // a ? glyph + tooltip so readers know it's a data-quality issue,
             // not a missing oracle.
             var anomalyAttrs = isAnomaly ?
-                ' title="Maple GraphQL data anomaly — collateral state unverifiable" class="cursor-help"' : '';
+                ' title="Maple GraphQL data anomaly — click for methodology footnote" class="cursor-help"' : '';
+            // Anchor jumps to the AUM-coverage panel's methodology footnote
+            // so a careful reader can find the explanation in one click.
             var anomalyGlyph = isAnomaly ?
-                ' <span class="text-amber-500 text-xs"' + anomalyAttrs + '>?</span>' : '';
+                ' <a href="#syrup-data-anomaly-note" class="text-amber-500 text-xs no-underline hover:underline" title="Maple GraphQL data anomaly — click for methodology footnote">?</a>' : '';
 
             // Single combined "Collateral" cell — "PYUSD $152.7M" or "USTB — ?"
             var collatCellText;
@@ -1310,7 +1326,7 @@ var SyrupUSDCRenderer = {
             // Distinguish data_anomaly (collateral state unverifiable) from
             // genuinely-unavailable so readers understand the difference.
             if (coll && coll.usd_source === 'data_anomaly') {
-                return '<td class="text-right font-mono text-slate-400 cursor-help" title="Maple GraphQL data anomaly — collateral state unverifiable">— <span class="text-amber-500 text-xs">?</span></td>';
+                return '<td class="text-right font-mono text-slate-400">— <a href="#syrup-data-anomaly-note" class="text-amber-500 text-xs no-underline hover:underline cursor-help" title="Maple GraphQL data anomaly — click for methodology footnote">?</a></td>';
             }
             return '<td class="text-right font-mono text-slate-400">—</td>';
         }
@@ -1403,7 +1419,6 @@ var SyrupUSDCRenderer = {
         var rows = c.borrowers.map(function(b) {
             return '<tr>' +
                 '<td><span class="font-mono text-xs" title="' + b.address + '">' + SyrupUSDCRenderer._truncAddr(b.address) + '</span> ' + SyrupUSDCRenderer._ethLink(b.address) + '</td>' +
-                '<td class="text-xs text-slate-500">' + (b.firm || '—') + '</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(b.principal_usd) + '</td>' +
                 '<td class="text-right font-mono">' + (b.loan_count || 0) + '</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatPercent(b.share_pct, 2) + '</td>' +
@@ -1425,7 +1440,7 @@ var SyrupUSDCRenderer = {
                 '</div>' +
             '</div>' +
             '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
-                '<th>Borrower</th><th>Firm</th><th class="text-right">Principal</th><th class="text-right"># Loans</th><th class="text-right">Share</th>' +
+                '<th>Borrower</th><th class="text-right">Principal</th><th class="text-right"># Loans</th><th class="text-right">Share</th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
         '</div>';
     },
@@ -1455,11 +1470,12 @@ var SyrupUSDCRenderer = {
         return '<div class="panel">' +
             '<div class="panel-title">Repayment Schedule (next ' + (pl.horizon_days || 180) + ' days)</div>' +
             '<p class="text-sm text-slate-500 mb-3">Expected interest-only inflows from active open-term loans, bucketed by next payment-due date. Principal repays only on a Pool-Delegate call (24h notice + 48h grace) and is not modelled here.</p>' +
+            '<div class="text-xs text-slate-500 mb-2">Cumulative interest expected through each horizon (chart below shows per-bucket detail).</div>' +
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
-                statBlock('30d', t.expected_inflow_30d_usd) +
-                statBlock('60d', t.expected_inflow_60d_usd) +
-                statBlock('90d', t.expected_inflow_90d_usd) +
-                statBlock('180d', t.expected_inflow_180d_usd) +
+                statBlock('Within 30d', t.expected_inflow_30d_usd) +
+                statBlock('Within 60d', t.expected_inflow_60d_usd) +
+                statBlock('Within 90d', t.expected_inflow_90d_usd) +
+                statBlock('Within 180d', t.expected_inflow_180d_usd) +
             '</div>' +
             '<div style="height: 220px; position: relative;"><canvas id="syrup-ladder-chart"></canvas></div>' +
             (overdueCount > 0 ?
@@ -1534,14 +1550,15 @@ var SyrupUSDCRenderer = {
     },
 
     // ----- §5 Liquidity & Peg (folds Exit Realism + Stress Anchor + Peg) --
-    _renderLiquidityAndPeg: function(specific, s) {
+    _renderLiquidityAndPeg: function(specific, s, slug) {
         var wq = specific.withdrawal_queue;
         var liq = specific.liquidity;
         var peg = specific.peg;
         var lb = specific.loan_book || {};
+        var underlying = SyrupUSDCRenderer._underlying(slug);
 
         var html = '<div class="panel"><div class="panel-title">Liquidity &amp; Peg</div>' +
-            '<p class="text-sm text-slate-500 mb-3">Two exit paths: (a) instant queue exit redeems against free USDC at NAV; (b) DEX/aggregator sell takes a slippage hit but settles immediately. Peg deviation = market price vs theoretical NAV.</p>';
+            '<p class="text-sm text-slate-500 mb-3">Two exit paths: (a) instant queue exit redeems against free ' + underlying + ' at NAV; (b) DEX/aggregator sell takes a slippage hit but settles immediately. Peg deviation = market price vs theoretical NAV.</p>';
 
         // Free USDC + queue
         if (wq) {
@@ -1557,8 +1574,8 @@ var SyrupUSDCRenderer = {
             var depthText = depthUsd === null ? '—' : CommonRenderer.formatCurrency(depthUsd);
 
             html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
-                '<div class="summary-card"><div class="card-label">Free USDC</div><div class="card-value positive">' + CommonRenderer.formatCurrency(freeUsd) + '</div><div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(freePct, 1) + ' of supply</div></div>' +
-                '<div class="summary-card"><div class="card-label">Queue Depth</div><div class="card-value ' + depthCls + '">' + depthText + '</div><div class="text-xs text-slate-400 mt-1">USDC est.</div></div>' +
+                '<div class="summary-card"><div class="card-label">Free ' + underlying + '</div><div class="card-value positive">' + CommonRenderer.formatCurrency(freeUsd) + '</div><div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(freePct, 1) + ' of supply</div></div>' +
+                '<div class="summary-card"><div class="card-label">Queue Depth</div><div class="card-value ' + depthCls + '">' + depthText + '</div><div class="text-xs text-slate-400 mt-1">' + underlying + ' est.</div></div>' +
                 '<div class="summary-card"><div class="card-label">Queue Slots</div><div class="card-value">' + (slots !== null && slots !== undefined ? slots : '—') + '</div><div class="text-xs text-slate-400 mt-1">' + (queueEmpty ? 'empty' : 'pending') + '</div></div>' +
                 '<div class="summary-card"><div class="card-label">Request IDs</div><div class="card-value text-base font-mono">' + (lastId != null ? lastId : '—') + ' / ' + (nextId != null ? nextId : '—') + '</div><div class="text-xs text-slate-400 mt-1">last filled / next to file</div></div>' +
             '</div>';
@@ -1578,7 +1595,7 @@ var SyrupUSDCRenderer = {
                 '</tr>';
             }).join('');
             var sourceLabel = liq.source ? ' (' + liq.source + ')' : '';
-            html += '<div class="text-sm font-semibold text-slate-700 mt-2 mb-1">DEX aggregator slippage → USDC' + sourceLabel + '</div>' +
+            html += '<div class="text-sm font-semibold text-slate-700 mt-2 mb-1">DEX aggregator slippage → ' + underlying + sourceLabel + '</div>' +
                 '<table class="data-table"><thead><tr><th>Notional</th><th class="text-right">Slippage</th><th class="text-right">Output</th></tr></thead><tbody>' + rows + '</tbody></table>' +
                 (liq.pool_tvl ? '<div class="text-xs text-slate-400 mt-2">DEX pool TVL: ' + CommonRenderer.formatCurrency(liq.pool_tvl) + (liq.pool_count ? ' across ' + liq.pool_count + ' pools' : '') + '</div>' : '');
         }

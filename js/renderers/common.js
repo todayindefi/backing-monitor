@@ -59,13 +59,14 @@ const CommonRenderer = {
         }
         // Asset-specific renderers can override individual cards by label
         // (e.g. relabel "Collateral Ratio" → "Pool Coverage Ratio" + add subtext).
+        // An override with `hidden: true` removes the card entirely.
         var overrides = spec.card_overrides;
         if (overrides && typeof overrides === 'object') {
             cards = cards.map(function(c) {
                 var ov = overrides[c.label];
                 if (!ov) return c;
                 return Object.assign({}, c, ov);
-            });
+            }).filter(function(c) { return !c.hidden; });
         }
 
         var container = document.getElementById('summary-cards');
