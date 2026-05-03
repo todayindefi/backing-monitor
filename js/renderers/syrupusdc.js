@@ -35,8 +35,9 @@ var SYRUP_COLLATERAL_META = {
 // panel's dormant-sleeve sub-block; unknown impls degrade to "configured
 // DeFi sleeve" with the truncated address.
 var SYRUP_STRATEGY_IMPL_INFO = {
-    'MapleAaveStrategy': 'Aave V3 stablecoin pool wrapper',
-    'MapleSkyStrategy':  'Sky / sUSDS DSR wrapper'
+    'MapleAaveStrategy':       'Aave V3 stablecoin pool wrapper',
+    'MapleSkyStrategy':        'Sky / sUSDS DSR wrapper',
+    'FixedTermLoanManager':    'unused fixed-term loan-type slot'
 };
 
 // Active-vs-dormant threshold for non-LoanManager DeFi sleeves. Below this
