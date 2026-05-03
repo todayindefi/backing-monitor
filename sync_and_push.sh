@@ -15,6 +15,9 @@ cp /home/danger/PegTracker/data/thusd_critical_events.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/thusd_flow.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/syrupusdc_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/syrupusdc_backing_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/syrupusdt_backing.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/syrupusdt_backing_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/syrup_family.json data/ 2>/dev/null
 
 # Commit and push if changed
 git add data/
