@@ -201,6 +201,52 @@ var SyrupUSDCRenderer = {
                 '</div>' +
             '</div>';
 
+        // ---- Combined loan book by collateral asset ----
+        // Asset-level family rollup — complements the borrower-level overlap
+        // table below by showing concentration along the collateral axis.
+        var assetRollup = fam.by_collateral_asset_combined;
+        var assetBlock = '';
+        if (Array.isArray(assetRollup) && assetRollup.length) {
+            var sortedAssets = assetRollup.slice().sort(function(a, b) {
+                return (b.combined_principal_usd || 0) - (a.combined_principal_usd || 0);
+            });
+            function poolCell(loans, principal) {
+                if (!loans) return '<span class="text-slate-400">—</span>';
+                var label = loans === 1 ? '1 loan' : loans + ' loans';
+                return '<span class="font-mono text-xs">' + label + ' / ' + CommonRenderer.formatCurrency(principal || 0) + '</span>';
+            }
+            var assetRowsHtml = sortedAssets.map(function(row) {
+                var pct = row.combined_pct_of_family || 0;
+                var pctCls = pct >= 10 ? 'text-red-600 font-semibold' :
+                             pct >= 5  ? 'text-amber-600 font-semibold' :
+                                          'text-green-600';
+                return '<tr>' +
+                    '<td class="font-mono font-semibold">' + row.asset + '</td>' +
+                    '<td class="text-right">' + poolCell(row.syrupusdc_loans, row.syrupusdc_principal_usd) + '</td>' +
+                    '<td class="text-right">' + poolCell(row.syrupusdt_loans, row.syrupusdt_principal_usd) + '</td>' +
+                    '<td class="text-right font-mono font-semibold">' + CommonRenderer.formatCurrency(row.combined_principal_usd || 0) + '</td>' +
+                    '<td class="text-right font-mono ' + pctCls + '">' + CommonRenderer.formatPercent(pct, 1) + '</td>' +
+                '</tr>';
+            }).join('');
+            var topAsset = sortedAssets[0];
+            var topAssetPct = (topAsset && topAsset.combined_pct_of_family) || 0;
+            var assetCallout = topAssetPct >= 25 ?
+                '<div class="risk-flag risk-warning mt-3">' +
+                    topAsset.asset + ' is ' + CommonRenderer.formatPercent(topAssetPct, 0) +
+                    ' of family book — single-asset concentration risk axis.' +
+                '</div>' : '';
+            assetBlock =
+                '<div class="text-sm font-semibold text-slate-700 mb-2 mt-4">Combined loan book by collateral asset</div>' +
+                '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                    '<th>Asset</th>' +
+                    '<th class="text-right">USDC pool</th>' +
+                    '<th class="text-right">USDT pool</th>' +
+                    '<th class="text-right">Combined</th>' +
+                    '<th class="text-right">% of family</th>' +
+                '</tr></thead><tbody>' + assetRowsHtml + '</tbody></table></div>' +
+                assetCallout;
+        }
+
         // ---- Cross-pool borrower table ----
         var rowsHtml = '';
         var crossPoolBorrowers = overlap.filter(function(b) {
@@ -306,6 +352,7 @@ var SyrupUSDCRenderer = {
         return '<div class="panel">' +
             '<div class="panel-title">Maple Syrup Family — Cross-Pool Snapshot</div>' +
             aggCards +
+            assetBlock +
             tableBlock +
             govBlock +
             siblingBlock +
