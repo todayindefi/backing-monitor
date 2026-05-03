@@ -638,11 +638,11 @@ var SyrupUSDCRenderer = {
         caption.innerHTML = sourceLine + initLine + noteLine;
 
         // Second stacked chart in the same panel — deployment ratio.
-        this._renderDeploymentChart(panel, labels, entries);
+        this._renderDeploymentChart(panel, labels, entries, underlying);
     },
 
     // ----- Deployment ratio chart (stacked below AUM coverage) ------------
-    _renderDeploymentChart: function(panel, labels, entries) {
+    _renderDeploymentChart: function(panel, labels, entries, underlying) {
         if (typeof Chart === 'undefined') return;
         var deplSeries = entries.map(function(e) { return e.deployment_pct; });
 
