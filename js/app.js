@@ -99,6 +99,14 @@ async function renderAsset(slug) {
         document.getElementById('header-subtitle').textContent = data.asset + ' (' + data.chain + ')';
         document.getElementById('header-timestamp').textContent = 'Updated: ' + CommonRenderer.formatDate(data.timestamp);
 
+        // Asset-specific pre-render hook — lets the renderer patch top-card
+        // overrides (e.g. swap in init-level CR for syrupUSDC/USDT) before
+        // the common summary-cards row paints.
+        var preRenderer = ASSET_RENDERERS[data.asset_specific && data.asset_specific.type];
+        if (preRenderer && typeof preRenderer.preRender === 'function') {
+            preRenderer.preRender(data);
+        }
+
         // Common sections
         CommonRenderer.renderSummaryCards(data);
         CommonRenderer.renderRiskFlags(data);

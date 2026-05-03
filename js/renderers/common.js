@@ -72,8 +72,10 @@ const CommonRenderer = {
         container.innerHTML = cards.map(function(c) {
             return '<div class="summary-card">' +
                 '<div class="card-label">' + c.label + '</div>' +
+                (c.prefix_html ? c.prefix_html : '') +
                 '<div class="card-value ' + (c.cls || '') + '">' + c.value + '</div>' +
                 (c.subtext ? '<div class="text-xs text-slate-400 mt-1">' + c.subtext + '</div>' : '') +
+                (c.extra_html ? c.extra_html : '') +
                 '</div>';
         }).join('');
     },

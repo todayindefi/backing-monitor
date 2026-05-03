@@ -113,6 +113,64 @@ var SyrupUSDCRenderer = {
         }
     },
 
+    // ----- pre-render hook (fires before common summary cards render) ----
+    // Swaps the static "Pool Coverage Ratio" card (always 100% by ERC-4626
+    // design — a binary loss-recognition alarm, not a metric) for the
+    // dynamic init-level Pool Collateral Ratio (Maple's headline coverage
+    // metric, weighted-avg across active loans). PCR is demoted to an
+    // inline status pill below the value, with a banner-prefix when
+    // unrealized losses are recognized or PCR drops below 100.
+    preRender: function(data) {
+        var specific = data.asset_specific || {};
+        if (specific.type !== 'syrupusdc') return;
+        var lb = specific.loan_book || {};
+        var cs = lb.collateral_summary || {};
+        var poolCR = cs.pool_collateral_ratio_pct;
+        if (poolCR == null) return;  // graceful — keep existing override
+
+        var vs = specific.vault_state || {};
+        var pcr = vs.pcr_principal_pct;
+        var ul  = vs.unrealized_losses || 0;
+        var alarm = (ul > 0) || (pcr != null && pcr < 100.0);
+
+        // Color bands per spec: >=130 green, 110-130 amber, <110 red.
+        var cls = poolCR >= 130 ? 'positive' :
+                  poolCR >= 110 ? 'warning'  :
+                                  'negative';
+
+        var pillCls, pillDot, pillText;
+        if (alarm) {
+            pillCls  = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 mt-2';
+            pillDot  = '<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>';
+            var pcrTxt = (pcr != null) ? CommonRenderer.formatPercent(pcr, 2) : '—';
+            var ulTxt  = ul > 0 ? ' · ' + CommonRenderer.formatCurrency(ul) + ' losses recognized' : '';
+            pillText = 'PCR ' + pcrTxt + ulTxt;
+        } else {
+            pillCls  = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 mt-2';
+            pillDot  = '<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>';
+            pillText = 'PCR ' + (pcr != null ? CommonRenderer.formatPercent(pcr, 2) : '100.00%') + ' · no losses recognized';
+        }
+        var pillHtml = '<div><span class="' + pillCls + '">' + pillDot + ' ' + pillText + '</span></div>';
+
+        var bannerHtml = alarm ?
+            '<div class="risk-flag risk-critical mt-1 mb-1 text-xs"><strong>Loss recognized:</strong> PCR ' +
+                (pcr != null ? CommonRenderer.formatPercent(pcr, 2) : '—') +
+                (ul > 0 ? ' · ' + CommonRenderer.formatCurrency(ul) + ' unrealized losses' : '') +
+            '</div>' : '';
+
+        // Replace the existing "Pool Coverage Ratio" override with the
+        // init-level Pool Collateral Ratio override.
+        specific.card_overrides = specific.card_overrides || {};
+        specific.card_overrides['Collateral Ratio'] = {
+            label: 'Pool Collateral Ratio',
+            value: CommonRenderer.formatPercent(poolCR, 2),
+            subtext: 'Weighted-avg init-level coverage across active loans',
+            cls: cls,
+            prefix_html: bannerHtml,
+            extra_html: pillHtml
+        };
+    },
+
     // ----- entry point ----------------------------------------------------
     render: function(data) {
         var container = document.getElementById('asset-specific-panels');
@@ -153,28 +211,33 @@ var SyrupUSDCRenderer = {
     _loadCrossPoolFamily: function(data) {
         var target = document.getElementById('syrup-family-panel');
         if (!target) return;
-        fetch('data/syrup_family.json?nocache=' + Math.floor(Date.now() / 60000))
-            .then(function(r) { return r.ok ? r.json() : null; })
-            .then(function(fam) {
-                if (!fam) {
-                    // File missing — leave the placeholder empty.
-                    target.innerHTML = '';
-                    return;
-                }
-                if (fam.data_source === 'incomplete') {
-                    target.innerHTML =
-                        '<div class="panel">' +
-                            '<div class="panel-title">Maple Syrup Family — Cross-Pool Snapshot</div>' +
-                            '<div class="risk-flag risk-info">Cross-pool family data is currently unavailable (one pool\'s analyzer is mid-cycle or stale). Per-pool dashboards continue to render correctly.</div>' +
-                        '</div>';
-                    return;
-                }
-                target.innerHTML = SyrupUSDCRenderer._renderCrossPoolFamilyContent(fam, data);
-            })
-            .catch(function() { target.innerHTML = ''; });
+        var nocache = Math.floor(Date.now() / 60000);
+        var siblingSlug = data.asset_slug === 'syrupusdt' ? 'syrupusdc' : 'syrupusdt';
+        // Fetch family JSON + sibling pool's backing JSON in parallel. The
+        // sibling fetch supplies its init-level Pool CR for the side-by-side
+        // comparison row; the family JSON itself doesn't carry that field.
+        var famPromise     = fetch('data/syrup_family.json?nocache=' + nocache).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+        var siblingPromise = fetch('data/' + siblingSlug + '_backing.json?nocache=' + nocache).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+        Promise.all([famPromise, siblingPromise]).then(function(results) {
+            var fam = results[0];
+            var siblingData = results[1];
+            if (!fam) {
+                target.innerHTML = '';
+                return;
+            }
+            if (fam.data_source === 'incomplete') {
+                target.innerHTML =
+                    '<div class="panel">' +
+                        '<div class="panel-title">Maple Syrup Family — Cross-Pool Snapshot</div>' +
+                        '<div class="risk-flag risk-info">Cross-pool family data is currently unavailable (one pool\'s analyzer is mid-cycle or stale). Per-pool dashboards continue to render correctly.</div>' +
+                    '</div>';
+                return;
+            }
+            target.innerHTML = SyrupUSDCRenderer._renderCrossPoolFamilyContent(fam, data, siblingData);
+        }).catch(function() { target.innerHTML = ''; });
     },
 
-    _renderCrossPoolFamilyContent: function(fam, data) {
+    _renderCrossPoolFamilyContent: function(fam, data, siblingData) {
         var combined = fam.combined || {};
         var pools = fam.pools || [];
         var usdcPool = pools.find(function(p) { return p.slug === 'syrupusdc'; }) || {};
@@ -185,6 +248,42 @@ var SyrupUSDCRenderer = {
         // Pool-level total assets — analyzer emits `total_assets_usd`; older
         // fixture-style emits `aum_usd`. Accept either.
         function poolAum(p) { return p.aum_usd != null ? p.aum_usd : p.total_assets_usd; }
+
+        // ---- Pool Collateral Ratio comparison (init-level, weighted-avg) ----
+        // Reads from each pool's loan_book.collateral_summary.pool_collateral_ratio_pct.
+        // Current pool comes from `data`; sibling from a parallel fetch of its
+        // backing JSON. Hidden if neither value resolves.
+        function crFromBacking(d) {
+            return d && d.asset_specific && d.asset_specific.loan_book &&
+                d.asset_specific.loan_book.collateral_summary &&
+                d.asset_specific.loan_book.collateral_summary.pool_collateral_ratio_pct;
+        }
+        var currentCR = crFromBacking(data);
+        var siblingCR = crFromBacking(siblingData);
+        var usdcCR = currentSlug === 'syrupusdc' ? currentCR : siblingCR;
+        var usdtCR = currentSlug === 'syrupusdt' ? currentCR : siblingCR;
+        function crCls(v) {
+            if (v == null) return 'text-slate-400';
+            if (v >= 130) return 'text-green-600 font-semibold';
+            if (v >= 110) return 'text-amber-600 font-semibold';
+            return 'text-red-600 font-semibold';
+        }
+        function crCell(label, v) {
+            return '<div class="summary-card">' +
+                '<div class="card-label">' + label + '</div>' +
+                '<div class="card-value ' + crCls(v) + '">' +
+                    (v != null ? CommonRenderer.formatPercent(v, 2) : '—') +
+                '</div>' +
+            '</div>';
+        }
+        var crCompareBlock = (usdcCR != null || usdtCR != null) ?
+            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-1">Init-level Pool Collateral Ratio</div>' +
+            '<div class="grid grid-cols-2 gap-3 mb-1">' +
+                crCell('syrupUSDC', usdcCR) +
+                crCell('syrupUSDT', usdtCR) +
+            '</div>' +
+            '<div class="text-xs text-slate-400 mb-4">Init-level weighted average; differs across pools by book composition.</div>'
+            : '';
 
         // ---- Family aggregates row ----
         var aggCards =
@@ -368,6 +467,7 @@ var SyrupUSDCRenderer = {
         return '<div class="panel">' +
             '<div class="panel-title">Maple Syrup Family — Cross-Pool Snapshot</div>' +
             aggCards +
+            crCompareBlock +
             assetBlock +
             tableBlock +
             govBlock +
