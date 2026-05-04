@@ -95,6 +95,26 @@ var SyrupUSDCRenderer = {
         return slug === 'syrupusdt' ? 'USDT' : 'USDC';
     },
 
+    // Human-readable relative age: <60s "Just now", <60min "N minutes ago",
+    // <24h "N hours ago", <7d "N days ago", >=7d absolute YYYY-MM-DD.
+    // Used by the queue-based withdrawal UI for last-fill / head-age cells.
+    _formatRelativeAge: function(seconds) {
+        if (seconds == null) return '—';
+        var s = Math.max(0, Math.floor(seconds));
+        if (s < 60) return 'Just now';
+        if (s < 3600) return Math.floor(s / 60) + ' minutes ago';
+        if (s < 86400) {
+            var h = Math.floor(s / 3600);
+            return h + (h === 1 ? ' hour ago' : ' hours ago');
+        }
+        if (s < 86400 * 7) {
+            var dys = Math.floor(s / 86400);
+            return dys + (dys === 1 ? ' day ago' : ' days ago');
+        }
+        var dt = new Date(Date.now() - s * 1000);
+        return dt.toISOString().slice(0, 10);
+    },
+
     _statusFlagClass: function(status) {
         var s = (status || '').toLowerCase();
         if (s === 'healthy' || s === 'active') return 'text-green-600';
@@ -187,6 +207,70 @@ var SyrupUSDCRenderer = {
         // sanity check that should always be 0; the few-dollar non-zero
         // values are float-rounding noise, not a real signal. Hide it.
         specific.card_overrides['Surplus / Deficit'] = { hidden: true };
+
+        // Re-label NAV's "USDC per share" subtext for the syrupUSDT page.
+        // The card is baked into extra_summary_cards by the analyzer with
+        // a hardcoded subtext; rewrite it here so the deposit-asset symbol
+        // matches the pool.
+        var underlying = SyrupUSDCRenderer._underlying(data.asset_slug);
+        if (Array.isArray(specific.extra_summary_cards)) {
+            specific.extra_summary_cards.forEach(function(c) {
+                if (c && c.label === 'NAV') {
+                    c.subtext = underlying + ' per share';
+                }
+            });
+        }
+
+        // Promote brand-wide live APY to a top-strip card with a 30d
+        // sparkline. Sourced from yield.apy_history.entries (single Maple
+        // syrupGlobals.apyTimeSeries — same series for both pools, hence
+        // "Syrup brand APY" subtitle).
+        var y = specific.yield || {};
+        var apyEntries = (y.apy_history && Array.isArray(y.apy_history.entries)) ? y.apy_history.entries : [];
+        var liveApy = (y.core_apy_pct != null) ? y.core_apy_pct :
+                      (y.headline_apy_pct != null ? y.headline_apy_pct : y.base_apy_pct);
+        if (liveApy != null && apyEntries.length >= 2) {
+            var apyValues = apyEntries.map(function(e) { return e.total_apy_pct; }).filter(function(v) { return v != null; });
+            var first = apyValues[0];
+            var last = apyValues[apyValues.length - 1];
+            var minV = Math.min.apply(null, apyValues);
+            var maxV = Math.max.apply(null, apyValues);
+            var rangePp = maxV - minV;
+            var slopePp = last - first;
+            // Color rule per spec: rising/falling slope dominates; small
+            // range over the window reads as "stable" muted-green; otherwise
+            // moderate-variation slate-neutral.
+            var apyCls, sparkColor;
+            if (slopePp > 0.5) { apyCls = 'positive'; sparkColor = '#22c55e'; }
+            else if (slopePp < -0.5) { apyCls = 'warning'; sparkColor = '#f59e0b'; }
+            else if (rangePp <= 0.3) { apyCls = ''; sparkColor = '#10b981'; }
+            else { apyCls = ''; sparkColor = '#64748b'; }
+
+            var W = 80, H = 24, range = (maxV - minV) || 1;
+            var step = W / (apyValues.length - 1);
+            var pts = apyValues.map(function(v, i) {
+                var x = i * step;
+                var yPx = H - ((v - minV) / range) * (H - 4) - 2;
+                return x.toFixed(1) + ',' + yPx.toFixed(1);
+            }).join(' ');
+            var sparkSvg =
+                '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" class="inline-block flex-shrink-0">' +
+                    '<polyline points="' + pts + '" fill="none" stroke="' + sparkColor + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+                '</svg>';
+            var apyValueHtml =
+                '<div class="flex items-center justify-between gap-2">' +
+                    '<span>' + CommonRenderer.formatPercent(liveApy, 2) + '</span>' +
+                    sparkSvg +
+                '</div>';
+
+            specific.extra_summary_cards = specific.extra_summary_cards || [];
+            specific.extra_summary_cards.push({
+                label: 'Live APY',
+                value: apyValueHtml,
+                subtext: 'Syrup brand APY · 30d trend',
+                cls: apyCls
+            });
+        }
     },
 
     // ----- entry point ----------------------------------------------------
@@ -1417,8 +1501,16 @@ var SyrupUSDCRenderer = {
                    bar('Top 10', c.top_10_share_pct);
 
         var rows = c.borrowers.map(function(b) {
+            // borrower_meta_tag is a structural classifier (e.g. "Multi-product
+            // credit (PYUSD/USTB)"), not a legal-entity name — column header is
+            // "TAG" rather than "FIRM".
+            var tag = b.borrower_meta_tag || b.firm || null;
+            var tagCell = tag ?
+                '<span class="text-xs text-slate-600">' + tag + '</span>' :
+                '<span class="text-xs text-slate-400">—</span>';
             return '<tr>' +
                 '<td><span class="font-mono text-xs" title="' + b.address + '">' + SyrupUSDCRenderer._truncAddr(b.address) + '</span> ' + SyrupUSDCRenderer._ethLink(b.address) + '</td>' +
+                '<td>' + tagCell + '</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(b.principal_usd) + '</td>' +
                 '<td class="text-right font-mono">' + (b.loan_count || 0) + '</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatPercent(b.share_pct, 2) + '</td>' +
@@ -1440,7 +1532,7 @@ var SyrupUSDCRenderer = {
                 '</div>' +
             '</div>' +
             '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
-                '<th>Borrower</th><th class="text-right">Principal</th><th class="text-right"># Loans</th><th class="text-right">Share</th>' +
+                '<th>Borrower</th><th>Tag</th><th class="text-right">Principal</th><th class="text-right"># Loans</th><th class="text-right">Share</th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
         '</div>';
     },
@@ -1560,7 +1652,11 @@ var SyrupUSDCRenderer = {
         var html = '<div class="panel"><div class="panel-title">Liquidity &amp; Peg</div>' +
             '<p class="text-sm text-slate-500 mb-3">Two exit paths: (a) instant queue exit redeems against free ' + underlying + ' at NAV; (b) DEX/aggregator sell takes a slippage hit but settles immediately. Peg deviation = market price vs theoretical NAV.</p>';
 
-        // Free USDC + queue
+        // Free underlying + queue-based time-context cards. Maple Syrup's
+        // WithdrawalManager is queue-based (NOT cyclical) — getCurrentCycleId()
+        // reverts on the deployed impl. Render last-fill, head-request age (or
+        // empty state), queue depth, and request-id strip. Do not render
+        // current_cycle_* / cycle_duration_seconds — permanently null for Syrup.
         if (wq) {
             var freeUsd = (s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency) ? s.collateral_ratio_alt.value :
                           (specific.vault_state && specific.vault_state.free_usdc) || null;
@@ -1571,13 +1667,51 @@ var SyrupUSDCRenderer = {
             var nextId = wq.next_request_id;
             var lastId = wq.last_request_id;
             var depthCls = depthUsd !== null && depthUsd > 10000000 ? 'warning' : '';
-            var depthText = depthUsd === null ? '—' : CommonRenderer.formatCurrency(depthUsd);
+            var depthText = depthUsd === null ? '—' :
+                            (slots != null ? slots + ' request' + (slots === 1 ? '' : 's') + ' · ' + CommonRenderer.formatCurrency(depthUsd) : CommonRenderer.formatCurrency(depthUsd));
+
+            var lastFillAge = SyrupUSDCRenderer._formatRelativeAge(wq.last_filled_age_seconds);
+            var lastFillIso = wq.last_filled_timestamp_iso ? wq.last_filled_timestamp_iso.replace('+00:00', 'Z') : '—';
+            var lastFillCard =
+                '<div class="summary-card">' +
+                    '<div class="card-label">Last fill</div>' +
+                    '<div class="card-value text-base">' + lastFillAge + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1 font-mono">' + lastFillIso + '</div>' +
+                '</div>';
+
+            var headCard;
+            if (queueEmpty) {
+                headCard =
+                    '<div class="summary-card">' +
+                        '<div class="card-label">Queue status</div>' +
+                        '<div class="card-value text-base">Empty <span class="text-slate-400 text-sm">(0 pending)</span></div>' +
+                        '<div class="text-xs text-slate-400 mt-1">Next request fills on submission</div>' +
+                    '</div>';
+            } else {
+                var headAge = SyrupUSDCRenderer._formatRelativeAge(wq.next_request_age_seconds);
+                var headSubtext = (nextId != null && wq.next_request_age_seconds != null) ?
+                    'request ' + nextId + ' waiting' : 'head of queue';
+                headCard =
+                    '<div class="summary-card">' +
+                        '<div class="card-label">Head request age</div>' +
+                        '<div class="card-value text-base ' + (wq.next_request_age_seconds > 86400 ? 'warning' : '') + '">' + headAge + '</div>' +
+                        '<div class="text-xs text-slate-400 mt-1">' + headSubtext + '</div>' +
+                    '</div>';
+            }
 
             html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
                 '<div class="summary-card"><div class="card-label">Free ' + underlying + '</div><div class="card-value positive">' + CommonRenderer.formatCurrency(freeUsd) + '</div><div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(freePct, 1) + ' of supply</div></div>' +
-                '<div class="summary-card"><div class="card-label">Queue Depth</div><div class="card-value ' + depthCls + '">' + depthText + '</div><div class="text-xs text-slate-400 mt-1">' + underlying + ' est.</div></div>' +
-                '<div class="summary-card"><div class="card-label">Queue Slots</div><div class="card-value">' + (slots !== null && slots !== undefined ? slots : '—') + '</div><div class="text-xs text-slate-400 mt-1">' + (queueEmpty ? 'empty' : 'pending') + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Request IDs</div><div class="card-value text-base font-mono">' + (lastId != null ? lastId : '—') + ' / ' + (nextId != null ? nextId : '—') + '</div><div class="text-xs text-slate-400 mt-1">last filled / next to file</div></div>' +
+                lastFillCard +
+                headCard +
+                '<div class="summary-card"><div class="card-label">' + (queueEmpty ? 'Request IDs' : 'Queue depth') + '</div>' +
+                    (queueEmpty ?
+                        '<div class="card-value text-base font-mono">' + (lastId != null ? lastId : '—') + ' / ' + (nextId != null ? nextId : '—') + '</div>' +
+                        '<div class="text-xs text-slate-400 mt-1">last filled / next to file</div>'
+                      :
+                        '<div class="card-value ' + depthCls + '">' + depthText + '</div>' +
+                        '<div class="text-xs text-slate-400 mt-1">' + underlying + ' est.</div>'
+                    ) +
+                '</div>' +
             '</div>';
         }
 
@@ -1689,13 +1823,17 @@ var SyrupUSDCRenderer = {
         }
         var pdAddr = addrOf(g.pool_delegate);
         if (pdAddr) {
-            var pdExtra = '';
-            var firm = g.pool_delegate_firm || (typeof g.pool_delegate === 'object' ? g.pool_delegate.firm : null);
-            var isEoa = g.pool_delegate_is_eoa;
-            if (isEoa === undefined && typeof g.pool_delegate === 'object') isEoa = (g.pool_delegate.type === 'eoa');
-            if (firm) pdExtra += firm;
-            if (isEoa) pdExtra += (pdExtra ? ' · ' : '') + '<span class="text-amber-600 font-semibold">⚠ EOA</span>';
-            rows.push(row('Pool Delegate', pdAddr, pdExtra || '-'));
+            // New analyzer schema: pool_delegate is an object {address,
+            // firm_name, is_eoa}. Older snapshots used a string + sibling
+            // pool_delegate_firm/_is_eoa fields — keep both paths working.
+            var pdObj = (typeof g.pool_delegate === 'object' && g.pool_delegate) ? g.pool_delegate : null;
+            var firm = (pdObj && (pdObj.firm_name || pdObj.firm)) || g.pool_delegate_firm || null;
+            var isEoa = (pdObj && 'is_eoa' in pdObj) ? pdObj.is_eoa :
+                        (g.pool_delegate_is_eoa !== undefined ? g.pool_delegate_is_eoa :
+                         (pdObj && pdObj.type === 'eoa'));
+            var pdExtra = firm || '—';
+            if (isEoa) pdExtra += ' · <span class="text-amber-600 font-semibold">⚠ EOA (single-key for loan funding)</span>';
+            rows.push(row('Pool Delegate', pdAddr, pdExtra));
         }
         var coverAddr = (typeof g.pool_delegate_cover === 'string') ? g.pool_delegate_cover :
                         (g.pool_delegate_cover && g.pool_delegate_cover.address) || null;
