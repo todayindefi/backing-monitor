@@ -95,6 +95,31 @@ var SyrupUSDCRenderer = {
         return slug === 'syrupusdt' ? 'USDT' : 'USDC';
     },
 
+    // Position-type classifier — works directly off the analyzer's
+    // position_type field; falls back to a static asset-name heuristic for
+    // older snapshots that haven't been re-emitted with the new schema yet.
+    // Loans = crypto-overcollateralized third-party credit. Liquidity =
+    // pool-owned positions in stablecoin/RWA/AMM venues (functionally NOT
+    // third-party credit, even though they're routed through the
+    // LoanManager as accounting wrappers).
+    _isLoan: function(loan) {
+        if (!loan) return false;
+        if (loan.position_type) return loan.position_type === 'loan';
+        var asset = loan.collateral && loan.collateral.asset;
+        return SyrupUSDCRenderer._isLoanAsset(asset);
+    },
+    _isLiquidity: function(loan) {
+        if (!loan) return false;
+        if (loan.position_type) return loan.position_type === 'liquidity';
+        var asset = loan.collateral && loan.collateral.asset;
+        return asset && !SyrupUSDCRenderer._isLoanAsset(asset);
+    },
+    _isLoanAsset: function(asset) {
+        // Crypto-overcollat collateral assets — anything else (PYUSD, USTB,
+        // USDC, USDT, sUSDS, etc.) reads as liquidity-layer.
+        return ['BTC', 'cbBTC', 'ETH', 'XRP', 'HYPE'].indexOf(asset) >= 0;
+    },
+
     // Human-readable relative age: <60s "Just now", <60min "N minutes ago",
     // <24h "N hours ago", <7d "N days ago", >=7d absolute YYYY-MM-DD.
     // Used by the queue-based withdrawal UI for last-fill / head-age cells.
@@ -271,6 +296,56 @@ var SyrupUSDCRenderer = {
                 cls: apyCls
             });
         }
+
+        // Risk-flag reword — analyzer still emits the legacy "At-par (Set B)
+        // collateral: ..." flag; replace it with two flags that frame the
+        // exposure in Loans/Liquidity terms (issuer/RWA/AMM axis vs
+        // borrower-credit) plus the single-key EOA topology summary.
+        if (Array.isArray(data.risk_flags)) {
+            var lb = specific.loan_book || {};
+            var vs = specific.vault_state || {};
+            var ct = (specific.governance || {}).custody_topology || {};
+            var liquidityUsd = lb.principal_liquidity_usd;
+            var totalAssets = vs.total_assets;
+            var pctOfPool = (liquidityUsd != null && totalAssets) ?
+                (liquidityUsd / totalAssets * 100) : null;
+            var custodyEntries = (ct.entries || []).filter(function(e) {
+                return e.control_type === 'custody' && e.is_eoa;
+            });
+            var custodyEoaCount = custodyEntries.length;
+            var custodyEoaUsd = custodyEntries.reduce(function(sum, e) {
+                return sum + (e.capital_under_control_usd || 0);
+            }, 0);
+            var newFlags = [];
+            if (pctOfPool != null) {
+                newFlags.push({
+                    severity: 'info',
+                    message: 'Liquidity layer: ' + CommonRenderer.formatPercent(pctOfPool, 0) +
+                        ' of pool — issuer/RWA/AMM risk axis (not borrower credit)'
+                });
+            }
+            if (custodyEoaCount > 0) {
+                newFlags.push({
+                    severity: 'warning',
+                    message: 'Single-key EOA custody: ' + CommonRenderer.formatCurrency(custodyEoaUsd) +
+                        ' held in ' + custodyEoaCount + ' EOA' + (custodyEoaCount === 1 ? '' : 's')
+                });
+            }
+            data.risk_flags = data.risk_flags.flatMap(function(f) {
+                if (f && typeof f.message === 'string' && /At-par \(Set B\)/i.test(f.message)) {
+                    return newFlags;
+                }
+                return [f];
+            });
+            // If the legacy at-par flag wasn't present but we have data,
+            // still surface the new Liquidity/EOA flags.
+            var hasLiquidityFlag = data.risk_flags.some(function(f) {
+                return f && /Liquidity layer:/i.test(f.message || '');
+            });
+            if (!hasLiquidityFlag && newFlags.length) {
+                data.risk_flags = data.risk_flags.concat(newFlags);
+            }
+        }
     },
 
     // ----- entry point ----------------------------------------------------
@@ -291,7 +366,8 @@ var SyrupUSDCRenderer = {
         html += '<div id="syrup-family-panel"></div>';
 
         html += this._renderBacking(specific, s, data.asset_slug);          // §1
-        html += this._renderLoanBookHealth(specific);                       // §2
+        html += this._renderLoanBookHealth(specific);                       // §2  (loans-only)
+        html += this._renderLiquidityLayer(specific, data.asset_slug);      // §2b (pool-owned positions)
         html += this._renderBorrowerConcentration(specific);                // §3
         html += this._renderRepaymentSchedule(specific);                    // §4
         html += this._renderLiquidityAndPeg(specific, s, data.asset_slug);  // §5
@@ -387,133 +463,169 @@ var SyrupUSDCRenderer = {
             '<div class="text-xs text-slate-400 mb-4">Init-level weighted average; differs across pools by book composition.</div>'
             : '';
 
-        // ---- Family aggregates row ----
+        // ---- Family aggregates row (Loans / Liquidity split) ----
+        // Drops Set A/B framing in favor of the structurally-correct
+        // Loans-vs-Liquidity split. Family Loan CR uses
+        // collateral_ratio_loans_only_pct (third-party-credit basis only).
+        var loansAum = combined.aum_loans_usd;
+        var liqAum = combined.aum_liquidity_usd;
+        var totalAum = combined.aum_total_usd != null ? combined.aum_total_usd : combined.total_aum_usd;
+        var familyLoanCR = combined.collateral_ratio_loans_only_pct;
+        var liqPct = (liqAum != null && totalAum) ? (liqAum / totalAum * 100) : null;
+        var loansOnlyCount = combined.loans_only_count;
+        var liquidityCount = combined.liquidity_count;
+
+        function familyLoanCRCls(v) {
+            if (v == null) return 'text-slate-400';
+            if (v >= 130) return 'positive';
+            if (v >= 110) return 'warning';
+            return 'negative';
+        }
+
         var aggCards =
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
                 '<div class="summary-card">' +
-                    '<div class="card-label">Combined family AUM</div>' +
-                    '<div class="card-value">' + CommonRenderer.formatCurrency(combined.total_aum_usd) + '</div>' +
+                    '<div class="card-label">Family Loans</div>' +
+                    '<div class="card-value">' + CommonRenderer.formatCurrency(loansAum) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' +
+                        (loansOnlyCount != null ? loansOnlyCount + ' loans · ' : '') +
+                        'third-party credit' +
+                    '</div>' +
+                '</div>' +
+                '<div class="summary-card">' +
+                    '<div class="card-label">Family Liquidity</div>' +
+                    '<div class="card-value">' + CommonRenderer.formatCurrency(liqAum) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' +
+                        (liquidityCount != null ? liquidityCount + ' positions · ' : '') +
+                        (liqPct != null ? CommonRenderer.formatPercent(liqPct, 1) + ' of pool' : 'pool-owned') +
+                    '</div>' +
+                '</div>' +
+                '<div class="summary-card">' +
+                    '<div class="card-label">Family Total AUM</div>' +
+                    '<div class="card-value">' + CommonRenderer.formatCurrency(totalAum) + '</div>' +
                     '<div class="text-xs text-slate-400 mt-1">USDC ' + CommonRenderer.formatCurrency(poolAum(usdcPool)) +
                         ' + USDT ' + CommonRenderer.formatCurrency(poolAum(usdtPool)) + '</div>' +
                 '</div>' +
                 '<div class="summary-card">' +
-                    '<div class="card-label">Combined active loans</div>' +
-                    '<div class="card-value">' + (combined.active_loan_count != null ? combined.active_loan_count : '—') + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">USDC ' + (usdcPool.active_loan_count || 0) +
-                        ' + USDT ' + (usdtPool.active_loan_count || 0) + '</div>' +
-                '</div>' +
-                '<div class="summary-card">' +
-                    '<div class="card-label">Set A (crypto-overcoll)</div>' +
-                    '<div class="card-value">' + CommonRenderer.formatCurrency(combined.set_a_principal_usd) + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">' +
-                        (combined.set_a_pct != null ? CommonRenderer.formatPercent(combined.set_a_pct, 1) + ' of family book' : '') +
+                    '<div class="card-label">Family Loan CR</div>' +
+                    '<div class="card-value ' + familyLoanCRCls(familyLoanCR) + '">' +
+                        (familyLoanCR != null ? CommonRenderer.formatPercent(familyLoanCR, 2) : '—') +
                     '</div>' +
-                '</div>' +
-                '<div class="summary-card">' +
-                    '<div class="card-label">Set B (at-par stable / RWA)</div>' +
-                    '<div class="card-value">' + CommonRenderer.formatCurrency(combined.set_b_principal_usd) + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">' +
-                        (combined.set_b_pct != null ? CommonRenderer.formatPercent(combined.set_b_pct, 1) + ' of family book' : '') +
-                    '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">Loans-only · weighted-avg init</div>' +
                 '</div>' +
             '</div>';
 
-        // ---- Combined loan book by collateral asset ----
-        // Asset-level family rollup — complements the borrower-level overlap
-        // table below by showing concentration along the collateral axis.
+        // ---- By collateral asset — split into Loans and Liquidity tables ----
+        // Asset-level family rollup. Classifies each row by asset name
+        // (BTC/XRP/HYPE/cbBTC/ETH = loans; PYUSD/USTB/USDC/USDT/sUSDS =
+        // liquidity) and renders two tables with percentages re-normalized
+        // within each class.
         var assetRollup = fam.by_collateral_asset_combined;
         var assetBlock = '';
         if (Array.isArray(assetRollup) && assetRollup.length) {
-            var sortedAssets = assetRollup.slice().sort(function(a, b) {
-                return (b.combined_principal_usd || 0) - (a.combined_principal_usd || 0);
-            });
             function poolCell(loans, principal) {
                 if (!loans) return '<span class="text-slate-400">—</span>';
                 var label = loans === 1 ? '1 loan' : loans + ' loans';
                 return '<span class="font-mono text-xs">' + label + ' / ' + CommonRenderer.formatCurrency(principal || 0) + '</span>';
             }
-            var assetRowsHtml = sortedAssets.map(function(row) {
-                var pct = row.combined_pct_of_family || 0;
-                var pctCls = pct >= 10 ? 'text-red-600 font-semibold' :
-                             pct >= 5  ? 'text-amber-600 font-semibold' :
-                                          'text-green-600';
-                return '<tr>' +
-                    '<td class="font-mono font-semibold">' + row.asset + '</td>' +
-                    '<td class="text-right">' + poolCell(row.syrupusdc_loans, row.syrupusdc_principal_usd) + '</td>' +
-                    '<td class="text-right">' + poolCell(row.syrupusdt_loans, row.syrupusdt_principal_usd) + '</td>' +
-                    '<td class="text-right font-mono font-semibold">' + CommonRenderer.formatCurrency(row.combined_principal_usd || 0) + '</td>' +
-                    '<td class="text-right font-mono ' + pctCls + '">' + CommonRenderer.formatPercent(pct, 1) + '</td>' +
-                '</tr>';
-            }).join('');
-            var topAsset = sortedAssets[0];
-            var topAssetPct = (topAsset && topAsset.combined_pct_of_family) || 0;
-            var assetCallout = topAssetPct >= 25 ?
-                '<div class="risk-flag risk-warning mt-3">' +
-                    topAsset.asset + ' is ' + CommonRenderer.formatPercent(topAssetPct, 0) +
-                    ' of family book — single-asset concentration risk axis.' +
+            var loanAssets = assetRollup.filter(function(r) { return SyrupUSDCRenderer._isLoanAsset(r.asset); })
+                .sort(function(a, b) { return (b.combined_principal_usd || 0) - (a.combined_principal_usd || 0); });
+            var liqAssets = assetRollup.filter(function(r) { return !SyrupUSDCRenderer._isLoanAsset(r.asset); })
+                .sort(function(a, b) { return (b.combined_principal_usd || 0) - (a.combined_principal_usd || 0); });
+
+            function renderAssetTable(rows, classTotal, headerLabel) {
+                if (rows.length === 0) return '';
+                var bodyHtml = rows.map(function(row) {
+                    var raw = row.combined_principal_usd || 0;
+                    var pct = classTotal > 0 ? (raw / classTotal * 100) : 0;
+                    var pctCls = pct >= 30 ? 'text-red-600 font-semibold' :
+                                 pct >= 15 ? 'text-amber-600 font-semibold' :
+                                              'text-green-600';
+                    return '<tr>' +
+                        '<td class="font-mono font-semibold">' + row.asset + '</td>' +
+                        '<td class="text-right">' + poolCell(row.syrupusdc_loans, row.syrupusdc_principal_usd) + '</td>' +
+                        '<td class="text-right">' + poolCell(row.syrupusdt_loans, row.syrupusdt_principal_usd) + '</td>' +
+                        '<td class="text-right font-mono font-semibold">' + CommonRenderer.formatCurrency(raw) + '</td>' +
+                        '<td class="text-right font-mono ' + pctCls + '">' + CommonRenderer.formatPercent(pct, 1) + '</td>' +
+                    '</tr>';
+                }).join('');
+                return '<div class="text-sm font-semibold text-slate-700 mb-2 mt-4">' + headerLabel + '</div>' +
+                    '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                        '<th>Asset</th>' +
+                        '<th class="text-right">USDC pool</th>' +
+                        '<th class="text-right">USDT pool</th>' +
+                        '<th class="text-right">Combined</th>' +
+                        '<th class="text-right">% of class</th>' +
+                    '</tr></thead><tbody>' + bodyHtml + '</tbody></table></div>';
+            }
+
+            var loansAumF = combined.aum_loans_usd ||
+                loanAssets.reduce(function(s, r) { return s + (r.combined_principal_usd || 0); }, 0);
+            var liqAumF = combined.aum_liquidity_usd ||
+                liqAssets.reduce(function(s, r) { return s + (r.combined_principal_usd || 0); }, 0);
+
+            var topLoanAsset = loanAssets[0];
+            var topLoanShare = topLoanAsset && loansAumF > 0 ?
+                ((topLoanAsset.combined_principal_usd || 0) / loansAumF * 100) : 0;
+            var loanCallout = topLoanShare >= 50 ?
+                '<div class="risk-flag risk-warning mt-2">' +
+                    topLoanAsset.asset + ' is ' + CommonRenderer.formatPercent(topLoanShare, 0) +
+                    ' of loans book — single-asset concentration risk axis.' +
                 '</div>' : '';
+
             assetBlock =
-                '<div class="text-sm font-semibold text-slate-700 mb-2 mt-4">Combined loan book by collateral asset</div>' +
-                '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
-                    '<th>Asset</th>' +
-                    '<th class="text-right">USDC pool</th>' +
-                    '<th class="text-right">USDT pool</th>' +
-                    '<th class="text-right">Combined</th>' +
-                    '<th class="text-right">% of family</th>' +
-                '</tr></thead><tbody>' + assetRowsHtml + '</tbody></table></div>' +
-                assetCallout;
+                renderAssetTable(loanAssets, loansAumF, 'By asset (Loans)') +
+                loanCallout +
+                renderAssetTable(liqAssets, liqAumF, 'By asset (Liquidity)');
         }
 
-        // ---- Cross-pool borrower table ----
-        var rowsHtml = '';
-        var crossPoolBorrowers = overlap.filter(function(b) {
-            return (b.syrupusdc_total_usd || 0) > 0 && (b.syrupusdt_total_usd || 0) > 0;
-        });
-        var top3CombinedPct = 0;
-        for (var i = 0; i < Math.min(3, crossPoolBorrowers.length); i++) {
-            top3CombinedPct += crossPoolBorrowers[i].combined_pct_of_family || 0;
+        // ---- Cross-pool borrower concentration (Loans-only) ----
+        // Switched from book-wide borrower_overlap to
+        // cross_pool_concentration_loans_only — concentration percentages
+        // are now versus the loans-only family book ($1.27B), not total
+        // AUM ($1.61B). Drops the per-pool USDC/USDT split since the
+        // loans-only concentration data isn't broken out by pool.
+        var loansOnlyConc = fam.cross_pool_concentration_loans_only || {};
+        var loansOnlyBorrowers = loansOnlyConc.borrowers || [];
+        var top3LoansPct = 0;
+        for (var i = 0; i < Math.min(3, loansOnlyBorrowers.length); i++) {
+            top3LoansPct += loansOnlyBorrowers[i].share_pct || 0;
         }
-        rowsHtml = (overlap.length === 0) ?
-            '<tr><td colspan="6" class="text-slate-400 text-sm italic">No cross-pool borrower exposures.</td></tr>' :
-            overlap.map(function(b) {
-                var pct = b.combined_pct_of_family || 0;
-                var pctCls = pct >= 10 ? 'text-red-600 font-semibold' :
-                             pct >= 5 ? 'text-amber-600 font-semibold' :
-                             'text-green-600';
-                var rowCls = pct >= 10 ? 'bg-red-50' : pct >= 5 ? 'bg-amber-50' : '';
-                var addrCell = '<span class="font-mono text-xs" title="' + b.borrower_address + '">' +
-                    SyrupUSDCRenderer._truncAddr(b.borrower_address) + '</span> ' +
-                    SyrupUSDCRenderer._ethLink(b.borrower_address) +
+        var rowsHtml = (loansOnlyBorrowers.length === 0) ?
+            '<tr><td colspan="3" class="text-slate-400 text-sm italic">No loans-only cross-pool concentration data.</td></tr>' :
+            loansOnlyBorrowers.map(function(b) {
+                var pct = b.share_pct || 0;
+                var pctCls = pct >= 15 ? 'text-red-600 font-semibold' :
+                             pct >= 8  ? 'text-amber-600 font-semibold' :
+                                          'text-green-600';
+                var rowCls = pct >= 15 ? 'bg-red-50' : pct >= 8 ? 'bg-amber-50' : '';
+                var addrCell = '<span class="font-mono text-xs" title="' + b.address + '">' +
+                    SyrupUSDCRenderer._truncAddr(b.address) + '</span> ' +
+                    SyrupUSDCRenderer._ethLink(b.address) +
                     (b.borrower_firm ? ' <span class="text-xs text-slate-500">' + b.borrower_firm + '</span>' : '');
-                var sharedAssetsBadges = '';
-                if (Array.isArray(b.shared_collateral_assets) && b.shared_collateral_assets.length) {
-                    sharedAssetsBadges = ' ' + b.shared_collateral_assets.map(function(a) {
-                        return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-600">' + a + '</span>';
-                    }).join(' ');
-                }
                 return '<tr class="' + rowCls + '">' +
-                    '<td>' + addrCell + sharedAssetsBadges + '</td>' +
-                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(b.syrupusdc_total_usd || 0) + '</td>' +
-                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(b.syrupusdt_total_usd || 0) + '</td>' +
-                    '<td class="text-right font-mono font-semibold">' + CommonRenderer.formatCurrency(b.combined_total_usd || 0) + '</td>' +
+                    '<td>' + addrCell + '</td>' +
+                    '<td class="text-right font-mono font-semibold">' + CommonRenderer.formatCurrency(b.principal_usd || 0) + '</td>' +
                     '<td class="text-right font-mono ' + pctCls + '">' + CommonRenderer.formatPercent(pct, 2) + '</td>' +
                 '</tr>';
             }).join('');
 
-        var crossPoolCount = crossPoolBorrowers.length;
-        var calloutText = crossPoolCount > 0 ?
-            ('Top 3 cross-pool borrowers control ~<span class="font-semibold">' + CommonRenderer.formatPercent(top3CombinedPct, 1) + '</span> of combined family book. ' +
-             'A credit event at any of these damages BOTH pools.') :
-            'No borrowers currently span both pools.';
+        var hhi = loansOnlyConc.hhi;
+        var hhiBucket = loansOnlyConc.hhi_bucket;
+        var hhiCls = hhiBucket === 'unconcentrated' ? 'text-green-700' :
+                     hhiBucket === 'moderate' ? 'text-amber-700' : 'text-red-700';
+        var calloutText = loansOnlyBorrowers.length > 0 ?
+            ('Top 3 loan borrowers control ~<span class="font-semibold">' + CommonRenderer.formatPercent(top3LoansPct, 1) + '</span> of family loans-only book' +
+             (hhi != null ? ' · HHI <span class="font-mono ' + hhiCls + '">' + hhi + '</span>' + (hhiBucket ? ' (' + hhiBucket + ')' : '') : '') + '.' +
+             ' A credit event at any of these damages the family loan book.') :
+            'No cross-pool loan-borrower data.';
 
         var tableBlock =
-            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-4">Top cross-pool borrower exposures</div>' +
+            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-4">Top cross-pool borrower exposures <span class="text-xs font-normal text-slate-500">(Loans-only)</span></div>' +
             '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
                 '<th>Borrower</th>' +
-                '<th class="text-right">USDC pool</th>' +
-                '<th class="text-right">USDT pool</th>' +
-                '<th class="text-right">Combined</th>' +
-                '<th class="text-right">% family</th>' +
+                '<th class="text-right">Family principal</th>' +
+                '<th class="text-right">% loans-only</th>' +
             '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
             '<div class="risk-flag risk-warning mt-3">' + calloutText + '</div>';
 
@@ -1045,7 +1157,10 @@ var SyrupUSDCRenderer = {
         });
     },
 
-    // ----- §2 Loan Book Health (4 sub-blocks) -----------------------------
+    // ----- §2 Loan Book (loans-only — third-party credit) -----------------
+    // Liquidity-layer positions (PYUSD/USTB/USDC/sUSDS/AMM) render as their
+    // own §2b panel below; this panel scopes strictly to crypto-overcollat
+    // third-party borrower credit.
     _renderLoanBookHealth: function(specific) {
         var lb = specific.loan_book;
         if (!lb) return '';
@@ -1054,33 +1169,133 @@ var SyrupUSDCRenderer = {
 
         if (lb.active_loan_count === null || lb.active_loan_count === undefined) {
             return '<div class="panel">' +
-                '<div class="panel-title">Loan Book Health</div>' +
+                '<div class="panel-title">Loan Book</div>' +
                 disclaimer +
                 '<div class="text-slate-400 text-sm mt-3 italic">Loan-level data pending — per-loan enumeration ships in Phase 2.</div>' +
             '</div>';
         }
 
+        var allLoans = lb.loans || [];
+        var loanRows = allLoans.filter(SyrupUSDCRenderer._isLoan);
+
         return '<div class="panel">' +
-            '<div class="panel-title">Loan Book Health</div>' +
+            '<div class="panel-title">Loan Book <span class="text-xs font-normal text-slate-500">(third-party credit)</span></div>' +
             disclaimer +
-            this._renderLBH_status(specific, lb) +
+            this._renderLBH_status(specific, lb, loanRows) +
             this._renderLBH_buffer(lb) +
-            this._renderLBH_collateralMix(lb) +
-            this._renderLBH_loanTable(lb) +
+            this._renderLBH_byAssetLoans(lb) +
+            this._renderTopLoansTable(lb, loanRows) +
         '</div>';
     },
 
-    // §2 sub-block A — Status snapshot
-    _renderLBH_status: function(specific, lb) {
-        var imp = lb.impaired_count || 0;
-        var cal = lb.called_count || 0;
-        var def = lb.default_count || 0;
-        var healthy = (lb.healthy_count !== null && lb.healthy_count !== undefined) ?
-            lb.healthy_count : Math.max(0, (lb.active_loan_count || 0) - imp - cal - def);
+    // ----- §2b Liquidity Layer (pool-owned positions) ---------------------
+    // Hidden when the analyzer hasn't shipped position_type yet (older
+    // snapshots) — the heuristic _isLiquidity classifier still works but
+    // the custody fields needed for the table only land with the new schema.
+    _renderLiquidityLayer: function(specific, slug) {
+        var lb = specific.loan_book || {};
+        var ct = (specific.governance || {}).custody_topology || {};
+        var loans = (lb.loans || []).filter(SyrupUSDCRenderer._isLiquidity);
+        if (loans.length === 0) return '';
 
-        var poolCR = lb.collateral_summary && lb.collateral_summary.pool_collateral_ratio_pct;
+        var vs = specific.vault_state || {};
+        var liqTotal = lb.principal_liquidity_usd ||
+            loans.reduce(function(s, l) { return s + (l.principal || 0); }, 0);
+        var pctOfPool = (vs.total_assets) ? (liqTotal / vs.total_assets * 100) : null;
+        var underlying = SyrupUSDCRenderer._underlying(slug);
+
+        // ---- Header row ----
+        var header =
+            '<div class="text-sm text-slate-700 mb-2">' +
+                '<span class="font-semibold">' + loans.length + ' position' + (loans.length === 1 ? '' : 's') + '</span> · ' +
+                '<span class="font-mono">' + CommonRenderer.formatCurrency(liqTotal) + '</span>' +
+                (pctOfPool != null ? ' · <span class="font-mono">' + CommonRenderer.formatPercent(pctOfPool, 1) + '</span> of pool' : '') +
+            '</div>';
+
+        // ---- Inline risk flags ----
+        var custodyEntries = (ct.entries || []).filter(function(e) {
+            return e.control_type === 'custody' && e.is_eoa;
+        });
+        var custodyEoaUsd = custodyEntries.reduce(function(s, e) { return s + (e.capital_under_control_usd || 0); }, 0);
+        var eoaFlag = custodyEntries.length > 0 ?
+            '<div class="risk-flag risk-critical mb-2">🔴 <strong>Single-key EOA custody</strong> — ' +
+                CommonRenderer.formatCurrency(custodyEoaUsd) + ' across ' + custodyEntries.length +
+                ' EOA' + (custodyEntries.length === 1 ? '' : 's') +
+                ' · no on-chain multi-sig protection.</div>' : '';
+        var bigIssuers = loans.filter(function(l) { return (l.principal || 0) >= 50000000; })
+            .map(function(l) {
+                var c = l.collateral || {};
+                var meta = SYRUP_COLLATERAL_META[c.asset] || {};
+                var issuer = meta.issuer && meta.issuer !== '—' ? meta.issuer : (c.asset || '?');
+                return issuer + ' (' + (c.asset || '?') + ', ' + CommonRenderer.formatCurrency(l.principal) + ')';
+            });
+        var issuerFlag = bigIssuers.length > 0 ?
+            '<div class="risk-flag risk-warning mb-2">⚠ <strong>Issuer-axis exposure</strong> — concentrated single-issuer positions over $50M: ' +
+                bigIssuers.join(' · ') + '.</div>' : '';
+
+        // ---- Per-position table ----
+        var tableRows = loans.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).map(function(l) {
+            var c = l.collateral || {};
+            var cu = l.custody || {};
+            var meta = SYRUP_COLLATERAL_META[c.asset] || {};
+            var issuer = meta.issuer && meta.issuer !== '—' ? meta.issuer : '—';
+            if (cu.venue) issuer += ' <span class="text-xs text-slate-400">· ' + cu.venue + '</span>';
+            var custodyAddr = cu.address || l.borrower || '—';
+            var custodyChain = (cu.chain || 'ethereum').charAt(0).toUpperCase() + (cu.chain || 'ethereum').slice(1);
+            var eoaBadge = cu.is_eoa ?
+                '<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700" title="single-key EOA — no multi-sig">EOA</span>' : '';
+            var custodyCell = custodyAddr === '—' ?
+                '<span class="text-slate-400">—</span>' :
+                '<span class="font-mono text-xs" title="' + custodyAddr + '">' + SyrupUSDCRenderer._truncAddr(custodyAddr) + '</span> ' +
+                    SyrupUSDCRenderer._ethLink(custodyAddr) + eoaBadge;
+            return '<tr>' +
+                '<td><span class="font-mono font-semibold">' + (c.asset || '—') + '</span></td>' +
+                '<td class="text-xs text-slate-600">' + issuer + '</td>' +
+                '<td>' + custodyCell + '</td>' +
+                '<td class="text-xs text-slate-500">' + custodyChain + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(l.principal || 0) + '</td>' +
+            '</tr>';
+        }).join('');
+        var table =
+            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-2">Liquidity positions</div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                '<th>Asset</th><th>Issuer</th><th>Custody</th><th>Chain</th><th class="text-right">Principal</th>' +
+            '</tr></thead><tbody>' + tableRows + '</tbody></table></div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Liquidity Layer <span class="text-xs font-normal text-slate-500">(pool-owned positions)</span></div>' +
+            '<p class="text-sm text-slate-500 mb-3">Pool-owned positions in yield-generating strategies — routed through Strategy 0 LoanManager as accounting wrapper, but functionally NOT third-party credit. Risk axis: issuer / RWA / AMM, not borrower default.</p>' +
+            header +
+            eoaFlag +
+            issuerFlag +
+            table +
+        '</div>';
+    },
+
+    // §2 sub-block A — Status snapshot (loans-only)
+    // Recomputes status counts from the filtered loans-only set; the
+    // analyzer's lb.healthy_count etc. are book-wide and would mix
+    // liquidity positions into the health metric.
+    _renderLBH_status: function(specific, lb, loanRows) {
+        var rows = loanRows || (lb.loans || []).filter(SyrupUSDCRenderer._isLoan);
+        var loansCount = (lb.loans_only_count != null) ? lb.loans_only_count : rows.length;
+        var imp = 0, cal = 0, def = 0, healthy = 0;
+        rows.forEach(function(l) {
+            var s = (l.status || '').toLowerCase();
+            if (l.is_in_default || s === 'default' || s === 'defaulted') def++;
+            else if (l.is_called || s === 'called') cal++;
+            else if (l.is_impaired || s === 'impaired') imp++;
+            else healthy++;
+        });
+
+        var cs = lb.collateral_summary || {};
+        var poolCR = (cs.collateral_ratio_loans_only_pct != null) ?
+            cs.collateral_ratio_loans_only_pct : cs.pool_collateral_ratio_pct;
         var rateText = (lb.weighted_avg_rate_pct != null) ? CommonRenderer.formatPercent(lb.weighted_avg_rate_pct, 2) : '—';
         var poolCRText = (poolCR != null) ? CommonRenderer.formatPercent(poolCR, 1) : '—';
+
+        var co = lb.concentration_loans_only || lb.concentration || {};
+        var borrowerCount = co.total_borrowers || co.borrower_count || lb.borrower_count || 0;
 
         function statusPill(label, count, cls) {
             var color = count > 0 ? cls : 'text-slate-400';
@@ -1089,10 +1304,10 @@ var SyrupUSDCRenderer = {
 
         return '<div class="mt-4 mb-4">' +
             '<div class="text-sm text-slate-700 mb-1">' +
-                '<span class="font-semibold">' + (lb.active_loan_count || 0) + ' loans</span> · ' +
-                '<span class="font-semibold">' + (lb.borrower_count || 0) + ' borrowers</span> · ' +
+                '<span class="font-semibold">' + loansCount + ' loans</span> · ' +
+                '<span class="font-semibold">' + borrowerCount + ' borrowers</span> · ' +
                 '<span class="font-mono">' + rateText + '</span> wtd-rate · ' +
-                'pool CR <span class="font-mono">' + poolCRText + '</span>' +
+                'pool CR (loans-only) <span class="font-mono">' + poolCRText + '</span>' +
             '</div>' +
             '<div class="text-sm text-slate-600 flex flex-wrap gap-x-4 gap-y-1">' +
                 statusPill('Healthy', healthy, 'text-green-600') +
@@ -1171,8 +1386,11 @@ var SyrupUSDCRenderer = {
         '</div>';
     },
 
-    // §2 sub-block C — Collateral mix (folded in from old _renderCollateralMix)
-    _renderLBH_collateralMix: function(lb) {
+    // §2 sub-block C — By collateral asset (loans-only). Drops Set A/B
+    // framing — the new framing splits the book into loans-only vs
+    // liquidity-layer panels, with this section showing the per-asset
+    // breakdown of crypto-overcollat third-party credit only.
+    _renderLBH_byAssetLoans: function(lb) {
         var cs = lb.collateral_summary;
         if (!cs) return '';
 
@@ -1180,18 +1398,18 @@ var SyrupUSDCRenderer = {
             return '<div class="risk-flag risk-info mb-4">Collateral data temporarily unavailable from Maple API. Loan-level credit and timing fields above are unaffected.</div>';
         }
 
-        var setA = cs.set_a_overcollateralized || {};
-        var setB = cs.set_b_at_par || {};
         var byAsset = cs.by_asset || [];
-        if (byAsset.length === 0 && (setA.principal_usd || 0) === 0 && (setB.principal_usd || 0) === 0) return '';
+        var loanAssets = byAsset.filter(function(r) {
+            return SyrupUSDCRenderer._isLoanAsset(r.asset) || (r.init_level_pct_max || 0) > 105;
+        });
+        if (loanAssets.length === 0) return '';
 
-        var poolLine = '';
-        if (cs.pool_collateral_value_usd != null && cs.pool_collateral_ratio_pct != null) {
-            poolLine = '<div class="text-xs text-slate-500 mb-2">Pool collateralization: <span class="font-mono font-semibold">' + CommonRenderer.formatPercent(cs.pool_collateral_ratio_pct, 1) + '</span> · <span class="font-mono">' + CommonRenderer.formatCurrency(cs.pool_collateral_value_usd) + '</span> collateral against active loan book <span class="text-slate-400">(Maple GraphQL)</span></div>';
-        }
+        var loansOnlyTotal = lb.principal_loans_only_usd ||
+            loanAssets.reduce(function(s, r) { return s + (r.principal_usd || 0); }, 0);
 
-        function bar(row, color) {
-            var pct = row.pct_of_book || 0;
+        function bar(row) {
+            var raw = row.principal_usd || 0;
+            var pct = loansOnlyTotal > 0 ? (raw / loansOnlyTotal * 100) : 0;
             var meta = SYRUP_COLLATERAL_META[row.asset] || {};
             var issuerTag = meta.issuer && meta.issuer !== '—' ?
                 ' <span class="text-xs text-slate-500">' + meta.issuer + '</span>' : '';
@@ -1204,67 +1422,32 @@ var SyrupUSDCRenderer = {
             return '<div class="mb-2">' +
                 '<div class="flex justify-between text-sm mb-1">' +
                     '<span class="text-slate-700"><span class="font-mono font-semibold">' + row.asset + '</span>' + issuerTag + ' <span class="text-xs text-slate-400">' + (row.loans || 0) + ' loan' + (row.loans === 1 ? '' : 's') + ' · init ' + levelRange + '</span></span>' +
-                    '<span class="font-mono font-semibold">' + CommonRenderer.formatPercent(pct, 1) + ' · ' + CommonRenderer.formatCurrency(row.principal_usd) + '</span>' +
+                    '<span class="font-mono font-semibold">' + CommonRenderer.formatPercent(pct, 1) + ' · ' + CommonRenderer.formatCurrency(raw) + '</span>' +
                 '</div>' +
-                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + Math.min(pct, 100) + '%; background:' + color + '"></div></div>' +
+                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + Math.min(pct, 100) + '%; background:#22c55e"></div></div>' +
             '</div>';
         }
 
-        var setARows = byAsset.filter(function(r) { return (r.init_level_pct_max || 0) > 105; });
-        var setBRows = byAsset.filter(function(r) { return (r.init_level_pct_max || 0) <= 105; });
-
-        var setAHtml = '<div>' +
-            '<div class="text-sm font-semibold text-slate-700 mb-2">' +
-                'Set A — crypto-overcollateralized · ' + CommonRenderer.formatPercent(setA.pct_of_book || 0, 1) +
-                ' <span class="text-xs text-slate-500 font-normal">' + CommonRenderer.formatCurrency(setA.principal_usd || 0) +
-                (setA.weighted_avg_init_level_pct ? ' · wtd-init ' + CommonRenderer.formatPercent(setA.weighted_avg_init_level_pct, 1) : '') +
-                '</span>' +
-            '</div>' +
-            (setARows.length ? setARows.map(function(r) { return bar(r, '#22c55e'); }).join('') :
-                '<div class="text-xs text-slate-400 italic">No over-collateralized loans in current book.</div>') +
-        '</div>';
-
-        var setBWarning = '';
-        if (setB.principal_usd > 0) {
-            var totalPrincipal = (setA.principal_usd || 0) + (setB.principal_usd || 0);
-            var largestPctOfBook = totalPrincipal > 0 ? (setB.largest_position_usd / totalPrincipal * 100) : 0;
-            setBWarning =
-                '<div class="risk-flag risk-warning mt-3"><strong>At-par binding risk:</strong> Set B stress binds on collateral-asset peg/issuer events, NOT crypto-cycle drawdowns.' +
-                (setB.largest_position_usd ?
-                    ' <span class="font-mono">' + (setB.largest_position_asset || '?') + '</span> depeg → largest single position (<span class="font-mono">' + CommonRenderer.formatCurrency(setB.largest_position_usd) + '</span>, ' + CommonRenderer.formatPercent(largestPctOfBook, 1) + ' of book) underwater.' : '') +
-                '</div>';
-        }
-        var issuerLine = setB.named_issuers && setB.named_issuers.length ?
-            '<div class="text-xs text-slate-500 mt-2">Named issuers: ' + setB.named_issuers.join(' · ') + '</div>' : '';
-
-        var setBHtml = '<div>' +
-            '<div class="text-sm font-semibold text-slate-700 mb-2">' +
-                'Set B — at-par stablecoin / RWA ⚠ · ' + CommonRenderer.formatPercent(setB.pct_of_book || 0, 1) +
-                ' <span class="text-xs text-slate-500 font-normal">' + CommonRenderer.formatCurrency(setB.principal_usd || 0) + '</span>' +
-            '</div>' +
-            (setBRows.length ? setBRows.map(function(r) { return bar(r, '#f59e0b'); }).join('') :
-                '<div class="text-xs text-slate-400 italic">No at-par loans in current book.</div>') +
-            issuerLine +
-        '</div>';
-
         return '<div class="mb-4">' +
-            '<div class="text-sm font-semibold text-slate-700 mb-2">Collateral mix</div>' +
-            poolLine +
-            '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">' + setAHtml + setBHtml + '</div>' +
-            setBWarning +
+            '<div class="text-sm font-semibold text-slate-700 mb-2">By collateral asset</div>' +
+            '<div class="text-xs text-slate-400 mb-2">Percentages relative to ' + CommonRenderer.formatCurrency(loansOnlyTotal) + ' loans-only book.</div>' +
+            loanAssets.sort(function(a, b) { return (b.principal_usd || 0) - (a.principal_usd || 0); }).map(bar).join('') +
         '</div>';
     },
 
-    // §2 sub-block D — Loan-level table (9 columns including new Buffer)
-    _renderLBH_loanTable: function(lb) {
-        var loans = lb.loans || [];
-        if (loans.length === 0) return '';
+    // §2 sub-block D — Top loans table (loans-only). The previous
+    // single-table version mixed third-party credit with pool-owned
+    // liquidity positions; liquidity positions now render as their own
+    // table inside the §2b Liquidity Layer panel.
+    _renderTopLoansTable: function(lb, loanRows) {
+        var rows = loanRows || (lb.loans || []).filter(SyrupUSDCRenderer._isLoan);
+        if (rows.length === 0) return '';
 
         var summary = lb.collateral_summary;
         var hasCollateral = !!(summary && summary.data_source && summary.data_source !== 'unavailable')
-            || loans.some(function(l) { return l && l.collateral; });
-        var loansSorted = loans.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).slice(0, 10);
-        var rows = loansSorted.map(function(l) { return SyrupUSDCRenderer._renderLoanRow(l, hasCollateral); }).join('');
+            || rows.some(function(l) { return l && l.collateral; });
+        var sorted = rows.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).slice(0, 10);
+        var rowsHtml = sorted.map(function(l) { return SyrupUSDCRenderer._renderLoanRow(l, hasCollateral); }).join('');
 
         var collateralHeaders = hasCollateral ?
             ('<th class="cursor-pointer" data-sort="collat">Collateral</th>' +
@@ -1280,7 +1463,7 @@ var SyrupUSDCRenderer = {
                 '<th class="text-right cursor-pointer" data-sort="days">Days</th>' +
                 '<th class="cursor-pointer" data-sort="status">S</th>' +
                 collateralHeaders +
-            '</tr></thead><tbody>' + rows + '</tbody></table></div>';
+            '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
     },
 
     _renderLoanRow: function(loan, hasCollateral) {
@@ -1460,11 +1643,17 @@ var SyrupUSDCRenderer = {
         });
     },
 
-    // ----- §3 Borrower Concentration (unchanged) --------------------------
+    // ----- §3 Borrower Concentration (loans-only) -------------------------
+    // Uses concentration_loans_only when present so the HHI / top-N stats
+    // describe third-party-credit concentration only — including liquidity
+    // custodies overstates loan-book concentration. Falls back to
+    // book-wide concentration for older snapshots.
     _renderBorrowerConcentration: function(specific) {
         var lb = specific.loan_book;
-        if (!lb || !lb.concentration) return '';
-        var c = lb.concentration;
+        if (!lb) return '';
+        var c = lb.concentration_loans_only || lb.concentration;
+        if (!c) return '';
+        var isLoansOnly = !!lb.concentration_loans_only;
 
         if (!c.borrowers || c.borrowers.length === 0) {
             return '<div class="panel">' +
@@ -1513,9 +1702,10 @@ var SyrupUSDCRenderer = {
         }).join('');
 
         return '<div class="panel">' +
-            '<div class="panel-title">Borrower Concentration</div>' +
+            '<div class="panel-title">Borrower Concentration' + (isLoansOnly ? ' <span class="text-xs font-normal text-slate-500">(Loans-only)</span>' : '') + '</div>' +
+            (isLoansOnly ? '<p class="text-sm text-slate-500 mb-3">Loan-book concentration only. Liquidity-layer custodies surfaced separately above.</p>' : '') +
             '<div class="flex items-center gap-3 mb-4">' +
-                '<span class="text-sm text-slate-700"><span class="font-semibold">' + (c.total_borrowers || 0) + '</span> borrowers · HHI <span class="font-mono font-semibold">' + (c.hhi || 0) + '</span></span>' +
+                '<span class="text-sm text-slate-700"><span class="font-semibold">' + (c.total_borrowers || 0) + '</span> ' + (isLoansOnly ? 'loan ' : '') + 'borrowers · HHI <span class="font-mono font-semibold">' + (c.hhi || 0) + '</span></span>' +
                 bucketBadge +
                 '<span class="text-xs text-slate-400">FTC merger-review thresholds: &lt;1500 unconcentrated · 1500-2500 moderate · &gt;2500 concentrated</span>' +
             '</div>' +
@@ -1864,6 +2054,46 @@ var SyrupUSDCRenderer = {
             lastTx = '<div class="text-xs text-slate-400 mt-2">Last admin tx: ' + CommonRenderer.formatDate(g.last_admin_tx_timestamp) + '</div>';
         }
 
+        // ---- Single-key EOA topology — surfaces the full set of EOAs that
+        // hold real capital. Pool Delegate is already in the table above; the
+        // "custody" entries here are the liquidity-layer custodians the
+        // analyzer enumerates separately. Hidden when custody_topology is
+        // empty (older snapshots).
+        var ct = g.custody_topology || {};
+        var custodyEntries = (ct.entries || []).filter(function(e) {
+            return e && e.is_eoa && e.control_type === 'custody';
+        });
+        var topologyBlock = '';
+        if (ct.single_key_eoa_count != null && ct.single_key_eoa_count > 0) {
+            var topologyHeader =
+                '<div class="text-sm font-semibold text-slate-700 mt-4 mb-1">' +
+                    'Single-key EOA topology' +
+                    ' <span class="text-xs font-normal text-slate-500">— ' +
+                        ct.single_key_eoa_count + ' addresses control ' +
+                        CommonRenderer.formatCurrency(ct.total_capital_under_eoa_control_usd || 0) +
+                        ' of pool capital' +
+                    '</span>' +
+                '</div>';
+            var topologyRows = custodyEntries.map(function(e) {
+                var addr = e.address || '';
+                var addrCell = '<span class="font-mono text-xs" title="' + addr + '">' + SyrupUSDCRenderer._truncAddr(addr) + '</span> ' + SyrupUSDCRenderer._ethLink(addr);
+                var capUsd = e.capital_under_control_usd || e.loan_book_principal_usd || 0;
+                var note = '<span class="text-amber-600 font-semibold">⚠ Single-key EOA</span> · holds ' + CommonRenderer.formatCurrency(capUsd);
+                if (e.venue) note += ' · ' + e.venue;
+                if (e.chain && e.chain !== 'ethereum') note += ' · ' + e.chain.charAt(0).toUpperCase() + e.chain.slice(1);
+                note += ' · no multi-sig';
+                return '<tr>' +
+                    '<td class="font-medium">' + (e.role || 'Custody') + '</td>' +
+                    '<td>' + addrCell + '</td>' +
+                    '<td class="text-xs text-slate-500">' + note + '</td>' +
+                '</tr>';
+            }).join('');
+            topologyBlock = topologyHeader +
+                (topologyRows ?
+                    '<table class="data-table"><tbody>' + topologyRows + '</tbody></table>' :
+                    '<div class="text-xs text-slate-400 italic">No additional custody EOAs at this snapshot.</div>');
+        }
+
         var auditLine =
             '<div class="text-sm text-slate-600 mt-3 pt-3 border-t border-slate-200">' +
                 'Audits: <strong>' + SYRUP_AUDIT_INFO.primary_audits + '</strong> + ' + SYRUP_AUDIT_INFO.other_audits_count + ' others (' + SYRUP_AUDIT_INFO.total_audits + ' total) · ' +
@@ -1873,6 +2103,7 @@ var SyrupUSDCRenderer = {
         return '<div class="panel">' +
             '<div class="panel-title">Trust Stack</div>' +
             '<table class="data-table"><thead><tr><th>Role</th><th>Address</th><th>Notes</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>' +
+            topologyBlock +
             lastTx +
             auditLine +
         '</div>';
