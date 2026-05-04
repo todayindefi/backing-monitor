@@ -593,13 +593,18 @@ var SyrupUSDCRenderer = {
         if (!panel) return;
         panel.style.display = '';  // unhide if common renderer suppressed it
 
-        var entries = h.entries.slice().sort(function(a, b) { return a.timestamp - b.timestamp; });
+        // Sort then slice to the trailing 7 days. PegTracker still emits 30d
+        // in aum_history.entries[]; we narrow the viewport here to drop the
+        // documented Apr 3-20 Maple aggregation-transient dips that visually
+        // dominated the 30d chart but aren't real undercollateralization.
+        var allEntries = h.entries.slice().sort(function(a, b) { return a.timestamp - b.timestamp; });
+        var entries = allEntries.slice(-7);
         var labels = entries.map(function(e) { return new Date(e.timestamp * 1000); });
         var crSeries = entries.map(function(e) { return e.collateral_ratio_pct; });
 
-        // Title + 30d stats
+        // Title + 7d stats
         var titleEl = panel.querySelector('.panel-title');
-        if (titleEl) titleEl.textContent = 'Pool Coverage (live USD) — 30d';
+        if (titleEl) titleEl.textContent = 'Pool Coverage (live USD) — 7d';
 
         var statsEl = document.getElementById('cr-chart-stats');
         if (!statsEl) {
@@ -613,21 +618,10 @@ var SyrupUSDCRenderer = {
             var minCR = Math.min.apply(null, crNonNull);
             var maxCR = Math.max.apply(null, crNonNull);
             var minCls = minCR < 110 ? 'text-red-600 font-semibold' : minCR < 130 ? 'text-amber-600 font-semibold' : '';
-            // Caveat the min when it's anomalously low (< 100%) — that's the
-            // Maple aumTimeSeries aggregation transient, not real undercollateralization.
-            var minIdx = crSeries.indexOf(minCR);
-            var minDateText = '';
-            if (minIdx >= 0 && labels[minIdx]) {
-                minDateText = labels[minIdx].toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
-            }
-            var minAnnotation = '';
-            if (minCR < 100 && minDateText) {
-                minAnnotation = ' <span class="text-xs text-slate-400 font-normal">on ' + minDateText + ' — likely Maple aggregation transient, not a real undercollateralization event</span>';
-            }
             statsEl.innerHTML =
-                '<span>30d Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span>' + minAnnotation + '</span>' +
-                '<span>30d Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
-                '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>';
+                '<span>7d Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
+                '<span>7d Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
+                '<span>7d Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>';
         } else {
             statsEl.innerHTML = '';
         }
@@ -714,10 +708,11 @@ var SyrupUSDCRenderer = {
         // unrealizedLosses so the credit-alarm framing only fires when it's 0.
         var ul = (specific.vault_state || {}).unrealized_losses;
         var ulFragment = (ul === 0 || ul == null) ?
-            ' <span class="font-mono">unrealizedLosses</span> (the on-chain credit alarm) stayed at 0 throughout the displayed window.' :
+            ' <span class="font-mono">unrealizedLosses</span> (the on-chain credit alarm) stayed at 0 throughout — the apparent dips were aggregation glitches, not real undercollateralization.' :
             '';
         var noteLine = '<div id="syrup-data-anomaly-note" class="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-400 leading-relaxed scroll-mt-4">' +
-            '<strong class="text-slate-500">Note:</strong> Maple\'s <span class="font-mono">aumTimeSeries</span> has documented aggregation inconsistencies (correlated with the per-loan <span class="font-mono">currentAssetAmount</span> anomaly affecting at-par stablecoin/RWA positions). Day-to-day swings &gt;10pp may reflect data-quality variance rather than real composition shifts. Loan-level cells flagged with <span class="text-amber-500 font-semibold">?</span> share this root cause — Maple GraphQL returns a broken <span class="font-mono">currentAssetAmount</span> for at-par stablecoin/RWA positions, leaving current-value and buffer cells unverifiable.' + ulFragment +
+            '<strong class="text-slate-500">Note:</strong> Window narrowed to 7d to focus on the post-anomaly clean window. Maple\'s <span class="font-mono">aumTimeSeries</span> has documented aggregation inconsistencies (most recently seen Apr 3–20, 2026 with day-over-day swings of $300–500M on a $1B+ book).' + ulFragment +
+            ' Treat day-to-day swings &gt;10pp as data-quality variance unless cross-validated against <span class="font-mono">unrealizedLosses</span>. Loan-level cells flagged with <span class="text-amber-500 font-semibold">?</span> share this root cause — Maple GraphQL returns a broken <span class="font-mono">currentAssetAmount</span> for at-par stablecoin/RWA positions, leaving current-value and buffer cells unverifiable.' +
         '</div>';
         caption.innerHTML = sourceLine + initLine + noteLine;
 
