@@ -2353,14 +2353,16 @@ var SyrupUSDCRenderer = {
         '</div>';
     },
 
-    // Per-chain explorer base URLs. Plasma intentionally omitted — the
-    // Phase-1 stub has no token address to link to; Phase-2 wires this up.
+    // Per-chain explorer base URLs. Ink stub carries a verified token address;
+    // Plasma kept as a placeholder for the upcoming syrupUSDT chain expansion
+    // (URL to be re-verified when activating).
     _CHAIN_EXPLORERS: {
         ethereum: { name: 'Ethereum', base: 'https://etherscan.io/address/' },
         arbitrum: { name: 'Arbitrum', base: 'https://arbiscan.io/address/' },
         base:     { name: 'Base',     base: 'https://basescan.org/address/' },
         solana:   { name: 'Solana',   base: 'https://solscan.io/token/' },
-        plasma:   { name: 'Plasma',   base: null }
+        ink:      { name: 'Ink',      base: 'https://explorer.inkonchain.com/address/' },
+        plasma:   { name: 'Plasma',   base: 'https://plasmascan.to/address/' }
     },
 
     _renderChainRow: function(c) {
@@ -2381,8 +2383,12 @@ var SyrupUSDCRenderer = {
 
         var kindLabel = ({ evm: 'EVM', solana: 'Solana', stub: 'stub' })[c.kind] || c.kind || '-';
 
+        // Stubs with a verified token_address still render the linked address
+        // — the row's italic/grey styling already telegraphs "not live-probed
+        // yet." Lets readers verify the deployment exists on-chain even
+        // before live data wires up.
         var addrCell;
-        if (isStub || !c.token_address) {
+        if (!c.token_address) {
             addrCell = isStub ? 'n/a' : '—';
         } else {
             var truncated = SyrupUSDCRenderer._truncAddr(c.token_address);
