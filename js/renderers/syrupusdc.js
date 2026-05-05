@@ -369,6 +369,7 @@ var SyrupUSDCRenderer = {
         html += this._renderBacking(specific, s, data.asset_slug);          // §1
         html += this._renderLoanBookHealth(specific);                       // §2  (loans-only)
         html += this._renderLiquidityLayer(specific, data.asset_slug);      // §2b (pool-owned positions)
+        html += this._renderStrategySlots(specific, data.asset_slug);       // §2c (unused contract slots)
         html += this._renderBorrowerConcentration(specific);                // §3
         html += this._renderRepaymentSchedule(specific);                    // §4
         html += this._renderLiquidityAndPeg(specific, s, data.asset_slug);  // §5
@@ -964,48 +965,63 @@ var SyrupUSDCRenderer = {
         var fee = (s && s.delegate_management_fee_pct != null) ? s.delegate_management_fee_pct :
                    (specific.yield && specific.yield.delegate_fee_pct);
 
-        // Asset composition rows.
+        // Asset composition rows. Three-bucket split: Free + Loans + Liquidity.
+        // Both Loans and Liquidity flow through the Strategy 0 LoanManager as
+        // accounting wrapper, but their risk axes differ — Loans = third-party
+        // borrower credit, Liquidity = issuer/RWA/AMM. Splitting prevents the
+        // misread of "97.9% in Loan Manager" as "97.9% in third-party credit".
         var freeUsdc = (v.free_usdc !== null && v.free_usdc !== undefined) ?
             v.free_usdc :
             (s && s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency ? s.collateral_ratio_alt.value : 0);
         var underlying = SyrupUSDCRenderer._underlying(slug);
         var strategies = v.strategies || [];
+        var lb = specific.loan_book || {};
+        var loansUsd = lb.principal_loans_only_usd;
+        var liqUsd = lb.principal_liquidity_usd;
+
+        // LoanManager address — both Loans and Liquidity rows link here.
+        var lmAddress = null;
+        strategies.forEach(function(st) { if (st.is_loan_manager) lmAddress = st.address; });
+
         var rows = [{
             label: 'Free ' + underlying,
             value: freeUsdc,
-            tag: 'liquid',
-            color: '#22c55e'
+            color: '#64748b',
+            tooltip: 'Pool ' + underlying + ' sitting in the vault contract — instantly available for withdrawals.'
         }];
 
-        // Split strategies into active vs dormant. LoanManager is always active;
-        // a non-LM sleeve below the activation threshold renders as a dormant
-        // policy slot in its own sub-block (preserves visibility of latent
-        // DeFi-counterparty surface even when AUM is zero).
-        var dormantStrategies = [];
-        if (strategies.length === 0) {
-            // Fall back to backing_breakdown if vault_state.strategies is empty
-            // (older analyzer JSON).
+        var haveLoansLiqSplit = (loansUsd != null && liqUsd != null);
+        if (haveLoansLiqSplit) {
+            rows.push({
+                label: 'Loans <span class="text-xs font-normal text-slate-500">(third-party credit)</span>',
+                value: loansUsd,
+                color: '#22c55e',
+                address: lmAddress,
+                tooltip: 'Crypto-overcollateralized open-term loans. Routed through the Strategy 0 LoanManager as accounting wrapper, but functionally third-party borrower credit risk.'
+            });
+            rows.push({
+                label: 'Liquidity layer <span class="text-xs font-normal text-slate-500">(pool-owned strategies)</span>',
+                value: liqUsd,
+                color: '#f59e0b',
+                address: lmAddress,
+                tooltip: 'Pool-owned positions in stablecoin / RWA / AMM venues (PYUSD, USTB, etc.). Routed through the same Strategy 0 LoanManager as accounting wrapper, but the risk axis is issuer / RWA / AMM — NOT third-party credit.'
+            });
+        } else if (strategies.length === 0) {
+            // Older analyzer JSON without per-loan position_type or loan_book
+            // principal split — degrade to a single deployed bucket.
             rows.push({
                 label: 'Strategy AUM (deployed)',
                 value: (v.strategy_aum != null) ? v.strategy_aum : ((totalAssets || 0) - (freeUsdc || 0)),
-                tag: 'deployed',
                 color: '#6366f1'
             });
         } else {
             strategies.forEach(function(st, i) {
                 var aum = st.aum_usd || 0;
                 var isActive = st.is_loan_manager || aum >= SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD;
-                if (!isActive) {
-                    dormantStrategies.push({ st: st, index: i });
-                    return;
-                }
-                var label = st.is_loan_manager ?
-                    'Strategy ' + i + ' (Loan Manager)' :
-                    'Strategy ' + i;
+                if (!isActive) return;
                 rows.push({
-                    label: label,
+                    label: st.is_loan_manager ? 'Strategy ' + i + ' (Loan Manager)' : 'Strategy ' + i,
                     value: aum,
-                    tag: st.is_loan_manager ? 'deployed' : 'idle',
                     color: st.is_loan_manager ? '#6366f1' : '#94a3b8',
                     address: st.address
                 });
@@ -1016,8 +1032,10 @@ var SyrupUSDCRenderer = {
 
         var compRows = rows.map(function(r) {
             var pct = (r.value || 0) / total * 100;
+            var infoIcon = r.tooltip ?
+                ' <span class="text-slate-400 cursor-help" title="' + r.tooltip.replace(/"/g, '&quot;') + '">ⓘ</span>' : '';
             return '<tr>' +
-                '<td class="font-medium">' + r.label +
+                '<td class="font-medium">' + r.label + infoIcon +
                     (r.address ? ' ' + SyrupUSDCRenderer._ethLink(r.address) : '') +
                 '</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(r.value || 0) + '</td>' +
@@ -1036,49 +1054,6 @@ var SyrupUSDCRenderer = {
             '<div class="risk-flag risk-critical mt-3"><strong>PROTOCOL PAUSED</strong> — deposits/withdrawals blocked at MapleGlobals</div>' : '';
         var ulBadge = (v.unrealized_losses && v.unrealized_losses > 0) ?
             '<div class="risk-flag risk-critical mt-3"><strong>Unrealized losses:</strong> ' + CommonRenderer.formatCurrencyExact(v.unrealized_losses) + ' — PCR_principal below 100%</div>' : '';
-
-        // ---- Dormant DeFi sleeves sub-block ----
-        // Surface configured-but-empty DeFi sleeves (delegate-discretionary,
-        // no timelock) so the latent counterparty surface is visible to
-        // allocators even at $0 AUM. Hidden when there are no dormant
-        // sleeves or strategies[] is missing entirely.
-        var dormantBlock = '';
-        if (dormantStrategies.length > 0) {
-            var sleeveItems = dormantStrategies.map(function(d) {
-                var st = d.st;
-                var implName = st.strategy_impl_name;
-                var nameLabel;
-                if (implName) {
-                    var desc = SYRUP_STRATEGY_IMPL_INFO[implName] || 'configured DeFi sleeve';
-                    nameLabel = '<span class="font-mono">' + implName + '</span>' +
-                        ' <span class="text-slate-400">(' + desc + ')</span>';
-                } else {
-                    nameLabel = '<span class="font-mono text-xs" title="' + st.address + '">' +
-                        SyrupUSDCRenderer._truncAddr(st.address) + '</span>';
-                }
-                return '<li class="flex items-center gap-2 py-1">' +
-                    '<span class="text-slate-500">Strategy ' + d.index + ' —</span> ' +
-                    nameLabel + ' ' +
-                    SyrupUSDCRenderer._ethLink(st.address) +
-                    ' <span class="ml-auto text-xs font-semibold uppercase tracking-wide text-slate-400">Dormant · $0</span>' +
-                '</li>';
-            }).join('');
-
-            var historicalNote = (slug === 'syrupusdc') ?
-                ' Historical context: Strategy 2 (Aave V3 sleeve) was deployed at $26–42M scale March–April 2026, wound down before the Kelp DAO/rsETH incident.' :
-                '';
-            dormantBlock =
-                '<div class="mt-4 pt-3 border-t border-slate-200">' +
-                    '<div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">' +
-                        'DeFi allocation sleeves <span class="font-normal text-slate-400">(delegate-discretionary; no timelock)</span>' +
-                    '</div>' +
-                    '<ul class="text-sm text-slate-600 mb-2">' + sleeveItems + '</ul>' +
-                    '<div class="text-xs text-slate-500 italic leading-relaxed">' +
-                        '↺ Configured policy slots. Pool Delegate has on-chain authority to deploy capital ' +
-                        'into these venues at any time without governance approval.' + historicalNote +
-                    '</div>' +
-                '</div>';
-        }
 
         // Header KPI row — 4 stats split into two visual columns.
         var kpiHeader =
@@ -1113,7 +1088,6 @@ var SyrupUSDCRenderer = {
                     '<div style="height: 220px; position: relative;"><canvas id="syrup-backing-donut"></canvas></div>' +
                 '</div>' +
             '</div>' +
-            dormantBlock +
             ulBadge +
             pausedBadge +
         '</div>';
@@ -1123,19 +1097,41 @@ var SyrupUSDCRenderer = {
         var ctx = document.getElementById('syrup-backing-donut');
         if (!ctx || typeof Chart === 'undefined') return;
         var v = specific.vault_state || {};
+        var lb = specific.loan_book || {};
         var freeUsdc = v.free_usdc || 0;
-        var deployed = (v.strategy_aum != null) ? v.strategy_aum :
-            ((v.total_assets || 0) - freeUsdc);
+        var loansUsd = lb.principal_loans_only_usd;
+        var liqUsd = lb.principal_liquidity_usd;
         var underlying = SyrupUSDCRenderer._underlying(slug);
+
+        // Three-segment view aligned with the asset-composition table:
+        // slate Free, green Loans (third-party credit), amber Liquidity layer.
+        // Falls back to the legacy 2-segment view if the loans/liquidity
+        // split isn't available in the snapshot.
+        var labels, data, colors;
+        if (loansUsd != null && liqUsd != null) {
+            labels = [
+                'Free ' + underlying,
+                'Loans (third-party credit)',
+                'Liquidity layer (pool-owned)'
+            ];
+            data = [freeUsdc, loansUsd, liqUsd];
+            colors = ['#64748b', '#22c55e', '#f59e0b'];
+        } else {
+            var deployed = (v.strategy_aum != null) ? v.strategy_aum :
+                ((v.total_assets || 0) - freeUsdc);
+            labels = ['Free ' + underlying, 'Deployed (loans + strategies)'];
+            data = [freeUsdc, deployed];
+            colors = ['#22c55e', '#6366f1'];
+        }
 
         if (window._syrupBackingDonut) window._syrupBackingDonut.destroy();
         window._syrupBackingDonut = new Chart(ctx, {
             type: 'doughnut',
             data: {
-                labels: ['Free ' + underlying, 'Deployed (loans + strategies)'],
+                labels: labels,
                 datasets: [{
-                    data: [freeUsdc, deployed],
-                    backgroundColor: ['#22c55e', '#6366f1'],
+                    data: data,
+                    backgroundColor: colors,
                     borderWidth: 0
                 }]
             },
@@ -1642,6 +1638,65 @@ var SyrupUSDCRenderer = {
                 rows.forEach(function(r) { tbody.appendChild(r); });
             });
         });
+    },
+
+    // ----- §2c Strategy contract slots (unused) ---------------------------
+    // Configured-but-empty wrapper-contract strategy slots. Distinct from
+    // the §2b Liquidity Layer panel: that panel covers Maple's ACTIVE
+    // DeFi-strategy deployment ($304M+ syrupUSDC / $43M syrupUSDT) routed
+    // via Strategy 0's loan-record accounting path. This panel covers the
+    // PARALLEL audited-wrapper-contract path (Aave V3 deposit, Sky/sUSDS
+    // DSR, etc.) that the Pool Delegate could activate but currently isn't
+    // using. Both paths are delegate-discretionary.
+    //
+    // Slug-aware: syrupUSDT has 2 dormant slots (FixedTerm + Aave),
+    // syrupUSDC has 3 (FixedTerm + Aave + Sky). The historical Aave note
+    // only renders for syrupUSDC.
+    _renderStrategySlots: function(specific, slug) {
+        var v = specific.vault_state || {};
+        var strategies = v.strategies || [];
+        var dormant = [];
+        strategies.forEach(function(st, i) {
+            var aum = st.aum_usd || 0;
+            var isActive = st.is_loan_manager || aum >= SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD;
+            if (!isActive) dormant.push({ st: st, index: i });
+        });
+        if (dormant.length === 0) return '';
+
+        var sleeveItems = dormant.map(function(d) {
+            var st = d.st;
+            var implName = st.strategy_impl_name;
+            var nameLabel;
+            if (implName) {
+                var desc = SYRUP_STRATEGY_IMPL_INFO[implName] || 'configured DeFi sleeve';
+                nameLabel = '<span class="font-mono">' + implName + '</span>' +
+                    ' <span class="text-slate-400">(' + desc + ')</span>';
+            } else {
+                nameLabel = '<span class="font-mono text-xs" title="' + st.address + '">' +
+                    SyrupUSDCRenderer._truncAddr(st.address) + '</span>';
+            }
+            return '<li class="flex items-center gap-2 py-1">' +
+                '<span class="text-slate-500">Strategy ' + d.index + ' —</span> ' +
+                nameLabel + ' ' +
+                SyrupUSDCRenderer._ethLink(st.address) +
+                ' <span class="ml-auto text-xs font-semibold uppercase tracking-wide text-slate-400">Dormant · $0</span>' +
+            '</li>';
+        }).join('');
+
+        var historicalNote = (slug === 'syrupusdc') ?
+            ' <strong>Historical context (syrupUSDC only):</strong> Strategy 2 (Aave V3) was deployed at $26–42M scale March–April 2026, wound down before the Kelp DAO/rsETH incident.' :
+            '';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Strategy contract slots <span class="text-xs font-normal text-slate-500">(unused — separate from Liquidity layer above)</span></div>' +
+            '<p class="text-sm text-slate-500 mb-3 leading-relaxed">' +
+                '↺ Configured contract slots that the Pool Delegate could activate to deploy capital via audited wrapper contracts (Aave V3 deposit, Sky/sUSDS DSR). ' +
+                'Maple\'s <strong>active DeFi-strategy deployment</strong> is via the Liquidity Layer panel above — that uses Strategy 0\'s loan-record accounting rather than these wrapper contracts. ' +
+                'Both mechanisms are delegate-discretionary; this block tracks the wrapper-contract path.' +
+                historicalNote +
+            '</p>' +
+            '<ul class="text-sm text-slate-600">' + sleeveItems + '</ul>' +
+        '</div>';
     },
 
     // ----- §3 Borrower Concentration (loans-only) -------------------------
