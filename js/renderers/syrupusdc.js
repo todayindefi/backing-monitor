@@ -429,63 +429,21 @@ var SyrupUSDCRenderer = {
         // fixture-style emits `aum_usd`. Accept either.
         function poolAum(p) { return p.aum_usd != null ? p.aum_usd : p.total_assets_usd; }
 
-        // ---- Pool Collateral Ratio comparison (init-level, weighted-avg) ----
-        // Reads from each pool's loan_book.collateral_summary.pool_collateral_ratio_pct.
-        // Current pool comes from `data`; sibling from a parallel fetch of its
-        // backing JSON. Hidden if neither value resolves.
-        function crFromBacking(d) {
-            return d && d.asset_specific && d.asset_specific.loan_book &&
-                d.asset_specific.loan_book.collateral_summary &&
-                d.asset_specific.loan_book.collateral_summary.pool_collateral_ratio_pct;
-        }
-        var currentCR = crFromBacking(data);
-        var siblingCR = crFromBacking(siblingData);
-        var usdcCR = currentSlug === 'syrupusdc' ? currentCR : siblingCR;
-        var usdtCR = currentSlug === 'syrupusdt' ? currentCR : siblingCR;
-        function crCls(v) {
-            if (v == null) return 'text-slate-400';
-            if (v >= 130) return 'text-green-600 font-semibold';
-            if (v >= 110) return 'text-amber-600 font-semibold';
-            return 'text-red-600 font-semibold';
-        }
-        function crCell(label, v) {
-            return '<div class="summary-card">' +
-                '<div class="card-label">' + label + '</div>' +
-                '<div class="card-value ' + crCls(v) + '">' +
-                    (v != null ? CommonRenderer.formatPercent(v, 2) : '—') +
-                '</div>' +
-            '</div>';
-        }
-        var crCompareBlock = (usdcCR != null || usdtCR != null) ?
-            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-1">Init-level Pool Collateral Ratio</div>' +
-            '<div class="grid grid-cols-2 gap-3 mb-1">' +
-                crCell('syrupUSDC', usdcCR) +
-                crCell('syrupUSDT', usdtCR) +
-            '</div>' +
-            '<div class="text-xs text-slate-400 mb-4">Init-level weighted average; differs across pools by book composition.</div>'
-            : '';
-
         // ---- Family aggregates row (Loans / Liquidity split) ----
-        // Drops Set A/B framing in favor of the structurally-correct
-        // Loans-vs-Liquidity split. Family Loan CR uses
-        // collateral_ratio_loans_only_pct (third-party-credit basis only).
+        // Aggregate Loan CR was dropped: CR is per-pool because risk is
+        // per-pool — depositors in one pool aren't covered by collateral in
+        // the other, so averaging across pools "covers" a risk that isn't
+        // actually shared and masks divergence. Per-pool comparison lives in
+        // the table below.
         var loansAum = combined.aum_loans_usd;
         var liqAum = combined.aum_liquidity_usd;
         var totalAum = combined.aum_total_usd != null ? combined.aum_total_usd : combined.total_aum_usd;
-        var familyLoanCR = combined.collateral_ratio_loans_only_pct;
         var liqPct = (liqAum != null && totalAum) ? (liqAum / totalAum * 100) : null;
         var loansOnlyCount = combined.loans_only_count;
         var liquidityCount = combined.liquidity_count;
 
-        function familyLoanCRCls(v) {
-            if (v == null) return 'text-slate-400';
-            if (v >= 130) return 'positive';
-            if (v >= 110) return 'warning';
-            return 'negative';
-        }
-
         var aggCards =
-            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">' +
                 '<div class="summary-card">' +
                     '<div class="card-label">Family Loans</div>' +
                     '<div class="card-value">' + CommonRenderer.formatCurrency(loansAum) + '</div>' +
@@ -508,13 +466,94 @@ var SyrupUSDCRenderer = {
                     '<div class="text-xs text-slate-400 mt-1">USDC ' + CommonRenderer.formatCurrency(poolAum(usdcPool)) +
                         ' + USDT ' + CommonRenderer.formatCurrency(poolAum(usdtPool)) + '</div>' +
                 '</div>' +
-                '<div class="summary-card">' +
-                    '<div class="card-label">Family Loan CR</div>' +
-                    '<div class="card-value ' + familyLoanCRCls(familyLoanCR) + '">' +
-                        (familyLoanCR != null ? CommonRenderer.formatPercent(familyLoanCR, 2) : '—') +
-                    '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">Loans-only · weighted-avg init</div>' +
-                '</div>' +
+            '</div>';
+
+        // ---- Per-pool collateral health comparison ----
+        // Side-by-side replacement for the dropped family-aggregate Loan CR.
+        // Loans-only CR uses family.json's per-pool fields:
+        //   (pool_collateral_value_usd − principal_liquidity_usd) / principal_loans_only_usd × 100
+        // Until syrupUSDT's loan-classification analyzer fix lands, its
+        // principal_loans_only_usd is 0 in family.json — the loans-only CR
+        // and counts cells render "pending classification fix" rather than
+        // a misleading number. Init-level CR (weighted-avg baseline) and
+        // loans-below-init (stress signal) come from each pool's
+        // collateral_summary directly and resolve independently.
+        function summaryFromBacking(d) {
+            return d && d.asset_specific && d.asset_specific.loan_book &&
+                d.asset_specific.loan_book.collateral_summary || null;
+        }
+        function loansOnlyCR(p) {
+            var coll = p.pool_collateral_value_usd;
+            var liq = p.principal_liquidity_usd;
+            var loans = p.principal_loans_only_usd;
+            if (coll == null || liq == null || !loans) return null;
+            return (coll - liq) / loans * 100;
+        }
+        function crCls(v) {
+            if (v == null) return 'text-slate-400';
+            if (v >= 130) return 'text-green-600 font-semibold';
+            if (v >= 110) return 'text-amber-600 font-semibold';
+            return 'text-red-600 font-semibold';
+        }
+        var usdcSummary = currentSlug === 'syrupusdc' ? summaryFromBacking(data) : summaryFromBacking(siblingData);
+        var usdtSummary = currentSlug === 'syrupusdt' ? summaryFromBacking(data) : summaryFromBacking(siblingData);
+        var usdcLoansOnlyCR = loansOnlyCR(usdcPool);
+        var usdtLoansOnlyCR = loansOnlyCR(usdtPool);
+        var usdcInitCR = usdcSummary && usdcSummary.pool_collateral_ratio_pct;
+        var usdtInitCR = usdtSummary && usdtSummary.pool_collateral_ratio_pct;
+        var usdcBelowInit = usdcSummary && usdcSummary.loans_below_init_count;
+        var usdtBelowInit = usdtSummary && usdtSummary.loans_below_init_count;
+
+        function pendingCell() {
+            return '<span class="text-slate-400 italic text-xs">pending classification fix</span>';
+        }
+        function pctCell(v) {
+            if (v == null) return pendingCell();
+            return '<span class="font-mono ' + crCls(v) + '">' + CommonRenderer.formatPercent(v, 2) + '</span>';
+        }
+        function countsCell(p) {
+            var lo = p.loans_only_count, lq = p.liquidity_count;
+            if ((lo == null || lo === 0) && (lq == null || lq === 0)) return pendingCell();
+            return '<span class="font-mono">' + (lo || 0) + ' / ' + (lq || 0) + '</span>';
+        }
+        function belowInitCell(below, denom) {
+            if (below == null) return '<span class="text-slate-400">—</span>';
+            var cls = below > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold';
+            var denomStr = denom ? ' / ' + denom : ' / <span class="text-slate-400 italic text-xs">denom pending</span>';
+            return '<span class="font-mono ' + cls + '">' + below + '</span>' + denomStr;
+        }
+
+        var perPoolBlock =
+            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-1">Per-pool collateral health</div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                '<th>Metric</th>' +
+                '<th class="text-right">syrupUSDC</th>' +
+                '<th class="text-right">syrupUSDT</th>' +
+            '</tr></thead><tbody>' +
+                '<tr>' +
+                    '<td class="font-medium">Loans-only CR <span class="text-xs font-normal text-slate-500">(current snapshot)</span></td>' +
+                    '<td class="text-right">' + pctCell(usdcLoansOnlyCR) + '</td>' +
+                    '<td class="text-right">' + pctCell(usdtLoansOnlyCR) + '</td>' +
+                '</tr>' +
+                '<tr>' +
+                    '<td class="font-medium">Init-level pool CR <span class="text-xs font-normal text-slate-500">(weighted-avg baseline)</span></td>' +
+                    '<td class="text-right">' + pctCell(usdcInitCR) + '</td>' +
+                    '<td class="text-right">' + pctCell(usdtInitCR) + '</td>' +
+                '</tr>' +
+                '<tr>' +
+                    '<td class="font-medium">Loans / Liquidity count</td>' +
+                    '<td class="text-right">' + countsCell(usdcPool) + '</td>' +
+                    '<td class="text-right">' + countsCell(usdtPool) + '</td>' +
+                '</tr>' +
+                '<tr>' +
+                    '<td class="font-medium">Loans below init level <span class="text-xs font-normal text-slate-500">(stress signal)</span></td>' +
+                    '<td class="text-right">' + belowInitCell(usdcBelowInit, usdcPool.loans_only_count) + '</td>' +
+                    '<td class="text-right">' + belowInitCell(usdtBelowInit, usdtPool.loans_only_count) + '</td>' +
+                '</tr>' +
+            '</tbody></table></div>' +
+            '<div class="text-xs text-slate-500 mt-2 mb-4">' +
+                'CR is per-pool: depositors in one pool aren\'t covered by collateral in the other. ' +
+                '"Below init level" = collateral has dropped below the level required at loan funding (loan still active but under-cushioned).' +
             '</div>';
 
         // ---- By collateral asset — split into Loans and Liquidity tables ----
@@ -683,7 +722,7 @@ var SyrupUSDCRenderer = {
         return '<div class="panel">' +
             '<div class="panel-title">Maple Syrup Family — Cross-Pool Snapshot</div>' +
             aggCards +
-            crCompareBlock +
+            perPoolBlock +
             assetBlock +
             tableBlock +
             govBlock +
