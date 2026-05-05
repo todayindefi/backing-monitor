@@ -6,10 +6,10 @@
  *   §2 Loan Book Health   — 4 sub-blocks: A status · B buffer (NEW) · C collateral mix · D loan table
  *   §3 Borrower Concentration
  *   §4 Repayment Schedule (renamed from Payment Ladder)
- *   §5 Liquidity & Peg    — folds Exit Realism + Stress Anchor + new Peg deviation row
- *   §6 Trust Stack        — Governance + 1-line audit roll-up
- *   §7 Yield (demoted)
- *   Multi-Chain (hidden when only Ethereum)
+ *   §5  Liquidity & Peg   — folds Exit Realism + Stress Anchor + new Peg deviation row
+ *   §5b Multi-Chain Distribution — Phase-1 per-chain token supply (Ethereum + L2/Solana via CCIP+CCT)
+ *   §6  Trust Stack       — Governance + 1-line audit roll-up
+ *   §7  Yield (demoted)
  *
  * Suppresses the common-header Backing Breakdown table + Allocation pie panel for
  * syrupUSDC only — they're replaced by §1's asset-composition table + donut.
@@ -373,9 +373,9 @@ var SyrupUSDCRenderer = {
         html += this._renderBorrowerConcentration(specific);                // §3
         html += this._renderRepaymentSchedule(specific);                    // §4
         html += this._renderLiquidityAndPeg(specific, s, data.asset_slug);  // §5
+        html += this._renderMultiChain(specific, data.asset_slug);          // §5b multi-chain distribution
         html += this._renderTrustStack(specific);                   // §6
         html += this._renderYield(specific);                        // §7
-        html += this._renderMultiChain(specific);                   // hidden when single-chain
 
         container.innerHTML = html;
 
@@ -2245,29 +2245,162 @@ var SyrupUSDCRenderer = {
         '</div>';
     },
 
-    // ----- Multi-Chain (Phase 3, hidden when only Ethereum) ---------------
-    _renderMultiChain: function(specific) {
+    // ----- Multi-Chain Distribution (Phase 1: per-chain token supply) -----
+    // Backward-compat: schema_version < 2 OR multi_chain.deferred === true
+    // (the pre-Phase-1 stub) falls through to a placeholder card so the
+    // brief deploy window between analyzer push + cron regenerating JSON
+    // doesn't visibly regress.
+    _renderMultiChain: function(specific, slug) {
         var mc = specific.multi_chain;
-        if (!mc) return '';
-        var chains = Object.keys(mc);
-        var nonEthPopulated = chains.some(function(c) {
-            return c !== 'ethereum' && mc[c] && mc[c].supply !== null && mc[c].supply !== undefined;
-        });
-        if (!nonEthPopulated) return '';
+        if (!mc || mc.deferred || !Array.isArray(mc.chains) || mc.chains.length === 0) {
+            return SyrupUSDCRenderer._renderMultiChainPlaceholder(slug);
+        }
 
-        var rows = chains.map(function(c) {
-            var d = mc[c] || {};
-            return '<tr>' +
-                '<td class="font-medium">' + c.charAt(0).toUpperCase() + c.slice(1) + '</td>' +
-                '<td class="text-right font-mono">' + (d.supply != null ? CommonRenderer.formatCurrency(d.supply) : '-') + '</td>' +
-                '<td class="text-right font-mono">' + (d.share_of_supply_pct != null ? CommonRenderer.formatPercent(d.share_of_supply_pct, 1) : '-') + '</td>' +
-                '<td class="font-mono text-xs">' + (d.ccip_pool ? SyrupUSDCRenderer._truncAddr(d.ccip_pool) + ' ' + SyrupUSDCRenderer._ethLink(d.ccip_pool) : '-') + '</td>' +
+        var isUSDT = slug === 'syrupusdt';
+        var chains = mc.chains;  // already sorted desc by share_pct per analyzer contract
+        var totalSupply = mc.total_supply_usd_across_chains;
+
+        var rowsHtml = chains.map(function(c) { return SyrupUSDCRenderer._renderChainRow(c); }).join('');
+
+        // Total row — share column locked to 100% (per-chain shares sum to it
+        // by construction; reconciliation pct is shown separately below).
+        var totalRow =
+            '<tr class="font-bold border-t-2 border-slate-200">' +
+                '<td>Total</td>' +
+                '<td class="text-right font-mono">' + (totalSupply != null ? CommonRenderer.formatCurrency(totalSupply) : '-') + '</td>' +
+                '<td class="text-right font-mono">100%</td>' +
+                '<td colspan="3"></td>' +
             '</tr>';
-        }).join('');
+
+        var subheader;
+        if (isUSDT) {
+            subheader = 'syrupUSDT is currently Ethereum-only. CCIP+CCT cross-chain ' +
+                       'expansion is planned but not yet deployed.';
+        } else {
+            var nonStub = chains.filter(function(c) { return c.kind !== 'stub'; }).length;
+            subheader = 'syrupUSDC is deployed natively on ' + nonStub + ' chains via Chainlink CCIP+CCT ' +
+                       '(burn-and-mint). Per-chain supply via direct token-contract reads. DEX depth ' +
+                       'per chain is Phase 2 — for now, only Ethereum has aggregator-route slippage ' +
+                       'data (see Liquidity &amp; Peg panel above).';
+        }
+
+        var recon = SyrupUSDCRenderer._reconciliationLine(mc.cross_chain_supply_reconciliation_pct);
+
+        var emptyStateFooter = '';
+        if (isUSDT) {
+            emptyStateFooter =
+                '<div class="text-xs text-slate-500 mt-3 italic">' +
+                    'syrupUSDT has limited cross-chain footprint vs syrupUSDC. ' +
+                    'Other-chain deployments not yet tracked.' +
+                '</div>';
+        }
 
         return '<div class="panel">' +
             '<div class="panel-title">Multi-Chain Distribution</div>' +
-            '<table class="data-table"><thead><tr><th>Chain</th><th class="text-right">Supply</th><th class="text-right">Share</th><th>CCIP Pool</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+            '<div class="text-xs text-slate-500 mb-3">' + subheader + '</div>' +
+            '<table class="data-table">' +
+                '<thead><tr>' +
+                    '<th>Chain</th>' +
+                    '<th class="text-right">Supply</th>' +
+                    '<th class="text-right">Share</th>' +
+                    '<th>Kind</th>' +
+                    '<th>Token Address</th>' +
+                    '<th>Source</th>' +
+                '</tr></thead>' +
+                '<tbody>' + rowsHtml + totalRow + '</tbody>' +
+            '</table>' +
+            recon +
+            emptyStateFooter +
+        '</div>';
+    },
+
+    // Per-chain explorer base URLs. Plasma intentionally omitted — the
+    // Phase-1 stub has no token address to link to; Phase-2 wires this up.
+    _CHAIN_EXPLORERS: {
+        ethereum: { name: 'Ethereum', base: 'https://etherscan.io/address/' },
+        arbitrum: { name: 'Arbitrum', base: 'https://arbiscan.io/address/' },
+        base:     { name: 'Base',     base: 'https://basescan.org/address/' },
+        solana:   { name: 'Solana',   base: 'https://solscan.io/token/' },
+        plasma:   { name: 'Plasma',   base: null }
+    },
+
+    _renderChainRow: function(c) {
+        var meta = SyrupUSDCRenderer._CHAIN_EXPLORERS[c.chain] || { name: c.chain, base: null };
+        var displayName = meta.name || (c.chain.charAt(0).toUpperCase() + c.chain.slice(1));
+        var isStub = c.kind === 'stub' || c.data_source === 'stub';
+        var rowClass = isStub ? ' class="text-slate-400 italic"' : '';
+
+        // Supply / share — stub rows render '~' prefix to telegraph estimate.
+        var supplyCell, shareCell;
+        if (isStub) {
+            supplyCell = c.supply_usd != null ? '~' + CommonRenderer.formatCurrency(c.supply_usd) : '—';
+            shareCell  = c.share_pct  != null ? '~' + CommonRenderer.formatPercent(c.share_pct, 1) : '—';
+        } else {
+            supplyCell = c.supply_usd != null ? CommonRenderer.formatCurrency(c.supply_usd) : '-';
+            shareCell  = c.share_pct  != null ? CommonRenderer.formatPercent(c.share_pct, 1) : '-';
+        }
+
+        var kindLabel = ({ evm: 'EVM', solana: 'Solana', stub: 'stub' })[c.kind] || c.kind || '-';
+
+        var addrCell;
+        if (isStub || !c.token_address) {
+            addrCell = isStub ? 'n/a' : '—';
+        } else {
+            var truncated = SyrupUSDCRenderer._truncAddr(c.token_address);
+            if (meta.base) {
+                addrCell = '<span class="font-mono text-xs">' + truncated + '</span>' +
+                    ' <a href="' + meta.base + c.token_address + '" target="_blank" ' +
+                    'class="text-blue-500 hover:underline text-xs" title="' + c.token_address + '">↗</a>';
+            } else {
+                addrCell = '<span class="font-mono text-xs">' + truncated + '</span>';
+            }
+        }
+
+        var sourceCell = isStub ? 'Phase 2 stub' :
+                         c.data_source === 'on_chain_token_supply' ? 'on-chain' :
+                         (c.data_source || '—');
+
+        return '<tr' + rowClass + '>' +
+            '<td class="font-medium">' + displayName + '</td>' +
+            '<td class="text-right font-mono">' + supplyCell + '</td>' +
+            '<td class="text-right font-mono">' + shareCell + '</td>' +
+            '<td class="text-xs">' + kindLabel + '</td>' +
+            '<td>' + addrCell + '</td>' +
+            '<td class="text-xs">' + sourceCell + '</td>' +
+        '</tr>';
+    },
+
+    // Reconciliation badge — color-coded against the analyzer's 98–102%
+    // tolerance band. Outside that, the analyzer also fires a risk flag
+    // (already surfaced in §Risk Flags), so this is a passive readout.
+    _reconciliationLine: function(pct) {
+        if (pct == null) return '';
+        var cls, label;
+        if (pct >= 99 && pct <= 101) {
+            cls = 'text-green-600';
+            label = '(per-chain supplies match canonical Pool total)';
+        } else if ((pct >= 98 && pct < 99) || (pct > 101 && pct <= 102)) {
+            cls = 'text-amber-600';
+            label = '(minor drift — possibly CCT bridge messages in flight)';
+        } else {
+            cls = 'text-red-600 font-semibold';
+            label = '(material drift — bridge-in-flight or analyzer issue; see Risk Flags)';
+        }
+        return '<div class="text-xs mt-3">' +
+            '<span class="text-slate-500">Reconciliation: </span>' +
+            '<span class="' + cls + ' font-mono">' + CommonRenderer.formatPercent(pct, 1) + '</span> ' +
+            '<span class="text-slate-500">' + label + '</span>' +
+        '</div>';
+    },
+
+    _renderMultiChainPlaceholder: function(slug) {
+        var note = slug === 'syrupusdt'
+            ? 'Multi-chain tracking is rolling out — current snapshot pre-dates the Phase-1 schema bump.'
+            : 'Multi-chain tracking is rolling out — current snapshot pre-dates the Phase-1 schema bump. ' +
+              'syrupUSDC is deployed on Ethereum, Solana, Arbitrum, Base, and Plasma via CCIP+CCT.';
+        return '<div class="panel">' +
+            '<div class="panel-title">Multi-Chain Distribution</div>' +
+            '<div class="text-sm text-slate-500">' + note + '</div>' +
         '</div>';
     }
 };
