@@ -326,9 +326,10 @@ var SyrupUSDCRenderer = {
             }
             if (custodyEoaCount > 0) {
                 newFlags.push({
-                    severity: 'warning',
-                    message: 'Single-key EOA custody: ' + CommonRenderer.formatCurrency(custodyEoaUsd) +
-                        ' held in ' + custodyEoaCount + ' EOA' + (custodyEoaCount === 1 ? '' : 's')
+                    severity: 'info',
+                    message: 'Maple-controlled MPC custody: ' + CommonRenderer.formatCurrency(custodyEoaUsd) +
+                        ' held across ' + custodyEoaCount + ' MPC wallet' + (custodyEoaCount === 1 ? '' : 's') +
+                        ' (per Maple\'s 2026-05-04 attestation)'
                 });
             }
             data.risk_flags = data.risk_flags.flatMap(function(f) {
@@ -1218,10 +1219,10 @@ var SyrupUSDCRenderer = {
         });
         var custodyEoaUsd = custodyEntries.reduce(function(s, e) { return s + (e.capital_under_control_usd || 0); }, 0);
         var eoaFlag = custodyEntries.length > 0 ?
-            '<div class="risk-flag risk-critical mb-2">🔴 <strong>Single-key EOA custody</strong> — ' +
+            '<div class="risk-flag risk-info mb-2">ⓘ <strong>Maple-controlled MPC custody</strong> — ' +
                 CommonRenderer.formatCurrency(custodyEoaUsd) + ' across ' + custodyEntries.length +
-                ' EOA' + (custodyEntries.length === 1 ? '' : 's') +
-                ' · no on-chain multi-sig protection.</div>' : '';
+                ' MPC wallet' + (custodyEntries.length === 1 ? '' : 's') +
+                ' under Maple Labs operational control. Residual axis is centralization-of-control (a firm-level event affects all wallets), not custody-primitive weakness.</div>' : '';
         var bigIssuers = loans.filter(function(l) { return (l.principal || 0) >= 50000000; })
             .map(function(l) {
                 var c = l.collateral || {};
@@ -1243,7 +1244,7 @@ var SyrupUSDCRenderer = {
             var custodyAddr = cu.address || l.borrower || '—';
             var custodyChain = (cu.chain || 'ethereum').charAt(0).toUpperCase() + (cu.chain || 'ethereum').slice(1);
             var eoaBadge = cu.is_eoa ?
-                '<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-100 text-red-700" title="single-key EOA — no multi-sig">EOA</span>' : '';
+                '<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600" title="MPC + policy (per Maple\'s 2026-05-04 attestation)">MPC</span>' : '';
             var custodyCell = custodyAddr === '—' ?
                 '<span class="text-slate-400">—</span>' :
                 '<span class="font-mono text-xs" title="' + custodyAddr + '">' + SyrupUSDCRenderer._truncAddr(custodyAddr) + '</span> ' +
@@ -2017,7 +2018,7 @@ var SyrupUSDCRenderer = {
                         (g.pool_delegate_is_eoa !== undefined ? g.pool_delegate_is_eoa :
                          (pdObj && pdObj.type === 'eoa'));
             var pdExtra = firm || '—';
-            if (isEoa) pdExtra += ' · <span class="text-amber-600 font-semibold">⚠ EOA (single-key for loan funding)</span>';
+            if (isEoa) pdExtra += ' · <span class="text-slate-500">MPC + policy (per Maple)</span>';
             rows.push(row('Pool Delegate', pdAddr, pdExtra));
         }
         var coverAddr = (typeof g.pool_delegate_cover === 'string') ? g.pool_delegate_cover :
@@ -2054,11 +2055,14 @@ var SyrupUSDCRenderer = {
             lastTx = '<div class="text-xs text-slate-400 mt-2">Last admin tx: ' + CommonRenderer.formatDate(g.last_admin_tx_timestamp) + '</div>';
         }
 
-        // ---- Single-key EOA topology — surfaces the full set of EOAs that
-        // hold real capital. Pool Delegate is already in the table above; the
-        // "custody" entries here are the liquidity-layer custodians the
-        // analyzer enumerates separately. Hidden when custody_topology is
-        // empty (older snapshots).
+        // ---- Maple-controlled MPC topology — surfaces the full set of
+        // EOA-shaped addresses (eth_getCode == 0x) that hold real capital.
+        // Per Maple's 2026-05-04 attestation, all such addresses are MPC
+        // wallets with strict policy controls under Maple Labs operational
+        // control — institutional-grade custody primitive, NOT single-key.
+        // Pool Delegate is already in the table above; the "custody"
+        // entries here are the liquidity-layer custodians the analyzer
+        // enumerates separately. Hidden when custody_topology is empty.
         var ct = g.custody_topology || {};
         var custodyEntries = (ct.entries || []).filter(function(e) {
             return e && e.is_eoa && e.control_type === 'custody';
@@ -2067,9 +2071,10 @@ var SyrupUSDCRenderer = {
         if (ct.single_key_eoa_count != null && ct.single_key_eoa_count > 0) {
             var topologyHeader =
                 '<div class="text-sm font-semibold text-slate-700 mt-4 mb-1">' +
-                    'Single-key EOA topology' +
+                    'Maple-controlled MPC topology' +
                     ' <span class="text-xs font-normal text-slate-500">— ' +
-                        ct.single_key_eoa_count + ' addresses control ' +
+                        ct.single_key_eoa_count + ' MPC wallet' + (ct.single_key_eoa_count === 1 ? '' : 's') +
+                        ' control ' +
                         CommonRenderer.formatCurrency(ct.total_capital_under_eoa_control_usd || 0) +
                         ' of pool capital' +
                     '</span>' +
@@ -2078,20 +2083,28 @@ var SyrupUSDCRenderer = {
                 var addr = e.address || '';
                 var addrCell = '<span class="font-mono text-xs" title="' + addr + '">' + SyrupUSDCRenderer._truncAddr(addr) + '</span> ' + SyrupUSDCRenderer._ethLink(addr);
                 var capUsd = e.capital_under_control_usd || e.loan_book_principal_usd || 0;
-                var note = '<span class="text-amber-600 font-semibold">⚠ Single-key EOA</span> · holds ' + CommonRenderer.formatCurrency(capUsd);
+                var note = '<span class="text-slate-600">MPC + policy (per Maple)</span> · holds ' + CommonRenderer.formatCurrency(capUsd);
                 if (e.venue) note += ' · ' + e.venue;
                 if (e.chain && e.chain !== 'ethereum') note += ' · ' + e.chain.charAt(0).toUpperCase() + e.chain.slice(1);
-                note += ' · no multi-sig';
                 return '<tr>' +
                     '<td class="font-medium">' + (e.role || 'Custody') + '</td>' +
                     '<td>' + addrCell + '</td>' +
                     '<td class="text-xs text-slate-500">' + note + '</td>' +
                 '</tr>';
             }).join('');
+            // Methodology footer — institutional-grade custody primitive
+            // is Maple's off-chain attestation; on-chain reads can't
+            // independently verify MPC vs single-key.
+            var topologyFooter =
+                '<div class="text-xs text-slate-400 italic mt-2 leading-relaxed">' +
+                    'ⓘ Per Maple\'s response 2026-05-04: these are MPC wallets with strict policy controls. ' +
+                    'On-chain reads cannot independently verify MPC vs single-key (both produce standard Ethereum signatures off-chain) — ' +
+                    '<span class="font-mono">eth_getCode == 0x</span> rules out smart-contract multi-sigs but the MPC + policy claim is Maple\'s off-chain attestation.' +
+                '</div>';
             topologyBlock = topologyHeader +
                 (topologyRows ?
-                    '<table class="data-table"><tbody>' + topologyRows + '</tbody></table>' :
-                    '<div class="text-xs text-slate-400 italic">No additional custody EOAs at this snapshot.</div>');
+                    '<table class="data-table"><tbody>' + topologyRows + '</tbody></table>' + topologyFooter :
+                    '<div class="text-xs text-slate-400 italic">No additional custody addresses at this snapshot.</div>');
         }
 
         var auditLine =
