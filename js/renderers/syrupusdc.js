@@ -1162,7 +1162,7 @@ var SyrupUSDCRenderer = {
         var lb = specific.loan_book;
         if (!lb) return '';
 
-        var disclaimer = '<div class="risk-flag risk-warning"><strong>Important:</strong> These are uncollateralized-on-chain open-term loans. Collateral is held off-chain by the Pool Delegate. On-chain enforcement = noticePeriod (24h) + gracePeriod (48h) → 72h max default lag.</div>';
+        var disclaimer = '<div class="risk-flag risk-warning"><strong>Important:</strong> These are open-term loans with off-chain custodied collateral. The smart contract holds no collateral and cannot auto-liquidate — enforcement requires Pool Delegate\'s call right (24h notice + 48h grace before contract-level default). See loan list below for per-loan collateral assets / init levels.</div>';
 
         if (lb.active_loan_count === null || lb.active_loan_count === undefined) {
             return '<div class="panel">' +
