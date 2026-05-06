@@ -11,7 +11,8 @@ var ASSET_RENDERERS = {
     frax:      typeof FRAXRenderer      !== 'undefined' ? FRAXRenderer      : null,
     crvusd:    typeof CrvUSDRenderer    !== 'undefined' ? CrvUSDRenderer    : null,
     usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
-    syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null
+    syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
+    syrupusdt: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null
 };
 
 function getAssetSlug() {
@@ -27,6 +28,11 @@ async function renderIndex() {
     document.getElementById('asset-view').classList.add('hidden');
     document.getElementById('error-view').classList.add('hidden');
     document.getElementById('header-subtitle').textContent = '';
+    var reportLink = document.getElementById('header-report-link');
+    if (reportLink) {
+        reportLink.classList.add('hidden');
+        reportLink.removeAttribute('href');
+    }
 
     try {
         var resp = await fetch('data/assets.json');
@@ -83,9 +89,10 @@ async function renderAsset(slug) {
     document.getElementById('error-view').classList.add('hidden');
 
     try {
-        var [dataResp, histResp] = await Promise.all([
+        var [dataResp, histResp, assetsResp] = await Promise.all([
             fetch('data/' + slug + '_backing.json'),
-            fetch('data/' + slug + '_backing_history.json').catch(function() { return null; })
+            fetch('data/' + slug + '_backing_history.json').catch(function() { return null; }),
+            fetch('data/assets.json').catch(function() { return null; })
         ]);
 
         if (!dataResp.ok) throw new Error('Asset data not found (HTTP ' + dataResp.status + ')');
@@ -94,10 +101,26 @@ async function renderAsset(slug) {
         if (histResp && histResp.ok) {
             history = await histResp.json();
         }
+        var assetMeta = null;
+        if (assetsResp && assetsResp.ok) {
+            var assets = await assetsResp.json();
+            assetMeta = assets.find(function(a) { return a.slug === slug; }) || null;
+        }
 
         // Header
         document.getElementById('header-subtitle').textContent = data.asset + ' (' + data.chain + ')';
         document.getElementById('header-timestamp').textContent = 'Updated: ' + CommonRenderer.formatDate(data.timestamp);
+
+        var reportLink = document.getElementById('header-report-link');
+        if (reportLink) {
+            if (assetMeta && assetMeta.report_url) {
+                reportLink.href = assetMeta.report_url;
+                reportLink.classList.remove('hidden');
+            } else {
+                reportLink.classList.add('hidden');
+                reportLink.removeAttribute('href');
+            }
+        }
 
         // Asset-specific pre-render hook — lets the renderer patch top-card
         // overrides (e.g. swap in init-level CR for syrupUSDC/USDT) before

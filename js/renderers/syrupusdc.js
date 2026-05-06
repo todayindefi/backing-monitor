@@ -181,7 +181,7 @@ var SyrupUSDCRenderer = {
     // unrealized losses are recognized or PCR drops below 100.
     preRender: function(data) {
         var specific = data.asset_specific || {};
-        if (specific.type !== 'syrupusdc') return;
+        if (specific.type !== 'syrupusdc' && specific.type !== 'syrupusdt') return;
         var lb = specific.loan_book || {};
         var cs = lb.collateral_summary || {};
         var poolCR = cs.pool_collateral_ratio_pct;
@@ -353,7 +353,7 @@ var SyrupUSDCRenderer = {
     render: function(data) {
         var container = document.getElementById('asset-specific-panels');
         var specific = data.asset_specific;
-        if (!specific || specific.type !== 'syrupusdc') return;
+        if (!specific || (specific.type !== 'syrupusdc' && specific.type !== 'syrupusdt')) return;
 
         this._suppressCommonPanels();
 
