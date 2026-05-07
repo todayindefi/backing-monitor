@@ -3,34 +3,34 @@
   "asset": "USDD",
   "asset_slug": "usdd",
   "chain": "Tron + Ethereum + BNB Chain",
-  "timestamp": "2026-05-07T18:38:10Z",
+  "timestamp": "2026-05-07T19:38:25Z",
   "summary": {
-    "total_supply": 1364625965.36,
-    "total_backing": 787919299.84,
-    "collateral_ratio": 57.74,
+    "total_supply": 1364945289.69,
+    "total_backing": 1451743231.99,
+    "collateral_ratio": 106.36,
     "collateral_ratio_alt": {
       "label": "Independent CR",
-      "value": 34.24,
+      "value": 34.27,
       "note": "User vaults only \u2014 excludes HTX-sourced collateral (SA + PSM)",
       "is_currency": false
     },
-    "surplus_deficit": -576706665.52,
-    "psm_coverage_pct": 5.3,
-    "htx_pct": 40.7
+    "surplus_deficit": 86797942.29,
+    "psm_coverage_pct": 10.7,
+    "htx_pct": 67.8
   },
   "backing_breakdown": [
     {
       "label": "Smart Allocator (HTX)",
-      "value": 248234503.0,
-      "pct": 31.5,
+      "value": 837933499.0,
+      "pct": 57.7,
       "tags": [
         "htx"
       ]
     },
     {
       "label": "PSM Reserves (HTX)",
-      "value": 72437580.0,
-      "pct": 9.2,
+      "value": 146002611.0,
+      "pct": 10.1,
       "tags": [
         "htx"
       ]
@@ -38,48 +38,58 @@
     {
       "label": "TRX Vaults (User)",
       "value": 456631904.0,
-      "pct": 58.0,
+      "pct": 31.5,
       "tags": []
     },
     {
       "label": "sTRX Vaults (User)",
       "value": 10615312.0,
-      "pct": 1.3,
+      "pct": 0.7,
+      "tags": []
+    },
+    {
+      "label": "USDT Vaults (User)",
+      "value": 559906.0,
+      "pct": 0.0,
       "tags": []
     }
   ],
   "risk_flags": [
     {
-      "severity": "critical",
-      "message": "UNDERCOLLATERALIZED: Headline CR = 57.7%"
+      "severity": "warning",
+      "message": "Thin margin: Headline CR = 106.4%"
     },
     {
       "severity": "warning",
-      "message": "Stress test: 50% TRX drop would push CR to 40.6% (below 100%)"
+      "message": "HTX controls 68% of backing. Admin multisig can access funds (zero timelock)."
     },
     {
-      "severity": "critical",
-      "message": "PSM draining: $84.7M withdrawn (-53.9%) in 24h"
+      "severity": "warning",
+      "message": "Stress test: 50% TRX drop would push CR to 89.2% (below 100%)"
+    },
+    {
+      "severity": "warning",
+      "message": "PSM outflow: $11.1M (-7.1%) in 24h"
     }
   ],
   "asset_specific": {
     "type": "usdd",
     "supply_by_chain": {
-      "tron": 1129898408.0,
+      "tron": 1130217733.0,
       "ethereum": 124146228.0,
       "bsc": 110581329.0,
-      "total": 1364625965.0
+      "total": 1364945290.0
     },
     "psm_by_chain": {
       "tron": {
-        "reserves_usd": 0,
-        "chain_supply": 1129898408.0,
-        "coverage_pct": 0.0
+        "reserves_usd": 73467595.0,
+        "chain_supply": 1130217733.0,
+        "coverage_pct": 6.5
       },
       "ethereum": {
-        "reserves_usd": 55265688.0,
+        "reserves_usd": 55363123.0,
         "chain_supply": 124146228.0,
-        "coverage_pct": 44.5
+        "coverage_pct": 44.6
       },
       "bsc": {
         "reserves_usd": 17171892.0,
@@ -87,28 +97,28 @@
         "coverage_pct": 15.5
       }
     },
-    "psm_total_usd": 72437580.0,
-    "psm_coverage_pct": 5.3,
+    "psm_total_usd": 146002611.0,
+    "psm_coverage_pct": 10.7,
     "collateral": {
       "smart_allocator": {
-        "tron": 0,
+        "tron": 589698996.0,
         "ethereum": 248234503.0,
-        "total": 248234503.0
+        "total": 837933499.0
       },
       "psm": {
-        "tron": 0,
-        "ethereum": 55265688.0,
+        "tron": 73467595.0,
+        "ethereum": 55363123.0,
         "bsc": 17171892.0,
-        "total": 72437580.0
+        "total": 146002611.0
       },
       "trx_vaults_usd": 456631904.0,
       "strx_vaults_usd": 10615312.0,
-      "usdt_vaults_usd": 0,
+      "usdt_vaults_usd": 559906.0,
       "other_vaults_usd": 0,
-      "independent_total": 467247217.0,
-      "htx_total": 320672083.0,
-      "htx_pct": 40.7,
-      "total": 787919300.0
+      "independent_total": 467807122.0,
+      "htx_total": 983936110.0,
+      "htx_pct": 67.8,
+      "total": 1451743232.0
     },
     "ilks": {
       "tron:TRX-A": {
@@ -143,10 +153,34 @@
         "utilization_pct": 5.3,
         "is_htx": false
       },
+      "tron:USDT-A": {
+        "chain": "tron",
+        "ilk": "USDT-A",
+        "debt": 559905.64,
+        "ceiling": 200000000.0,
+        "utilization_pct": 0.3,
+        "is_htx": false
+      },
+      "tron:PSM-USDT-A": {
+        "chain": "tron",
+        "ilk": "PSM-USDT-A",
+        "debt": 73466076.04,
+        "ceiling": 600000000.0,
+        "utilization_pct": 12.2,
+        "is_htx": true
+      },
+      "tron:SA001-A": {
+        "chain": "tron",
+        "ilk": "SA001-A",
+        "debt": 589698996.0,
+        "ceiling": 1000000000.0,
+        "utilization_pct": 59.0,
+        "is_htx": true
+      },
       "ethereum:PSM-USDT-A": {
         "chain": "ethereum",
         "ilk": "PSM-USDT-A",
-        "debt": 55265687.22,
+        "debt": 55363122.6,
         "ceiling": 500000000.0,
         "utilization_pct": 11.1,
         "is_htx": true
@@ -177,49 +211,49 @@
       }
     },
     "stress_test": {
-      "trx_price": 0.349553,
+      "trx_price": 0.349616,
       "trx_exposed_usd": 467247217.0,
-      "stable_backing_usd": 320672083.0,
+      "stable_backing_usd": 984496015.0,
       "scenarios": {
         "trx_minus_30": {
           "drop_pct": 30,
           "trx_backing_usd": 327073052.0,
-          "total_backing_usd": 647745135.0,
-          "cr_pct": 47.47
+          "total_backing_usd": 1311569067.0,
+          "cr_pct": 96.09
         },
         "trx_minus_50": {
           "drop_pct": 50,
           "trx_backing_usd": 233623608.0,
-          "total_backing_usd": 554295691.0,
-          "cr_pct": 40.62
+          "total_backing_usd": 1218119624.0,
+          "cr_pct": 89.24
         },
         "trx_minus_70": {
           "drop_pct": 70,
           "trx_backing_usd": 140174165.0,
-          "total_backing_usd": 460846248.0,
-          "cr_pct": 33.77
+          "total_backing_usd": 1124670180.0,
+          "cr_pct": 82.4
         }
       }
     },
     "peg": {
-      "price": 1.0,
-      "24h_change_pct": 0.036104489083609054,
-      "market_cap": 1449981479.3834543,
-      "volume_24h": 4738277.087306329
+      "price": 0.999936,
+      "24h_change_pct": 0.020994259500009216,
+      "market_cap": 1449754615.556974,
+      "volume_24h": 4687927.174398915
     },
     "trx_price": {
-      "price": 0.349553,
-      "24h_change_pct": 0.9818223437869658,
-      "market_cap": 33135054553.886944,
-      "volume_24h": 450634150.14907074
+      "price": 0.349616,
+      "24h_change_pct": 0.6865959835996897,
+      "market_cap": 33139884482.24607,
+      "volume_24h": 444569552.4542146
     },
     "htx_overlap": {
       "ethereum": {
-        "htx_aave_usdt_total": 20030920.0,
+        "htx_aave_usdt_total": 20031000.0,
         "htx_aave_usdt_addrs": [
           {
             "address": "0x18709E89BD403F470088aBDAcEbE86CC60dda12e",
-            "aave_usdt": 20023819.0
+            "aave_usdt": 20023898.0
           },
           {
             "address": "0xa03400e098f4421b34a3a44a1b4e571419517687",
@@ -274,7 +308,7 @@
           {
             "address": "0x18709E89BD403F470088aBDAcEbE86CC60dda12e",
             "usdt": 50000039.402442,
-            "aave_usdt": 20023820.130013,
+            "aave_usdt": 20023899.512669,
             "eth": 663.0059200226167,
             "verification": "balance"
           },
@@ -282,7 +316,7 @@
             "address": "0x4fb312915b779b1339388e14b6d079741ca83128",
             "usdt": 30820002.000125,
             "aave_usdt": 8.2e-05,
-            "eth": 7371.100099987184,
+            "eth": 7571.100099987184,
             "verification": "balance"
           },
           {
@@ -294,9 +328,9 @@
           },
           {
             "address": "0xa03400e098f4421b34a3a44a1b4e571419517687",
-            "usdt": 3547240.176799,
-            "aave_usdt": 7101.230054,
-            "eth": 691.481152707961,
+            "usdt": 3789893.232858,
+            "aave_usdt": 7101.258112,
+            "eth": 562.2440827425755,
             "verification": "balance"
           },
           {
@@ -315,10 +349,10 @@
           }
         ],
         "totals": {
-          "usdt": 85412693.765809,
+          "usdt": 85655346.821868,
           "usdc": 0,
-          "aave_usdt": 20030921.360149,
-          "eth": 8775.812285257243
+          "aave_usdt": 20031000.770863,
+          "eth": 8846.57521529186
         }
       },
       "tron": {
@@ -332,8 +366,8 @@
           },
           {
             "address": "TK86Qm97uM848dMk8G7xNbJB7zG1uW3h1n",
-            "usdt": 16668002.161101,
-            "trx": 47325695.781013,
+            "usdt": 19456002.161101,
+            "trx": 46085694.377014,
             "justlend_usdt": 0,
             "verification": "balance"
           },
@@ -395,8 +429,8 @@
           },
           {
             "address": "TFTWNgDBkQ5wQoP8RXpRznnHvAVV8x5jLu",
-            "usdt": 7787071.609752,
-            "trx": 1009277.310259,
+            "usdt": 2028476.131049,
+            "trx": 1644830.560491,
             "justlend_usdt": 0,
             "verification": "balance"
           },
@@ -409,12 +443,12 @@
           }
         ],
         "totals": {
-          "usdt": 26364180.282222003,
-          "trx": 3182594317.5191026,
+          "usdt": 23393584.803518996,
+          "trx": 3181989869.365336,
           "justlend_usdt": 17383795.541774057
         }
       },
-      "grand_total_usd": 149191590.94995406
+      "grand_total_usd": 146463727.93802404
     },
     "htx_margin": {
       "por_snapshot_date": "2026-03-01",
@@ -432,21 +466,21 @@
         "Ethereum:AETHUSDT": 20029590.0
       },
       "live_stablecoin_total": 199635750.0,
-      "usdd_collateral_total": 320672083.0,
+      "usdd_collateral_total": 983936110.0,
       "shortfall_ex_usdd": -1119538621.0,
-      "combined_surplus": -798866538.0,
+      "combined_surplus": -135602511.0,
       "defillama_available": true,
       "coverage_pct": 15.1
     },
     "psm_delta": {
-      "current_usd": 72437580.0,
-      "run_previous_usd": 145169021.0,
-      "run_delta_usd": -72731441.0,
-      "run_delta_pct": -50.1,
+      "current_usd": 146002611.0,
+      "run_previous_usd": 72437580.0,
+      "run_delta_usd": 73565031.0,
+      "run_delta_pct": 101.56,
       "h24_previous_usd": 157096240.0,
-      "h24_delta_usd": -84658660.0,
-      "h24_delta_pct": -53.89,
-      "draining": true
+      "h24_delta_usd": -11093629.0,
+      "h24_delta_pct": -7.06,
+      "draining": false
     }
   }
 }
