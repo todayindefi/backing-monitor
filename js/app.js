@@ -12,7 +12,9 @@ var ASSET_RENDERERS = {
     crvusd:    typeof CrvUSDRenderer    !== 'undefined' ? CrvUSDRenderer    : null,
     usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
     syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
-    syrupusdt: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null
+    syrupusdt: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
+    apxusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null,
+    apyusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null
 };
 
 function getAssetSlug() {

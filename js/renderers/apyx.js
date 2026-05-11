@@ -1,0 +1,1340 @@
+/**
+ * Apyx renderer — apxUSD (non-yield) + apyUSD (ERC-4626 wrapper).
+ *
+ * Single renderer registered for both slugs; the two products share the
+ * same Accountable proof-of-solvency feed, the same bridge admin, and the
+ * same governance topology. Asset-specific divergence lives in:
+ *   - asset_specific.type ('apxusd' | 'apyusd')
+ *   - _renderHeadlineCard (different headline metrics)
+ *   - _renderYieldTrajectory + _renderUnlockQueue (apyUSD only)
+ *   - _renderLiquidity (different quote pairs)
+ *   - _renderMultiChainBridge (different conservation invariants, rate limits)
+ *
+ * Data sources:
+ *   - data/apxusd_backing.json + data/apxusd_backing_history.json
+ *   - data/apyusd_backing.json + data/apyusd_backing_history.json
+ *   - data/apyx_family.json   (async-loaded for the cross-asset family panel)
+ *
+ * Modeled on js/renderers/syrupusdc.js — same vault-share frame, same
+ * Trust Stack pattern, same _suppressCommonPanels approach.
+ */
+
+var APYX_BRIDGE_INFO = {
+    ccip_version: '1.6.1',
+    architecture: 'LockRelease (Ethereum) + BurnMint (Base)',
+    router_canonical_eth: '0x80226fc0Ee2b096224EeAc085Bb9a8cba1146f7D',
+    rmn_canonical_eth: '0x411dE17f12D1A34ecC7F45f49844626267c75e81'
+};
+
+var APYX_AUDITS = {
+    primary_audits: 'Quantstamp + Zellic + Certora (formal verification)',
+    bug_bounty: 'none disclosed',
+    total_audits: 3
+};
+
+var ACCOUNTABLE_INFO = {
+    enclave_key: '0x5fd592cD004F9089ee56356BD5a46Fa0E62eAf7f',
+    parent: 'Accountable (accountable.capital)',
+    type: 'AWS Nitro Enclave (TEE)'
+};
+
+var APYX_RESERVES_COLORS = {
+    'Cash & Equivalents': '#3b82f6',
+    'STRC':               '#f59e0b',
+    'SATA':               '#a855f7',
+    'Other':              '#94a3b8'
+};
+
+var APYX_RESERVES_ISSUER = {
+    'Cash & Equivalents': '(unitemized)',
+    'STRC':               'Strategy (MSTR)',
+    'SATA':               'Other DAT',
+    'Other':              '—'
+};
+
+var ApyxRenderer = {
+
+    // ============================================================
+    // helpers
+    // ============================================================
+    _isApyx: function(t) { return t === 'apxusd' || t === 'apyusd'; },
+
+    _truncAddr: function(addr) {
+        if (!addr) return '-';
+        return addr.slice(0, 6) + '...' + addr.slice(-4);
+    },
+
+    _explorerLink: function(addr, chain) {
+        if (!addr) return '';
+        var base = (chain === 'base') ?
+            'https://basescan.org/address/' :
+            'https://etherscan.io/address/';
+        return '<a href="' + base + addr + '" target="_blank" rel="noopener noreferrer" ' +
+            'class="text-blue-500 hover:underline text-xs" title="' + addr + '">↗</a>';
+    },
+
+    _addrCell: function(addr, chain) {
+        if (!addr) return '<span class="text-slate-400">-</span>';
+        return '<span class="font-mono text-xs" title="' + addr + '">' +
+            ApyxRenderer._truncAddr(addr) +
+            '</span> ' + ApyxRenderer._explorerLink(addr, chain);
+    },
+
+    // Three-state colored dot — uses inline span so it works without
+    // additional CSS classes beyond what Tailwind already ships.
+    _statusDot: function(state) {
+        var color;
+        if (state === 'ok')       color = '#22c55e';   // green
+        else if (state === 'warn') color = '#f59e0b';  // amber
+        else if (state === 'critical') color = '#ef4444'; // red
+        else color = '#94a3b8';                        // slate (neutral)
+        return '<span class="inline-block w-2 h-2 rounded-full align-middle" ' +
+            'style="background:' + color + '"></span>';
+    },
+
+    _statusPill: function(label, state, extra) {
+        var bg, fg;
+        if (state === 'ok')        { bg = 'bg-green-100'; fg = 'text-green-800'; }
+        else if (state === 'warn') { bg = 'bg-amber-100'; fg = 'text-amber-800'; }
+        else if (state === 'critical') { bg = 'bg-red-100'; fg = 'text-red-800'; }
+        else                       { bg = 'bg-slate-100'; fg = 'text-slate-700'; }
+        return '<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ' + bg + ' ' + fg + '">' +
+            ApyxRenderer._statusDot(state) +
+            '<span>' + label + (extra ? ' <span class="font-mono">' + extra + '</span>' : '') + '</span>' +
+        '</span>';
+    },
+
+    _chainBadge: function(chain) {
+        var label = chain.charAt(0).toUpperCase() + chain.slice(1);
+        var cls = (chain === 'base') ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700';
+        return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ' + cls + '">' + label + '</span>';
+    },
+
+    // "3m 34s ago" / "1h 04m ago" — used for the attestation-age pill.
+    _formatAge: function(seconds) {
+        if (seconds == null) return '—';
+        var s = Math.max(0, Math.floor(seconds));
+        if (s < 60) return s + 's ago';
+        if (s < 3600) {
+            var m = Math.floor(s / 60);
+            var r = s - m * 60;
+            return m + 'm ' + (r < 10 ? '0' + r : r) + 's ago';
+        }
+        if (s < 86400) {
+            var h = Math.floor(s / 3600);
+            var m2 = Math.floor((s - h * 3600) / 60);
+            return h + 'h ' + (m2 < 10 ? '0' + m2 : m2) + 'm ago';
+        }
+        var d = Math.floor(s / 86400);
+        return d + (d === 1 ? ' day ago' : ' days ago');
+    },
+
+    _formatToken: function(num, decimals) {
+        if (num === null || num === undefined) return '-';
+        decimals = decimals !== undefined ? decimals : 2;
+        return num.toLocaleString('en-US', { maximumFractionDigits: decimals, minimumFractionDigits: decimals });
+    },
+
+    _formatShares: function(num) {
+        if (num == null) return '-';
+        if (Math.abs(num) >= 1e6) return (num / 1e6).toFixed(2) + 'M shares';
+        if (Math.abs(num) >= 1e3) return (num / 1e3).toFixed(2) + 'K shares';
+        return num.toFixed(0) + ' shares';
+    },
+
+    _rawToTokens: function(raw, decimals) {
+        if (raw == null) return null;
+        decimals = decimals || 18;
+        // Defensive: large integers may arrive as Number from JSON; we
+        // still divide as floats. Precision is more than enough for the
+        // dashboard's display rounding.
+        return Number(raw) / Math.pow(10, decimals);
+    },
+
+    _attestationFreshness: function(ageSeconds) {
+        if (ageSeconds == null) return 'critical';
+        if (ageSeconds <= 1800) return 'ok';       // <=30m
+        if (ageSeconds <= 14400) return 'warn';     // <=4h
+        return 'critical';
+    },
+
+    _slippageState: function(pct) {
+        if (pct == null) return 'critical';
+        if (pct < 0.5) return 'ok';
+        if (pct < 2.0) return 'warn';
+        return 'critical';
+    },
+
+    // ============================================================
+    // pre-render — runs before common renderer paints summary cards.
+    // ============================================================
+    // The apxUSD/apyUSD summary blocks don't carry collateral_ratio_alt or
+    // backing_breakdown (the analyzer leaves them out — neither concept
+    // maps cleanly onto a vault-share + reserve-attestation product). We
+    // synthesize minimal values here so common.js doesn't crash, then the
+    // per-asset panels below carry the rich view.
+    preRender: function(data) {
+        var specific = data.asset_specific || {};
+        if (!ApyxRenderer._isApyx(specific.type)) return;
+        var s = data.summary;
+        if (!s) return;
+
+        // Synthesize collateral_ratio_alt — common renderSummaryCards reads
+        // .label unconditionally, so the field must exist. We immediately
+        // hide the card via card_overrides; the rich version lives in §1
+        // Headline below (capture ratio / buffer over par).
+        var altLabel = (specific.type === 'apxusd') ? '_apyxAltBuffer' : '_apyxAltCapture';
+        if (!s.collateral_ratio_alt) {
+            s.collateral_ratio_alt = { label: altLabel, value: 0, is_currency: false };
+        }
+        specific.card_overrides = specific.card_overrides || {};
+        specific.card_overrides[altLabel] = { hidden: true };
+
+        // Surplus / Deficit is structurally 0 for apyUSD (ERC-4626 wrapper)
+        // and already prominent in the §1 Headline card for apxUSD — hide
+        // the duplicated common card on both pages.
+        specific.card_overrides['Surplus / Deficit'] = { hidden: true };
+
+        // Add a NAV card for apyUSD so the common top-strip immediately
+        // surfaces share-price (1 share = N apxUSD).
+        if (specific.type === 'apyusd') {
+            specific.extra_summary_cards = specific.extra_summary_cards || [];
+            var vs = specific.vault_state || {};
+            var nav = (vs.nav != null) ? vs.nav : s.nav;
+            specific.extra_summary_cards.push({
+                label: 'NAV per share',
+                value: (nav != null) ? nav.toFixed(4) : '-',
+                subtext: 'apxUSD per share'
+            });
+        }
+
+        // Empty backing_breakdown — common.renderBreakdownTable iterates
+        // this array and would NPE without it. The actual reserve breakdown
+        // lives in §2 Backing Attestation as a custom donut + table.
+        if (!Array.isArray(data.backing_breakdown)) {
+            data.backing_breakdown = [];
+        }
+
+        // Mirror syrupusdc: collateral_ratio is already on summary and
+        // common will color it green/red against 100 — fine as-is.
+    },
+
+    // ============================================================
+    // entry point
+    // ============================================================
+    render: function(data) {
+        var container = document.getElementById('asset-specific-panels');
+        if (!container) return;
+        var specific = data.asset_specific || {};
+        if (!ApyxRenderer._isApyx(specific.type)) return;
+
+        ApyxRenderer._suppressCommonPanels();
+
+        var slug = data.asset_slug;
+        var s = data.summary;
+        var html = '';
+
+        html += ApyxRenderer._renderHeadlineCard(specific, s, slug);
+        html += ApyxRenderer._renderBackingAttestation(specific, slug);
+        if (slug === 'apyusd') {
+            html += ApyxRenderer._renderYieldTrajectory(specific, s);
+            html += ApyxRenderer._renderUnlockQueue(specific);
+        }
+        html += ApyxRenderer._renderLiquidity(specific, slug);
+        html += ApyxRenderer._renderMultiChainBridge(specific, slug);
+        html += ApyxRenderer._renderTrustStack(specific);
+        html += '<div id="apyx-family-panel"></div>';
+
+        container.innerHTML = html;
+
+        // Post-render chart renders — DOM nodes must exist first.
+        ApyxRenderer._renderReservesDonut(specific, slug);
+        ApyxRenderer._renderAttestationTimeline(specific, slug);
+        ApyxRenderer._renderSlippageChart(specific, slug);
+        if (slug === 'apyusd') {
+            ApyxRenderer._loadNavTrajectoryChart(slug);
+        }
+        ApyxRenderer._loadFamilyPanel(slug);
+    },
+
+    _suppressCommonPanels: function() {
+        // §2 Backing Attestation supplies a custom reserves donut + table —
+        // hide the default breakdown panel and the default pie panel.
+        var bd = document.getElementById('breakdown-table');
+        if (bd) {
+            var p = bd.closest('.panel');
+            if (p) p.style.display = 'none';
+        }
+        var pie = document.getElementById('pie-chart');
+        if (pie) {
+            var p2 = pie.closest('.panel');
+            if (p2) p2.style.display = 'none';
+        }
+        // Stretch the Risk Flags panel into the now-empty column.
+        var risk = document.getElementById('risk-flags');
+        if (risk) {
+            var wrapper = risk.closest('.panel').parentElement;
+            if (wrapper && !wrapper.classList.contains('lg:col-span-3')) {
+                wrapper.classList.add('lg:col-span-3');
+            }
+        }
+    },
+
+    // ============================================================
+    // §1 Headline card
+    // ============================================================
+    _renderHeadlineCard: function(specific, s, slug) {
+        var vs = specific.vault_state || {};
+        var pausedState = vs.paused ? 'critical' : 'ok';
+        var pausedLabel = vs.paused ? 'PAUSED' : 'Active';
+        var chainBadges = ApyxRenderer._chainBadge('ethereum') + ' ' + ApyxRenderer._chainBadge('base');
+
+        var headerLeft, metricsRow, captureRow = '';
+
+        if (slug === 'apxusd') {
+            headerLeft = '<div class="text-xl font-bold text-slate-800">apxUSD</div>' +
+                '<div class="text-xs text-slate-500 mt-1">Apyx · RWA-backed synthetic stablecoin (non-yield)</div>';
+            var crCls = (s.collateral_ratio >= 100) ? 'text-green-600' : 'text-red-600';
+            metricsRow =
+                '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Supply</div>' +
+                        '<div class="text-lg font-bold text-slate-800">' + CommonRenderer.formatCurrency(s.total_supply) + '</div></div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Backing</div>' +
+                        '<div class="text-lg font-bold text-slate-800">' + CommonRenderer.formatCurrency(s.total_backing) + '</div></div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Collateralization</div>' +
+                        '<div class="text-lg font-bold ' + crCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 2) + '</div></div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
+                        '<div class="text-lg">' + ApyxRenderer._statusPill(pausedLabel, pausedState) + '</div></div>' +
+                '</div>';
+        } else {
+            // apyUSD
+            headerLeft = '<div class="text-xl font-bold text-slate-800">apyUSD</div>' +
+                '<div class="text-xs text-slate-500 mt-1">Apyx · ERC-4626 yield wrapper over apxUSD</div>';
+            var nav = vs.nav;
+            var tvl = s.total_supply_usd_at_nav || s.total_backing;
+            metricsRow =
+                '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Shares</div>' +
+                        '<div class="text-lg font-bold text-slate-800">' + ApyxRenderer._formatShares(s.total_supply) + '</div></div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">NAV</div>' +
+                        '<div class="text-lg font-bold text-slate-800">' + (nav != null ? nav.toFixed(4) : '-') +
+                        '<span class="text-xs text-slate-400 font-normal ml-1">apxUSD</span></div></div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">TVL</div>' +
+                        '<div class="text-lg font-bold text-slate-800">' + CommonRenderer.formatCurrency(tvl) + '</div></div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
+                        '<div class="text-lg">' + ApyxRenderer._statusPill(pausedLabel, pausedState) + '</div></div>' +
+                '</div>';
+            var cap = specific.capture_ratio_pct;
+            if (cap != null) {
+                captureRow =
+                    '<div class="mt-3">' +
+                        '<span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">' +
+                            'Captures <span class="font-mono mx-1">' + cap.toFixed(1) + '%</span> of apxUSD supply' +
+                        '</span>' +
+                    '</div>';
+            }
+        }
+
+        return '<div class="panel">' +
+            '<div class="flex items-start justify-between gap-4">' +
+                '<div>' + headerLeft + '</div>' +
+                '<div class="flex flex-wrap gap-1 justify-end">' + chainBadges + '</div>' +
+            '</div>' +
+            metricsRow +
+            captureRow +
+        '</div>';
+    },
+
+    // ============================================================
+    // §2 Backing Attestation (the marquee panel)
+    // ============================================================
+    _renderBackingAttestation: function(specific, slug) {
+        var ba = specific.backing_attestation;
+        if (!ba) {
+            return '<div class="panel"><div class="panel-title">Backing Attestation</div>' +
+                '<div class="risk-flag risk-warning">Accountable feed data not available in this snapshot.</div></div>';
+        }
+
+        var feedState  = ba.fetch_status === 'ok' ? 'ok' : 'critical';
+        var keyState   = ba.signing_key_match ? 'ok' : 'critical';
+        var freshState = ApyxRenderer._attestationFreshness(ba.attestation_age_seconds);
+        var crossState = ba.cross_source_supply_consistency ? 'ok' : 'warn';
+        var collat = ba.collateralization_pct;
+        var collatCls = (collat != null && collat >= 100) ? 'text-green-600' : 'text-red-600';
+
+        var truncKey = ba.signing_key ? (ba.signing_key.slice(0, 10) + '...' + ba.signing_key.slice(-4)) : '—';
+
+        var statusRow =
+            '<div class="flex flex-wrap items-center gap-2 mb-4">' +
+                ApyxRenderer._statusPill('Accountable feed', feedState, ba.source || '') +
+                ApyxRenderer._statusPill('Signing key', keyState, truncKey) +
+                ApyxRenderer._statusPill('Last attested', freshState, ApyxRenderer._formatAge(ba.attestation_age_seconds)) +
+                '<span class="ml-auto text-xs text-slate-500">' +
+                    'Collateralization: <span class="font-mono text-base font-bold ' + collatCls + '">' +
+                        CommonRenderer.formatPercent(collat, 2) +
+                    '</span>' +
+                '</span>' +
+            '</div>';
+
+        // Reserves table — uses the canonical order in APYX_RESERVES_COLORS
+        // so even an unexpected analyzer ordering renders predictably.
+        var splitUsd = ba.reserves_split || {};
+        var splitPct = ba.reserves_split_pct || {};
+        var totalReserves = ba.total_reserves_usd || 0;
+        var reserveOrder = ['Cash & Equivalents', 'STRC', 'SATA', 'Other'];
+        // Preserve any unknown keys at the end so the renderer doesn't silently drop them.
+        Object.keys(splitUsd).forEach(function(k) {
+            if (reserveOrder.indexOf(k) < 0) reserveOrder.push(k);
+        });
+        var resRows = reserveOrder.filter(function(k) { return splitUsd[k] != null; }).map(function(k) {
+            var usd = splitUsd[k] || 0;
+            var pct = (splitPct[k] != null) ? (splitPct[k] * 100) : (totalReserves > 0 ? (usd / totalReserves * 100) : 0);
+            var color = APYX_RESERVES_COLORS[k] || '#94a3b8';
+            var issuer = APYX_RESERVES_ISSUER[k] || '—';
+            return '<tr>' +
+                '<td class="font-medium">' +
+                    '<span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:' + color + '"></span>' +
+                    k +
+                '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(usd) + '</td>' +
+                '<td class="text-right font-mono">' + pct.toFixed(2) + '%</td>' +
+                '<td class="text-xs text-slate-500">' + issuer + '</td>' +
+            '</tr>';
+        }).join('');
+        resRows += '<tr class="font-bold border-t-2 border-slate-200">' +
+            '<td>Total reserves</td>' +
+            '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(totalReserves) + '</td>' +
+            '<td class="text-right">100.00%</td>' +
+            '<td></td>' +
+        '</tr>';
+
+        // Donut + table side-by-side on desktop, stacked on mobile.
+        var donutBlock =
+            '<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">' +
+                '<div class="lg:col-span-3">' +
+                    '<div class="text-sm font-semibold text-slate-700 mb-2">Reserves split</div>' +
+                    '<table class="data-table">' +
+                        '<thead><tr>' +
+                            '<th>Asset</th>' +
+                            '<th class="text-right">USD</th>' +
+                            '<th class="text-right">%</th>' +
+                            '<th>Issuer</th>' +
+                        '</tr></thead>' +
+                        '<tbody>' + resRows + '</tbody>' +
+                    '</table>' +
+                '</div>' +
+                '<div class="lg:col-span-2">' +
+                    '<div class="text-sm font-semibold text-slate-700 mb-2">Composition</div>' +
+                    '<div style="height: 240px; position: relative;">' +
+                        '<canvas id="apyx-reserves-donut"></canvas>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        // Timeline chart — 21-day Accountable supply vs reserves.
+        var timelineBlock =
+            '<div class="mt-6">' +
+                '<div class="flex items-center justify-between mb-2">' +
+                    '<div class="text-sm font-semibold text-slate-700">21-day supply vs reserves (Accountable)</div>' +
+                    ApyxRenderer._statusPill('Cross-source supply check', crossState,
+                        (ba.cross_source_drift_pct != null) ? (ba.cross_source_drift_pct.toFixed(3) + '% drift') : '') +
+                '</div>' +
+                '<div style="height: 260px; position: relative;">' +
+                    '<canvas id="apyx-attestation-timeline"></canvas>' +
+                '</div>' +
+            '</div>';
+
+        var attTs = CommonRenderer.formatDate(ba.attestation_timestamp);
+        var methodology =
+            '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
+                'Real-time TEE-attested proof-of-solvency via Accountable (' + ACCOUNTABLE_INFO.type + ', on-chain-registered signing key). ' +
+                '<strong>What it proves:</strong> enclave processed and signed the data shown. ' +
+                '<strong>What it doesn\'t:</strong> the custodian itself is not audited; not a PCAOB-firm attestation. ' +
+                'Last attested ' + attTs + ' · enclave key <span class="font-mono">' + truncKey + '</span>.' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Backing Attestation <span class="text-xs font-normal text-slate-500">— Accountable proof-of-solvency</span></div>' +
+            statusRow +
+            donutBlock +
+            timelineBlock +
+            methodology +
+        '</div>';
+    },
+
+    _renderReservesDonut: function(specific, slug) {
+        var ctx = document.getElementById('apyx-reserves-donut');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var ba = specific.backing_attestation || {};
+        var split = ba.reserves_split || {};
+        var order = ['Cash & Equivalents', 'STRC', 'SATA', 'Other'];
+        Object.keys(split).forEach(function(k) { if (order.indexOf(k) < 0) order.push(k); });
+        var labels = order.filter(function(k) { return split[k] != null && split[k] > 0; });
+        var values = labels.map(function(k) { return split[k]; });
+        var colors = labels.map(function(k) { return APYX_RESERVES_COLORS[k] || '#94a3b8'; });
+
+        if (window._apyxReservesDonut) window._apyxReservesDonut.destroy();
+        window._apyxReservesDonut = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '55%',
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) {
+                                var total = c.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                                var pct = total > 0 ? (c.raw / total * 100).toFixed(2) : '0.00';
+                                return c.label + ': ' + CommonRenderer.formatCurrencyExact(c.raw) + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    _renderAttestationTimeline: function(specific, slug) {
+        var ctx = document.getElementById('apyx-attestation-timeline');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var ba = specific.backing_attestation || {};
+        var timeline = ba.timeline || [];
+        if (timeline.length < 2) {
+            ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Timeline data unavailable.</div>';
+            return;
+        }
+        var labels = timeline.map(function(p) {
+            // ts is millis-as-string; date field is already a YYYY-MM-DD string.
+            return new Date(Number(p.ts));
+        });
+        var supplySeries = timeline.map(function(p) { return p.supply; });
+        var reservesSeries = timeline.map(function(p) { return p.reserves; });
+        var collatSeries = timeline.map(function(p) {
+            return (p.supply > 0) ? (p.reserves / p.supply * 100) : null;
+        });
+
+        if (window._apyxAttestationTimeline) window._apyxAttestationTimeline.destroy();
+        window._apyxAttestationTimeline = new Chart(ctx, {
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Supply (USD)',
+                        data: supplySeries,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                        fill: false,
+                        tension: 0.25,
+                        pointRadius: 0,
+                        borderWidth: 2,
+                        yAxisID: 'y'
+                    },
+                    {
+                        type: 'line',
+                        label: 'Reserves (USD)',
+                        data: reservesSeries,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.08)',
+                        fill: false,
+                        tension: 0.25,
+                        pointRadius: 0,
+                        borderWidth: 2,
+                        yAxisID: 'y'
+                    },
+                    {
+                        type: 'line',
+                        label: 'Collateralization (%)',
+                        data: collatSeries,
+                        borderColor: '#a855f7',
+                        backgroundColor: 'transparent',
+                        borderDash: [4, 3],
+                        tension: 0.25,
+                        pointRadius: 0,
+                        borderWidth: 1.5,
+                        yAxisID: 'yPct'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        position: 'left',
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) {
+                                if (Math.abs(v) >= 1e6) return '$' + (v / 1e6).toFixed(0) + 'M';
+                                if (Math.abs(v) >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'K';
+                                return '$' + v;
+                            }
+                        }
+                    },
+                    yPct: {
+                        position: 'right',
+                        grid: { display: false },
+                        suggestedMin: 99,
+                        suggestedMax: 102,
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) { return v.toFixed(2) + '%'; }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) {
+                                if (c.dataset.yAxisID === 'yPct') {
+                                    return c.dataset.label + ': ' + (c.raw != null ? c.raw.toFixed(3) + '%' : '—');
+                                }
+                                return c.dataset.label + ': ' + CommonRenderer.formatCurrencyExact(c.raw);
+                            }
+                        }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    // ============================================================
+    // §3a Yield Trajectory  (apyUSD only)
+    // ============================================================
+    _renderYieldTrajectory: function(specific, s) {
+        var y = specific.yield || {};
+        var apy7 = y.implied_apy_7d_pct;
+        var apy30 = y.implied_apy_30d_pct;
+        var headline = (apy30 != null) ? apy30 : apy7;
+
+        var headlineHtml;
+        if (headline != null) {
+            headlineHtml = '<div class="text-2xl font-bold text-slate-800">~' +
+                headline.toFixed(2) + '% APY</div>' +
+                '<div class="text-xs text-slate-500 mt-1">Trailing implied APY · NAV-delta rolling window</div>';
+        } else {
+            headlineHtml = '<div class="text-base text-slate-500 italic">' +
+                'Insufficient history — yield chart will populate after 7 days of NAV samples' +
+                '</div>';
+        }
+
+        var apyRow =
+            '<div class="grid grid-cols-3 gap-3 mt-4">' +
+                '<div class="summary-card"><div class="card-label">7d implied APY</div>' +
+                    '<div class="card-value">' + (apy7 != null ? CommonRenderer.formatPercent(apy7, 2) : '—') + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">30d implied APY</div>' +
+                    '<div class="card-value">' + (apy30 != null ? CommonRenderer.formatPercent(apy30, 2) : '—') + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">Since inception</div>' +
+                    '<div class="card-value text-base text-slate-500 italic">(awaiting history)</div></div>' +
+            '</div>';
+
+        var navChart =
+            '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">NAV trajectory</div>' +
+                '<div style="height: 220px; position: relative;">' +
+                    '<canvas id="apyx-nav-trajectory"></canvas>' +
+                '</div>' +
+            '</div>';
+
+        var methodology =
+            '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
+                'Yield is real STRC dividend pass-through. NAV growth in the first week of operations ' +
+                '(Feb 20-27 2026) included a one-time ~33% launch seed from donation-pattern apxUSD ' +
+                'inflows; the post-launch trajectory is the recurring rate (~13% APY, consistent with ' +
+                'STRC\'s 11-15% indicated-rate range). <strong>New buyers earn the ongoing rate, not the ' +
+                'headline.</strong>' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Yield Trajectory</div>' +
+            headlineHtml +
+            apyRow +
+            navChart +
+            methodology +
+        '</div>';
+    },
+
+    _loadNavTrajectoryChart: function(slug) {
+        var ctx = document.getElementById('apyx-nav-trajectory');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + slug + '_backing_history.json?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                if (!hist || !Array.isArray(hist.entries) || hist.entries.length < 2) {
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">' +
+                        'NAV history is accumulating — chart will populate after a few hours of samples.</div>';
+                    return;
+                }
+                ApyxRenderer._drawNavTrajectory(ctx, hist.entries);
+            })
+            .catch(function() {
+                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">' +
+                    'NAV history unavailable.</div>';
+            });
+    },
+
+    _drawNavTrajectory: function(ctx, entries) {
+        var labels = entries.map(function(e) {
+            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+            return new Date(ts);
+        });
+        var navSeries = entries.map(function(e) { return e.nav; });
+
+        if (window._apyxNavChart) window._apyxNavChart.destroy();
+        window._apyxNavChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'NAV (apxUSD per share)',
+                    data: navSeries,
+                    borderColor: '#a855f7',
+                    backgroundColor: 'rgba(168, 85, 247, 0.08)',
+                    fill: true,
+                    tension: 0.25,
+                    pointRadius: 0,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) { return Number(v).toFixed(4); }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) { return c.dataset.label + ': ' + Number(c.raw).toFixed(6); }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            baseline: {
+                                type: 'line', yMin: 1.0, yMax: 1.0,
+                                borderColor: '#94a3b8', borderWidth: 1, borderDash: [4, 4],
+                                label: { content: 'launch baseline 1.0', display: true, position: 'start', font: { size: 9 }, color: '#64748b' }
+                            }
+                        }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    // ============================================================
+    // §3b Unlock Queue  (apyUSD only)
+    // ============================================================
+    _renderUnlockQueue: function(specific) {
+        var u = specific.unlock_queue || {};
+        var depth = u.queue_depth_apxusd;
+        var wow = u.week_over_week_growth_x;
+        var docDays = u.duration_documented_days || 30;
+        var known = u.duration_known;
+
+        var wowState = (wow != null && wow > 2.0) ? 'critical' : (wow != null && wow > 1.5) ? 'warn' : 'ok';
+        var wowPill = (wow != null) ?
+            ApyxRenderer._statusPill('Week-over-week growth', wowState, wow.toFixed(2) + '×') :
+            ApyxRenderer._statusPill('Week-over-week growth', 'warn', 'no history');
+
+        var durationCaveat = '';
+        if (!known) {
+            durationCaveat =
+                '<div class="text-xs text-amber-700 mt-2">' +
+                    '<strong>Note:</strong> ' + docDays + '-day cooldown from contract source review. ' +
+                    'Apyx docs cite a different figure (20 days). The on-chain ' +
+                    '<span class="font-mono">duration()</span> getter is not externally exposed.' +
+                '</div>';
+        }
+
+        var methodology =
+            '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
+                'UnlockToken\'s <span class="font-mono">duration()</span> getter is not externally exposed. ' +
+                'The ' + docDays + '-day figure comes from contract source review; Apyx docs state 20 days. ' +
+                'Code is authoritative; verify with the Apyx team if sizing materially.' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Unlock Queue</div>' +
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
+                '<div class="summary-card"><div class="card-label">Queue depth</div>' +
+                    '<div class="card-value">' + CommonRenderer.formatCurrency(depth) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">apxUSD locked in cooldown</div></div>' +
+                '<div class="summary-card"><div class="card-label">W-o-W growth</div>' +
+                    '<div class="mt-1">' + wowPill + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">Cooldown</div>' +
+                    '<div class="card-value">' + docDays + ' days</div>' +
+                    (known ? '' : '<div class="text-xs text-amber-600 mt-1">contract not docs</div>') +
+                '</div>' +
+            '</div>' +
+            durationCaveat +
+            methodology +
+        '</div>';
+    },
+
+    // ============================================================
+    // §4 Liquidity
+    // ============================================================
+    _renderLiquidity: function(specific, slug) {
+        var liq = specific.liquidity || {};
+        var pools = liq.pools || [];
+        var totalDepthEth = pools.filter(function(p) { return p.chain === 'ethereum'; })
+            .reduce(function(sum, p) { return sum + (p.depth_usd || 0); }, 0);
+        var totalDepthBase = pools.filter(function(p) { return p.chain === 'base'; })
+            .reduce(function(sum, p) { return sum + (p.depth_usd || 0); }, 0);
+
+        // For apxUSD we filter to pools where apxUSD is the primary side
+        // (Curve apxUSD/USDC + the two pancake pools with apxUSD).
+        // For apyUSD we show the apyUSD/apxUSD pools.
+        var relevantPools = pools;
+        if (slug === 'apxusd') {
+            relevantPools = pools.filter(function(p) {
+                return p.pair && p.pair.indexOf('apxUSD') >= 0;
+            });
+        } else if (slug === 'apyusd') {
+            relevantPools = pools.filter(function(p) {
+                return p.pair && p.pair.indexOf('apyUSD') >= 0;
+            });
+        }
+
+        var headline;
+        if (slug === 'apxusd') {
+            headline = '~' + CommonRenderer.formatCurrency(totalDepthEth + totalDepthBase) +
+                ' across ' + relevantPools.length + ' pool' + (relevantPools.length === 1 ? '' : 's') +
+                ' (' + CommonRenderer.formatCurrency(totalDepthEth) + ' Ethereum';
+            if (totalDepthBase > 0) headline += ' · ' + CommonRenderer.formatCurrency(totalDepthBase) + ' Base';
+            headline += ')';
+        } else {
+            headline = '~' + CommonRenderer.formatCurrency(totalDepthEth + totalDepthBase) +
+                ' across ' + relevantPools.length + ' pool' + (relevantPools.length === 1 ? '' : 's') +
+                ' (' + CommonRenderer.formatCurrency(totalDepthEth) + ' Ethereum';
+            if (totalDepthBase > 0) headline += ' · ' + CommonRenderer.formatCurrency(totalDepthBase) + ' Base';
+            headline += ')';
+        }
+
+        // Pool inventory table
+        var poolRows = relevantPools.map(function(p) {
+            var venueName = (p.venue === 'pcs_v3') ? 'PancakeSwap V3' :
+                            (p.venue === 'curve') ? 'Curve' :
+                            (p.venue ? p.venue.charAt(0).toUpperCase() + p.venue.slice(1) : '—');
+            var ratio = (p.balance_ratio != null) ? p.balance_ratio.toFixed(4) : '—';
+            var ratioCls = (p.balance_ratio != null && Math.abs(p.balance_ratio - 1) < 0.1) ? '' :
+                           (p.balance_ratio != null && p.balance_ratio < 0.5) ? 'text-amber-600' : 'text-slate-500';
+            return '<tr>' +
+                '<td class="font-medium">' + venueName + '</td>' +
+                '<td>' + ApyxRenderer._chainBadge(p.chain || 'ethereum') + '</td>' +
+                '<td class="font-mono text-xs">' + (p.pair || '—') + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(p.depth_usd || 0) + '</td>' +
+                '<td class="text-right font-mono ' + ratioCls + '">' + ratio + '</td>' +
+                '<td>' + ApyxRenderer._addrCell(p.address, p.chain) + '</td>' +
+            '</tr>';
+        }).join('');
+
+        // KyberSwap slippage tiers — pick the right quote map by slug.
+        var quotes = liq.quotes || {};
+        var quoteKey = (slug === 'apxusd') ? 'apxUSD_to_USDC' : 'apyUSD_to_apxUSD';
+        var qm = quotes[quoteKey] || {};
+        var tiers = ['1000', '10000', '50000', '100000'];
+        var has100k = qm['100000'] && qm['100000'].slippage_pct != null;
+        var slip100k = has100k ? qm['100000'].slippage_pct : null;
+        var routeState = ApyxRenderer._slippageState(slip100k);
+        var routeLabel = (routeState === 'ok') ? 'Aggregator route OK' :
+                         (routeState === 'warn') ? 'Aggregator route — moderate slippage' :
+                         'Aggregator route — heavy slippage';
+        var routePill = ApyxRenderer._statusPill(routeLabel, routeState,
+            slip100k != null ? slip100k.toFixed(3) + '% @ $100K' : '');
+
+        var hasAnyQuotes = tiers.some(function(t) { return qm[t] && qm[t].slippage_pct != null; });
+
+        var slippageBlock = '';
+        if (hasAnyQuotes) {
+            slippageBlock =
+                '<div class="mt-6">' +
+                    '<div class="flex items-center justify-between mb-2">' +
+                        '<div class="text-sm font-semibold text-slate-700">KyberSwap slippage tiers — ' +
+                            (slug === 'apxusd' ? 'apxUSD → USDC' : 'apyUSD → apxUSD') +
+                        '</div>' +
+                        routePill +
+                    '</div>' +
+                    '<div style="height: 200px; position: relative;">' +
+                        '<canvas id="apyx-slippage-chart"></canvas>' +
+                    '</div>' +
+                '</div>';
+        }
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Secondary Liquidity</div>' +
+            '<div class="text-sm text-slate-700 mb-3">' + headline + '</div>' +
+            (poolRows ?
+                '<table class="data-table">' +
+                    '<thead><tr>' +
+                        '<th>Venue</th><th>Chain</th><th>Pair</th>' +
+                        '<th class="text-right">Depth (USD)</th>' +
+                        '<th class="text-right">Balance ratio</th>' +
+                        '<th>Pool</th>' +
+                    '</tr></thead>' +
+                    '<tbody>' + poolRows + '</tbody>' +
+                '</table>'
+                :
+                '<div class="text-xs text-slate-400 italic">No pools enumerated in this snapshot.</div>'
+            ) +
+            slippageBlock +
+        '</div>';
+    },
+
+    _renderSlippageChart: function(specific, slug) {
+        var ctx = document.getElementById('apyx-slippage-chart');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var quotes = (specific.liquidity || {}).quotes || {};
+        var quoteKey = (slug === 'apxusd') ? 'apxUSD_to_USDC' : 'apyUSD_to_apxUSD';
+        var qm = quotes[quoteKey] || {};
+        var tiers = ['1000', '10000', '50000', '100000'];
+        var labels = tiers.map(function(t) {
+            var n = Number(t);
+            return (n >= 1000) ? '$' + (n / 1000) + 'K' : '$' + n;
+        });
+        var values = tiers.map(function(t) {
+            return qm[t] && qm[t].slippage_pct != null ? qm[t].slippage_pct : null;
+        });
+        var colors = values.map(function(v) {
+            var st = ApyxRenderer._slippageState(v);
+            if (st === 'ok') return '#22c55e';
+            if (st === 'warn') return '#f59e0b';
+            return '#ef4444';
+        });
+
+        if (window._apyxSlippageChart) window._apyxSlippageChart.destroy();
+        window._apyxSlippageChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Slippage %',
+                    data: values,
+                    backgroundColor: colors,
+                    borderWidth: 0,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) { return v.toFixed(2) + '%'; }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) {
+                                return 'Slippage: ' + (c.raw != null ? c.raw.toFixed(4) + '%' : '—');
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    // ============================================================
+    // §5 Multi-chain + CCIP Bridge
+    // ============================================================
+    _renderMultiChainBridge: function(specific, slug) {
+        var mc = specific.multi_chain || {};
+        var bridge = specific.bridge || {};
+        var isApyUsd = slug === 'apyusd';
+        var unit = isApyUsd ? ' shares' : '';
+
+        var supplyEth, supplyBase, lockedEth, totalEth;
+        // Prefer the on-chain LockRelease pool balance (ccip_locked_eth_raw)
+        // as the "locked" display value — it's the same number the
+        // conservation invariant compares against base supply. Falling
+        // back to canonical - user_circulating keeps older snapshots
+        // working but the derived value diverges when conservation breaks.
+        var lockedFromPool = ApyxRenderer._rawToTokens(mc.ccip_locked_eth_raw);
+        if (isApyUsd) {
+            totalEth = mc.canonical_total_supply_shares;
+            supplyEth = mc.ethereum && mc.ethereum.user_circulating_shares;
+            lockedEth = (lockedFromPool != null) ? lockedFromPool :
+                (mc.ethereum && (mc.canonical_total_supply_shares - mc.ethereum.user_circulating_shares));
+            supplyBase = mc.base && mc.base.supply_shares;
+        } else {
+            totalEth = mc.canonical_total_supply;
+            supplyEth = mc.ethereum && mc.ethereum.user_circulating;
+            lockedEth = (lockedFromPool != null) ? lockedFromPool :
+                (mc.ethereum && (mc.canonical_total_supply - mc.ethereum.user_circulating));
+            supplyBase = mc.base && mc.base.supply;
+        }
+
+        function fmtAmt(n) {
+            if (n == null) return '—';
+            return isApyUsd ? ApyxRenderer._formatShares(n) : CommonRenderer.formatCurrency(n);
+        }
+
+        // Distribution row
+        var distRow =
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+                '<div class="summary-card"><div class="card-label">Ethereum circulating</div>' +
+                    '<div class="card-value">' + fmtAmt(supplyEth) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">user-held</div></div>' +
+                '<div class="summary-card"><div class="card-label">Ethereum locked</div>' +
+                    '<div class="card-value">' + fmtAmt(lockedEth) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">in CCIP LockRelease pool</div></div>' +
+                '<div class="summary-card"><div class="card-label">Base supply</div>' +
+                    '<div class="card-value">' + fmtAmt(supplyBase) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">BurnMint mirror</div></div>' +
+                '<div class="summary-card"><div class="card-label">Canonical total</div>' +
+                    '<div class="card-value">' + fmtAmt(totalEth) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">Ethereum totalSupply</div></div>' +
+            '</div>';
+
+        // Conservation invariant banner — the live signal.
+        var consBanner;
+        if (mc.ccip_conservation_match === true) {
+            consBanner =
+                '<div class="risk-flag" style="background:#dcfce7;color:#166534;border-left:4px solid #22c55e;">' +
+                    '<strong>✓ Conservation invariant satisfied</strong> — locked-on-ETH equals Base supply (exact match).' +
+                '</div>';
+        } else if (mc.ccip_conservation_match === false) {
+            var lockedTok = ApyxRenderer._rawToTokens(mc.ccip_locked_eth_raw);
+            var baseTok = ApyxRenderer._rawToTokens(mc.ccip_burnmint_supply_base_raw);
+            var diff = (lockedTok != null && baseTok != null) ? (lockedTok - baseTok) : null;
+            var diffTxt = (diff != null) ? (isApyUsd ?
+                ApyxRenderer._formatToken(diff, 4) + ' shares' :
+                CommonRenderer.formatCurrencyExact(diff)) : '—';
+            consBanner =
+                '<div class="risk-flag risk-critical">' +
+                    '<strong>🚨 CONSERVATION VIOLATED</strong> — ' +
+                    'locked-on-ETH (' + (isApyUsd ? ApyxRenderer._formatToken(lockedTok, 4) + ' shares' : CommonRenderer.formatCurrencyExact(lockedTok)) + ') ' +
+                    '≠ Base supply (' + (isApyUsd ? ApyxRenderer._formatToken(baseTok, 4) + ' shares' : CommonRenderer.formatCurrencyExact(baseTok)) + ') · ' +
+                    'diff <span class="font-mono">' + diffTxt + '</span>' +
+                    '<div class="text-xs mt-2 font-normal">' +
+                        '<strong>Most likely:</strong> in-flight CCIP message (L1 → L2 finality is ~20-30 min). ' +
+                        'If persistent &gt; 1h, escalate as structural breach.' +
+                    '</div>' +
+                '</div>';
+        } else {
+            consBanner =
+                '<div class="risk-flag risk-info">Conservation invariant status unknown for this snapshot.</div>';
+        }
+
+        // Bridge mechanics row
+        var bridgeMeta =
+            '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">Bridge mechanics</div>' +
+                '<table class="data-table"><tbody>' +
+                    '<tr><td class="font-medium">CCIP version</td><td><span class="font-mono">' + (bridge.ccip_version || APYX_BRIDGE_INFO.ccip_version) + '</span></td></tr>' +
+                    '<tr><td class="font-medium">Architecture</td><td>' + APYX_BRIDGE_INFO.architecture + '</td></tr>' +
+                    '<tr><td class="font-medium">Router</td><td>' +
+                        ApyxRenderer._statusPill('Chainlink-canonical', bridge.router_canonical ? 'ok' : 'critical') +
+                        ' ' + ApyxRenderer._addrCell(bridge.router_eth || APYX_BRIDGE_INFO.router_canonical_eth, 'ethereum') +
+                    '</td></tr>' +
+                    '<tr><td class="font-medium">RMN</td><td>' +
+                        ApyxRenderer._statusPill('Chainlink-canonical', bridge.rmn_canonical ? 'ok' : 'critical') +
+                        ' ' + ApyxRenderer._addrCell(bridge.rmn_proxy_eth || APYX_BRIDGE_INFO.rmn_canonical_eth, 'ethereum') +
+                    '</td></tr>' +
+                    '<tr><td class="font-medium">Rebalancer</td><td>' +
+                        (bridge.rebalancer_zero ?
+                            ApyxRenderer._statusPill('0x0 (no operator)', 'ok', 'locked inventory cannot leave pool') :
+                            ApyxRenderer._statusPill('Set', 'warn') + ' ' + ApyxRenderer._addrCell(bridge.rebalancer, 'ethereum')) +
+                    '</td></tr>' +
+                '</tbody></table>' +
+            '</div>';
+
+        // Rate-limit gauges
+        var rlOutCap = ApyxRenderer._rawToTokens(bridge.rate_limit_outbound_capacity_raw);
+        var rlInCap = ApyxRenderer._rawToTokens(bridge.rate_limit_inbound_capacity_raw);
+        var rlOutUtil = (bridge.rate_limit_outbound_utilization_pct != null) ? bridge.rate_limit_outbound_utilization_pct : 0;
+        function rlBar(label, capTokens, utilPct) {
+            var capTxt = (capTokens != null) ?
+                (capTokens >= 1e6 ? (capTokens / 1e6).toFixed(2) + 'M' : (capTokens / 1e3).toFixed(0) + 'K') +
+                (isApyUsd ? ' shares' : '') : '—';
+            var barWidth = Math.max(0, Math.min(100, utilPct));
+            var color = utilPct < 50 ? '#22c55e' : utilPct < 85 ? '#f59e0b' : '#ef4444';
+            return '<div class="mb-2">' +
+                '<div class="flex justify-between text-sm mb-1">' +
+                    '<span class="text-slate-700 font-medium">' + label + '</span>' +
+                    '<span class="text-xs text-slate-500 font-mono">' + capTxt + '/day · ' + utilPct.toFixed(2) + '% used</span>' +
+                '</div>' +
+                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + barWidth + '%; background:' + color + '"></div></div>' +
+            '</div>';
+        }
+        var rlBlock =
+            '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">CCIP rate limits</div>' +
+                rlBar('Outbound (Eth → Base)', rlOutCap, rlOutUtil) +
+                '<div class="text-xs text-slate-500 mt-1">' +
+                    'Inbound capacity ' + (rlInCap != null ? (rlInCap >= 1e6 ? (rlInCap / 1e6).toFixed(2) + 'M' : (rlInCap / 1e3).toFixed(0) + 'K') : '—') +
+                    (isApyUsd ? ' shares' : '') + '/day · refills continuously.' +
+                '</div>' +
+            '</div>';
+
+        // Pool addresses (CCIP eth + base pools)
+        var poolAddrs =
+            '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">CCIP pool addresses</div>' +
+                '<table class="data-table"><tbody>' +
+                    '<tr><td class="font-medium">Ethereum (LockRelease)</td><td>' + ApyxRenderer._addrCell(bridge.eth_pool_address, 'ethereum') + '</td></tr>' +
+                    '<tr><td class="font-medium">Base (BurnMint)</td><td>' + ApyxRenderer._addrCell(bridge.base_pool_address, 'base') + '</td></tr>' +
+                '</tbody></table>' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Multi-chain &amp; CCIP Bridge</div>' +
+            distRow +
+            consBanner +
+            bridgeMeta +
+            rlBlock +
+            poolAddrs +
+        '</div>';
+    },
+
+    // ============================================================
+    // §6 Trust Stack
+    // ============================================================
+    _renderTrustStack: function(specific) {
+        var g = specific.governance || {};
+
+        function trow(role, addr, threshold, timelock, notes, chain, isWarn) {
+            var rowCls = isWarn ?
+                ' style="background:#fffbeb;border-left:3px solid #f59e0b;"' :
+                '';
+            return '<tr' + rowCls + '>' +
+                '<td class="font-medium">' + role +
+                    (isWarn ? ' <span class="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-amber-200 text-amber-900 ml-1" title="Bridge admin posture is one tier weaker than token admin. 3-of-6 quorum can change rate limits, add chain peers, swap RMN/router, or set rebalancer instantly.">⚠ structural</span>' : '') +
+                '</td>' +
+                '<td>' + ApyxRenderer._addrCell(addr, chain) + '</td>' +
+                '<td class="text-xs">' + (threshold || '—') + '</td>' +
+                '<td class="text-xs">' + (timelock || '—') + '</td>' +
+                '<td class="text-xs text-slate-500">' + (notes || '') + '</td>' +
+            '</tr>';
+        }
+
+        var adminDelayH = (g.target_admin_delay_seconds != null) ? (g.target_admin_delay_seconds / 3600) : null;
+        var adminTimelock = adminDelayH != null ? adminDelayH + 'h via AccessManager' : '—';
+
+        var rows = '';
+        rows += trow('ADMIN Safe (root admin)',
+            g.admin_safe, g.admin_threshold, adminTimelock,
+            'Holds ADMIN_ROLE; governs token contracts', 'ethereum', false);
+        rows += trow('MAINTAINER Safe (bridge owner)',
+            g.maintainer_safe, g.maintainer_threshold, 'None (Ownable, no delay)',
+            'Owns CCIP pools — can change rate limits / peers / RMN / router instantly', 'ethereum', true);
+        rows += trow('AccessManager',
+            g.access_manager, '—', '—',
+            'OZ AccessManager; authority for apxUSD / apyUSD / UnlockToken / AddressList', 'ethereum', false);
+
+        // Maintainer warning callout
+        var maintainerCallout =
+            '<div class="risk-flag risk-warning mt-3">' +
+                '<strong>Bridge admin gap (structural):</strong> the MAINTAINER Safe owning the CCIP pools is ' +
+                '3-of-6 with <strong>no timelock</strong>, while the token-level ADMIN Safe is 4-of-6 with a ' +
+                (adminDelayH != null ? adminDelayH + 'h' : '72h') + ' AccessManager delay. ' +
+                '3 signatures can re-configure rate limits, add chain peers, swap RMN/router, or set a ' +
+                'rebalancer with no review window. On-chain rate limits + Chainlink-canonical RMN provide ' +
+                'operational containment but do not eliminate this asymmetry.' +
+            '</div>';
+
+        var auditLine =
+            '<div class="text-sm text-slate-600 mt-3 pt-3 border-t border-slate-200">' +
+                'Audits: <strong>' + APYX_AUDITS.primary_audits + '</strong> (' + APYX_AUDITS.total_audits + ' total) · ' +
+                'Bug bounty: <strong>' + APYX_AUDITS.bug_bounty + '</strong>' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Trust Stack</div>' +
+            '<table class="data-table">' +
+                '<thead><tr>' +
+                    '<th>Role</th><th>Address</th><th>Threshold</th><th>Timelock</th><th>Notes</th>' +
+                '</tr></thead>' +
+                '<tbody>' + rows + '</tbody>' +
+            '</table>' +
+            maintainerCallout +
+            auditLine +
+        '</div>';
+    },
+
+    // ============================================================
+    // §7 Family panel (async)
+    // ============================================================
+    _loadFamilyPanel: function(currentSlug) {
+        var target = document.getElementById('apyx-family-panel');
+        if (!target) return;
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/apyx_family.json?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(fam) {
+                if (!fam) {
+                    target.innerHTML = '';
+                    return;
+                }
+                target.innerHTML = ApyxRenderer._renderFamilyHtml(fam, currentSlug);
+            })
+            .catch(function() { target.innerHTML = ''; });
+    },
+
+    _renderFamilyHtml: function(fam, currentSlug) {
+        var tokens = fam.tokens || [];
+        var bt = fam.bridge_topology || {};
+        var ba = fam.backing_attestation || {};
+        var ct = fam.custody_topology || {};
+
+        // ----- Cross-asset comparison row -----
+        function tokenCard(t) {
+            var isCurrent = (t.slug === currentSlug);
+            var hiCls = isCurrent ? 'border-blue-400 ring-1 ring-blue-200' : '';
+            var lines = [];
+            lines.push('<div class="text-xs text-slate-400 uppercase font-medium">' + t.name + '</div>');
+            if (t.slug === 'apxusd') {
+                lines.push('<div class="text-base font-bold text-slate-800 mt-1">' + CommonRenderer.formatCurrency(t.supply_usd) + ' supply</div>');
+                lines.push('<div class="text-xs text-slate-500">NAV ' + (t.nav != null ? t.nav.toFixed(4) : '—') + ' · CR ' + (t.collateral_ratio_pct != null ? t.collateral_ratio_pct.toFixed(2) + '%' : '—') + '</div>');
+            } else {
+                lines.push('<div class="text-base font-bold text-slate-800 mt-1">' + ApyxRenderer._formatShares(t.supply_shares) + '</div>');
+                lines.push('<div class="text-xs text-slate-500">NAV ' + (t.nav != null ? t.nav.toFixed(4) : '—') + ' · TVL ' + CommonRenderer.formatCurrency(t.tvl_usd) + '</div>');
+                if (t.capture_ratio_pct != null) {
+                    lines.push('<div class="text-xs text-indigo-600 mt-1">Captures ' + t.capture_ratio_pct.toFixed(1) + '% of apxUSD</div>');
+                }
+            }
+            return '<a href="?asset=' + t.slug + '" class="summary-card block hover:shadow-sm transition-shadow ' + hiCls + '">' +
+                lines.join('') +
+            '</a>';
+        }
+
+        var tokenRow =
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">' +
+                tokens.map(tokenCard).join('') +
+            '</div>';
+
+        // ----- Bridge integrity dashboard -----
+        function consCard(slug, name, c) {
+            if (!c) {
+                return '<div class="summary-card"><div class="text-xs text-slate-400 uppercase font-medium">' + name + '</div>' +
+                    '<div class="text-sm text-slate-500 mt-2 italic">data unavailable</div></div>';
+            }
+            var state = c.match ? 'ok' : 'critical';
+            var lockedTok = ApyxRenderer._rawToTokens(c.locked_eth_raw);
+            var baseTok = ApyxRenderer._rawToTokens(c.supply_base_raw);
+            var diffTok = ApyxRenderer._rawToTokens(c.diff_raw);
+            var isApyShare = (slug === 'apyusd');
+            function fmtTok(v) {
+                if (v == null) return '—';
+                return isApyShare ?
+                    ApyxRenderer._formatToken(v, 4) + ' sh' :
+                    CommonRenderer.formatCurrency(v);
+            }
+            return '<div class="summary-card">' +
+                '<div class="flex items-center justify-between">' +
+                    '<div class="text-xs text-slate-400 uppercase font-medium">' + name + ' conservation</div>' +
+                    ApyxRenderer._statusPill(c.match ? 'Match' : 'Drift', state) +
+                '</div>' +
+                '<div class="grid grid-cols-2 gap-2 mt-2 text-xs">' +
+                    '<div><span class="text-slate-500">Locked-ETH</span><div class="font-mono">' + fmtTok(lockedTok) + '</div></div>' +
+                    '<div><span class="text-slate-500">Base supply</span><div class="font-mono">' + fmtTok(baseTok) + '</div></div>' +
+                '</div>' +
+                (!c.match && diffTok != null ? '<div class="text-xs mt-2 text-red-700">Diff: <span class="font-mono">' + fmtTok(diffTok) + '</span></div>' : '') +
+            '</div>';
+        }
+
+        var anyBreach = bt.any_breach === true;
+        var combinedBanner =
+            (anyBreach ?
+                '<div class="risk-flag risk-warning mb-3"><strong>Bridge family — drift detected on one or more pools.</strong> See per-pool detail below; CCIP finality typically resolves transient drift within 30 min.</div>'
+                :
+                '<div class="risk-flag mb-3" style="background:#dcfce7;color:#166534;border-left:4px solid #22c55e;"><strong>Bridge family — all conservation invariants satisfied.</strong></div>'
+            );
+
+        var bridgeBlock =
+            '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">Bridge integrity dashboard</div>' +
+                combinedBanner +
+                '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">' +
+                    consCard('apxusd', 'apxUSD', bt.apxusd_conservation) +
+                    consCard('apyusd', 'apyUSD', bt.apyusd_conservation) +
+                '</div>' +
+                '<div class="text-xs text-slate-500 mt-2">' +
+                    'Owner Safe: ' + ApyxRenderer._addrCell(bt.owner_safe, 'ethereum') +
+                    ' · threshold ' + (bt.owner_threshold || '—') +
+                    ' · timelock ' + (bt.owner_timelock_seconds === 0 ? 'none' : (bt.owner_timelock_seconds || '—')) +
+                '</div>' +
+            '</div>';
+
+        // ----- Shared backing summary -----
+        var backingState = ba.fetch_status === 'ok' ? 'ok' : 'critical';
+        var backingBlock =
+            '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">Shared backing</div>' +
+                '<div class="flex flex-wrap items-center gap-2">' +
+                    ApyxRenderer._statusPill('Accountable feed', backingState, ba.source || '—') +
+                    ApyxRenderer._statusPill('Collateralization', (ba.collateralization_pct != null && ba.collateralization_pct >= 100) ? 'ok' : 'critical',
+                        (ba.collateralization_pct != null) ? ba.collateralization_pct.toFixed(2) + '%' : '—') +
+                    '<span class="text-xs text-slate-500">Reserves ' + CommonRenderer.formatCurrency(ba.total_reserves_usd) + ' · same feed powers both tokens</span>' +
+                '</div>' +
+            '</div>';
+
+        // ----- Custody topology summary -----
+        var custodyBlock = '';
+        if (ct.entries && ct.entries.length) {
+            var entryRows = ct.entries.map(function(e) {
+                return '<tr>' +
+                    '<td class="font-medium text-xs">' + (e.role || '—') + '</td>' +
+                    '<td>' + ApyxRenderer._addrCell(e.address, 'ethereum') + '</td>' +
+                    '<td class="text-xs text-slate-500">' + (e.control_type || '—') +
+                        (e.timelock_seconds != null ? ' · timelock ' + (e.timelock_seconds === 0 ? 'none' : Math.round(e.timelock_seconds / 3600) + 'h') : '') +
+                    '</td>' +
+                '</tr>';
+            }).join('');
+            custodyBlock =
+                '<div class="mt-4">' +
+                    '<div class="text-sm font-semibold text-slate-700 mb-2">Shared governance topology</div>' +
+                    '<table class="data-table"><tbody>' + entryRows + '</tbody></table>' +
+                '</div>';
+        }
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Apyx Family — cross-asset snapshot</div>' +
+            tokenRow +
+            bridgeBlock +
+            backingBlock +
+            custodyBlock +
+            '<div class="text-xs text-slate-400 mt-3">As of ' + CommonRenderer.formatDate(fam.as_of) + ' · self-computed.</div>' +
+        '</div>';
+    }
+};
