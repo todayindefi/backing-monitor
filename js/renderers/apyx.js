@@ -165,6 +165,41 @@ var ApyxRenderer = {
         return 'critical';
     },
 
+    // Shared peg / NAV-spread threshold. Mirrors the alerter (Layer 3):
+    //   <0.25%  → Healthy (ok)
+    //   <0.50%  → Watch   (warn)
+    //   ≥0.50%  → Stress  (critical)
+    // Uses absolute value — premiums and discounts of equal magnitude get
+    // the same severity.
+    _pegStatusClass: function(pctValue) {
+        if (pctValue == null) return 'unknown';
+        var abs = Math.abs(pctValue);
+        if (abs < 0.25) return 'ok';
+        if (abs < 0.50) return 'warn';
+        return 'critical';
+    },
+
+    _pegStatusLabel: function(state) {
+        if (state === 'ok') return 'Healthy';
+        if (state === 'warn') return 'Watch';
+        if (state === 'critical') return 'Stress';
+        return '—';
+    },
+
+    _pegPctText: function(pct, decimals) {
+        if (pct == null) return '—';
+        decimals = decimals != null ? decimals : 3;
+        var sign = pct >= 0 ? '+' : '';
+        return sign + pct.toFixed(decimals) + '%';
+    },
+
+    _pegPctClass: function(state) {
+        if (state === 'ok') return 'text-green-600';
+        if (state === 'warn') return 'text-amber-600';
+        if (state === 'critical') return 'text-red-600';
+        return 'text-slate-500';
+    },
+
     // ============================================================
     // pre-render — runs before common renderer paints summary cards.
     // ============================================================
@@ -236,6 +271,13 @@ var ApyxRenderer = {
 
         html += ApyxRenderer._renderHeadlineCard(specific, s, slug);
         html += ApyxRenderer._renderBackingAttestation(specific, slug);
+        // Layer 2 peg/NAV performance panel sits between attestation and the
+        // asset-specific trajectory/liquidity panels.
+        if (slug === 'apxusd') {
+            html += ApyxRenderer._renderPegPerformance(specific, slug);
+        } else if (slug === 'apyusd') {
+            html += ApyxRenderer._renderNavPerformance(specific, slug);
+        }
         if (slug === 'apyusd') {
             html += ApyxRenderer._renderYieldTrajectory(specific, s);
             html += ApyxRenderer._renderUnlockQueue(specific);
@@ -251,8 +293,12 @@ var ApyxRenderer = {
         ApyxRenderer._renderReservesDonut(specific, slug);
         ApyxRenderer._renderAttestationTimeline(specific, slug);
         ApyxRenderer._renderSlippageChart(specific, slug);
+        if (slug === 'apxusd') {
+            ApyxRenderer._loadPegHistoryChart(slug);
+        }
         if (slug === 'apyusd') {
-            ApyxRenderer._loadNavTrajectoryChart(slug);
+            ApyxRenderer._loadNavTrajectoryV2(slug);
+            ApyxRenderer._loadNavSpreadChart(slug);
         }
         ApyxRenderer._loadFamilyPanel(slug);
     },
@@ -614,6 +660,500 @@ var ApyxRenderer = {
     },
 
     // ============================================================
+    // §2b Peg Performance (apxUSD)
+    //
+    // Surface market-price drift vs the $1 theoretical for apxUSD. Conditionally
+    // hidden (replaced with a placeholder note) when peg.market_price is null —
+    // the source feed (peg_tracker_latest_usd.json) doesn't yet carry the
+    // Apyx tokens, so the analyzer emits an empty peg block.
+    // ============================================================
+    _renderPegPerformance: function(specific, slug) {
+        var peg = specific.peg || {};
+        var hasMarket = peg.market_price != null;
+
+        if (!hasMarket) {
+            return '<div class="panel">' +
+                '<div class="panel-title">Peg Performance</div>' +
+                '<div class="risk-flag risk-info">' +
+                    '<strong>Peg data not yet tracked.</strong> ' +
+                    'apxUSD has not been added to the upstream peg-tracker feed yet — DEX-implied state ' +
+                    'is visible in the Secondary Liquidity panel below. This panel will populate ' +
+                    'automatically once <span class="font-mono">peg_tracker_latest_usd.json</span> ' +
+                    'begins emitting apxUSD entries.' +
+                '</div>' +
+            '</div>';
+        }
+
+        var pdPct = peg.premium_discount_pct;
+        var state = ApyxRenderer._pegStatusClass(pdPct);
+        var pdCls = ApyxRenderer._pegPctClass(state);
+
+        var marketTxt = '$' + peg.market_price.toFixed(4);
+        var theoTxt = (peg.theoretical_price != null) ?
+            '$' + peg.theoretical_price.toFixed(4) : '$1.0000';
+
+        var statCards =
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">' +
+                '<div class="summary-card"><div class="card-label">Market price</div>' +
+                    '<div class="card-value">' + marketTxt + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">vs theoretical ' + theoTxt + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">Premium / Discount</div>' +
+                    '<div class="card-value ' + pdCls + '">' + ApyxRenderer._pegPctText(pdPct) + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">Status</div>' +
+                    '<div class="mt-2">' + ApyxRenderer._statusPill(ApyxRenderer._pegStatusLabel(state), state) + '</div></div>' +
+            '</div>';
+
+        var chartBlock =
+            '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">30-day premium / discount vs $1</div>' +
+                '<div style="height: 360px; position: relative;">' +
+                    '<canvas id="apyx-peg-history"></canvas>' +
+                '</div>' +
+            '</div>';
+
+        // Secondary metrics — slippage and Curve pool balance ratio are
+        // contemporaneous proxies for peg pressure; rising exit-cost or a
+        // tilting pool signals the same stress before the price moves.
+        var liq = specific.liquidity || {};
+        var quotes = liq.quotes || {};
+        var slip100k = (quotes.apxUSD_to_USDC && quotes.apxUSD_to_USDC['100000']) ?
+            quotes.apxUSD_to_USDC['100000'].slippage_pct : null;
+
+        var pools = liq.pools || [];
+        var curveApxPool = null;
+        for (var i = 0; i < pools.length; i++) {
+            var p = pools[i];
+            if (p.venue === 'curve' && p.pair && p.pair.indexOf('apxUSD/USDC') >= 0) {
+                curveApxPool = p;
+                break;
+            }
+        }
+        var poolRatio = (curveApxPool && curveApxPool.balance_ratio != null) ?
+            curveApxPool.balance_ratio : null;
+
+        var sourceTxt = peg.source || '—';
+        var obsAgo = '—';
+        if (peg.timestamp) {
+            var pegMs = new Date(peg.timestamp).getTime();
+            if (!isNaN(pegMs)) {
+                obsAgo = ApyxRenderer._formatAge((Date.now() - pegMs) / 1000);
+            }
+        }
+
+        var secondaryRow =
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">' +
+                '<div><div class="text-slate-400 uppercase font-medium">Source</div>' +
+                    '<div class="font-mono text-slate-700 mt-0.5">' + sourceTxt + '</div></div>' +
+                '<div><div class="text-slate-400 uppercase font-medium">Last observation</div>' +
+                    '<div class="text-slate-700 mt-0.5">' + obsAgo + '</div></div>' +
+                '<div><div class="text-slate-400 uppercase font-medium">$100K slippage</div>' +
+                    '<div class="font-mono text-slate-700 mt-0.5">' + (slip100k != null ? slip100k.toFixed(3) + '%' : '—') + '</div>' +
+                    '<div class="text-slate-400">peg-pressure proxy</div></div>' +
+                '<div><div class="text-slate-400 uppercase font-medium">Curve apxUSD share</div>' +
+                    '<div class="font-mono text-slate-700 mt-0.5">' + (poolRatio != null ? poolRatio.toFixed(4) : '—') + '</div>' +
+                    '<div class="text-slate-400">drift from 0.5 = pressure</div></div>' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Peg Performance</div>' +
+            statCards +
+            chartBlock +
+            secondaryRow +
+        '</div>';
+    },
+
+    // ============================================================
+    // §2c NAV Performance (apyUSD)
+    //
+    // Contract NAV (on-chain ERC-4626 read) vs DEX-implied NAV (derived from
+    // Curve apyUSD/apxUSD spot × current apxUSD NAV). A persistent spread
+    // is normally an arbitrage-bounded inefficiency, not a peg break — but
+    // the trajectory still matters as an early-warning signal.
+    // ============================================================
+    _renderNavPerformance: function(specific, slug) {
+        var vs = specific.vault_state || {};
+        var contractNav = vs.nav;
+        var dexNav = vs.dex_implied_nav;
+        var spreadPct = vs.nav_spread_pct;
+
+        var state = ApyxRenderer._pegStatusClass(spreadPct);
+        var spreadCls = ApyxRenderer._pegPctClass(state);
+
+        var contractTxt = (contractNav != null) ? contractNav.toFixed(4) : '—';
+        var dexTxt = (dexNav != null) ? dexNav.toFixed(4) : '—';
+
+        var contractUnit = (contractNav != null) ?
+            '<span class="text-xs text-slate-400 font-normal ml-1">apxUSD/share</span>' : '';
+        var dexUnit = (dexNav != null) ?
+            '<span class="text-xs text-slate-400 font-normal ml-1">apxUSD/share</span>' : '';
+
+        var statCards =
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">' +
+                '<div class="summary-card"><div class="card-label">Contract NAV</div>' +
+                    '<div class="card-value">' + contractTxt + contractUnit + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">on-chain ERC-4626 share price</div></div>' +
+                '<div class="summary-card"><div class="card-label">DEX-implied NAV</div>' +
+                    '<div class="card-value">' + dexTxt + dexUnit + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">Curve apyUSD/apxUSD spot × apxUSD NAV</div></div>' +
+                '<div class="summary-card"><div class="card-label">Spread</div>' +
+                    '<div class="card-value ' + spreadCls + '">' + ApyxRenderer._pegPctText(spreadPct) + '</div>' +
+                    '<div class="mt-1">' + ApyxRenderer._statusPill(ApyxRenderer._pegStatusLabel(state), state) + '</div></div>' +
+            '</div>';
+
+        var trajectoryBlock =
+            '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">30-day NAV trajectory (contract vs DEX)</div>' +
+                '<div style="height: 320px; position: relative;">' +
+                    '<canvas id="apyx-nav-trajectory-v2"></canvas>' +
+                '</div>' +
+            '</div>';
+
+        var spreadChartBlock =
+            '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">DEX / contract spread over time</div>' +
+                '<div style="height: 200px; position: relative;">' +
+                    '<canvas id="apyx-nav-spread"></canvas>' +
+                '</div>' +
+            '</div>';
+
+        var y = specific.yield || {};
+        var apy7 = y.implied_apy_7d_pct;
+        var apy30 = y.implied_apy_30d_pct;
+        var apyRow =
+            '<div class="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4 text-xs">' +
+                '<div><div class="text-slate-400 uppercase font-medium">7d implied APY</div>' +
+                    '<div class="font-mono text-slate-700 mt-0.5">' +
+                        (apy7 != null ? apy7.toFixed(2) + '%' : '<span class="italic text-slate-400">Insufficient history</span>') +
+                    '</div></div>' +
+                '<div><div class="text-slate-400 uppercase font-medium">30d implied APY</div>' +
+                    '<div class="font-mono text-slate-700 mt-0.5">' +
+                        (apy30 != null ? apy30.toFixed(2) + '%' : '<span class="italic text-slate-400">Insufficient history</span>') +
+                    '</div></div>' +
+                '<div><div class="text-slate-400 uppercase font-medium">Method</div>' +
+                    '<div class="font-mono text-slate-700 mt-0.5">' + (y.method || 'nav_delta_rolling') + '</div></div>' +
+            '</div>';
+
+        var methodology =
+            '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
+                'Contract NAV is the on-chain ERC-4626 share price. DEX-implied NAV multiplies the Curve ' +
+                'apyUSD/apxUSD spot by the current apxUSD NAV. A persistent negative spread typically ' +
+                'reflects arb-bounded redemption inefficiency, not a peg break — bands match the alerter ' +
+                'thresholds (±25 bps healthy / ±50 bps watch / ±100 bps stress).' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">NAV Performance</div>' +
+            statCards +
+            trajectoryBlock +
+            spreadChartBlock +
+            apyRow +
+            methodology +
+        '</div>';
+    },
+
+    // Shared annotation set — ±25 / ±50 / ±100 bps reference bands. Used by
+    // both the apxUSD peg chart and the apyUSD spread chart.
+    _pegBandAnnotations: function() {
+        return {
+            healthyBand: { type: 'box', yMin: -0.25, yMax: 0.25, backgroundColor: 'rgba(34, 197, 94, 0.07)', borderWidth: 0 },
+            watchBandPos: { type: 'box', yMin: 0.25, yMax: 0.50, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+            watchBandNeg: { type: 'box', yMin: -0.50, yMax: -0.25, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+            stressBandPos: { type: 'box', yMin: 0.50, yMax: 1.00, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+            stressBandNeg: { type: 'box', yMin: -1.00, yMax: -0.50, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+            line25pos: { type: 'line', yMin: 0.25, yMax: 0.25, borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3], label: { content: '+25 bps', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
+            line25neg: { type: 'line', yMin: -0.25, yMax: -0.25, borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3], label: { content: '-25 bps', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
+            line50pos: { type: 'line', yMin: 0.50, yMax: 0.50, borderColor: '#f59e0b', borderWidth: 1, borderDash: [3, 3], label: { content: '+50 bps', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+            line50neg: { type: 'line', yMin: -0.50, yMax: -0.50, borderColor: '#f59e0b', borderWidth: 1, borderDash: [3, 3], label: { content: '-50 bps', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+            line100pos: { type: 'line', yMin: 1.00, yMax: 1.00, borderColor: '#ef4444', borderWidth: 1, borderDash: [3, 3], label: { content: '+100 bps', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+            line100neg: { type: 'line', yMin: -1.00, yMax: -1.00, borderColor: '#ef4444', borderWidth: 1, borderDash: [3, 3], label: { content: '-100 bps', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+            zero: { type: 'line', yMin: 0, yMax: 0, borderColor: '#94a3b8', borderWidth: 1 }
+        };
+    },
+
+    _loadPegHistoryChart: function(slug) {
+        var ctx = document.getElementById('apyx-peg-history');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + slug + '_backing_history.json?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                if (!hist || !Array.isArray(hist.entries)) {
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Peg history unavailable.</div>';
+                    return;
+                }
+                var pts = hist.entries.filter(function(e) { return e.peg_premium_discount_pct != null; });
+                if (pts.length < 2) {
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">' +
+                        'Peg history not yet populated — chart will appear once the upstream peg tracker emits apxUSD readings.</div>';
+                    return;
+                }
+                ApyxRenderer._drawPegHistory(ctx, pts);
+            })
+            .catch(function() {
+                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Peg history unavailable.</div>';
+            });
+    },
+
+    _drawPegHistory: function(ctx, entries) {
+        var labels = entries.map(function(e) {
+            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+            return new Date(ts);
+        });
+        var pdSeries = entries.map(function(e) { return e.peg_premium_discount_pct; });
+        var pointColors = pdSeries.map(function(v) {
+            var st = ApyxRenderer._pegStatusClass(v);
+            if (st === 'ok') return '#3b82f6';
+            if (st === 'warn') return '#f59e0b';
+            if (st === 'critical') return '#ef4444';
+            return '#94a3b8';
+        });
+
+        if (window._apyxPegChart) {
+            try { window._apyxPegChart.destroy(); } catch (e) {}
+        }
+        window._apyxPegChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Premium / Discount',
+                    data: pdSeries,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    fill: false,
+                    tension: 0.25,
+                    pointRadius: 2,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        suggestedMin: -1.0,
+                        suggestedMax: 1.0,
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) { return (v > 0 ? '+' : '') + Number(v).toFixed(2) + '%'; }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) { return c.dataset.label + ': ' + (c.raw != null ? c.raw.toFixed(3) + '%' : '—'); }
+                        }
+                    },
+                    annotation: { annotations: ApyxRenderer._pegBandAnnotations() }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    _loadNavTrajectoryV2: function(slug) {
+        var ctx = document.getElementById('apyx-nav-trajectory-v2');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + slug + '_backing_history.json?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                if (!hist || !Array.isArray(hist.entries) || hist.entries.length < 2) {
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">NAV history not yet available.</div>';
+                    return;
+                }
+                ApyxRenderer._drawNavTrajectoryV2(ctx, hist.entries);
+            })
+            .catch(function() {
+                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">NAV history unavailable.</div>';
+            });
+    },
+
+    _drawNavTrajectoryV2: function(ctx, entries) {
+        var labels = entries.map(function(e) {
+            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+            return new Date(ts);
+        });
+        var navSeries = entries.map(function(e) { return e.nav; });
+        var dexSeries = entries.map(function(e) { return e.dex_implied_nav; });
+
+        if (window._apyxNavChartV2) {
+            try { window._apyxNavChartV2.destroy(); } catch (e) {}
+        }
+        window._apyxNavChartV2 = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Contract NAV',
+                        data: navSeries,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                        fill: false,
+                        tension: 0.25,
+                        pointRadius: 0,
+                        borderWidth: 2,
+                        spanGaps: true
+                    },
+                    {
+                        label: 'DEX-implied NAV',
+                        data: dexSeries,
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'transparent',
+                        borderDash: [5, 4],
+                        fill: false,
+                        tension: 0.25,
+                        pointRadius: 0,
+                        borderWidth: 2,
+                        spanGaps: true
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) { return Number(v).toFixed(4); }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) { return c.dataset.label + ': ' + (c.raw != null ? Number(c.raw).toFixed(6) : '—'); }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            baseline: {
+                                type: 'line', yMin: 1.0, yMax: 1.0,
+                                borderColor: '#cbd5e1', borderWidth: 1, borderDash: [4, 4],
+                                label: { content: 'launch baseline 1.0', display: true, position: 'start', font: { size: 9 }, color: '#94a3b8' }
+                            }
+                        }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    _loadNavSpreadChart: function(slug) {
+        var ctx = document.getElementById('apyx-nav-spread');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + slug + '_backing_history.json?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                if (!hist || !Array.isArray(hist.entries)) {
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Spread history unavailable.</div>';
+                    return;
+                }
+                var pts = hist.entries.filter(function(e) { return e.nav_spread_pct != null; });
+                if (pts.length < 2) {
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">' +
+                        'NAV spread history is accumulating — chart will populate after a few hours of samples.</div>';
+                    return;
+                }
+                ApyxRenderer._drawNavSpreadChart(ctx, pts);
+            })
+            .catch(function() {
+                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Spread history unavailable.</div>';
+            });
+    },
+
+    _drawNavSpreadChart: function(ctx, entries) {
+        var labels = entries.map(function(e) {
+            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+            return new Date(ts);
+        });
+        var spreadSeries = entries.map(function(e) { return e.nav_spread_pct; });
+        var pointColors = spreadSeries.map(function(v) {
+            var st = ApyxRenderer._pegStatusClass(v);
+            if (st === 'ok') return '#3b82f6';
+            if (st === 'warn') return '#f59e0b';
+            if (st === 'critical') return '#ef4444';
+            return '#94a3b8';
+        });
+
+        if (window._apyxNavSpreadChart) {
+            try { window._apyxNavSpreadChart.destroy(); } catch (e) {}
+        }
+        window._apyxNavSpreadChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'DEX / contract spread',
+                    data: spreadSeries,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    fill: false,
+                    tension: 0.25,
+                    pointRadius: 2,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        suggestedMin: -1.0,
+                        suggestedMax: 1.0,
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) { return (v > 0 ? '+' : '') + Number(v).toFixed(2) + '%'; }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) { return c.dataset.label + ': ' + (c.raw != null ? c.raw.toFixed(3) + '%' : '—'); }
+                        }
+                    },
+                    annotation: { annotations: ApyxRenderer._pegBandAnnotations() }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    // ============================================================
     // §3a Yield Trajectory  (apyUSD only)
     // ============================================================
     _renderYieldTrajectory: function(specific, s) {
@@ -643,113 +1183,24 @@ var ApyxRenderer = {
                     '<div class="card-value text-base text-slate-500 italic">(awaiting history)</div></div>' +
             '</div>';
 
-        var navChart =
-            '<div class="mt-4">' +
-                '<div class="text-sm font-semibold text-slate-700 mb-2">NAV trajectory</div>' +
-                '<div style="height: 220px; position: relative;">' +
-                    '<canvas id="apyx-nav-trajectory"></canvas>' +
-                '</div>' +
-            '</div>';
-
+        // NAV trajectory chart moved to the NAV Performance panel (Layer 2) —
+        // it now overlays DEX-implied NAV alongside contract NAV, which
+        // subsumes the standalone contract-only chart that used to live here.
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
                 'Yield is real STRC dividend pass-through. NAV growth in the first week of operations ' +
                 '(Feb 20-27 2026) included a one-time ~33% launch seed from donation-pattern apxUSD ' +
                 'inflows; the post-launch trajectory is the recurring rate (~13% APY, consistent with ' +
                 'STRC\'s 11-15% indicated-rate range). <strong>New buyers earn the ongoing rate, not the ' +
-                'headline.</strong>' +
+                'headline.</strong> See the NAV Performance panel above for the live contract-vs-DEX overlay.' +
             '</div>';
 
         return '<div class="panel">' +
             '<div class="panel-title">Yield Trajectory</div>' +
             headlineHtml +
             apyRow +
-            navChart +
             methodology +
         '</div>';
-    },
-
-    _loadNavTrajectoryChart: function(slug) {
-        var ctx = document.getElementById('apyx-nav-trajectory');
-        if (!ctx || typeof Chart === 'undefined') return;
-        var nocache = Math.floor(Date.now() / 60000);
-        fetch('data/' + slug + '_backing_history.json?nocache=' + nocache)
-            .then(function(r) { return r.ok ? r.json() : null; })
-            .then(function(hist) {
-                if (!hist || !Array.isArray(hist.entries) || hist.entries.length < 2) {
-                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">' +
-                        'NAV history is accumulating — chart will populate after a few hours of samples.</div>';
-                    return;
-                }
-                ApyxRenderer._drawNavTrajectory(ctx, hist.entries);
-            })
-            .catch(function() {
-                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">' +
-                    'NAV history unavailable.</div>';
-            });
-    },
-
-    _drawNavTrajectory: function(ctx, entries) {
-        var labels = entries.map(function(e) {
-            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
-            return new Date(ts);
-        });
-        var navSeries = entries.map(function(e) { return e.nav; });
-
-        if (window._apyxNavChart) window._apyxNavChart.destroy();
-        window._apyxNavChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'NAV (apxUSD per share)',
-                    data: navSeries,
-                    borderColor: '#a855f7',
-                    backgroundColor: 'rgba(168, 85, 247, 0.08)',
-                    fill: true,
-                    tension: 0.25,
-                    pointRadius: 0,
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
-                        grid: { display: false },
-                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
-                    },
-                    y: {
-                        grid: { color: '#f1f5f9' },
-                        ticks: {
-                            font: { size: 11 },
-                            callback: function(v) { return Number(v).toFixed(4); }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
-                    tooltip: {
-                        callbacks: {
-                            label: function(c) { return c.dataset.label + ': ' + Number(c.raw).toFixed(6); }
-                        }
-                    },
-                    annotation: {
-                        annotations: {
-                            baseline: {
-                                type: 'line', yMin: 1.0, yMax: 1.0,
-                                borderColor: '#94a3b8', borderWidth: 1, borderDash: [4, 4],
-                                label: { content: 'launch baseline 1.0', display: true, position: 'start', font: { size: 9 }, color: '#64748b' }
-                            }
-                        }
-                    }
-                },
-                interaction: { intersect: false, mode: 'index' }
-            }
-        });
     },
 
     // ============================================================
