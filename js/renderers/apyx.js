@@ -276,7 +276,7 @@ var ApyxRenderer = {
         if (slug === 'apxusd') {
             html += ApyxRenderer._renderPegPerformance(specific, slug);
         } else if (slug === 'apyusd') {
-            html += ApyxRenderer._renderNavPerformance(specific, slug);
+            html += ApyxRenderer._renderSecondaryMarket(specific, slug);
         }
         if (slug === 'apyusd') {
             html += ApyxRenderer._renderYieldTrajectory(specific, s);
@@ -297,8 +297,8 @@ var ApyxRenderer = {
             ApyxRenderer._loadPegHistoryChart(slug);
         }
         if (slug === 'apyusd') {
-            ApyxRenderer._loadNavTrajectoryV2(slug);
-            ApyxRenderer._loadNavSpreadChart(slug);
+            ApyxRenderer._loadMarketPriceTrajectory(slug);
+            ApyxRenderer._loadMarketDiscountChart(slug);
         }
         ApyxRenderer._loadFamilyPanel(slug);
     },
@@ -763,28 +763,33 @@ var ApyxRenderer = {
     },
 
     // ============================================================
-    // §2c NAV Performance (apyUSD)
+    // §2c Secondary Market (apyUSD)
     //
-    // Contract NAV (on-chain ERC-4626 read) vs DEX-implied NAV (derived from
-    // Curve apyUSD/apxUSD spot × current apxUSD NAV). A persistent spread
-    // is normally an arbitrage-bounded inefficiency, not a peg break — but
-    // the trajectory still matters as an early-warning signal.
+    // Contract NAV (on-chain ERC-4626 share price) vs Market Price (live
+    // Curve apyUSD/apxUSD spot — apxUSD per apyUSD share). A persistent
+    // market discount is normally arb-bounded redemption inefficiency
+    // driven by the 30-day UnlockToken cooldown, not a peg break.
+    //
+    // Field reads use Layer-1 names with a fallback to legacy:
+    //   dex_market_price ?? dex_implied_nav
+    //   market_discount_pct ?? nav_spread_pct
+    // Fallback becomes dead code once Layer 1 is live everywhere.
     // ============================================================
-    _renderNavPerformance: function(specific, slug) {
+    _renderSecondaryMarket: function(specific, slug) {
         var vs = specific.vault_state || {};
         var contractNav = vs.nav;
-        var dexNav = vs.dex_implied_nav;
-        var spreadPct = vs.nav_spread_pct;
+        var marketPrice = (vs.dex_market_price != null) ? vs.dex_market_price : vs.dex_implied_nav;
+        var discountPct = (vs.market_discount_pct != null) ? vs.market_discount_pct : vs.nav_spread_pct;
 
-        var state = ApyxRenderer._pegStatusClass(spreadPct);
-        var spreadCls = ApyxRenderer._pegPctClass(state);
+        var state = ApyxRenderer._pegStatusClass(discountPct);
+        var discountCls = ApyxRenderer._pegPctClass(state);
 
         var contractTxt = (contractNav != null) ? contractNav.toFixed(4) : '—';
-        var dexTxt = (dexNav != null) ? dexNav.toFixed(4) : '—';
+        var marketTxt = (marketPrice != null) ? marketPrice.toFixed(4) : '—';
 
         var contractUnit = (contractNav != null) ?
             '<span class="text-xs text-slate-400 font-normal ml-1">apxUSD/share</span>' : '';
-        var dexUnit = (dexNav != null) ?
+        var marketUnit = (marketPrice != null) ?
             '<span class="text-xs text-slate-400 font-normal ml-1">apxUSD/share</span>' : '';
 
         var statCards =
@@ -792,27 +797,27 @@ var ApyxRenderer = {
                 '<div class="summary-card"><div class="card-label">Contract NAV</div>' +
                     '<div class="card-value">' + contractTxt + contractUnit + '</div>' +
                     '<div class="text-xs text-slate-400 mt-1">on-chain ERC-4626 share price</div></div>' +
-                '<div class="summary-card"><div class="card-label">DEX-implied NAV</div>' +
-                    '<div class="card-value">' + dexTxt + dexUnit + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">Curve apyUSD/apxUSD spot × apxUSD NAV</div></div>' +
-                '<div class="summary-card"><div class="card-label">Spread</div>' +
-                    '<div class="card-value ' + spreadCls + '">' + ApyxRenderer._pegPctText(spreadPct) + '</div>' +
+                '<div class="summary-card"><div class="card-label">Market Price</div>' +
+                    '<div class="card-value">' + marketTxt + marketUnit + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">Curve apyUSD/apxUSD spot, apxUSD/share</div></div>' +
+                '<div class="summary-card"><div class="card-label">Market Discount</div>' +
+                    '<div class="card-value ' + discountCls + '">' + ApyxRenderer._pegPctText(discountPct) + '</div>' +
                     '<div class="mt-1">' + ApyxRenderer._statusPill(ApyxRenderer._pegStatusLabel(state), state) + '</div></div>' +
             '</div>';
 
         var trajectoryBlock =
             '<div class="mt-4">' +
-                '<div class="text-sm font-semibold text-slate-700 mb-2">30-day NAV trajectory (contract vs DEX)</div>' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">Market price vs contract NAV (30 days)</div>' +
                 '<div style="height: 320px; position: relative;">' +
-                    '<canvas id="apyx-nav-trajectory-v2"></canvas>' +
+                    '<canvas id="apyx-market-price-trajectory"></canvas>' +
                 '</div>' +
             '</div>';
 
-        var spreadChartBlock =
+        var discountChartBlock =
             '<div class="mt-4">' +
-                '<div class="text-sm font-semibold text-slate-700 mb-2">DEX / contract spread over time</div>' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">Market discount over time</div>' +
                 '<div style="height: 200px; position: relative;">' +
-                    '<canvas id="apyx-nav-spread"></canvas>' +
+                    '<canvas id="apyx-market-discount"></canvas>' +
                 '</div>' +
             '</div>';
 
@@ -835,17 +840,19 @@ var ApyxRenderer = {
 
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
-                'Contract NAV is the on-chain ERC-4626 share price. DEX-implied NAV multiplies the Curve ' +
-                'apyUSD/apxUSD spot by the current apxUSD NAV. A persistent negative spread typically ' +
-                'reflects arb-bounded redemption inefficiency, not a peg break — bands match the alerter ' +
-                'thresholds (±25 bps healthy / ±50 bps watch / ±100 bps stress).' +
+                'Contract NAV is the on-chain ERC-4626 share price (how many apxUSD each apyUSD share ' +
+                'represents). Market Price is the live Curve apyUSD/apxUSD spot — what the secondary ' +
+                'market actually pays for one share right now. A persistent market discount typically ' +
+                'reflects arb-bounded redemption inefficiency from the 30-day UnlockToken cooldown ' +
+                '(arbs can\'t close the gap atomically), not a peg break. Reference bands match the ' +
+                'alerter thresholds: ±25 bps healthy / ±50 bps watch / ±100 bps stress.' +
             '</div>';
 
         return '<div class="panel">' +
-            '<div class="panel-title">NAV Performance</div>' +
+            '<div class="panel-title">Secondary Market</div>' +
             statCards +
             trajectoryBlock +
-            spreadChartBlock +
+            discountChartBlock +
             apyRow +
             methodology +
         '</div>';
@@ -962,36 +969,40 @@ var ApyxRenderer = {
         });
     },
 
-    _loadNavTrajectoryV2: function(slug) {
-        var ctx = document.getElementById('apyx-nav-trajectory-v2');
+    _loadMarketPriceTrajectory: function(slug) {
+        var ctx = document.getElementById('apyx-market-price-trajectory');
         if (!ctx || typeof Chart === 'undefined') return;
         var nocache = Math.floor(Date.now() / 60000);
         fetch('data/' + slug + '_backing_history.json?nocache=' + nocache)
             .then(function(r) { return r.ok ? r.json() : null; })
             .then(function(hist) {
                 if (!hist || !Array.isArray(hist.entries) || hist.entries.length < 2) {
-                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">NAV history not yet available.</div>';
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Market price history not yet available.</div>';
                     return;
                 }
-                ApyxRenderer._drawNavTrajectoryV2(ctx, hist.entries);
+                ApyxRenderer._drawMarketPriceTrajectory(ctx, hist.entries);
             })
             .catch(function() {
-                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">NAV history unavailable.</div>';
+                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Market price history unavailable.</div>';
             });
     },
 
-    _drawNavTrajectoryV2: function(ctx, entries) {
+    _drawMarketPriceTrajectory: function(ctx, entries) {
         var labels = entries.map(function(e) {
             var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
             return new Date(ts);
         });
         var navSeries = entries.map(function(e) { return e.nav; });
-        var dexSeries = entries.map(function(e) { return e.dex_implied_nav; });
+        // Layer 1 emits dex_market_price; fall back to legacy dex_implied_nav
+        // until all live JSONs carry the new name.
+        var marketSeries = entries.map(function(e) {
+            return (e.dex_market_price != null) ? e.dex_market_price : e.dex_implied_nav;
+        });
 
-        if (window._apyxNavChartV2) {
-            try { window._apyxNavChartV2.destroy(); } catch (e) {}
+        if (window._apyxMarketPriceChart) {
+            try { window._apyxMarketPriceChart.destroy(); } catch (e) {}
         }
-        window._apyxNavChartV2 = new Chart(ctx, {
+        window._apyxMarketPriceChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
@@ -1008,8 +1019,8 @@ var ApyxRenderer = {
                         spanGaps: true
                     },
                     {
-                        label: 'DEX-implied NAV',
-                        data: dexSeries,
+                        label: 'Market Price',
+                        data: marketSeries,
                         borderColor: '#f59e0b',
                         backgroundColor: 'transparent',
                         borderDash: [5, 4],
@@ -1061,37 +1072,42 @@ var ApyxRenderer = {
         });
     },
 
-    _loadNavSpreadChart: function(slug) {
-        var ctx = document.getElementById('apyx-nav-spread');
+    _loadMarketDiscountChart: function(slug) {
+        var ctx = document.getElementById('apyx-market-discount');
         if (!ctx || typeof Chart === 'undefined') return;
         var nocache = Math.floor(Date.now() / 60000);
         fetch('data/' + slug + '_backing_history.json?nocache=' + nocache)
             .then(function(r) { return r.ok ? r.json() : null; })
             .then(function(hist) {
                 if (!hist || !Array.isArray(hist.entries)) {
-                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Spread history unavailable.</div>';
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Market discount history unavailable.</div>';
                     return;
                 }
-                var pts = hist.entries.filter(function(e) { return e.nav_spread_pct != null; });
+                // Layer 1 field market_discount_pct, fallback to legacy nav_spread_pct.
+                var pts = hist.entries.filter(function(e) {
+                    return (e.market_discount_pct != null) || (e.nav_spread_pct != null);
+                });
                 if (pts.length < 2) {
                     ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">' +
-                        'NAV spread history is accumulating — chart will populate after a few hours of samples.</div>';
+                        'Market discount history is accumulating — chart will populate after a few hours of samples.</div>';
                     return;
                 }
-                ApyxRenderer._drawNavSpreadChart(ctx, pts);
+                ApyxRenderer._drawMarketDiscountChart(ctx, pts);
             })
             .catch(function() {
-                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Spread history unavailable.</div>';
+                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Market discount history unavailable.</div>';
             });
     },
 
-    _drawNavSpreadChart: function(ctx, entries) {
+    _drawMarketDiscountChart: function(ctx, entries) {
         var labels = entries.map(function(e) {
             var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
             return new Date(ts);
         });
-        var spreadSeries = entries.map(function(e) { return e.nav_spread_pct; });
-        var pointColors = spreadSeries.map(function(v) {
+        var discountSeries = entries.map(function(e) {
+            return (e.market_discount_pct != null) ? e.market_discount_pct : e.nav_spread_pct;
+        });
+        var pointColors = discountSeries.map(function(v) {
             var st = ApyxRenderer._pegStatusClass(v);
             if (st === 'ok') return '#3b82f6';
             if (st === 'warn') return '#f59e0b';
@@ -1099,16 +1115,16 @@ var ApyxRenderer = {
             return '#94a3b8';
         });
 
-        if (window._apyxNavSpreadChart) {
-            try { window._apyxNavSpreadChart.destroy(); } catch (e) {}
+        if (window._apyxMarketDiscountChart) {
+            try { window._apyxMarketDiscountChart.destroy(); } catch (e) {}
         }
-        window._apyxNavSpreadChart = new Chart(ctx, {
+        window._apyxMarketDiscountChart = new Chart(ctx, {
             type: 'line',
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'DEX / contract spread',
-                    data: spreadSeries,
+                    label: 'Market discount',
+                    data: discountSeries,
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.08)',
                     pointBackgroundColor: pointColors,
@@ -1183,16 +1199,17 @@ var ApyxRenderer = {
                     '<div class="card-value text-base text-slate-500 italic">(awaiting history)</div></div>' +
             '</div>';
 
-        // NAV trajectory chart moved to the NAV Performance panel (Layer 2) —
-        // it now overlays DEX-implied NAV alongside contract NAV, which
-        // subsumes the standalone contract-only chart that used to live here.
+        // NAV trajectory chart moved to the Secondary Market panel (Layer 2) —
+        // it now overlays the Curve apyUSD/apxUSD market price alongside
+        // contract NAV, which subsumes the standalone contract-only chart
+        // that used to live here.
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
                 'Yield is real STRC dividend pass-through. NAV growth in the first week of operations ' +
                 '(Feb 20-27 2026) included a one-time ~33% launch seed from donation-pattern apxUSD ' +
                 'inflows; the post-launch trajectory is the recurring rate (~13% APY, consistent with ' +
                 'STRC\'s 11-15% indicated-rate range). <strong>New buyers earn the ongoing rate, not the ' +
-                'headline.</strong> See the NAV Performance panel above for the live contract-vs-DEX overlay.' +
+                'headline.</strong> See the Secondary Market panel above for the live market-price-vs-NAV overlay.' +
             '</div>';
 
         return '<div class="panel">' +
