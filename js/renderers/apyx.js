@@ -1802,7 +1802,7 @@ var ApyxRenderer = {
             bridgeBlock +
             backingBlock +
             custodyBlock +
-            '<div class="text-xs text-slate-400 mt-3">As of ' + CommonRenderer.formatDate(fam.as_of) + ' · self-computed.</div>' +
+            '<div class="text-xs text-slate-400 mt-3">As of ' + CommonRenderer.formatDate(fam.timestamp || fam.as_of) + ' · self-computed.</div>' +
         '</div>';
     }
 };
