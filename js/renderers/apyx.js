@@ -705,7 +705,7 @@ var ApyxRenderer = {
 
         var chartBlock =
             '<div class="mt-4">' +
-                '<div class="text-sm font-semibold text-slate-700 mb-2">30-day premium / discount vs $1</div>' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">7-day premium / discount vs $1</div>' +
                 '<div style="height: 360px; position: relative;">' +
                     '<canvas id="apyx-peg-history"></canvas>' +
                 '</div>' +
@@ -807,7 +807,7 @@ var ApyxRenderer = {
 
         var trajectoryBlock =
             '<div class="mt-4">' +
-                '<div class="text-sm font-semibold text-slate-700 mb-2">Market price vs contract NAV (30 days)</div>' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">Market price vs contract NAV (7 days)</div>' +
                 '<div style="height: 320px; position: relative;">' +
                     '<canvas id="apyx-market-price-trajectory"></canvas>' +
                 '</div>' +
@@ -888,7 +888,12 @@ var ApyxRenderer = {
                     ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Peg history unavailable.</div>';
                     return;
                 }
-                var pts = hist.entries.filter(function(e) { return e.peg_premium_discount_pct != null; });
+                var cutoff = Date.now() - 7 * 24 * 3600 * 1000;
+                var pts = hist.entries.filter(function(e) {
+                    if (e.peg_premium_discount_pct == null) return false;
+                    var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+                    return new Date(ts).getTime() >= cutoff;
+                });
                 if (pts.length < 2) {
                     ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">' +
                         'Peg history not yet populated — chart will appear once the upstream peg tracker emits apxUSD readings.</div>';
@@ -980,7 +985,16 @@ var ApyxRenderer = {
                     ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Market price history not yet available.</div>';
                     return;
                 }
-                ApyxRenderer._drawMarketPriceTrajectory(ctx, hist.entries);
+                var cutoff = Date.now() - 7 * 24 * 3600 * 1000;
+                var windowed = hist.entries.filter(function(e) {
+                    var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+                    return new Date(ts).getTime() >= cutoff;
+                });
+                if (windowed.length < 2) {
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Market price history not yet available.</div>';
+                    return;
+                }
+                ApyxRenderer._drawMarketPriceTrajectory(ctx, windowed);
             })
             .catch(function() {
                 ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Market price history unavailable.</div>';
@@ -1084,8 +1098,11 @@ var ApyxRenderer = {
                     return;
                 }
                 // Layer 1 field market_discount_pct, fallback to legacy nav_spread_pct.
+                var cutoff = Date.now() - 7 * 24 * 3600 * 1000;
                 var pts = hist.entries.filter(function(e) {
-                    return (e.market_discount_pct != null) || (e.nav_spread_pct != null);
+                    if (e.market_discount_pct == null && e.nav_spread_pct == null) return false;
+                    var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+                    return new Date(ts).getTime() >= cutoff;
                 });
                 if (pts.length < 2) {
                     ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">' +
