@@ -165,40 +165,13 @@ var ApyxRenderer = {
         return 'critical';
     },
 
-    // Shared peg / NAV-spread threshold. Mirrors the alerter (Layer 3):
-    //   <0.25%  → Healthy (ok)
-    //   <0.50%  → Watch   (warn)
-    //   ≥0.50%  → Stress  (critical)
-    // Uses absolute value — premiums and discounts of equal magnitude get
-    // the same severity.
-    _pegStatusClass: function(pctValue) {
-        if (pctValue == null) return 'unknown';
-        var abs = Math.abs(pctValue);
-        if (abs < 0.25) return 'ok';
-        if (abs < 0.50) return 'warn';
-        return 'critical';
-    },
-
-    _pegStatusLabel: function(state) {
-        if (state === 'ok') return 'Healthy';
-        if (state === 'warn') return 'Watch';
-        if (state === 'critical') return 'Stress';
-        return '—';
-    },
-
-    _pegPctText: function(pct, decimals) {
-        if (pct == null) return '—';
-        decimals = decimals != null ? decimals : 3;
-        var sign = pct >= 0 ? '+' : '';
-        return sign + pct.toFixed(decimals) + '%';
-    },
-
-    _pegPctClass: function(state) {
-        if (state === 'ok') return 'text-green-600';
-        if (state === 'warn') return 'text-amber-600';
-        if (state === 'critical') return 'text-red-600';
-        return 'text-slate-500';
-    },
+    // Peg / NAV-spread helpers — canonical implementations live in CommonRenderer
+    // (shared with the OUSD renderer). These pass-throughs preserve the existing
+    // ApyxRenderer._peg* call sites.
+    _pegStatusClass: function(pctValue) { return CommonRenderer.pegStatusClass(pctValue); },
+    _pegStatusLabel: function(state) { return CommonRenderer.pegStatusLabel(state); },
+    _pegPctText: function(pct, decimals) { return CommonRenderer.pegPctText(pct, decimals); },
+    _pegPctClass: function(state) { return CommonRenderer.pegPctClass(state); },
 
     // ============================================================
     // pre-render — runs before common renderer paints summary cards.
@@ -858,24 +831,7 @@ var ApyxRenderer = {
         '</div>';
     },
 
-    // Shared annotation set — ±25 / ±50 / ±100 bps reference bands. Used by
-    // both the apxUSD peg chart and the apyUSD spread chart.
-    _pegBandAnnotations: function() {
-        return {
-            healthyBand: { type: 'box', yMin: -0.25, yMax: 0.25, backgroundColor: 'rgba(34, 197, 94, 0.07)', borderWidth: 0 },
-            watchBandPos: { type: 'box', yMin: 0.25, yMax: 0.50, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
-            watchBandNeg: { type: 'box', yMin: -0.50, yMax: -0.25, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
-            stressBandPos: { type: 'box', yMin: 0.50, yMax: 1.00, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
-            stressBandNeg: { type: 'box', yMin: -1.00, yMax: -0.50, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
-            line25pos: { type: 'line', yMin: 0.25, yMax: 0.25, borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3], label: { content: '+25 bps', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
-            line25neg: { type: 'line', yMin: -0.25, yMax: -0.25, borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3], label: { content: '-25 bps', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
-            line50pos: { type: 'line', yMin: 0.50, yMax: 0.50, borderColor: '#f59e0b', borderWidth: 1, borderDash: [3, 3], label: { content: '+50 bps', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
-            line50neg: { type: 'line', yMin: -0.50, yMax: -0.50, borderColor: '#f59e0b', borderWidth: 1, borderDash: [3, 3], label: { content: '-50 bps', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
-            line100pos: { type: 'line', yMin: 1.00, yMax: 1.00, borderColor: '#ef4444', borderWidth: 1, borderDash: [3, 3], label: { content: '+100 bps', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
-            line100neg: { type: 'line', yMin: -1.00, yMax: -1.00, borderColor: '#ef4444', borderWidth: 1, borderDash: [3, 3], label: { content: '-100 bps', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
-            zero: { type: 'line', yMin: 0, yMax: 0, borderColor: '#94a3b8', borderWidth: 1 }
-        };
-    },
+    _pegBandAnnotations: function() { return CommonRenderer.pegBandAnnotations(); },
 
     _loadPegHistoryChart: function(slug) {
         var ctx = document.getElementById('apyx-peg-history');

@@ -12,6 +12,10 @@ var OUSDRenderer = {
         var html = '';
         var s = data.summary;
 
+        // Peg performance — sits at the top of the asset-specific section,
+        // immediately under the static Backing Breakdown / Allocation panels.
+        html += OUSDRenderer._renderPegPerformance(specific);
+
         // Supply breakdown: circulating vs POL
         var circulating = s.circulating_supply || s.tvl_ex_pol;
         if (circulating && s.pol_self_minted) {
@@ -149,5 +153,219 @@ var OUSDRenderer = {
         }
 
         container.innerHTML = html;
+
+        // Post-render chart — DOM nodes must exist first.
+        OUSDRenderer._loadPegHistoryChart('ousd');
+    },
+
+    // ============================================================
+    // Peg Performance — mirrors apxUSD's panel pattern.
+    //
+    // Renders a placeholder when peg data is absent or peg.market_price is
+    // null — covers both the "analyzer patch not yet shipped" case (no peg
+    // block on asset_specific) and a transient fetch failure mid-cycle.
+    // ============================================================
+    _renderPegPerformance: function(specific) {
+        var peg = (specific && specific.peg) || {};
+        var hasMarket = peg.market_price != null;
+
+        if (!hasMarket) {
+            return '<div class="panel">' +
+                '<div class="panel-title">Peg Performance</div>' +
+                '<div class="risk-flag risk-info">' +
+                    '<strong>Peg data not yet available.</strong> ' +
+                    'The OUSD analyzer has not emitted a peg block yet — this panel will ' +
+                    'populate automatically once <span class="font-mono">ousd_backing.json</span> ' +
+                    'begins carrying <span class="font-mono">asset_specific.peg.market_price</span>.' +
+                '</div>' +
+            '</div>';
+        }
+
+        var pdPct = peg.premium_discount_pct;
+        var state = CommonRenderer.pegStatusClass(pdPct);
+        var pdCls = CommonRenderer.pegPctClass(state);
+
+        var marketTxt = '$' + peg.market_price.toFixed(4);
+        var theoTxt = (peg.theoretical_price != null) ?
+            '$' + peg.theoretical_price.toFixed(4) : '$1.0000';
+
+        var statCards =
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">' +
+                '<div class="summary-card"><div class="card-label">Market price</div>' +
+                    '<div class="card-value">' + marketTxt + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">vs theoretical ' + theoTxt + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">Premium / Discount</div>' +
+                    '<div class="card-value ' + pdCls + '">' + CommonRenderer.pegPctText(pdPct) + '</div></div>' +
+                '<div class="summary-card"><div class="card-label">Status</div>' +
+                    '<div class="mt-2">' + OUSDRenderer._statusPill(CommonRenderer.pegStatusLabel(state), state) + '</div></div>' +
+            '</div>';
+
+        var chartBlock =
+            '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">7-day premium / discount vs $1</div>' +
+                '<div style="height: 360px; position: relative;">' +
+                    '<canvas id="ousd-peg-history"></canvas>' +
+                '</div>' +
+            '</div>';
+
+        var sourceTxt = peg.source || '—';
+        var obsAgo = '—';
+        if (peg.timestamp) {
+            var pegMs = new Date(peg.timestamp.endsWith('Z') ? peg.timestamp : peg.timestamp + 'Z').getTime();
+            if (!isNaN(pegMs)) {
+                obsAgo = OUSDRenderer._formatAge((Date.now() - pegMs) / 1000);
+            }
+        }
+
+        var secondaryRow =
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">' +
+                '<div><div class="text-slate-400 uppercase font-medium">Source</div>' +
+                    '<div class="font-mono text-slate-700 mt-0.5">' + sourceTxt + '</div></div>' +
+                '<div><div class="text-slate-400 uppercase font-medium">Last observation</div>' +
+                    '<div class="text-slate-700 mt-0.5">' + obsAgo + '</div></div>' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Peg Performance</div>' +
+            statCards +
+            chartBlock +
+            secondaryRow +
+        '</div>';
+    },
+
+    _loadPegHistoryChart: function(slug) {
+        var ctx = document.getElementById('ousd-peg-history');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + slug + '_backing_history.json?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                if (!hist || !Array.isArray(hist.entries)) {
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Peg history unavailable.</div>';
+                    return;
+                }
+                var cutoff = Date.now() - 7 * 24 * 3600 * 1000;
+                var pts = hist.entries.filter(function(e) {
+                    if (e.peg_premium_discount_pct == null) return false;
+                    var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+                    return new Date(ts).getTime() >= cutoff;
+                });
+                if (pts.length < 2) {
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">' +
+                        'Peg history not yet populated — chart will appear once the analyzer emits a few cycles of OUSD peg readings.</div>';
+                    return;
+                }
+                OUSDRenderer._drawPegHistory(ctx, pts);
+            })
+            .catch(function() {
+                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Peg history unavailable.</div>';
+            });
+    },
+
+    _drawPegHistory: function(ctx, entries) {
+        var labels = entries.map(function(e) {
+            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+            return new Date(ts);
+        });
+        var pdSeries = entries.map(function(e) { return e.peg_premium_discount_pct; });
+        var pointColors = pdSeries.map(function(v) {
+            var st = CommonRenderer.pegStatusClass(v);
+            if (st === 'ok') return '#3b82f6';
+            if (st === 'warn') return '#f59e0b';
+            if (st === 'critical') return '#ef4444';
+            return '#94a3b8';
+        });
+
+        if (window._ousdPegChart) {
+            try { window._ousdPegChart.destroy(); } catch (e) {}
+        }
+        window._ousdPegChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Premium / Discount',
+                    data: pdSeries,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    fill: false,
+                    tension: 0.25,
+                    pointRadius: 2,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        suggestedMin: -1.0,
+                        suggestedMax: 1.0,
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) { return (v > 0 ? '+' : '') + Number(v).toFixed(2) + '%'; }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) { return c.dataset.label + ': ' + (c.raw != null ? c.raw.toFixed(3) + '%' : '—'); }
+                        }
+                    },
+                    annotation: { annotations: CommonRenderer.pegBandAnnotations() }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    _statusDot: function(state) {
+        var color;
+        if (state === 'ok') color = '#22c55e';
+        else if (state === 'warn') color = '#f59e0b';
+        else if (state === 'critical') color = '#ef4444';
+        else color = '#94a3b8';
+        return '<span class="inline-block w-2 h-2 rounded-full align-middle" style="background:' + color + '"></span>';
+    },
+
+    _statusPill: function(label, state, extra) {
+        var bg, fg;
+        if (state === 'ok')        { bg = 'bg-green-100'; fg = 'text-green-800'; }
+        else if (state === 'warn') { bg = 'bg-amber-100'; fg = 'text-amber-800'; }
+        else if (state === 'critical') { bg = 'bg-red-100'; fg = 'text-red-800'; }
+        else                       { bg = 'bg-slate-100'; fg = 'text-slate-700'; }
+        return '<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ' + bg + ' ' + fg + '">' +
+            OUSDRenderer._statusDot(state) +
+            '<span>' + label + (extra ? ' <span class="font-mono">' + extra + '</span>' : '') + '</span>' +
+        '</span>';
+    },
+
+    _formatAge: function(seconds) {
+        if (seconds == null) return '—';
+        var s = Math.max(0, Math.floor(seconds));
+        if (s < 60) return s + 's ago';
+        if (s < 3600) {
+            var m = Math.floor(s / 60);
+            var r = s - m * 60;
+            return m + 'm ' + (r < 10 ? '0' + r : r) + 's ago';
+        }
+        if (s < 86400) {
+            var h = Math.floor(s / 3600);
+            var m2 = Math.floor((s - h * 3600) / 60);
+            return h + 'h ' + (m2 < 10 ? '0' + m2 : m2) + 'm ago';
+        }
+        var d = Math.floor(s / 86400);
+        return d + (d === 1 ? ' day ago' : ' days ago');
     }
 };
