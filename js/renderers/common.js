@@ -31,6 +31,59 @@ const CommonRenderer = {
         });
     },
 
+    // ------ Peg / NAV-spread shared helpers ------
+    // Threshold mirrors the Layer-3 alerter:
+    //   <0.25% → Healthy (ok)
+    //   <0.50% → Watch   (warn)
+    //   ≥0.50% → Stress  (critical)
+    // Absolute value — premium and discount of equal magnitude get the same severity.
+    pegStatusClass(pctValue) {
+        if (pctValue == null) return 'unknown';
+        var abs = Math.abs(pctValue);
+        if (abs < 0.25) return 'ok';
+        if (abs < 0.50) return 'warn';
+        return 'critical';
+    },
+
+    pegStatusLabel(state) {
+        if (state === 'ok') return 'Healthy';
+        if (state === 'warn') return 'Watch';
+        if (state === 'critical') return 'Stress';
+        return '—';
+    },
+
+    pegPctText(pct, decimals) {
+        if (pct == null) return '—';
+        decimals = decimals != null ? decimals : 3;
+        var sign = pct >= 0 ? '+' : '';
+        return sign + pct.toFixed(decimals) + '%';
+    },
+
+    pegPctClass(state) {
+        if (state === 'ok') return 'text-green-600';
+        if (state === 'warn') return 'text-amber-600';
+        if (state === 'critical') return 'text-red-600';
+        return 'text-slate-500';
+    },
+
+    // ±25 / ±50 / ±100 bps reference bands for peg/spread charts.
+    pegBandAnnotations() {
+        return {
+            healthyBand:   { type: 'box', yMin: -0.25, yMax: 0.25, backgroundColor: 'rgba(34, 197, 94, 0.07)', borderWidth: 0 },
+            watchBandPos:  { type: 'box', yMin: 0.25, yMax: 0.50, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+            watchBandNeg:  { type: 'box', yMin: -0.50, yMax: -0.25, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+            stressBandPos: { type: 'box', yMin: 0.50, yMax: 1.00, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+            stressBandNeg: { type: 'box', yMin: -1.00, yMax: -0.50, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+            line25pos:  { type: 'line', yMin: 0.25,  yMax: 0.25,  borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3], label: { content: '+25 bps', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
+            line25neg:  { type: 'line', yMin: -0.25, yMax: -0.25, borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3], label: { content: '-25 bps', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
+            line50pos:  { type: 'line', yMin: 0.50,  yMax: 0.50,  borderColor: '#f59e0b', borderWidth: 1, borderDash: [3, 3], label: { content: '+50 bps', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+            line50neg:  { type: 'line', yMin: -0.50, yMax: -0.50, borderColor: '#f59e0b', borderWidth: 1, borderDash: [3, 3], label: { content: '-50 bps', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+            line100pos: { type: 'line', yMin: 1.00,  yMax: 1.00,  borderColor: '#ef4444', borderWidth: 1, borderDash: [3, 3], label: { content: '+100 bps', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+            line100neg: { type: 'line', yMin: -1.00, yMax: -1.00, borderColor: '#ef4444', borderWidth: 1, borderDash: [3, 3], label: { content: '-100 bps', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+            zero:       { type: 'line', yMin: 0,     yMax: 0,     borderColor: '#94a3b8', borderWidth: 1 }
+        };
+    },
+
     // ------ Summary cards ------
     renderSummaryCards(data) {
         var s = data.summary;
