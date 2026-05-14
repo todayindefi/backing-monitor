@@ -208,3 +208,40 @@ body.dark .risk-critical { background: #450a0a; color: #fca5a5; }
 body.dark .risk-warning { background: #451a03; color: #fcd34d; }
 body.dark .risk-info { background: #172554; color: #93c5fd; }
 body.dark footer { color: #475569; }
+
+/* R15: mobile table overflow + nav fade ---------------------------- */
+
+/* Wrap data tables so they can scroll horizontally inside their panel
+   at narrow viewports. Right-edge mask telegraphs "more to scroll." */
+.data-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 18px), transparent 100%);
+            mask-image: linear-gradient(to right, black 0, black calc(100% - 18px), transparent 100%);
+}
+
+/* At md: and up tables fit; drop the fade so it doesn't suggest a
+   scroll affordance that isn't there. overflow-x: auto stays — no-op
+   when content fits, defensive otherwise. */
+@media (min-width: 768px) {
+    .data-table-scroll {
+        -webkit-mask-image: none;
+                mask-image: none;
+    }
+}
+
+/* Sticky anchor nav: same fade so the truncated link list is visibly
+   scrollable. Targets the inner overflow-x-auto div added in 6af51d9. */
+#asset-anchor-nav .overflow-x-auto {
+    -webkit-mask-image: linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%);
+            mask-image: linear-gradient(to right, black 0, black calc(100% - 24px), transparent 100%);
+}
+
+/* apxUSD's 9 links fit at sm:; apyUSD's 11 may still scroll on phablets
+   up to ~720px but the fade is harmless when content fits. */
+@media (min-width: 640px) {
+    #asset-anchor-nav .overflow-x-auto {
+        -webkit-mask-image: none;
+                mask-image: none;
+    }
+}

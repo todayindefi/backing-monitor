@@ -621,15 +621,17 @@ var ApyxRenderer = {
             '<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">' +
                 '<div class="lg:col-span-3">' +
                     '<div class="text-sm font-semibold text-slate-700 mb-2">Reserves split</div>' +
-                    '<table class="data-table">' +
-                        '<thead><tr>' +
-                            '<th>Asset</th>' +
-                            '<th class="text-right">USD</th>' +
-                            '<th class="text-right">%</th>' +
-                            '<th>Issuer</th>' +
-                        '</tr></thead>' +
-                        '<tbody>' + resRows + '</tbody>' +
-                    '</table>' +
+                    '<div class="data-table-scroll">' +
+                        '<table class="data-table">' +
+                            '<thead><tr>' +
+                                '<th>Asset</th>' +
+                                '<th class="text-right">USD</th>' +
+                                '<th class="text-right">%</th>' +
+                                '<th>Issuer</th>' +
+                            '</tr></thead>' +
+                            '<tbody>' + resRows + '</tbody>' +
+                        '</table>' +
+                    '</div>' +
                 '</div>' +
                 '<div class="lg:col-span-2">' +
                     '<div class="text-sm font-semibold text-slate-700 mb-2">Composition</div>' +
@@ -1584,15 +1586,17 @@ var ApyxRenderer = {
                 '<div class="text-sm font-semibold text-slate-700">' + title + '</div>' +
                 (subtitle ? '<div class="text-xs text-slate-500 mt-0.5">' + subtitle + '</div>' : '') +
                 '<div class="text-sm text-slate-600 mt-1 mb-2">' + subtotal + '</div>' +
-                '<table class="data-table">' +
-                    '<thead><tr>' +
-                        '<th>Venue</th><th>Chain</th><th>Pair</th>' +
-                        '<th class="text-right">Depth (USD)</th>' +
-                        '<th class="text-right">Balance ratio</th>' +
-                        '<th>Pool</th>' +
-                    '</tr></thead>' +
-                    '<tbody>' + sectionPools.map(poolRowHtml).join('') + '</tbody>' +
-                '</table>' +
+                '<div class="data-table-scroll">' +
+                    '<table class="data-table">' +
+                        '<thead><tr>' +
+                            '<th>Venue</th><th>Chain</th><th>Pair</th>' +
+                            '<th class="text-right">Depth (USD)</th>' +
+                            '<th class="text-right">Balance ratio</th>' +
+                            '<th>Pool</th>' +
+                        '</tr></thead>' +
+                        '<tbody>' + sectionPools.map(poolRowHtml).join('') + '</tbody>' +
+                    '</table>' +
+                '</div>' +
             '</div>';
         }
 
@@ -1937,12 +1941,14 @@ var ApyxRenderer = {
 
         return '<div class="panel">' +
             '<div class="panel-title">Trust Stack</div>' +
-            '<table class="data-table">' +
-                '<thead><tr>' +
-                    '<th>Role</th><th>Address</th><th>Threshold</th><th>Timelock</th><th>Notes</th>' +
-                '</tr></thead>' +
-                '<tbody>' + rows + '</tbody>' +
-            '</table>' +
+            '<div class="data-table-scroll">' +
+                '<table class="data-table">' +
+                    '<thead><tr>' +
+                        '<th>Role</th><th>Address</th><th>Threshold</th><th>Timelock</th><th>Notes</th>' +
+                    '</tr></thead>' +
+                    '<tbody>' + rows + '</tbody>' +
+                '</table>' +
+            '</div>' +
             maintainerCallout +
             auditLine +
         '</div>';
