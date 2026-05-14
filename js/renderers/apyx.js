@@ -1463,42 +1463,8 @@ var ApyxRenderer = {
     _renderLiquidity: function(specific, slug) {
         var liq = specific.liquidity || {};
         var pools = liq.pools || [];
-        var totalDepthEth = pools.filter(function(p) { return p.chain === 'ethereum'; })
-            .reduce(function(sum, p) { return sum + (p.depth_usd || 0); }, 0);
-        var totalDepthBase = pools.filter(function(p) { return p.chain === 'base'; })
-            .reduce(function(sum, p) { return sum + (p.depth_usd || 0); }, 0);
 
-        // For apxUSD we filter to pools where apxUSD is the primary side
-        // (Curve apxUSD/USDC + the two pancake pools with apxUSD).
-        // For apyUSD we show the apyUSD/apxUSD pools.
-        var relevantPools = pools;
-        if (slug === 'apxusd') {
-            relevantPools = pools.filter(function(p) {
-                return p.pair && p.pair.indexOf('apxUSD') >= 0;
-            });
-        } else if (slug === 'apyusd') {
-            relevantPools = pools.filter(function(p) {
-                return p.pair && p.pair.indexOf('apyUSD') >= 0;
-            });
-        }
-
-        var headline;
-        if (slug === 'apxusd') {
-            headline = '~' + CommonRenderer.formatCurrency(totalDepthEth + totalDepthBase) +
-                ' across ' + relevantPools.length + ' pool' + (relevantPools.length === 1 ? '' : 's') +
-                ' (' + CommonRenderer.formatCurrency(totalDepthEth) + ' Ethereum';
-            if (totalDepthBase > 0) headline += ' · ' + CommonRenderer.formatCurrency(totalDepthBase) + ' Base';
-            headline += ')';
-        } else {
-            headline = '~' + CommonRenderer.formatCurrency(totalDepthEth + totalDepthBase) +
-                ' across ' + relevantPools.length + ' pool' + (relevantPools.length === 1 ? '' : 's') +
-                ' (' + CommonRenderer.formatCurrency(totalDepthEth) + ' Ethereum';
-            if (totalDepthBase > 0) headline += ' · ' + CommonRenderer.formatCurrency(totalDepthBase) + ' Base';
-            headline += ')';
-        }
-
-        // Pool inventory table
-        var poolRows = relevantPools.map(function(p) {
+        function poolRowHtml(p) {
             var venueName = (p.venue === 'pcs_v3') ? 'PancakeSwap V3' :
                             (p.venue === 'curve') ? 'Curve' :
                             (p.venue ? p.venue.charAt(0).toUpperCase() + p.venue.slice(1) : '—');
@@ -1513,9 +1479,70 @@ var ApyxRenderer = {
                 '<td class="text-right font-mono ' + ratioCls + '">' + ratio + '</td>' +
                 '<td>' + ApyxRenderer._addrCell(p.address, p.chain) + '</td>' +
             '</tr>';
-        }).join('');
+        }
 
-        // KyberSwap slippage tiers — pick the right quote map by slug.
+        function sectionHtml(title, sectionPools, subtitle) {
+            if (!sectionPools.length) return '';
+            var depthEth = sectionPools.filter(function(p) { return p.chain === 'ethereum'; })
+                .reduce(function(s, p) { return s + (p.depth_usd || 0); }, 0);
+            var depthBase = sectionPools.filter(function(p) { return p.chain === 'base'; })
+                .reduce(function(s, p) { return s + (p.depth_usd || 0); }, 0);
+            var subtotal = '~' + CommonRenderer.formatCurrency(depthEth + depthBase) +
+                ' across ' + sectionPools.length + ' pool' + (sectionPools.length === 1 ? '' : 's') +
+                ' (' + CommonRenderer.formatCurrency(depthEth) + ' Ethereum';
+            if (depthBase > 0) subtotal += ' · ' + CommonRenderer.formatCurrency(depthBase) + ' Base';
+            subtotal += ')';
+
+            return '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700">' + title + '</div>' +
+                (subtitle ? '<div class="text-xs text-slate-500 mt-0.5">' + subtitle + '</div>' : '') +
+                '<div class="text-sm text-slate-600 mt-1 mb-2">' + subtotal + '</div>' +
+                '<table class="data-table">' +
+                    '<thead><tr>' +
+                        '<th>Venue</th><th>Chain</th><th>Pair</th>' +
+                        '<th class="text-right">Depth (USD)</th>' +
+                        '<th class="text-right">Balance ratio</th>' +
+                        '<th>Pool</th>' +
+                    '</tr></thead>' +
+                    '<tbody>' + sectionPools.map(poolRowHtml).join('') + '</tbody>' +
+                '</table>' +
+            '</div>';
+        }
+
+        var sectionsHtml = '';
+        if (slug === 'apxusd') {
+            // R8: split apxUSD secondary liquidity into primary-exit (USDC-quoted)
+            // and cross-asset (apxUSD without USDC) sections. Per-section subtotals
+            // keep the actual USDC-exit depth from being masked by cross-asset
+            // depth that doesn't help an apxUSD holder reach dollars. Filter is
+            // USDC-substring rather than "any dollar stable" — a future USDT/DAI
+            // pool would need the predicate broadened by hand.
+            var primaryPools = pools.filter(function(p) {
+                return p.pair && p.pair.indexOf('USDC') >= 0;
+            });
+            var crossPools = pools.filter(function(p) {
+                return p.pair && p.pair.indexOf('apxUSD') >= 0 && p.pair.indexOf('USDC') < 0;
+            });
+            sectionsHtml =
+                sectionHtml(
+                    'Primary exit (→ USDC)',
+                    primaryPools,
+                    'Direct apxUSD-to-USDC venues — the actual retail exit path to dollars.'
+                ) +
+                sectionHtml(
+                    'Cross-asset (apyUSD ↔ apxUSD)',
+                    crossPools,
+                    'apyUSD holders use these to convert into apxUSD (then exit via the primary venues above). Not an apxUSD-side exit.'
+                );
+        } else if (slug === 'apyusd') {
+            var apyusdPools = pools.filter(function(p) {
+                return p.pair && p.pair.indexOf('apyUSD') >= 0;
+            });
+            sectionsHtml = sectionHtml('Secondary depth', apyusdPools, null);
+        } else {
+            sectionsHtml = sectionHtml('Pools', pools, null);
+        }
+
         var quotes = liq.quotes || {};
         var quoteKey = (slug === 'apxusd') ? 'apxUSD_to_USDC' : 'apyUSD_to_apxUSD';
         var qm = quotes[quoteKey] || {};
@@ -1549,20 +1576,7 @@ var ApyxRenderer = {
 
         return '<div class="panel">' +
             '<div class="panel-title">Secondary Liquidity</div>' +
-            '<div class="text-sm text-slate-700 mb-3">' + headline + '</div>' +
-            (poolRows ?
-                '<table class="data-table">' +
-                    '<thead><tr>' +
-                        '<th>Venue</th><th>Chain</th><th>Pair</th>' +
-                        '<th class="text-right">Depth (USD)</th>' +
-                        '<th class="text-right">Balance ratio</th>' +
-                        '<th>Pool</th>' +
-                    '</tr></thead>' +
-                    '<tbody>' + poolRows + '</tbody>' +
-                '</table>'
-                :
-                '<div class="text-xs text-slate-400 italic">No pools enumerated in this snapshot.</div>'
-            ) +
+            (sectionsHtml || '<div class="text-xs text-slate-400 italic mt-2">No pools enumerated in this snapshot.</div>') +
             slippageBlock +
         '</div>';
     },
