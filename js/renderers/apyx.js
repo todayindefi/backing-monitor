@@ -316,6 +316,7 @@ var ApyxRenderer = {
         html += '<div id="apyx-family-panel"></div>';
         html += anc('panel-attestation', ApyxRenderer._renderBackingAttestation(specific, slug));
         html += anc('panel-stress',      ApyxRenderer._renderStressLens(specific, slug));
+        html += anc('panel-watch',       ApyxRenderer._renderExternalWatch(specific, slug));
         if (slug === 'apxusd') {
             html += anc('panel-peg',     ApyxRenderer._renderPegPerformance(specific, slug));
         } else if (slug === 'apyusd') {
@@ -408,6 +409,7 @@ var ApyxRenderer = {
                 { id: 'apyx-family-panel', label: 'Family' },
                 { id: 'panel-attestation', label: 'Backing' },
                 { id: 'panel-stress',      label: 'Stress' },
+                { id: 'panel-watch',       label: 'Watch' },
                 { id: 'panel-peg',         label: 'Peg' },
                 { id: 'panel-liquidity',   label: 'Liquidity' },
                 { id: 'panel-bridge',      label: 'Bridge' },
@@ -420,6 +422,7 @@ var ApyxRenderer = {
                 { id: 'apyx-family-panel', label: 'Family' },
                 { id: 'panel-attestation', label: 'Backing' },
                 { id: 'panel-stress',      label: 'Stress' },
+                { id: 'panel-watch',       label: 'Watch' },
                 { id: 'panel-market',      label: 'Market' },
                 { id: 'panel-yield',       label: 'Yield' },
                 { id: 'panel-unlock',      label: 'Unlock' },
@@ -759,6 +762,67 @@ var ApyxRenderer = {
             '</div>' +
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
                 methodology +
+            '</div>' +
+        '</div>';
+    },
+
+    // ============================================================
+    // §2c External Watch — STRC leading indicators
+    //
+    // Pairs with the Stress Lens above. Stress Lens shows hypothetical
+    // writedowns; this panel surfaces the observed inputs a reader should
+    // check to anticipate which scenario is moving toward realized. Per
+    // assets/apxusd.md §Key Risk Notes: MSTR equity price, STRC's
+    // monthly-reset dividend rate, Strategy's 10-Q filing cadence.
+    //
+    // R12.minimal: three click-through tiles, no live data. Upgradeable
+    // in-place to value-and-context displays if demand emerges.
+    // ============================================================
+    _renderExternalWatch: function(specific, slug) {
+        var tiles = [
+            {
+                label: 'MSTR price',
+                source: 'Yahoo Finance',
+                href: 'https://finance.yahoo.com/quote/MSTR',
+                why: 'Strategy\'s underlying equity. Drawdown is the binding stress trigger for STRC.'
+            },
+            {
+                label: 'STRC dividend rate',
+                source: 'Strategy IR',
+                href: 'https://www.strategy.com/investor-relations',
+                why: 'Monthly-reset variable-rate preferred. Watch for moves outside the historical 11–15% band.'
+            },
+            {
+                label: 'Strategy 10-Q filings',
+                source: 'SEC EDGAR',
+                href: 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0001050446&type=10-Q',
+                why: 'Quarterly disclosure of BTC holdings, STRC outstanding, and dividend coverage.'
+            }
+        ];
+
+        var tilesHtml = tiles.map(function(t) {
+            return '<a href="' + t.href + '" target="_blank" rel="noopener noreferrer" ' +
+                   'class="block rounded-lg border border-slate-200 dark:border-slate-700 p-3 ' +
+                   'hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-slate-700 transition-colors">' +
+                '<div class="flex items-baseline justify-between gap-2">' +
+                    '<div class="text-sm font-semibold text-slate-800 dark:text-slate-200">' + t.label + '</div>' +
+                    '<div class="text-xs text-blue-600 dark:text-blue-400">' + t.source + ' &#8599;</div>' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">' + t.why + '</div>' +
+            '</a>';
+        }).join('');
+
+        return '<div class="panel">' +
+            '<div class="panel-title">External Watch <span class="text-xs font-normal text-slate-500">— STRC leading indicators</span></div>' +
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">' +
+                tilesHtml +
+            '</div>' +
+            '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
+                'These are the report\'s named leading indicators for STRC concentration risk ' +
+                '(see assets/apxusd.md §Key Risk Notes). They sit alongside the Stress Lens above ' +
+                'to let you correlate observed inputs with hypothetical writedown scenarios — ' +
+                'e.g. a sharp MSTR drawdown or STRC rate cut should move the relevant Stress Lens ' +
+                'scenarios from hypothetical toward "watch closely." Links open in a new tab.' +
             '</div>' +
         '</div>';
     },
