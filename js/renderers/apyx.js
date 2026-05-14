@@ -486,6 +486,17 @@ var ApyxRenderer = {
             var pct = (splitPct[k] != null) ? (splitPct[k] * 100) : (totalReserves > 0 ? (usd / totalReserves * 100) : 0);
             var color = APYX_RESERVES_COLORS[k] || '#94a3b8';
             var issuer = APYX_RESERVES_ISSUER[k] || '—';
+            // R5: promote "(unitemized)" from faint gray to an amber
+            // disclosure-gap badge. Public Accountable attestation doesn't
+            // break Cash & Equivalents into deposits / T-bills / USDC, so
+            // the cash-side risk profile is unobservable. Pattern-matches
+            // on the magic string so any future unitemized component
+            // (APYX_RESERVES_ISSUER) inherits the badge.
+            var issuerCell = (issuer === '(unitemized)')
+                ? '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200" ' +
+                  'title="Cash composition is not itemized in the public Accountable attestation — could be bank deposits, T-bills, USDC, or another instrument. ' +
+                  'Disclosure gap flagged in assets/apxusd.md §Key Risk Notes.">⚠ unitemized</span>'
+                : '<span class="text-xs text-slate-500">' + issuer + '</span>';
             return '<tr>' +
                 '<td class="font-medium">' +
                     '<span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:' + color + '"></span>' +
@@ -493,7 +504,7 @@ var ApyxRenderer = {
                 '</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(usd) + '</td>' +
                 '<td class="text-right font-mono">' + pct.toFixed(2) + '%</td>' +
-                '<td class="text-xs text-slate-500">' + issuer + '</td>' +
+                '<td>' + issuerCell + '</td>' +
             '</tr>';
         }).join('');
         resRows += '<tr class="font-bold border-t-2 border-slate-200">' +
