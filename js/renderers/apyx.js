@@ -236,7 +236,7 @@ var ApyxRenderer = {
         var specific = data.asset_specific || {};
         if (!ApyxRenderer._isApyx(specific.type)) return;
 
-        ApyxRenderer._suppressCommonPanels();
+        ApyxRenderer._suppressCommonPanels(data);
 
         var slug = data.asset_slug;
         var s = data.summary;
@@ -276,7 +276,14 @@ var ApyxRenderer = {
         ApyxRenderer._loadFamilyPanel(slug);
     },
 
-    _suppressCommonPanels: function() {
+    _suppressCommonPanels: function(data) {
+        // R2: drop the top summary-card strip. The §1 Headline card below
+        // already carries Supply / Backing / Collateralization / Status with
+        // richer context (chain pills, asset tagline, status pill, NAV for
+        // apyUSD). The top strip is pure duplication.
+        var summaryCards = document.getElementById('summary-cards');
+        if (summaryCards) summaryCards.style.display = 'none';
+
         // §2 Backing Attestation supplies a custom reserves donut + table —
         // hide the default breakdown panel and the default pie panel.
         var bd = document.getElementById('breakdown-table');
@@ -289,12 +296,24 @@ var ApyxRenderer = {
             var p2 = pie.closest('.panel');
             if (p2) p2.style.display = 'none';
         }
-        // Stretch the Risk Flags panel into the now-empty column.
+
+        // R3: hide Risk Flags panel when only the "No risk flags" placeholder
+        // would render. Structural caveats are surfaced in Trust Stack +
+        // Backing Attestation; a green "No risk flags" pill here misleads.
+        // When real exception flags fire, keep the panel and stretch it.
+        var hasRealFlags = data && Array.isArray(data.risk_flags) && data.risk_flags.length > 0;
         var risk = document.getElementById('risk-flags');
         if (risk) {
-            var wrapper = risk.closest('.panel').parentElement;
-            if (wrapper && !wrapper.classList.contains('lg:col-span-3')) {
-                wrapper.classList.add('lg:col-span-3');
+            var riskPanel = risk.closest('.panel');
+            if (riskPanel) {
+                if (!hasRealFlags) {
+                    riskPanel.style.display = 'none';
+                } else {
+                    var wrapper = riskPanel.parentElement;
+                    if (wrapper && !wrapper.classList.contains('lg:col-span-3')) {
+                        wrapper.classList.add('lg:col-span-3');
+                    }
+                }
             }
         }
     },
