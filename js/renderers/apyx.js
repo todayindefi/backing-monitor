@@ -301,6 +301,7 @@ var ApyxRenderer = {
 
         html += ApyxRenderer._renderHeadlineCard(specific, s, slug);
         html += ApyxRenderer._renderBackingAttestation(specific, slug);
+        html += ApyxRenderer._renderStressLens(specific, slug);
         // Layer 2 peg/NAV performance panel sits between attestation and the
         // asset-specific trajectory/liquidity panels.
         if (slug === 'apxusd') {
@@ -397,7 +398,21 @@ var ApyxRenderer = {
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Backing</div>' +
                         '<div class="text-lg font-bold text-slate-800">' + CommonRenderer.formatCurrency(s.total_backing) + '</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Collateralization</div>' +
-                        '<div class="text-lg font-bold ' + crCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 2) + '</div></div>' +
+                        '<div class="text-lg font-bold ' + crCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 2) + '</div>' +
+                        // R6: surface the absolute buffer alongside CR — assets/apxusd.md
+                        // §Key Risk Notes flags "thin absolute buffer" as a binding
+                        // constraint; the percentage form hides how thin the cushion is.
+                        (function() {
+                            var buf = s.surplus_deficit;
+                            if (buf == null) return '';
+                            var sign = buf >= 0 ? '+' : '−';
+                            var bufCls = buf >= 0 ? 'text-green-600' : 'text-red-600';
+                            var bufMag = '$' + (Math.abs(buf) / 1e6).toFixed(2) + 'M';
+                            return '<div class="text-xs text-slate-500 mt-0.5">' +
+                                'Buffer: <span class="font-mono ' + bufCls + '">' + sign + bufMag + '</span>' +
+                            '</div>';
+                        })() +
+                    '</div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
                         '<div class="text-lg">' + ApyxRenderer._statusPill(pausedLabel, pausedState) + '</div></div>' +
                 '</div>';
@@ -565,6 +580,97 @@ var ApyxRenderer = {
             donutBlock +
             timelineBlock +
             methodology +
+        '</div>';
+    },
+
+    // ============================================================
+    // §2b STRC Concentration Stress Lens
+    //
+    // Quantifies what an STRC writedown does to collateralization.
+    // The report's "50% writedown still leaves most backing intact"
+    // is technically true but obscures that even a 25% writedown puts
+    // CR below par with current composition. Reads already-present
+    // backing_attestation fields; no new analyzer surface.
+    // ============================================================
+    _renderStressLens: function(specific, slug) {
+        var ba = specific.backing_attestation || {};
+        var split = ba.reserves_split || {};
+        var supplyUsd = ba.total_supply_usd;
+        var strc = split['STRC'] || 0;
+        var nonStrc = (split['Cash & Equivalents'] || 0) +
+                      (split['SATA'] || 0) +
+                      (split['Other'] || 0);
+
+        if (!supplyUsd || strc === 0) return '';
+
+        var scenarios = [
+            { label: 'Current',     mult: 1.00, isBaseline: true },
+            { label: '−25% STRC',   mult: 0.75 },
+            { label: '−50% STRC',   mult: 0.50 },
+            { label: '−100% STRC',  mult: 0.00 }
+        ];
+
+        var fmtUsdM = function(v) {
+            var sign = v >= 0 ? '+' : '−';
+            return sign + '$' + (Math.abs(v) / 1e6).toFixed(2) + 'M';
+        };
+
+        var cardsHtml = scenarios.map(function(sc) {
+            var backing = nonStrc + strc * sc.mult;
+            var cr = (backing / supplyUsd) * 100;
+            var buffer = backing - supplyUsd;
+
+            var crCls, badgeCls;
+            if (cr >= 100) {
+                crCls = 'text-green-600';
+                badgeCls = 'bg-green-50 border-green-200';
+            } else if (cr >= 90) {
+                crCls = 'text-amber-600';
+                badgeCls = 'bg-amber-50 border-amber-200';
+            } else {
+                crCls = 'text-red-600';
+                badgeCls = 'bg-red-50 border-red-200';
+            }
+
+            var labelEmphasis = sc.isBaseline
+                ? 'text-slate-500'
+                : 'text-slate-700 font-medium';
+
+            return '<div class="rounded-lg border ' + badgeCls + ' p-3">' +
+                '<div class="text-xs uppercase ' + labelEmphasis + '">' + sc.label + '</div>' +
+                '<div class="text-2xl font-bold ' + crCls + ' mt-1">' + cr.toFixed(2) + '%</div>' +
+                '<div class="text-xs text-slate-500 mt-0.5 font-mono">' + fmtUsdM(buffer) + '</div>' +
+            '</div>';
+        }).join('');
+
+        var methodology;
+        if (slug === 'apxusd') {
+            methodology =
+                'STRC is Strategy\'s variable-rate perpetual preferred (the largest single-issuer ' +
+                'concentration in Apyx\'s reserves). Scenarios show how a writedown of that position ' +
+                'would shift collateralization against the current $' +
+                (supplyUsd / 1e6).toFixed(1) + 'M supply, holding cash and other reserves constant. ' +
+                'A 25% writedown already puts CR below par; a 50% writedown leaves ~78% backing ' +
+                '(the report\'s "most intact" framing). MSTR equity price and STRC dividend health ' +
+                'are the leading indicators per assets/apxusd.md §Key Risk Notes.';
+        } else {
+            methodology =
+                'apyUSD inherits backing through the apxUSD wrapper, so the same STRC-writedown ' +
+                'scenarios apply to your shares. Cards show resulting apxUSD-side collateralization; ' +
+                'in stressed redemption your NAV per share would proportionally reflect the backing ' +
+                'shortfall. MSTR equity price and STRC dividend health are the leading indicators ' +
+                'per assets/apxusd.md §Key Risk Notes; the cooldown amplifies this — by the time ' +
+                'you can exit via the 30-day UnlockToken path, the underlying may have already moved.';
+        }
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Concentration Stress Lens — STRC writedown scenarios</div>' +
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
+                cardsHtml +
+            '</div>' +
+            '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
+                methodology +
+            '</div>' +
         '</div>';
     },
 
