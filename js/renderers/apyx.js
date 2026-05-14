@@ -104,6 +104,15 @@ var ApyxRenderer = {
         '</span>';
     },
 
+    // R13: inject an id into the outermost <div class="panel"> of a
+    // rendered panel so the anchor nav can jump-link to it. Idempotent —
+    // if the html doesn't lead with <div class="panel">, it's returned
+    // unchanged (e.g. the family-panel placeholder, which is a bare div).
+    _anchor: function(id, html) {
+        if (!html || typeof html !== 'string') return html;
+        return html.replace(/^(<div class="panel")/, '<div id="' + id + '" class="panel"');
+    },
+
     _chainBadge: function(chain) {
         var label = chain.charAt(0).toUpperCase() + chain.slice(1);
         var cls = (chain === 'base') ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700';
@@ -299,26 +308,32 @@ var ApyxRenderer = {
             }
         }
 
-        html += ApyxRenderer._renderHeadlineCard(specific, s, slug);
-        html += ApyxRenderer._renderBackingAttestation(specific, slug);
-        html += ApyxRenderer._renderStressLens(specific, slug);
-        // Layer 2 peg/NAV performance panel sits between attestation and the
-        // asset-specific trajectory/liquidity panels.
+        var anc = ApyxRenderer._anchor;
+        html += anc('panel-headline',    ApyxRenderer._renderHeadlineCard(specific, s, slug));
+        // R9: Family panel promoted to row 2 — cross-asset framing sets context
+        // before the asset-specific panels. _loadFamilyPanel(slug) populates
+        // this placeholder via async fetch later in this same render() call.
+        html += '<div id="apyx-family-panel"></div>';
+        html += anc('panel-attestation', ApyxRenderer._renderBackingAttestation(specific, slug));
+        html += anc('panel-stress',      ApyxRenderer._renderStressLens(specific, slug));
         if (slug === 'apxusd') {
-            html += ApyxRenderer._renderPegPerformance(specific, slug);
+            html += anc('panel-peg',     ApyxRenderer._renderPegPerformance(specific, slug));
         } else if (slug === 'apyusd') {
-            html += ApyxRenderer._renderSecondaryMarket(specific, slug);
+            html += anc('panel-market',  ApyxRenderer._renderSecondaryMarket(specific, slug));
         }
         if (slug === 'apyusd') {
-            html += ApyxRenderer._renderYieldTrajectory(specific, s);
-            html += ApyxRenderer._renderUnlockQueue(specific);
+            html += anc('panel-yield',   ApyxRenderer._renderYieldTrajectory(specific, s));
+            html += anc('panel-unlock',  ApyxRenderer._renderUnlockQueue(specific));
         }
-        html += ApyxRenderer._renderLiquidity(specific, slug);
-        html += ApyxRenderer._renderMultiChainBridge(specific, slug);
-        html += ApyxRenderer._renderTrustStack(specific);
-        html += '<div id="apyx-family-panel"></div>';
+        html += anc('panel-liquidity',   ApyxRenderer._renderLiquidity(specific, slug));
+        html += anc('panel-bridge',      ApyxRenderer._renderMultiChainBridge(specific, slug));
+        html += anc('panel-trust',       ApyxRenderer._renderTrustStack(specific));
 
         container.innerHTML = html;
+
+        // R13/R14: populate sticky nav + companion-asset header link.
+        ApyxRenderer._setupAnchorNav(slug);
+        ApyxRenderer._setupCompanionLink(slug);
 
         // Post-render chart renders — DOM nodes must exist first.
         ApyxRenderer._renderReservesDonut(specific, slug);
@@ -374,6 +389,78 @@ var ApyxRenderer = {
                 }
             }
         }
+    },
+
+    // R13: build and reveal the sticky anchor nav. Per-slug item lists —
+    // apxUSD has Peg Performance where apyUSD has Secondary Market + Yield
+    // + Unlock. #chart-panel is the common CR-history panel rendered by
+    // common.js and is linked by its hard-coded id.
+    _setupAnchorNav: function(slug) {
+        var navEl = document.getElementById('asset-anchor-nav');
+        var inner = document.getElementById('asset-anchor-nav-inner');
+        if (!navEl || !inner) return;
+
+        var items;
+        if (slug === 'apxusd') {
+            items = [
+                { id: 'chart-panel',       label: 'CR' },
+                { id: 'panel-headline',    label: 'Asset' },
+                { id: 'apyx-family-panel', label: 'Family' },
+                { id: 'panel-attestation', label: 'Backing' },
+                { id: 'panel-stress',      label: 'Stress' },
+                { id: 'panel-peg',         label: 'Peg' },
+                { id: 'panel-liquidity',   label: 'Liquidity' },
+                { id: 'panel-bridge',      label: 'Bridge' },
+                { id: 'panel-trust',       label: 'Trust' }
+            ];
+        } else if (slug === 'apyusd') {
+            items = [
+                { id: 'chart-panel',       label: 'CR' },
+                { id: 'panel-headline',    label: 'Asset' },
+                { id: 'apyx-family-panel', label: 'Family' },
+                { id: 'panel-attestation', label: 'Backing' },
+                { id: 'panel-stress',      label: 'Stress' },
+                { id: 'panel-market',      label: 'Market' },
+                { id: 'panel-yield',       label: 'Yield' },
+                { id: 'panel-unlock',      label: 'Unlock' },
+                { id: 'panel-liquidity',   label: 'Liquidity' },
+                { id: 'panel-bridge',      label: 'Bridge' },
+                { id: 'panel-trust',       label: 'Trust' }
+            ];
+        } else {
+            return;
+        }
+
+        inner.innerHTML = items.map(function(item) {
+            return '<a href="#' + item.id + '" ' +
+                   'class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 ' +
+                   'px-2 py-0.5 rounded transition-colors">' +
+                   item.label +
+                   '</a>';
+        }).join('');
+
+        navEl.classList.remove('hidden');
+    },
+
+    // R14: point the header "View companion" link at the sibling asset.
+    // Same-tab navigation (no target="_blank") — both pages are this
+    // dashboard, not external.
+    _setupCompanionLink: function(slug) {
+        var link = document.getElementById('header-companion-link');
+        if (!link) return;
+        var sibling, label;
+        if (slug === 'apxusd') {
+            sibling = 'apyusd';
+            label = 'View apyUSD ↗';
+        } else if (slug === 'apyusd') {
+            sibling = 'apxusd';
+            label = 'View apxUSD ↗';
+        } else {
+            return;
+        }
+        link.setAttribute('href', '?asset=' + sibling);
+        link.textContent = label;
+        link.classList.remove('hidden');
     },
 
     // ============================================================

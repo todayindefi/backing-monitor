@@ -35,6 +35,13 @@ async function renderIndex() {
         reportLink.classList.add('hidden');
         reportLink.removeAttribute('href');
     }
+    var companionLink = document.getElementById('header-companion-link');
+    if (companionLink) {
+        companionLink.classList.add('hidden');
+        companionLink.removeAttribute('href');
+    }
+    var anchorNav = document.getElementById('asset-anchor-nav');
+    if (anchorNav) anchorNav.classList.add('hidden');
 
     try {
         var resp = await fetch('data/assets.json');
@@ -89,6 +96,18 @@ async function renderAsset(slug) {
     document.getElementById('index-view').classList.add('hidden');
     document.getElementById('asset-view').classList.remove('hidden');
     document.getElementById('error-view').classList.add('hidden');
+
+    // Default-hide apyx-specific header/nav adornments — the apyx renderer
+    // re-reveals them at the end of render() when applicable. Without this,
+    // navigating apyx → another asset leaves stale anchor nav / companion
+    // link visible.
+    var resetCompanion = document.getElementById('header-companion-link');
+    if (resetCompanion) {
+        resetCompanion.classList.add('hidden');
+        resetCompanion.removeAttribute('href');
+    }
+    var resetAnchorNav = document.getElementById('asset-anchor-nav');
+    if (resetAnchorNav) resetAnchorNav.classList.add('hidden');
 
     try {
         var [dataResp, histResp, assetsResp] = await Promise.all([
