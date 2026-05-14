@@ -168,7 +168,21 @@ var ApyxRenderer = {
     // Peg / NAV-spread helpers — canonical implementations live in CommonRenderer
     // (shared with the OUSD renderer). These pass-throughs preserve the existing
     // ApyxRenderer._peg* call sites.
-    _pegStatusClass: function(pctValue) { return CommonRenderer.pegStatusClass(pctValue); },
+    // R4: apyUSD trades a steady ~−40 bp structural cooldown discount per
+    // assets/apyusd.md and the alerter's exclude-band policy. Widen the
+    // healthy band to ±50 bps (vs ±25 bps for apxUSD's true peg) so the
+    // visual matches the alerter — otherwise the operating norm renders
+    // as amber Watch every snapshot.
+    _pegStatusClass: function(pctValue, slug) {
+        if (slug === 'apyusd') {
+            if (pctValue == null) return 'unknown';
+            var abs = Math.abs(pctValue);
+            if (abs < 0.50) return 'ok';
+            if (abs < 1.00) return 'warn';
+            return 'critical';
+        }
+        return CommonRenderer.pegStatusClass(pctValue);
+    },
     _pegStatusLabel: function(state) { return CommonRenderer.pegStatusLabel(state); },
     _pegPctText: function(pct, decimals) { return CommonRenderer.pegPctText(pct, decimals); },
     _pegPctClass: function(state) { return CommonRenderer.pegPctClass(state); },
@@ -225,6 +239,36 @@ var ApyxRenderer = {
 
         // Mirror syrupusdc: collateral_ratio is already on summary and
         // common will color it green/red against 100 — fine as-is.
+
+        // R1: tighten CR chart for the actual asset shape. common.js defaults
+        // to Y=[80,150]% with a 130% "healthy" line — calibrated for
+        // over-collateralized lending. For Apyx, the meaningful range is
+        // much tighter, par (100%) is the floor not a critical threshold,
+        // and the 130% line is irrelevant. app.js reads these fields off
+        // asset_specific when present.
+        if (specific.type === 'apxusd') {
+            specific.chart_y_min = 99;
+            specific.chart_y_max = 103;
+            specific.chart_bands = {
+                critical: [0, 99.5],
+                thin: [99.5, 100],
+                amber: [100, 100.5],
+                healthy: [100.5, 200],
+                min_line: 100,
+                max_line: null
+            };
+        } else if (specific.type === 'apyusd') {
+            specific.chart_y_min = 99;
+            specific.chart_y_max = 101;
+            specific.chart_bands = {
+                critical: [0, 99],
+                thin: [99, 99.9],
+                amber: [99.9, 100.1],
+                healthy: [100.1, 200],
+                min_line: 100,
+                max_line: null
+            };
+        }
     },
 
     // ============================================================
@@ -241,6 +285,19 @@ var ApyxRenderer = {
         var slug = data.asset_slug;
         var s = data.summary;
         var html = '';
+
+        // R1: apyUSD CR is ~100% by ERC-4626 construction — annotate the
+        // chart so visible rounding-level drift isn't misread as volatility.
+        if (slug === 'apyusd') {
+            var chartPanel = document.getElementById('chart-panel');
+            if (chartPanel && !chartPanel.querySelector('.cr-note-apyusd')) {
+                var note = document.createElement('p');
+                note.className = 'cr-note-apyusd text-xs text-slate-500 mt-2 italic';
+                note.textContent = 'CR is ~100% by ERC-4626 construction; visible drift is rounding-level. ' +
+                                   'See Secondary Market panel below for the price-vs-NAV chart that actually matters.';
+                chartPanel.appendChild(note);
+            }
+        }
 
         html += ApyxRenderer._renderHeadlineCard(specific, s, slug);
         html += ApyxRenderer._renderBackingAttestation(specific, slug);
@@ -773,7 +830,7 @@ var ApyxRenderer = {
         var marketPrice = (vs.dex_market_price != null) ? vs.dex_market_price : vs.dex_implied_nav;
         var discountPct = (vs.market_discount_pct != null) ? vs.market_discount_pct : vs.nav_spread_pct;
 
-        var state = ApyxRenderer._pegStatusClass(discountPct);
+        var state = ApyxRenderer._pegStatusClass(discountPct, 'apyusd');
         var discountCls = ApyxRenderer._pegPctClass(state);
 
         var contractTxt = (contractNav != null) ? contractNav.toFixed(4) : '—';
@@ -836,8 +893,10 @@ var ApyxRenderer = {
                 'represents). Market Price is the live Curve apyUSD/apxUSD spot — what the secondary ' +
                 'market actually pays for one share right now. A persistent market discount typically ' +
                 'reflects arb-bounded redemption inefficiency from the 30-day UnlockToken cooldown ' +
-                '(arbs can\'t close the gap atomically), not a peg break. Reference bands match the ' +
-                'alerter thresholds: ±25 bps healthy / ±50 bps watch / ±100 bps stress.' +
+                '(arbs can\'t close the gap atomically), not a peg break. Reference bands are widened ' +
+                'vs the apxUSD true-peg panel — ±50 bps healthy / ±100 bps watch / ±200 bps stress — ' +
+                'because the cooldown imposes a structural discount floor of roughly −40 bps that is ' +
+                'not stress and should not alert.' +
             '</div>';
 
         return '<div class="panel">' +
@@ -850,7 +909,25 @@ var ApyxRenderer = {
         '</div>';
     },
 
-    _pegBandAnnotations: function() { return CommonRenderer.pegBandAnnotations(); },
+    _pegBandAnnotations: function(slug) {
+        if (slug !== 'apyusd') return CommonRenderer.pegBandAnnotations();
+        // apyUSD bands are 2× the apxUSD true-peg bands.
+        // ±50 bps healthy / ±100 bps watch / ±200 bps stress.
+        return {
+            healthyBand:   { type: 'box', yMin: -0.50, yMax: 0.50,  backgroundColor: 'rgba(34, 197, 94, 0.07)', borderWidth: 0 },
+            watchBandPos:  { type: 'box', yMin: 0.50,  yMax: 1.00,  backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+            watchBandNeg:  { type: 'box', yMin: -1.00, yMax: -0.50, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+            stressBandPos: { type: 'box', yMin: 1.00,  yMax: 2.00,  backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+            stressBandNeg: { type: 'box', yMin: -2.00, yMax: -1.00, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+            line50pos:  { type: 'line', yMin: 0.50,  yMax: 0.50,  borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3], label: { content: '+50 bps',  display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
+            line50neg:  { type: 'line', yMin: -0.50, yMax: -0.50, borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3], label: { content: '-50 bps',  display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
+            line100pos: { type: 'line', yMin: 1.00,  yMax: 1.00,  borderColor: '#f59e0b', borderWidth: 1, borderDash: [3, 3], label: { content: '+100 bps', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+            line100neg: { type: 'line', yMin: -1.00, yMax: -1.00, borderColor: '#f59e0b', borderWidth: 1, borderDash: [3, 3], label: { content: '-100 bps', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+            line200pos: { type: 'line', yMin: 2.00,  yMax: 2.00,  borderColor: '#ef4444', borderWidth: 1, borderDash: [3, 3], label: { content: '+200 bps', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+            line200neg: { type: 'line', yMin: -2.00, yMax: -2.00, borderColor: '#ef4444', borderWidth: 1, borderDash: [3, 3], label: { content: '-200 bps', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+            zero: { type: 'line', yMin: 0, yMax: 0, borderColor: '#94a3b8', borderWidth: 1 }
+        };
+    },
 
     _loadPegHistoryChart: function(slug) {
         var ctx = document.getElementById('apyx-peg-history');
@@ -1100,7 +1177,7 @@ var ApyxRenderer = {
             return (e.market_discount_pct != null) ? e.market_discount_pct : e.nav_spread_pct;
         });
         var pointColors = discountSeries.map(function(v) {
-            var st = ApyxRenderer._pegStatusClass(v);
+            var st = ApyxRenderer._pegStatusClass(v, 'apyusd');
             if (st === 'ok') return '#3b82f6';
             if (st === 'warn') return '#f59e0b';
             if (st === 'critical') return '#ef4444';
@@ -1110,6 +1187,7 @@ var ApyxRenderer = {
         if (window._apyxMarketDiscountChart) {
             try { window._apyxMarketDiscountChart.destroy(); } catch (e) {}
         }
+        var marketDiscountAnnotations = ApyxRenderer._pegBandAnnotations('apyusd');
         window._apyxMarketDiscountChart = new Chart(ctx, {
             type: 'line',
             data: {
@@ -1154,7 +1232,7 @@ var ApyxRenderer = {
                             label: function(c) { return c.dataset.label + ': ' + (c.raw != null ? c.raw.toFixed(3) + '%' : '—'); }
                         }
                     },
-                    annotation: { annotations: ApyxRenderer._pegBandAnnotations() }
+                    annotation: { annotations: marketDiscountAnnotations }
                 },
                 interaction: { intersect: false, mode: 'index' }
             }
