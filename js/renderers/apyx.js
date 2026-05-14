@@ -712,24 +712,40 @@ var ApyxRenderer = {
             var cr = (backing / supplyUsd) * 100;
             var buffer = backing - supplyUsd;
 
+            // Visual hierarchy: baseline keeps tier-driven color so a real CR
+            // drop still surfaces (Current would render amber/red on its own
+            // merits). Non-baseline cards force muted slate regardless of
+            // their hypothetical CR, so the reader's eye lands on Current.
             var crCls, badgeCls;
-            if (cr >= 100) {
-                crCls = 'text-green-600';
-                badgeCls = 'bg-green-50 border-green-200';
-            } else if (cr >= 90) {
-                crCls = 'text-amber-600';
-                badgeCls = 'bg-amber-50 border-amber-200';
+            if (sc.isBaseline) {
+                if (cr >= 100) {
+                    crCls = 'text-green-600';
+                    badgeCls = 'bg-green-50 border-green-200';
+                } else if (cr >= 90) {
+                    crCls = 'text-amber-600';
+                    badgeCls = 'bg-amber-50 border-amber-200';
+                } else {
+                    crCls = 'text-red-600';
+                    badgeCls = 'bg-red-50 border-red-200';
+                }
             } else {
-                crCls = 'text-red-600';
-                badgeCls = 'bg-red-50 border-red-200';
+                crCls = 'text-slate-600 dark:text-slate-300';
+                badgeCls = 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
             }
 
             var labelEmphasis = sc.isBaseline
-                ? 'text-slate-500'
-                : 'text-slate-700 font-medium';
+                ? 'text-slate-700 font-semibold'
+                : 'text-slate-500';
+
+            var label = sc.isBaseline ? sc.label : 'If ' + sc.label;
+
+            var hereIndicator = sc.isBaseline
+                ? '<div class="text-[10px] text-green-700 dark:text-green-400 font-medium mt-0.5">● you are here</div>'
+                : '';
 
             return '<div class="rounded-lg border ' + badgeCls + ' p-3">' +
-                '<div class="text-xs uppercase ' + labelEmphasis + '">' + sc.label + '</div>' +
+                '<div class="text-xs uppercase ' + labelEmphasis + '">' + label + '</div>' +
+                hereIndicator +
                 '<div class="text-2xl font-bold ' + crCls + ' mt-1">' + cr.toFixed(2) + '%</div>' +
                 '<div class="text-xs text-slate-500 mt-0.5 font-mono">' + fmtUsdM(buffer) + '</div>' +
             '</div>';
@@ -738,6 +754,7 @@ var ApyxRenderer = {
         var methodology;
         if (slug === 'apxusd') {
             methodology =
+                '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
                 'STRC is Strategy\'s variable-rate perpetual preferred (the largest single-issuer ' +
                 'concentration in Apyx\'s reserves). Scenarios show how a writedown of that position ' +
                 'would shift collateralization against the current $' +
@@ -747,6 +764,7 @@ var ApyxRenderer = {
                 'are the leading indicators per assets/apxusd.md §Key Risk Notes.';
         } else {
             methodology =
+                '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
                 'apyUSD inherits backing through the apxUSD wrapper, so the same STRC-writedown ' +
                 'scenarios apply to your shares. Cards show resulting apxUSD-side collateralization; ' +
                 'in stressed redemption your NAV per share would proportionally reflect the backing ' +
