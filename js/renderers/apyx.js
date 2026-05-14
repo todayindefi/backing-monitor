@@ -1521,16 +1521,70 @@ var ApyxRenderer = {
                 '</div>';
         }
 
+        // R10 layer-2: drain rate + implied wait. Analyzer emits a 7-day
+        // rolling sum of UnlockToken Withdraw events as drain_rate; implied
+        // wait = queue depth / drain rate (null when drain is zero). Wait
+        // card color-tiers against docDays: green within docDays+5, amber
+        // up to 2× nominal (back-loading visible), red beyond 2× or stalled.
+        var drainRate = u.drain_rate_7d_apxusd_per_day;
+        var impliedWait = u.implied_wait_days;
+
+        var drainCard = '';
+        if (drainRate != null) {
+            drainCard =
+                '<div class="summary-card">' +
+                    '<div class="card-label">7d drain rate</div>' +
+                    '<div class="card-value">' + CommonRenderer.formatCurrency(drainRate) +
+                        '<span class="text-xs text-slate-400 font-normal ml-1">/day</span>' +
+                    '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">apxUSD exiting cooldown (7-day rolling)</div>' +
+                '</div>';
+        }
+
+        var waitCard = '';
+        if (impliedWait != null || drainRate === 0) {
+            var waitValue, waitValueCls, waitSubtext;
+            if (impliedWait == null || drainRate === 0) {
+                waitValue = 'stalled';
+                waitValueCls = 'text-red-600';
+                waitSubtext = 'no exits in 7-day window';
+            } else {
+                var ratio = impliedWait / docDays;
+                waitValue = impliedWait.toFixed(1) + ' days';
+                if (impliedWait <= docDays + 5) {
+                    waitValueCls = 'text-green-600';
+                    waitSubtext = 'queue tracking nominal cooldown';
+                } else if (ratio <= 2.0) {
+                    waitValueCls = 'text-amber-600';
+                    waitSubtext = ratio.toFixed(2) + '× nominal — queue back-loaded';
+                } else {
+                    waitValueCls = 'text-red-600';
+                    waitSubtext = ratio.toFixed(2) + '× nominal — heavy back-loading';
+                }
+            }
+            waitCard =
+                '<div class="summary-card">' +
+                    '<div class="card-label">Implied wait</div>' +
+                    '<div class="card-value ' + waitValueCls + '">' + waitValue + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' + waitSubtext + '</div>' +
+                '</div>';
+        }
+
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
                 'UnlockToken\'s <span class="font-mono">duration()</span> getter is not externally exposed. ' +
                 'The ' + docDays + '-day figure comes from contract source review; Apyx docs state 20 days. ' +
-                'Code is authoritative; verify with the Apyx team if sizing materially.' +
+                'Code is authoritative; verify with the Apyx team if sizing materially. ' +
+                '<strong>Drain rate</strong> is a 7-day rolling sum of UnlockToken Withdraw events; ' +
+                '<strong>implied wait</strong> = queue depth ÷ drain rate. When implied wait exceeds ' +
+                'the documented cooldown, the queue is back-loaded — new entrants nominally face the ' +
+                docDays + '-day SLA but the existing queue-tail has been there longer, so realized exit ' +
+                'time tracks implied wait, not nominal cooldown.' +
             '</div>';
 
         return '<div class="panel">' +
             '<div class="panel-title">Unlock Queue</div>' +
-            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
+            '<div class="grid grid-cols-2 md:grid-cols-5 gap-3">' +
                 '<div class="summary-card"><div class="card-label">Queue depth</div>' +
                     '<div class="card-value">' + CommonRenderer.formatCurrency(depth) + '</div>' +
                     '<div class="text-xs text-slate-400 mt-1">apxUSD locked in cooldown</div></div>' +
@@ -1540,6 +1594,8 @@ var ApyxRenderer = {
                     '<div class="card-value">' + docDays + ' days</div>' +
                     (known ? '' : '<div class="text-xs text-amber-600 mt-1">contract not docs</div>') +
                 '</div>' +
+                drainCard +
+                waitCard +
             '</div>' +
             durationCaveat +
             methodology +
