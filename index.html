@@ -117,7 +117,7 @@
 
     <footer class="max-w-6xl mx-auto px-4 py-6 text-center text-xs text-slate-400">
         <div>Data refreshes every hour. Dashboard auto-refreshes every 5 minutes.</div>
-        <div class="mt-2">This dashboard was created and maintained with support of a FireStarter Grant from ArbitrumDAO.</div>
+        <div id="firestarter-credit" class="mt-2 hidden">This dashboard was created and maintained with support of a FireStarter Grant from ArbitrumDAO.</div>
     </footer>
 
     <script>
@@ -134,6 +134,14 @@
         document.getElementById('theme-icon-light').classList.add('hidden');
         document.getElementById('theme-icon-dark').classList.remove('hidden');
     }
+    // FireStarter credit — only show on dashboards that were actually sponsored.
+    (function () {
+        var sponsored = ['syrupusdc', 'syrupusdt', 'thbill', 'thusd'];
+        var slug = new URLSearchParams(window.location.search).get('asset');
+        if (slug && sponsored.indexOf(slug.toLowerCase()) !== -1) {
+            document.getElementById('firestarter-credit').classList.remove('hidden');
+        }
+    })();
     </script>
     <script src="js/renderers/common.js?v=20260513d"></script>
     <script src="js/renderers/ousd.js?v=20260513d"></script>
