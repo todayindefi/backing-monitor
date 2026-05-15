@@ -130,8 +130,9 @@ var ApyxRenderer = {
         banner.className = 'risk-flag risk-warning mb-4';
         banner.innerHTML =
             '<strong>Trust posture — read before acting:</strong> ' +
-            'Backing sits off-chain with a Cayman-SPV custodian and is published via a daily ' +
-            'Accountable attestation — not on-chain proof-of-reserves and not a PCAOB-firm audit. ' +
+            'Backing sits off-chain with an unnamed custodian/broker (legal structure not publicly ' +
+            'disclosed) and is published via Accountable\'s real-time TEE-attested proof-of-solvency ' +
+            'feed — not on-chain proof-of-reserves and not a PCAOB-firm audit. ' +
             'Cash composition is not itemized, and the bridge-admin Safe (3-of-6) can re-configure ' +
             'rate limits, chain peers, and RMN with no timelock. Treat panels below as analyst ' +
             'inference over the public attestation and on-chain state; the full report ' +
