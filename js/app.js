@@ -108,6 +108,8 @@ async function renderAsset(slug) {
     }
     var resetAnchorNav = document.getElementById('asset-anchor-nav');
     if (resetAnchorNav) resetAnchorNav.classList.add('hidden');
+    var staleDisclaimer = document.getElementById('apyx-trust-disclaimer');
+    if (staleDisclaimer) staleDisclaimer.remove();
 
     try {
         var [dataResp, histResp, assetsResp] = await Promise.all([
