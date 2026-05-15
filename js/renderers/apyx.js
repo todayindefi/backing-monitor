@@ -113,6 +113,32 @@ var ApyxRenderer = {
         return html.replace(/^(<div class="panel")/, '<div id="' + id + '" class="panel"');
     },
 
+    // Amber trust banner injected above the CR History chart. Pairs with the
+    // tidresearch report disclaimer so a reader who jumps between dashboard
+    // and report sees the same caveats with the same framing. Apyx-only —
+    // other dashboards short-circuit. Idempotent — the #apyx-trust-disclaimer
+    // id guard means re-renders (5-minute auto-refresh, anchor-nav clicks)
+    // don't stack copies.
+    _renderTrustDisclaimer: function(slug) {
+        if (!ApyxRenderer._isApyx(slug)) return;
+        var chartPanel = document.getElementById('chart-panel');
+        if (!chartPanel || !chartPanel.parentNode) return;
+        if (document.getElementById('apyx-trust-disclaimer')) return;
+
+        var banner = document.createElement('div');
+        banner.id = 'apyx-trust-disclaimer';
+        banner.className = 'risk-flag risk-warning mb-4';
+        banner.innerHTML =
+            '<strong>Trust posture — read before acting:</strong> ' +
+            'Backing sits off-chain with a Cayman-SPV custodian and is published via a daily ' +
+            'Accountable attestation — not on-chain proof-of-reserves and not a PCAOB-firm audit. ' +
+            'Cash composition is not itemized, and the bridge-admin Safe (3-of-6) can re-configure ' +
+            'rate limits, chain peers, and RMN with no timelock. Treat panels below as analyst ' +
+            'inference over the public attestation and on-chain state; the full report ' +
+            '(link in header) carries the sourcing and limitations.';
+        chartPanel.parentNode.insertBefore(banner, chartPanel);
+    },
+
     _chainBadge: function(chain) {
         var label = chain.charAt(0).toUpperCase() + chain.slice(1);
         var cls = (chain === 'base') ? 'bg-blue-50 text-blue-700' : 'bg-slate-100 text-slate-700';
@@ -294,6 +320,11 @@ var ApyxRenderer = {
         var slug = data.asset_slug;
         var s = data.summary;
         var html = '';
+
+        // Top-of-page trust banner — mirrors the framing on the tidresearch
+        // report so a reader who jumps between dashboard and report sees the
+        // same language. Apyx-only; idempotent.
+        ApyxRenderer._renderTrustDisclaimer(slug);
 
         // R1: apyUSD CR is ~100% by ERC-4626 construction — annotate the
         // chart so visible rounding-level drift isn't misread as volatility.
