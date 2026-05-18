@@ -447,7 +447,7 @@ var USDmRenderer = {
                             '<dd class="text-xl font-bold font-mono ' + covCls + '">' + covPct + '</dd>' +
                         '</div>' +
                     '</dl>' +
-                    '<div class="text-xs text-slate-400 mt-2">Pool-resident USDm pulls coverage below 100%; bridge-locked Celo reserves cover the gap off this chain.</div>' +
+                    '<div class="text-xs text-slate-400 mt-2">Pool-resident USDm pulls local coverage below 100%. The gap is closed by Mento operational top-ups (visible in chart), not by an on-chain bridge — Wormhole NTT is announced but not yet operational.</div>' +
                 '</div>' +
 
             '</div>' +
