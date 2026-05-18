@@ -14,7 +14,8 @@ var ASSET_RENDERERS = {
     syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
     syrupusdt: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
     apxusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null,
-    apyusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null
+    apyusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null,
+    'fiat-stable-reserve-backed': typeof USDmRenderer !== 'undefined' ? USDmRenderer : null
 };
 
 function getAssetSlug() {
@@ -62,8 +63,13 @@ async function renderIndex() {
         grid.innerHTML = cardData.map(function(item) {
             var a = item.asset;
             var d = item.data;
-            var cr = d ? CommonRenderer.formatPercent(d.summary.collateral_ratio) : '-';
-            var crClass = d && d.summary.collateral_ratio >= 100 ? 'text-green-600' : 'text-red-600';
+            // Some analyzers (USDm) emit collateral_ratio as a ratio (1.01)
+            // instead of a percentage (101). Normalize for display so all
+            // cards share the same scale.
+            var crRaw = d ? d.summary.collateral_ratio : null;
+            var crNorm = (crRaw != null && crRaw < 2) ? crRaw * 100 : crRaw;
+            var cr = d ? CommonRenderer.formatPercent(crNorm) : '-';
+            var crClass = d && crNorm >= 100 ? 'text-green-600' : 'text-red-600';
             var supply = d ? CommonRenderer.formatCurrency(d.summary.total_supply) : '-';
             var ts = d ? CommonRenderer.formatDate(d.timestamp) : '';
             var flagCount = d ? d.risk_flags.length : 0;
@@ -147,10 +153,11 @@ async function renderAsset(slug) {
 
         // Asset-specific pre-render hook — lets the renderer patch top-card
         // overrides (e.g. swap in init-level CR for syrupUSDC/USDT) before
-        // the common summary-cards row paints.
+        // the common summary-cards row paints. History is passed too so
+        // renderers can normalize chart-series scale (USDm ratio→%).
         var preRenderer = ASSET_RENDERERS[data.asset_specific && data.asset_specific.type];
         if (preRenderer && typeof preRenderer.preRender === 'function') {
-            preRenderer.preRender(data);
+            preRenderer.preRender(data, history);
         }
 
         // Common sections
