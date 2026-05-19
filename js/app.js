@@ -5,7 +5,10 @@
 
 var REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
-// Asset-specific renderers registry
+// Asset-specific renderers registry. Keys are matched against
+// data.asset_slug first, then asset_specific.type — so a renderer
+// can be keyed by slug (thusd) when the analyzer's type field is
+// too generic to use safely (e.g. "rwa-stable").
 var ASSET_RENDERERS = {
     ousd:      typeof OUSDRenderer      !== 'undefined' ? OUSDRenderer      : null,
     frax:      typeof FRAXRenderer      !== 'undefined' ? FRAXRenderer      : null,
@@ -15,8 +18,17 @@ var ASSET_RENDERERS = {
     syrupusdt: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
     apxusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null,
     apyusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null,
+    thusd:     typeof ThusdRenderer     !== 'undefined' ? ThusdRenderer     : null,
     'fiat-stable-reserve-backed': typeof USDmRenderer !== 'undefined' ? USDmRenderer : null
 };
+
+function findAssetRenderer(data) {
+    if (!data) return null;
+    var bySlug = data.asset_slug ? ASSET_RENDERERS[data.asset_slug] : null;
+    if (bySlug) return bySlug;
+    var t = data.asset_specific && data.asset_specific.type;
+    return t ? (ASSET_RENDERERS[t] || null) : null;
+}
 
 function getAssetSlug() {
     var params = new URLSearchParams(window.location.search);
@@ -155,7 +167,7 @@ async function renderAsset(slug) {
         // overrides (e.g. swap in init-level CR for syrupUSDC/USDT) before
         // the common summary-cards row paints. History is passed too so
         // renderers can normalize chart-series scale (USDm ratio→%).
-        var preRenderer = ASSET_RENDERERS[data.asset_specific && data.asset_specific.type];
+        var preRenderer = findAssetRenderer(data);
         if (preRenderer && typeof preRenderer.preRender === 'function') {
             preRenderer.preRender(data, history);
         }
@@ -217,7 +229,7 @@ async function renderAsset(slug) {
         }
 
         // Asset-specific renderer
-        var renderer = ASSET_RENDERERS[data.asset_specific && data.asset_specific.type];
+        var renderer = findAssetRenderer(data);
         if (renderer) {
             renderer.render(data);
         } else {
