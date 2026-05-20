@@ -380,6 +380,7 @@ var ApyxRenderer = {
             ApyxRenderer._loadMarketDiscountChart(slug);
         }
         ApyxRenderer._loadFamilyPanel(slug);
+        ApyxRenderer._loadWolfSection();
     },
 
     _suppressCommonPanels: function(data) {
@@ -634,11 +635,21 @@ var ApyxRenderer = {
                   'title="Cash composition is not itemized in the public Accountable attestation — could be bank deposits, T-bills, USDC, or another instrument. ' +
                   'Disclosure gap flagged in assets/apxusd.md §Key Risk Notes.">⚠ unitemized</span>'
                 : '<span class="text-xs text-slate-500">' + issuer + '</span>';
+            // STRC bucket bundles brokerage STRC + on-chain STRCx — Accountable's
+            // reserves_split rolls them into one figure. Surface the disclosure
+            // inline so a reader doesn't miss the brokerage-vs-on-chain split.
+            // The STRCx Safe is identified on-chain (0x37b0779a…) — see Wolf
+            // section below for the split's last attested breakdown.
+            var nameCell = '<td class="font-medium">' +
+                '<span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:' + color + '"></span>' +
+                k +
+                (k === 'STRC' ?
+                    ' <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 ml-1 cursor-help" ' +
+                    'title="Bundles brokerage-custodied STRC (at Alpaca) and on-chain STRCx (in a 3-of-6 Gnosis Safe at 0x37b0779a…323a555 — same six owners as Apyx\'s MAINTAINER + ADMIN Safes, verified on-chain). The Accountable feed bundles both into a single STRC figure; the brokerage-vs-on-chain split is disclosed in Wolf & Company\'s monthly attestations (latest: 4/30/2026 — $76.8M STRC + $51.5M STRCx) and the STRCx slice is directly observable via balanceOf() on the Safe.">ⓘ incl. STRCx</span>' :
+                    '') +
+            '</td>';
             return '<tr>' +
-                '<td class="font-medium">' +
-                    '<span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:' + color + '"></span>' +
-                    k +
-                '</td>' +
+                nameCell +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(usd) + '</td>' +
                 '<td class="text-right font-mono">' + pct.toFixed(2) + '%</td>' +
                 '<td>' + issuerCell + '</td>' +
@@ -692,19 +703,211 @@ var ApyxRenderer = {
         var attTs = CommonRenderer.formatDate(ba.attestation_timestamp);
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
-                'Real-time TEE-attested proof-of-solvency via Accountable (' + ACCOUNTABLE_INFO.type + ', on-chain-registered signing key). ' +
-                '<strong>What it proves:</strong> enclave processed and signed the data shown. ' +
-                '<strong>What it doesn\'t:</strong> the custodian itself is not audited; not a PCAOB-firm attestation. ' +
+                '<strong>Layer A — Accountable (continuous):</strong> ' +
+                'Real-time TEE-attested proof-of-solvency (' + ACCOUNTABLE_INFO.type + ', on-chain-registered signing key). ' +
+                'Proves the enclave processed and signed the data shown; does not prove the custodian itself is audited, and not a PCAOB-firm attestation. ' +
                 'Last attested ' + attTs + ' · enclave key <span class="font-mono">' + truncKey + '</span>.' +
+                '<br><br>' +
+                '<strong>Layer B — Wolf & Company (point-in-time):</strong> ' +
+                'AICPA-standards monthly examinations, two snapshot dates per month. ' +
+                'Independent CPA-firm corroboration of the figures the Accountable feed produces. ' +
+                'Latest reports and scope detail in the Wolf section above.' +
             '</div>';
 
+        // Layer B (Wolf) — extends this panel as a sibling section. Static
+        // JSON (data/apyx_wolf_attestations.json) is manually maintained;
+        // panel-attestation id intentionally unchanged so existing anchor
+        // links (#panel-attestation) keep working.
+        var wolfPlaceholder = '<div id="apyx-wolf-section" class="mt-6"></div>';
+
         return '<div class="panel">' +
-            '<div class="panel-title">Backing Attestation <span class="text-xs font-normal text-slate-500">— Accountable proof-of-solvency</span></div>' +
+            '<div class="panel-title">Backing Attestations <span class="text-xs font-normal text-slate-500">— Accountable feed + Wolf & Company CPA examinations</span></div>' +
             statusRow +
             donutBlock +
             timelineBlock +
+            wolfPlaceholder +
             methodology +
         '</div>';
+    },
+
+    // ============================================================
+    // §2a' Wolf & Company section (Layer B, point-in-time)
+    //
+    // Extends panel-attestation as a sibling block to the Accountable
+    // (Layer A) view above. Reads data/apyx_wolf_attestations.json —
+    // a manually-maintained static file updated whenever a new monthly
+    // attestation lands. Degrades gracefully to a link-only tile if the
+    // JSON is missing.
+    // ============================================================
+    _loadWolfSection: function() {
+        var target = document.getElementById('apyx-wolf-section');
+        if (!target) return;
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/apyx_wolf_attestations.json?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(wolf) {
+                target.innerHTML = ApyxRenderer._renderWolfSectionHtml(wolf);
+            })
+            .catch(function() {
+                target.innerHTML = ApyxRenderer._renderWolfSectionHtml(null);
+            });
+    },
+
+    _renderWolfSectionHtml: function(wolf) {
+        // Phase-1 fallback when the static JSON is missing — link tile only.
+        if (!wolf) {
+            return '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-slate-50/50 dark:bg-slate-800/40">' +
+                '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">' +
+                    'Third-Party CPA Attestations (Wolf &amp; Company)' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 dark:text-slate-400 mb-3">' +
+                    'AICPA-standards monthly examination engagements · ' +
+                    '<a href="https://docs.apyx.fi/collateral-and-custody/third-party-attestation" ' +
+                        'target="_blank" rel="noopener noreferrer" ' +
+                        'class="text-blue-600 hover:underline">' +
+                        'View attestations &rarr; docs.apyx.fi/collateral-and-custody/third-party-attestation' +
+                    '</a>' +
+                '</div>' +
+            '</div>';
+        }
+
+        var auditor = wolf.auditor || {};
+        var reports = Array.isArray(wolf.reports) ? wolf.reports : [];
+
+        // Auditor identity row.
+        var auditorLine =
+            '<div class="text-xs text-slate-500 dark:text-slate-400 mb-3">' +
+                '<strong class="text-slate-700 dark:text-slate-200">' + (auditor.name || 'Wolf & Company, P.C.') + '</strong>' +
+                ' — ' + (auditor.standard || 'AICPA attestation standards') + ' examinations · ' +
+                (auditor.city || 'Boston, MA') +
+                (auditor.affiliation ? ' · ' + auditor.affiliation + ' member' : '') +
+                (wolf.issuer_entity ? ' · Issuer entity: <span class="font-medium">' + wolf.issuer_entity + '</span>' : '') +
+            '</div>';
+
+        // Latest-report freshness pill — CRIT if no report in 45+ days.
+        var latest = reports[0] || null;
+        var freshState = 'unknown';
+        var freshLabel = 'No reports';
+        if (latest && latest.signed_date) {
+            var ageDays = (Date.now() - new Date(latest.signed_date).getTime()) / 86400000;
+            if (ageDays <= 35)      { freshState = 'ok';       freshLabel = 'Latest: ' + latest.period; }
+            else if (ageDays <= 45) { freshState = 'warn';     freshLabel = 'Latest: ' + latest.period + ' (' + Math.round(ageDays) + 'd ago)'; }
+            else                    { freshState = 'critical'; freshLabel = 'Stale — ' + Math.round(ageDays) + 'd since ' + latest.period; }
+        }
+
+        // Reports table.
+        function totalForReport(r) {
+            if (!r || !r.balances) return null;
+            var dates = Object.keys(r.balances).sort();
+            if (dates.length === 0) return null;
+            var last = r.balances[dates[dates.length - 1]];
+            return last && last.total_securities != null ? last.total_securities :
+                   last && last.total != null            ? last.total :
+                   null;
+        }
+        function snapshotDate(r) {
+            if (!r || !r.balances) return '—';
+            var dates = Object.keys(r.balances).sort();
+            return dates.length ? dates[dates.length - 1] : '—';
+        }
+        function scopePill(scope) {
+            if (scope === 'full_balance') {
+                return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">full-scope</span>';
+            }
+            if (scope === 'securities_only') {
+                return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">securities-only</span>';
+            }
+            return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">' + (scope || '—') + '</span>';
+        }
+
+        var rowsHtml = reports.map(function(r) {
+            var total = totalForReport(r);
+            var snap = snapshotDate(r);
+            var pdfCell = r.pdf_url ?
+                '<a href="' + r.pdf_url + '" target="_blank" rel="noopener noreferrer" ' +
+                    'class="text-blue-600 hover:underline text-xs">PDF &uarr;</a>' :
+                '<span class="text-slate-400">—</span>';
+            return '<tr>' +
+                '<td class="font-medium">' + (r.period || '—') + '</td>' +
+                '<td>' + scopePill(r.scope) + '</td>' +
+                '<td class="text-right font-mono">' + (total != null ? CommonRenderer.formatCurrencyExact(total) : '—') + '</td>' +
+                '<td class="text-xs text-slate-500">' + snap + '</td>' +
+                '<td class="text-xs text-slate-500">' + (r.signed_date || '—') + '</td>' +
+                '<td>' + pdfCell + '</td>' +
+            '</tr>';
+        }).join('');
+
+        var tableBlock =
+            '<div class="data-table-scroll">' +
+                '<table class="data-table">' +
+                    '<thead><tr>' +
+                        '<th>Period</th>' +
+                        '<th>Scope</th>' +
+                        '<th class="text-right">Snapshot total</th>' +
+                        '<th>Snapshot date</th>' +
+                        '<th>Signed</th>' +
+                        '<th>PDF</th>' +
+                    '</tr></thead>' +
+                    '<tbody>' + rowsHtml + '</tbody>' +
+                '</table>' +
+            '</div>';
+
+        // STRC vs STRCx breakout — only when the latest report is securities-only
+        // and carries the split. Surfaces the figures the Accountable feed hides.
+        var breakoutBlock = '';
+        if (latest && latest.scope === 'securities_only' && latest.balances) {
+            var dates = Object.keys(latest.balances).sort();
+            var last = latest.balances[dates[dates.length - 1]] || {};
+            if (last.STRC != null || last.STRCx != null) {
+                breakoutBlock =
+                    '<div class="mt-3 text-xs text-slate-600 dark:text-slate-300">' +
+                        '<strong>Latest STRC-family breakout (' + dates[dates.length - 1] + '):</strong> ' +
+                        'STRC <span class="font-mono">' + CommonRenderer.formatCurrencyExact(last.STRC || 0) + '</span> · ' +
+                        'STRCx <span class="font-mono">' + CommonRenderer.formatCurrencyExact(last.STRCx || 0) + '</span>' +
+                        (last.SATA != null ? ' · SATA <span class="font-mono">' + CommonRenderer.formatCurrencyExact(last.SATA) + '</span>' : '') +
+                        ' <span class="text-slate-400">(Wolf-attested; the public Accountable feed bundles STRC + STRCx into a single STRC figure)</span>' +
+                    '</div>';
+            }
+        }
+
+        // Scope-regression warning — only render when the latest scope is narrower
+        // than the prior one. Avoids false positives if scope re-expands.
+        var scopeWarning = '';
+        if (reports.length >= 2 &&
+            latest && latest.scope === 'securities_only' &&
+            reports[1] && reports[1].scope === 'full_balance') {
+            scopeWarning =
+                '<div class="risk-flag risk-warning mt-3">' +
+                    '<strong>⚠ Scope regression:</strong> ' +
+                    latest.period + ' narrowed to securities only — cash, stablecoin, and dividends-in-motion ' +
+                    '(covered in ' + reports[1].period + ') all dropped out. ' +
+                    'The largest reserve component (Cash &amp; Equivalents) has no CPA-firm coverage for any date after ' +
+                    snapshotDate(reports[1]) + '. ' +
+                    'Watch the next report for scope re-inclusion.' +
+                '</div>';
+        }
+
+        // Header row with auditor identity + freshness pill + landing-page link.
+        var landing = wolf.landing_page || 'https://docs.apyx.fi/collateral-and-custody/third-party-attestation';
+        var headerRow =
+            '<div class="flex flex-wrap items-center justify-between gap-2 mb-2">' +
+                '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200">' +
+                    'Third-Party CPA Attestations (Wolf &amp; Company)' +
+                '</div>' +
+                '<div class="flex items-center gap-2">' +
+                    ApyxRenderer._statusPill(freshLabel, freshState) +
+                    '<a href="' + landing + '" target="_blank" rel="noopener noreferrer" ' +
+                        'class="text-xs text-blue-600 hover:underline">' +
+                        'All attestations &uarr;' +
+                    '</a>' +
+                '</div>' +
+            '</div>';
+
+        return headerRow +
+            auditorLine +
+            tableBlock +
+            breakoutBlock +
+            scopeWarning;
     },
 
     // ============================================================
