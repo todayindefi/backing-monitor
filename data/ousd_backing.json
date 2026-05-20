@@ -3,45 +3,45 @@
   "asset": "OUSD",
   "asset_slug": "ousd",
   "chain": "Ethereum",
-  "timestamp": "2026-05-20T15:35:34Z",
+  "timestamp": "2026-05-20T16:35:16Z",
   "summary": {
     "total_supply": 5165738.78,
-    "total_backing": 4608628.55,
+    "total_backing": 4608763.95,
     "collateral_ratio": 100.59,
     "collateral_ratio_alt": {
       "label": "CR (gross)",
-      "value": 100.52,
+      "value": 100.53,
       "note": "Includes circular protocol-minted OUSD in Curve pools \u2014 for reference only"
     },
-    "surplus_deficit": 27119.8,
+    "surplus_deficit": 27255.2,
     "defillama_tvl": 5174019.43,
     "wousd_supply": 446681.35,
-    "vault_total_value": 5175654.63,
+    "vault_total_value": 5175790.03,
     "circulating_supply": 4581508.75,
     "pol_self_minted": 584230.03
   },
   "backing_breakdown": [
     {
       "label": "Morpho v2",
-      "value": 2103929.45,
+      "value": 2103940.18,
       "pct": 45.7,
       "tags": [],
       "detail": {
         "address": "0x3643cafA6eF3dd7Fcc2ADaD1cabf708075AFFf6e",
         "balances": {
-          "USDC": 2103929.452483
+          "USDC": 2103940.176795
         }
       }
     },
     {
       "label": "Unknown (0xE0228DB1...)",
-      "value": 1265806.71,
+      "value": 1265931.38,
       "pct": 27.5,
       "tags": [],
       "detail": {
         "address": "0xE0228DB13F8C4Eb00fD1e08e076b09eF5cD0EA1e",
         "balances": {
-          "USDC": 1265806.708669
+          "USDC": 1265931.382989
         }
       }
     },
@@ -88,11 +88,15 @@
   "risk_flags": [
     {
       "severity": "warning",
-      "message": "Thin margin: CR = 100.59% (surplus: $27.1K)"
+      "message": "Thin margin: CR = 100.59% (surplus: $27.3K)"
     },
     {
       "severity": "critical",
       "message": "Rebase is PAUSED \u2014 holders not receiving yield"
+    },
+    {
+      "severity": "warning",
+      "message": "Self-referential risk: 100% of Morpho collateral is Origin products (OETH) \u2014 same issuer as OUSD"
     }
   ],
   "vault_status": {
@@ -128,21 +132,42 @@
       "is_transfer_pending": false,
       "local_usdc": 0.0
     },
-    "morpho_allocations": null,
+    "morpho_allocations": {
+      "vault_address": "0x5B8b9FA8e4145eE06025F642cAdB1B47e5F39F04",
+      "vault_name": "OUSD Vault V1",
+      "total_assets_usd": 2103709.34,
+      "available_liquidity_usd": 1290643.26,
+      "origin_collateral_usd": 2103709.34,
+      "origin_collateral_pct": 100.0,
+      "markets": [
+        {
+          "collateral": "OETH",
+          "collateral_address": "0x856c4Efb76C1D1AE02e20CEB03A2A6a08b0b8dC3",
+          "vault_supply_usd": 2103709.34,
+          "pct_of_morpho": 100.0,
+          "total_supply_usd": 9087428.4,
+          "total_borrows_usd": 7796785.14,
+          "available_liquidity_usd": 1290643.26,
+          "utilization_pct": 85.8,
+          "lltv": 0.86,
+          "self_referential": true
+        }
+      ]
+    },
     "redemption_capacity": {
       "vault_idle_usd": 17203.95,
-      "morpho_available_usd": 0,
-      "instant_capacity_usd": 17203.95,
+      "morpho_available_usd": 1290643.26,
+      "instant_capacity_usd": 1307847.21,
       "total_supply_usd": 5165738.78,
-      "instant_pct": 0.3,
+      "instant_pct": 25.3,
       "note": "Remaining requires strategy withdrawal (up to 24h for cross-chain)"
     },
     "peg": {
-      "market_price": 0.9991631304249696,
+      "market_price": 0.9996311516608013,
       "theoretical_price": 1.0,
-      "premium_discount_pct": -0.08368695750303745,
+      "premium_discount_pct": -0.036884833919870186,
       "source": "coingecko",
-      "timestamp": "2026-05-20T15:16:31.482675Z"
+      "timestamp": "2026-05-20T16:16:35.347962Z"
     }
   }
 }
