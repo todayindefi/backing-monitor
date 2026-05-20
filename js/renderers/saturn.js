@@ -211,6 +211,7 @@ var SaturnRenderer = {
             html += anc('panel-nav',      SaturnRenderer._renderSusdatNavTrajectory(specific, s));
         }
         html += anc('panel-market',   SaturnRenderer._renderSecondaryMarket(specific, slug));
+        html += anc('panel-peg',      SaturnRenderer._renderPegHistory(specific, s, slug));
         html += anc('panel-trust',    SaturnRenderer._renderTrustStack(specific, slug));
         html += '<div id="saturn-family-panel"></div>';
 
@@ -226,6 +227,7 @@ var SaturnRenderer = {
             SaturnRenderer._renderSusdatReserveDonut(specific);
             SaturnRenderer._loadSusdatNavChart(slug, s);
         }
+        SaturnRenderer._loadPegHistoryChart(slug, s);
         SaturnRenderer._loadFamilyPanel(slug);
     },
 
@@ -287,6 +289,7 @@ var SaturnRenderer = {
                 { id: 'panel-backing',        label: 'Backing' },
                 { id: 'panel-drift',          label: 'Drift' },
                 { id: 'panel-market',         label: 'Market' },
+                { id: 'panel-peg',            label: 'Peg' },
                 { id: 'panel-trust',          label: 'Trust' },
                 { id: 'saturn-family-panel',  label: 'Family' }
             ];
@@ -296,6 +299,7 @@ var SaturnRenderer = {
                 { id: 'panel-reserve',        label: 'Reserve' },
                 { id: 'panel-nav',            label: 'NAV' },
                 { id: 'panel-market',         label: 'Market' },
+                { id: 'panel-peg',            label: 'Peg' },
                 { id: 'panel-trust',          label: 'Trust' },
                 { id: 'saturn-family-panel',  label: 'Family' }
             ];
@@ -1066,6 +1070,367 @@ var SaturnRenderer = {
                 interaction: { intersect: false, mode: 'index' }
             }
         });
+    },
+
+    // ============================================================
+    // §4b Peg Performance — 30d history
+    //
+    // USDat: Curve-derived peg vs $1.00 (fixed-peg model).
+    // sUSDat: discount-to-NAV vs 0% baseline (vault-share — absolute
+    // price vs $1 would understate the discount because NAV grows).
+    // Sources from {slug}_backing_history.json — same file the NAV
+    // trajectory chart loads on sUSDat, browser HTTP cache makes the
+    // second fetch effectively free.
+    // ============================================================
+    _renderPegHistory: function(specific, s, slug) {
+        var headline, methodology, chartTitle;
+
+        if (slug === 'usdat') {
+            var pegState = SaturnRenderer._pegStatusClass(s.peg_deviation_pct);
+            var pegCls   = SaturnRenderer._pegPctClass(pegState);
+            var pegTxt   = (s.peg_curve_usdc != null) ? '$' + s.peg_curve_usdc.toFixed(4) : '—';
+            headline =
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">' +
+                    '<div class="summary-card"><div class="card-label">Current peg (Curve)</div>' +
+                        '<div class="card-value">' + pegTxt + '</div>' +
+                        '<div class="text-xs ' + pegCls + ' mt-0.5 font-mono">' +
+                            SaturnRenderer._pegPctText(s.peg_deviation_pct, 3) +
+                        '</div>' +
+                        '<div class="mt-1">' + SaturnRenderer._statusPill(SaturnRenderer._pegStatusLabel(pegState), pegState) + '</div>' +
+                    '</div>' +
+                    '<div class="summary-card"><div class="card-label">24h range</div>' +
+                        '<div class="card-value text-base" id="saturn-peg-range-24h">—</div>' +
+                        '<div class="text-xs text-slate-400 mt-1">min · max</div></div>' +
+                    '<div class="summary-card"><div class="card-label">7d range</div>' +
+                        '<div class="card-value text-base" id="saturn-peg-range-7d">—</div>' +
+                        '<div class="text-xs text-slate-400 mt-1">min · max</div></div>' +
+                '</div>';
+            chartTitle = '30-day peg vs $1.00 (Curve USDAT/USDC)';
+            methodology =
+                '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
+                    'Peg sampled per hourly analyzer cycle as the Curve USDAT/USDC implied rate; ±25 bps healthy, ' +
+                    '±50 bps watch, ±100 bps stress (same bands as the Layer-3 alerter). Higher-fidelity than ' +
+                    'CoinGecko aggregate price for short-window observation — analyzer reads pool state directly.' +
+                '</div>';
+        } else {
+            // sUSDat — discount-to-NAV, not absolute price.
+            var sec = specific.secondary || {};
+            var poolPrice = sec.curve_susdat_usdc && sec.curve_susdat_usdc.implied_price;
+            var d = s.discount_to_nav_pct;
+            var dState = (d == null) ? 'unknown' :
+                         (Math.abs(d) < 0.5) ? 'ok' :
+                         (Math.abs(d) < 1.5) ? 'warn' : 'critical';
+            var dCls = SaturnRenderer._pegPctClass(dState);
+            headline =
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">' +
+                    '<div class="summary-card"><div class="card-label">Discount to NAV</div>' +
+                        '<div class="card-value ' + dCls + '">' + SaturnRenderer._pegPctText(d, 3) + '</div>' +
+                        '<div class="text-xs text-slate-400 mt-0.5">Curve sUSDat/USDC vs NAV</div>' +
+                        '<div class="mt-1">' + SaturnRenderer._statusPill(SaturnRenderer._pegStatusLabel(dState), dState) + '</div>' +
+                    '</div>' +
+                    '<div class="summary-card"><div class="card-label">Current NAV</div>' +
+                        '<div class="card-value text-base">' +
+                            (s.nav_per_share != null ? s.nav_per_share.toFixed(6) : '—') +
+                        '</div>' +
+                        '<div class="text-xs text-slate-400 mt-1">USDat / sUSDat</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Curve market price</div>' +
+                        '<div class="card-value text-base">' +
+                            (poolPrice != null ? '$' + poolPrice.toFixed(4) :
+                                (s.peg_curve_usdc != null ? '$' + s.peg_curve_usdc.toFixed(4) : '—')) +
+                        '</div>' +
+                        '<div class="text-xs text-slate-400 mt-1">Curve sUSDat/USDC spot</div></div>' +
+                '</div>';
+            chartTitle = '30-day discount-to-NAV (sUSDat)';
+            methodology =
+                '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
+                    '<strong>Vault-share peg is measured as discount-to-NAV, not absolute price vs $1.00.</strong> ' +
+                    'NAV accrues over time (currently ~$' + (s.nav_per_share != null ? s.nav_per_share.toFixed(4) : '1.0007') +
+                    ' and growing under the 11% APY design target), so absolute-price comparisons would understate ' +
+                    'the true discount. A persistent small positive discount typically reflects the 30-day vesting ' +
+                    'queue — arbs can\'t close the gap atomically — and is not a peg break.' +
+                '</div>';
+        }
+
+        var chartBlock =
+            '<div class="mt-4">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">' + chartTitle + '</div>' +
+                '<div style="height: 320px; position: relative;">' +
+                    '<canvas id="saturn-peg-history-chart"></canvas>' +
+                '</div>' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Peg Performance</div>' +
+            headline +
+            chartBlock +
+            methodology +
+        '</div>';
+    },
+
+    _loadPegHistoryChart: function(slug, s) {
+        var ctx = document.getElementById('saturn-peg-history-chart');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + slug + '_backing_history.json?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                if (!hist || !Array.isArray(hist.entries) || hist.entries.length < 2) {
+                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Peg history not yet available — chart populates after a few hours of samples.</div>';
+                    return;
+                }
+                if (slug === 'usdat') {
+                    SaturnRenderer._drawUsdatPegChart(ctx, hist.entries, s);
+                } else {
+                    SaturnRenderer._drawSusdatDiscountChart(ctx, hist.entries, s);
+                }
+            })
+            .catch(function() {
+                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Peg history unavailable.</div>';
+            });
+    },
+
+    _drawUsdatPegChart: function(ctx, entries, s) {
+        var cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+        var windowed = entries.filter(function(e) {
+            if (e.peg_curve_usdc == null) return false;
+            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+            return new Date(ts).getTime() >= cutoff;
+        });
+        if (windowed.length < 2) {
+            ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Peg history not yet available — chart populates after a few hours of samples.</div>';
+            return;
+        }
+
+        // Backfill 24h / 7d range tiles populated by _renderPegHistory.
+        SaturnRenderer._fillPegRangeTiles(windowed);
+
+        var labels = windowed.map(function(e) {
+            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+            return new Date(ts);
+        });
+        var values = windowed.map(function(e) { return e.peg_curve_usdc; });
+
+        // Y range — anchored at $1.00 with ±0.5% padding default, but auto-rescale
+        // if real data widens beyond. Per spec: "auto-rescale if a stress event
+        // widens the range".
+        var minV = Math.min.apply(null, values);
+        var maxV = Math.max.apply(null, values);
+        var pad = Math.max(0.005, (maxV - minV) * 0.4);
+        var yMin = Math.min(1 - 0.005, minV - pad);
+        var yMax = Math.max(1 + 0.005, maxV + pad);
+
+        var pointColors = values.map(function(v) {
+            var dev = (v - 1) * 100;
+            var st = SaturnRenderer._pegStatusClass(dev);
+            if (st === 'ok')       return '#3b82f6';
+            if (st === 'warn')     return '#f59e0b';
+            if (st === 'critical') return '#ef4444';
+            return '#94a3b8';
+        });
+
+        if (window._saturnPegChart) {
+            try { window._saturnPegChart.destroy(); } catch (e) {}
+        }
+        window._saturnPegChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Curve USDAT/USDC',
+                    data: values,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    fill: true,
+                    tension: 0.25,
+                    pointRadius: 2,
+                    borderWidth: 2,
+                    spanGaps: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        suggestedMin: yMin,
+                        suggestedMax: yMax,
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) { return '$' + Number(v).toFixed(4); }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) {
+                                var v = c.raw;
+                                var dev = (v - 1) * 100;
+                                var sign = dev >= 0 ? '+' : '';
+                                return 'Curve: $' + Number(v).toFixed(6) + '  (' + sign + (dev * 100).toFixed(1) + ' bps)';
+                            }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            peg: {
+                                type: 'line', yMin: 1.0, yMax: 1.0,
+                                borderColor: '#94a3b8', borderWidth: 1, borderDash: [4, 4],
+                                label: { content: '$1.00', display: true, position: 'end', font: { size: 9 }, color: '#64748b' }
+                            }
+                        }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    _drawSusdatDiscountChart: function(ctx, entries, s) {
+        var cutoff = Date.now() - 30 * 24 * 3600 * 1000;
+        var windowed = entries.filter(function(e) {
+            if (e.discount_to_nav_pct == null) return false;
+            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+            return new Date(ts).getTime() >= cutoff;
+        });
+        if (windowed.length < 2) {
+            ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Discount history not yet available — chart populates after a few hours of samples.</div>';
+            return;
+        }
+
+        var labels = windowed.map(function(e) {
+            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+            return new Date(ts);
+        });
+        var values = windowed.map(function(e) { return e.discount_to_nav_pct; });
+        var navMap = windowed.map(function(e) { return e.nav_per_share; });
+        var priceMap = windowed.map(function(e) { return e.peg_curve_usdc; });
+
+        // Y range — anchored at 0% with ±2% padding default, auto-rescale if real
+        // data widens.
+        var absMax = Math.max.apply(null, values.map(function(v) { return Math.abs(v); }));
+        var padPct = Math.max(2.0, absMax * 1.2);
+
+        var pointColors = values.map(function(v) {
+            var absV = Math.abs(v);
+            if (absV < 0.5) return '#3b82f6';
+            if (absV < 1.5) return '#f59e0b';
+            return '#ef4444';
+        });
+
+        if (window._saturnPegChart) {
+            try { window._saturnPegChart.destroy(); } catch (e) {}
+        }
+        window._saturnPegChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Discount to NAV',
+                    data: values,
+                    borderColor: '#3b82f6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                    pointBackgroundColor: pointColors,
+                    pointBorderColor: pointColors,
+                    fill: false,
+                    tension: 0.25,
+                    pointRadius: 2,
+                    borderWidth: 2,
+                    spanGaps: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        suggestedMin: -padPct,
+                        suggestedMax:  padPct,
+                        title: { display: true, text: 'Discount to NAV (%)', font: { size: 11 } },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) { return (v > 0 ? '+' : '') + Number(v).toFixed(2) + '%'; }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) {
+                                var idx = c.dataIndex;
+                                var nav = navMap[idx];
+                                var p   = priceMap[idx];
+                                var dev = c.raw;
+                                var sign = dev >= 0 ? '+' : '';
+                                return [
+                                    'Discount: ' + sign + Number(dev).toFixed(3) + '%',
+                                    'NAV: ' + (nav != null ? Number(nav).toFixed(6) : '—'),
+                                    'Curve: ' + (p != null ? '$' + Number(p).toFixed(4) : '—')
+                                ];
+                            }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            zero: {
+                                type: 'line', yMin: 0, yMax: 0,
+                                borderColor: '#94a3b8', borderWidth: 1, borderDash: [4, 4],
+                                label: { content: 'NAV (0%)', display: true, position: 'end', font: { size: 9 }, color: '#64748b' }
+                            }
+                        }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    // Helper for the 24h / 7d range tiles on the USDat peg panel.
+    _fillPegRangeTiles: function(entries) {
+        var now = Date.now();
+        var cutoff24h = now - 24 * 3600 * 1000;
+        var cutoff7d  = now - 7 * 24 * 3600 * 1000;
+
+        function rangeOver(threshold) {
+            var vals = entries.filter(function(e) {
+                if (e.peg_curve_usdc == null) return false;
+                var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+                return new Date(ts).getTime() >= threshold;
+            }).map(function(e) { return e.peg_curve_usdc; });
+            if (vals.length === 0) return null;
+            return { min: Math.min.apply(null, vals), max: Math.max.apply(null, vals), n: vals.length };
+        }
+
+        function setTile(id, range) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            if (range == null) {
+                el.textContent = '—';
+                return;
+            }
+            el.textContent = '$' + range.min.toFixed(4) + ' · $' + range.max.toFixed(4);
+        }
+
+        setTile('saturn-peg-range-24h', rangeOver(cutoff24h));
+        setTile('saturn-peg-range-7d',  rangeOver(cutoff7d));
     },
 
     // ============================================================
