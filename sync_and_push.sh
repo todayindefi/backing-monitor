@@ -26,6 +26,11 @@ cp /home/danger/PegTracker/data/apxusd_backing_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/apyusd_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/apyusd_backing_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/apyx_family.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/usdat_backing.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/usdat_backing_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/susdat_backing.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/susdat_backing_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/saturn_family.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/usdm_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/usdm_backing_history.json data/ 2>/dev/null
 

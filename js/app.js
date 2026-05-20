@@ -18,6 +18,8 @@ var ASSET_RENDERERS = {
     syrupusdt: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
     apxusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null,
     apyusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null,
+    usdat:     typeof SaturnRenderer    !== 'undefined' ? SaturnRenderer    : null,
+    susdat:    typeof SaturnRenderer    !== 'undefined' ? SaturnRenderer    : null,
     thusd:     typeof ThusdRenderer     !== 'undefined' ? ThusdRenderer     : null,
     'fiat-stable-reserve-backed': typeof USDmRenderer !== 'undefined' ? USDmRenderer : null
 };
@@ -148,6 +150,19 @@ async function renderAsset(slug) {
             assetMeta = assets.find(function(a) { return a.slug === slug; }) || null;
         }
 
+        // Asset-specific pre-render hook — lets the renderer patch top-card
+        // overrides (e.g. swap in init-level CR for syrupUSDC/USDT) before
+        // the common summary-cards row paints. History is passed too so
+        // renderers can normalize chart-series scale (USDm ratio→%).
+        // Runs before the header below so renderers can backfill top-level
+        // fields the Layer-1 schema doesn't carry (e.g. Saturn omits
+        // `asset` + `chain`, aliasing them in preRender keeps the header
+        // out of "undefined (undefined)").
+        var preRenderer = findAssetRenderer(data);
+        if (preRenderer && typeof preRenderer.preRender === 'function') {
+            preRenderer.preRender(data, history);
+        }
+
         // Header
         document.getElementById('header-subtitle').textContent = data.asset + ' (' + data.chain + ')';
         document.getElementById('header-timestamp').textContent = 'Updated: ' + CommonRenderer.formatDate(data.timestamp);
@@ -161,15 +176,6 @@ async function renderAsset(slug) {
                 reportLink.classList.add('hidden');
                 reportLink.removeAttribute('href');
             }
-        }
-
-        // Asset-specific pre-render hook — lets the renderer patch top-card
-        // overrides (e.g. swap in init-level CR for syrupUSDC/USDT) before
-        // the common summary-cards row paints. History is passed too so
-        // renderers can normalize chart-series scale (USDm ratio→%).
-        var preRenderer = findAssetRenderer(data);
-        if (preRenderer && typeof preRenderer.preRender === 'function') {
-            preRenderer.preRender(data, history);
         }
 
         // Common sections
