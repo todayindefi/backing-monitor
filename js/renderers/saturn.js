@@ -1599,9 +1599,19 @@ var SaturnRenderer = {
             rows += row('ProxyAdmin contract', SaturnRenderer._addrCell(proxyAdminContract), 'Owns the USDat upgrade path');
         }
         rows += row(
-            (slug === 'usdat') ? 'ProxyAdmin owner / Admin EOA' : 'DEFAULT_ADMIN_ROLE holder',
+            (slug === 'usdat') ? 'ProxyAdmin owner' : 'DEFAULT_ADMIN_ROLE holder',
             SaturnRenderer._addrCell(proxyAdminOwner),
-            adminIsEoa ? '<span class="text-red-700 font-medium">⚠ Single EOA — not a multisig</span>' : 'multisig'
+            'Same address controls USDat + sUSDat'
+        );
+        // Admin custody — Saturn-disclosed Fireblocks MPC representation.
+        // The ⓘ tooltip carries the on-chain-indistinguishability caveat per
+        // saturn-fireblocks-mpc-disclosure-backing-monitor.md.
+        rows += row(
+            'Admin custody',
+            '<span class="font-medium">Saturn-stated Fireblocks 2-of-3 MPC</span>' +
+            ' <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 ml-1 cursor-help" ' +
+            'title="Saturn represents this address as a Fireblocks 2-of-3 MPC wallet. On-chain reads cannot distinguish MPC from single-key EOA — the address shows no contract code and a low outbound nonce in either case. Claim taken at face value pending independent attestation. The raw single-key-compromise vector is closed by the MPC quorum requirement, but concentration-under-Saturn and no-on-chain-timelock remain.">ⓘ on-chain indistinguishable</span>',
+            'Same (shared address)'
         );
 
         if (slug === 'susdat' && specific.trust_stack && specific.trust_stack.vesting_period_days != null) {
@@ -1631,17 +1641,22 @@ var SaturnRenderer = {
                 ' · <span class="text-xs text-slate-500">audit set is shared across USDat + sUSDat</span>' +
             '</div>';
 
-        // Single-key callout — the structural risk.
-        var singleKeyCallout = '';
+        // Admin posture callout — Saturn-represented Fireblocks 2-of-3 MPC.
+        // Amber/warn rather than red/crit: the raw single-key vector is
+        // closed by the MPC quorum (taking Saturn's representation at face
+        // value), but three structural residuals remain — surfaced inline.
+        var adminCallout = '';
         if (adminIsEoa) {
-            singleKeyCallout =
-                '<div class="risk-flag risk-critical mt-3">' +
-                    '<strong>🚨 Single-key admin posture.</strong> ' +
-                    'Admin layer is a single EOA at ' + SaturnRenderer._addrCell(proxyAdminOwner) + '. ' +
-                    'A single key compromise can rewrite token logic or pause both Saturn assets ' +
-                    'with no review window — no timelock, no multisig, no on-chain governance check. ' +
-                    'Same risk class as the Apyx MAINTAINER Safe (3-of-6, no timelock), but tighter: ' +
-                    '1-of-1 vs 3-of-6.' +
+            adminCallout =
+                '<div class="risk-flag risk-warning mt-3">' +
+                    '<strong>Admin layer is a Saturn-represented Fireblocks 2-of-3 MPC</strong> ' +
+                    '<span class="text-xs font-normal">(on-chain reads cannot distinguish MPC from single-key EOA)</span> ' +
+                    'at ' + SaturnRenderer._addrCell(proxyAdminOwner) + '. ' +
+                    'Taking the claim at face value, the raw single-key-compromise vector is closed — a 2-of-3 quorum is required for any admin action. ' +
+                    'Three residual concerns remain: signers are internal to Saturn\'s custody process (not multi-org), ' +
+                    'there is no on-chain timelock (admin actions land immediately once the quorum signs), and Fireblocks ' +
+                    'doesn\'t publish customer-verifiable infrastructure proofs. ' +
+                    'Same residual risk class as Apyx\'s admin posture.' +
                 '</div>';
         }
 
@@ -1653,7 +1668,7 @@ var SaturnRenderer = {
                     '<tbody>' + rows + '</tbody>' +
                 '</table>' +
             '</div>' +
-            singleKeyCallout +
+            adminCallout +
             auditLine +
         '</div>';
     },
@@ -1712,15 +1727,19 @@ var SaturnRenderer = {
                 (totals.comment ? '<div class="text-xs text-slate-500 italic mt-2">' + totals.comment + '</div>' : '') +
             '</div>';
 
-        // Admin EOA card
+        // Shared admin card — Saturn-represented Fireblocks 2-of-3 MPC
+        // (on-chain shape is EOA-shaped — no contract code, low nonce). Title
+        // + subtitle carry the MPC framing; the on-chain shape stays visible
+        // in the Type row so the indistinguishability is legible.
         var adminCard =
             '<div>' +
-                '<div class="text-sm font-semibold text-slate-700 mb-2">Shared admin EOA</div>' +
+                '<div class="text-sm font-semibold text-slate-700 mb-1">Shared admin MPC</div>' +
+                '<div class="text-xs text-slate-500 mb-2">Saturn-stated Fireblocks 2-of-3 — on-chain EOA-shaped</div>' +
                 '<table class="data-table"><tbody>' +
                     '<tr><td class="font-medium">Address</td><td>' + SaturnRenderer._addrCell(admin.address) + '</td></tr>' +
-                    '<tr><td class="font-medium">Type</td><td>' +
+                    '<tr><td class="font-medium">On-chain shape</td><td>' +
                         (admin.is_eoa ?
-                            SaturnRenderer._statusPill('EOA (not multisig)', 'critical') :
+                            SaturnRenderer._statusPill('EOA (no code)', 'warn') :
                             SaturnRenderer._statusPill('Contract', 'warn')) +
                     '</td></tr>' +
                     '<tr><td class="font-medium">Outbound nonce</td><td><span class="font-mono">' +
