@@ -650,7 +650,7 @@ var ApyxRenderer = {
                 k +
                 (k === 'STRC' ?
                     ' <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 ml-1 cursor-help" ' +
-                    'title="Bundles brokerage-custodied STRC (at Alpaca) and on-chain STRCx (in a 3-of-6 Gnosis Safe at 0x37b0779a…323a555 — same six owners as Apyx\'s MAINTAINER + ADMIN Safes, verified on-chain). The Accountable feed bundles both into a single STRC figure; the brokerage-vs-on-chain split is disclosed in Wolf & Company\'s monthly attestations (latest: 4/30/2026 — $76.8M STRC + $51.5M STRCx) and the STRCx slice is directly observable via balanceOf() on the Safe.">ⓘ incl. STRCx</span>' :
+                    'title="Bundles brokerage-custodied STRC (at Alpaca) and on-chain STRCx (in a 3-of-6 Gnosis Safe at 0x37b0779a…323a555 — same six owners as Apyx\'s MAINTAINER + ADMIN Safes, verified on-chain). The Accountable feed bundles both into a single STRC figure; the brokerage-vs-on-chain split is disclosed in Wolf & Company\'s monthly attestations (latest: 4/30/2026 — $76.8M STRC + $51.5M STRCx). The STRCx slice is directly observable via balanceOf() on the Safe — see the On-Chain Verified tile below for live numbers.">ⓘ incl. STRCx</span>' :
                     '') +
             '</td>';
             return '<tr>' +
@@ -731,8 +731,148 @@ var ApyxRenderer = {
             donutBlock +
             timelineBlock +
             wolfPlaceholder +
+            ApyxRenderer._renderOnChainVerifiedSection(specific) +
             methodology +
         '</div>';
+    },
+
+    // On-Chain Verified sub-section — promotes the STRCx Safe verifiability
+    // story from a tooltip in the STRC bucket to a first-class artifact:
+    // STRCx is the only Apyx reserve component directly readable on-chain
+    // via a single balanceOf() call. Sub-section pattern mirrors the
+    // Liquidity-panel consolidation (H3 + divider). Renders empty when the
+    // upstream onchain_verified_usd field is missing — analyzer fields ship
+    // via PegTracker apyx-strcx-verification-fields-pegtracker handoff.
+    _renderOnChainVerifiedSection: function(specific) {
+        var ba = (specific && specific.backing_attestation) || {};
+        var safe = ba.strcx_safe || {};
+        var verifiedUsd = safe.onchain_verified_usd;
+        if (verifiedUsd == null) return '';
+
+        var balanceTokens = safe.balance_strcx;
+        var coverageTotal = safe.coverage_pct_of_total_reserves;
+        var coverageStrc = safe.coverage_pct_of_strc_bucket;
+        var delta = safe.delta_vs_last_wolf_attestation_pct;
+        var priceSource = safe.implied_price_source;
+        var addr = safe.address;
+        var etherscanUrl = safe.etherscan_url ||
+            (addr ? 'https://etherscan.io/address/' + addr : null);
+
+        var balanceTxt = (balanceTokens != null) ?
+            balanceTokens.toLocaleString('en-US', { maximumFractionDigits: 0 }) :
+            '—';
+        var usdTxt = CommonRenderer.formatCurrency(verifiedUsd);
+        var parAnnotation = (priceSource === 'par_fallback') ?
+            ' <span class="text-xs text-slate-400 italic font-normal">(par-priced)</span>' : '';
+
+        var deltaTxt = '';
+        if (delta != null) {
+            var deltaArrow = delta >= 0 ? '↑' : '↓';
+            var deltaCls = delta >= 0 ? 'text-emerald-700' : 'text-red-600';
+            var deltaSign = (delta > 0) ? '+' : (delta < 0 ? '−' : '');
+            deltaTxt = '<div class="text-xs ' + deltaCls + ' mt-1">' +
+                deltaArrow + ' ' + deltaSign + Math.abs(delta).toFixed(1) + '% vs last Wolf attestation' +
+            '</div>';
+        }
+
+        var coverageTotalTxt = (coverageTotal != null) ? coverageTotal.toFixed(2) + '%' : '—';
+        var coverageStrcRow = (coverageStrc != null) ?
+            '<div class="text-xs text-slate-400 mt-1">' + coverageStrc.toFixed(2) + '% of STRC family</div>' : '';
+
+        var balanceTile =
+            '<div class="summary-card">' +
+                '<div class="card-label">STRCx Safe balance</div>' +
+                '<div class="card-value text-base">' + balanceTxt + ' <span class="text-xs text-slate-400 font-normal">STRCx</span></div>' +
+                '<div class="text-xs text-slate-400 mt-1">at the Apyx 3-of-6 Safe</div>' +
+            '</div>';
+
+        var usdTile =
+            '<div class="summary-card">' +
+                '<div class="card-label">Implied USD value</div>' +
+                '<div class="card-value">' + usdTxt + parAnnotation + '</div>' +
+                deltaTxt +
+            '</div>';
+
+        var coverageTile =
+            '<div class="summary-card">' +
+                '<div class="card-label">Coverage of total reserves</div>' +
+                '<div class="card-value">' + coverageTotalTxt + '</div>' +
+                coverageStrcRow +
+            '</div>';
+
+        var tilesRow =
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">' +
+                balanceTile + usdTile + coverageTile +
+            '</div>';
+
+        var badgeHtml = ApyxRenderer._strcxReconciliationBadge(delta);
+        var addrShort = addr ? (addr.slice(0, 10) + '…' + addr.slice(-7)) : '—';
+        var addrLink = etherscanUrl ?
+            '<a href="' + etherscanUrl + '" target="_blank" rel="noopener noreferrer" ' +
+                'class="text-blue-500 hover:underline">view on Etherscan ↗</a>' : '';
+        var addressRow =
+            '<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mt-4 text-xs">' +
+                '<div class="text-slate-600">' +
+                    'Address: <span class="font-mono text-slate-700" title="' + (addr || '') + '">' + addrShort + '</span> ' +
+                    '<span class="text-slate-400">(3-of-6 Safe)</span>' +
+                    (addrLink ? ' · ' + addrLink : '') +
+                '</div>' +
+                (badgeHtml ? '<div>' + badgeHtml + '</div>' : '') +
+            '</div>';
+
+        // Methodology footnote — surfaces "STRCx = only TEE + CPA + on-chain
+        // triple-verified component." Uses "approximately" rather than tilde
+        // per feedback_markdown_tilde_gfm gotcha (same applies if this string
+        // ever flows through a markdown layer).
+        var coveragePctTxt = (coverageTotal != null) ?
+            'approximately ' + coverageTotal.toFixed(0) + '%' : 'approximately 16%';
+        var remainingPctTxt = (coverageTotal != null) ?
+            'approximately ' + (100 - coverageTotal).toFixed(0) + '%' : 'approximately 84%';
+        var methodology =
+            '<div class="text-xs text-slate-500 italic leading-relaxed mt-4">' +
+                'Of Apyx\'s total reserves, ' + coveragePctTxt + ' is directly readable on-chain via a single ' +
+                '<span class="font-mono not-italic">balanceOf</span> call on the STRCx contract at the Apyx Safe. The remaining ' +
+                remainingPctTxt + ' (brokerage STRC, cash &amp; equivalents, SATA) is verifiable only through the Accountable ' +
+                'TEE-attested proof-of-solvency feed and monthly Wolf &amp; Company CPA examinations. STRCx is Wolf-anchored ' +
+                'for USD pricing — refreshed when each monthly Wolf attestation publishes. This makes STRCx the only Apyx ' +
+                'reserve component combining TEE attestation + CPA examination + direct on-chain readability.' +
+            '</div>';
+
+        var divider = '<div class="border-t border-slate-200 pt-6 mt-6"></div>';
+        return divider +
+            '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">On-Chain Verified</h3>' +
+            tilesRow +
+            addressRow +
+            methodology;
+    },
+
+    // Reconciliation badge for the STRCx Safe vs last Wolf attestation.
+    // Asymmetric thresholds: positive delta is accumulation since the last
+    // attested snapshot (benign — apyx routinely accrues STRCx between
+    // monthly attestations). Negative delta is outflow from the Safe —
+    // any unexplained outflow > 2% in magnitude is significant enough to
+    // warrant red, even though the same magnitude on the positive side
+    // would still badge emerald.
+    _strcxReconciliationBadge: function(delta) {
+        if (delta == null) return '';
+        var abs = Math.abs(delta);
+        var label, bg, fg, icon;
+        if (delta < -2) {
+            label = 'Material outflow from Safe — investigate';
+            bg = 'bg-red-50';     fg = 'text-red-800';     icon = '⚠';
+        } else if (abs <= 5) {
+            label = 'Reconciles to Wolf attestation';
+            bg = 'bg-emerald-50'; fg = 'text-emerald-800'; icon = '✓';
+        } else if (abs <= 20) {
+            label = 'Tracking (accumulating since attestation)';
+            bg = 'bg-amber-50';   fg = 'text-amber-800';   icon = '△';
+        } else {
+            label = 'Material drift from attestation — investigate';
+            bg = 'bg-red-50';     fg = 'text-red-800';     icon = '⚠';
+        }
+        return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ' + bg + ' ' + fg + '">' +
+            '<span>' + icon + '</span><span>' + label + '</span>' +
+        '</span>';
     },
 
     // ============================================================
