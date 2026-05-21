@@ -847,27 +847,27 @@ var ApyxRenderer = {
     },
 
     // Reconciliation badge for the STRCx Safe vs last Wolf attestation.
-    // Asymmetric thresholds: positive delta is accumulation since the last
-    // attested snapshot (benign — apyx routinely accrues STRCx between
-    // monthly attestations). Negative delta is outflow from the Safe —
-    // any unexplained outflow > 2% in magnitude is significant enough to
-    // warrant red, even though the same magnitude on the positive side
-    // would still badge emerald.
+    // Asymmetric on direction: positive delta is accumulation between
+    // monthly Wolf snapshots and is benign by default — emerald through
+    // +20%, amber through +100% (notable but expected), red only beyond
+    // +100% (verify). Negative delta is outflow from the Safe — any
+    // shrinkage greater than 2% in magnitude is significant enough to
+    // warrant red regardless of size, since unexplained Safe outflow is
+    // the signal that genuinely matters here.
     _strcxReconciliationBadge: function(delta) {
         if (delta == null) return '';
-        var abs = Math.abs(delta);
         var label, bg, fg, icon;
         if (delta < -2) {
-            label = 'Material outflow from Safe — investigate';
+            label = 'Outflow detected — investigate';
             bg = 'bg-red-50';     fg = 'text-red-800';     icon = '⚠';
-        } else if (abs <= 5) {
+        } else if (delta <= 20) {
             label = 'Reconciles to Wolf attestation';
             bg = 'bg-emerald-50'; fg = 'text-emerald-800'; icon = '✓';
-        } else if (abs <= 20) {
-            label = 'Tracking (accumulating since attestation)';
+        } else if (delta <= 100) {
+            label = 'Tracking (notable accumulation since attestation)';
             bg = 'bg-amber-50';   fg = 'text-amber-800';   icon = '△';
         } else {
-            label = 'Material drift from attestation — investigate';
+            label = 'Extreme growth — verify';
             bg = 'bg-red-50';     fg = 'text-red-800';     icon = '⚠';
         }
         return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ' + bg + ' ' + fg + '">' +
