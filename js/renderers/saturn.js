@@ -216,14 +216,11 @@ var SaturnRenderer = {
         if (slug === 'usdat') {
             html += anc('panel-backing',   SaturnRenderer._renderUsdatBackingComposition(specific, s));
             html += anc('panel-drift',     SaturnRenderer._renderUsdatDriftProbe(specific));
-            html += anc('panel-liquidity', SaturnRenderer._renderLiquidity(specific, s, slug));
         } else {
             html += anc('panel-reserve',   SaturnRenderer._renderSusdatReserveSplit(specific, s));
             html += anc('panel-nav',       SaturnRenderer._renderSusdatNavTrajectory(specific, s));
-            html += anc('panel-market',    SaturnRenderer._renderSecondaryMarket(specific, slug));
-            html += anc('panel-peg',       SaturnRenderer._renderPegHistory(specific, s, slug));
-            html += anc('panel-liquidity', SaturnRenderer._renderLiquidityDerived(specific, s, slug));
         }
+        html += anc('panel-liquidity', SaturnRenderer._renderLiquidity(specific, s, slug));
         html += anc('panel-trust',     SaturnRenderer._renderTrustStack(specific, slug));
         html += '<div id="saturn-family-panel"></div>';
 
@@ -240,12 +237,6 @@ var SaturnRenderer = {
             SaturnRenderer._loadSusdatNavChart(slug, s);
         }
         SaturnRenderer._loadPegHistoryChart(slug, s);
-        // USDat consolidated the derived-score chart out — its time-series
-        // story rides on the peg chart inside the same parent. sUSDat still
-        // renders the standalone Liquidity panel with its own score chart.
-        if (slug !== 'usdat') {
-            SaturnRenderer._loadLiquidityChart(slug);
-        }
         SaturnRenderer._loadFamilyPanel(slug);
     },
 
@@ -315,8 +306,6 @@ var SaturnRenderer = {
                 { id: 'panel-headline',       label: 'Asset' },
                 { id: 'panel-reserve',        label: 'Reserve' },
                 { id: 'panel-nav',            label: 'NAV' },
-                { id: 'panel-market',         label: 'Market' },
-                { id: 'panel-peg',            label: 'Peg' },
                 { id: 'panel-liquidity',      label: 'Liquidity' },
                 { id: 'panel-trust',          label: 'Trust' },
                 { id: 'saturn-family-panel',  label: 'Family' }
@@ -1607,11 +1596,14 @@ var SaturnRenderer = {
     // ============================================================
     _renderLiquidity: function(specific, s, slug) {
         var divider = '<div class="border-t border-slate-200 pt-6 mt-6"></div>';
+        // Vault-share peg metric is discount-to-NAV, not absolute price vs $1 —
+        // the sub-section heading reflects that for sUSDat.
+        var pegHeading = (slug === 'susdat') ? 'Discount to NAV' : 'Peg Performance';
         return '<div class="panel">' +
             '<div class="panel-title">Liquidity</div>' +
             SaturnRenderer._renderLiquidityScoreSection(specific, s, slug) +
             divider +
-            '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">Peg Performance</h3>' +
+            '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">' + pegHeading + '</h3>' +
             SaturnRenderer._renderLiquidityPegSection(specific, s, slug) +
             divider +
             '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">Secondary Market Depth</h3>' +
@@ -1767,166 +1759,6 @@ var SaturnRenderer = {
         return SaturnRenderer._renderSecondaryMarketInner(specific, slug);
     },
 
-    // ============================================================
-    // §4b Liquidity Depth (derived — standalone panel, sUSDat only)
-    //
-    // Original standalone panel — still wired in the sUSDat render() branch
-    // until sUSDat gets the same consolidation. USDat reads the same data
-    // via _renderLiquidityScoreSection inside the consolidated parent above.
-    // ============================================================
-    _renderLiquidityDerived: function(specific, s, slug) {
-        var ld = s.liquidity_depth_derived;
-        if (!ld) {
-            return '<div class="panel">' +
-                '<div class="panel-title">Liquidity Depth <span class="text-xs font-normal text-slate-500">(derived)</span></div>' +
-                '<div class="risk-flag" style="background:#f1f5f9;color:#475569;border-left:4px solid #94a3b8;">' +
-                    '<strong>Liquidity derivation pending.</strong> Formula codified, awaiting analyzer wire-up. ' +
-                    'See <span class="font-mono">specs/handoffs/saturn-liquidity-derivation-pegtracker.md</span>.' +
-                '</div>' +
-            '</div>';
-        }
-
-        var editorial = EDITORIAL_LIQUIDITY[slug];
-        var derived = ld.score;
-        var derivedTxt = (derived != null) ? derived.toFixed(1) + ' / 10' : '—';
-        var editorialTxt = (editorial != null) ? editorial.toFixed(1) : '—';
-        var delta = (editorial != null && derived != null) ? (derived - editorial) : null;
-        var deltaTxt = (delta == null) ? '—' :
-                       (delta === 0) ? '0.0' :
-                       (delta > 0 ? '+' : '−') + Math.abs(delta).toFixed(1);
-        var badge = SaturnRenderer._liquidityReconciliationBadge(delta);
-
-        var comp = ld.components || {};
-        var sec = specific.secondary || {};
-        var poolKey = (slug === 'usdat') ? 'curve_usdat_usdc' : 'curve_susdat_usdc';
-        var poolTvl = sec[poolKey] && sec[poolKey].tvl_usd;
-
-        function fmtUsdShort(v) {
-            if (v == null) return '—';
-            if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
-            if (v >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'K';
-            return '$' + v.toFixed(0);
-        }
-        function fmtAdj(v) {
-            if (v == null) return '—';
-            if (v === 0) return '0.0';
-            return (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
-        }
-        function adjCls(v) {
-            if (v == null) return 'text-slate-500';
-            if (v === 0) return 'text-slate-600';
-            return v > 0 ? 'text-emerald-700' : 'text-red-600';
-        }
-
-        var rows = [
-            {
-                label: 'Depth tier',
-                value: comp.depth_tier != null ? comp.depth_tier.toFixed(1) : '—',
-                valueCls: 'text-slate-800',
-                context: (comp.effective_max_under_25bps_usd != null ?
-                          fmtUsdShort(comp.effective_max_under_25bps_usd) + ' under 25 bps' :
-                          '—') +
-                         (poolTvl != null ?
-                          ', capped to 5% × ' + fmtUsdShort(poolTvl) + ' Curve TVL' :
-                          '')
-            },
-            {
-                label: 'Peg band 30d',
-                value: fmtAdj(comp.peg_adj),
-                valueCls: adjCls(comp.peg_adj),
-                context: (comp.peg_band_30d_bps != null ?
-                          comp.peg_band_30d_bps.toFixed(2) + ' bps over window' :
-                          '—') +
-                         (comp.peg_band_30d_partial === true ?
-                          ' · <em>partial 30d window</em>' :
-                          '')
-            },
-            {
-                label: 'Venues ≥ $1M TVL',
-                value: fmtAdj(comp.venue_adj),
-                valueCls: adjCls(comp.venue_adj),
-                context: (comp.deep_venues_count != null ?
-                          comp.deep_venues_count + ' deep venue' + (comp.deep_venues_count === 1 ? '' : 's') :
-                          '—')
-            },
-            {
-                label: 'Turnover (24h vol / TVL)',
-                value: fmtAdj(comp.turnover_adj),
-                valueCls: adjCls(comp.turnover_adj),
-                context: comp.turnover_ratio_24h != null ? (comp.turnover_ratio_24h * 100).toFixed(1) + '%' : '—'
-            },
-            {
-                label: 'Pool / supply ratio',
-                value: fmtAdj(comp.pool_adj),
-                valueCls: adjCls(comp.pool_adj),
-                context: comp.pool_supply_ratio != null ? (comp.pool_supply_ratio * 100).toFixed(1) + '%' : '—'
-            }
-        ];
-
-        var compRows = rows.map(function(r) {
-            return '<tr>' +
-                '<td class="font-medium text-slate-700">' + r.label + '</td>' +
-                '<td class="text-right font-mono ' + r.valueCls + '">' + r.value + '</td>' +
-                '<td class="text-xs text-slate-500">' + r.context + '</td>' +
-            '</tr>';
-        }).join('');
-
-        var headerBlock =
-            '<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">' +
-                '<div>' +
-                    '<div class="panel-title" style="margin-bottom:0;">' +
-                        'Liquidity Depth <span class="text-xs font-normal text-slate-500">(derived)</span>' +
-                    '</div>' +
-                    '<div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">' +
-                        '<span>Editorial: <strong>' + editorialTxt + '</strong></span>' +
-                        '<span>· Δ <span class="font-mono">' + deltaTxt + '</span></span>' +
-                        badge +
-                    '</div>' +
-                '</div>' +
-                '<div class="text-2xl font-bold text-slate-800 sm:text-right whitespace-nowrap">' + derivedTxt + '</div>' +
-            '</div>';
-
-        var compTable =
-            '<div class="mt-5">' +
-                '<div class="text-sm font-semibold text-slate-700 mb-2">Score components</div>' +
-                '<div class="data-table-scroll">' +
-                    '<table class="data-table">' +
-                        '<thead><tr>' +
-                            '<th>Component</th>' +
-                            '<th class="text-right">Contribution</th>' +
-                            '<th>Detail</th>' +
-                        '</tr></thead>' +
-                        '<tbody>' + compRows + '</tbody>' +
-                    '</table>' +
-                '</div>' +
-            '</div>';
-
-        var chartBlock =
-            '<div class="mt-6">' +
-                '<div class="text-sm font-semibold text-slate-700 mb-2">' +
-                    '30-day derived score' +
-                    ' <span class="text-xs font-normal text-slate-500">(dashed = editorial reference at ' + editorialTxt + ')</span>' +
-                '</div>' +
-                '<div style="height: 280px; position: relative;">' +
-                    '<canvas id="saturn-liquidity-chart"></canvas>' +
-                '</div>' +
-            '</div>';
-
-        var methodology =
-            '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
-                'Pure-data formula — observed depth + peg behavior + venue diversification. ' +
-                'Permissioning and addressable-universe constraints score in the <strong>Issuer</strong> axis, not here. ' +
-                'See <span class="font-mono">specs/handoffs/saturn-liquidity-derivation-pegtracker.md</span> for the codified formula.' +
-            '</div>';
-
-        return '<div class="panel">' +
-            headerBlock +
-            compTable +
-            chartBlock +
-            methodology +
-        '</div>';
-    },
-
     _liquidityReconciliationBadge: function(delta) {
         if (delta == null) {
             return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">No editorial reference</span>';
@@ -1943,134 +1775,6 @@ var SaturnRenderer = {
         return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ' + bg + ' ' + fg + '">' +
             '<span>' + icon + '</span><span>' + label + '</span>' +
         '</span>';
-    },
-
-    _loadLiquidityChart: function(slug) {
-        var ctx = document.getElementById('saturn-liquidity-chart');
-        if (!ctx || typeof Chart === 'undefined') return;
-        var nocache = Math.floor(Date.now() / 60000);
-        fetch('data/' + slug + '_backing_history.json?nocache=' + nocache)
-            .then(function(r) { return r.ok ? r.json() : null; })
-            .then(function(hist) {
-                if (!hist || !Array.isArray(hist.entries)) {
-                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Liquidity history unavailable.</div>';
-                    return;
-                }
-                var withScore = hist.entries.filter(function(e) {
-                    return e.liquidity_depth_derived_score != null;
-                });
-                if (withScore.length < 2) {
-                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Score history populating — chart appears after a few cycles.</div>';
-                    return;
-                }
-                SaturnRenderer._drawLiquidityChart(ctx, withScore, slug);
-            })
-            .catch(function() {
-                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Liquidity history unavailable.</div>';
-            });
-    },
-
-    _drawLiquidityChart: function(ctx, entries, slug) {
-        var cutoff = Date.now() - 30 * 24 * 3600 * 1000;
-        var windowed = entries.filter(function(e) {
-            var ts = e.timestamp && e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
-            return new Date(ts).getTime() >= cutoff;
-        });
-        if (windowed.length < 2) {
-            ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Score history populating — chart appears after a few cycles.</div>';
-            return;
-        }
-
-        var labels = windowed.map(function(e) {
-            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
-            return new Date(ts);
-        });
-        var scores  = windowed.map(function(e) { return e.liquidity_depth_derived_score; });
-        var bandBps = windowed.map(function(e) { return e.liquidity_depth_peg_band_30d_bps; });
-
-        var editorial = EDITORIAL_LIQUIDITY[slug];
-        var editorialSeries = (editorial != null) ? windowed.map(function() { return editorial; }) : null;
-
-        if (window._saturnLiquidityChart) {
-            try { window._saturnLiquidityChart.destroy(); } catch (e) {}
-        }
-        var datasets = [{
-            label: 'Derived score',
-            data: scores,
-            borderColor: '#3b82f6',
-            backgroundColor: 'rgba(59, 130, 246, 0.08)',
-            fill: true,
-            tension: 0.25,
-            pointRadius: 2,
-            borderWidth: 2,
-            spanGaps: true
-        }];
-        if (editorialSeries) {
-            datasets.push({
-                label: 'Editorial reference (' + editorial.toFixed(1) + ')',
-                data: editorialSeries,
-                borderColor: '#f59e0b',
-                backgroundColor: 'transparent',
-                borderDash: [5, 4],
-                fill: false,
-                tension: 0,
-                pointRadius: 0,
-                borderWidth: 2,
-                spanGaps: true
-            });
-        }
-
-        window._saturnLiquidityChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: labels, datasets: datasets },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
-                        grid: { display: false },
-                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
-                    },
-                    y: {
-                        grid: { color: '#f1f5f9' },
-                        min: 0,
-                        max: 10,
-                        ticks: { stepSize: 2, font: { size: 11 } },
-                        title: { display: true, text: 'Score (0–10)', font: { size: 11 } }
-                    }
-                },
-                plugins: {
-                    legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
-                    tooltip: {
-                        callbacks: {
-                            // Only score + peg-band-bps are threaded into history JSONs;
-                            // full component-delta tooltip awaits broader plumbing per
-                            // saturn-liquidity-derivation-dashboard-backing-monitor.md.
-                            label: function(c) {
-                                if (c.datasetIndex !== 0) {
-                                    return c.dataset.label + ': ' + Number(c.raw).toFixed(1);
-                                }
-                                var idx = c.dataIndex;
-                                var lines = ['Derived: ' + Number(c.raw).toFixed(1) + ' / 10'];
-                                var bps = bandBps[idx];
-                                if (bps != null) lines.push('Peg band 30d: ' + bps.toFixed(2) + ' bps');
-                                if (idx > 0 && scores[idx - 1] != null) {
-                                    var diff = c.raw - scores[idx - 1];
-                                    if (Math.abs(diff) >= 0.05) {
-                                        var sign = diff > 0 ? '+' : '−';
-                                        lines.push('Δ vs prev: ' + sign + Math.abs(diff).toFixed(1));
-                                    }
-                                }
-                                return lines;
-                            }
-                        }
-                    }
-                },
-                interaction: { intersect: false, mode: 'index' }
-            }
-        });
     },
 
     // ============================================================
