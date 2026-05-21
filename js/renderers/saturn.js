@@ -214,15 +214,16 @@ var SaturnRenderer = {
 
         html += anc('panel-headline', SaturnRenderer._renderHeadlineCard(specific, s, slug));
         if (slug === 'usdat') {
-            html += anc('panel-backing',  SaturnRenderer._renderUsdatBackingComposition(specific, s));
-            html += anc('panel-drift',    SaturnRenderer._renderUsdatDriftProbe(specific));
+            html += anc('panel-backing',   SaturnRenderer._renderUsdatBackingComposition(specific, s));
+            html += anc('panel-drift',     SaturnRenderer._renderUsdatDriftProbe(specific));
+            html += anc('panel-liquidity', SaturnRenderer._renderLiquidity(specific, s, slug));
         } else {
-            html += anc('panel-reserve',  SaturnRenderer._renderSusdatReserveSplit(specific, s));
-            html += anc('panel-nav',      SaturnRenderer._renderSusdatNavTrajectory(specific, s));
+            html += anc('panel-reserve',   SaturnRenderer._renderSusdatReserveSplit(specific, s));
+            html += anc('panel-nav',       SaturnRenderer._renderSusdatNavTrajectory(specific, s));
+            html += anc('panel-market',    SaturnRenderer._renderSecondaryMarket(specific, slug));
+            html += anc('panel-peg',       SaturnRenderer._renderPegHistory(specific, s, slug));
+            html += anc('panel-liquidity', SaturnRenderer._renderLiquidityDerived(specific, s, slug));
         }
-        html += anc('panel-market',    SaturnRenderer._renderSecondaryMarket(specific, slug));
-        html += anc('panel-peg',       SaturnRenderer._renderPegHistory(specific, s, slug));
-        html += anc('panel-liquidity', SaturnRenderer._renderLiquidityDerived(specific, s, slug));
         html += anc('panel-trust',     SaturnRenderer._renderTrustStack(specific, slug));
         html += '<div id="saturn-family-panel"></div>';
 
@@ -239,7 +240,12 @@ var SaturnRenderer = {
             SaturnRenderer._loadSusdatNavChart(slug, s);
         }
         SaturnRenderer._loadPegHistoryChart(slug, s);
-        SaturnRenderer._loadLiquidityChart(slug);
+        // USDat consolidated the derived-score chart out — its time-series
+        // story rides on the peg chart inside the same parent. sUSDat still
+        // renders the standalone Liquidity panel with its own score chart.
+        if (slug !== 'usdat') {
+            SaturnRenderer._loadLiquidityChart(slug);
+        }
         SaturnRenderer._loadFamilyPanel(slug);
     },
 
@@ -300,8 +306,6 @@ var SaturnRenderer = {
                 { id: 'panel-headline',       label: 'Asset' },
                 { id: 'panel-backing',        label: 'Backing' },
                 { id: 'panel-drift',          label: 'Drift' },
-                { id: 'panel-market',         label: 'Market' },
-                { id: 'panel-peg',            label: 'Peg' },
                 { id: 'panel-liquidity',      label: 'Liquidity' },
                 { id: 'panel-trust',          label: 'Trust' },
                 { id: 'saturn-family-panel',  label: 'Family' }
@@ -1097,6 +1101,15 @@ var SaturnRenderer = {
     // second fetch effectively free.
     // ============================================================
     _renderPegHistory: function(specific, s, slug) {
+        return '<div class="panel">' +
+            '<div class="panel-title">Peg Performance</div>' +
+            SaturnRenderer._renderPegHistoryInner(specific, s, slug) +
+        '</div>';
+    },
+
+    // Inner body shared by the standalone Peg Performance panel (sUSDat)
+    // and the consolidated Liquidity parent's Peg sub-section (USDat).
+    _renderPegHistoryInner: function(specific, s, slug) {
         var headline, methodology, chartTitle;
 
         if (slug === 'usdat') {
@@ -1173,12 +1186,7 @@ var SaturnRenderer = {
                 '</div>' +
             '</div>';
 
-        return '<div class="panel">' +
-            '<div class="panel-title">Peg Performance</div>' +
-            headline +
-            chartBlock +
-            methodology +
-        '</div>';
+        return headline + chartBlock + methodology;
     },
 
     _loadPegHistoryChart: function(slug, s) {
@@ -1451,6 +1459,17 @@ var SaturnRenderer = {
     // §4 Secondary Market
     // ============================================================
     _renderSecondaryMarket: function(specific, slug) {
+        return '<div class="panel">' +
+            '<div class="panel-title">Secondary Market</div>' +
+            SaturnRenderer._renderSecondaryMarketInner(specific, slug) +
+        '</div>';
+    },
+
+    // Inner body shared by the standalone Secondary Market panel (sUSDat)
+    // and the consolidated Liquidity parent's Depth sub-section (USDat).
+    // Returns the inner content with no panel/title wrap; returns the empty
+    // "No Curve pool data" placeholder directly when pool data is missing.
+    _renderSecondaryMarketInner: function(specific, slug) {
         var sec = specific.secondary || {};
         var slip = specific.slippage_tiers || {};
         var pool, secondPool, headlineMetric, quoteKey, pairLabel;
@@ -1469,10 +1488,7 @@ var SaturnRenderer = {
         }
 
         if (!pool) {
-            return '<div class="panel">' +
-                '<div class="panel-title">Secondary Market</div>' +
-                '<div class="text-xs text-slate-400 italic">No Curve pool data in this snapshot.</div>' +
-            '</div>';
+            return '<div class="text-xs text-slate-400 italic">No Curve pool data in this snapshot.</div>';
         }
 
         // Headline tile — price (USDat) vs discount-to-NAV (sUSDat) per the
@@ -1575,22 +1591,188 @@ var SaturnRenderer = {
                 'reflects the 30-day vesting queue (arbs can\'t close the gap atomically), not a backing problem.' +
             '</div>' : '';
 
-        return '<div class="panel">' +
-            '<div class="panel-title">Secondary Market</div>' +
-            topRow +
-            slipBlock +
-            note +
-        '</div>';
+        return topRow + slipBlock + note;
     },
 
     // ============================================================
-    // §4b Liquidity Depth (derived)
+    // §4 Liquidity (consolidated parent — USDat)
     //
-    // Live deterministic Liquidity tier from PegTracker's
-    // summary.liquidity_depth_derived (depth + peg + venues + turnover +
-    // pool/supply), rendered alongside the editorial score from the
-    // riskAnalyst report. Reconciliation badge surfaces drift visually so
-    // the next report refresh has a clear signal.
+    // One panel mapped to the report's "Liquidity" axis, replacing the
+    // prior three (Secondary Market + Peg Performance + Derived score).
+    // Sub-sections render summary → detail: Derived Score (summary tile +
+    // components reveal) → Peg Performance → Secondary Market Depth.
+    // sUSDat still ships as three separate panels until a follow-up
+    // consolidation pass — see saturn-usdat-liquidity-panel-consolidation
+    // handoff for the USDat-only scope.
+    // ============================================================
+    _renderLiquidity: function(specific, s, slug) {
+        var divider = '<div class="border-t border-slate-200 pt-6 mt-6"></div>';
+        return '<div class="panel">' +
+            '<div class="panel-title">Liquidity</div>' +
+            SaturnRenderer._renderLiquidityScoreSection(specific, s, slug) +
+            divider +
+            '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">Peg Performance</h3>' +
+            SaturnRenderer._renderLiquidityPegSection(specific, s, slug) +
+            divider +
+            '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">Secondary Market Depth</h3>' +
+            SaturnRenderer._renderLiquidityDepthSection(specific, slug) +
+        '</div>';
+    },
+
+    // Score sub-section — summary tile (derived score · editorial · Δ · badge)
+    // with a <details> reveal for the components breakdown. No chart canvas;
+    // the underlying time-series story is covered by the Peg sub-section's
+    // chart below, so a separate score chart is redundant.
+    _renderLiquidityScoreSection: function(specific, s, slug) {
+        var ld = s.liquidity_depth_derived;
+        if (!ld) {
+            return '<div class="risk-flag" style="background:#f1f5f9;color:#475569;border-left:4px solid #94a3b8;">' +
+                '<strong>Liquidity derivation pending.</strong> Formula codified, awaiting analyzer wire-up. ' +
+                'See <span class="font-mono">specs/handoffs/saturn-liquidity-derivation-pegtracker.md</span>.' +
+            '</div>';
+        }
+
+        var editorial = EDITORIAL_LIQUIDITY[slug];
+        var derived = ld.score;
+        var derivedTxt = (derived != null) ? derived.toFixed(1) + ' / 10' : '—';
+        var editorialTxt = (editorial != null) ? editorial.toFixed(1) : '—';
+        var delta = (editorial != null && derived != null) ? (derived - editorial) : null;
+        var deltaTxt = (delta == null) ? '—' :
+                       (delta === 0) ? '0.0' :
+                       (delta > 0 ? '+' : '−') + Math.abs(delta).toFixed(1);
+        var badge = SaturnRenderer._liquidityReconciliationBadge(delta);
+
+        var comp = ld.components || {};
+        var sec = specific.secondary || {};
+        var poolKey = (slug === 'usdat') ? 'curve_usdat_usdc' : 'curve_susdat_usdc';
+        var poolTvl = sec[poolKey] && sec[poolKey].tvl_usd;
+
+        function fmtUsdShort(v) {
+            if (v == null) return '—';
+            if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
+            if (v >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'K';
+            return '$' + v.toFixed(0);
+        }
+        function fmtAdj(v) {
+            if (v == null) return '—';
+            if (v === 0) return '0.0';
+            return (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+        }
+        function adjCls(v) {
+            if (v == null) return 'text-slate-500';
+            if (v === 0) return 'text-slate-600';
+            return v > 0 ? 'text-emerald-700' : 'text-red-600';
+        }
+
+        var rows = [
+            {
+                label: 'Depth tier',
+                value: comp.depth_tier != null ? comp.depth_tier.toFixed(1) : '—',
+                valueCls: 'text-slate-800',
+                context: (comp.effective_max_under_25bps_usd != null ?
+                          fmtUsdShort(comp.effective_max_under_25bps_usd) + ' under 25 bps' :
+                          '—') +
+                         (poolTvl != null ?
+                          ', capped to 5% × ' + fmtUsdShort(poolTvl) + ' Curve TVL' :
+                          '')
+            },
+            {
+                label: 'Peg band 30d',
+                value: fmtAdj(comp.peg_adj),
+                valueCls: adjCls(comp.peg_adj),
+                context: (comp.peg_band_30d_bps != null ?
+                          comp.peg_band_30d_bps.toFixed(2) + ' bps over window' :
+                          '—') +
+                         (comp.peg_band_30d_partial === true ?
+                          ' · <em>partial 30d window</em>' :
+                          '')
+            },
+            {
+                label: 'Venues ≥ $1M TVL',
+                value: fmtAdj(comp.venue_adj),
+                valueCls: adjCls(comp.venue_adj),
+                context: (comp.deep_venues_count != null ?
+                          comp.deep_venues_count + ' deep venue' + (comp.deep_venues_count === 1 ? '' : 's') :
+                          '—')
+            },
+            {
+                label: 'Turnover (24h vol / TVL)',
+                value: fmtAdj(comp.turnover_adj),
+                valueCls: adjCls(comp.turnover_adj),
+                context: comp.turnover_ratio_24h != null ? (comp.turnover_ratio_24h * 100).toFixed(1) + '%' : '—'
+            },
+            {
+                label: 'Pool / supply ratio',
+                value: fmtAdj(comp.pool_adj),
+                valueCls: adjCls(comp.pool_adj),
+                context: comp.pool_supply_ratio != null ? (comp.pool_supply_ratio * 100).toFixed(1) + '%' : '—'
+            }
+        ];
+
+        var compRows = rows.map(function(r) {
+            return '<tr>' +
+                '<td class="font-medium text-slate-700">' + r.label + '</td>' +
+                '<td class="text-right font-mono ' + r.valueCls + '">' + r.value + '</td>' +
+                '<td class="text-xs text-slate-500">' + r.context + '</td>' +
+            '</tr>';
+        }).join('');
+
+        var scoreHeader =
+            '<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">' +
+                '<div>' +
+                    '<h3 class="text-sm font-semibold text-slate-900" style="margin:0;">Derived Score</h3>' +
+                    '<div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">' +
+                        '<span>Editorial: <strong>' + editorialTxt + '</strong></span>' +
+                        '<span>· Δ <span class="font-mono">' + deltaTxt + '</span></span>' +
+                        badge +
+                    '</div>' +
+                '</div>' +
+                '<div class="text-2xl font-bold text-slate-800 sm:text-right whitespace-nowrap">' + derivedTxt + '</div>' +
+            '</div>';
+
+        var componentsReveal =
+            '<details class="mt-3 group">' +
+                '<summary class="cursor-pointer text-xs font-medium text-blue-700 hover:text-blue-900 select-none" style="list-style:none;">' +
+                    '<span class="inline-block transform group-open:rotate-90 transition-transform">▶</span> How this score is computed' +
+                '</summary>' +
+                '<div class="mt-3 data-table-scroll">' +
+                    '<table class="data-table">' +
+                        '<thead><tr>' +
+                            '<th>Component</th>' +
+                            '<th class="text-right">Contribution</th>' +
+                            '<th>Detail</th>' +
+                        '</tr></thead>' +
+                        '<tbody>' + compRows + '</tbody>' +
+                    '</table>' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 italic leading-relaxed mt-3">' +
+                    'Pure-data formula — observed depth + peg behavior + venue diversification. ' +
+                    'Permissioning and addressable-universe constraints score in the <strong>Issuer</strong> axis, not here.' +
+                '</div>' +
+            '</details>';
+
+        return scoreHeader + componentsReveal;
+    },
+
+    // Peg sub-section — wraps the shared Peg Performance inner body
+    // (3 tiles + chart canvas + methodology). Canvas id is preserved as
+    // saturn-peg-history-chart so _loadPegHistoryChart finds it unchanged.
+    _renderLiquidityPegSection: function(specific, s, slug) {
+        return SaturnRenderer._renderPegHistoryInner(specific, s, slug);
+    },
+
+    // Depth sub-section — wraps the shared Secondary Market inner body
+    // (headline tile + pool meta + slippage tiers + methodology note).
+    _renderLiquidityDepthSection: function(specific, slug) {
+        return SaturnRenderer._renderSecondaryMarketInner(specific, slug);
+    },
+
+    // ============================================================
+    // §4b Liquidity Depth (derived — standalone panel, sUSDat only)
+    //
+    // Original standalone panel — still wired in the sUSDat render() branch
+    // until sUSDat gets the same consolidation. USDat reads the same data
+    // via _renderLiquidityScoreSection inside the consolidated parent above.
     // ============================================================
     _renderLiquidityDerived: function(specific, s, slug) {
         var ld = s.liquidity_depth_derived;
