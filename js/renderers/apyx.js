@@ -52,6 +52,18 @@ var APYX_RESERVES_ISSUER = {
     'Other':              '—'
 };
 
+// Editorial Liquidity scores from riskAnalyst/assets/<slug>.md frontmatter.
+// Kept in sync manually — update when the internal report rescore lands.
+// apxusd updated 2026-05-21: derived 8.0 = editorial 8.0 (rescore landed in
+// riskAnalyst — old editorial was 4.5; bundled redemption-opacity + pool-vs-supply
+// concerns now correctly attributed to Peg/Backing axes per the discipline reset).
+// Namespaced (not bare EDITORIAL_LIQUIDITY) because saturn.js declares its own
+// top-level EDITORIAL_LIQUIDITY for usdat/susdat — bare names collide at load.
+var APYX_EDITORIAL_LIQUIDITY = {
+    apxusd: 8.0,
+    apyusd: 5.5
+};
+
 var ApyxRenderer = {
 
     // ============================================================
@@ -335,7 +347,7 @@ var ApyxRenderer = {
                 var note = document.createElement('p');
                 note.className = 'cr-note-apyusd text-xs text-slate-500 mt-2 italic';
                 note.textContent = 'CR is ~100% by ERC-4626 construction; visible drift is rounding-level. ' +
-                                   'See Secondary Market panel below for the price-vs-NAV chart that actually matters.';
+                                   'See Liquidity panel below for the price-vs-NAV chart that actually matters.';
                 chartPanel.appendChild(note);
             }
         }
@@ -349,16 +361,11 @@ var ApyxRenderer = {
         html += anc('panel-attestation', ApyxRenderer._renderBackingAttestation(specific, slug));
         html += anc('panel-stress',      ApyxRenderer._renderStressLens(specific, slug));
         html += anc('panel-watch',       ApyxRenderer._renderExternalWatch(specific, slug));
-        if (slug === 'apxusd') {
-            html += anc('panel-peg',     ApyxRenderer._renderPegPerformance(specific, slug));
-        } else if (slug === 'apyusd') {
-            html += anc('panel-market',  ApyxRenderer._renderSecondaryMarket(specific, slug));
-        }
         if (slug === 'apyusd') {
             html += anc('panel-yield',   ApyxRenderer._renderYieldTrajectory(specific, s));
             html += anc('panel-unlock',  ApyxRenderer._renderUnlockQueue(specific));
         }
-        html += anc('panel-liquidity',   ApyxRenderer._renderLiquidity(specific, slug));
+        html += anc('panel-liquidity',   ApyxRenderer._renderLiquidity(specific, s, slug));
         html += anc('panel-bridge',      ApyxRenderer._renderMultiChainBridge(specific, slug));
         html += anc('panel-trust',       ApyxRenderer._renderTrustStack(specific));
 
@@ -443,7 +450,6 @@ var ApyxRenderer = {
                 { id: 'panel-attestation', label: 'Backing' },
                 { id: 'panel-stress',      label: 'Stress' },
                 { id: 'panel-watch',       label: 'Watch' },
-                { id: 'panel-peg',         label: 'Peg' },
                 { id: 'panel-liquidity',   label: 'Liquidity' },
                 { id: 'panel-bridge',      label: 'Bridge' },
                 { id: 'panel-trust',       label: 'Trust' }
@@ -456,7 +462,6 @@ var ApyxRenderer = {
                 { id: 'panel-attestation', label: 'Backing' },
                 { id: 'panel-stress',      label: 'Stress' },
                 { id: 'panel-watch',       label: 'Watch' },
-                { id: 'panel-market',      label: 'Market' },
                 { id: 'panel-yield',       label: 'Yield' },
                 { id: 'panel-unlock',      label: 'Unlock' },
                 { id: 'panel-liquidity',   label: 'Liquidity' },
@@ -1239,20 +1244,206 @@ var ApyxRenderer = {
     // the source feed (peg_tracker_latest_usd.json) doesn't yet carry the
     // Apyx tokens, so the analyzer emits an empty peg block.
     // ============================================================
-    _renderPegPerformance: function(specific, slug) {
+    // ============================================================
+    // §4 Liquidity (consolidated parent — apxUSD + apyUSD)
+    //
+    // One panel mapped to the report's "Liquidity" axis, replacing the
+    // prior per-asset pair (apxUSD: Peg Performance + Secondary Liquidity;
+    // apyUSD: Secondary Market + Secondary Liquidity, with APY tiles relocated
+    // to the Yield Trajectory panel where they belong). Sub-sections render
+    // summary → detail: Derived Score (summary tile + components reveal)
+    // → Peg Performance / Discount to NAV → Secondary Market Depth.
+    // Mirrors saturn.js's consolidation (commits c578741e + 1a640777).
+    // ============================================================
+    _renderLiquidity: function(specific, s, slug) {
+        var divider = '<div class="border-t border-slate-200 pt-6 mt-6"></div>';
+        // Vault-share peg metric is discount-to-NAV, not absolute price vs $1 —
+        // sub-section heading reflects that for apyUSD.
+        var pegHeading = (slug === 'apxusd') ? 'Peg Performance' : 'Discount to NAV';
+        return '<div class="panel">' +
+            '<div class="panel-title">Liquidity</div>' +
+            ApyxRenderer._renderLiquidityScoreSection(specific, s, slug) +
+            divider +
+            '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">' + pegHeading + '</h3>' +
+            ApyxRenderer._renderLiquidityPegSection(specific, s, slug) +
+            divider +
+            '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">Secondary Market Depth</h3>' +
+            ApyxRenderer._renderLiquidityDepthSection(specific, slug) +
+        '</div>';
+    },
+
+    // Score sub-section — summary tile (derived score · editorial · Δ · badge)
+    // with a <details> reveal for the components breakdown. No chart canvas;
+    // the underlying time-series story is covered by the Peg sub-section's
+    // chart below, so a separate score chart is redundant.
+    _renderLiquidityScoreSection: function(specific, s, slug) {
+        var ld = (s && s.liquidity_depth_derived) || null;
+        if (!ld) {
+            return '<div class="risk-flag" style="background:#f1f5f9;color:#475569;border-left:4px solid #94a3b8;">' +
+                '<strong>Liquidity derivation pending.</strong> Formula codified, awaiting analyzer wire-up. ' +
+                'See <span class="font-mono">specs/handoffs/apyx-liquidity-derivation-pegtracker.md</span>.' +
+            '</div>';
+        }
+
+        var editorial = APYX_EDITORIAL_LIQUIDITY[slug];
+        var derived = ld.score;
+        var derivedTxt = (derived != null) ? derived.toFixed(1) + ' / 10' : '—';
+        var editorialTxt = (editorial != null) ? editorial.toFixed(1) : '—';
+        var delta = (editorial != null && derived != null) ? (derived - editorial) : null;
+        var deltaTxt = (delta == null) ? '—' :
+                       (delta === 0) ? '0.0' :
+                       (delta > 0 ? '+' : '−') + Math.abs(delta).toFixed(1);
+        var badge = ApyxRenderer._liquidityReconciliationBadge(delta);
+
+        var comp = ld.components || {};
+
+        // Pull Curve pool TVL for the depth-tier context "capped to 5% × $X
+        // Curve TVL". apxUSD uses Curve apxUSD/USDC; apyUSD uses Curve
+        // apyUSD/apxUSD as its analyzer-anchor pair.
+        var pools = (specific.liquidity || {}).pools || [];
+        var curvePair = (slug === 'apxusd') ? 'apxUSD/USDC' : 'apyUSD/apxUSD';
+        var curvePool = null;
+        for (var i = 0; i < pools.length; i++) {
+            var p = pools[i];
+            if (p.venue === 'curve' && p.pair && p.pair.indexOf(curvePair) >= 0) {
+                curvePool = p;
+                break;
+            }
+        }
+        var poolTvl = curvePool ? curvePool.depth_usd : null;
+
+        function fmtUsdShort(v) {
+            if (v == null) return '—';
+            if (v >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
+            if (v >= 1e3) return '$' + (v / 1e3).toFixed(0) + 'K';
+            return '$' + v.toFixed(0);
+        }
+        function fmtAdj(v) {
+            if (v == null) return '—';
+            if (v === 0) return '0.0';
+            return (v > 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+        }
+        function adjCls(v) {
+            if (v == null) return 'text-slate-500';
+            if (v === 0) return 'text-slate-600';
+            return v > 0 ? 'text-emerald-700' : 'text-red-600';
+        }
+
+        var rows = [
+            {
+                label: 'Depth tier',
+                value: comp.depth_tier != null ? comp.depth_tier.toFixed(1) : '—',
+                valueCls: 'text-slate-800',
+                context: (comp.effective_max_under_25bps_usd != null ?
+                          fmtUsdShort(comp.effective_max_under_25bps_usd) + ' under 25 bps' :
+                          '—') +
+                         (poolTvl != null ?
+                          ', capped to 5% × ' + fmtUsdShort(poolTvl) + ' Curve TVL' :
+                          '')
+            },
+            {
+                label: 'Peg band 30d',
+                value: fmtAdj(comp.peg_adj),
+                valueCls: adjCls(comp.peg_adj),
+                context: (comp.peg_band_30d_bps != null ?
+                          comp.peg_band_30d_bps.toFixed(2) + ' bps over window' :
+                          '—') +
+                         (comp.peg_band_30d_partial === true ?
+                          ' · <em>partial 30d window</em>' :
+                          '')
+            },
+            {
+                label: 'Venues ≥ $1M TVL',
+                value: fmtAdj(comp.venue_adj),
+                valueCls: adjCls(comp.venue_adj),
+                context: (comp.deep_venues_count != null ?
+                          comp.deep_venues_count + ' deep venue' + (comp.deep_venues_count === 1 ? '' : 's') :
+                          '—')
+            },
+            {
+                label: 'Turnover (24h vol / TVL)',
+                value: fmtAdj(comp.turnover_adj),
+                valueCls: adjCls(comp.turnover_adj),
+                context: comp.turnover_ratio_24h != null ? (comp.turnover_ratio_24h * 100).toFixed(1) + '%' : '—'
+            },
+            {
+                label: 'Pool / supply ratio',
+                value: fmtAdj(comp.pool_adj),
+                valueCls: adjCls(comp.pool_adj),
+                context: comp.pool_supply_ratio != null ? (comp.pool_supply_ratio * 100).toFixed(1) + '%' : '—'
+            }
+        ];
+
+        var compRows = rows.map(function(r) {
+            return '<tr>' +
+                '<td class="font-medium text-slate-700">' + r.label + '</td>' +
+                '<td class="text-right font-mono ' + r.valueCls + '">' + r.value + '</td>' +
+                '<td class="text-xs text-slate-500">' + r.context + '</td>' +
+            '</tr>';
+        }).join('');
+
+        var scoreHeader =
+            '<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">' +
+                '<div>' +
+                    '<h3 class="text-sm font-semibold text-slate-900" style="margin:0;">Derived Score</h3>' +
+                    '<div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">' +
+                        '<span>Editorial: <strong>' + editorialTxt + '</strong></span>' +
+                        '<span>· Δ <span class="font-mono">' + deltaTxt + '</span></span>' +
+                        badge +
+                    '</div>' +
+                '</div>' +
+                '<div class="text-2xl font-bold text-slate-800 sm:text-right whitespace-nowrap">' + derivedTxt + '</div>' +
+            '</div>';
+
+        var componentsReveal =
+            '<details class="mt-3 group">' +
+                '<summary class="cursor-pointer text-xs font-medium text-blue-700 hover:text-blue-900 select-none" style="list-style:none;">' +
+                    '<span class="inline-block transform group-open:rotate-90 transition-transform">▶</span> How this score is computed' +
+                '</summary>' +
+                '<div class="mt-3 data-table-scroll">' +
+                    '<table class="data-table">' +
+                        '<thead><tr>' +
+                            '<th>Component</th>' +
+                            '<th class="text-right">Contribution</th>' +
+                            '<th>Detail</th>' +
+                        '</tr></thead>' +
+                        '<tbody>' + compRows + '</tbody>' +
+                    '</table>' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 italic leading-relaxed mt-3">' +
+                    'Pure-data formula — observed depth + peg behavior + venue diversification. ' +
+                    'Permissioning and addressable-universe constraints score in the <strong>Issuer</strong> axis, not here.' +
+                '</div>' +
+            '</details>';
+
+        return scoreHeader + componentsReveal;
+    },
+
+    // Peg sub-section — slug-branched body.
+    // apxUSD: Peg Performance (market price vs theoretical $1, 7d premium/discount chart).
+    // apyUSD: Discount to NAV (contract NAV vs Curve market price, trajectory + discount chart).
+    // Canvas IDs preserved so the existing chart loaders find their targets:
+    //   apxUSD: apyx-peg-history → _loadPegHistoryChart
+    //   apyUSD: apyx-market-price-trajectory + apyx-market-discount
+    //           → _loadMarketPriceTrajectory + _loadMarketDiscountChart
+    _renderLiquidityPegSection: function(specific, s, slug) {
+        if (slug === 'apxusd') {
+            return ApyxRenderer._renderApxusdPegBody(specific);
+        }
+        return ApyxRenderer._renderApyusdDiscountBody(specific);
+    },
+
+    _renderApxusdPegBody: function(specific) {
         var peg = specific.peg || {};
         var hasMarket = peg.market_price != null;
 
         if (!hasMarket) {
-            return '<div class="panel">' +
-                '<div class="panel-title">Peg Performance</div>' +
-                '<div class="risk-flag risk-info">' +
-                    '<strong>Peg data not yet tracked.</strong> ' +
-                    'apxUSD has not been added to the upstream peg-tracker feed yet — DEX-implied state ' +
-                    'is visible in the Secondary Liquidity panel below. This panel will populate ' +
-                    'automatically once <span class="font-mono">peg_tracker_latest_usd.json</span> ' +
-                    'begins emitting apxUSD entries.' +
-                '</div>' +
+            return '<div class="risk-flag risk-info">' +
+                '<strong>Peg data not yet tracked.</strong> ' +
+                'apxUSD has not been added to the upstream peg-tracker feed yet — DEX-implied state ' +
+                'is visible in the Secondary Market Depth sub-section below. This sub-section will populate ' +
+                'automatically once <span class="font-mono">peg_tracker_latest_usd.json</span> ' +
+                'begins emitting apxUSD entries.' +
             '</div>';
         }
 
@@ -1326,28 +1517,16 @@ var ApyxRenderer = {
                     '<div class="text-slate-400">drift from 0.5 = pressure</div></div>' +
             '</div>';
 
-        return '<div class="panel">' +
-            '<div class="panel-title">Peg Performance</div>' +
-            statCards +
-            chartBlock +
-            secondaryRow +
-        '</div>';
+        return statCards + chartBlock + secondaryRow;
     },
 
-    // ============================================================
-    // §2c Secondary Market (apyUSD)
-    //
-    // Contract NAV (on-chain ERC-4626 share price) vs Market Price (live
-    // Curve apyUSD/apxUSD spot — apxUSD per apyUSD share). A persistent
-    // market discount is normally arb-bounded redemption inefficiency
-    // driven by the 30-day UnlockToken cooldown, not a peg break.
-    //
+    // Discount-to-NAV body for apyUSD. Contract NAV vs Curve market price
+    // (apyUSD/apxUSD) — no APY tile row; the Yield Trajectory panel is the
+    // canonical home for yield metrics, this sub-section covers exit cost.
     // Field reads use Layer-1 names with a fallback to legacy:
     //   dex_market_price ?? dex_implied_nav
     //   market_discount_pct ?? nav_spread_pct
-    // Fallback becomes dead code once Layer 1 is live everywhere.
-    // ============================================================
-    _renderSecondaryMarket: function(specific, slug) {
+    _renderApyusdDiscountBody: function(specific) {
         var vs = specific.vault_state || {};
         var contractNav = vs.nav;
         var marketPrice = (vs.dex_market_price != null) ? vs.dex_market_price : vs.dex_implied_nav;
@@ -1393,23 +1572,6 @@ var ApyxRenderer = {
                 '</div>' +
             '</div>';
 
-        var y = specific.yield || {};
-        var apy7 = y.implied_apy_7d_pct;
-        var apy30 = y.implied_apy_30d_pct;
-        var apyRow =
-            '<div class="grid grid-cols-2 md:grid-cols-3 gap-3 mt-4 text-xs">' +
-                '<div><div class="text-slate-400 uppercase font-medium">7d implied APY</div>' +
-                    '<div class="font-mono text-slate-700 mt-0.5">' +
-                        (apy7 != null ? apy7.toFixed(2) + '%' : '<span class="italic text-slate-400">Insufficient history</span>') +
-                    '</div></div>' +
-                '<div><div class="text-slate-400 uppercase font-medium">30d implied APY</div>' +
-                    '<div class="font-mono text-slate-700 mt-0.5">' +
-                        (apy30 != null ? apy30.toFixed(2) + '%' : '<span class="italic text-slate-400">Insufficient history</span>') +
-                    '</div></div>' +
-                '<div><div class="text-slate-400 uppercase font-medium">Method</div>' +
-                    '<div class="font-mono text-slate-700 mt-0.5">' + (y.method || 'nav_delta_rolling') + '</div></div>' +
-            '</div>';
-
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
                 'Contract NAV is the on-chain ERC-4626 share price (how many apxUSD each apyUSD share ' +
@@ -1422,14 +1584,25 @@ var ApyxRenderer = {
                 'not stress and should not alert.' +
             '</div>';
 
-        return '<div class="panel">' +
-            '<div class="panel-title">Secondary Market</div>' +
-            statCards +
-            trajectoryBlock +
-            discountChartBlock +
-            apyRow +
-            methodology +
-        '</div>';
+        return statCards + trajectoryBlock + discountChartBlock + methodology;
+    },
+
+    _liquidityReconciliationBadge: function(delta) {
+        if (delta == null) {
+            return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">No editorial reference</span>';
+        }
+        var abs = Math.abs(delta);
+        var label, bg, fg, icon;
+        if (abs <= 0.5) {
+            label = 'aligned';                              bg = 'bg-emerald-50'; fg = 'text-emerald-800'; icon = '✓';
+        } else if (abs <= 1.0) {
+            label = 'slight drift';                         bg = 'bg-amber-50';   fg = 'text-amber-800';   icon = '△';
+        } else {
+            label = 'stale editorial — refresh recommended'; bg = 'bg-red-50';    fg = 'text-red-800';     icon = '⚠';
+        }
+        return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ' + bg + ' ' + fg + '">' +
+            '<span>' + icon + '</span><span>' + label + '</span>' +
+        '</span>';
     },
 
     _pegBandAnnotations: function(slug) {
@@ -1792,17 +1965,17 @@ var ApyxRenderer = {
                     '<div class="card-value text-base text-slate-500 italic">(awaiting history)</div></div>' +
             '</div>';
 
-        // NAV trajectory chart moved to the Secondary Market panel (Layer 2) —
-        // it now overlays the Curve apyUSD/apxUSD market price alongside
-        // contract NAV, which subsumes the standalone contract-only chart
-        // that used to live here.
+        // NAV trajectory chart lives inside the Liquidity panel's Discount-to-NAV
+        // sub-section — it overlays the Curve apyUSD/apxUSD market price alongside
+        // contract NAV, which subsumes the standalone contract-only chart that
+        // used to live here.
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
                 'Yield is real STRC dividend pass-through. NAV growth in the first week of operations ' +
                 '(Feb 20-27 2026) included a one-time ~33% launch seed from donation-pattern apxUSD ' +
                 'inflows; the post-launch trajectory is the recurring rate (~13% APY, consistent with ' +
                 'STRC\'s 11-15% indicated-rate range). <strong>New buyers earn the ongoing rate, not the ' +
-                'headline.</strong> See the Secondary Market panel above for the live market-price-vs-NAV overlay.' +
+                'headline.</strong> See the Liquidity panel below for the live market-price-vs-NAV overlay.' +
             '</div>';
 
         return '<div class="panel">' +
@@ -1920,9 +2093,12 @@ var ApyxRenderer = {
     },
 
     // ============================================================
-    // §4 Liquidity
+    // Depth sub-section — pool table + KyberSwap slippage tiers bar chart.
+    // Renamed from _renderLiquidity; panel/title wrap moved to the parent
+    // _renderLiquidity. Preserves apxUSD-vs-apyUSD pool-table branching and
+    // canvas id apyx-slippage-chart so _renderSlippageChart finds its target.
     // ============================================================
-    _renderLiquidity: function(specific, slug) {
+    _renderLiquidityDepthSection: function(specific, slug) {
         var liq = specific.liquidity || {};
         var pools = liq.pools || [];
 
@@ -2038,11 +2214,8 @@ var ApyxRenderer = {
                 '</div>';
         }
 
-        return '<div class="panel">' +
-            '<div class="panel-title">Secondary Liquidity</div>' +
-            (sectionsHtml || '<div class="text-xs text-slate-400 italic mt-2">No pools enumerated in this snapshot.</div>') +
-            slippageBlock +
-        '</div>';
+        return (sectionsHtml || '<div class="text-xs text-slate-400 italic mt-2">No pools enumerated in this snapshot.</div>') +
+            slippageBlock;
     },
 
     _renderSlippageChart: function(specific, slug) {
