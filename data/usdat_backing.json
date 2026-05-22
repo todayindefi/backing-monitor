@@ -3,23 +3,23 @@
   "asset": "USDat",
   "asset_slug": "usdat",
   "chain": "ethereum",
-  "timestamp": "2026-05-22T05:41:46Z",
-  "as_of": "2026-05-22T05:41:46Z",
-  "block_number": 25148770,
+  "timestamp": "2026-05-22T06:41:54Z",
+  "as_of": "2026-05-22T06:41:54Z",
+  "block_number": 25149071,
   "summary": {
-    "supply_usd": 104684689.88,
-    "backing_total_usd": 104710845.77,
-    "backing_ratio": 1.00025,
-    "net_buffer_usd": 26155.89,
-    "peg_curve_usdc": 0.99993,
-    "peg_deviation_pct": -0.007,
+    "supply_usd": 105389805.4,
+    "backing_total_usd": 105416359.33,
+    "backing_ratio": 1.000252,
+    "net_buffer_usd": 26553.93,
+    "peg_curve_usdc": 0.999901,
+    "peg_deviation_pct": -0.0099,
     "paused": false,
     "implementation": "0x17cAC25c6D6BBcB592837FEA083A5c8Eb4D1E52E",
     "admin_role_holder": "0x610182581C93687Ca03F4a8E7f124f8cEC616820",
     "admin_eoa_nonce": 25,
     "liquidity_depth_derived": {
       "score": 7.5,
-      "as_of": "2026-05-22T05:41:46Z",
+      "as_of": "2026-05-22T06:41:54Z",
       "components": {
         "depth_tier": 7.5,
         "effective_max_under_25bps_usd": 500000,
@@ -28,29 +28,59 @@
         "peg_adj": 0.5,
         "deep_venues_count": 1,
         "venue_adj": -1.0,
-        "turnover_ratio_24h": 0.2746,
+        "turnover_ratio_24h": 0.2995,
         "turnover_adj": 0.5,
-        "pool_supply_ratio": 0.2236,
+        "pool_supply_ratio": 0.2221,
         "pool_adj": 0.0
       }
     },
     "liquidity_depth_derived_score": 7.5
   },
-  "risk_flags": [],
+  "risk_flags": [
+    {
+      "severity": "critical",
+      "message": "USDat backing composition drift: non-allowlist token in treasury (AIFreeUse.cc, AIFreeUse.cc, AIFreeUse.pro, AIMevBot.cc)"
+    }
+  ],
   "asset_specific": {
     "type": "usdat",
     "composition": {
       "M": {
-        "balance": 104710845.77,
-        "pct_of_supply": 1.00025,
+        "balance": 104711243.81,
+        "pct_of_supply": 0.993561,
         "verifiable": "onchain"
       },
       "USDC": {
-        "balance": 0.0,
-        "pct_of_supply": 0.0,
+        "balance": 705115.52,
+        "pct_of_supply": 0.006691,
         "verifiable": "onchain"
       },
-      "OTHER": []
+      "OTHER": [
+        {
+          "symbol": "AIFreeUse.cc",
+          "address": "0x13F52241B2B6829401f459aE7219483D25fd96e2",
+          "units": 1000.0,
+          "flagged": true
+        },
+        {
+          "symbol": "AIFreeUse.cc",
+          "address": "0x4A3f71219508B3b9033D21e99bA0443d691bbE8D",
+          "units": 1000.0,
+          "flagged": true
+        },
+        {
+          "symbol": "AIFreeUse.pro",
+          "address": "0xd26B998b876dfdc12F1Ba486Ab06F8598FE27587",
+          "units": 1000.0,
+          "flagged": true
+        },
+        {
+          "symbol": "AIMevBot.cc",
+          "address": "0xf6D59AF673D6aa277e31d6FA765C6f3Bd0A74CB5",
+          "units": 1000.0,
+          "flagged": true
+        }
+      ]
     },
     "drift_probe": {
       "allowlist": [
@@ -58,7 +88,40 @@
         "USDC"
       ],
       "scanner": "alchemy_getTokenBalances",
-      "non_allowlist_holdings": [],
+      "non_allowlist_holdings": [
+        {
+          "address": "0x13F52241B2B6829401f459aE7219483D25fd96e2",
+          "symbol": "AIFreeUse.cc",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "flagged": true
+        },
+        {
+          "address": "0x4A3f71219508B3b9033D21e99bA0443d691bbE8D",
+          "symbol": "AIFreeUse.cc",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "flagged": true
+        },
+        {
+          "address": "0xd26B998b876dfdc12F1Ba486Ab06F8598FE27587",
+          "symbol": "AIFreeUse.pro",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "flagged": true
+        },
+        {
+          "address": "0xf6D59AF673D6aa277e31d6FA765C6f3Bd0A74CB5",
+          "symbol": "AIMevBot.cc",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "flagged": true
+        }
+      ],
       "dust": [
         {
           "address": "0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39",
@@ -66,42 +129,42 @@
           "raw": "100000000"
         }
       ],
-      "tier1_drift_flagged": false
+      "tier1_drift_flagged": true
     },
     "secondary": {
       "curve_usdat_usdc": {
         "address": "0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
-        "tvl_usd": 23411683.99,
-        "vol_24h_usd": 6428264.27684048,
-        "implied_price": 0.99993,
-        "deviation_pct": -0.007
+        "tvl_usd": 23411815.15,
+        "vol_24h_usd": 7011708.42315734,
+        "implied_price": 0.999901,
+        "deviation_pct": -0.0099
       }
     },
     "slippage_tiers": {
       "usdat_to_usdc": {
         "1000": {
-          "output_token": 999.930171,
-          "output_usd": 999.93,
-          "slippage_bps": 0.7,
-          "gas_usd": "0.040721566579014885"
+          "output_token": 999.900886,
+          "output_usd": 999.9,
+          "slippage_bps": 0.99,
+          "gas_usd": "0.05690769254868083"
         },
         "10000": {
-          "output_token": 9999.286369,
-          "output_usd": 9999.29,
-          "slippage_bps": 0.71,
-          "gas_usd": "0.04070979212548693"
+          "output_token": 9998.993522,
+          "output_usd": 9998.99,
+          "slippage_bps": 1.01,
+          "gas_usd": "0.05690769254868083"
         },
         "100000": {
-          "output_token": 99991.32932,
-          "output_usd": 99991.33,
-          "slippage_bps": 0.87,
-          "gas_usd": "0.04070979212548693"
+          "output_token": 99988.400514,
+          "output_usd": 99988.4,
+          "slippage_bps": 1.16,
+          "gas_usd": "0.05690769254868083"
         },
         "500000": {
-          "output_token": 499922.505031,
-          "output_usd": 499922.51,
-          "slippage_bps": 1.55,
-          "gas_usd": "0.04070979212548693"
+          "output_token": 499907.811937,
+          "output_usd": 499907.81,
+          "slippage_bps": 1.84,
+          "gas_usd": "0.05690769254868083"
         }
       }
     },
