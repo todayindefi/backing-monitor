@@ -33,6 +33,11 @@ cp /home/danger/PegTracker/data/susdat_backing_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/saturn_family.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/usdm_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/usdm_backing_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/usde_backing.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/usde_backing_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/susde_backing.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/susde_backing_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/ethena_family.json data/ 2>/dev/null
 
 # Commit and push if changed
 git add data/
