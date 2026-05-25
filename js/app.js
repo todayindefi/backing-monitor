@@ -21,6 +21,8 @@ var ASSET_RENDERERS = {
     usdat:     typeof SaturnRenderer    !== 'undefined' ? SaturnRenderer    : null,
     susdat:    typeof SaturnRenderer    !== 'undefined' ? SaturnRenderer    : null,
     thusd:     typeof ThusdRenderer     !== 'undefined' ? ThusdRenderer     : null,
+    usde:      typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
+    susde:     typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
     'fiat-stable-reserve-backed': typeof USDmRenderer !== 'undefined' ? USDmRenderer : null
 };
 
