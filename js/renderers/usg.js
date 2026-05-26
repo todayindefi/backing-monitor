@@ -28,11 +28,21 @@ var USGRenderer = {
         return cr < 110 ? 'text-red-600' : cr < 120 ? 'text-amber-600' : 'text-green-600';
     },
 
-    // Liquidation thresholds sit only ~1-5% above price; <2% headroom is the
-    // analyzer's low-headroom warning line, so colour accordingly.
+    // Low headroom_to_liq is AMBER, not red: it is baseline-normal for
+    // max-leveraged borrowing on low-vol stable LPs (badDebt 0, peg fine) and
+    // becomes a liquidation risk only if that market's collateral leg depegs.
+    // Semibold amber on the lowest still draws the eye to the cascade-sensitive legs.
     _headroomClass: function(h) {
         if (h == null) return '';
-        return h < 2 ? 'text-red-600 font-semibold' : h < 3 ? 'text-amber-600' : 'text-green-600';
+        return h < 2.5 ? 'text-amber-600 font-semibold' : 'text-slate-600';
+    },
+
+    // NAV divergence vs the optimistic oracle read; threshold (typically 1.0%)
+    // is the analyzer's flag line — only a real breach goes red.
+    _divClass: function(pct, threshold) {
+        if (pct == null) return 'text-slate-400';
+        var a = Math.abs(pct), t = threshold || 1.0;
+        return a >= t ? 'text-red-600 font-semibold' : a >= t * 0.5 ? 'text-amber-600' : 'text-green-600';
     },
 
     _shortMarketType: function(t) {
@@ -136,7 +146,7 @@ var USGRenderer = {
             '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">' +
                 '<div class="summary-card"><div class="card-label">CDP-book CR</div><div class="card-value ' + (s.mint_cr >= 100 ? 'positive' : 'negative') + '">' + CommonRenderer.formatPercent(s.mint_cr, 1) + '</div><div class="text-xs text-slate-400 mt-1">CDP collateral ÷ CDP debt</div></div>' +
                 '<div class="summary-card"><div class="card-label">Inclusive CR</div><div class="card-value ' + (s.collateral_ratio_inclusive >= 100 ? 'positive' : 'negative') + '">' + CommonRenderer.formatPercent(s.collateral_ratio_inclusive, 1) + '</div><div class="text-xs text-slate-400 mt-1">(CDP collateral + POL pool stables) ÷ real supply</div></div>' +
-                '<div class="summary-card"><div class="card-label">Collateral-backed share of supply</div><div class="card-value">' + CommonRenderer.formatPercent(s.collateral_ratio, 1) + '</div><div class="text-xs text-slate-400 mt-1">external collateral ÷ supply — ~half is by design for a POL-heavy model, not undercollateralization</div></div>' +
+                '<div class="summary-card"><div class="card-label">Collateral-backed share of supply</div><div class="card-value">' + CommonRenderer.formatPercent(s.collateral_backed_share_pct != null ? s.collateral_backed_share_pct : s.collateral_ratio, 1) + '</div><div class="text-xs text-slate-400 mt-1">external collateral ÷ supply — ~half is by design for a POL-heavy model, not undercollateralization</div></div>' +
             '</div>';
         if (cb) {
             html += '<table class="data-table"><thead><tr><th>Collateral component</th><th class="text-right">Value</th></tr></thead><tbody>' +
@@ -154,7 +164,7 @@ var USGRenderer = {
             var active = markets.filter(function(m) { return m.debt >= 1; })
                                 .sort(function(a, b) { return b.debt - a.debt; });
             html += '<div class="panel"><div class="panel-title">CDP Markets (' + active.length + ' active, book CR ' + CommonRenderer.formatPercent(s.mint_cr, 1) + ')</div>' +
-                '<p class="text-sm text-slate-500 mb-3">Per-market lending health. Headroom to liquidation = how far the collateral oracle price can fall before positions cross their liquidation threshold; markets tagged low-headroom (&lt;2.5%) sit in amber/red.</p>' +
+                '<p class="text-sm text-slate-500 mb-3">Per-market lending health. Headroom to liquidation = how far the collateral oracle price can fall before positions cross their liquidation threshold. Low headroom (amber) is baseline-normal for max-leveraged borrowing on low-vol stable LPs — it becomes a liquidation risk only if that market’s collateral leg depegs; badDebt is currently $0 everywhere.</p>' +
                 '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
                 '<th>Market</th><th class="text-right">Debt</th><th class="text-right">maxLTV</th><th class="text-right">Liq Thr</th><th class="text-right">CR</th><th class="text-right">Headroom</th><th class="text-right">Bad Debt</th>' +
                 '</tr></thead><tbody>';
@@ -164,14 +174,73 @@ var USGRenderer = {
                     '<td class="text-right font-mono">' + CommonRenderer.formatPercent(m.maxLTV, 1) + '</td>' +
                     '<td class="text-right font-mono">' + CommonRenderer.formatPercent(m.liqThreshold, 2) + '</td>' +
                     '<td class="text-right font-mono ' + USGRenderer._crClass(m.cr) + '">' + CommonRenderer.formatPercent(m.cr, 1) + '</td>' +
-                    '<td class="text-right font-mono ' + USGRenderer._headroomClass(m.headroom_to_liq) + '">' + CommonRenderer.formatPercent(m.headroom_to_liq, 2) + '</td>' +
+                    '<td class="text-right font-mono ' + USGRenderer._headroomClass(m.headroom_to_liq) + '" title="max-leveraged — becomes a liquidation risk only if this market’s collateral leg depegs">' + CommonRenderer.formatPercent(m.headroom_to_liq, 2) + '</td>' +
                     '<td class="text-right font-mono ' + (m.badDebt > 0 ? 'text-red-600 font-semibold' : 'text-slate-400') + '">' + CommonRenderer.formatCurrencyExact(m.badDebt) + '</td></tr>';
             });
             html += '</tbody></table></div>' +
                 '<p class="text-xs text-slate-400 mt-2">Total bad debt across markets: <span class="font-mono">' + CommonRenderer.formatCurrencyExact(s.total_bad_debt) + '</span>. maxLTV 84–90% with liquidation thresholds ~1–1.5% above and a 20% liquidation fee.</p></div>';
         }
 
-        // ====== 4. PegKeeper Pools (POL peg defense) ======
+        // ====== 4. Oracle Integrity (independent NAV vs oracle read) ======
+        var on = specific.oracle_nav;
+        var oracleMarkets = (markets || []).filter(function(m) { return m.debt >= 1 && m.independent_nav != null; });
+        if (on && oracleMarkets.length) {
+            var thr = on.threshold_pct || 1.0;
+            html += '<div class="panel"><div class="panel-title">Oracle Integrity</div>' +
+                '<p class="text-sm text-slate-500 mb-3">Each market prices its Curve-LP collateral via an on-chain oracle. We cross-check that read against an independent NAV computed bottom-up, and flag any market whose oracle diverges past ' + CommonRenderer.formatPercent(thr, 1) + '. Divergence is measured against the <em>optimistic</em> oracle read (the pessimistic read would structurally false-flag).</p>' +
+                '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">' +
+                    '<div class="summary-card"><div class="card-label">Max NAV divergence</div><div class="card-value ' + USGRenderer._divClass(on.max_divergence_pct, thr) + '">' + CommonRenderer.formatPercent(on.max_divergence_pct, 2) + '</div><div class="text-xs text-slate-400 mt-1">flag threshold ' + CommonRenderer.formatPercent(thr, 1) + '</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Divergent markets</div><div class="card-value ' + (on.n_divergent > 0 ? 'negative' : 'positive') + '">' + on.n_divergent + ' / ' + oracleMarkets.length + '</div><div class="text-xs text-slate-400 mt-1">beyond threshold</div></div>' +
+                '</div>';
+            if (on.method) {
+                html += '<p class="text-xs text-slate-400 mb-3"><span class="font-semibold">Method:</span> ' + on.method + '</p>';
+            }
+            var oSorted = oracleMarkets.slice().sort(function(a, b) { return Math.abs(b.nav_divergence_pct || 0) - Math.abs(a.nav_divergence_pct || 0); });
+            html += '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                '<th>Market</th><th>Oracle</th><th class="text-right">Oracle px</th><th class="text-right">Virtual px</th><th class="text-right">Indep. NAV</th><th class="text-right">Divergence</th><th class="text-right">Min coin</th>' +
+                '</tr></thead><tbody>';
+            oSorted.forEach(function(m) {
+                html += '<tr><td class="font-medium">' + m.name + '</td>' +
+                    '<td class="font-mono text-xs text-slate-500" title="' + (m.oracle || '') + '">' + (m.oracle_name || '-') + '</td>' +
+                    '<td class="text-right font-mono">' + (m.oracle_price_optimistic != null ? m.oracle_price_optimistic.toFixed(4) : '-') + '</td>' +
+                    '<td class="text-right font-mono text-slate-400">' + (m.virtual_price != null ? m.virtual_price.toFixed(4) : '-') + '</td>' +
+                    '<td class="text-right font-mono">' + (m.independent_nav != null ? m.independent_nav.toFixed(4) : '-') + '</td>' +
+                    '<td class="text-right font-mono ' + USGRenderer._divClass(m.nav_divergence_pct, thr) + '">' + (m.nav_divergence_pct != null ? CommonRenderer.formatPercent(m.nav_divergence_pct, 3) : '-') + '</td>' +
+                    '<td class="text-right font-mono text-xs text-slate-500">' + (m.min_coin_symbol || '-') + (m.min_coin_price != null ? ' @ $' + m.min_coin_price.toFixed(4) : '') + '</td></tr>';
+            });
+            html += '</tbody></table></div></div>';
+        }
+
+        // ====== 5. Collateral Cascade Risk (exotic peg legs) ======
+        var exotic = specific.exotic_pegs;
+        if (exotic && exotic.length) {
+            var pegged = exotic.filter(function(e) { return e.par_target; })
+                               .sort(function(a, b) { return Math.abs(b.deviation_pct || 0) - Math.abs(a.deviation_pct || 0); });
+            var wrappers = exotic.filter(function(e) { return !e.par_target; });
+            var worst = s.worst_exotic_deviation_pct;
+            html += '<div class="panel"><div class="panel-title">Collateral Cascade Risk</div>' +
+                '<p class="text-sm text-slate-500 mb-3">USG is a CDP stablecoin collateralized by Curve LPs that themselves contain <em>other</em> CDP / exotic stables — a productive-LP cascade. These are the non-USDC/frxUSD stable legs reached through that collateral; a depeg here feeds into the LP NAV before USG’s own oracle reacts.</p>' +
+                '<div class="summary-card mb-4" style="display:inline-block"><div class="card-label">Worst $1-peg deviation</div><div class="card-value ' + CommonRenderer.pegPctClass(CommonRenderer.pegStatusClass(worst)) + '">' + CommonRenderer.pegPctText(worst, 2) + '</div><div class="text-xs text-slate-400 mt-1">across par-target legs</div></div>' +
+                '<table class="data-table"><thead><tr><th>Token</th><th class="text-right">Price</th><th class="text-right">Deviation</th><th>Used in markets</th></tr></thead><tbody>';
+            pegged.forEach(function(e) {
+                var st = CommonRenderer.pegStatusClass(e.deviation_pct);
+                var emphasis = e.symbol === 'reUSD' ? ' <span class="tag" style="background:#fef2f2;color:#dc2626">cascade-sensitive</span>' : '';
+                html += '<tr><td class="font-medium">' + e.symbol + emphasis + '</td>' +
+                    '<td class="text-right font-mono">$' + e.price.toFixed(4) + '</td>' +
+                    '<td class="text-right font-mono ' + CommonRenderer.pegPctClass(st) + '">' + CommonRenderer.pegPctText(e.deviation_pct, 2) + '</td>' +
+                    '<td class="text-xs text-slate-500">' + (e.in_markets || []).join(', ') + '</td></tr>';
+            });
+            wrappers.forEach(function(e) {
+                html += '<tr><td class="font-medium">' + e.symbol + ' <span class="tag" style="background:#f1f5f9;color:#475569">wrapper</span></td>' +
+                    '<td class="text-right font-mono">$' + e.price.toFixed(4) + '</td>' +
+                    '<td class="text-right font-mono text-slate-400" title="yield-bearing wrapper, not a $1 peg — price drifts up with accrued yield">n/a</td>' +
+                    '<td class="text-xs text-slate-500">' + (e.in_markets || []).join(', ') + '</td></tr>';
+            });
+            html += '</tbody></table>' +
+                '<p class="text-xs text-slate-400 mt-2">sDOLA and scrvUSD are yield-bearing wrappers — their price sits above $1 by accrued yield, which is not a depeg. reUSD (Resupply) is the most cascade-sensitive leg: a recursive-CDP stablecoin reached via two markets.</p></div>';
+        }
+
+        // ====== 6. PegKeeper Pools (POL peg defense) ======
         var pks = specific.pegkeepers;
         if (pks && pks.length) {
             html += '<div class="panel"><div class="panel-title">PegKeeper Pools (POL peg defense, ' + pks.length + ')</div>' +
