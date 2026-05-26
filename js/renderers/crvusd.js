@@ -48,6 +48,22 @@ var CrvUSDRenderer = {
                 '</tbody></table></div>';
         }
 
+        // ====== 1b. Supply Composition Over Time (stacked area + YB% danger line) ======
+        // Canvases are populated by _loadSupplyCompChart() after innerHTML is set below.
+        html += '<div class="panel">' +
+            '<div class="panel-title">Supply Composition Over Time</div>' +
+            '<p class="text-sm text-slate-500 mb-3">crvUSD supply by source. YieldBasis is the watch-item — its share is tracked against the report\'s 80%-of-supply concentration danger line.</p>' +
+            '<div id="crvusd-supply-comp-section">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2">Supply by source (stacked, reconciles to total supply)</div>' +
+                '<div style="height:320px;position:relative;"><canvas id="crvusd-supply-comp-chart"></canvas></div>' +
+            '</div>' +
+            '<div id="crvusd-yb-pct-section">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2 mt-5">YieldBasis % of supply</div>' +
+                '<div style="height:220px;position:relative;"><canvas id="crvusd-yb-pct-chart"></canvas></div>' +
+            '</div>' +
+            '<p class="text-xs text-slate-400 mt-2">Supply-composition history begins 2026-05-26 (when per-source persistence was added). The window lengthens on its own as samples accumulate.</p>' +
+            '</div>';
+
         // ====== 2. Collateral Breakdown (matches Total Backing header) ======
         var cb = specific.collateral_breakdown;
         if (cb) {
@@ -171,5 +187,144 @@ var CrvUSDRenderer = {
         }
 
         container.innerHTML = html;
+
+        // Canvases now exist in the DOM — fetch history and draw.
+        CrvUSDRenderer._loadSupplyCompChart();
+    },
+
+    // ====== Supply-composition charts ======
+
+    // Stride-based downsample that always keeps the first and last point.
+    _downsample: function(arr, max) {
+        if (arr.length <= max) return arr;
+        var step = Math.ceil(arr.length / max);
+        var out = [];
+        for (var i = 0; i < arr.length; i += step) out.push(arr[i]);
+        if (out[out.length - 1] !== arr[arr.length - 1]) out.push(arr[arr.length - 1]);
+        return out;
+    },
+
+    _toDate: function(e) {
+        var t = e.timestamp;
+        return new Date(t.endsWith('Z') ? t : t + 'Z');
+    },
+
+    _loadSupplyCompChart: function() {
+        var canvas = document.getElementById('crvusd-supply-comp-chart');
+        if (!canvas || typeof Chart === 'undefined') return;
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/crvusd_backing_history.json?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                // yb_crvusd_deployed is forward-only (null before 2026-05-26). Without this
+                // filter the "Other" residual swallows the whole YB amount on pre-fix entries
+                // and the stack shows a false cliff the hour the field landed.
+                var entries = (hist && Array.isArray(hist.entries) ? hist.entries : [])
+                    .filter(function(e) { return e.yb_crvusd_deployed != null; });
+                if (entries.length < 2) {
+                    CrvUSDRenderer._compUnavailable();
+                    return;
+                }
+                entries = CrvUSDRenderer._downsample(entries, 300);
+                CrvUSDRenderer._drawSupplyCompChart(canvas, entries);
+                CrvUSDRenderer._drawYbPctChart(entries);
+            })
+            .catch(function() { CrvUSDRenderer._compUnavailable(); });
+    },
+
+    _compUnavailable: function() {
+        var sec = document.getElementById('crvusd-supply-comp-section');
+        if (sec) sec.innerHTML = '<div class="text-xs text-slate-400 italic">Supply-composition history populates after a few hours of samples (per-source persistence began 2026-05-26).</div>';
+        var yb = document.getElementById('crvusd-yb-pct-section');
+        if (yb) yb.style.display = 'none';
+    },
+
+    _drawSupplyCompChart: function(canvas, entries) {
+        var labels = entries.map(CrvUSDRenderer._toDate);
+        var totals = entries.map(function(e) { return e.total_supply || 0; });
+        var mint = entries.map(function(e) { return e.total_market_debt || 0; });
+        var yb   = entries.map(function(e) { return e.yb_crvusd_deployed || 0; });
+        var pk   = entries.map(function(e) { return e.total_pegkeeper_debt || 0; });
+        // "Other" is the residual vs total_supply so the four bands always sum to supply
+        // (absorbs operator-minted / LlamaLend-supplied crvUSD). Clamp at 0 — timing/rounding
+        // can occasionally make it marginally negative.
+        var other = entries.map(function(e) {
+            return Math.max(0, (e.total_supply || 0) - (e.total_market_debt || 0) - (e.yb_crvusd_deployed || 0) - (e.total_pegkeeper_debt || 0));
+        });
+
+        var ds = function(label, data, border, bg) {
+            return { label: label, data: data, borderColor: border, backgroundColor: bg, fill: true, stack: 'supply', tension: 0.2, pointRadius: 0, borderWidth: 1.5 };
+        };
+
+        if (window._crvusdSupplyCompChart) { try { window._crvusdSupplyCompChart.destroy(); } catch (e) {} }
+        window._crvusdSupplyCompChart = new Chart(canvas, {
+            type: 'line',
+            data: { labels: labels, datasets: [
+                // bottom -> top: Mint, YieldBasis (highlighted), PegKeeper, Other
+                ds('Mint markets (CDP)', mint, '#3b82f6', 'rgba(59,130,246,0.55)'),
+                ds('YieldBasis', yb, '#f59e0b', 'rgba(245,158,11,0.75)'),
+                ds('PegKeeper', pk, '#94a3b8', 'rgba(148,163,184,0.5)'),
+                ds('Other (operator / LlamaLend)', other, '#22c55e', 'rgba(34,197,94,0.45)')
+            ] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                scales: {
+                    x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } }, grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+                    y: { stacked: true, beginAtZero: true, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 }, callback: function(v) { return '$' + (v / 1e6).toFixed(0) + 'M'; } } }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: { callbacks: {
+                        label: function(c) {
+                            var tot = totals[c.dataIndex] || 0;
+                            var pct = tot > 0 ? (c.parsed.y / tot * 100).toFixed(1) : '0.0';
+                            return c.dataset.label + ': $' + (c.parsed.y / 1e6).toFixed(1) + 'M (' + pct + '%)';
+                        },
+                        footer: function(items) {
+                            if (!items.length) return '';
+                            var tot = totals[items[0].dataIndex] || 0;
+                            return 'Total supply: $' + (tot / 1e6).toFixed(1) + 'M';
+                        }
+                    } }
+                }
+            }
+        });
+    },
+
+    _drawYbPctChart: function(entries) {
+        var canvas = document.getElementById('crvusd-yb-pct-chart');
+        if (!canvas) return;
+        var labels = entries.map(CrvUSDRenderer._toDate);
+        var pct = entries.map(function(e) {
+            return (e.total_supply > 0) ? e.yb_crvusd_deployed / e.total_supply * 100 : 0;
+        });
+
+        if (window._crvusdYbPctChart) { try { window._crvusdYbPctChart.destroy(); } catch (e) {} }
+        window._crvusdYbPctChart = new Chart(canvas, {
+            type: 'line',
+            data: { labels: labels, datasets: [{
+                label: 'YieldBasis % of supply', data: pct,
+                borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.08)',
+                fill: true, tension: 0.25, pointRadius: 0, borderWidth: 2
+            }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                scales: {
+                    x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } }, grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+                    y: { suggestedMin: 0, suggestedMax: 100, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 }, callback: function(v) { return Number(v).toFixed(0) + '%'; } } }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function(c) { return 'YieldBasis: ' + c.parsed.y.toFixed(1) + '% of supply'; } } },
+                    annotation: { annotations: { ybDanger: {
+                        type: 'line', yMin: 80, yMax: 80,
+                        borderColor: 'rgba(220,38,38,0.8)', borderWidth: 1, borderDash: [4, 4],
+                        label: { content: 'YB concentration danger (80%)', display: true, position: 'end', font: { size: 10 }, color: '#fff', backgroundColor: 'rgba(220,38,38,0.8)' }
+                    } } }
+                }
+            }
+        });
     }
 };
