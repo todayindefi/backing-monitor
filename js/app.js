@@ -13,6 +13,7 @@ var ASSET_RENDERERS = {
     ousd:      typeof OUSDRenderer      !== 'undefined' ? OUSDRenderer      : null,
     frax:      typeof FRAXRenderer      !== 'undefined' ? FRAXRenderer      : null,
     crvusd:    typeof CrvUSDRenderer    !== 'undefined' ? CrvUSDRenderer    : null,
+    usg:       typeof USGRenderer       !== 'undefined' ? USGRenderer       : null,
     usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
     syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
     syrupusdt: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
@@ -82,11 +83,15 @@ async function renderIndex() {
             // Some analyzers (USDm) emit collateral_ratio as a ratio (1.01)
             // instead of a percentage (101). Normalize for display so all
             // cards share the same scale.
-            var crRaw = d ? d.summary.collateral_ratio : null;
+            // USG-shape analyzers emit collateral_ratio as a conservative
+            // "collateral-backed share of supply" (~55%); the headline ratio is the
+            // CDP-book mint CR. Prefer it (only when both fields are present, which
+            // is USG-only) so the grid card isn't a misleading sub-100.
+            var crRaw = d ? ((d.summary.mint_cr != null && d.summary.collateral_ratio_inclusive != null) ? d.summary.mint_cr : d.summary.collateral_ratio) : null;
             var crNorm = (crRaw != null && crRaw < 2) ? crRaw * 100 : crRaw;
             var cr = d ? CommonRenderer.formatPercent(crNorm) : '-';
             var crClass = d && crNorm >= 100 ? 'text-green-600' : 'text-red-600';
-            var supply = d ? CommonRenderer.formatCurrency(d.summary.total_supply) : '-';
+            var supply = d ? CommonRenderer.formatCurrency(d.summary.total_supply || d.summary.real_supply) : '-';
             var ts = d ? CommonRenderer.formatDate(d.timestamp) : '';
             var flagCount = d ? d.risk_flags.length : 0;
             var flagBadge = flagCount > 0 ?
