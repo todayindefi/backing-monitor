@@ -162,6 +162,33 @@ const CommonRenderer = {
             '<td></td></tr>'
         );
         tbody.innerHTML = rows.join('');
+
+        // Basis caption: the % column is each line's share of the displayed
+        // backing pie (the 100% row), NOT share of token supply. Generic line
+        // for every asset; USG gets an addendum because the same page shows POL
+        // on two different bases that otherwise look contradictory — the pie's
+        // "POL pool stables" counter-side % vs the Supply Composition panel's
+        // "POL deployed" share. Figures are read from live data so they always
+        // match the panels above (no hardcoded numbers to go stale).
+        var cap = document.getElementById('breakdown-caption');
+        if (cap) {
+            var note = "Percentages are each line’s share of total displayed backing (the 100% row) — not share of token supply.";
+            if (data.asset_slug === 'usg') {
+                var sc = data.asset_specific && data.asset_specific.supply_composition;
+                var polRow = (data.backing_breakdown || []).filter(function(i) {
+                    return i.tags && i.tags.indexOf('pol') >= 0;
+                })[0];
+                var polPiePct = polRow ? CommonRenderer.formatPercent(polRow.pct, 1) : null;
+                var polSupplyPct = sc && sc.pol_pct != null ? CommonRenderer.formatPercent(sc.pol_pct, 1) : null;
+                note += ' <strong>USG:</strong> this is the inclusive-CR backing pie (CDP collateral + PegKeeper pool counter-side stables).';
+                if (polPiePct && polSupplyPct) {
+                    note += ' The “POL pool stables (PegKeeper)” line — the pool counter-side stablecoins (USDC/frxUSD paired against protocol-minted USG) — is ' + polPiePct +
+                        ' of this pie. That is a different quantity from the “POL deployed” figure (' + polSupplyPct +
+                        ') in the Supply Composition panel above, which counts the protocol-minted USG itself as a share of supply. Both are correct: different numerators (counter-side stables vs minted USG) and different denominators (backing pie vs supply).';
+                }
+            }
+            cap.innerHTML = note;
+        }
     },
 
     // ------ Pie chart ------
