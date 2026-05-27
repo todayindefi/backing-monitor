@@ -63,6 +63,10 @@ var ETHENA_CEX_COLORS = {
     'Deribit':  '#a855f7'
 };
 
+// Indexed palette for the per-wallet trend lines (wallets have no stable
+// semantic color the way venues/protocols do — assign by sorted position).
+var ETHENA_WALLET_COLORS = ['#3b82f6', '#f59e0b', '#22c55e', '#a855f7', '#ec4899', '#06b6d4', '#64748b'];
+
 var ETHENA_THRESHOLDS = {
     cex_concentration_warn:      70.0,   // % of hedge in one venue
     cex_concentration_critical:  90.0,
@@ -481,6 +485,7 @@ var EthenaRenderer = {
                 // charts (canvases now exist)
                 EthenaRenderer._drawDefiDonut(fam);
                 EthenaRenderer._drawCustodyDonut(fam);
+                EthenaRenderer._drawReserveTrend('protocol');
                 EthenaRenderer._loadFamilyTrendChart();
             })
             .catch(function() { EthenaRenderer._familyUnavailable(); });
@@ -608,9 +613,16 @@ var EthenaRenderer = {
         });
     },
 
-    // ----- §4 Coinbase wallets table -----
+    // ----- §4 Coinbase wallets: snapshot table + 30d trend + drift -----
+    // The snapshot table is the current state (kept verbatim); the trend
+    // chart + drift flags + freshness badge turn it into a portfolio-
+    // tracking view fed by FarmTracker's daily wallet history (which rides
+    // inside ethena_family.json as coinbase_wallets_history / _drift). All
+    // three augmentations degrade silently when those keys are absent
+    // (older snapshot) or short (<2 daily points accrued).
     _fillWallets: function(fam) {
         var wallets = (fam.coinbase_wallets || []).slice().sort(function(a, b) { return (b.total_usd || 0) - (a.total_usd || 0); });
+        var hist = Array.isArray(fam.coinbase_wallets_history) ? fam.coinbase_wallets_history : [];
 
         function topProtocols(protocols) {
             var agg = {};
@@ -621,13 +633,27 @@ var EthenaRenderer = {
                 .slice(0, 3);
         }
 
+        // Per-wallet 30d delta (first→last) — only when ≥2 daily points exist.
+        var deltaByAddr = {}, deltaDays = 0;
+        if (hist.length >= 2) {
+            var first = hist[0], lastH = hist[hist.length - 1];
+            var ft = first.wallet_totals || {}, lt = lastH.wallet_totals || {};
+            Object.keys(lt).forEach(function(addr) {
+                if (ft[addr] != null) deltaByAddr[addr] = lt[addr] - ft[addr];
+            });
+            deltaDays = Math.max(1, Math.round((new Date(lastH.date + 'T00:00:00Z') - new Date(first.date + 'T00:00:00Z')) / 86400000));
+        }
+
         var rows = wallets.map(function(w) {
             var tops = topProtocols(w.protocols);
             var topStr = tops.length ? tops.map(function(p) { return p.name + ' (' + EthenaRenderer._money(p.usd) + ')'; }).join(' · ') : '<span class="text-slate-400">raw tokens only</span>';
             var stale = (w.fetch_status && w.fetch_status !== 'ok') ? ' ' + EthenaRenderer._statusPill('stale', 'warn', w.fetch_status) : '';
+            var d = deltaByAddr[w.address];
+            var deltaLine = (d != null && deltaDays) ?
+                '<div class="text-xs text-slate-400 mt-0.5">' + (d >= 0 ? '+' : '−') + EthenaRenderer._money(Math.abs(d)).replace('$', '$') + ' · ' + deltaDays + 'd</div>' : '';
             return '<tr>' +
                 '<td>' + EthenaRenderer._addrCell(w.address) + stale + '</td>' +
-                '<td class="text-right font-mono">' + EthenaRenderer._money(w.total_usd) + '</td>' +
+                '<td class="text-right font-mono">' + EthenaRenderer._money(w.total_usd) + deltaLine + '</td>' +
                 '<td class="text-right font-mono">' + EthenaRenderer._money(w.defi_usd) + '</td>' +
                 '<td class="text-xs">' + topStr + '</td>' +
                 '<td>' + EthenaRenderer._debankLink(w.address) + '</td>' +
@@ -636,10 +662,178 @@ var EthenaRenderer = {
 
         EthenaRenderer._set('ethena-wallets-panel',
             '<div class="panel">' +
-                '<div class="panel-title">Coinbase Onchain Wallets <span class="text-xs font-normal text-slate-400">— ' + EthenaRenderer._money(fam.coinbase_wallets_total_usd) + ' across ' + (fam.coinbase_wallets || []).length + ' wallets</span></div>' +
+                '<div class="flex items-start justify-between gap-3 flex-wrap">' +
+                    '<div class="panel-title" style="margin-bottom:0">Coinbase Onchain Wallets <span class="text-xs font-normal text-slate-400">— ' + EthenaRenderer._money(fam.coinbase_wallets_total_usd) + ' across ' + (fam.coinbase_wallets || []).length + ' wallets</span></div>' +
+                    EthenaRenderer._walletFreshnessBadge(fam) +
+                '</div>' +
+                '<div class="text-xs text-slate-500 mt-1 mb-3">The on-chain reserve slice (≈$2.0B of ≈$4.5B backing) — the only custody DeBank can track per-position. ' +
+                    'Off-exchange custodians and the CEX hedge stay attestation / LlamaRisk-sourced. Wallet positions refresh <span class="font-medium">daily</span> (headline coverage above is hourly).</div>' +
+                EthenaRenderer._reserveTrendSection(hist) +
                 '<table class="data-table"><thead><tr><th>Address</th><th class="text-right">Total</th><th class="text-right">In DeFi</th><th>Top protocols</th><th></th></tr></thead>' +
                 '<tbody>' + rows + '</tbody></table>' +
+                EthenaRenderer._reserveDriftCallouts(fam) +
             '</div>');
+
+        // Stash history for the trend chart + its toggle (drawn post-DOM in
+        // _loadFamily once the canvas exists).
+        EthenaRenderer._reserveTrendCache = { history: hist, mode: 'protocol' };
+    },
+
+    // Freshness pill: "Wallet data as of {date} · daily", visually distinct
+    // from the hourly headline. Amber when stale (>2d for a daily feed).
+    _walletFreshnessBadge: function(fam) {
+        var iso = fam.wallet_data_generated_at;
+        if (!iso) return '';
+        var d = new Date(iso);
+        if (isNaN(d.getTime())) return '';
+        var dateLabel = new Date(iso.slice(0, 10) + 'T00:00:00Z')
+            .toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+        var cadence = fam.wallet_data_cadence || 'daily';
+        var ageDays = (Date.now() - d.getTime()) / 86400000;
+        var state = ageDays > 2 ? 'warn' : 'ok';
+        var extra = ageDays > 2 ? Math.round(ageDays) + 'd old' : '';
+        return EthenaRenderer._statusPill('Wallet data as of ' + dateLabel + ' · ' + cadence, state, extra);
+    },
+
+    // Trend chart shell (toggle + canvas) when ≥2 daily points exist; a short
+    // accrual note at exactly 1 point; nothing when the history key is absent.
+    _reserveTrendSection: function(hist) {
+        if (hist.length >= 2) {
+            var activeBtn = 'px-2.5 py-1 rounded text-xs font-medium bg-blue-600 text-white';
+            var idleBtn = 'px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200';
+            return '<div class="mb-4">' +
+                '<div class="flex items-center justify-between gap-2 mb-2 flex-wrap">' +
+                    '<div class="text-sm font-semibold text-slate-700">Reserve composition trend <span class="text-xs font-normal text-slate-400">— ' + hist.length + ' daily snapshots</span></div>' +
+                    '<div class="flex gap-1" id="ethena-reserve-trend-toggle">' +
+                        '<button data-mode="protocol" onclick="EthenaRenderer._switchReserveTrend(\'protocol\')" class="' + activeBtn + '">By protocol</button>' +
+                        '<button data-mode="wallet" onclick="EthenaRenderer._switchReserveTrend(\'wallet\')" class="' + idleBtn + '">By wallet</button>' +
+                    '</div>' +
+                '</div>' +
+                '<div class="chart-container" style="height:240px;position:relative;"><canvas id="ethena-reserve-trend"></canvas></div>' +
+                '<div class="text-xs text-slate-400 mt-2">By protocol: Aave / Morpho deposits + raw tokens stacked to the wallet total. By wallet: per-address totals. Daily from FarmTracker.</div>' +
+            '</div>';
+        }
+        if (hist.length === 1) {
+            return '<div class="text-xs text-slate-400 italic mb-4">Per-wallet trend appears once a second daily snapshot accrues (1 so far).</div>';
+        }
+        return '';
+    },
+
+    // Drift flags (position appeared/disappeared) under the table. Absent or
+    // empty → render nothing (no drift events yet, or older snapshot).
+    _reserveDriftCallouts: function(fam) {
+        var drift = Array.isArray(fam.coinbase_wallets_drift) ? fam.coinbase_wallets_drift.slice() : [];
+        if (!drift.length) return '';
+        drift.sort(function(a, b) { return (b.date || '').localeCompare(a.date || ''); });
+
+        function eventLabel(ev) {
+            if (ev === 'position_disappeared') return 'position disappeared';
+            if (ev === 'position_appeared') return 'position appeared';
+            return (ev || 'position changed').replace(/_/g, ' ');
+        }
+
+        var flags = drift.slice(0, 8).map(function(x) {
+            var cls = x.event === 'position_appeared' ? 'risk-info' : 'risk-warning';
+            var posLabel = x.position && x.position !== x.protocol ? ' (' + x.position + ')' : '';
+            var was = (x.yesterday_value != null && x.yesterday_value > 0) ? ' · was ' + EthenaRenderer._money(x.yesterday_value) : '';
+            return '<div class="risk-flag ' + cls + ' text-xs">Wallet ' + EthenaRenderer._truncAddr(x.wallet) +
+                ' — ' + (x.protocol || 'Position') + posLabel + ' ' + eventLabel(x.event) +
+                (x.date ? ' ' + x.date : '') + was + '</div>';
+        }).join('');
+        var more = drift.length > 8 ? '<div class="text-xs text-slate-400 mt-1">+ ' + (drift.length - 8) + ' more</div>' : '';
+
+        return '<div class="mt-4">' +
+            '<div class="text-sm font-semibold text-slate-700 mb-2">Position drift <span class="text-xs font-normal text-slate-400">— ' + drift.length + ' event' + (drift.length === 1 ? '' : 's') + ' (daily)</span></div>' +
+            flags + more +
+        '</div>';
+    },
+
+    // Draw / redraw the reserve-trend chart for the active mode from cached
+    // daily history. window._ethenaReserveTrend per the global-scope convention.
+    _drawReserveTrend: function(mode) {
+        var ctx = document.getElementById('ethena-reserve-trend');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var cache = EthenaRenderer._reserveTrendCache;
+        if (!cache || !Array.isArray(cache.history) || cache.history.length < 2) return;
+        mode = mode || cache.mode || 'protocol';
+        cache.mode = mode;
+        var hist = cache.history;
+        var labels = hist.map(function(h) { return new Date(h.date + 'T00:00:00Z'); });
+
+        var datasets, stacked;
+        if (mode === 'wallet') {
+            stacked = false;
+            // Wallet set ordered by latest total desc, for a stable legend.
+            var lastW = hist[hist.length - 1].wallet_totals || {};
+            var addrs = {};
+            hist.forEach(function(h) { Object.keys(h.wallet_totals || {}).forEach(function(a) { addrs[a] = true; }); });
+            addrs = Object.keys(addrs).sort(function(a, b) { return (lastW[b] || 0) - (lastW[a] || 0); });
+            datasets = addrs.map(function(addr, i) {
+                var color = ETHENA_WALLET_COLORS[i % ETHENA_WALLET_COLORS.length];
+                return {
+                    label: EthenaRenderer._truncAddr(addr),
+                    data: hist.map(function(h) { var v = (h.wallet_totals || {})[addr]; return v == null ? null : v; }),
+                    borderColor: color, backgroundColor: 'transparent', fill: false,
+                    tension: 0.25, pointRadius: 0, borderWidth: 2, spanGaps: true
+                };
+            });
+        } else {
+            stacked = true;
+            var lastP = hist[hist.length - 1].protocol_totals || {};
+            var protos = {};
+            hist.forEach(function(h) { Object.keys(h.protocol_totals || {}).forEach(function(p) { protos[p] = true; }); });
+            protos = Object.keys(protos).sort(function(a, b) { return (lastP[b] || 0) - (lastP[a] || 0); });
+            datasets = protos.map(function(p) {
+                var color = ETHENA_PROTOCOL_COLORS[p] || '#94a3b8';
+                return {
+                    label: p,
+                    data: hist.map(function(h) { return (h.protocol_totals || {})[p] || 0; }),
+                    borderColor: color, backgroundColor: EthenaRenderer._rgba(color, 0.18), fill: true,
+                    tension: 0.25, pointRadius: 0, borderWidth: 1.5
+                };
+            });
+            // Raw (non-DeFi) tokens close the stack to the wallet total.
+            datasets.push({
+                label: 'Raw tokens',
+                data: hist.map(function(h) { var g = h.group_totals || {}; return Math.max((g.total_usd || 0) - (g.defi_total_usd || 0), 0); }),
+                borderColor: '#94a3b8', backgroundColor: 'rgba(148,163,184,0.18)', fill: true,
+                tension: 0.25, pointRadius: 0, borderWidth: 1.5
+            });
+        }
+
+        if (window._ethenaReserveTrend) window._ethenaReserveTrend.destroy();
+        window._ethenaReserveTrend = new Chart(ctx, {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } }, grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+                    y: { stacked: stacked, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 }, callback: function(v) { return '$' + (v / 1e9).toFixed(1) + 'B'; } } }
+                },
+                plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + (c.parsed.y != null ? EthenaRenderer._money(c.parsed.y) : '—'); } } } },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    _switchReserveTrend: function(mode) {
+        var active = 'px-2.5 py-1 rounded text-xs font-medium bg-blue-600 text-white';
+        var idle = 'px-2.5 py-1 rounded text-xs font-medium bg-slate-100 text-slate-600 hover:bg-slate-200';
+        var toggle = document.getElementById('ethena-reserve-trend-toggle');
+        if (toggle) toggle.querySelectorAll('button').forEach(function(b) {
+            b.className = (b.getAttribute('data-mode') === mode) ? active : idle;
+        });
+        EthenaRenderer._drawReserveTrend(mode);
+    },
+
+    // Hex → rgba for translucent stacked-area fills.
+    _rgba: function(hex, a) {
+        var h = (hex || '').replace('#', '');
+        if (h.length !== 6) return 'rgba(148,163,184,' + a + ')';
+        var r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+        return 'rgba(' + r + ',' + g + ',' + b + ',' + a + ')';
     },
 
     // ----- §5 CEX hedge breakdown -----
