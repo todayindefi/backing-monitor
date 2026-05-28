@@ -21,6 +21,8 @@ var ASSET_RENDERERS = {
     apyusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null,
     usdat:     typeof SaturnRenderer    !== 'undefined' ? SaturnRenderer    : null,
     susdat:    typeof SaturnRenderer    !== 'undefined' ? SaturnRenderer    : null,
+    usdai:     typeof UsdaiRenderer     !== 'undefined' ? UsdaiRenderer     : null,
+    susdai:    typeof UsdaiRenderer     !== 'undefined' ? UsdaiRenderer     : null,
     thusd:     typeof ThusdRenderer     !== 'undefined' ? ThusdRenderer     : null,
     usde:      typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
     susde:     typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
