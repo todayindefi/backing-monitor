@@ -100,14 +100,27 @@ var EthenaRenderer = {
         return addr.slice(0, 6) + '…' + addr.slice(-4);
     },
 
+    // Solana base58 addresses don't carry the 0x prefix; Etherscan/DeBank
+    // can't resolve them, so route them to Solscan + Jupiter Portfolio.
+    _isSolanaAddr: function(addr) {
+        return !!addr && addr.indexOf('0x') !== 0;
+    },
+
     _explorerLink: function(addr) {
         if (!addr) return '';
-        return '<a href="https://etherscan.io/address/' + addr + '" target="_blank" rel="noopener noreferrer" ' +
+        var sol = EthenaRenderer._isSolanaAddr(addr);
+        var href = sol ? 'https://solscan.io/account/' + addr
+                       : 'https://etherscan.io/address/' + addr;
+        return '<a href="' + href + '" target="_blank" rel="noopener noreferrer" ' +
             'class="text-blue-500 hover:underline text-xs" title="' + addr + '">↗</a>';
     },
 
     _debankLink: function(addr) {
         if (!addr) return '';
+        if (EthenaRenderer._isSolanaAddr(addr)) {
+            return '<a href="https://portfolio.jup.ag/portfolio/' + addr + '" target="_blank" rel="noopener noreferrer" ' +
+                'class="text-blue-500 hover:underline text-xs">Jupiter ↗</a>';
+        }
         return '<a href="https://debank.com/profile/' + addr + '" target="_blank" rel="noopener noreferrer" ' +
             'class="text-blue-500 hover:underline text-xs">DeBank ↗</a>';
     },
