@@ -1150,7 +1150,7 @@ var ApyxRenderer = {
                 'in stressed redemption your NAV per share would proportionally reflect the backing ' +
                 'shortfall. MSTR equity price and STRC dividend health are the leading indicators ' +
                 'per assets/apxusd.md §Key Risk Notes; the cooldown amplifies this — by the time ' +
-                'you can exit via the 30-day UnlockToken path, the underlying may have already moved.';
+                'you can exit via the 20-day UnlockToken path, the underlying may have already moved.';
         }
 
         return '<div class="panel">' +
@@ -1717,7 +1717,7 @@ var ApyxRenderer = {
                 'Contract NAV is the on-chain ERC-4626 share price (how many apxUSD each apyUSD share ' +
                 'represents). Market Price is the live Curve apyUSD/apxUSD spot — what the secondary ' +
                 'market actually pays for one share right now. A persistent market discount typically ' +
-                'reflects arb-bounded redemption inefficiency from the 30-day UnlockToken cooldown ' +
+                'reflects arb-bounded redemption inefficiency from the 20-day UnlockToken cooldown ' +
                 '(arbs can\'t close the gap atomically), not a peg break. Reference bands are widened ' +
                 'vs the apxUSD true-peg panel — ±50 bps healthy / ±100 bps watch / ±200 bps stress — ' +
                 'because the cooldown imposes a structural discount floor of roughly −40 bps that is ' +
@@ -2133,7 +2133,10 @@ var ApyxRenderer = {
         var u = specific.unlock_queue || {};
         var depth = u.queue_depth_apxusd;
         var wow = u.week_over_week_growth_x;
-        var docDays = u.duration_documented_days || 30;
+        // Prefer live cooldown_days from the analyzer (2026-04-15 lever flip); fall back to legacy doc field; final default 20 (current on-chain).
+        var docDays = u.cooldown_days != null ? u.cooldown_days
+                    : u.duration_documented_days != null ? u.duration_documented_days
+                    : 20;
         var known = u.duration_known;
 
         var wowState = (wow != null && wow > 2.0) ? 'critical' : (wow != null && wow > 1.5) ? 'warn' : 'ok';
@@ -2145,9 +2148,8 @@ var ApyxRenderer = {
         if (!known) {
             durationCaveat =
                 '<div class="text-xs text-amber-700 mt-2">' +
-                    '<strong>Note:</strong> ' + docDays + '-day cooldown from contract source review. ' +
-                    'Apyx docs cite a different figure (20 days). The on-chain ' +
-                    '<span class="font-mono">duration()</span> getter is not externally exposed.' +
+                    '<strong>Note:</strong> Live <span class="font-mono">unlockingDelay()</span> ' +
+                    'read failed on this snapshot; displaying last-known value.' +
                 '</div>';
         }
 
@@ -2202,12 +2204,14 @@ var ApyxRenderer = {
 
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
-                'UnlockToken\'s <span class="font-mono">duration()</span> getter is not externally exposed. ' +
-                'The ' + docDays + '-day figure comes from contract source review; Apyx docs state 20 days. ' +
-                'Code is authoritative; verify with the Apyx team if sizing materially. ' +
+                '<strong>Cooldown</strong> is read live from the UnlockToken\'s ' +
+                '<span class="font-mono">unlockingDelay()</span> getter on each snapshot. ' +
+                'The cooldown was 30 days at deploy; Apyx admin reduced it to 20 days on 2026-04-15 ' +
+                'via <span class="font-mono">setUnlockingDelay()</span>. The setting is admin-mutable ' +
+                'subject to a 72-hour AccessManager delay, so future changes surface with a 3-day window. ' +
                 '<strong>Drain rate</strong> is a 7-day rolling sum of UnlockToken Withdraw events; ' +
                 '<strong>implied wait</strong> = queue depth ÷ drain rate. When implied wait exceeds ' +
-                'the documented cooldown, the queue is back-loaded — new entrants nominally face the ' +
+                'the nominal cooldown, the queue is back-loaded — new entrants nominally face the ' +
                 docDays + '-day SLA but the existing queue-tail has been there longer, so realized exit ' +
                 'time tracks implied wait, not nominal cooldown.' +
             '</div>';
@@ -2222,7 +2226,9 @@ var ApyxRenderer = {
                     '<div class="mt-1">' + wowPill + '</div></div>' +
                 '<div class="summary-card"><div class="card-label">Cooldown</div>' +
                     '<div class="card-value">' + docDays + ' days</div>' +
-                    (known ? '' : '<div class="text-xs text-amber-600 mt-1">contract not docs</div>') +
+                    (known
+                        ? '<div class="text-xs text-slate-400 mt-1">live on-chain</div>'
+                        : '<div class="text-xs text-amber-600 mt-1">last known</div>') +
                 '</div>' +
                 drainCard +
                 waitCard +
