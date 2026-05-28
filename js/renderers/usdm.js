@@ -108,6 +108,16 @@ var USDmRenderer = {
         return 'critical';
     },
 
+    // Stable-only Reserve coverage state. Thresholds from the editorial
+    // handoff: ≥1.10 green / 1.00–1.10 neutral / 0.95–1.00 warn / <0.95 alert.
+    _stableOnlyState: function(ratio) {
+        if (ratio == null) return 'unknown';
+        if (ratio >= 1.10) return 'ok';
+        if (ratio >= 1.00) return 'neutral';
+        if (ratio >= 0.95) return 'warn';
+        return 'critical';
+    },
+
     // ============================================================
     // pre-render — runs before common renderer paints summary cards.
     // ============================================================
@@ -132,15 +142,37 @@ var USDmRenderer = {
         }
 
         // Synthesize collateral_ratio_alt — common.renderSummaryCards reads
-        // .label unconditionally. Surface Reserve / USDm-only as the alt
-        // ratio (always > main, because Reserve also backs FX synthetics).
+        // .label unconditionally. When the analyzer publishes the stable-only
+        // bucket fields, surface stable-only coverage here (the editorial
+        // headline: 16% of Reserve is volatile, fiat-comparable view is barely
+        // covered). Otherwise fall back to Reserve / USDm-only.
         var agg = specific.aggregate || {};
-        var altValue = (agg.reserve_to_supply_ratio != null) ? agg.reserve_to_supply_ratio * 100 : 0;
-        s.collateral_ratio_alt = {
-            label: 'Reserve / USDm only',
-            value: altValue,
-            is_currency: false
-        };
+        var stableOnlyAggRatio = agg.stablecoin_aggregate_ratio_stable_only;
+        if (stableOnlyAggRatio != null) {
+            s.collateral_ratio_alt = {
+                label: 'Stable-Only Coverage',
+                value: stableOnlyAggRatio * 100,
+                is_currency: false
+            };
+        } else {
+            var altValue = (agg.reserve_to_supply_ratio != null) ? agg.reserve_to_supply_ratio * 100 : 0;
+            s.collateral_ratio_alt = {
+                label: 'Reserve / USDm only',
+                value: altValue,
+                is_currency: false
+            };
+        }
+
+        // Per-entry chart overlay: stable-only coverage as the second series.
+        // renderCRChart reads e.collateral_ratio_alt; populate it from the new
+        // per-snapshot stable_only_coverage_ratio (ratio scale → percent).
+        if (history && Array.isArray(history.entries)) {
+            history.entries.forEach(function(e) {
+                if (e.stable_only_coverage_ratio != null) {
+                    e.collateral_ratio_alt = e.stable_only_coverage_ratio * 100;
+                }
+            });
+        }
 
         // Synthesize backing_breakdown — common.renderBreakdownTable +
         // renderPieChart both iterate this array. Map the aggregate custodian
@@ -168,7 +200,10 @@ var USDmRenderer = {
             max_line: null
         };
         specific.chart_title = 'Collateral Ratio History — Reserve vs All Stablecoin Debt';
-        specific.chart_dataset_label = 'Reserve / Σ(stablecoins)';
+        specific.chart_dataset_label = stableOnlyAggRatio != null ? 'All Collateral' : 'Reserve / Σ(stablecoins)';
+        if (stableOnlyAggRatio != null) {
+            specific.chart_alt_dataset_label = 'Stable Only';
+        }
     },
 
     // ============================================================
@@ -182,6 +217,7 @@ var USDmRenderer = {
 
         var html = '';
         html += USDmRenderer._renderHeadlineCard(specific, data.summary);
+        html += USDmRenderer._renderReserveBuckets(specific.aggregate || {});
         html += USDmRenderer._renderMonadReserveTable(specific.monad_state || {});
         html += USDmRenderer._renderSupplyDistribution(specific.monad_state || {});
         html += USDmRenderer._renderFXSynthetics(specific.monad_state || {});
@@ -213,6 +249,26 @@ var USDmRenderer = {
         var rsr = (agg.reserve_to_supply_ratio != null) ? (agg.reserve_to_supply_ratio * 100) : null;
         var sar = (agg.stablecoin_aggregate_ratio != null) ? (agg.stablecoin_aggregate_ratio * 100) : null;
 
+        // Stable-only headline. Only present once the PegTracker analyzer
+        // emits bucket fields; until then, the tile + sub-text degrade silently.
+        var stableOnlyRatio = agg.stablecoin_aggregate_ratio_stable_only;
+        var stableOnlyPct = (stableOnlyRatio != null) ? stableOnlyRatio * 100 : null;
+        var volatileBucket = agg.total_reserve_volatile_bucket;
+        var hasStableOnly = (stableOnlyRatio != null);
+        var crSubtext = hasStableOnly && volatileBucket != null ?
+            'Includes ' + CommonRenderer.formatCurrencyExact(volatileBucket) +
+            ' volatile collateral (CELO + stETH); see Stable-Only Coverage for the fiat-comparable view.' :
+            '';
+        var stableOnlyState = USDmRenderer._stableOnlyState(stableOnlyRatio);
+        var stableOnlyCls = stableOnlyState === 'ok' ? 'text-green-600' :
+                            stableOnlyState === 'neutral' ? 'text-slate-800 dark:text-slate-100' :
+                            stableOnlyState === 'warn' ? 'text-amber-600' :
+                            stableOnlyState === 'critical' ? 'text-red-600' : 'text-slate-600';
+        var stableOnlySub = (volatileBucket != null) ?
+            'Reserve excluding CELO + stETH ÷ all Mento stablecoin debt. Strips ' +
+            CommonRenderer.formatCurrencyExact(volatileBucket) + ' of volatile assets from the headline.' :
+            'Reserve excluding volatile collateral ÷ all Mento stablecoin debt.';
+
         var html = '<div class="panel">' +
             '<div class="panel-title flex items-center gap-2">' +
                 '<span>Mento Dollar — Reserve-Backed Stable</span>' +
@@ -220,8 +276,10 @@ var USDmRenderer = {
                 USDmRenderer._chainBadge('monad') +
             '</div>' +
 
-            // Row 1: aggregate metrics
-            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+            // Row 1: aggregate metrics. Grid bumps to 5 cols on lg+ when the
+            // analyzer has emitted the stable-only headline so it sits next to
+            // the gross Collateral Ratio tile.
+            '<div class="grid grid-cols-2 md:grid-cols-4 ' + (hasStableOnly ? 'lg:grid-cols-5 ' : '') + 'gap-3 mb-4">' +
                 '<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">' +
                     '<div class="text-xs text-slate-500 uppercase font-medium">Total Supply (USDm)</div>' +
                     '<div class="text-lg font-bold text-slate-800 dark:text-slate-100">' + CommonRenderer.formatCurrencyExact(totalSupply) + '</div>' +
@@ -233,7 +291,15 @@ var USDmRenderer = {
                 '<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">' +
                     '<div class="text-xs text-slate-500 uppercase font-medium">Collateral Ratio</div>' +
                     '<div class="text-lg font-bold ' + crCls + '">' + (crPct != null ? crPct.toFixed(2) + '%' : '—') + '</div>' +
+                    (crSubtext ? '<div class="text-xs text-slate-400 mt-1">' + crSubtext + '</div>' : '') +
                 '</div>' +
+                (hasStableOnly ?
+                    '<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">' +
+                        '<div class="text-xs text-slate-500 uppercase font-medium">Stable-Only Coverage</div>' +
+                        '<div class="text-lg font-bold ' + stableOnlyCls + '">' + (stableOnlyPct != null ? stableOnlyPct.toFixed(2) + '%' : '—') + '</div>' +
+                        '<div class="text-xs text-slate-400 mt-1">' + stableOnlySub + '</div>' +
+                    '</div>'
+                : '') +
                 '<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">' +
                     '<div class="text-xs text-slate-500 uppercase font-medium">Surplus / Deficit</div>' +
                     '<div class="text-lg font-bold ' + surplusCls + '">' + CommonRenderer.formatCurrencyExact(surplus) + '</div>' +
@@ -271,6 +337,63 @@ var USDmRenderer = {
 
         '</div>';
         return html;
+    },
+
+    // ============================================================
+    // §1b Reserve Bucket Breakdown — USD-stable / EUR-stable / Volatile / Other
+    // ============================================================
+    // Renders only when the PegTracker analyzer has emitted the bucket fields
+    // under aggregate.*. Editorial goal: surface the volatile slice (CELO +
+    // stETH) explicitly so "is the volatile counted as collateral?" is
+    // answered at a glance.
+    _renderReserveBuckets: function(agg) {
+        var usd = agg.total_reserve_usd_stable_bucket;
+        var eur = agg.total_reserve_eur_stable_bucket;
+        var vol = agg.total_reserve_volatile_bucket;
+        var other = agg.total_reserve_other_bucket;
+        if (usd == null && eur == null && vol == null && other == null) return '';
+
+        usd = usd || 0; eur = eur || 0; vol = vol || 0; other = other || 0;
+        var total = usd + eur + vol + other;
+        if (total <= 0) return '';
+
+        function pct(v) { return (v / total) * 100; }
+        var buckets = [
+            { label: 'USD-stable',              value: usd,   color: '#22c55e', note: '' },
+            { label: 'EUR-stable',              value: eur,   color: '#3b82f6', note: '' },
+            { label: 'Volatile (CELO + stETH)', value: vol,   color: '#f59e0b', note: 'Stripped from Stable-Only Coverage' },
+            { label: 'Other',                   value: other, color: '#94a3b8', note: '' }
+        ];
+
+        var bar = buckets.map(function(b) {
+            var w = pct(b.value);
+            if (w <= 0) return '';
+            return '<div style="width:' + w + '%; background:' + b.color + '" title="' + b.label + ' — ' + CommonRenderer.formatCurrencyExact(b.value) + ' (' + w.toFixed(1) + '%)"></div>';
+        }).join('');
+
+        var rows = buckets.map(function(b) {
+            var p = pct(b.value);
+            return '<tr>' +
+                '<td><span class="inline-block w-2 h-2 rounded-sm align-middle mr-2" style="background:' + b.color + '"></span><span class="font-medium">' + b.label + '</span>' +
+                    (b.note ? '<div class="text-xs text-slate-400 ml-4">' + b.note + '</div>' : '') + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(b.value) + '</td>' +
+                '<td class="text-right font-mono">' + p.toFixed(1) + '%</td>' +
+            '</tr>';
+        }).join('');
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Reserve Composition by Bucket <span class="text-xs font-normal text-slate-500">stable vs volatile</span></div>' +
+            '<div class="text-xs text-slate-500 mb-3">Mento Reserve totals ' + CommonRenderer.formatCurrencyExact(total) + '. The Volatile bucket (CELO + stETH) is the slice that pulls the headline Collateral Ratio above the Stable-Only Coverage figure.</div>' +
+            '<div class="flex h-4 rounded overflow-hidden bg-slate-200 mb-3">' + bar + '</div>' +
+            '<table class="data-table">' +
+                '<thead><tr>' +
+                    '<th>Bucket</th>' +
+                    '<th class="text-right">USD Value</th>' +
+                    '<th class="text-right">% of Reserve</th>' +
+                '</tr></thead>' +
+                '<tbody>' + rows + '</tbody>' +
+            '</table>' +
+        '</div>';
     },
 
     // ============================================================

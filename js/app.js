@@ -221,6 +221,7 @@ async function renderAsset(slug) {
             }
             if (data.asset_specific.chart_title) chartOpts.title = data.asset_specific.chart_title;
             if (data.asset_specific.chart_dataset_label) chartOpts.dataset_label = data.asset_specific.chart_dataset_label;
+            if (data.asset_specific.chart_alt_dataset_label) chartOpts.alt_dataset_label = data.asset_specific.chart_alt_dataset_label;
             if (data.asset_specific.chart_y_min !== undefined) chartOpts.y_min = data.asset_specific.chart_y_min;
             if (data.asset_specific.chart_y_max !== undefined) chartOpts.y_max = data.asset_specific.chart_y_max;
         }
