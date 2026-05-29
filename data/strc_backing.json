@@ -1,16 +1,16 @@
 {
   "asset": "strc",
-  "timestamp_utc": "2026-05-29T07:44:54Z",
-  "freshness_seconds": 5,
+  "timestamp_utc": "2026-05-29T08:44:35Z",
+  "freshness_seconds": 6,
   "tradfi": {
     "mstr": {
       "price_usd": 151.64,
       "market_cap_usd": 53242250431.29974,
       "source": "yfinance",
-      "fetched_at": "2026-05-29T07:44:50Z"
+      "fetched_at": "2026-05-29T08:44:30Z"
     },
     "btc": {
-      "price_usd": 73334.0,
+      "price_usd": 73678.0,
       "source": "coingecko"
     },
     "strategy_btc_holdings": {
@@ -19,7 +19,7 @@
       "fetched_at": "2026-05-29T05:49:30Z"
     },
     "mnav": {
-      "value": 0.8605,
+      "value": 0.8565,
       "regime": "discount",
       "regime_thresholds": {
         "premium": ">= 1.05",
@@ -74,16 +74,26 @@
       "outstanding_par_usd": 8537000000.0,
       "annual_dividend_obligation_usd": 981755000,
       "source": "marketchameleon + tnorth.com (manual cadence \u2014 refresh quarterly)"
+    },
+    "strf": {
+      "price_usd": 100.49,
+      "par_usd": 100.0,
+      "discount_to_par_bps": 49,
+      "outstanding_shares": 12839689,
+      "outstanding_par_usd": 1283968900.0,
+      "annual_dividend_rate": 0.1,
+      "annual_dividend_obligation_usd": 128396890,
+      "source": "yfinance price + manual refresh per Strategy 8-K (12,839,689 shares as of 2026-05-05)"
     }
   },
   "wrapper_strcx": {
     "total_supply_all_chains": 2597444.7921,
     "total_supply_source": "coingecko_aggregate",
-    "total_supply_usd": 265614704.44,
+    "total_supply_usd": 266238091.19,
     "implied_other_chains_supply": 489513.4413,
     "multiplier": 1.04129401,
     "multiplier_source": "ethereum.multiplier()",
-    "coingecko_price_usd": 102.26,
+    "coingecko_price_usd": 102.5,
     "per_chain": {
       "ethereum": {
         "fetch_status": "ok",
@@ -134,30 +144,62 @@
   "downstream_exposure": {
     "apyx": {
       "source_file": "apxusd_backing.json",
-      "source_timestamp": "2026-05-29T07:44:48Z",
-      "strc_bucket_usd": 307956790.75,
-      "strc_share_of_reserves": 0.5779,
+      "source_timestamp": "2026-05-29T08:44:28Z",
+      "strc_bucket_usd": 308171586.64,
+      "strc_share_of_reserves": 0.5781,
       "strcx_onchain_balance": 757187.5279656978,
-      "strcx_onchain_usd": 77429996.60977226,
-      "strc_raw_implied_usd": 230526794.14022774,
-      "total_reserves_usd": 532889992.24,
-      "attestation_timestamp": "2026-05-29T07:41:38Z"
+      "strcx_onchain_usd": 77611721.61648403,
+      "strc_raw_implied_usd": 230559865.02351594,
+      "total_reserves_usd": 533104430.54,
+      "attestation_timestamp": "2026-05-29T08:42:44Z"
     },
     "saturn": {
       "source_file": "susdat_backing.json",
-      "source_timestamp": "2026-05-29T07:42:54Z",
-      "strc_raw_usd": 92651427.34,
-      "strc_share_of_reserves": 0.867887,
+      "source_timestamp": "2026-05-29T08:43:07Z",
+      "strc_raw_usd": 92652402.79,
+      "strc_share_of_reserves": 0.867693,
       "verifiable": "oracle_unverified",
-      "total_assets_usd": 106755174.21
+      "total_assets_usd": 106780195.81
     },
-    "portfolio_total_strc_family_usd": 400608218.09
+    "portfolio_total_strc_family_usd": 400823989.43
+  },
+  "cash_service_waterfall": {
+    "annual_obligation_usd": {
+      "senior_convert_interest": 34522000,
+      "strf_dividend": 128396890,
+      "strc_dividend": 981755000,
+      "junior_preferred_estimate": 20000000,
+      "total": 1164673890
+    },
+    "senior_convert_2030_maturity_wall_usd": 2700000000,
+    "btc_per_year_at_current_price": {
+      "strc_only": 13325,
+      "senior_to_strc": 15536,
+      "total_preferred_plus_interest": 15808
+    },
+    "pct_of_stack_per_year": {
+      "strc_only": 0.0158,
+      "senior_to_strc": 0.0184,
+      "total_preferred_plus_interest": 0.0187
+    },
+    "runway_years_flat_btc": {
+      "strc_only": 63,
+      "senior_to_strc": 54,
+      "total_preferred_plus_interest": 53
+    },
+    "assumptions": {
+      "btc_price_usd": 73678.0,
+      "btc_stack": 843738,
+      "frozen_outstanding": true,
+      "frozen_rates": true,
+      "note": "All three assumptions are fragile. A BTC bear case + continued preferred growth + rising STRC rate could collapse runway dramatically."
+    }
   },
   "risk_flags": [
     {
       "code": "MNAV_REGIME_DISCOUNT",
       "severity": "high",
-      "message": "MSTR mNAV = 0.861 (discount). ATM issuance not accretive; BTC sales the active funding source per Saylor 2026-05-05 pivot."
+      "message": "MSTR mNAV = 0.857 (discount). ATM issuance not accretive; BTC sales the active funding source per Saylor 2026-05-05 pivot."
     }
   ],
   "framework_version": "strc-framework.md 2026-05-29"
