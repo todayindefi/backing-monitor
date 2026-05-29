@@ -421,7 +421,7 @@ var SaturnRenderer = {
                         '<div class="text-lg font-bold text-slate-800">' +
                             (nav != null ? nav.toFixed(6) : '—') +
                         '</div>' +
-                        '<div class="text-xs text-slate-500 mt-0.5">USDat / sUSDat</div></div>' +
+                        '<div class="text-xs text-slate-500 mt-0.5">USDat per share (not $/share)</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Implied APY (30d)</div>' +
                         '<div class="text-lg font-bold ' + apyCls + '">' + apyTxt + '</div>' +
                         '<div class="text-xs text-slate-500 mt-0.5">vs 11% target</div></div>' +
@@ -930,16 +930,24 @@ var SaturnRenderer = {
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
                 '<div class="summary-card"><div class="card-label">NAV per share</div>' +
                     '<div class="card-value">' + (s.nav_per_share != null ? s.nav_per_share.toFixed(6) : '—') + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">USDat / sUSDat</div></div>' +
+                    '<div class="text-xs text-slate-400 mt-1">USDat per share (not $/share)</div></div>' +
+                '<div class="summary-card"><div class="card-label">$ NAV per share</div>' +
+                    '<div class="card-value">' + (
+                        (s.nav_per_share != null && s.peg_curve_usdc != null)
+                            ? '$' + (s.nav_per_share * s.peg_curve_usdc).toFixed(4)
+                            : '—'
+                    ) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' + (
+                        (s.nav_per_share != null && s.peg_curve_usdc != null)
+                            ? s.nav_per_share.toFixed(6) + ' USDat × $' + s.peg_curve_usdc.toFixed(4) + ' (Curve)'
+                            : 'Curve-implied USDat × 4626 NAV'
+                    ) + '</div></div>' +
                 '<div class="summary-card"><div class="card-label">30d implied APY</div>' +
                     '<div class="card-value ' + apyCls + '">' + apyTxt + '</div>' +
                     '<div class="mt-1">' + SaturnRenderer._statusPill(apyLabel, apyState) + '</div></div>' +
                 '<div class="summary-card"><div class="card-label">Headline target</div>' +
                     '<div class="card-value">11.00%</div>' +
                     '<div class="text-xs text-slate-400 mt-1">Saturn docs APY target</div></div>' +
-                '<div class="summary-card"><div class="card-label">Vesting design</div>' +
-                    '<div class="card-value text-base">30-day lag</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">first 30 days of deposits accrue with delay</div></div>' +
             '</div>';
 
         var chartBlock =
@@ -959,7 +967,8 @@ var SaturnRenderer = {
                 'STRC loss event. 30-day vesting design intentionally delays yield landing, so a fresh ' +
                 'sUSDat position accrues with a lag for its first 30 days. Implied APY is computed from ' +
                 'the NAV slope over the trailing window; the 11% headline target is a Saturn-disclosed ' +
-                'design number, not a guarantee.' +
+                'design number, not a guarantee. sUSDat NAV is denominated in USDat (the vault\'s underlying), ' +
+                'not USD. USDat\'s own peg deviation stacks on top, so $-equivalent NAV ≈ 4626 NAV × current USDat peg.' +
             '</div>';
 
         return '<div class="panel">' +
@@ -1059,6 +1068,7 @@ var SaturnRenderer = {
                         ticks: { maxTicksLimit: 8, font: { size: 11 } }
                     },
                     y: {
+                        title: { display: true, text: 'NAV (USDat per sUSDat)', font: { size: 11 }, color: '#64748b' },
                         grid: { color: '#f1f5f9' },
                         ticks: {
                             font: { size: 11 },
@@ -1070,7 +1080,7 @@ var SaturnRenderer = {
                     legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
                     tooltip: {
                         callbacks: {
-                            label: function(c) { return c.dataset.label + ': ' + Number(c.raw).toFixed(6); }
+                            label: function(c) { return c.dataset.label + ': ' + Number(c.raw).toFixed(6) + ' USDat'; }
                         }
                     }
                 },
