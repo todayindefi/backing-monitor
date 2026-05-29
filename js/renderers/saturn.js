@@ -675,11 +675,20 @@ var SaturnRenderer = {
         if (comp.M)    { labels.push('$M');   values.push(comp.M.balance || 0);    colors.push(SATURN_COLORS.M); }
         if (comp.USDC) { labels.push('USDC'); values.push(comp.USDC.balance || 0); colors.push(SATURN_COLORS.USDC); }
         if (Array.isArray(comp.OTHER)) {
-            comp.OTHER.forEach(function(o) {
+            var flaggedOther = comp.OTHER.filter(function(o) { return o.flagged === true; });
+            var dustOther    = comp.OTHER.filter(function(o) { return o.flagged !== true; });
+            flaggedOther.forEach(function(o) {
                 labels.push(o.symbol || 'Other');
                 values.push(o.balance || 0);
                 colors.push(SATURN_COLORS.OTHER);
             });
+            if (dustOther.length > 0) {
+                var drift = specific.drift_probe || {};
+                var dustN = drift.airdrop_dust_count != null ? drift.airdrop_dust_count : dustOther.length;
+                labels.push('Airdrop dust (' + dustN + ')');
+                values.push(drift.airdrop_dust_total_usd || 0);
+                colors.push(SATURN_COLORS.OTHER);
+            }
         }
 
         if (window._saturnUsdatDonut) {
