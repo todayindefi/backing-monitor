@@ -493,17 +493,38 @@ var SaturnRenderer = {
         if (comp.M)    rows.push(row('$M  <span class="text-xs text-slate-500 font-normal">(M^0 T-bill backed)</span>', comp.M, SATURN_COLORS.M, verifyOnchain));
         if (comp.USDC) rows.push(row('USDC',                                                                              comp.USDC, SATURN_COLORS.USDC, verifyOnchain));
 
-        // OTHER may be an array of {symbol, address, balance, pct} entries from the drift probe;
-        // surface each one as its own row in red so a non-allowlist token is impossible to miss.
+        // OTHER is an array of non-allowlist holdings from the drift probe. Each entry
+        // carries .flagged — true for ≥$10K real drift (loud red row each), false for
+        // sub-threshold airdrop dust (collapsed into one quiet grey row). See
+        // saturn_backing_analyzer.py scan_drift + handoff usdat-drift-probe-dollar-filter.
         var other = comp.OTHER;
         if (Array.isArray(other) && other.length > 0) {
-            other.forEach(function(o) {
+            var flaggedOther = other.filter(function(o) { return o.flagged === true; });
+            var dustOther    = other.filter(function(o) { return o.flagged !== true; });
+
+            flaggedOther.forEach(function(o) {
                 var verifyBreach = '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-semibold bg-red-50 text-red-700 border border-red-200" ' +
-                    'title="Non-allowlist ERC20 held by USDat treasury — investigate.">⚠ drift</span>';
+                    'title="Non-allowlist ERC20 (≥$10K) held by USDat treasury — investigate.">⚠ drift</span>';
                 rows.push(row(
                     (o.symbol || 'Unknown') + ' <span class="text-xs text-slate-500 font-mono">' + SaturnRenderer._truncAddr(o.address || '') + '</span>',
                     o, SATURN_COLORS.OTHER, verifyBreach));
             });
+
+            if (dustOther.length > 0) {
+                var drift   = specific.drift_probe || {};
+                var dustN   = drift.airdrop_dust_count != null ? drift.airdrop_dust_count : dustOther.length;
+                var dustUsd = drift.airdrop_dust_total_usd || 0;
+                var thresh  = drift.drift_value_threshold_usd || 10000;
+                rows.push('<tr class="text-slate-400">' +
+                    '<td>' +
+                        '<span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:' + SATURN_COLORS.OTHER + ';opacity:0.3"></span>' +
+                        'Airdrop dust <span class="text-xs">(' + dustN + ' tokens &lt; $' + thresh.toLocaleString() + ')</span>' +
+                    '</td>' +
+                    '<td class="text-right font-mono">' + (dustUsd > 0 ? CommonRenderer.formatCurrencyExact(dustUsd) : '$0') + '</td>' +
+                    '<td class="text-right font-mono">≈ 0%</td>' +
+                    '<td><span class="text-xs text-slate-400 italic">filtered, no exit value</span></td>' +
+                '</tr>');
+            }
         } else {
             // Explicit Other = 0 line — the absence of this row would hide
             // the signal that allowlist breach is monitored.
@@ -703,6 +724,14 @@ var SaturnRenderer = {
         var breaches = drift.non_allowlist_holdings || [];
         var flagged = drift.tier1_drift_flagged === true;
 
+        var dustN = drift.airdrop_dust_count || 0;
+        var dustThresh = drift.drift_value_threshold_usd || 10000;
+        var dustNote = dustN > 0
+            ? '<div class="text-xs text-slate-400 mt-2">Sub-threshold dust filtered: ' +
+                '<span class="font-mono">' + dustN + '</span> non-allowlist tokens below $' +
+                dustThresh.toLocaleString() + ' (typically airdrop spam — no liquid market, $0 exit value).</div>'
+            : '';
+
         if (!flagged) {
             // Quiet green state — one-line confirmation, low visual weight.
             return '<div class="panel">' +
@@ -718,15 +747,18 @@ var SaturnRenderer = {
                     'backing-composition-drift signal — both intentional rotation and unauthorized minting ' +
                     'would surface here.' +
                 '</div>' +
+                dustNote +
             '</div>';
         }
 
-        // BREACH STATE — promoted to full red callout.
-        var breachRows = breaches.map(function(b) {
+        // BREACH STATE — promoted to full red callout. Dust entries stay out of this
+        // table even when a separate real breach is firing.
+        var flaggedBreaches = breaches.filter(function(b) { return b.flagged === true; });
+        var breachRows = flaggedBreaches.map(function(b) {
             return '<tr>' +
                 '<td class="font-semibold text-red-700">' + (b.symbol || 'Unknown') + '</td>' +
                 '<td>' + SaturnRenderer._addrCell(b.address) + '</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(b.balance || 0) + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(b.value_usd || 0) + '</td>' +
             '</tr>';
         }).join('');
 
@@ -738,9 +770,10 @@ var SaturnRenderer = {
                 'This may reflect the planned STRC rotation or an unauthorized minting/transfer — investigate immediately.' +
             '</div>' +
             '<table class="data-table mt-3">' +
-                '<thead><tr><th>Token</th><th>Address</th><th class="text-right">Balance</th></tr></thead>' +
+                '<thead><tr><th>Token</th><th>Address</th><th class="text-right">Value (USD)</th></tr></thead>' +
                 '<tbody>' + breachRows + '</tbody>' +
             '</table>' +
+            dustNote +
         '</div>';
     },
 
