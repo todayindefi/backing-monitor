@@ -26,6 +26,7 @@ var ASSET_RENDERERS = {
     thusd:     typeof ThusdRenderer     !== 'undefined' ? ThusdRenderer     : null,
     usde:      typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
     susde:     typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
+    strc:      typeof STRCRenderer      !== 'undefined' ? STRCRenderer      : null,
     'fiat-stable-reserve-backed': typeof USDmRenderer !== 'undefined' ? USDmRenderer : null
 };
 
@@ -34,7 +35,12 @@ function findAssetRenderer(data) {
     var bySlug = data.asset_slug ? ASSET_RENDERERS[data.asset_slug] : null;
     if (bySlug) return bySlug;
     var t = data.asset_specific && data.asset_specific.type;
-    return t ? (ASSET_RENDERERS[t] || null) : null;
+    if (t && ASSET_RENDERERS[t]) return ASSET_RENDERERS[t];
+    // Third fallback: bare `asset` field. The STRC analyzer emits a flat
+    // tradfi/wrapper_strcx schema that doesn't populate asset_slug or
+    // asset_specific.type; routing keys off `asset: "strc"` instead.
+    if (data.asset && ASSET_RENDERERS[data.asset]) return ASSET_RENDERERS[data.asset];
+    return null;
 }
 
 function getAssetSlug() {
@@ -89,13 +95,17 @@ async function renderIndex() {
             // "collateral-backed share of supply" (~55%); the headline ratio is the
             // CDP-book mint CR. Prefer it (only when both fields are present, which
             // is USG-only) so the grid card isn't a misleading sub-100.
-            var crRaw = d ? ((d.summary.mint_cr != null && d.summary.collateral_ratio_inclusive != null) ? d.summary.mint_cr : d.summary.collateral_ratio) : null;
+            // Defensive: some asset JSONs (e.g. strc) carry no `summary` block —
+            // their analyzer emits a flat per-domain schema. Guard each access so
+            // a single off-schema asset doesn't NPE the whole grid render.
+            var s = d && d.summary;
+            var crRaw = s ? ((s.mint_cr != null && s.collateral_ratio_inclusive != null) ? s.mint_cr : s.collateral_ratio) : null;
             var crNorm = (crRaw != null && crRaw < 2) ? crRaw * 100 : crRaw;
-            var cr = d ? CommonRenderer.formatPercent(crNorm) : '-';
-            var crClass = d && crNorm >= 100 ? 'text-green-600' : 'text-red-600';
-            var supply = d ? CommonRenderer.formatCurrency(d.summary.total_supply || d.summary.real_supply) : '-';
-            var ts = d ? CommonRenderer.formatDate(d.timestamp) : '';
-            var flagCount = d ? d.risk_flags.length : 0;
+            var cr = (crNorm != null) ? CommonRenderer.formatPercent(crNorm) : '-';
+            var crClass = (crNorm != null && crNorm >= 100) ? 'text-green-600' : 'text-red-600';
+            var supply = s ? CommonRenderer.formatCurrency(s.total_supply || s.real_supply) : '-';
+            var ts = d ? CommonRenderer.formatDate(d.timestamp || d.timestamp_utc) : '';
+            var flagCount = (d && Array.isArray(d.risk_flags)) ? d.risk_flags.length : 0;
             var flagBadge = flagCount > 0 ?
                 '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">' + flagCount + ' flag' + (flagCount > 1 ? 's' : '') + '</span>' : '';
 
