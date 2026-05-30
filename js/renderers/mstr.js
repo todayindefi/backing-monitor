@@ -131,21 +131,43 @@ var MSTRRenderer = {
         var mv = data.mstr_view || {};
         var riskFlags = data.risk_flags || [];
 
+        // 7-panel layout (post-reorg, MSTR owns issuer-side analysis):
+        //   1. MSTR headline (equity-holder lens)
+        //   2. mNAV regime (equity-caption variant)
+        //   3. Balance sheet snapshot
+        //   4. Capital structure stack (with → STRC affordance)
+        //   5. Cash-Service Waterfall + Rate-Ceiling Overlay (moved from STRC)
+        //   6. Per-share BTC NAV trajectory
+        //   7. Dilution + maturity wall
         var html = '';
         html += MSTRRenderer._renderHeadlineBanner(tradfi, mv);
         html += MSTRRenderer._renderMnavRegime(tradfi);
         html += MSTRRenderer._renderBalanceSheet(mv);
         html += MSTRRenderer._renderCapitalStructure(mv);
+        html += MSTRRenderer._renderCashServiceWaterfall(data);
         html += MSTRRenderer._renderPerShareNavTrajectory(tradfi, mv);
         html += MSTRRenderer._renderDilutionMaturityWall(mv);
         html += MSTRRenderer._renderFreshness(data);
 
         container.innerHTML = html;
 
+        // Sibling-dashboard affordance in the page header (above panel 1).
+        MSTRRenderer._setupCompanionLink();
+
         // Post-paint charts — DOM nodes must exist first.
         MSTRRenderer._paintCapitalStructureChart(mv);
         MSTRRenderer._paintMaturityWallChart(mv);
         MSTRRenderer._loadHistoryAndPaintTrajectory(tradfi, mv);
+    },
+
+    // Persistent header link to the sibling STRC dashboard. Reuses the
+    // shared #header-companion-link slot; app.js resets it on each route.
+    _setupCompanionLink: function () {
+        var link = document.getElementById('header-companion-link');
+        if (!link) return;
+        link.setAttribute('href', '?asset=strc');
+        link.textContent = 'STRC + STRCx preferred analysis → STRC dashboard ↗';
+        link.classList.remove('hidden');
     },
 
     _suppressCommonPanels: function (data) {
@@ -328,7 +350,11 @@ var MSTRRenderer = {
         var rowHtml = tiers.map(function (t) {
             var pct = (t.value != null && total) ? (t.value / total * 100) : null;
             var bg = t.highlight ? 'bg-blue-50 dark:bg-blue-900/20 font-semibold' : '';
-            var marker = t.highlight ? ' <span class="text-xs text-blue-700">◄ largest preferred tier</span>' : '';
+            var marker = '';
+            if (t.key === 'strc') {
+                marker = ' <span class="text-xs text-blue-700">◄ largest preferred tier</span>' +
+                    ' <a href="?asset=strc" class="text-xs text-blue-500 hover:underline ml-1">→ STRC dashboard</a>';
+            }
             return '<tr class="' + bg + '">' +
                 '<td class="font-medium">' + t.label + marker + '</td>' +
                 '<td class="text-right font-mono">' + (t.value != null ? MSTRRenderer._fmtMoneyShort(t.value) : '—') + '</td>' +
@@ -355,14 +381,328 @@ var MSTRRenderer = {
                 '</div>' +
             '</div>' +
             '<div class="text-xs text-slate-500 mt-3">' +
-                'Annual cash service waterfall for the preferred tiers → ' +
-                '<a href="?asset=strc" class="text-blue-500 hover:underline">STRC view Cash-Service Waterfall</a>.' +
+                'Annual cash service through these tiers is shown in the next panel. ' +
+                'For the STRC instrument-native view (rate mechanics, STRCx wrapper, downstream exposure), see the ' +
+                '<a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard →</a>' +
             '</div>' +
         '</div>';
     },
 
     // ============================================================
-    // Panel 5 — Per-share BTC NAV trajectory (LOAD-BEARING)
+    // Panel 5 — Cash-Service Waterfall + Rate-Ceiling Overlay
+    //
+    // Ported from STRC dashboard (was strc panel 6). The waterfall is
+    // MSTR-issuer analysis — where annual cash service flows in the
+    // senior-to-junior capital stack. STRC is one tier within it; the
+    // other three (Senior Converts, STRF, STRK+STRD) are MSTR capital-
+    // structure objects. Lives here as the dynamic counterpart to the
+    // static Capital Structure stack (#4).
+    // ============================================================
+    _runwayClass: function (years) {
+        if (years == null) return 'text-slate-700 dark:text-slate-200';
+        if (years > 40) return 'text-green-700 dark:text-green-300';
+        if (years >= 25) return 'text-amber-700 dark:text-amber-300';
+        if (years >= 15) return 'text-orange-700 dark:text-orange-300';
+        return 'text-red-700 dark:text-red-300';
+    },
+
+    _renderCashServiceWaterfall: function (data) {
+        var csw = data.cash_service_waterfall;
+        if (!csw) {
+            return '<div class="panel">' +
+                '<div class="panel-title">Cash-Service Waterfall</div>' +
+                '<div class="risk-flag risk-warning">cash_service_waterfall block not present in this snapshot — analyzer may be running an older schema.</div>' +
+            '</div>';
+        }
+
+        var obl = csw.annual_obligation_usd || {};
+        var btcYr = csw.btc_per_year_at_current_price || {};
+        var pctStack = csw.pct_of_stack_per_year || {};
+        var runway = csw.runway_years_flat_btc || {};
+        var assum = csw.assumptions || {};
+        var rateCeiling = csw.runway_at_rate_ceiling || {};
+        var mnav = (data.tradfi && data.tradfi.mnav) || {};
+
+        var headlineRunway = runway.total_preferred_plus_interest;
+        var runwayCls = MSTRRenderer._runwayClass(headlineRunway);
+
+        // ---- Seniority waterfall table — 4 tiers, STRC row highlighted +
+        // STRC tier cross-links to the STRC dashboard.
+        function rowHtml(tier, label, faceUsd, annualUsd, btcYrVal, extra, highlight) {
+            var bg = highlight ? 'bg-blue-50 dark:bg-blue-900/20 font-semibold' : '';
+            var crossLink = highlight ? ' <a href="?asset=strc" class="text-xs text-blue-500 hover:underline ml-1">→ STRC dashboard</a>' : '';
+            return '<tr class="' + bg + '">' +
+                '<td><span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ' +
+                    (tier === 'SENIOR' ? 'bg-slate-200 text-slate-800' : tier === 'STRC' ? 'bg-blue-200 text-blue-900' : 'bg-amber-100 text-amber-800') + '">' + tier + '</span></td>' +
+                '<td class="font-medium">' + label + crossLink + '</td>' +
+                '<td class="text-right font-mono">' + (faceUsd != null ? MSTRRenderer._fmtMoneyShort(faceUsd) : '—') + '</td>' +
+                '<td class="text-right font-mono">' + (annualUsd != null ? MSTRRenderer._fmtMoneyShort(annualUsd) + '/yr' : '—') + '</td>' +
+                '<td class="text-right font-mono">' + (btcYrVal != null ? MSTRRenderer._fmtNum(btcYrVal) + ' BTC/yr' : '—') + '</td>' +
+                '<td class="text-xs text-slate-500">' + (extra || '') + '</td>' +
+            '</tr>';
+        }
+        var btcPx = assum.btc_price_usd;
+        function annualToBtc(annual) {
+            return (annual != null && btcPx) ? Math.round(annual / btcPx) : null;
+        }
+        var seniorConvertFace = 8200000000;  // matches PegTracker SENIOR_CONVERT_FACE_USD constant
+        var strfPar = (obl.strf_dividend != null) ? obl.strf_dividend / 0.10 : null;
+        var strcPar = (data.tradfi && data.tradfi.strc_dividend && data.tradfi.strc_dividend.outstanding_par_usd) || null;
+        var strcRateLabel = (data.tradfi && data.tradfi.strc_dividend && data.tradfi.strc_dividend.current_rate != null)
+            ? ((data.tradfi.strc_dividend.current_rate || 0) * 100).toFixed(2) + '%'
+            : '—';
+
+        var waterfallRows =
+            rowHtml('SENIOR', 'Senior Converts (0.42% blended)', seniorConvertFace, obl.senior_convert_interest,
+                annualToBtc(obl.senior_convert_interest),
+                '2030 wall ' + MSTRRenderer._fmtMoneyShort(csw.senior_convert_2030_maturity_wall_usd), false) +
+            rowHtml('SENIOR', 'STRF (10% fixed)', strfPar, obl.strf_dividend,
+                annualToBtc(obl.strf_dividend), '', false) +
+            rowHtml('STRC', 'STRC (variable, ' + strcRateLabel + ')',
+                strcPar, obl.strc_dividend, annualToBtc(obl.strc_dividend), '', true) +
+            rowHtml('JUNIOR', 'STRK + STRD residual (conservative)', null, obl.junior_preferred_estimate,
+                annualToBtc(obl.junior_preferred_estimate), '', false) +
+            '<tr class="font-bold border-t-2 border-slate-200">' +
+                '<td></td>' +
+                '<td>Aggregate annual obligation</td>' +
+                '<td></td>' +
+                '<td class="text-right font-mono">' + MSTRRenderer._fmtMoneyShort(obl.total) + '/yr</td>' +
+                '<td class="text-right font-mono">' + MSTRRenderer._fmtNum(btcYr.total_preferred_plus_interest) + ' BTC/yr</td>' +
+                '<td></td>' +
+            '</tr>';
+
+        // ---- Three runway readouts.
+        function runwayCard(label, sub, years, btc, pct) {
+            var yrCls = MSTRRenderer._runwayClass(years);
+            return '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">' +
+                '<div class="text-xs uppercase font-semibold text-slate-500">' + label + '</div>' +
+                '<div class="text-xs text-slate-500 mt-0.5">' + sub + '</div>' +
+                '<div class="text-3xl font-bold mt-2 ' + yrCls + '">' + (years != null ? years + ' yr' : '—') + '</div>' +
+                '<div class="text-xs text-slate-500 mt-1 font-mono">' +
+                    (btc != null ? MSTRRenderer._fmtNum(btc) + ' BTC/yr' : '—') +
+                    (pct != null ? ' · ' + (pct * 100).toFixed(2) + '% of stack/yr' : '') +
+                '</div>' +
+            '</div>';
+        }
+        var runwayRow =
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">' +
+                runwayCard('STRC alone', 'STRC dividend only', runway.strc_only, btcYr.strc_only, pctStack.strc_only) +
+                runwayCard('Senior-to-STRC', 'STRF + STRC + senior convert interest', runway.senior_to_strc, btcYr.senior_to_strc, pctStack.senior_to_strc) +
+                runwayCard('All preferred + interest', 'Adds STRK + STRD residual', runway.total_preferred_plus_interest, btcYr.total_preferred_plus_interest, pctStack.total_preferred_plus_interest) +
+            '</div>';
+
+        // ---- Rate-ceiling overlay (sub-panel) — STRC's rate stress, but
+        // shown here because it determines the multi-tier runway profile.
+        var midCycles = rateCeiling.stress_cycles_to_mid;
+        var topCycles = rateCeiling.stress_cycles_to_top;
+        var midColor = (midCycles != null && midCycles <= 3) ? 'amber' : 'neutral';
+        function ceilingCard(label, sub, years, color) {
+            var cls = 'border-slate-200 dark:border-slate-700';
+            var yearsCls = 'text-slate-800 dark:text-slate-100';
+            if (color === 'amber') { cls = 'border-amber-300 bg-amber-50 dark:bg-amber-900/10'; yearsCls = 'text-amber-700 dark:text-amber-300'; }
+            else if (color === 'red') { cls = 'border-red-300 bg-red-50 dark:bg-red-900/10'; yearsCls = 'text-red-700 dark:text-red-300'; }
+            return '<div class="rounded-lg border p-3 ' + cls + '">' +
+                '<div class="text-xs uppercase font-semibold text-slate-500">' + label + '</div>' +
+                '<div class="text-xs text-slate-500 mt-0.5">' + sub + '</div>' +
+                '<div class="text-2xl font-bold mt-1 ' + yearsCls + '">' + (years != null ? years + ' yr' : '—') + '</div>' +
+            '</div>';
+        }
+        var ceilingRow =
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">' +
+                ceilingCard('Current rate', ((rateCeiling.current_rate || 0) * 100).toFixed(2) + '%', rateCeiling.runway_at_current_rate_years, 'neutral') +
+                ceilingCard('Mid-ceiling', ((rateCeiling.mid_ceiling_rate || 0) * 100).toFixed(0) + '% — ' + (midCycles != null ? midCycles + ' stress ' + (midCycles === 1 ? 'cycle' : 'cycles') + ' away' : ''), rateCeiling.runway_at_mid_ceiling_years, midColor) +
+                ceilingCard('Top-ceiling', ((rateCeiling.top_ceiling_rate || 0) * 100).toFixed(0) + '% — ' + (topCycles != null ? topCycles + ' stress cycles away' : ''), rateCeiling.runway_at_top_ceiling_years, 'red') +
+            '</div>';
+
+        var launchRate = 0.1025;
+        var topRate = (rateCeiling.top_ceiling_rate != null) ? rateCeiling.top_ceiling_rate : 0.16;
+        var midRate = (rateCeiling.mid_ceiling_rate != null) ? rateCeiling.mid_ceiling_rate : 0.14;
+        var currRate = (rateCeiling.current_rate != null) ? rateCeiling.current_rate : 0.115;
+        function pctAcross(rate) {
+            var x = (rate - launchRate) / (topRate - launchRate) * 100;
+            return Math.max(0, Math.min(100, x));
+        }
+        var headroomBar =
+            '<div class="mt-2 mb-3">' +
+                '<div class="text-xs text-slate-500 mb-1">Rate-ceiling headroom (launch 10.25% → top 16%)</div>' +
+                '<div class="relative h-6 rounded bg-slate-100 dark:bg-slate-700">' +
+                    '<div class="absolute top-0 left-0 h-full rounded-l bg-gradient-to-r from-green-400 via-amber-400 to-red-500" style="width:' + pctAcross(currRate).toFixed(2) + '%; opacity:0.5"></div>' +
+                    '<div class="absolute top-0 h-full border-l-2 border-amber-600" style="left:' + pctAcross(midRate).toFixed(2) + '%"><div class="absolute -top-4 -translate-x-1/2 text-[10px] font-semibold text-amber-700">14%</div></div>' +
+                    '<div class="absolute top-0 h-full border-l-2 border-red-600" style="left:' + pctAcross(topRate).toFixed(2) + '%"><div class="absolute -top-4 -translate-x-1/2 text-[10px] font-semibold text-red-700">16%</div></div>' +
+                    '<div class="absolute top-0 h-full border-l-2 border-blue-600" style="left:' + pctAcross(currRate).toFixed(2) + '%"><div class="absolute -bottom-4 -translate-x-1/2 text-[10px] font-semibold text-blue-700">' + (currRate * 100).toFixed(2) + '%</div></div>' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 mt-5">' +
+                    (midCycles != null ? midCycles + ' stress ' + (midCycles === 1 ? 'cycle' : 'cycles') + ' to 14% ceiling' : '—') +
+                    (topCycles != null ? ' · ' + topCycles + ' to 16%' : '') +
+                    ' · one stress cycle ≈ 125 bp (observed Oct 2025 → Mar 2026)' +
+                '</div>' +
+            '</div>';
+
+        var ceilingCaption =
+            '<div class="text-xs text-slate-500 italic mt-2 leading-relaxed">' +
+                'STRC rate trends monotonically upward (sticky on recovery — framework §IV.5). ' +
+                'At ~14–16% Strategy may elect dividend suspension over further hikes.' +
+            '</div>';
+
+        var ceilingSubPanel =
+            '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4 mt-4 bg-slate-50/40 dark:bg-slate-800/30">' +
+                '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Rate-ceiling overlay <span class="text-xs font-normal text-slate-500">— framework §IV.5</span></div>' +
+                ceilingRow +
+                headroomBar +
+                ceilingCaption +
+            '</div>';
+
+        // ---- Treasury available table.
+        var btcStack = assum.btc_stack;
+        var btcStackUsd = (btcStack != null && btcPx) ? btcStack * btcPx : null;
+        var mnavTxt = (mnav.value != null) ? mnav.value.toFixed(4) : '—';
+        var atmStatus = (mnav.value != null && mnav.value < 1.0) ? 'Offline (mNAV ' + mnavTxt + ' < 1.0)' : 'Live (mNAV ' + mnavTxt + ')';
+        var atmCls = (mnav.value != null && mnav.value < 1.0) ? 'text-orange-700' : 'text-green-700';
+        var treasuryTable =
+            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-6 mb-2">Treasury available</div>' +
+            '<div class="data-table-scroll">' +
+                '<table class="data-table">' +
+                    '<thead><tr><th>Source</th><th>Value</th><th>Note</th></tr></thead>' +
+                    '<tbody>' +
+                        '<tr><td class="font-medium">BTC stack</td><td class="font-mono">' + MSTRRenderer._fmtMoneyShort(btcStackUsd) + '</td><td class="text-xs text-slate-500">Primary funding source · ' + MSTRRenderer._fmtNum(btcStack) + ' BTC @ ' + MSTRRenderer._fmtMoney(btcPx, 0) + '</td></tr>' +
+                        '<tr><td class="font-medium">Cash on balance sheet</td><td class="font-mono">~$0.5–1B</td><td class="text-xs text-slate-500">Q1 2026 estimate (refresh per 10-Q)</td></tr>' +
+                        '<tr><td class="font-medium">Software cash flow</td><td class="font-mono">≈ $0</td><td class="text-xs text-slate-500">Immaterial</td></tr>' +
+                        '<tr><td class="font-medium">ATM equity</td><td class="font-mono ' + atmCls + '">' + atmStatus + '</td><td class="text-xs text-slate-500">Accretive only at mNAV ≥ 1.0</td></tr>' +
+                        '<tr><td class="font-medium">Preferred re-issuance</td><td class="font-mono">Tappable</td><td class="text-xs text-slate-500">…but compounds the obligation</td></tr>' +
+                    '</tbody>' +
+                '</table>' +
+            '</div>';
+
+        // ---- Caveat block.
+        var caveat =
+            '<div class="risk-flag risk-warning mt-4">' +
+                '<strong>Caveat.</strong> Runway assumes flat BTC, frozen preferred outstanding, and frozen rates. ' +
+                'All three are fragile — a BTC bear case + continued preferred growth + rising STRC rate could collapse runway materially. ' +
+                'The rate-ceiling overlay shows the <em>rate stress dimension only</em> — it does NOT compound with BTC stress; in a joint stress scenario, runway compresses faster than either alone. ' +
+                'See <a href="https://github.com/todayindefi/riskAnalyst/blob/master/assets/_frameworks/strc-framework.md" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">framework §IV</a> (waterfall) and §IV.5 (rate-ratchet thesis).' +
+            '</div>';
+
+        // ---- History charts (runway over time + STRC rate trajectory).
+        var historyCharts =
+            '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">' +
+                '<div>' +
+                    '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Runway over time (3 series)</div>' +
+                    '<div style="height: 220px; position: relative;"><canvas id="mstr-runway-chart"></canvas></div>' +
+                '</div>' +
+                '<div>' +
+                    '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">STRC rate trajectory <span class="text-xs font-normal text-slate-500">— §IV.5 one-way ratchet</span></div>' +
+                    '<div style="height: 220px; position: relative;"><canvas id="mstr-rate-trajectory-chart"></canvas></div>' +
+                    '<div class="text-xs text-slate-500 italic mt-1">Stress cycles ratchet up; recovery does not ratchet down.</div>' +
+                '</div>' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Cash-Service Waterfall <span class="text-xs font-normal text-slate-500">— senior → junior preferred service + rate-ceiling overlay</span></div>' +
+            // Headline runway big number.
+            '<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 p-4 rounded-lg border ' + (headlineRunway != null && headlineRunway < 25 ? 'border-orange-300 bg-orange-50 dark:bg-orange-900/20' : 'border-slate-200 dark:border-slate-700') + '">' +
+                '<div>' +
+                    '<div class="text-xs uppercase font-semibold text-slate-500">Aggregate-preferred runway (flat BTC)</div>' +
+                    '<div class="text-5xl font-bold mt-1 ' + runwayCls + '">' + (headlineRunway != null ? headlineRunway + ' years' : '—') + '</div>' +
+                    '<div class="text-xs text-slate-500 mt-1">' +
+                        MSTRRenderer._fmtMoneyShort(obl.total) + '/yr aggregate · ' +
+                        MSTRRenderer._fmtNum(btcYr.total_preferred_plus_interest) + ' BTC/yr @ ' + MSTRRenderer._fmtMoney(btcPx, 0) +
+                    '</div>' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 max-w-md leading-relaxed">' +
+                    'Color bands: >40 yr green · 25–40 yr amber · 15–25 yr orange · &lt;15 yr red. ' +
+                    'Assumes flat BTC price, frozen outstanding, frozen rates.' +
+                '</div>' +
+            '</div>' +
+            // Seniority waterfall.
+            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-2 mb-2">Seniority waterfall</div>' +
+            '<div class="data-table-scroll mb-4">' +
+                '<table class="data-table">' +
+                    '<thead><tr><th>Tier</th><th>Series</th><th class="text-right">Face / outstanding</th><th class="text-right">Annual</th><th class="text-right">BTC/yr</th><th>Note</th></tr></thead>' +
+                    '<tbody>' + waterfallRows + '</tbody>' +
+                '</table>' +
+            '</div>' +
+            // Three runway readouts.
+            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-4 mb-2">Runway scenarios (current BTC)</div>' +
+            runwayRow +
+            // Rate-ceiling overlay.
+            ceilingSubPanel +
+            // Treasury table.
+            treasuryTable +
+            // Caveat.
+            caveat +
+            // Two history charts.
+            historyCharts +
+        '</div>';
+    },
+
+    _paintRunwayChart: function (series) {
+        var ctx = document.getElementById('mstr-runway-chart');
+        if (!ctx) return;
+        var strcOnly = MSTRRenderer._seriesXY(series, 'runway_strc_only_years');
+        var seniorToStrc = MSTRRenderer._seriesXY(series, 'runway_senior_to_strc_years');
+        var total = MSTRRenderer._seriesXY(series, 'runway_total_years');
+        var ann = {
+            green:  { type: 'line', yMin: 40, yMax: 40, borderColor: '#22c55e', borderWidth: 1, borderDash: [4, 4],
+                      label: { content: '40 yr · green', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
+            amber:  { type: 'line', yMin: 25, yMax: 25, borderColor: '#f59e0b', borderWidth: 1, borderDash: [4, 4],
+                      label: { content: '25 yr · amber', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+            red:    { type: 'line', yMin: 15, yMax: 15, borderColor: '#ef4444', borderWidth: 1, borderDash: [4, 4],
+                      label: { content: '15 yr · red', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } }
+        };
+        if (window._mstrRunwayChart) window._mstrRunwayChart.destroy();
+        window._mstrRunwayChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                datasets: [
+                    { label: 'STRC only', data: strcOnly, borderColor: '#3b82f6', backgroundColor: 'transparent', tension: 0.3, pointRadius: 0, borderWidth: 1.5 },
+                    { label: 'Senior-to-STRC', data: seniorToStrc, borderColor: '#a855f7', backgroundColor: 'transparent', tension: 0.3, pointRadius: 0, borderWidth: 1.5 },
+                    { label: 'Total', data: total, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.08)', fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 }
+                ]
+            },
+            options: Object.assign({}, MSTRRenderer._baseChartOpts(ann), {
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 10, font: { size: 10 } } },
+                    annotation: { annotations: ann }
+                }
+            })
+        });
+    },
+
+    _paintRateTrajectoryChart: function (series) {
+        var ctx = document.getElementById('mstr-rate-trajectory-chart');
+        if (!ctx) return;
+        var raw = MSTRRenderer._seriesXY(series, 'strc_current_rate');
+        var data = raw.map(function (p) { return { x: p.x, y: p.y * 100 }; });
+        var ann = {
+            launch: { type: 'line', yMin: 10.25, yMax: 10.25, borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3],
+                      label: { content: '10.25% launch', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
+            mid:    { type: 'line', yMin: 14, yMax: 14, borderColor: '#f59e0b', borderWidth: 1, borderDash: [4, 4],
+                      label: { content: '14% mid-ceiling', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+            top:    { type: 'line', yMin: 16, yMax: 16, borderColor: '#ef4444', borderWidth: 1, borderDash: [4, 4],
+                      label: { content: '16% top-ceiling', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } }
+        };
+        if (window._mstrRateTrajChart) window._mstrRateTrajChart.destroy();
+        window._mstrRateTrajChart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [{
+                label: 'STRC rate (%)',
+                data: data,
+                borderColor: '#0ea5e9',
+                backgroundColor: 'rgba(14,165,233,0.1)',
+                fill: true, stepped: true, pointRadius: 2, borderWidth: 2
+            }] },
+            options: Object.assign({}, MSTRRenderer._baseChartOpts(ann), {
+                scales: {
+                    x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } }, grid: { display: false }, ticks: { maxTicksLimit: 6, font: { size: 10 } } },
+                    y: { grid: { color: '#f1f5f9' }, ticks: { callback: function (v) { return v + '%'; }, font: { size: 10 } } }
+                },
+                plugins: { legend: { display: false }, annotation: { annotations: ann } }
+            })
+        });
+    },
+
+    // ============================================================
+    // Panel 6 — Per-share BTC NAV trajectory (LOAD-BEARING)
     // ============================================================
     _renderPerShareNavTrajectory: function (tradfi, mv) {
         var mstr = tradfi.mstr || {};
@@ -397,7 +737,7 @@ var MSTRRenderer = {
     },
 
     // ============================================================
-    // Panel 6 — Dilution + maturity wall combined
+    // Panel 7 — Dilution + maturity wall combined
     // ============================================================
     _renderDilutionMaturityWall: function (mv) {
         var atm = mv.atm_cadence_90d || {};
@@ -639,6 +979,8 @@ var MSTRRenderer = {
             var series = (hist && Array.isArray(hist.series)) ? hist.series : [];
             MSTRRenderer._paintMnavChart(series);
             MSTRRenderer._paintPerShareNavChart(series, tradfi, mv, events);
+            MSTRRenderer._paintRunwayChart(series);
+            MSTRRenderer._paintRateTrajectoryChart(series);
         });
     },
 
