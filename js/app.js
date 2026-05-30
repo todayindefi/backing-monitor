@@ -27,11 +27,16 @@ var ASSET_RENDERERS = {
     usde:      typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
     susde:     typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
     strc:      typeof STRCRenderer      !== 'undefined' ? STRCRenderer      : null,
+    mstr:      typeof MSTRRenderer      !== 'undefined' ? MSTRRenderer      : null,
     'fiat-stable-reserve-backed': typeof USDmRenderer !== 'undefined' ? USDmRenderer : null
 };
 
 function findAssetRenderer(data) {
     if (!data) return null;
+    // First: URL view_slug. Set by renderAsset() after fetch so a sibling
+    // view (e.g. ?asset=mstr that reads strc_backing.json) routes to its
+    // own renderer instead of falling through to the source asset's.
+    if (data.view_slug && ASSET_RENDERERS[data.view_slug]) return ASSET_RENDERERS[data.view_slug];
     var bySlug = data.asset_slug ? ASSET_RENDERERS[data.asset_slug] : null;
     if (bySlug) return bySlug;
     var t = data.asset_specific && data.asset_specific.type;
@@ -73,10 +78,13 @@ async function renderIndex() {
         var resp = await fetch('data/assets.json');
         var assets = await resp.json();
 
-        // Try to fetch latest data for each asset to show CR on cards
+        // Try to fetch latest data for each asset to show CR on cards.
+        // `data_source` lets a sibling view (e.g. mstr) reuse another
+        // asset's backing JSON instead of needing its own file.
         var cardData = await Promise.all(assets.map(async function(a) {
             try {
-                var r = await fetch('data/' + a.slug + '_backing.json');
+                var sourceSlug = a.data_source || a.slug;
+                var r = await fetch('data/' + sourceSlug + '_backing.json');
                 var d = await r.json();
                 return { asset: a, data: d };
             } catch (e) {
@@ -151,22 +159,29 @@ async function renderAsset(slug) {
     if (staleDisclaimer) staleDisclaimer.remove();
 
     try {
-        var [dataResp, histResp, assetsResp] = await Promise.all([
-            fetch('data/' + slug + '_backing.json'),
-            fetch('data/' + slug + '_backing_history.json').catch(function() { return null; }),
-            fetch('data/assets.json').catch(function() { return null; })
+        // Fetch assets.json first so we can resolve `data_source` aliases
+        // (e.g. ?asset=mstr reads strc_backing.json) before fetching data.
+        var assetsResp0 = await fetch('data/assets.json').catch(function() { return null; });
+        var assetMeta = null;
+        if (assetsResp0 && assetsResp0.ok) {
+            var assets = await assetsResp0.json();
+            assetMeta = assets.find(function(a) { return a.slug === slug; }) || null;
+        }
+        var sourceSlug = (assetMeta && assetMeta.data_source) ? assetMeta.data_source : slug;
+
+        var [dataResp, histResp] = await Promise.all([
+            fetch('data/' + sourceSlug + '_backing.json'),
+            fetch('data/' + sourceSlug + '_backing_history.json').catch(function() { return null; })
         ]);
 
         if (!dataResp.ok) throw new Error('Asset data not found (HTTP ' + dataResp.status + ')');
         var data = await dataResp.json();
+        // Tag the URL slug so findAssetRenderer can route to the sibling
+        // view's renderer instead of falling through to the source asset's.
+        data.view_slug = slug;
         var history = null;
         if (histResp && histResp.ok) {
             history = await histResp.json();
-        }
-        var assetMeta = null;
-        if (assetsResp && assetsResp.ok) {
-            var assets = await assetsResp.json();
-            assetMeta = assets.find(function(a) { return a.slug === slug; }) || null;
         }
 
         // Asset-specific pre-render hook — lets the renderer patch top-card
