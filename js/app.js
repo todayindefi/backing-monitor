@@ -28,6 +28,7 @@ var ASSET_RENDERERS = {
     susde:     typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
     strc:      typeof STRCRenderer      !== 'undefined' ? STRCRenderer      : null,
     mstr:      typeof MSTRRenderer      !== 'undefined' ? MSTRRenderer      : null,
+    bmnr:      typeof BMNRRenderer      !== 'undefined' ? BMNRRenderer      : null,
     'fiat-stable-reserve-backed': typeof USDmRenderer !== 'undefined' ? USDmRenderer : null
 };
 
