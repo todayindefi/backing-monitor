@@ -788,6 +788,15 @@ var STRCRenderer = {
         return 'text-red-700 dark:text-red-300';
     },
 
+    // Cash-runway color bands (months): >12 green, 6–12 amber, 3–6 orange, <3 red.
+    _cashRunwayClass: function (months) {
+        if (months == null) return 'text-slate-700 dark:text-slate-200';
+        if (months > 12) return 'text-green-700 dark:text-green-300';
+        if (months >= 6) return 'text-amber-700 dark:text-amber-300';
+        if (months >= 3) return 'text-orange-700 dark:text-orange-300';
+        return 'text-red-700 dark:text-red-300';
+    },
+
     _renderStrcDividendObligation: function (data) {
         var csw = data.cash_service_waterfall;
         if (!csw) {
@@ -895,6 +904,29 @@ var STRCRenderer = {
                 '<div class="text-xs text-slate-500 italic mt-1">Stress cycles ratchet up; recovery does not ratchet down.</div>' +
             '</div>';
 
+        // ---- Cash-buffer callout (dependency data point + cross-link).
+        // Strategy's cash position is an MSTR-issuer concern, but STRC holders
+        // need the headline number to size short-term dividend-suspension risk.
+        // Small + dependency-framed, consistent with the d373a1d6 reorg pattern.
+        var cashRunway = csw.cash_runway || null;
+        var cashCallout = '';
+        if (cashRunway) {
+            var totalMonths = (cashRunway.months_until_btc_sales_required || {}).total_preferred_plus_interest;
+            var monthsCls = STRCRenderer._cashRunwayClass(totalMonths);
+            var cashTxt = STRCRenderer._fmtMoneyShort(cashRunway.cash_and_equivalents_usd);
+            var asOf = cashRunway.cash_as_of || '—';
+            cashCallout =
+                '<div class="rounded border border-slate-200 dark:border-slate-700 p-3 mt-4 bg-slate-50/40 dark:bg-slate-800/30">' +
+                    '<div class="text-xs uppercase font-semibold text-slate-500 mb-1">Strategy cash buffer (dependency)</div>' +
+                    '<div class="text-sm">' +
+                        '<span class="font-bold ' + monthsCls + '">' + (totalMonths != null ? '~' + totalMonths.toFixed(1) + ' months' : '—') + '</span> ' +
+                        'until BTC sales operationally required at current obligation rate. ' +
+                        'Cash <span class="font-mono">' + cashTxt + '</span> as of <span class="font-mono">' + asOf + '</span>. ' +
+                        '<a href="?asset=mstr" class="text-blue-500 hover:underline">→ Full cash-service runway on MSTR dashboard</a>' +
+                    '</div>' +
+                '</div>';
+        }
+
         // ---- Footer affordance to MSTR for the full-stack waterfall.
         var footer =
             '<div class="text-xs text-slate-500 mt-4 leading-relaxed">' +
@@ -906,6 +938,7 @@ var STRCRenderer = {
             '<div class="panel-title">STRC dividend obligation + runway <span class="text-xs font-normal text-slate-500">— STRC-slice cash service</span></div>' +
             headline +
             ceilingSubPanel +
+            cashCallout +
             footer +
         '</div>';
     },

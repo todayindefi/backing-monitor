@@ -406,6 +406,15 @@ var MSTRRenderer = {
         return 'text-red-700 dark:text-red-300';
     },
 
+    // Cash-runway color bands (months): >12 green, 6–12 amber, 3–6 orange, <3 red.
+    _cashRunwayClass: function (months) {
+        if (months == null) return 'text-slate-700 dark:text-slate-200';
+        if (months > 12) return 'text-green-700 dark:text-green-300';
+        if (months >= 6) return 'text-amber-700 dark:text-amber-300';
+        if (months >= 3) return 'text-orange-700 dark:text-orange-300';
+        return 'text-red-700 dark:text-red-300';
+    },
+
     _renderCashServiceWaterfall: function (data) {
         var csw = data.cash_service_waterfall;
         if (!csw) {
@@ -490,6 +499,67 @@ var MSTRRenderer = {
                 runwayCard('Senior-to-STRC', 'STRF + STRC + senior convert interest', runway.senior_to_strc, btcYr.senior_to_strc, pctStack.senior_to_strc) +
                 runwayCard('All preferred + interest', 'Adds STRK + STRD residual', runway.total_preferred_plus_interest, btcYr.total_preferred_plus_interest, pctStack.total_preferred_plus_interest) +
             '</div>';
+
+        // ---- Cash runway sub-panel: short-term operational stress horizon
+        // (months until BTC sales become required absent new issuance inflow).
+        // Complements the year-runway above (long-term flat-BTC solvency).
+        var cashRunway = csw.cash_runway || null;
+        var cashSubPanel = '';
+        if (cashRunway) {
+            var monthsByTier = cashRunway.months_until_btc_sales_required || {};
+            var monthlyObl = cashRunway.monthly_obligation_usd || {};
+            function cashCard(label, sub, months, monthly, primary) {
+                var bandCls = MSTRRenderer._cashRunwayClass(months);
+                var sizeCls = primary ? 'text-3xl' : 'text-2xl';
+                var border = primary ? 'border-2' : 'border';
+                return '<div class="rounded-lg ' + border + ' border-slate-200 dark:border-slate-700 p-3">' +
+                    '<div class="text-xs uppercase font-semibold text-slate-500">' + label + '</div>' +
+                    '<div class="text-xs text-slate-500 mt-0.5">' + sub + '</div>' +
+                    '<div class="' + sizeCls + ' font-bold mt-1 ' + bandCls + '">' + (months != null ? months.toFixed(1) + ' mo' : '—') + '</div>' +
+                    '<div class="text-[10px] text-slate-500 mt-1 font-mono">' + (monthly != null ? MSTRRenderer._fmtMoneyShort(monthly) + '/mo obligation' : '—') + '</div>' +
+                '</div>';
+            }
+            var cashRunwayRow =
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">' +
+                    cashCard('STRC alone', 'STRC dividend only',
+                        monthsByTier.strc_only, monthlyObl.strc_only, false) +
+                    cashCard('Senior-to-STRC', 'STRF + STRC + senior convert interest',
+                        monthsByTier.senior_to_strc, monthlyObl.senior_to_strc, false) +
+                    cashCard('Total preferred + interest', 'All preferred + STRK/STRD residual',
+                        monthsByTier.total_preferred_plus_interest, monthlyObl.total_preferred_plus_interest, true) +
+                '</div>';
+
+            var cashAsOf = cashRunway.cash_as_of;
+            var staleDaysTxt = '';
+            if (cashAsOf) {
+                var ageMs = Date.now() - Date.parse(cashAsOf + 'T00:00:00Z');
+                var ageDays = Math.floor(ageMs / 86400000);
+                if (ageDays > 60) {
+                    staleDaysTxt = ' <span class="text-amber-700 dark:text-amber-300 font-semibold">(stale by ' + ageDays + ' days)</span>';
+                }
+            }
+            var cashCaption =
+                '<div class="text-xs text-slate-600 dark:text-slate-300 mt-2">' +
+                    '<span class="font-semibold">Cash on hand:</span> ' +
+                    '<span class="font-mono">' + MSTRRenderer._fmtMoneyShort(cashRunway.cash_and_equivalents_usd) + '</span>' +
+                    ' as of <span class="font-mono">' + (cashAsOf || '—') + '</span>' +
+                    staleDaysTxt +
+                    ' · source: <span class="italic">' + (cashRunway.cash_source || '—') + '</span>' +
+                '</div>';
+            var cashCaveat =
+                '<div class="text-xs text-slate-500 italic mt-1 leading-relaxed">' +
+                    'Cash runway assumes ZERO new issuance inflow. In practice Strategy continuously refills cash via preferred + ATM activity. ' +
+                    'Treat as a stress-scenario watermark, not a forward forecast.' +
+                '</div>';
+
+            cashSubPanel =
+                '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4 mt-4 bg-slate-50/40 dark:bg-slate-800/30">' +
+                    '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Cash Runway <span class="text-xs font-normal text-slate-500">— months until BTC sales required (no-issuance stress)</span></div>' +
+                    cashRunwayRow +
+                    cashCaption +
+                    cashCaveat +
+                '</div>';
+        }
 
         // ---- Rate-ceiling overlay (sub-panel) — STRC's rate stress, but
         // shown here because it determines the multi-tier runway profile.
@@ -621,10 +691,12 @@ var MSTRRenderer = {
                     '<tbody>' + waterfallRows + '</tbody>' +
                 '</table>' +
             '</div>' +
-            // Three runway readouts.
+            // Three runway readouts (long-term, flat BTC).
             '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-4 mb-2">Runway scenarios (current BTC)</div>' +
             runwayRow +
-            // Rate-ceiling overlay.
+            // Cash runway (short-term, no-issuance stress).
+            cashSubPanel +
+            // Rate-ceiling overlay (STRC-specific stress).
             ceilingSubPanel +
             // Treasury table.
             treasuryTable +
