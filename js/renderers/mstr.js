@@ -561,6 +561,71 @@ var MSTRRenderer = {
                 '</div>';
         }
 
+        // ---- Sequenced runway sub-panel: operational timeline from cash
+        // service (Phase 1) into BTC sales (Phase 2).
+        var seq = csw.sequenced_runway || null;
+        var seqSubPanel = '';
+        if (seq) {
+            var p1 = seq.phase1_cash_months || {};
+            var p2 = seq.phase2_btc_years_after_cash || {};
+            var tot = seq.total_operational_timeline_years || {};
+            var saleStart = seq.btc_sale_start_date_approx;
+            var p1AggMonths = p1.total_preferred_plus_interest;
+            var saleStartCls = MSTRRenderer._cashRunwayClass(p1AggMonths);
+            var saleStartCard =
+                '<div class="rounded-lg border-2 ' +
+                    (p1AggMonths != null && p1AggMonths < 6 ? 'border-red-300 bg-red-50 dark:bg-red-900/10' :
+                     p1AggMonths != null && p1AggMonths < 12 ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/10' :
+                     'border-slate-200 dark:border-slate-700') +
+                    ' p-4 mb-3">' +
+                    '<div class="text-xs uppercase font-semibold text-slate-500">BTC-sale window opens (aggregate basis)</div>' +
+                    '<div class="text-xs text-slate-500 mt-0.5">Date when Phase 1 cash buffer exhausts at current obligation rate</div>' +
+                    '<div class="text-3xl font-bold mt-2 ' + saleStartCls + '">' + (saleStart || '—') + '</div>' +
+                    '<div class="text-xs text-slate-500 mt-1 font-mono">' +
+                        (p1AggMonths != null ? '~' + p1AggMonths.toFixed(1) + ' mo cash · then ' + (p2.total_preferred_plus_interest != null ? p2.total_preferred_plus_interest + ' yr BTC stack' : '—') : '—') +
+                    '</div>' +
+                '</div>';
+
+            function seqRow(label, p1m, p2y, totY) {
+                return '<tr>' +
+                    '<td class="font-medium">' + label + '</td>' +
+                    '<td class="text-right font-mono">' + (p1m != null ? p1m.toFixed(1) + ' mo' : '—') + '</td>' +
+                    '<td class="text-right font-mono">' + (p2y != null ? p2y + ' yr' : '—') + '</td>' +
+                    '<td class="text-right font-mono font-semibold">' + (totY != null ? totY.toFixed(1) + ' yr' : '—') + '</td>' +
+                '</tr>';
+            }
+            var seqTable =
+                '<div class="data-table-scroll">' +
+                    '<table class="data-table">' +
+                        '<thead><tr>' +
+                            '<th>Obligation slice</th>' +
+                            '<th class="text-right">Phase 1 (cash)</th>' +
+                            '<th class="text-right">Phase 2 (BTC)</th>' +
+                            '<th class="text-right">Total timeline</th>' +
+                        '</tr></thead>' +
+                        '<tbody>' +
+                            seqRow('STRC alone', p1.strc_only, p2.strc_only, tot.strc_only) +
+                            seqRow('Senior-to-STRC', p1.senior_to_strc, p2.senior_to_strc, tot.senior_to_strc) +
+                            seqRow('Total preferred + interest', p1.total_preferred_plus_interest, p2.total_preferred_plus_interest, tot.total_preferred_plus_interest) +
+                        '</tbody>' +
+                    '</table>' +
+                '</div>';
+            var seqCaption =
+                '<div class="text-xs text-slate-500 italic mt-2 leading-relaxed">' +
+                    'Sequenced model — cash funds Phase 1, BTC sales begin Phase 2. ' +
+                    'The total timeline is barely distinguishable from the BTC-only runway (months + decades) — ' +
+                    '<span class="font-semibold">the load-bearing field is when Phase 1 exhausts</span>, since BTC sales activate the BTC-price feedback chain. ' +
+                    'Same zero-issuance assumption as the cash-runway sub-panel above.' +
+                '</div>';
+            seqSubPanel =
+                '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4 mt-4 bg-slate-50/40 dark:bg-slate-800/30">' +
+                    '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Sequenced Runway <span class="text-xs font-normal text-slate-500">— cash → BTC operational timeline</span></div>' +
+                    saleStartCard +
+                    seqTable +
+                    seqCaption +
+                '</div>';
+        }
+
         // ---- Rate-ceiling overlay (sub-panel) — STRC's rate stress, but
         // shown here because it determines the multi-tier runway profile.
         var midCycles = rateCeiling.stress_cycles_to_mid;
@@ -634,8 +699,8 @@ var MSTRRenderer = {
                 '<table class="data-table">' +
                     '<thead><tr><th>Source</th><th>Value</th><th>Note</th></tr></thead>' +
                     '<tbody>' +
-                        '<tr><td class="font-medium">BTC stack</td><td class="font-mono">' + MSTRRenderer._fmtMoneyShort(btcStackUsd) + '</td><td class="text-xs text-slate-500">Primary funding source · ' + MSTRRenderer._fmtNum(btcStack) + ' BTC @ ' + MSTRRenderer._fmtMoney(btcPx, 0) + '</td></tr>' +
-                        '<tr><td class="font-medium">Cash on balance sheet</td><td class="font-mono">~$0.5–1B</td><td class="text-xs text-slate-500">Q1 2026 estimate (refresh per 10-Q)</td></tr>' +
+                        '<tr><td class="font-medium">Cash on balance sheet</td><td class="font-mono">~$0.5–1B</td><td class="text-xs text-slate-500">First-line dividend service · BTC sales not triggered until depleted</td></tr>' +
+                        '<tr><td class="font-medium">BTC stack</td><td class="font-mono">' + MSTRRenderer._fmtMoneyShort(btcStackUsd) + '</td><td class="text-xs text-slate-500">Second-line (activated when cash exhausted) · ' + MSTRRenderer._fmtNum(btcStack) + ' BTC @ ' + MSTRRenderer._fmtMoney(btcPx, 0) + '</td></tr>' +
                         '<tr><td class="font-medium">Software cash flow</td><td class="font-mono">≈ $0</td><td class="text-xs text-slate-500">Immaterial</td></tr>' +
                         '<tr><td class="font-medium">ATM equity</td><td class="font-mono ' + atmCls + '">' + atmStatus + '</td><td class="text-xs text-slate-500">Accretive only at mNAV ≥ 1.0</td></tr>' +
                         '<tr><td class="font-medium">Preferred re-issuance</td><td class="font-mono">Tappable</td><td class="text-xs text-slate-500">…but compounds the obligation</td></tr>' +
@@ -696,6 +761,8 @@ var MSTRRenderer = {
             runwayRow +
             // Cash runway (short-term, no-issuance stress).
             cashSubPanel +
+            // Sequenced runway (cash Phase 1 into BTC-sale Phase 2).
+            seqSubPanel +
             // Rate-ceiling overlay (STRC-specific stress).
             ceilingSubPanel +
             // Treasury table.

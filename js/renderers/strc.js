@@ -909,12 +909,23 @@ var STRCRenderer = {
         // need the headline number to size short-term dividend-suspension risk.
         // Small + dependency-framed, consistent with the d373a1d6 reorg pattern.
         var cashRunway = csw.cash_runway || null;
+        var seq = csw.sequenced_runway || null;
         var cashCallout = '';
         if (cashRunway) {
             var totalMonths = (cashRunway.months_until_btc_sales_required || {}).total_preferred_plus_interest;
             var monthsCls = STRCRenderer._cashRunwayClass(totalMonths);
             var cashTxt = STRCRenderer._fmtMoneyShort(cashRunway.cash_and_equivalents_usd);
             var asOf = cashRunway.cash_as_of || '—';
+            var seqLine = '';
+            if (seq && seq.btc_sale_start_date_approx) {
+                var totYears = (seq.total_operational_timeline_years || {}).total_preferred_plus_interest;
+                seqLine =
+                    '<div class="text-xs text-slate-500 mt-1">' +
+                        'Operational timeline ≈ <span class="font-mono">' + (totYears != null ? totYears.toFixed(1) + ' yr' : '—') + '</span> ' +
+                        '(BTC-sale window opens <span class="font-mono">' + seq.btc_sale_start_date_approx + '</span>) · ' +
+                        '<a href="?asset=mstr" class="text-blue-500 hover:underline">→ sequenced detail on MSTR dashboard</a>' +
+                    '</div>';
+            }
             cashCallout =
                 '<div class="rounded border border-slate-200 dark:border-slate-700 p-3 mt-4 bg-slate-50/40 dark:bg-slate-800/30">' +
                     '<div class="text-xs uppercase font-semibold text-slate-500 mb-1">Strategy cash buffer (dependency)</div>' +
@@ -924,6 +935,7 @@ var STRCRenderer = {
                         'Cash <span class="font-mono">' + cashTxt + '</span> as of <span class="font-mono">' + asOf + '</span>. ' +
                         '<a href="?asset=mstr" class="text-blue-500 hover:underline">→ Full cash-service runway on MSTR dashboard</a>' +
                     '</div>' +
+                    seqLine +
                 '</div>';
         }
 
