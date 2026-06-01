@@ -1,16 +1,16 @@
 {
   "asset": "strc",
-  "timestamp_utc": "2026-06-01T20:44:21Z",
-  "freshness_seconds": 7,
+  "timestamp_utc": "2026-06-01T21:44:27Z",
+  "freshness_seconds": 5,
   "tradfi": {
     "mstr": {
       "price_usd": 149.78,
       "market_cap_usd": 52589186472.59949,
       "source": "yfinance",
-      "fetched_at": "2026-06-01T20:44:15Z"
+      "fetched_at": "2026-06-01T21:44:22Z"
     },
     "btc": {
-      "price_usd": 71501.0,
+      "price_usd": 71018.0,
       "source": "coingecko"
     },
     "strategy_btc_holdings": {
@@ -19,7 +19,7 @@
       "fetched_at": "2026-06-01T10:44:42Z"
     },
     "mnav": {
-      "value": 0.8717,
+      "value": 0.8776,
       "regime": "discount",
       "regime_thresholds": {
         "premium": ">= 1.05",
@@ -87,10 +87,10 @@
     }
   },
   "wrapper_strcx": {
-    "total_supply_all_chains": 2597444.7921,
+    "total_supply_all_chains": 2597444.792,
     "total_supply_source": "coingecko_aggregate",
-    "total_supply_usd": 265822500.02,
-    "implied_other_chains_supply": 489513.4414,
+    "total_supply_usd": 265822500.01,
+    "implied_other_chains_supply": 489513.4413,
     "multiplier": 1.04129401,
     "multiplier_source": "ethereum.multiplier()",
     "coingecko_price_usd": 102.34,
@@ -144,24 +144,24 @@
   "downstream_exposure": {
     "apyx": {
       "source_file": "apxusd_backing.json",
-      "source_timestamp": "2026-06-01T20:44:12Z",
-      "strc_bucket_usd": 308533074.92,
-      "strc_share_of_reserves": 0.6003,
+      "source_timestamp": "2026-06-01T21:44:20Z",
+      "strc_bucket_usd": 308352020.76,
+      "strc_share_of_reserves": 0.6002,
       "strcx_onchain_balance": 757187.5279656978,
       "strcx_onchain_usd": 77490571.61200951,
-      "strc_raw_implied_usd": 231042503.3079905,
-      "total_reserves_usd": 513954108.36,
-      "attestation_timestamp": "2026-06-01T20:37:51Z"
+      "strc_raw_implied_usd": 230861449.14799047,
+      "total_reserves_usd": 513770072.8,
+      "attestation_timestamp": "2026-06-01T21:40:40Z"
     },
     "saturn": {
       "source_file": "susdat_backing.json",
-      "source_timestamp": "2026-06-01T20:43:01Z",
-      "strc_raw_usd": 92186297.78,
-      "strc_share_of_reserves": 0.89359,
+      "source_timestamp": "2026-06-01T21:43:11Z",
+      "strc_raw_usd": 92187781.02,
+      "strc_share_of_reserves": 0.893591,
       "verifiable": "oracle_unverified",
-      "total_assets_usd": 103164033.93
+      "total_assets_usd": 103165541.06
     },
-    "portfolio_total_strc_family_usd": 400719372.7
+    "portfolio_total_strc_family_usd": 400539801.78
   },
   "cash_service_waterfall": {
     "annual_obligation_usd": {
@@ -173,22 +173,22 @@
     },
     "senior_convert_2030_maturity_wall_usd": 2700000000,
     "btc_per_year_at_current_price": {
-      "strc_only": 13731,
-      "senior_to_strc": 16009,
-      "total_preferred_plus_interest": 16289
+      "strc_only": 13824,
+      "senior_to_strc": 16118,
+      "total_preferred_plus_interest": 16400
     },
     "pct_of_stack_per_year": {
-      "strc_only": 0.0163,
-      "senior_to_strc": 0.019,
-      "total_preferred_plus_interest": 0.0193
+      "strc_only": 0.0164,
+      "senior_to_strc": 0.0191,
+      "total_preferred_plus_interest": 0.0194
     },
     "runway_years_flat_btc": {
       "strc_only": 61,
-      "senior_to_strc": 53,
-      "total_preferred_plus_interest": 52
+      "senior_to_strc": 52,
+      "total_preferred_plus_interest": 51
     },
     "assumptions": {
-      "btc_price_usd": 71501.0,
+      "btc_price_usd": 71018.0,
       "btc_stack": 843738,
       "frozen_outstanding": true,
       "frozen_rates": true,
@@ -202,8 +202,8 @@
       "headroom_bp_to_top": 450,
       "stress_cycles_to_mid": 2,
       "stress_cycles_to_top": 4,
-      "runway_at_current_rate_years": 52,
-      "runway_at_mid_ceiling_years": 44,
+      "runway_at_current_rate_years": 51,
+      "runway_at_mid_ceiling_years": 43,
       "runway_at_top_ceiling_years": 39,
       "note": "Framework \u00a7IV.5: STRC rate ratchets monotonically upward over multi-year horizons (sticky on recovery). Each ~125bp stress cycle consumes ceiling headroom; at 14-16% Strategy plausibly elects dividend suspension over further hikes."
     },
@@ -222,21 +222,41 @@
         "total_preferred_plus_interest": 9.0
       },
       "note": "Cash runway represents months until Strategy must begin BTC sales assuming ZERO new issuance inflow (no STRC issuance, no MSTR ATM). In practice, Strategy continuously refills cash via preferred issuance + ATM; this is a stress-scenario watermark. See strc.md \u00a7IV and mstr.md \u00a7II for the analytical framing. Cash position is stale-by-date \u2014 refresh on each new 10-Q + transaction 8-K disclosure."
+    },
+    "sequenced_runway": {
+      "assumption": "zero_inflow_worst_case",
+      "phase1_cash_months": {
+        "strc_only": 10.6,
+        "senior_to_strc": 9.1,
+        "total_preferred_plus_interest": 9.0
+      },
+      "phase2_btc_years_after_cash": {
+        "strc_only": 61,
+        "senior_to_strc": 52,
+        "total_preferred_plus_interest": 51
+      },
+      "total_operational_timeline_years": {
+        "strc_only": 61.9,
+        "senior_to_strc": 52.8,
+        "total_preferred_plus_interest": 51.8
+      },
+      "btc_sale_start_date_approx": "2027-03-02",
+      "note": "Sequenced model: cash funds Phase 1, BTC sales fund Phase 2. Assumes ZERO new issuance refill (no STRC, no MSTR ATM). The total_operational_timeline_years field is barely distinguishable from runway_years_flat_btc (Phase 1 is months, Phase 2 is decades) \u2014 the load-bearing field is btc_sale_start_date_approx / phase1_cash_months. See cash_runway block for the parallel short-term watermark and runway_years_flat_btc for the parallel long-term solvency framing. See strc.md \u00a7IV.View 1 for analytical context."
     }
   },
   "mstr_view": {
     "share_count": 331469290,
     "market_cap_usd": 52589186472.59949,
-    "btc_nav_per_share_usd": 182.0,
-    "premium_discount_per_share_usd": -32.22,
-    "premium_discount_pct": -0.177,
+    "btc_nav_per_share_usd": 180.77,
+    "premium_discount_per_share_usd": -30.99,
+    "premium_discount_pct": -0.1714,
     "balance_sheet": {
       "as_of": "2026-05-25",
       "cash_and_equivalents_usd": 871000000,
       "senior_convertible_debt_usd": 6700000000,
       "total_preferred_notional_usd": 15500000000,
-      "btc_holdings_usd": 60328110738.0,
-      "implied_equity_book_value_usd": 38999110738.0,
+      "btc_holdings_usd": 59920585284.0,
+      "implied_equity_book_value_usd": 38591585284.0,
       "source": "2026-05-26 8-K + Q1 2026 10-Q"
     },
     "capital_structure": {
@@ -292,12 +312,12 @@
     {
       "code": "MNAV_REGIME_DISCOUNT",
       "severity": "high",
-      "message": "MSTR mNAV = 0.872 (discount). ATM issuance not accretive; BTC sales the active funding source per Saylor 2026-05-05 pivot."
+      "message": "MSTR mNAV = 0.878 (discount). ATM issuance not accretive; BTC sales the active funding source per Saylor 2026-05-05 pivot."
     },
     {
       "code": "MSTR_DISCOUNT_TO_BTC_NAV",
       "severity": "high",
-      "message": "MSTR trading at 17.7% discount to BTC NAV per share \u2014 accretive ATM offline, BTC bid via STRC issuance only."
+      "message": "MSTR trading at 17.1% discount to BTC NAV per share \u2014 accretive ATM offline, BTC bid via STRC issuance only."
     }
   ],
   "framework_version": "strc-framework.md 2026-05-29"
