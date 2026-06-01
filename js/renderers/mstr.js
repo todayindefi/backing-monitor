@@ -569,22 +569,6 @@ var MSTRRenderer = {
             var p1 = seq.phase1_cash_months || {};
             var p2 = seq.phase2_btc_years_after_cash || {};
             var tot = seq.total_operational_timeline_years || {};
-            var saleStart = seq.btc_sale_start_date_approx;
-            var p1AggMonths = p1.total_preferred_plus_interest;
-            var saleStartCls = MSTRRenderer._cashRunwayClass(p1AggMonths);
-            var saleStartCard =
-                '<div class="rounded-lg border-2 ' +
-                    (p1AggMonths != null && p1AggMonths < 6 ? 'border-red-300 bg-red-50 dark:bg-red-900/10' :
-                     p1AggMonths != null && p1AggMonths < 12 ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/10' :
-                     'border-slate-200 dark:border-slate-700') +
-                    ' p-4 mb-3">' +
-                    '<div class="text-xs uppercase font-semibold text-slate-500">BTC-sale window opens (aggregate basis)</div>' +
-                    '<div class="text-xs text-slate-500 mt-0.5">Date when Phase 1 cash buffer exhausts at current obligation rate</div>' +
-                    '<div class="text-3xl font-bold mt-2 ' + saleStartCls + '">' + (saleStart || '—') + '</div>' +
-                    '<div class="text-xs text-slate-500 mt-1 font-mono">' +
-                        (p1AggMonths != null ? '~' + p1AggMonths.toFixed(1) + ' mo cash · then ' + (p2.total_preferred_plus_interest != null ? p2.total_preferred_plus_interest + ' yr BTC stack' : '—') : '—') +
-                    '</div>' +
-                '</div>';
 
             function seqRow(label, p1m, p2y, totY) {
                 return '<tr>' +
@@ -619,8 +603,7 @@ var MSTRRenderer = {
                 '</div>';
             seqSubPanel =
                 '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4 mt-4 bg-slate-50/40 dark:bg-slate-800/30">' +
-                    '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Sequenced Runway <span class="text-xs font-normal text-slate-500">— cash → BTC operational timeline</span></div>' +
-                    saleStartCard +
+                    '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Sequenced Runway by obligation slice <span class="text-xs font-normal text-slate-500">— Phase 1 / Phase 2 / Total breakdown</span></div>' +
                     seqTable +
                     seqCaption +
                 '</div>';
@@ -731,23 +714,60 @@ var MSTRRenderer = {
                 '</div>' +
             '</div>';
 
+        // ---- Headline strip: promote the sequenced sale-start date when the
+        // block is present; preserve the legacy BTC-only headline otherwise.
+        var headlineStrip;
+        if (seq) {
+            var saleStart = seq.btc_sale_start_date_approx;
+            var p1AggMonths = (seq.phase1_cash_months || {}).total_preferred_plus_interest;
+            var saleCls = (p1AggMonths != null && p1AggMonths < 6) ? 'text-red-700 dark:text-red-300' :
+                          (p1AggMonths != null && p1AggMonths < 12) ? 'text-amber-700 dark:text-amber-300' :
+                          'text-slate-800 dark:text-slate-100';
+            var saleBorder = (p1AggMonths != null && p1AggMonths < 6) ? 'border-red-300 bg-red-50 dark:bg-red-900/20' :
+                             (p1AggMonths != null && p1AggMonths < 12) ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/10' :
+                             'border-slate-200 dark:border-slate-700';
+            headlineStrip =
+                '<div class="flex flex-col md:flex-row md:items-stretch md:gap-6 mb-4 p-4 rounded-lg border ' + saleBorder + '">' +
+                    '<div class="flex-1 md:border-r md:pr-6 md:border-slate-200 md:dark:border-slate-700">' +
+                        '<div class="text-xs uppercase font-semibold text-slate-500">BTC-sale window opens (aggregate basis)</div>' +
+                        '<div class="text-xs text-slate-500 mt-0.5">First-line cash service exhausts — Phase 2 BTC sales begin</div>' +
+                        '<div class="text-5xl font-bold mt-2 ' + saleCls + '">' + (saleStart || '—') + '</div>' +
+                        '<div class="text-xs text-slate-500 mt-1 font-mono">' +
+                            (p1AggMonths != null ? '~' + p1AggMonths.toFixed(1) + ' months out · ' : '') +
+                            'zero-issuance assumption · binding signal for portfolio decisions' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="flex-1 md:pl-6 mt-4 md:mt-0">' +
+                        '<div class="text-xs uppercase font-semibold text-slate-500">Long-term solvency (BTC-only)</div>' +
+                        '<div class="text-xs text-slate-500 mt-0.5">Phase 2 horizon after cash exhausts — flat BTC</div>' +
+                        '<div class="text-3xl font-bold mt-2 ' + runwayCls + '">' + (headlineRunway != null ? headlineRunway + ' years' : '—') + '</div>' +
+                        '<div class="text-xs text-slate-500 mt-1 font-mono">' +
+                            MSTRRenderer._fmtMoneyShort(obl.total) + '/yr aggregate · ' +
+                            MSTRRenderer._fmtNum(btcYr.total_preferred_plus_interest) + ' BTC/yr @ ' + MSTRRenderer._fmtMoney(btcPx, 0) +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+        } else {
+            headlineStrip =
+                '<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 p-4 rounded-lg border ' + (headlineRunway != null && headlineRunway < 25 ? 'border-orange-300 bg-orange-50 dark:bg-orange-900/20' : 'border-slate-200 dark:border-slate-700') + '">' +
+                    '<div>' +
+                        '<div class="text-xs uppercase font-semibold text-slate-500">Aggregate-preferred runway (flat BTC)</div>' +
+                        '<div class="text-5xl font-bold mt-1 ' + runwayCls + '">' + (headlineRunway != null ? headlineRunway + ' years' : '—') + '</div>' +
+                        '<div class="text-xs text-slate-500 mt-1">' +
+                            MSTRRenderer._fmtMoneyShort(obl.total) + '/yr aggregate · ' +
+                            MSTRRenderer._fmtNum(btcYr.total_preferred_plus_interest) + ' BTC/yr @ ' + MSTRRenderer._fmtMoney(btcPx, 0) +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="text-xs text-slate-500 max-w-md leading-relaxed">' +
+                        'Color bands: >40 yr green · 25–40 yr amber · 15–25 yr orange · &lt;15 yr red. ' +
+                        'Assumes flat BTC price, frozen outstanding, frozen rates.' +
+                    '</div>' +
+                '</div>';
+        }
+
         return '<div class="panel">' +
             '<div class="panel-title">Cash-Service Waterfall <span class="text-xs font-normal text-slate-500">— senior → junior preferred service + rate-ceiling overlay</span></div>' +
-            // Headline runway big number.
-            '<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-4 p-4 rounded-lg border ' + (headlineRunway != null && headlineRunway < 25 ? 'border-orange-300 bg-orange-50 dark:bg-orange-900/20' : 'border-slate-200 dark:border-slate-700') + '">' +
-                '<div>' +
-                    '<div class="text-xs uppercase font-semibold text-slate-500">Aggregate-preferred runway (flat BTC)</div>' +
-                    '<div class="text-5xl font-bold mt-1 ' + runwayCls + '">' + (headlineRunway != null ? headlineRunway + ' years' : '—') + '</div>' +
-                    '<div class="text-xs text-slate-500 mt-1">' +
-                        MSTRRenderer._fmtMoneyShort(obl.total) + '/yr aggregate · ' +
-                        MSTRRenderer._fmtNum(btcYr.total_preferred_plus_interest) + ' BTC/yr @ ' + MSTRRenderer._fmtMoney(btcPx, 0) +
-                    '</div>' +
-                '</div>' +
-                '<div class="text-xs text-slate-500 max-w-md leading-relaxed">' +
-                    'Color bands: >40 yr green · 25–40 yr amber · 15–25 yr orange · &lt;15 yr red. ' +
-                    'Assumes flat BTC price, frozen outstanding, frozen rates.' +
-                '</div>' +
-            '</div>' +
+            headlineStrip +
             // Seniority waterfall.
             '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-2 mb-2">Seniority waterfall</div>' +
             '<div class="data-table-scroll mb-4">' +
@@ -757,7 +777,7 @@ var MSTRRenderer = {
                 '</table>' +
             '</div>' +
             // Three runway readouts (long-term, flat BTC).
-            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-4 mb-2">Runway scenarios (current BTC)</div>' +
+            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-4 mb-2">Phase 2 BTC-only runway by obligation slice</div>' +
             runwayRow +
             // Cash runway (short-term, no-issuance stress).
             cashSubPanel +
