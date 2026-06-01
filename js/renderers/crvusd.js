@@ -67,17 +67,25 @@ var CrvUSDRenderer = {
         // ====== 2. Collateral Breakdown (matches Total Backing header) ======
         var cb = specific.collateral_breakdown;
         if (cb) {
-            var crCls = s.collateral_ratio < 100 ? 'negative' : s.collateral_ratio < 120 ? 'warning' : 'positive';
-            var ybPct = cb.total > 0 ? (cb.yb_btc_collateral / cb.total * 100).toFixed(1) : '0';
-            var mintPct = cb.total > 0 ? (cb.mint_collateral / cb.total * 100).toFixed(1) : '0';
+            var pkStables = s.pk_stables || 0;
+            var inclusiveTotal = s.total_backing_inclusive || (cb.total + pkStables);
+            var consCls = s.collateral_ratio < 100 ? 'negative' : s.collateral_ratio < 120 ? 'warning' : 'positive';
+            var inclCls = s.inclusive_cr < 100 ? 'negative' : s.inclusive_cr < 120 ? 'warning' : 'positive';
+            var denom = inclusiveTotal > 0 ? inclusiveTotal : 1;
+            var ybPct = (cb.yb_btc_collateral / denom * 100).toFixed(1);
+            var mintPct = (cb.mint_collateral / denom * 100).toFixed(1);
+            var consPct = (cb.total / denom * 100).toFixed(1);
+            var pkPct = (pkStables / denom * 100).toFixed(1);
 
             html += '<div class="panel">' +
                 '<div class="panel-title">Collateral Breakdown</div>' +
-                '<p class="text-sm text-slate-500 mb-3">All locked collateral backing crvUSD supply. CR: <span class="font-bold ' + crCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 1) + '</span></p>' +
+                '<p class="text-sm text-slate-500 mb-3">Conservative CR: <span class="font-bold ' + consCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 1) + '</span> &nbsp;·&nbsp; Inclusive CR: <span class="font-bold ' + inclCls + '">' + CommonRenderer.formatPercent(s.inclusive_cr, 1) + '</span>. Conservative drops PegKeeper debt from supply and PK pool stables from collateral; inclusive counts both. PK pool stables are LP-owned (not protocol-owned) — they defend the peg via arbitrage but aren\'t a redemption-style backing claim.</p>' +
                 '<table class="data-table"><thead><tr><th>Component</th><th class="text-right">Value</th><th class="text-right">%</th></tr></thead><tbody>' +
                 '<tr><td>YB pool BTC/ETH</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.yb_btc_collateral) + '</td><td class="text-right">' + ybPct + '%</td></tr>' +
                 '<tr><td>Minting market collateral</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.mint_collateral) + '</td><td class="text-right">' + mintPct + '%</td></tr>' +
-                '<tr class="font-bold border-t-2 border-slate-200"><td>Total Backing</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.total) + '</td><td class="text-right">100%</td></tr>' +
+                '<tr class="border-t border-slate-200"><td class="italic text-slate-600">Subtotal: locked collateral (conservative)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.total) + '</td><td class="text-right">' + consPct + '%</td></tr>' +
+                '<tr><td>PK pool stables <span class="text-xs text-slate-400">(peg-defense, LP-owned)</span></td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(pkStables) + '</td><td class="text-right">' + pkPct + '%</td></tr>' +
+                '<tr class="font-bold border-t-2 border-slate-200"><td>Total Backing (inclusive)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(inclusiveTotal) + '</td><td class="text-right">100%</td></tr>' +
                 '</tbody></table></div>';
         }
 
