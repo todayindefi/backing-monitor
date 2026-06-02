@@ -212,15 +212,38 @@ var MSTRRenderer = {
         var price = mstr.price_usd;
         var navPs = mv.btc_nav_per_share_usd;
         var pdFrac = mv.premium_discount_pct;
-        var pdUsd = mv.premium_discount_per_share_usd;
+
+        // Dual-anchor: book-value-per-share + premium-vs-book derived from
+        // analyzer's implied_equity_book_value_usd (cash + BTC − senior convert
+        // − preferred notional). Both inputs already live in strc_backing.json.
+        var bs = mv.balance_sheet || {};
+        var bookPerShare = (bs.implied_equity_book_value_usd != null && mv.share_count)
+            ? bs.implied_equity_book_value_usd / mv.share_count
+            : null;
+        var pdBookFrac = (price != null && bookPerShare && bookPerShare > 0)
+            ? price / bookPerShare - 1
+            : null;
 
         var mnavCls = MSTRRenderer._mnavBandClass(mnav.regime);
         var mnavLabel = MSTRRenderer._mnavBandLabel(mnav.regime);
         var mnavVal = (mnav.value != null) ? mnav.value.toFixed(2) : '—';
-        var pdCls = MSTRRenderer._pdClass(pdFrac);
-        var pdSign = (pdFrac != null && pdFrac > 0) ? '+' : '';
-        var pdTxt = (pdFrac != null) ? pdSign + MSTRRenderer._fmtPct(pdFrac, 1) : '—';
-        var pdSub = (pdUsd != null) ? (pdUsd >= 0 ? '+' : '') + MSTRRenderer._fmtMoney(pdUsd, 2) + ' / share' : '';
+
+        function pdRow(frac, anchorLabel) {
+            var cls = MSTRRenderer._pdClass(frac);
+            var sign = (frac != null && frac > 0) ? '+' : '';
+            var txt = (frac != null) ? sign + MSTRRenderer._fmtPct(frac, 1) : '—';
+            return '<div class="flex items-baseline gap-2 mt-1">' +
+                '<div class="text-2xl font-bold ' + cls + '">' + txt + '</div>' +
+                '<div class="text-xs text-slate-500">' + anchorLabel + '</div>' +
+            '</div>';
+        }
+        function navRow(value, anchorLabel) {
+            var txt = (value != null) ? MSTRRenderer._fmtMoney(value, 2) : '—';
+            return '<div class="flex items-baseline gap-2 mt-1">' +
+                '<div class="text-2xl font-bold text-slate-800 dark:text-slate-100">' + txt + '</div>' +
+                '<div class="text-xs text-slate-500">' + anchorLabel + '</div>' +
+            '</div>';
+        }
 
         return '<div class="panel">' +
             '<div class="panel-title">Headline status <span class="text-xs font-normal text-slate-500">— equity-holder lens · ' +
@@ -237,14 +260,16 @@ var MSTRRenderer = {
                     '<div class="text-xs font-semibold mt-1">' + mnavLabel + '</div>' +
                 '</div>' +
                 '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">' +
-                    '<div class="text-xs uppercase font-semibold text-slate-500">Per-share BTC NAV</div>' +
-                    '<div class="text-3xl font-bold mt-1 text-slate-800 dark:text-slate-100">' + (navPs != null ? MSTRRenderer._fmtMoney(navPs, 2) : '—') + '</div>' +
+                    '<div class="text-xs uppercase font-semibold text-slate-500">Per-share NAV</div>' +
+                    navRow(navPs, 'gross BTC') +
+                    navRow(bookPerShare, 'equity book') +
                     '<div class="text-xs text-slate-500 mt-1">' + MSTRRenderer._fmtNum(mv.share_count) + ' shares</div>' +
                 '</div>' +
                 '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">' +
                     '<div class="text-xs uppercase font-semibold text-slate-500">Premium / discount</div>' +
-                    '<div class="text-3xl font-bold mt-1 ' + pdCls + '">' + pdTxt + '</div>' +
-                    '<div class="text-xs text-slate-500 mt-1">' + pdSub + '</div>' +
+                    pdRow(pdFrac, 'vs gross BTC NAV') +
+                    pdRow(pdBookFrac, 'vs equity book value') +
+                    '<div class="text-[11px] text-slate-500 mt-2 leading-snug">BTC-only ignores $22B senior stack; book value nets cash − converts − preferred notional.</div>' +
                 '</div>' +
             '</div>' +
         '</div>';
@@ -867,14 +892,40 @@ var MSTRRenderer = {
         var mstr = tradfi.mstr || {};
         var nav = mv.btc_nav_per_share_usd;
         var pdFrac = mv.premium_discount_pct;
-        var pdCls = MSTRRenderer._pdClass(pdFrac);
+
+        // Dual-anchor mirror of Headline cards #3/#4.
+        var bs = mv.balance_sheet || {};
+        var bookPerShare = (bs.implied_equity_book_value_usd != null && mv.share_count)
+            ? bs.implied_equity_book_value_usd / mv.share_count
+            : null;
+        var pdBookFrac = (mstr.price_usd != null && bookPerShare && bookPerShare > 0)
+            ? mstr.price_usd / bookPerShare - 1
+            : null;
+
+        function pdRow(frac, anchorLabel) {
+            var cls = MSTRRenderer._pdClass(frac);
+            var sign = (frac != null && frac > 0) ? '+' : '';
+            var txt = (frac != null) ? sign + MSTRRenderer._fmtPct(frac, 1) : '—';
+            return '<div class="flex items-baseline gap-2 mt-1">' +
+                '<div class="text-xl font-bold ' + cls + '">' + txt + '</div>' +
+                '<div class="text-[11px] text-slate-500">' + anchorLabel + '</div>' +
+            '</div>';
+        }
+        function navRow(value, anchorLabel) {
+            var txt = (value != null) ? MSTRRenderer._fmtMoney(value, 2) : '—';
+            return '<div class="flex items-baseline gap-2 mt-1">' +
+                '<div class="text-xl font-bold text-slate-800 dark:text-slate-100">' + txt + '</div>' +
+                '<div class="text-[11px] text-slate-500">' + anchorLabel + '</div>' +
+            '</div>';
+        }
 
         return '<div class="panel">' +
-            '<div class="panel-title">Per-share BTC NAV trajectory <span class="text-xs font-normal text-slate-500">— equity-holder headline metric</span></div>' +
+            '<div class="panel-title">Per-share NAV trajectory <span class="text-xs font-normal text-slate-500">— equity-holder anchors</span></div>' +
             '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">' +
                 '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3">' +
-                    '<div class="text-xs uppercase font-semibold text-slate-500">Per-share BTC NAV</div>' +
-                    '<div class="text-2xl font-bold mt-1">' + (nav != null ? MSTRRenderer._fmtMoney(nav, 2) : '—') + '</div>' +
+                    '<div class="text-xs uppercase font-semibold text-slate-500">Per-share NAV</div>' +
+                    navRow(nav, 'gross BTC') +
+                    navRow(bookPerShare, 'equity book') +
                 '</div>' +
                 '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3">' +
                     '<div class="text-xs uppercase font-semibold text-slate-500">MSTR price</div>' +
@@ -882,7 +933,8 @@ var MSTRRenderer = {
                 '</div>' +
                 '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3">' +
                     '<div class="text-xs uppercase font-semibold text-slate-500">Premium / discount</div>' +
-                    '<div class="text-2xl font-bold mt-1 ' + pdCls + '">' + (pdFrac != null ? (pdFrac > 0 ? '+' : '') + MSTRRenderer._fmtPct(pdFrac, 1) : '—') + '</div>' +
+                    pdRow(pdFrac, 'vs gross BTC NAV') +
+                    pdRow(pdBookFrac, 'vs equity book value') +
                 '</div>' +
             '</div>' +
             '<div style="height: 280px; position: relative;"><canvas id="mstr-pershare-chart"></canvas></div>' +
