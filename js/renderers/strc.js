@@ -910,32 +910,54 @@ var STRCRenderer = {
         // Small + dependency-framed, consistent with the d373a1d6 reorg pattern.
         var cashRunway = csw.cash_runway || null;
         var seq = csw.sequenced_runway || null;
-        var cashCallout = '';
+        var cashSubPanel = '';
         if (cashRunway) {
             var totalMonths = (cashRunway.months_until_btc_sales_required || {}).total_preferred_plus_interest;
             var monthsCls = STRCRenderer._cashRunwayClass(totalMonths);
             var cashTxt = STRCRenderer._fmtMoneyShort(cashRunway.cash_and_equivalents_usd);
             var asOf = cashRunway.cash_as_of || '—';
-            var seqLine = '';
-            if (seq && seq.btc_sale_start_date_approx) {
-                var totYears = (seq.total_operational_timeline_years || {}).total_preferred_plus_interest;
-                seqLine =
-                    '<div class="text-xs text-slate-500 mt-1">' +
-                        'Operational timeline ≈ <span class="font-mono">' + (totYears != null ? totYears.toFixed(1) + ' yr' : '—') + '</span> ' +
-                        '(BTC-sale window opens <span class="font-mono">' + seq.btc_sale_start_date_approx + '</span>) · ' +
-                        '<a href="?asset=mstr" class="text-blue-500 hover:underline">→ sequenced detail on MSTR dashboard</a>' +
-                    '</div>';
-            }
-            cashCallout =
-                '<div class="rounded border border-slate-200 dark:border-slate-700 p-3 mt-4 bg-slate-50/40 dark:bg-slate-800/30">' +
-                    '<div class="text-xs uppercase font-semibold text-slate-500 mb-1">Strategy cash buffer (dependency)</div>' +
-                    '<div class="text-sm">' +
-                        '<span class="font-bold ' + monthsCls + '">' + (totalMonths != null ? '~' + totalMonths.toFixed(1) + ' months' : '—') + '</span> ' +
-                        'until BTC sales operationally required at current obligation rate. ' +
-                        'Cash <span class="font-mono">' + cashTxt + '</span> as of <span class="font-mono">' + asOf + '</span>. ' +
-                        '<a href="?asset=mstr" class="text-blue-500 hover:underline">→ Full cash-service runway on MSTR dashboard</a>' +
+
+            var saleStart = seq && seq.btc_sale_start_date_approx;
+            var saleStartCls =
+                (totalMonths != null && totalMonths < 6) ? 'text-red-700 dark:text-red-300' :
+                (totalMonths != null && totalMonths < 12) ? 'text-amber-700 dark:text-amber-300' :
+                'text-slate-800 dark:text-slate-100';
+            var saleBorder =
+                (totalMonths != null && totalMonths < 6) ? 'border-red-300 bg-red-50 dark:bg-red-900/10' :
+                (totalMonths != null && totalMonths < 12) ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/10' :
+                'border-slate-200 dark:border-slate-700';
+
+            var saleStartCard =
+                '<div class="rounded-lg border-2 ' + saleBorder + ' p-4 mb-3">' +
+                    '<div class="text-xs uppercase font-semibold text-slate-500">BTC-sale window opens (aggregate basis)</div>' +
+                    '<div class="text-xs text-slate-500 mt-0.5">First-line cash service exhausts — Phase 2 BTC sales begin</div>' +
+                    '<div class="text-3xl font-bold mt-2 ' + saleStartCls + '">' + (saleStart || '—') + '</div>' +
+                    '<div class="text-xs text-slate-500 mt-1 font-mono">' +
+                        (totalMonths != null ? '~' + totalMonths.toFixed(1) + ' months out · ' : '') +
+                        'zero-issuance assumption' +
                     '</div>' +
-                    seqLine +
+                '</div>';
+
+            var cashDetail =
+                '<div class="text-sm text-slate-700 dark:text-slate-200 mb-2">' +
+                    '<span class="font-bold ' + monthsCls + '">' + (totalMonths != null ? '~' + totalMonths.toFixed(1) + ' months' : '—') + '</span> ' +
+                    'until BTC sales operationally required. ' +
+                    'Cash <span class="font-mono">' + cashTxt + '</span> as of <span class="font-mono">' + asOf + '</span>.' +
+                '</div>';
+
+            var cashCaption =
+                '<div class="text-xs text-slate-500 italic leading-relaxed">' +
+                    'STRC dividends are serviced from Strategy\'s cash buffer first; BTC sales activate only when cash exhausts. ' +
+                    'This is the binding near-term signal for STRC holders — BTC sales trigger reflexive BTC-price feedback (see strc.md §V). ' +
+                    '<a href="?asset=mstr" class="text-blue-500 hover:underline">→ Full sequenced waterfall + Phase 2 BTC-stack detail on MSTR dashboard</a>' +
+                '</div>';
+
+            cashSubPanel =
+                '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4 mt-4 bg-slate-50/40 dark:bg-slate-800/30">' +
+                    '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Strategy cash service horizon <span class="text-xs font-normal text-slate-500">— Phase 1 buffer before BTC sales activate</span></div>' +
+                    saleStartCard +
+                    cashDetail +
+                    cashCaption +
                 '</div>';
         }
 
@@ -949,8 +971,8 @@ var STRCRenderer = {
         return '<div class="panel">' +
             '<div class="panel-title">STRC dividend obligation + runway <span class="text-xs font-normal text-slate-500">— STRC-slice cash service</span></div>' +
             headline +
+            cashSubPanel +
             ceilingSubPanel +
-            cashCallout +
             footer +
         '</div>';
     },
