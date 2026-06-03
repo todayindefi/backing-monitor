@@ -1059,17 +1059,13 @@ var ApyxRenderer = {
     // ============================================================
     // §2b STRC Concentration Stress Lens
     //
-    // Calibrates scenarios to STRC's actual historical trading band
-    // (~$90–$100), not tail magnitudes. The scenario cards correspond
-    // to STRC at $97 / $95 / $93 / $90, giving finer granularity around
-    // the current secondary-market mark before the historical-floor card.
-    // With STRC ~60% of reserves and the buffer thin (low single-digit
-    // $M on a several-hundred-$M book), moves inside the historical band
-    // already chew the buffer; this lens makes that sensitivity legible
-    // without anchoring the reader's eye to off-distribution tail scenarios
-    // (the External Watch tile below carries the tail-risk story). Reads
-    // already-present backing_attestation fields plus an async STRC dashboard
-    // anchor from data/strc_backing.json when available.
+    // Splits the near-par baseline into Attested (Accountable's par-anchored
+    // STRC bucket) and Live mark (that same bucket repriced by STRC's
+    // secondary-market mark from the sibling STRC dashboard). The "you are
+    // here" indicator belongs on Live mark, not Attested: Attested is what
+    // Accountable reports, while Live is what the STRC bucket is worth at
+    // market right now. Hypothetical downside cards then step through the
+    // historical band ($95 / $93 / $90), not off-distribution tail scenarios.
     // ============================================================
     _renderStressLens: function(specific, slug) {
         var ba = specific.backing_attestation || {};
@@ -1083,11 +1079,11 @@ var ApyxRenderer = {
         if (!supplyUsd || strc === 0) return '';
 
         var scenarios = [
-            { label: 'Current',          mult: 1.00, isBaseline: true },
-            { label: '−3% STRC ($97)',   mult: 0.97 },
-            { label: '−5% STRC ($95)',   mult: 0.95 },
-            { label: '−7% STRC ($93)',   mult: 0.93 },
-            { label: '−10% STRC ($90)',  mult: 0.90 }
+            { label: 'Attested (at par)',  mult: 1.00, kind: 'attested' },
+            { label: '● Live mark',        mult: null, kind: 'live' },
+            { label: '−5% STRC ($95)',     mult: 0.95, kind: 'hypothetical' },
+            { label: '−7% STRC ($93)',     mult: 0.93, kind: 'hypothetical' },
+            { label: '−10% STRC ($90)',    mult: 0.90, kind: 'hypothetical' }
         ];
 
         var fmtUsdM = function(v) {
@@ -1095,47 +1091,67 @@ var ApyxRenderer = {
             return sign + '$' + (Math.abs(v) / 1e6).toFixed(2) + 'M';
         };
 
-        var cardsHtml = scenarios.map(function(sc) {
-            var backing = nonStrc + strc * sc.mult;
-            var cr = (backing / supplyUsd) * 100;
-            var buffer = backing - supplyUsd;
-
-            // Visual hierarchy: baseline keeps tier-driven color so a real CR
-            // drop still surfaces (Current would render amber/red on its own
-            // merits). Non-baseline cards force muted slate regardless of
-            // their hypothetical CR, so the reader's eye lands on Current.
-            var crCls, badgeCls;
-            if (sc.isBaseline) {
-                if (cr >= 100) {
-                    crCls = 'text-green-600';
-                    badgeCls = 'bg-green-50 border-green-200';
-                } else if (cr >= 90) {
-                    crCls = 'text-amber-600';
-                    badgeCls = 'bg-amber-50 border-amber-200';
-                } else {
-                    crCls = 'text-red-600';
-                    badgeCls = 'bg-red-50 border-red-200';
-                }
-            } else {
-                crCls = 'text-slate-600 dark:text-slate-300';
-                badgeCls = 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700';
+        var tierClasses = function(cr) {
+            if (cr >= 100) {
+                return {
+                    crCls: 'text-green-600',
+                    badgeCls: 'bg-green-50 border-green-200'
+                };
             }
+            if (cr >= 90) {
+                return {
+                    crCls: 'text-amber-600',
+                    badgeCls: 'bg-amber-50 border-amber-200'
+                };
+            }
+            return {
+                crCls: 'text-red-600',
+                badgeCls: 'bg-red-50 border-red-200'
+            };
+        };
+        var mutedClasses = {
+            crCls: 'text-slate-600 dark:text-slate-300',
+            badgeCls: 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+        };
 
-            var labelEmphasis = sc.isBaseline
+        var cardsHtml = scenarios.map(function(sc) {
+            var isLive = sc.kind === 'live';
+            var backing = isLive ? null : nonStrc + strc * sc.mult;
+            var cr = isLive ? null : (backing / supplyUsd) * 100;
+            var buffer = isLive ? null : backing - supplyUsd;
+
+            var classes = (sc.kind === 'attested' || sc.kind === 'hypothetical')
+                ? mutedClasses
+                : mutedClasses;
+            var labelEmphasis = (sc.kind === 'attested')
                 ? 'text-slate-700 font-semibold'
                 : 'text-slate-500';
+            var label = (sc.kind === 'hypothetical') ? 'If ' + sc.label : sc.label;
+            var subLine = '';
+            var hereIndicator = '';
+            var cardId = '';
+            var extraAttrs = '';
+            var crHtml = isLive ? '—' : cr.toFixed(2) + '%';
+            var bufferHtml = isLive ? '—' : fmtUsdM(buffer);
 
-            var label = sc.isBaseline ? sc.label : 'If ' + sc.label;
+            if (sc.kind === 'attested') {
+                subLine = '<div class="text-[10px] text-slate-400 mt-0.5">Accountable feed</div>';
+            } else if (sc.kind === 'live') {
+                cardId = ' id="apyx-stress-card-live"';
+                extraAttrs =
+                    ' data-supply-usd="' + supplyUsd + '"' +
+                    ' data-strc-usd="' + strc + '"' +
+                    ' data-nonstrc-usd="' + nonStrc + '"';
+                subLine = '<div class="apyx-stress-card-live-subline text-[10px] text-slate-400 mt-0.5">loading…</div>';
+                hereIndicator = '<div class="apyx-stress-card-live-here text-[10px] text-green-700 dark:text-green-400 font-medium mt-0.5 hidden"></div>';
+            }
 
-            var hereIndicator = sc.isBaseline
-                ? '<div class="text-[10px] text-green-700 dark:text-green-400 font-medium mt-0.5">● you are here</div>'
-                : '';
-
-            return '<div class="rounded-lg border ' + badgeCls + ' p-3">' +
+            return '<div' + cardId + extraAttrs + ' class="rounded-lg border ' + classes.badgeCls + ' p-3">' +
                 '<div class="text-xs uppercase ' + labelEmphasis + '">' + label + '</div>' +
+                subLine +
                 hereIndicator +
-                '<div class="text-2xl font-bold ' + crCls + ' mt-1">' + cr.toFixed(2) + '%</div>' +
-                '<div class="text-xs text-slate-500 mt-0.5 font-mono">' + fmtUsdM(buffer) + '</div>' +
+                '<div class="apyx-stress-card-cr text-2xl font-bold ' + classes.crCls + ' mt-1">' + crHtml + '</div>' +
+                '<div class="apyx-stress-card-buffer text-xs text-slate-500 mt-0.5 font-mono">' + bufferHtml + '</div>' +
             '</div>';
         }).join('');
 
@@ -1144,8 +1160,10 @@ var ApyxRenderer = {
             methodology =
                 '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
                 'STRC is Strategy\'s variable-rate perpetual preferred and the largest single-issuer ' +
-                'concentration in Apyx\'s reserves. The live STRC line above anchors where the market is ' +
-                'now; scenario cards then step through the historical band with $97 / $95 / $93 / $90 ' +
+                'concentration in Apyx\'s reserves. Accountable attests the STRC bucket at par, while ' +
+                'STRC\'s secondary market can trade below par; the Live mark card reprices that bucket by ' +
+                'the sibling STRC dashboard\'s live price. The wedge between Attested and Live is the gap ' +
+                'between reported and at-market collateralization. Downside cards then step through $95 / $93 / $90 ' +
                 'marks. At current composition (STRC ≈ 61% of reserves on ' +
                 'the $' + (supplyUsd / 1e6).toFixed(1) + 'M supply, with a low single-digit $M absolute buffer), ' +
                 'even moves inside the historical band push CR meaningfully under par — this lens is for ' +
@@ -1157,8 +1175,10 @@ var ApyxRenderer = {
             methodology =
                 '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
                 'apyUSD inherits backing through the apxUSD wrapper, so the same STRC band applies to ' +
-                'your shares. The live STRC line above anchors where the market is now; scenario cards ' +
-                'then step through the historical band with $97 / $95 / $93 / $90 marks. Cards show ' +
+                'your shares. Accountable attests the STRC bucket at par, while STRC\'s secondary market ' +
+                'can trade below par; the Live mark card reprices that bucket by the sibling STRC dashboard\'s ' +
+                'live price. The wedge between Attested and Live is the gap between reported and at-market ' +
+                'collateralization. Downside cards then step through $95 / $93 / $90 marks. Cards show ' +
                 'resulting apxUSD-side collateralization and USD buffer; in stressed ' +
                 'redemption your NAV per share would proportionally reflect the backing shortfall. ' +
                 'MSTR equity price and STRC dividend health are the leading indicators per ' +
@@ -1182,8 +1202,48 @@ var ApyxRenderer = {
 
     _loadStressLensStrcAnchor: function() {
         var target = document.getElementById('apyx-strc-live-anchor');
-        if (!target) return;
+        var liveCard = document.getElementById('apyx-stress-card-live');
+        if (!target && !liveCard) return;
         var nocache = Math.floor(Date.now() / 60000);
+
+        var fmtUsdM = function(v) {
+            var sign = v >= 0 ? '+' : '−';
+            return sign + '$' + (Math.abs(v) / 1e6).toFixed(2) + 'M';
+        };
+        var tierClasses = function(cr) {
+            if (cr >= 100) {
+                return {
+                    crCls: 'text-green-600',
+                    badgeCls: 'bg-green-50 border-green-200'
+                };
+            }
+            if (cr >= 90) {
+                return {
+                    crCls: 'text-amber-600',
+                    badgeCls: 'bg-amber-50 border-amber-200'
+                };
+            }
+            return {
+                crCls: 'text-red-600',
+                badgeCls: 'bg-red-50 border-red-200'
+            };
+        };
+        var setLiveUnavailable = function() {
+            if (!liveCard) return;
+            var sub = liveCard.querySelector('.apyx-stress-card-live-subline');
+            var crEl = liveCard.querySelector('.apyx-stress-card-cr');
+            var bufEl = liveCard.querySelector('.apyx-stress-card-buffer');
+            var here = liveCard.querySelector('.apyx-stress-card-live-here');
+            if (sub) {
+                sub.innerHTML = 'Live mark unavailable — <a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard &rarr;</a>';
+            }
+            if (crEl) crEl.textContent = '—';
+            if (bufEl) bufEl.textContent = '—';
+            if (here) {
+                here.textContent = '';
+                here.classList.add('hidden');
+            }
+        };
 
         Promise.all([
             fetch('data/strc_backing.json?nocache=' + nocache)
@@ -1194,9 +1254,12 @@ var ApyxRenderer = {
             var secondary = strcData && strcData.tradfi && strcData.tradfi.strc_secondary;
             var price = secondary ? Number(secondary.price_usd) : NaN;
             if (!secondary || secondary.price_usd == null || !isFinite(price)) {
-                target.innerHTML =
-                    'Live STRC secondary price unavailable; scenario cards remain hypothetical writedown marks. ' +
-                    '<a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard &rarr;</a>';
+                if (target) {
+                    target.innerHTML =
+                        'Live STRC secondary price unavailable; scenario cards remain hypothetical writedown marks. ' +
+                        '<a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard &rarr;</a>';
+                }
+                setLiveUnavailable();
                 return;
             }
 
@@ -1205,10 +1268,44 @@ var ApyxRenderer = {
             if (bps != null) {
                 bpsTxt = ' (' + (bps > 0 ? '+' : '') + bps + ' bps to par)';
             }
-            target.innerHTML =
-                'Live STRC secondary price: <span class="font-mono font-semibold text-slate-700 dark:text-slate-200">$' +
-                price.toFixed(2) + '</span>' + bpsTxt +
-                ' · <a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard &rarr;</a>';
+            if (target) {
+                target.innerHTML =
+                    'STRC: <span class="font-mono font-semibold text-slate-700 dark:text-slate-200">$' +
+                    price.toFixed(2) + '</span>' + bpsTxt +
+                    ' · <a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard &rarr;</a>';
+            }
+
+            if (liveCard) {
+                var supplyUsd = Number(liveCard.getAttribute('data-supply-usd'));
+                var strcUsd = Number(liveCard.getAttribute('data-strc-usd'));
+                var nonStrcUsd = Number(liveCard.getAttribute('data-nonstrc-usd'));
+                var parUsd = secondary.par_usd != null ? Number(secondary.par_usd) : 100;
+                var liveMult = parUsd > 0 ? price / parUsd : NaN;
+                if (!isFinite(supplyUsd) || !isFinite(strcUsd) || !isFinite(nonStrcUsd) || !isFinite(liveMult)) {
+                    setLiveUnavailable();
+                    return;
+                }
+
+                var liveBacking = nonStrcUsd + strcUsd * liveMult;
+                var liveCr = (liveBacking / supplyUsd) * 100;
+                var liveBuffer = liveBacking - supplyUsd;
+                var cls = tierClasses(liveCr);
+                liveCard.className = 'rounded-lg border ' + cls.badgeCls + ' p-3';
+                var crEl = liveCard.querySelector('.apyx-stress-card-cr');
+                var bufEl = liveCard.querySelector('.apyx-stress-card-buffer');
+                var sub = liveCard.querySelector('.apyx-stress-card-live-subline');
+                var here = liveCard.querySelector('.apyx-stress-card-live-here');
+                if (crEl) {
+                    crEl.className = 'apyx-stress-card-cr text-2xl font-bold ' + cls.crCls + ' mt-1';
+                    crEl.textContent = liveCr.toFixed(2) + '%';
+                }
+                if (bufEl) bufEl.textContent = fmtUsdM(liveBuffer);
+                if (sub) sub.textContent = '$' + price.toFixed(2) + ' · live STRC / par';
+                if (here) {
+                    here.textContent = '● you are here';
+                    here.classList.remove('hidden');
+                }
+            }
         });
     },
 
