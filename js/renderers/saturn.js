@@ -1532,10 +1532,10 @@ var SaturnRenderer = {
     // ============================================================
     // §4 Secondary Market
     // ============================================================
-    _renderSecondaryMarket: function(specific, slug) {
+    _renderSecondaryMarket: function(specific, s, slug) {
         return '<div class="panel">' +
             '<div class="panel-title">Secondary Market</div>' +
-            SaturnRenderer._renderSecondaryMarketInner(specific, slug) +
+            SaturnRenderer._renderSecondaryMarketInner(specific, s, slug) +
         '</div>';
     },
 
@@ -1543,8 +1543,9 @@ var SaturnRenderer = {
     // and the consolidated Liquidity parent's Depth sub-section (USDat).
     // Returns the inner content with no panel/title wrap; returns the empty
     // "No Curve pool data" placeholder directly when pool data is missing.
-    _renderSecondaryMarketInner: function(specific, slug) {
+    _renderSecondaryMarketInner: function(specific, s, slug) {
         var sec = specific.secondary || {};
+        s = s || {};
         var slip = specific.slippage_tiers || {};
         var pool, secondPool, headlineMetric, quoteKey, pairLabel;
 
@@ -1690,7 +1691,7 @@ var SaturnRenderer = {
             SaturnRenderer._renderLiquidityPegSection(specific, s, slug) +
             divider +
             '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">Secondary Market Depth</h3>' +
-            SaturnRenderer._renderLiquidityDepthSection(specific, slug) +
+            SaturnRenderer._renderLiquidityDepthSection(specific, s, slug) +
         '</div>';
     },
 
@@ -1838,8 +1839,8 @@ var SaturnRenderer = {
 
     // Depth sub-section — wraps the shared Secondary Market inner body
     // (headline tile + pool meta + slippage tiers + methodology note).
-    _renderLiquidityDepthSection: function(specific, slug) {
-        return SaturnRenderer._renderSecondaryMarketInner(specific, slug);
+    _renderLiquidityDepthSection: function(specific, s, slug) {
+        return SaturnRenderer._renderSecondaryMarketInner(specific, s, slug);
     },
 
     _liquidityReconciliationBadge: function(delta) {
