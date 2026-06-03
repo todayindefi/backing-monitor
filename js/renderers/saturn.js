@@ -125,6 +125,34 @@ var SaturnRenderer = {
     _pegPctText:     function(pct, d)   { return CommonRenderer.pegPctText(pct, d); },
     _pegPctClass:    function(state)    { return CommonRenderer.pegPctClass(state); },
 
+    // Stored discount_to_nav_pct = (NAV - price) / NAV * 100, positive = discount.
+    // Display convention is price-vs-NAV: positive = premium, negative = discount.
+    _navDevDisplay: function(nav, price, storedDiscount) {
+        if (nav != null && price != null && nav > 0) {
+            return (price - nav) / nav * 100;
+        }
+        return storedDiscount != null ? -storedDiscount : null;
+    },
+
+    _navDevState: function(disp) {
+        if (disp == null) return 'unknown';
+        if (disp >= 0) {
+            if (disp < 1.0) return 'ok';
+            if (disp < 3.0) return 'warn';
+            return 'critical';
+        }
+        var a = -disp;
+        if (a < 0.5) return 'ok';
+        if (a < 1.5) return 'warn';
+        return 'critical';
+    },
+
+    _navDevWord: function(disp) {
+        if (disp == null) return '—';
+        if (Math.abs(disp) < 0.05) return 'at NAV';
+        return disp > 0 ? 'premium · trades above NAV' : 'discount · trades below NAV';
+    },
+
     // ============================================================
     // pre-render — runs before common renderer paints
     // ============================================================
@@ -1135,8 +1163,8 @@ var SaturnRenderer = {
     // §4b Peg Performance — 30d history
     //
     // USDat: Curve-derived peg vs $1.00 (fixed-peg model).
-    // sUSDat: discount-to-NAV vs 0% baseline (vault-share — absolute
-    // price vs $1 would understate the discount because NAV grows).
+    // sUSDat: price-vs-NAV vs 0% baseline (vault-share — absolute price vs
+    // $1 would mis-state the gap because NAV grows).
     // Sources from {slug}_backing_history.json — same file the NAV
     // trajectory chart loads on sUSDat, browser HTTP cache makes the
     // second fetch effectively free.
@@ -1181,19 +1209,18 @@ var SaturnRenderer = {
                     'CoinGecko aggregate price for short-window observation — analyzer reads pool state directly.' +
                 '</div>';
         } else {
-            // sUSDat — discount-to-NAV, not absolute price.
+            // sUSDat — price-vs-NAV, not absolute price.
             var sec = specific.secondary || {};
             var poolPrice = sec.curve_susdat_usdc && sec.curve_susdat_usdc.implied_price;
-            var d = s.discount_to_nav_pct;
-            var dState = (d == null) ? 'unknown' :
-                         (Math.abs(d) < 0.5) ? 'ok' :
-                         (Math.abs(d) < 1.5) ? 'warn' : 'critical';
+            var d = SaturnRenderer._navDevDisplay(s.nav_per_share, s.peg_curve_usdc, s.discount_to_nav_pct);
+            var dState = SaturnRenderer._navDevState(d);
             var dCls = SaturnRenderer._pegPctClass(dState);
+            var dWord = SaturnRenderer._navDevWord(d);
             headline =
                 '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">' +
-                    '<div class="summary-card"><div class="card-label">Discount to NAV</div>' +
+                    '<div class="summary-card"><div class="card-label">Price vs NAV</div>' +
                         '<div class="card-value ' + dCls + '">' + SaturnRenderer._pegPctText(d, 3) + '</div>' +
-                        '<div class="text-xs text-slate-400 mt-0.5">Curve sUSDat/USDC vs NAV</div>' +
+                        '<div class="text-xs text-slate-500 mt-0.5">' + dWord + ' · Curve sUSDat/USDC vs contract NAV</div>' +
                         '<div class="mt-1">' + SaturnRenderer._statusPill(SaturnRenderer._pegStatusLabel(dState), dState) + '</div>' +
                     '</div>' +
                     '<div class="summary-card"><div class="card-label">Current NAV</div>' +
@@ -1208,14 +1235,15 @@ var SaturnRenderer = {
                         '</div>' +
                         '<div class="text-xs text-slate-400 mt-1">Curve sUSDat/USDC spot</div></div>' +
                 '</div>';
-            chartTitle = '30-day discount-to-NAV (sUSDat)';
+            chartTitle = '30-day price vs NAV (sUSDat)';
             methodology =
                 '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
-                    '<strong>Vault-share peg is measured as discount-to-NAV, not absolute price vs $1.00.</strong> ' +
+                    '<strong>Vault-share peg is measured against contract NAV, not $1.00.</strong> ' +
                     'NAV accrues over time (currently ~$' + (s.nav_per_share != null ? s.nav_per_share.toFixed(4) : '1.0007') +
-                    ' and growing under the 11% APY design target), so absolute-price comparisons would understate ' +
-                    'the true discount. A persistent small positive discount typically reflects the 30-day vesting ' +
-                    'queue — arbs can\'t close the gap atomically — and is not a peg break.' +
+                    ' and growing under the 11% APY design target), so absolute-price comparisons would mis-state ' +
+                    'the true gap. Positive (+) = premium: market paying above NAV, often when buyers want to skip ' +
+                    'the 30-day vesting queue. Negative (-) = discount: market trading below NAV. A persistent small ' +
+                    'discount is not a peg break.' +
                 '</div>';
         }
 
@@ -1362,7 +1390,8 @@ var SaturnRenderer = {
     _drawSusdatDiscountChart: function(ctx, entries, s) {
         var cutoff = Date.now() - 30 * 24 * 3600 * 1000;
         var windowed = entries.filter(function(e) {
-            if (e.discount_to_nav_pct == null) return false;
+            if (e.discount_to_nav_pct == null &&
+                (e.nav_per_share == null || e.peg_curve_usdc == null || e.nav_per_share <= 0)) return false;
             var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
             return new Date(ts).getTime() >= cutoff;
         });
@@ -1375,20 +1404,23 @@ var SaturnRenderer = {
             var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
             return new Date(ts);
         });
-        var values = windowed.map(function(e) { return e.discount_to_nav_pct; });
+        var values = windowed.map(function(e) {
+            return SaturnRenderer._navDevDisplay(e.nav_per_share, e.peg_curve_usdc, e.discount_to_nav_pct);
+        });
         var navMap = windowed.map(function(e) { return e.nav_per_share; });
         var priceMap = windowed.map(function(e) { return e.peg_curve_usdc; });
 
         // Y range — anchored at 0% with ±2% padding default, auto-rescale if real
         // data widens.
-        var absMax = Math.max.apply(null, values.map(function(v) { return Math.abs(v); }));
+        var absMax = Math.max.apply(null, values.map(function(v) { return Math.abs(v || 0); }));
         var padPct = Math.max(2.0, absMax * 1.2);
 
         var pointColors = values.map(function(v) {
-            var absV = Math.abs(v);
-            if (absV < 0.5) return '#3b82f6';
-            if (absV < 1.5) return '#f59e0b';
-            return '#ef4444';
+            var st = SaturnRenderer._navDevState(v);
+            if (st === 'ok')       return '#3b82f6';
+            if (st === 'warn')     return '#f59e0b';
+            if (st === 'critical') return '#ef4444';
+            return '#94a3b8';
         });
 
         if (window._saturnPegChart) {
@@ -1399,7 +1431,7 @@ var SaturnRenderer = {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'Discount to NAV',
+                    label: 'Price vs NAV',
                     data: values,
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.08)',
@@ -1426,7 +1458,7 @@ var SaturnRenderer = {
                         grid: { color: '#f1f5f9' },
                         suggestedMin: -padPct,
                         suggestedMax:  padPct,
-                        title: { display: true, text: 'Discount to NAV (%)', font: { size: 11 } },
+                        title: { display: true, text: 'Price vs NAV (%) - positive premium · negative discount', font: { size: 11 } },
                         ticks: {
                             font: { size: 11 },
                             callback: function(v) { return (v > 0 ? '+' : '') + Number(v).toFixed(2) + '%'; }
@@ -1443,8 +1475,9 @@ var SaturnRenderer = {
                                 var p   = priceMap[idx];
                                 var dev = c.raw;
                                 var sign = dev >= 0 ? '+' : '';
+                                var word = SaturnRenderer._navDevWord(dev);
                                 return [
-                                    'Discount: ' + sign + Number(dev).toFixed(3) + '%',
+                                    sign + Number(dev).toFixed(3) + '% · ' + word,
                                     'NAV: ' + (nav != null ? Number(nav).toFixed(6) : '—'),
                                     'Curve: ' + (p != null ? '$' + Number(p).toFixed(4) : '—')
                                 ];
@@ -1456,7 +1489,7 @@ var SaturnRenderer = {
                             zero: {
                                 type: 'line', yMin: 0, yMax: 0,
                                 borderColor: '#94a3b8', borderWidth: 1, borderDash: [4, 4],
-                                label: { content: 'NAV (0%)', display: true, position: 'end', font: { size: 9 }, color: '#64748b' }
+                                label: { content: 'NAV', display: true, position: 'end', font: { size: 9 }, color: '#64748b' }
                             }
                         }
                     }
@@ -1525,14 +1558,14 @@ var SaturnRenderer = {
             secondPool = sec.curve_susdat_frxusd;
             quoteKey = 'susdat_to_usdc';
             pairLabel = 'sUSDat → USDC';
-            headlineMetric = 'discount_to_nav';
+            headlineMetric = 'price_vs_nav';
         }
 
         if (!pool) {
             return '<div class="text-xs text-slate-400 italic">No Curve pool data in this snapshot.</div>';
         }
 
-        // Headline tile — price (USDat) vs discount-to-NAV (sUSDat) per the
+        // Headline tile — price (USDat) vs price-vs-NAV (sUSDat) per the
         // vault-share peg-metric rule.
         var headlineTile;
         if (headlineMetric === 'price') {
@@ -1547,18 +1580,15 @@ var SaturnRenderer = {
                     '<div class="mt-1">' + SaturnRenderer._statusPill(SaturnRenderer._pegStatusLabel(pegState), pegState) + '</div>' +
                 '</div>';
         } else {
-            // sUSDat: discount-to-NAV is the headline (not price vs $1).
-            var d = pool.discount_to_nav_pct;
-            // Vault-share discount: small positive discount is normal (cooldown-arb structural).
-            // Use the same classification as price deviation for now — Layer-1 alerter thresholds.
-            var dState = (d == null) ? 'unknown' :
-                         (Math.abs(d) < 0.5) ? 'ok' :
-                         (Math.abs(d) < 1.5) ? 'warn' : 'critical';
+            // sUSDat: display price-vs-NAV, while stored discount_to_nav_pct is NAV-price.
+            var d = SaturnRenderer._navDevDisplay(s.nav_per_share, pool.implied_price, pool.discount_to_nav_pct);
+            var dState = SaturnRenderer._navDevState(d);
             var dCls = SaturnRenderer._pegPctClass(dState);
+            var dWord = SaturnRenderer._navDevWord(d);
             headlineTile =
-                '<div class="summary-card"><div class="card-label">Discount to NAV</div>' +
+                '<div class="summary-card"><div class="card-label">Price vs NAV</div>' +
                     '<div class="card-value ' + dCls + '">' + SaturnRenderer._pegPctText(d, 3) + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-0.5">Curve sUSDat/USDC vs contract NAV</div>' +
+                    '<div class="text-xs text-slate-500 mt-0.5">' + dWord + ' · Curve sUSDat/USDC vs contract NAV</div>' +
                     '<div class="mt-1">' + SaturnRenderer._statusPill(SaturnRenderer._pegStatusLabel(dState), dState) + '</div>' +
                 '</div>';
         }
@@ -1627,9 +1657,10 @@ var SaturnRenderer = {
 
         var note = (slug === 'susdat') ?
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
-                'Discount-to-NAV is the meaningful metric for a vault share — Curve sUSDat/USDC spot ' +
-                'is not "the peg" because 1 sUSDat ≠ $1 by design. Persistent discount typically ' +
-                'reflects the 30-day vesting queue (arbs can\'t close the gap atomically), not a backing problem.' +
+                'Price-vs-NAV is the meaningful metric for a vault share — Curve sUSDat/USDC spot ' +
+                'is not "the peg" because 1 sUSDat ≠ $1 by design. Positive (+) = premium above NAV; ' +
+                'negative (-) = discount below NAV. Persistent small discount typically reflects the 30-day ' +
+                'vesting queue (arbs can\'t close the gap atomically), not a backing problem.' +
             '</div>' : '';
 
         return topRow + slipBlock + note;
@@ -1648,9 +1679,9 @@ var SaturnRenderer = {
     // ============================================================
     _renderLiquidity: function(specific, s, slug) {
         var divider = '<div class="border-t border-slate-200 pt-6 mt-6"></div>';
-        // Vault-share peg metric is discount-to-NAV, not absolute price vs $1 —
+        // Vault-share peg metric is price-vs-NAV, not absolute price vs $1 —
         // the sub-section heading reflects that for sUSDat.
-        var pegHeading = (slug === 'susdat') ? 'Discount to NAV' : 'Peg Performance';
+        var pegHeading = (slug === 'susdat') ? 'Price vs NAV' : 'Peg Performance';
         return '<div class="panel">' +
             '<div class="panel-title">Liquidity</div>' +
             SaturnRenderer._renderLiquidityScoreSection(specific, s, slug) +

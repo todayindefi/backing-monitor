@@ -120,14 +120,32 @@ var UsdaiRenderer = {
         return 'critical';
     },
 
-    // discount_to_nav_pct is already a PERCENT (0.0254 = 0.0254%): small premium/
-    // discount is structural for an async vault behind a redemption queue.
-    _discountState: function(pct) {
-        if (pct == null) return 'unknown';
-        var a = Math.abs(pct);
+    // Stored discount_to_nav_pct = (NAV - price) / NAV * 100, positive = discount.
+    // Display convention is price-vs-NAV: positive = premium, negative = discount.
+    _navDevDisplay: function(nav, price, storedDiscount) {
+        if (nav != null && price != null && nav > 0) {
+            return (price - nav) / nav * 100;
+        }
+        return storedDiscount != null ? -storedDiscount : null;
+    },
+
+    _navDevState: function(disp) {
+        if (disp == null) return 'unknown';
+        if (disp >= 0) {
+            if (disp < 1.0) return 'ok';
+            if (disp < 3.0) return 'warn';
+            return 'critical';
+        }
+        var a = -disp;
         if (a < 0.5) return 'ok';
         if (a < 1.5) return 'warn';
         return 'critical';
+    },
+
+    _navDevWord: function(disp) {
+        if (disp == null) return '—';
+        if (Math.abs(disp) < 0.05) return 'at NAV';
+        return disp > 0 ? 'premium · above NAV' : 'discount · below NAV';
     },
 
     // api divergence is a PERCENT: <2% ok, <5% watch (a gap is itself signal).
@@ -398,8 +416,10 @@ var UsdaiRenderer = {
                 '<div class="text-xs text-slate-500 mt-1">Permian Labs · ERC-7540 vault over USDai — GPU/equipment loan book (MetaStreet engine)</div>';
 
             var nav = s.nav_per_share;
-            var dState = UsdaiRenderer._discountState(s.discount_to_nav_pct);
+            var d = UsdaiRenderer._navDevDisplay(s.nav_per_share, s.peg_secondary_px, s.discount_to_nav_pct);
+            var dState = UsdaiRenderer._navDevState(d);
             var dCls = UsdaiRenderer._stateTextCls(dState);
+            var dWord = UsdaiRenderer._navDevWord(d);
 
             metricsRow =
                 '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
@@ -409,9 +429,9 @@ var UsdaiRenderer = {
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">NAV per share</div>' +
                         '<div class="text-lg font-bold text-slate-800">' + (nav != null ? nav.toFixed(6) : '—') + '</div>' +
                         '<div class="text-xs text-slate-500 mt-0.5 font-mono">convertToAssets(1e18)</div></div>' +
-                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Discount to NAV</div>' +
-                        '<div class="text-lg font-bold ' + dCls + '">' + UsdaiRenderer._pegPctText(s.discount_to_nav_pct, 3) + '</div>' +
-                        '<div class="text-xs text-slate-400 mt-0.5">secondary vs contract NAV</div></div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Price vs NAV</div>' +
+                        '<div class="text-lg font-bold ' + dCls + '">' + UsdaiRenderer._pegPctText(d, 3) + '</div>' +
+                        '<div class="text-xs text-slate-500 mt-0.5">' + dWord + '</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
                         '<div class="text-lg">' + UsdaiRenderer._statusPill(pausedLabel, pausedState) + '</div></div>' +
                 '</div>';
@@ -862,16 +882,18 @@ var UsdaiRenderer = {
         var quoteKey = isVault ? 'susdai_to_usdc' : 'usdai_to_usdc';
         var pairLabel = isVault ? 'sUSDai → USDC' : 'USDai → USDC';
 
-        // Headline tile: discount-to-NAV (sUSDai) vs price-vs-$1 (USDai).
+        // Headline tile: price-vs-NAV (sUSDai) vs price-vs-$1 (USDai).
         var headlineTile;
         if (isVault) {
-            var disc = sec.discount_to_nav_pct;
-            var dState = UsdaiRenderer._discountState(disc);
+            var nav = specific.nav_per_share;
+            var disc = UsdaiRenderer._navDevDisplay(nav, sec.price_usd, sec.discount_to_nav_pct);
+            var dState = UsdaiRenderer._navDevState(disc);
             var dCls = UsdaiRenderer._pegPctClass(dState);
+            var dWord = UsdaiRenderer._navDevWord(disc);
             headlineTile =
-                '<div class="summary-card"><div class="card-label">Discount to NAV</div>' +
+                '<div class="summary-card"><div class="card-label">Price vs NAV</div>' +
                     '<div class="card-value ' + dCls + '">' + UsdaiRenderer._pegPctText(disc, 3) + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-0.5">secondary px ' +
+                    '<div class="text-xs text-slate-500 mt-0.5">' + dWord + ' · secondary px ' +
                         (sec.price_usd != null ? '$' + sec.price_usd.toFixed(4) : '—') + ' vs contract NAV</div>' +
                     '<div class="mt-1">' + UsdaiRenderer._statusPill(UsdaiRenderer._pegStatusLabel(dState), dState) + '</div>' +
                 '</div>';
@@ -940,8 +962,9 @@ var UsdaiRenderer = {
                 'at par through the secondary market alone — expect material slippage approaching $500k. Quotes via ' +
                 (sec.source || 'GeckoTerminal') + '/KyberSwap. ' +
                 (isVault ?
-                    'For a vault share, discount-to-NAV (not price-vs-$1) is the meaningful peg metric — 1 sUSDai ≠ $1 by ' +
-                    'design, and a persistent discount typically reflects the redemption queue, not a backing problem.' :
+                    'For a vault share, price-vs-NAV (not price-vs-$1) is the meaningful peg metric — 1 sUSDai ≠ $1 by ' +
+                    'design. Positive (+) = premium above NAV; negative (-) = discount below NAV. A persistent small ' +
+                    'discount typically reflects the redemption queue, not a backing problem.' :
                     'USDai is a $1 claim; deviation is measured vs $1.00.') +
             '</div>';
 
