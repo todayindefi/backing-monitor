@@ -116,6 +116,28 @@ var ApyxRenderer = {
         '</span>';
     },
 
+    _provenancePill: function(kind) {
+        var cfg = {
+            tee: {
+                label: 'TEE-attested (MTM)',
+                cls: 'bg-blue-50 text-blue-700 border-blue-200',
+                title: 'Accountable TEE proof-of-solvency feed. Values are mark-to-market per Accountable NAV docs; per-instrument pricing rules are not disclosed in the public feed.'
+            },
+            cpa: {
+                label: 'CPA-attested',
+                cls: 'bg-violet-50 text-violet-700 border-violet-200',
+                title: 'Wolf & Company monthly AICPA examination.'
+            },
+            onchain: {
+                label: 'On-chain',
+                cls: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                title: 'Read directly from contract state by the analyzer.'
+            }
+        }[kind];
+        if (!cfg) return '';
+        return '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium border ' + cfg.cls + ' cursor-help" title="' + cfg.title + '">' + cfg.label + '</span>';
+    },
+
     // R13: inject an id into the outermost <div class="panel"> of a
     // rendered panel so the anchor nav can jump-link to it. Idempotent —
     // if the html doesn't lead with <div class="panel">, it's returned
@@ -513,6 +535,7 @@ var ApyxRenderer = {
         var pausedState = vs.paused ? 'critical' : 'ok';
         var pausedLabel = vs.paused ? 'PAUSED' : 'Active';
         var chainBadges = ApyxRenderer._chainBadge('ethereum') + ' ' + ApyxRenderer._chainBadge('base');
+        var teePill = ApyxRenderer._provenancePill('tee');
 
         var headerLeft, metricsRow, captureRow = '';
 
@@ -528,6 +551,7 @@ var ApyxRenderer = {
                         '<div class="text-lg font-bold text-slate-800">' + CommonRenderer.formatCurrency(s.total_backing) + '</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Collateralization</div>' +
                         '<div class="text-lg font-bold ' + crCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 2) + '</div>' +
+                        '<div class="mt-1">' + teePill + '</div>' +
                         // R6: surface the absolute buffer alongside CR — assets/apxusd.md
                         // §Key Risk Notes flags "thin absolute buffer" as a binding
                         // constraint; the percentage form hides how thin the cushion is.
@@ -600,6 +624,9 @@ var ApyxRenderer = {
         var crossState = ba.cross_source_supply_consistency ? 'ok' : 'warn';
         var collat = ba.collateralization_pct;
         var collatCls = (collat != null && collat >= 100) ? 'text-green-600' : 'text-red-600';
+        var teePill = ApyxRenderer._provenancePill('tee');
+        var cpaPill = ApyxRenderer._provenancePill('cpa');
+        var onchainPill = ApyxRenderer._provenancePill('onchain');
 
         var truncKey = ba.signing_key ? (ba.signing_key.slice(0, 10) + '...' + ba.signing_key.slice(-4)) : '—';
 
@@ -607,11 +634,13 @@ var ApyxRenderer = {
             '<div class="flex flex-wrap items-center gap-2 mb-4">' +
                 ApyxRenderer._statusPill('Accountable feed', feedState, ba.source || '') +
                 ApyxRenderer._statusPill('Signing key', keyState, truncKey) +
-                ApyxRenderer._statusPill('Last attested', freshState, ApyxRenderer._formatAge(ba.attestation_age_seconds)) +
+                '<span title="Accountable enclave signing timestamp for this proof-of-solvency snapshot; underlying custodian and pricing observations may have their own observation times.">' +
+                    ApyxRenderer._statusPill('Last attested', freshState, ApyxRenderer._formatAge(ba.attestation_age_seconds)) +
+                '</span>' +
                 '<span class="ml-auto text-xs text-slate-500">' +
                     'Collateralization: <span class="font-mono text-base font-bold ' + collatCls + '">' +
                         CommonRenderer.formatPercent(collat, 2) +
-                    '</span>' +
+                    '</span> ' + teePill +
                 '</span>' +
             '</div>';
 
@@ -651,14 +680,14 @@ var ApyxRenderer = {
                 k +
                 (k === 'STRC' ?
                     ' <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 ml-1 cursor-help" ' +
-                    'title="Bundles brokerage-custodied STRC (at Alpaca) and on-chain STRCx (in a 3-of-6 Gnosis Safe at 0x37b0779a…323a555 — same six owners as Apyx\'s MAINTAINER + ADMIN Safes, verified on-chain). The Accountable feed bundles both into a single STRC figure; the brokerage-vs-on-chain split is disclosed in Wolf & Company\'s monthly attestations (latest: 4/30/2026 — $76.8M STRC + $51.5M STRCx). The STRCx slice is directly observable via balanceOf() on the Safe — see the On-Chain Verified tile below for live numbers.">ⓘ incl. STRCx</span>' :
+                    'title="Bundles brokerage-custodied STRC (at Alpaca) and on-chain STRCx (in a 3-of-6 Gnosis Safe at 0x37b0779a…323a555 — same six owners as Apyx\'s MAINTAINER + ADMIN Safes, verified on-chain). Accountable publishes this as one mark-to-market STRC-family bucket; the public feed does not disclose the per-instrument pricing rule. Wolf & Company discloses the brokerage-vs-on-chain split monthly (latest: 4/30/2026 — $76.8M STRC + $51.5M STRCx). The STRCx slice is directly observable via balanceOf() on the Safe — see the On-Chain Verified tile below.">ⓘ incl. STRCx</span>' :
                     '') +
             '</td>';
             return '<tr>' +
                 nameCell +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(usd) + '</td>' +
                 '<td class="text-right font-mono">' + pct.toFixed(2) + '%</td>' +
-                '<td>' + issuerCell + '</td>' +
+                '<td>' + issuerCell + '<div class="mt-1">' + teePill + '</div></td>' +
             '</tr>';
         }).join('');
         resRows += '<tr class="font-bold border-t-2 border-slate-200">' +
@@ -709,15 +738,15 @@ var ApyxRenderer = {
         var attTs = CommonRenderer.formatDate(ba.attestation_timestamp);
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
-                '<strong>Layer A — Accountable (continuous):</strong> ' +
-                'Real-time TEE-attested proof-of-solvency (' + ACCOUNTABLE_INFO.type + ', on-chain-registered signing key). ' +
-                'Proves the enclave processed and signed the data shown; does not prove the custodian itself is audited, and not a PCAOB-firm attestation. ' +
+                '<div class="not-italic flex flex-wrap gap-2 mb-2">' + teePill + cpaPill + onchainPill + '</div>' +
+                '<strong>TEE-attested (MTM):</strong> Accountable proof-of-solvency feed (' + ACCOUNTABLE_INFO.type + ', on-chain-registered signing key). ' +
+                'Values are mark-to-market per Accountable NAV docs; the public feed does not disclose the per-instrument pricing rule. ' +
+                'The enclave signature proves the feed processed and signed the data shown; it is not a CPA-firm audit. ' +
                 'Last attested ' + attTs + ' · enclave key <span class="font-mono">' + truncKey + '</span>.' +
                 '<br><br>' +
-                '<strong>Layer B — Wolf & Company (point-in-time):</strong> ' +
-                'AICPA-standards monthly examinations, two snapshot dates per month. ' +
-                'Independent CPA-firm corroboration of the figures the Accountable feed produces. ' +
-                'Latest reports and scope detail in the Wolf section above.' +
+                '<strong>CPA-attested:</strong> Wolf & Company monthly AICPA examinations, with reports and scope detail in the Wolf section above.' +
+                '<br>' +
+                '<strong>On-chain:</strong> STRCx Safe balance, bridge supply, pause state, and governance topology are read directly by this analyzer where contract state exposes them.' +
             '</div>';
 
         // Layer B (Wolf) — extends this panel as a sibling section. Static
@@ -749,6 +778,7 @@ var ApyxRenderer = {
         var safe = ba.strcx_safe || {};
         var verifiedUsd = safe.onchain_verified_usd;
         if (verifiedUsd == null) return '';
+        var onchainPill = ApyxRenderer._provenancePill('onchain');
 
         var balanceTokens = safe.balance_strcx;
         var coverageTotal = safe.coverage_pct_of_total_reserves;
@@ -841,7 +871,10 @@ var ApyxRenderer = {
 
         var divider = '<div class="border-t border-slate-200 pt-6 mt-6"></div>';
         return divider +
-            '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">On-Chain Verified</h3>' +
+            '<div class="flex flex-wrap items-center gap-2 mt-0 mb-3">' +
+                '<h3 class="text-sm font-semibold text-slate-900">On-Chain Verified</h3>' +
+                onchainPill +
+            '</div>' +
             tilesRow +
             addressRow +
             methodology;
@@ -1059,11 +1092,10 @@ var ApyxRenderer = {
     // ============================================================
     // §2b STRC Concentration Stress Lens
     //
-    // Splits the near-par baseline into Attested (Accountable's par-anchored
-    // STRC bucket) and a secondary-market mark from the sibling STRC dashboard.
-    // The market mark is only live during NYSE regular hours; after hours it is
-    // the latest available quote. Hypothetical downside cards then step through
-    // the historical band ($95 / $93 / $90), not off-distribution tail scenarios.
+    // Splits the Accountable mark-to-market baseline from relative STRC-bucket
+    // downside shocks. The sibling STRC dashboard quote is shown as a price-
+    // source/freshness check only; the public Apyx feed does not expose the raw
+    // STRC share count needed to reprice the whole bundled STRC + STRCx bucket.
     // ============================================================
     _renderStressLens: function(specific, slug) {
         var ba = specific.backing_attestation || {};
@@ -1077,11 +1109,11 @@ var ApyxRenderer = {
         if (!supplyUsd || strc === 0) return '';
 
         var scenarios = [
-            { label: 'Attested (at par)',  mult: 1.00, kind: 'attested' },
-            { label: 'STRC market mark',   mult: null, kind: 'live' },
-            { label: '−5% STRC ($95)',     mult: 0.95, kind: 'hypothetical' },
-            { label: '−7% STRC ($93)',     mult: 0.93, kind: 'hypothetical' },
-            { label: '−10% STRC ($90)',    mult: 0.90, kind: 'hypothetical' }
+            { label: 'Accountable mark',        mult: 1.00, kind: 'attested' },
+            { label: 'External quote check',    mult: null, kind: 'live' },
+            { label: '−5% from current mark',   mult: 0.95, kind: 'hypothetical' },
+            { label: '−7% from current mark',   mult: 0.93, kind: 'hypothetical' },
+            { label: '−10% from current mark',  mult: 0.90, kind: 'hypothetical' }
         ];
 
         var fmtUsdM = function(v) {
@@ -1133,7 +1165,7 @@ var ApyxRenderer = {
             var bufferHtml = isLive ? '—' : fmtUsdM(buffer);
 
             if (sc.kind === 'attested') {
-                subLine = '<div class="text-[10px] text-slate-400 mt-0.5">Accountable feed</div>';
+                subLine = '<div class="text-[10px] text-slate-400 mt-0.5">TEE MTM feed</div>';
             } else if (sc.kind === 'live') {
                 cardId = ' id="apyx-stress-card-live"';
                 extraAttrs =
@@ -1141,7 +1173,7 @@ var ApyxRenderer = {
                     ' data-strc-usd="' + strc + '"' +
                     ' data-nonstrc-usd="' + nonStrc + '"';
                 subLine = '<div class="apyx-stress-card-live-subline text-[10px] text-slate-400 mt-0.5">loading…</div>';
-                hereIndicator = '<div class="apyx-stress-card-live-here text-[10px] text-green-700 dark:text-green-400 font-medium mt-0.5 hidden"></div>';
+                hereIndicator = '<div class="apyx-stress-card-live-here text-[10px] text-slate-500 font-medium mt-0.5 hidden"></div>';
             }
 
             return '<div' + cardId + extraAttrs + ' class="rounded-lg border ' + classes.badgeCls + ' p-3">' +
@@ -1156,27 +1188,28 @@ var ApyxRenderer = {
         var methodology;
         if (slug === 'apxusd') {
             methodology =
-                '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
+                '<strong>Current mark anchor</strong> — scenarios are hypothetical writedown stress, not observed. ' +
                 'STRC is Strategy\'s variable-rate perpetual preferred and the largest single-issuer ' +
-                'concentration in Apyx\'s reserves. Accountable attests the STRC bucket at par, while ' +
-                'STRC\'s secondary market can trade below par; the market-mark card reprices that bucket by ' +
-                'the sibling STRC dashboard\'s STRC quote. The wedge between Attested and market mark is the gap ' +
-                'between reported and at-market collateralization. Downside cards then step through $95 / $93 / $90 ' +
-                'marks. At current composition (STRC ≈ 61% of reserves on ' +
+                'concentration in Apyx\'s reserves. Accountable publishes the STRC-family bucket as a TEE-attested ' +
+                'mark-to-market USD value; the public feed does not disclose the per-instrument pricing rule. ' +
+                'The external quote card is a price-source / freshness check against the sibling STRC dashboard, ' +
+                'not a valuation override. Downside cards shock the current Accountable STRC-family mark by ' +
+                '5% / 7% / 10% to model what happens if STRC tape moves lower from here. At current composition (STRC ≈ 61% of reserves on ' +
                 'the $' + (supplyUsd / 1e6).toFixed(1) + 'M supply, with a low single-digit $M absolute buffer), ' +
-                'even moves inside the historical band push CR meaningfully under par — this lens is for ' +
+                'modest relative moves push CR meaningfully under par — this lens is for ' +
                 'normal STRC-tape sensitivity, not tail risk. The buffer is the binding constraint: each ' +
                 'card shows the resulting USD buffer, which is the figure that ultimately decides whether ' +
                 'apxUSD can clear redemptions at $1. MSTR equity price and STRC dividend health ' +
                 'are the leading indicators per assets/apxusd.md §Key Risk Notes.';
         } else {
             methodology =
-                '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
+                '<strong>Current mark anchor</strong> — scenarios are hypothetical writedown stress, not observed. ' +
                 'apyUSD inherits backing through the apxUSD wrapper, so the same STRC band applies to ' +
-                'your shares. Accountable attests the STRC bucket at par, while STRC\'s secondary market ' +
-                'can trade below par; the market-mark card reprices that bucket by the sibling STRC dashboard\'s ' +
-                'STRC quote. The wedge between Attested and market mark is the gap between reported and at-market ' +
-                'collateralization. Downside cards then step through $95 / $93 / $90 marks. Cards show ' +
+                'your shares. Accountable publishes the STRC-family bucket as a TEE-attested mark-to-market USD value; ' +
+                'the public feed does not disclose the per-instrument pricing rule. The external quote card is a ' +
+                'price-source / freshness check against the sibling STRC dashboard, not a valuation override. ' +
+                'Downside cards shock the current Accountable STRC-family mark by 5% / 7% / 10% to model what happens ' +
+                'if STRC tape moves lower from here. Cards show ' +
                 'resulting apxUSD-side collateralization and USD buffer; in stressed ' +
                 'redemption your NAV per share would proportionally reflect the backing shortfall. ' +
                 'MSTR equity price and STRC dividend health are the leading indicators per ' +
@@ -1281,33 +1314,31 @@ var ApyxRenderer = {
                 var supplyUsd = Number(liveCard.getAttribute('data-supply-usd'));
                 var strcUsd = Number(liveCard.getAttribute('data-strc-usd'));
                 var nonStrcUsd = Number(liveCard.getAttribute('data-nonstrc-usd'));
-                var parUsd = secondary.par_usd != null ? Number(secondary.par_usd) : 100;
-                var liveMult = parUsd > 0 ? price / parUsd : NaN;
-                if (!isFinite(supplyUsd) || !isFinite(strcUsd) || !isFinite(nonStrcUsd) || !isFinite(liveMult)) {
+                if (!isFinite(supplyUsd) || !isFinite(strcUsd) || !isFinite(nonStrcUsd)) {
                     setLiveUnavailable();
                     return;
                 }
 
-                var liveBacking = nonStrcUsd + strcUsd * liveMult;
+                var liveBacking = nonStrcUsd + strcUsd;
                 var liveCr = (liveBacking / supplyUsd) * 100;
                 var liveBuffer = liveBacking - supplyUsd;
                 var cls = tierClasses(liveCr);
-                liveCard.className = 'rounded-lg border ' + cls.badgeCls + ' p-3';
+                liveCard.className = 'rounded-lg border bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 p-3';
                 var crEl = liveCard.querySelector('.apyx-stress-card-cr');
                 var bufEl = liveCard.querySelector('.apyx-stress-card-buffer');
                 var sub = liveCard.querySelector('.apyx-stress-card-live-subline');
                 var here = liveCard.querySelector('.apyx-stress-card-live-here');
                 var labelEl = liveCard.querySelector('.apyx-stress-card-label');
                 var isLiveSession = secondary.market_session === 'regular';
-                if (labelEl) labelEl.textContent = isLiveSession ? '● Live mark' : 'Last STRC mark';
+                if (labelEl) labelEl.textContent = 'External quote check';
                 if (crEl) {
                     crEl.className = 'apyx-stress-card-cr text-2xl font-bold ' + cls.crCls + ' mt-1';
                     crEl.textContent = liveCr.toFixed(2) + '%';
                 }
                 if (bufEl) bufEl.textContent = fmtUsdM(liveBuffer);
-                if (sub) sub.textContent = '$' + price.toFixed(2) + ' · ' + (isLiveSession ? 'live STRC / par' : 'latest STRC / par');
+                if (sub) sub.textContent = '$' + price.toFixed(2) + ' · ' + (isLiveSession ? 'live STRC quote' : 'latest STRC quote');
                 if (here) {
-                    here.textContent = isLiveSession ? '● you are here' : '● latest mark';
+                    here.textContent = 'Accountable bucket already MTM; raw units not public';
                     here.classList.remove('hidden');
                 }
             }
