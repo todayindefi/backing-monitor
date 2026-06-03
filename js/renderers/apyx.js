@@ -1058,11 +1058,17 @@ var ApyxRenderer = {
     // ============================================================
     // §2b STRC Concentration Stress Lens
     //
-    // Quantifies what an STRC writedown does to collateralization.
-    // The report's "50% writedown still leaves most backing intact"
-    // is technically true but obscures that even a 25% writedown puts
-    // CR below par with current composition. Reads already-present
-    // backing_attestation fields; no new analyzer surface.
+    // Calibrates scenarios to STRC's actual historical trading band
+    // (~$90–$100), not tail magnitudes. The −5% / −10% / −15% cards
+    // correspond to STRC at $95 / $90 / $85 — inside its normal range,
+    // at its historical floor, and just below. With STRC ~60% of
+    // reserves and the buffer thin (low single-digit $M on a several-
+    // hundred-$M book), moves inside the historical band already chew
+    // the buffer; this lens makes that sensitivity legible without
+    // anchoring the reader's eye to off-distribution tail scenarios
+    // (the External Watch tile below carries the tail-risk story).
+    // Reads already-present backing_attestation fields; no new
+    // analyzer surface.
     // ============================================================
     _renderStressLens: function(specific, slug) {
         var ba = specific.backing_attestation || {};
@@ -1076,10 +1082,10 @@ var ApyxRenderer = {
         if (!supplyUsd || strc === 0) return '';
 
         var scenarios = [
-            { label: 'Current',     mult: 1.00, isBaseline: true },
-            { label: '−25% STRC',   mult: 0.75 },
-            { label: '−50% STRC',   mult: 0.50 },
-            { label: '−100% STRC',  mult: 0.00 }
+            { label: 'Current',          mult: 1.00, isBaseline: true },
+            { label: '−5% STRC ($95)',   mult: 0.95 },
+            { label: '−10% STRC ($90)',  mult: 0.90 },
+            { label: '−15% STRC ($85)',  mult: 0.85 }
         ];
 
         var fmtUsdM = function(v) {
@@ -1135,22 +1141,27 @@ var ApyxRenderer = {
         if (slug === 'apxusd') {
             methodology =
                 '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
-                'STRC is Strategy\'s variable-rate perpetual preferred (the largest single-issuer ' +
-                'concentration in Apyx\'s reserves). Scenarios show how a writedown of that position ' +
-                'would shift collateralization against the current $' +
-                (supplyUsd / 1e6).toFixed(1) + 'M supply, holding cash and other reserves constant. ' +
-                'A 25% writedown already puts CR below par; a 50% writedown leaves ~78% backing ' +
-                '(the report\'s "most intact" framing). MSTR equity price and STRC dividend health ' +
+                'STRC is Strategy\'s variable-rate perpetual preferred and the largest single-issuer ' +
+                'concentration in Apyx\'s reserves. Scenarios are calibrated to STRC\'s actual historical ' +
+                'trading band (roughly $90–$100): −5% sits inside its normal range, −10% at its ' +
+                'historical floor, −15% just below. At current composition (STRC ≈ 61% of reserves on ' +
+                'the $' + (supplyUsd / 1e6).toFixed(1) + 'M supply, with a low single-digit $M absolute buffer), ' +
+                'even moves inside the historical band push CR meaningfully under par — this lens is for ' +
+                'normal STRC-tape sensitivity, not tail risk. The buffer is the binding constraint: each ' +
+                'card shows the resulting USD buffer, which is the figure that ultimately decides whether ' +
+                'apxUSD can clear redemptions at $1. MSTR equity price and STRC dividend health ' +
                 'are the leading indicators per assets/apxusd.md §Key Risk Notes.';
         } else {
             methodology =
                 '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
-                'apyUSD inherits backing through the apxUSD wrapper, so the same STRC-writedown ' +
-                'scenarios apply to your shares. Cards show resulting apxUSD-side collateralization; ' +
-                'in stressed redemption your NAV per share would proportionally reflect the backing ' +
-                'shortfall. MSTR equity price and STRC dividend health are the leading indicators ' +
-                'per assets/apxusd.md §Key Risk Notes; the cooldown amplifies this — by the time ' +
-                'you can exit via the 20-day UnlockToken path, the underlying may have already moved.';
+                'apyUSD inherits backing through the apxUSD wrapper, so the same STRC band applies to ' +
+                'your shares. Scenarios are calibrated to STRC\'s actual historical trading band (roughly ' +
+                '$90–$100): −5% sits inside its normal range, −10% at its historical floor, −15% just ' +
+                'below. Cards show resulting apxUSD-side collateralization and USD buffer; in stressed ' +
+                'redemption your NAV per share would proportionally reflect the backing shortfall. ' +
+                'MSTR equity price and STRC dividend health are the leading indicators per ' +
+                'assets/apxusd.md §Key Risk Notes; the 20-day UnlockToken cooldown amplifies this — by ' +
+                'the time you can exit, the underlying may have moved further than any card on the grid shows.';
         }
 
         return '<div class="panel">' +
