@@ -97,9 +97,18 @@ var STRCRenderer = {
     _mnavCaption: function (regime) {
         if (regime === 'premium')  return 'ATM equity issuance accretive — BTC accumulation funding model intact.';
         if (regime === 'parity')   return 'ATM marginally accretive — funding model under mild compression.';
-        if (regime === 'discount') return 'ATM not accretive. Strategy pivoted 2026-05-05 to BTC sales as the active preferred-dividend funding source.';
+        if (regime === 'discount') return 'ATM equity issuance dilutive vs gross BTC NAV. BTC-accumulation funding leg compressed; STRC issuance + BTC sales the load-bearing legs for preferred service.';
         if (regime === 'distress') return 'Funding model under acute stress. STRC dividend coverage analysis required.';
         return '—';
+    },
+
+    _renderCommonBtcCoverageLine: function (tradfi) {
+        var coverage = (tradfi.common_btc_coverage || {}).value;
+        if (coverage == null) return '';
+        return '<div class="text-xs text-slate-500 mt-3 leading-snug border-t border-slate-200 dark:border-slate-700 pt-3">' +
+            'Common-equity coverage (MktCap/BTC) = <span class="font-semibold">' + coverage.toFixed(2) + '</span>. ' +
+            'Leverage indicator only — NOT mNAV. Less than 1.0 is mechanically expected with $22B of senior claims ahead of common.' +
+        '</div>';
     },
 
     // ============================================================
@@ -329,7 +338,7 @@ var STRCRenderer = {
                 '<div class="rounded border border-slate-200 dark:border-slate-700 p-3">' +
                     '<div class="text-[10px] uppercase font-semibold text-slate-500">Implied mNAV</div>' +
                     '<div class="text-lg font-bold text-slate-800 dark:text-slate-100 mt-0.5">' + val + '</div>' +
-                    '<div class="text-[10px] text-slate-500">mcap ÷ BTC NAV</div>' +
+                    '<div class="text-[10px] text-slate-500">EV ÷ BTC NAV</div>' +
                 '</div>' +
             '</div>';
 
@@ -348,6 +357,7 @@ var STRCRenderer = {
                     '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
                         'Regime bands: premium ≥1.05 · parity 0.95–1.05 · discount 0.85–0.95 · distress &lt;0.85' +
                     '</div>' +
+                    STRCRenderer._renderCommonBtcCoverageLine(tradfi) +
                 '</div>' +
                 '<div class="lg:col-span-2">' +
                     '<div style="height: 240px; position: relative;"><canvas id="strc-mnav-chart"></canvas></div>' +
@@ -358,7 +368,7 @@ var STRCRenderer = {
             '</div>' +
             snapshotRow +
             '<div class="text-xs text-slate-500 mt-3">' +
-                'Methodology: mNAV = MSTR market cap ÷ (Strategy BTC count × BTC spot). See ' +
+                'Methodology: mNAV = enterprise value ÷ (Strategy BTC count × BTC spot). See ' +
                 '<a href="https://github.com/todayindefi/riskAnalyst/blob/master/assets/_frameworks/strc-framework.md" ' +
                 'target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">framework §IV (MSTR cash-flow stack)</a>. ' +
                 'Canonical issuer analysis: <a href="?asset=mstr" class="text-blue-500 hover:underline">MSTR dashboard →</a>' +
