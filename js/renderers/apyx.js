@@ -1060,12 +1060,10 @@ var ApyxRenderer = {
     // §2b STRC Concentration Stress Lens
     //
     // Splits the near-par baseline into Attested (Accountable's par-anchored
-    // STRC bucket) and Live mark (that same bucket repriced by STRC's
-    // secondary-market mark from the sibling STRC dashboard). The "you are
-    // here" indicator belongs on Live mark, not Attested: Attested is what
-    // Accountable reports, while Live is what the STRC bucket is worth at
-    // market right now. Hypothetical downside cards then step through the
-    // historical band ($95 / $93 / $90), not off-distribution tail scenarios.
+    // STRC bucket) and a secondary-market mark from the sibling STRC dashboard.
+    // The market mark is only live during NYSE regular hours; after hours it is
+    // the latest available quote. Hypothetical downside cards then step through
+    // the historical band ($95 / $93 / $90), not off-distribution tail scenarios.
     // ============================================================
     _renderStressLens: function(specific, slug) {
         var ba = specific.backing_attestation || {};
@@ -1080,7 +1078,7 @@ var ApyxRenderer = {
 
         var scenarios = [
             { label: 'Attested (at par)',  mult: 1.00, kind: 'attested' },
-            { label: '● Live mark',        mult: null, kind: 'live' },
+            { label: 'STRC market mark',   mult: null, kind: 'live' },
             { label: '−5% STRC ($95)',     mult: 0.95, kind: 'hypothetical' },
             { label: '−7% STRC ($93)',     mult: 0.93, kind: 'hypothetical' },
             { label: '−10% STRC ($90)',    mult: 0.90, kind: 'hypothetical' }
@@ -1147,7 +1145,7 @@ var ApyxRenderer = {
             }
 
             return '<div' + cardId + extraAttrs + ' class="rounded-lg border ' + classes.badgeCls + ' p-3">' +
-                '<div class="text-xs uppercase ' + labelEmphasis + '">' + label + '</div>' +
+                '<div class="apyx-stress-card-label text-xs uppercase ' + labelEmphasis + '">' + label + '</div>' +
                 subLine +
                 hereIndicator +
                 '<div class="apyx-stress-card-cr text-2xl font-bold ' + classes.crCls + ' mt-1">' + crHtml + '</div>' +
@@ -1161,8 +1159,8 @@ var ApyxRenderer = {
                 '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
                 'STRC is Strategy\'s variable-rate perpetual preferred and the largest single-issuer ' +
                 'concentration in Apyx\'s reserves. Accountable attests the STRC bucket at par, while ' +
-                'STRC\'s secondary market can trade below par; the Live mark card reprices that bucket by ' +
-                'the sibling STRC dashboard\'s live price. The wedge between Attested and Live is the gap ' +
+                'STRC\'s secondary market can trade below par; the market-mark card reprices that bucket by ' +
+                'the sibling STRC dashboard\'s STRC quote. The wedge between Attested and market mark is the gap ' +
                 'between reported and at-market collateralization. Downside cards then step through $95 / $93 / $90 ' +
                 'marks. At current composition (STRC ≈ 61% of reserves on ' +
                 'the $' + (supplyUsd / 1e6).toFixed(1) + 'M supply, with a low single-digit $M absolute buffer), ' +
@@ -1176,8 +1174,8 @@ var ApyxRenderer = {
                 '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
                 'apyUSD inherits backing through the apxUSD wrapper, so the same STRC band applies to ' +
                 'your shares. Accountable attests the STRC bucket at par, while STRC\'s secondary market ' +
-                'can trade below par; the Live mark card reprices that bucket by the sibling STRC dashboard\'s ' +
-                'live price. The wedge between Attested and Live is the gap between reported and at-market ' +
+                'can trade below par; the market-mark card reprices that bucket by the sibling STRC dashboard\'s ' +
+                'STRC quote. The wedge between Attested and market mark is the gap between reported and at-market ' +
                 'collateralization. Downside cards then step through $95 / $93 / $90 marks. Cards show ' +
                 'resulting apxUSD-side collateralization and USD buffer; in stressed ' +
                 'redemption your NAV per share would proportionally reflect the backing shortfall. ' +
@@ -1189,7 +1187,7 @@ var ApyxRenderer = {
         return '<div class="panel">' +
             '<div class="panel-title">Concentration Stress Lens — STRC writedown scenarios</div>' +
             '<div id="apyx-strc-live-anchor" class="text-xs text-slate-500 leading-relaxed mt-2">' +
-                'Live STRC secondary price loading…' +
+                'STRC secondary price loading…' +
             '</div>' +
             '<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">' +
                 cardsHtml +
@@ -1235,7 +1233,7 @@ var ApyxRenderer = {
             var bufEl = liveCard.querySelector('.apyx-stress-card-buffer');
             var here = liveCard.querySelector('.apyx-stress-card-live-here');
             if (sub) {
-                sub.innerHTML = 'Live mark unavailable — <a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard &rarr;</a>';
+                sub.innerHTML = 'Market mark unavailable — <a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard &rarr;</a>';
             }
             if (crEl) crEl.textContent = '—';
             if (bufEl) bufEl.textContent = '—';
@@ -1256,7 +1254,7 @@ var ApyxRenderer = {
             if (!secondary || secondary.price_usd == null || !isFinite(price)) {
                 if (target) {
                     target.innerHTML =
-                        'Live STRC secondary price unavailable; scenario cards remain hypothetical writedown marks. ' +
+                        'STRC secondary price unavailable; scenario cards remain hypothetical writedown marks. ' +
                         '<a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard &rarr;</a>';
                 }
                 setLiveUnavailable();
@@ -1269,9 +1267,13 @@ var ApyxRenderer = {
                 bpsTxt = ' (' + (bps > 0 ? '+' : '') + bps + ' bps to par)';
             }
             if (target) {
+                var isRegularSession = secondary.market_session === 'regular';
+                var quoteLabel = secondary.quote_label || (isRegularSession ? 'Live market quote' : 'Latest market quote');
+                var quoteDetail = secondary.quote_detail ? ' · ' + secondary.quote_detail : '';
                 target.innerHTML =
-                    'STRC: <span class="font-mono font-semibold text-slate-700 dark:text-slate-200">$' +
+                    quoteLabel + ': STRC <span class="font-mono font-semibold text-slate-700 dark:text-slate-200">$' +
                     price.toFixed(2) + '</span>' + bpsTxt +
+                    quoteDetail +
                     ' · <a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard &rarr;</a>';
             }
 
@@ -1295,14 +1297,17 @@ var ApyxRenderer = {
                 var bufEl = liveCard.querySelector('.apyx-stress-card-buffer');
                 var sub = liveCard.querySelector('.apyx-stress-card-live-subline');
                 var here = liveCard.querySelector('.apyx-stress-card-live-here');
+                var labelEl = liveCard.querySelector('.apyx-stress-card-label');
+                var isLiveSession = secondary.market_session === 'regular';
+                if (labelEl) labelEl.textContent = isLiveSession ? '● Live mark' : 'Last STRC mark';
                 if (crEl) {
                     crEl.className = 'apyx-stress-card-cr text-2xl font-bold ' + cls.crCls + ' mt-1';
                     crEl.textContent = liveCr.toFixed(2) + '%';
                 }
                 if (bufEl) bufEl.textContent = fmtUsdM(liveBuffer);
-                if (sub) sub.textContent = '$' + price.toFixed(2) + ' · live STRC / par';
+                if (sub) sub.textContent = '$' + price.toFixed(2) + ' · ' + (isLiveSession ? 'live STRC / par' : 'latest STRC / par');
                 if (here) {
-                    here.textContent = '● you are here';
+                    here.textContent = isLiveSession ? '● you are here' : '● latest mark';
                     here.classList.remove('hidden');
                 }
             }

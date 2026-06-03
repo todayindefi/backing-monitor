@@ -245,6 +245,9 @@ var STRCRenderer = {
         var mnavVal = (mnav.value != null) ? mnav.value.toFixed(2) : '—';
         var priceCls = STRCRenderer._strcPriceClass(strc.price_usd);
         var priceVal = (strc.price_usd != null) ? '$' + strc.price_usd.toFixed(2) : '—';
+        var isRegularSession = strc.market_session === 'regular';
+        var quoteLabel = strc.quote_label || (isRegularSession ? 'Live market quote' : 'Latest market quote');
+        var quoteDetail = strc.quote_detail || (strc.market_session ? '' : 'session unknown');
         var bpsTxt = '';
         if (strc.discount_to_par_bps != null) {
             var sign = strc.discount_to_par_bps >= 0 ? '+' : '';
@@ -263,6 +266,7 @@ var STRCRenderer = {
                     '<div class="text-xs uppercase font-semibold text-slate-500">STRC secondary price</div>' +
                     '<div class="text-3xl font-bold mt-1 ' + priceCls + '">' + priceVal + '</div>' +
                     '<div class="text-xs text-slate-500 mt-1">' + bpsTxt + '</div>' +
+                    '<div class="text-[10px] text-slate-400 mt-0.5">' + quoteLabel + (quoteDetail ? ' · ' + quoteDetail : '') + '</div>' +
                 '</div>' +
                 '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">' +
                     '<div class="text-xs uppercase font-semibold text-slate-500">Current monthly rate</div>' +
@@ -597,6 +601,9 @@ var STRCRenderer = {
     _renderFreshness: function (data) {
         var ts = data.timestamp_utc || data.timestamp;
         var age = data.freshness_seconds;
+        var strcQuote = data.tradfi && data.tradfi.strc_secondary;
+        var quoteTs = strcQuote && strcQuote.quote_fetched_at;
+        var quoteLabel = strcQuote && strcQuote.quote_label;
         var ageTxt = '';
         if (age != null) {
             if (age < 60) ageTxt = age + 's ago';
@@ -607,6 +614,7 @@ var STRCRenderer = {
         return '<div class="text-xs text-slate-500 mt-4 text-center">' +
             'Data refreshed ' + (ts ? CommonRenderer.formatDate(ts) : '—') +
             (ageTxt ? ' (' + ageTxt + ')' : '') +
+            (quoteTs ? ' · STRC quote: ' + (quoteLabel || 'Latest market quote') + ' at ' + CommonRenderer.formatDate(quoteTs) : '') +
             ' · framework_version <span class="font-mono">' + (data.framework_version || '—') + '</span>' +
         '</div>';
     },
