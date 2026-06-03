@@ -386,6 +386,7 @@ var ApyxRenderer = {
             ApyxRenderer._loadMarketPriceTrajectory(slug);
             ApyxRenderer._loadMarketDiscountChart(slug);
         }
+        ApyxRenderer._loadStressLensStrcAnchor();
         ApyxRenderer._loadFamilyPanel(slug);
         ApyxRenderer._loadWolfSection();
     },
@@ -1059,16 +1060,16 @@ var ApyxRenderer = {
     // §2b STRC Concentration Stress Lens
     //
     // Calibrates scenarios to STRC's actual historical trading band
-    // (~$90–$100), not tail magnitudes. The −5% / −10% / −15% cards
-    // correspond to STRC at $95 / $90 / $85 — inside its normal range,
-    // at its historical floor, and just below. With STRC ~60% of
-    // reserves and the buffer thin (low single-digit $M on a several-
-    // hundred-$M book), moves inside the historical band already chew
-    // the buffer; this lens makes that sensitivity legible without
-    // anchoring the reader's eye to off-distribution tail scenarios
-    // (the External Watch tile below carries the tail-risk story).
-    // Reads already-present backing_attestation fields; no new
-    // analyzer surface.
+    // (~$90–$100), not tail magnitudes. The scenario cards correspond
+    // to STRC at $97 / $95 / $93 / $90, giving finer granularity around
+    // the current secondary-market mark before the historical-floor card.
+    // With STRC ~60% of reserves and the buffer thin (low single-digit
+    // $M on a several-hundred-$M book), moves inside the historical band
+    // already chew the buffer; this lens makes that sensitivity legible
+    // without anchoring the reader's eye to off-distribution tail scenarios
+    // (the External Watch tile below carries the tail-risk story). Reads
+    // already-present backing_attestation fields plus an async STRC dashboard
+    // anchor from data/strc_backing.json when available.
     // ============================================================
     _renderStressLens: function(specific, slug) {
         var ba = specific.backing_attestation || {};
@@ -1083,9 +1084,10 @@ var ApyxRenderer = {
 
         var scenarios = [
             { label: 'Current',          mult: 1.00, isBaseline: true },
+            { label: '−3% STRC ($97)',   mult: 0.97 },
             { label: '−5% STRC ($95)',   mult: 0.95 },
-            { label: '−10% STRC ($90)',  mult: 0.90 },
-            { label: '−15% STRC ($85)',  mult: 0.85 }
+            { label: '−7% STRC ($93)',   mult: 0.93 },
+            { label: '−10% STRC ($90)',  mult: 0.90 }
         ];
 
         var fmtUsdM = function(v) {
@@ -1142,9 +1144,9 @@ var ApyxRenderer = {
             methodology =
                 '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
                 'STRC is Strategy\'s variable-rate perpetual preferred and the largest single-issuer ' +
-                'concentration in Apyx\'s reserves. Scenarios are calibrated to STRC\'s actual historical ' +
-                'trading band (roughly $90–$100): −5% sits inside its normal range, −10% at its ' +
-                'historical floor, −15% just below. At current composition (STRC ≈ 61% of reserves on ' +
+                'concentration in Apyx\'s reserves. The live STRC line above anchors where the market is ' +
+                'now; scenario cards then step through the historical band with $97 / $95 / $93 / $90 ' +
+                'marks. At current composition (STRC ≈ 61% of reserves on ' +
                 'the $' + (supplyUsd / 1e6).toFixed(1) + 'M supply, with a low single-digit $M absolute buffer), ' +
                 'even moves inside the historical band push CR meaningfully under par — this lens is for ' +
                 'normal STRC-tape sensitivity, not tail risk. The buffer is the binding constraint: each ' +
@@ -1155,9 +1157,9 @@ var ApyxRenderer = {
             methodology =
                 '<strong>You are here</strong> — scenarios are hypothetical writedown stress, not observed. ' +
                 'apyUSD inherits backing through the apxUSD wrapper, so the same STRC band applies to ' +
-                'your shares. Scenarios are calibrated to STRC\'s actual historical trading band (roughly ' +
-                '$90–$100): −5% sits inside its normal range, −10% at its historical floor, −15% just ' +
-                'below. Cards show resulting apxUSD-side collateralization and USD buffer; in stressed ' +
+                'your shares. The live STRC line above anchors where the market is now; scenario cards ' +
+                'then step through the historical band with $97 / $95 / $93 / $90 marks. Cards show ' +
+                'resulting apxUSD-side collateralization and USD buffer; in stressed ' +
                 'redemption your NAV per share would proportionally reflect the backing shortfall. ' +
                 'MSTR equity price and STRC dividend health are the leading indicators per ' +
                 'assets/apxusd.md §Key Risk Notes; the 20-day UnlockToken cooldown amplifies this — by ' +
@@ -1166,13 +1168,48 @@ var ApyxRenderer = {
 
         return '<div class="panel">' +
             '<div class="panel-title">Concentration Stress Lens — STRC writedown scenarios</div>' +
-            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
+            '<div id="apyx-strc-live-anchor" class="text-xs text-slate-500 leading-relaxed mt-2">' +
+                'Live STRC secondary price loading…' +
+            '</div>' +
+            '<div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">' +
                 cardsHtml +
             '</div>' +
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
                 methodology +
             '</div>' +
         '</div>';
+    },
+
+    _loadStressLensStrcAnchor: function() {
+        var target = document.getElementById('apyx-strc-live-anchor');
+        if (!target) return;
+        var nocache = Math.floor(Date.now() / 60000);
+
+        Promise.all([
+            fetch('data/strc_backing.json?nocache=' + nocache)
+                .then(function(r) { return r.ok ? r.json() : null; })
+                .catch(function() { return null; })
+        ]).then(function(results) {
+            var strcData = results[0];
+            var secondary = strcData && strcData.tradfi && strcData.tradfi.strc_secondary;
+            var price = secondary ? Number(secondary.price_usd) : NaN;
+            if (!secondary || secondary.price_usd == null || !isFinite(price)) {
+                target.innerHTML =
+                    'Live STRC secondary price unavailable; scenario cards remain hypothetical writedown marks. ' +
+                    '<a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard &rarr;</a>';
+                return;
+            }
+
+            var bps = secondary.discount_to_par_bps;
+            var bpsTxt = '';
+            if (bps != null) {
+                bpsTxt = ' (' + (bps > 0 ? '+' : '') + bps + ' bps to par)';
+            }
+            target.innerHTML =
+                'Live STRC secondary price: <span class="font-mono font-semibold text-slate-700 dark:text-slate-200">$' +
+                price.toFixed(2) + '</span>' + bpsTxt +
+                ' · <a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard &rarr;</a>';
+        });
     },
 
     // ============================================================
