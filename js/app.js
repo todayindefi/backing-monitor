@@ -5,6 +5,16 @@
 
 var REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
+// Cache-bust JSON fetches to defeat Fastly's bare-URL stickiness on GH Pages.
+// Bumps once per hour so per-page-load fetches still hit the CDN edge most
+// of the time (data syncs at xx:45 hourly), but a stale-by-hour upper bound
+// is enforced.
+function dataUrl(path) {
+    var hour = Math.floor(Date.now() / 3600000);
+    var sep = path.indexOf('?') >= 0 ? '&' : '?';
+    return path + sep + 'v=' + hour;
+}
+
 // Asset-specific renderers registry. Keys are matched against
 // data.asset_slug first, then asset_specific.type — so a renderer
 // can be keyed by slug (thusd) when the analyzer's type field is
@@ -76,7 +86,7 @@ async function renderIndex() {
     if (anchorNav) anchorNav.classList.add('hidden');
 
     try {
-        var resp = await fetch('data/assets.json');
+        var resp = await fetch(dataUrl('data/assets.json'));
         var assets = await resp.json();
 
         // Try to fetch latest data for each asset to show CR on cards.
@@ -85,7 +95,7 @@ async function renderIndex() {
         var cardData = await Promise.all(assets.map(async function(a) {
             try {
                 var sourceSlug = a.data_source || a.slug;
-                var r = await fetch('data/' + sourceSlug + '_backing.json');
+                var r = await fetch(dataUrl('data/' + sourceSlug + '_backing.json'));
                 var d = await r.json();
                 return { asset: a, data: d };
             } catch (e) {
@@ -162,7 +172,7 @@ async function renderAsset(slug) {
     try {
         // Fetch assets.json first so we can resolve `data_source` aliases
         // (e.g. ?asset=mstr reads strc_backing.json) before fetching data.
-        var assetsResp0 = await fetch('data/assets.json').catch(function() { return null; });
+        var assetsResp0 = await fetch(dataUrl('data/assets.json')).catch(function() { return null; });
         var assetMeta = null;
         if (assetsResp0 && assetsResp0.ok) {
             var assets = await assetsResp0.json();
@@ -171,8 +181,8 @@ async function renderAsset(slug) {
         var sourceSlug = (assetMeta && assetMeta.data_source) ? assetMeta.data_source : slug;
 
         var [dataResp, histResp] = await Promise.all([
-            fetch('data/' + sourceSlug + '_backing.json'),
-            fetch('data/' + sourceSlug + '_backing_history.json').catch(function() { return null; })
+            fetch(dataUrl('data/' + sourceSlug + '_backing.json')),
+            fetch(dataUrl('data/' + sourceSlug + '_backing_history.json')).catch(function() { return null; })
         ]);
 
         if (!dataResp.ok) throw new Error('Asset data not found (HTTP ' + dataResp.status + ')');
