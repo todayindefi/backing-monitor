@@ -3,7 +3,7 @@
   "asset": "USDm",
   "asset_slug": "usdm",
   "chain": "monad",
-  "timestamp": "2026-06-04T03:44:33Z",
+  "timestamp": "2026-06-04T03:50:52Z",
   "summary": {
     "total_supply": 17632621.67,
     "supply_unit": "USDm",
@@ -15,16 +15,14 @@
   },
   "risk_flags": [
     {
-      "severity": "high",
-      "message": "Aggregate Reserve coverage of USDm dropped below 1.0x (now 0.915x)."
-    },
-    {
       "severity": "medium",
-      "message": "Stable-collateral coverage of all Mento stablecoin debt fell below 1.0x (now 0.750x) \u2014 Reserve excluding CELO+stETH no longer fully covers user-circulating debt."
-    },
-    {
-      "severity": "info",
-      "message": "API vs RPC Monad-bucket drift 6.9% \u2014 within expected baseline (pool-resident reserves accounted in API)."
+      "type": "mento_api_eth_undercount",
+      "message": "Mento API Ethereum bucket undercounts on-chain reserves by $4.40M (34.7%). API: $8.29M vs on-chain: $12.69M. Tokens absent from API: AUSD.",
+      "delta_usd": 4402094.93,
+      "delta_pct": 0.3469,
+      "missing_symbols": [
+        "AUSD"
+      ]
     }
   ],
   "asset_specific": {
@@ -118,6 +116,104 @@
         }
       }
     },
+    "ethereum_state": {
+      "reserve_on_chain_usd": 12689370.27,
+      "reserve_on_chain_stable_only_usd": 12235273.75,
+      "reserve_per_api_usd": 8287275.34,
+      "api_vs_on_chain_delta_usd": 4402094.93,
+      "api_vs_on_chain_delta_pct": 0.3469,
+      "missing_from_api_symbols": [
+        "AUSD"
+      ],
+      "reserve_breakdown": {
+        "USDC": {
+          "balance": 0.28429,
+          "price_usd": 1.0,
+          "usd_value": 0.28,
+          "bucket": "usd_stable",
+          "by_holder": {
+            "v2_liquidity_reserve": 0.0,
+            "reserve_safe_cold": 0.0,
+            "ops_safe": 0.28429,
+            "rebalancer_bot": 0.0
+          }
+        },
+        "USDT": {
+          "balance": 1222798.962277,
+          "price_usd": 1.0,
+          "usd_value": 1222798.96,
+          "bucket": "usd_stable",
+          "by_holder": {
+            "v2_liquidity_reserve": 0.0,
+            "reserve_safe_cold": 1222798.962161,
+            "ops_safe": 0.000116,
+            "rebalancer_bot": 0.0
+          }
+        },
+        "AUSD": {
+          "balance": 4393453.0,
+          "price_usd": 1.0,
+          "usd_value": 4393453.0,
+          "bucket": "usd_stable",
+          "by_holder": {
+            "v2_liquidity_reserve": 0.0,
+            "reserve_safe_cold": 0.0,
+            "ops_safe": 4393453.0,
+            "rebalancer_bot": 0.0
+          }
+        },
+        "sUSDS": {
+          "balance": 4234485.751044,
+          "price_usd": 1.098659,
+          "usd_value": 4652254.25,
+          "bucket": "usd_stable",
+          "by_holder": {
+            "v2_liquidity_reserve": 0.0,
+            "reserve_safe_cold": 4234485.751044,
+            "ops_safe": 0.0,
+            "rebalancer_bot": 0.0
+          }
+        },
+        "EURC": {
+          "balance": 1694554.092126,
+          "price_usd": 1.16064,
+          "usd_value": 1966767.26,
+          "bucket": "eur_stable",
+          "by_holder": {
+            "v2_liquidity_reserve": 0.0,
+            "reserve_safe_cold": 1683640.084633,
+            "ops_safe": 0.0,
+            "rebalancer_bot": 10914.007493
+          }
+        },
+        "stETH": {
+          "balance": 251.439113,
+          "price_usd": 1805.99,
+          "usd_value": 454096.52,
+          "bucket": "volatile",
+          "by_holder": {
+            "v2_liquidity_reserve": 0.0,
+            "reserve_safe_cold": 251.439113,
+            "ops_safe": 0.0,
+            "rebalancer_bot": 0.0
+          }
+        }
+      },
+      "prices": {
+        "USDC": 1.0,
+        "USDT": 1.0,
+        "AUSD": 1.0,
+        "sUSDS": 1.098659,
+        "EURC": 1.16064,
+        "stETH": 1805.99
+      },
+      "reserve_holders": {
+        "v2_liquidity_reserve": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
+        "reserve_safe_cold": "0xd0697f70E79476195B742d5aFAb14BE50f98CC1E",
+        "ops_safe": "0xD3D2e5c5Af667DA817b2D752d86c8f40c22137E1",
+        "rebalancer_bot": "0xaa8299fc6a685b5f9ce9bda8d0b3ea3d54731976"
+      }
+    },
     "celo_state": {
       "usdm_supply": 15989485.3,
       "reserve_debt": 12220354.17,
@@ -145,7 +241,13 @@
         "hot_usd": 3551491.53,
         "cold_usd": 12280076.51,
         "ops_usd": 301416.72
-      }
+      },
+      "total_reserve_usd_corrected": 20535079.68,
+      "total_reserve_stable_only_corrected": 17201223.19,
+      "stablecoin_aggregate_ratio_corrected": 1.2023,
+      "reserve_to_supply_ratio_corrected": 1.1646,
+      "stablecoin_aggregate_ratio_stable_only_corrected": 1.0071,
+      "reserve_to_supply_ratio_stable_only_corrected": 0.7969
     },
     "governance_state": {
       "celo_timelock_min_delay_seconds": 172800,
@@ -157,6 +259,7 @@
       "mento_api_base": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2",
       "mento_api_ok": true,
       "monad_rpc_ok": true,
+      "ethereum_rpc_ok": true,
       "celo_rpc_ok": true
     }
   }
