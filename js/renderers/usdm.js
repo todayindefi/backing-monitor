@@ -334,7 +334,7 @@ var USDmRenderer = {
     // ============================================================
     _renderHeadlineCard: function(specific, s) {
         var agg = specific.aggregate || {};
-        var cb = agg.custodian_breakdown || {};
+        var cb = agg.custodian_breakdown_corrected || agg.custodian_breakdown || {};
         var eth = specific.ethereum_state || {};
 
         var totalSupply = s.total_supply;
