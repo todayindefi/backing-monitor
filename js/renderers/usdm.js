@@ -163,6 +163,78 @@ var USDmRenderer = {
             };
         }
 
+        // ─── API-vs-on-chain corrected overlay ─────────────────────────
+        // When the analyzer publishes *_corrected fields, the Mento /reserve
+        // API is undercounting Ethereum-side reserves (currently $4.4M AUSD at
+        // the Ops Safe). Surface the corrected numbers as primary in the top
+        // summary cards via card_overrides; the headline panel (§1) shows the
+        // full dual-display treatment.
+        var hasCorrected = (agg.stablecoin_aggregate_ratio_corrected != null);
+        if (hasCorrected) {
+            var apiGrossPct = (agg.stablecoin_aggregate_ratio != null) ? agg.stablecoin_aggregate_ratio * 100 : null;
+            var correctedGrossPct = agg.stablecoin_aggregate_ratio_corrected * 100;
+            var apiStableOnlyPct = (agg.stablecoin_aggregate_ratio_stable_only != null) ? agg.stablecoin_aggregate_ratio_stable_only * 100 : null;
+            var correctedStableOnlyPct = (agg.stablecoin_aggregate_ratio_stable_only_corrected != null) ? agg.stablecoin_aggregate_ratio_stable_only_corrected * 100 : null;
+
+            // NOTE: we intentionally do NOT rewrite s.collateral_ratio with
+            // the corrected value — the CR History chart's series is built
+            // from API-only history entries, and a same-day step-up tip would
+            // misrepresent the time series. Instead we override the top
+            // "Collateral Ratio" + "Stable-Only Coverage" summary cards via
+            // card_overrides to surface BOTH numbers (corrected primary,
+            // API subdued) without touching the chart datum.
+            //
+            // Total Backing + Surplus / Deficit ARE rewritten to on-chain
+            // reality because those reflect today's portfolio composition,
+            // not a time series tip.
+            if (agg.total_reserve_usd_corrected != null) {
+                s.total_backing = agg.total_reserve_usd_corrected;
+                if (agg.total_stablecoin_debt_usd != null) {
+                    s.surplus_deficit = agg.total_reserve_usd_corrected - agg.total_stablecoin_debt_usd;
+                }
+            }
+
+            // card_overrides — replace the raw % value with a 2-line block:
+            //   primary: corrected (large, color-coded)
+            //   secondary: "API X.XX% ⓘ" (small, strikethrough, with tooltip)
+            var ethDeltaUsdM = (specific.ethereum_state && specific.ethereum_state.api_vs_on_chain_delta_usd != null) ?
+                (specific.ethereum_state.api_vs_on_chain_delta_usd / 1e6).toFixed(2) : null;
+            var missingSyms = (specific.ethereum_state && Array.isArray(specific.ethereum_state.missing_from_api_symbols)) ?
+                specific.ethereum_state.missing_from_api_symbols.join(', ') : 'AUSD';
+            var tooltipText = "Mento's /reserve API does not list " + missingSyms +
+                " held at the Ethereum Ops Safe (0xD3D2...37E1)" +
+                (ethDeltaUsdM ? '; today the gap is $' + ethDeltaUsdM + 'M' : '') +
+                '. Corrected ratio sweeps all 7 reserve wallets on-chain.';
+
+            function correctedCardHtml(correctedPct, apiPct, colorCls) {
+                return '<div class="' + colorCls + '">' + correctedPct.toFixed(2) + '%</div>' +
+                    '<div class="text-xs text-slate-400 font-normal mt-1" title="' + tooltipText + '">' +
+                        '<span class="line-through">API ' + (apiPct != null ? apiPct.toFixed(2) + '%' : '—') + '</span>' +
+                        ' ⓘ' +
+                    '</div>';
+            }
+
+            var grossColor = correctedGrossPct >= 100 ? 'positive' : 'negative';
+            var stableColor = correctedStableOnlyPct != null && correctedStableOnlyPct >= 100 ? 'positive' :
+                              correctedStableOnlyPct != null && correctedStableOnlyPct >= 95 ? 'warning' : 'negative';
+
+            var overrides = {
+                'Collateral Ratio': {
+                    value: correctedCardHtml(correctedGrossPct, apiGrossPct, ''),
+                    cls: grossColor,
+                    subtext: 'On-chain verified (corrected for API undercount on Ethereum).'
+                }
+            };
+            if (correctedStableOnlyPct != null) {
+                overrides['Stable-Only Coverage'] = {
+                    value: correctedCardHtml(correctedStableOnlyPct, apiStableOnlyPct, ''),
+                    cls: stableColor,
+                    subtext: 'On-chain verified. Reserve ex CELO + stETH ÷ all Mento stablecoin debt.'
+                };
+            }
+            specific.card_overrides = Object.assign({}, specific.card_overrides || {}, overrides);
+        }
+
         // Per-entry chart overlay: stable-only coverage as the second series.
         // renderCRChart reads e.collateral_ratio_alt; populate it from the new
         // per-snapshot stable_only_coverage_ratio (ratio scale → percent).
@@ -234,27 +306,48 @@ var USDmRenderer = {
     _renderHeadlineCard: function(specific, s) {
         var agg = specific.aggregate || {};
         var cb = agg.custodian_breakdown || {};
+        var eth = specific.ethereum_state || {};
 
         var totalSupply = s.total_supply;
         var totalBacking = s.total_backing;
-        // collateral_ratio already normalized to % in preRender.
-        var crPct = s.collateral_ratio;
-        var crCls = crPct >= 100 ? 'text-green-600' : 'text-red-600';
         var surplus = s.surplus_deficit;
         var surplusCls = surplus >= 0 ? 'text-green-600' : 'text-red-600';
 
         var custTotal = (cb.hot_usd || 0) + (cb.cold_usd || 0) + (cb.ops_usd || 0);
         function custPct(v) { return custTotal > 0 ? ((v / custTotal) * 100).toFixed(1) + '%' : '—'; }
 
-        var rsr = (agg.reserve_to_supply_ratio != null) ? (agg.reserve_to_supply_ratio * 100) : null;
-        var sar = (agg.stablecoin_aggregate_ratio != null) ? (agg.stablecoin_aggregate_ratio * 100) : null;
+        // Corrected (on-chain) vs API-headline pair for the gross ratio.
+        // Corrected is published when the analyzer's Ethereum sweep finds the
+        // /reserve API under-listing tokens at the reserve wallets.
+        var hasCorrected = (agg.stablecoin_aggregate_ratio_corrected != null);
+        var apiGrossPct = (agg.stablecoin_aggregate_ratio != null) ? (agg.stablecoin_aggregate_ratio * 100) : null;
+        var correctedGrossPct = hasCorrected ? (agg.stablecoin_aggregate_ratio_corrected * 100) : null;
+        var apiStableOnlyPct = (agg.stablecoin_aggregate_ratio_stable_only != null) ? (agg.stablecoin_aggregate_ratio_stable_only * 100) : null;
+        var correctedStableOnlyPct = (agg.stablecoin_aggregate_ratio_stable_only_corrected != null) ? (agg.stablecoin_aggregate_ratio_stable_only_corrected * 100) : null;
+        var apiRsrPct = (agg.reserve_to_supply_ratio != null) ? (agg.reserve_to_supply_ratio * 100) : null;
+        var correctedRsrPct = (agg.reserve_to_supply_ratio_corrected != null) ? (agg.reserve_to_supply_ratio_corrected * 100) : null;
+
+        // Headline tile uses corrected when available, API otherwise.
+        var crPct = correctedGrossPct != null ? correctedGrossPct : apiGrossPct;
+        var crCls = crPct >= 100 ? 'text-green-600' : 'text-red-600';
+
+        var rsr = correctedRsrPct != null ? correctedRsrPct : apiRsrPct;
+        var sar = correctedGrossPct != null ? correctedGrossPct : apiGrossPct;
+
+        // Tooltip body shared across the dual-display tiles.
+        var deltaUsdM = (eth.api_vs_on_chain_delta_usd != null) ? (eth.api_vs_on_chain_delta_usd / 1e6).toFixed(2) : null;
+        var missingSyms = Array.isArray(eth.missing_from_api_symbols) ? eth.missing_from_api_symbols.join(', ') : '';
+        var undercountTooltip = "Mento's /reserve API does not list " +
+            (missingSyms || 'AUSD') +
+            ' held at the Ethereum Ops Safe (0xD3D2…37E1). The corrected ratio is computed by sweeping all 7 reserve wallets on Mento\'s /addresses page directly on-chain' +
+            (deltaUsdM ? '; today the gap is $' + deltaUsdM + 'M.' : '.');
 
         // Stable-only headline. Only present once the PegTracker analyzer
         // emits bucket fields; until then, the tile + sub-text degrade silently.
-        var stableOnlyRatio = agg.stablecoin_aggregate_ratio_stable_only;
-        var stableOnlyPct = (stableOnlyRatio != null) ? stableOnlyRatio * 100 : null;
+        var stableOnlyRatio = correctedStableOnlyPct != null ? (correctedStableOnlyPct / 100) : agg.stablecoin_aggregate_ratio_stable_only;
+        var stableOnlyPct = correctedStableOnlyPct != null ? correctedStableOnlyPct : apiStableOnlyPct;
         var volatileBucket = agg.total_reserve_volatile_bucket;
-        var hasStableOnly = (stableOnlyRatio != null);
+        var hasStableOnly = (stableOnlyPct != null);
         var crSubtext = hasStableOnly && volatileBucket != null ?
             'Includes ' + CommonRenderer.formatCurrencyExact(volatileBucket) +
             ' volatile collateral (CELO + stETH); see Stable-Only Coverage for the fiat-comparable view.' :
@@ -268,6 +361,16 @@ var USDmRenderer = {
             'Reserve excluding CELO + stETH ÷ all Mento stablecoin debt. Strips ' +
             CommonRenderer.formatCurrencyExact(volatileBucket) + ' of volatile assets from the headline.' :
             'Reserve excluding volatile collateral ÷ all Mento stablecoin debt.';
+
+        // Subdued "API: 0.94x" suffix used on the gross + stable-only tiles
+        // and on the Row 3 ratios. The corrected number is the primary mark.
+        function apiSuffix(apiPct) {
+            if (apiPct == null) return '';
+            return '<div class="text-xs text-slate-400 mt-1" title="' + undercountTooltip + '">' +
+                '<span class="line-through">API ' + apiPct.toFixed(2) + '%</span>' +
+                ' <span class="ml-1">ⓘ API undercount</span>' +
+            '</div>';
+        }
 
         var html = '<div class="panel">' +
             '<div class="panel-title flex items-center gap-2">' +
@@ -289,14 +392,18 @@ var USDmRenderer = {
                     '<div class="text-lg font-bold text-slate-800 dark:text-slate-100">' + CommonRenderer.formatCurrencyExact(totalBacking) + '</div>' +
                 '</div>' +
                 '<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">' +
-                    '<div class="text-xs text-slate-500 uppercase font-medium">Collateral Ratio</div>' +
+                    '<div class="text-xs text-slate-500 uppercase font-medium">Collateral Ratio' +
+                        (hasCorrected ? ' <span class="text-[10px] font-normal text-slate-400 normal-case">on-chain verified</span>' : '') + '</div>' +
                     '<div class="text-lg font-bold ' + crCls + '">' + (crPct != null ? crPct.toFixed(2) + '%' : '—') + '</div>' +
+                    (hasCorrected ? apiSuffix(apiGrossPct) : '') +
                     (crSubtext ? '<div class="text-xs text-slate-400 mt-1">' + crSubtext + '</div>' : '') +
                 '</div>' +
                 (hasStableOnly ?
                     '<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">' +
-                        '<div class="text-xs text-slate-500 uppercase font-medium">Stable-Only Coverage</div>' +
+                        '<div class="text-xs text-slate-500 uppercase font-medium">Stable-Only Coverage' +
+                            (hasCorrected ? ' <span class="text-[10px] font-normal text-slate-400 normal-case">on-chain verified</span>' : '') + '</div>' +
                         '<div class="text-lg font-bold ' + stableOnlyCls + '">' + (stableOnlyPct != null ? stableOnlyPct.toFixed(2) + '%' : '—') + '</div>' +
+                        (hasCorrected ? apiSuffix(apiStableOnlyPct) : '') +
                         '<div class="text-xs text-slate-400 mt-1">' + stableOnlySub + '</div>' +
                     '</div>'
                 : '') +
@@ -324,16 +431,31 @@ var USDmRenderer = {
             // Row 3: two side-by-side ratios
             '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">' +
                 '<div class="border border-slate-200 dark:border-slate-700 rounded-lg p-3">' +
-                    '<div class="text-xs text-slate-500 uppercase font-medium">Reserve / USDm only</div>' +
+                    '<div class="text-xs text-slate-500 uppercase font-medium">Reserve / USDm only' +
+                        (hasCorrected ? ' <span class="text-[10px] font-normal text-slate-400 normal-case">on-chain verified</span>' : '') + '</div>' +
                     '<div class="text-xl font-bold text-slate-800 dark:text-slate-100">' + (rsr != null ? rsr.toFixed(2) + '%' : '—') + '</div>' +
+                    (hasCorrected ? apiSuffix(apiRsrPct) : '') +
                     '<div class="text-xs text-slate-400 mt-1">Reserve backing the USDm float in isolation.</div>' +
                 '</div>' +
                 '<div class="border border-slate-200 dark:border-slate-700 rounded-lg p-3" title="Lower because the Reserve also backs EURm / GBPm / JPYm / CHFm.">' +
-                    '<div class="text-xs text-slate-500 uppercase font-medium">Reserve / All Stablecoin Debt</div>' +
+                    '<div class="text-xs text-slate-500 uppercase font-medium">Reserve / All Stablecoin Debt' +
+                        (hasCorrected ? ' <span class="text-[10px] font-normal text-slate-400 normal-case">on-chain verified</span>' : '') + '</div>' +
                     '<div class="text-xl font-bold text-slate-800 dark:text-slate-100">' + (sar != null ? sar.toFixed(2) + '%' : '—') + '</div>' +
+                    (hasCorrected ? apiSuffix(apiGrossPct) : '') +
                     '<div class="text-xs text-slate-400 mt-1">Reserve vs USDm + EURm + GBPm + JPYm + CHFm combined.</div>' +
                 '</div>' +
             '</div>' +
+
+            // Row 4: methodology callout. Only renders when the analyzer has
+            // flagged the API undercount.
+            (hasCorrected ?
+                '<div class="mt-3 text-xs text-slate-500 dark:text-slate-400 border-l-2 border-amber-300 pl-3 py-1">' +
+                    '<span class="font-semibold text-slate-700 dark:text-slate-200">ⓘ On-chain verified vs API headline:</span> ' +
+                    'Mento\'s public /reserve API undercounts Ethereum-side reserves by ' +
+                    (deltaUsdM ? '<strong>$' + deltaUsdM + 'M</strong> ' : '') +
+                    '(' + (missingSyms || 'AUSD') + ' held at Ops Safe is absent from the API). The primary figures above are computed by sweeping all 7 reserve wallets on Mento\'s /addresses page directly on-chain. See risk flag <code class="text-xs">mento_api_eth_undercount</code> for details.' +
+                '</div>'
+            : '') +
 
         '</div>';
         return html;
@@ -532,6 +654,8 @@ var USDmRenderer = {
     _renderChainBreakdown: function(specific) {
         var celo = specific.celo_state || {};
         var monad = specific.monad_state || {};
+        var eth = specific.ethereum_state || {};
+        var hasEth = (eth.reserve_on_chain_usd != null);
 
         var coverage = monad.reserve_v2_coverage_ratio;
         var coverageState = USDmRenderer._coverageState(coverage);
@@ -544,9 +668,63 @@ var USDmRenderer = {
             '<span class="text-amber-600 font-mono" title="Mento\'s own &quot;lost&quot; transparency field">' + USDmRenderer._formatToken(celo.lost) + ' USDm</span>' :
             '<span class="font-mono text-slate-600">' + USDmRenderer._formatToken(celo.lost) + ' USDm</span>';
 
+        // Ethereum card body — per-token breakdown with by_holder attribution
+        // for the API undercount story (AUSD at Ops Safe).
+        var ethBody = '';
+        if (hasEth) {
+            var rb = eth.reserve_breakdown || {};
+            var ethDeltaUsdM = (eth.api_vs_on_chain_delta_usd != null) ? (eth.api_vs_on_chain_delta_usd / 1e6).toFixed(2) : null;
+            var ethDeltaPct = (eth.api_vs_on_chain_delta_pct != null) ? (eth.api_vs_on_chain_delta_pct * 100).toFixed(1) : null;
+            var missingSet = new Set(Array.isArray(eth.missing_from_api_symbols) ? eth.missing_from_api_symbols : []);
+            var ethSymbols = Object.keys(rb).sort(function(a, b) {
+                return (rb[b].usd_value || 0) - (rb[a].usd_value || 0);
+            });
+            var tokenRows = ethSymbols.map(function(sym) {
+                var r = rb[sym] || {};
+                var holder = '—';
+                if (r.by_holder) {
+                    var best = null, bestVal = -1;
+                    Object.keys(r.by_holder).forEach(function(h) {
+                        var v = r.by_holder[h] || 0;
+                        if (v > bestVal) { best = h; bestVal = v; }
+                    });
+                    if (best) holder = best.replace(/_/g, ' ');
+                }
+                var missingBadge = missingSet.has(sym) ?
+                    ' <span class="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-800" title="Absent from Mento /reserve API headline">absent from API</span>' :
+                    '';
+                return '<div class="flex justify-between text-xs"><dt class="text-slate-500">' + sym + missingBadge + ' <span class="text-[10px] text-slate-400">@ ' + holder + '</span></dt>' +
+                    '<dd class="font-mono">' + CommonRenderer.formatCurrencyExact(r.usd_value) + '</dd></div>';
+            }).join('');
+
+            ethBody =
+                '<div class="border border-slate-200 dark:border-slate-700 rounded-lg p-4">' +
+                    '<div class="flex items-center gap-2 mb-3">' +
+                        '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700">Ethereum</span>' +
+                        '<span class="font-semibold">Ethereum (cold + ops)</span>' +
+                    '</div>' +
+                    '<dl class="text-sm space-y-1 mb-2">' +
+                        '<div class="flex justify-between"><dt class="text-slate-500">On-chain reserves</dt><dd class="font-mono">' + CommonRenderer.formatCurrencyExact(eth.reserve_on_chain_usd) + '</dd></div>' +
+                        '<div class="flex justify-between"><dt class="text-slate-500">Per Mento API</dt><dd class="font-mono text-slate-400">' + CommonRenderer.formatCurrencyExact(eth.reserve_per_api_usd) + '</dd></div>' +
+                        '<div class="flex justify-between border-t border-slate-100 dark:border-slate-700 pt-2 mt-2"><dt class="text-slate-700 dark:text-slate-200 font-semibold">API undercount</dt>' +
+                            '<dd class="font-mono font-bold text-amber-600">' +
+                                (ethDeltaUsdM ? '+$' + ethDeltaUsdM + 'M' : '—') +
+                                (ethDeltaPct ? ' <span class="text-xs font-normal text-slate-500">(' + ethDeltaPct + '%)</span>' : '') +
+                            '</dd>' +
+                        '</div>' +
+                    '</dl>' +
+                    '<div class="text-xs text-slate-500 uppercase font-medium mt-3 mb-1">Per-token (largest first)</div>' +
+                    '<dl class="space-y-0.5">' + tokenRows + '</dl>' +
+                    '<div class="text-xs text-slate-400 mt-2">Reserve wallets swept directly on-chain (V2 Liquidity Reserve, Reserve Safe Cold, Ops Safe, Rebalancer Bot). Tokens marked <em>absent from API</em> drive the corrected Collateral Ratio above.</div>' +
+                '</div>';
+        }
+
+        // Grid expands to 3 columns when Ethereum data is available.
+        var gridCls = hasEth ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4' : 'grid grid-cols-1 md:grid-cols-2 gap-4';
+
         return '<div class="panel">' +
             '<div class="panel-title">Chain Breakdown</div>' +
-            '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+            '<div class="' + gridCls + '">' +
 
                 // Celo card
                 '<div class="border border-slate-200 dark:border-slate-700 rounded-lg p-4">' +
@@ -572,6 +750,9 @@ var USDmRenderer = {
                     '</dl>' +
                     '<div class="text-xs text-slate-400 mt-2">Pool-resident USDm pulls local coverage below 100%. The gap is closed by Mento operational top-ups (visible in chart), not by an on-chain bridge — Wormhole NTT is announced but not yet operational.</div>' +
                 '</div>' +
+
+                // Ethereum card (rendered only when analyzer publishes ethereum_state)
+                ethBody +
 
             '</div>' +
         '</div>';
@@ -636,6 +817,7 @@ var USDmRenderer = {
                 srcPill('Mento API', ds.mento_api_ok) +
                 srcPill('Monad RPC', ds.monad_rpc_ok) +
                 srcPill('Celo RPC',  ds.celo_rpc_ok) +
+                (ds.ethereum_rpc_ok !== undefined ? srcPill('Ethereum RPC', ds.ethereum_rpc_ok) : '') +
                 USDmRenderer._statusPill('API↔RPC drift', driftState, (driftPct != null ? driftPct.toFixed(2) + '%' : '—')) +
             '</div>' +
             '<div class="text-xs text-slate-500 mt-3">' +
