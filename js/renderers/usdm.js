@@ -18,6 +18,12 @@
  * expects, so the standard summary cards and CR chart render correctly.
  */
 
+// Module-level constants — USDM_* prefixed per renderer global-scope
+// namespacing convention. Used by the backing-breakdown caption appender
+// in render() and the reserve-bucket panel-local caption.
+var USDM_CORRECTED_BREAKDOWN_NOTE = 'On-chain corrected — API total understates by the AUSD held at the Ethereum Ops Safe (added to Ops row above). Headline tiles and these rows now both reflect the on-chain sweep.';
+var USDM_CORRECTED_BUCKETS_NOTE = 'On-chain corrected — adds AUSD at the Ethereum Ops Safe to the USD-stable bucket. EUR-stable and Volatile are unchanged from the API; their % shares rebase against the corrected total.';
+
 var USDmRenderer = {
 
     // ============================================================
@@ -250,7 +256,14 @@ var USDmRenderer = {
         // renderPieChart both iterate this array. Map the aggregate custodian
         // split onto the standard breakdown shape; richer per-chain detail
         // lives in §5 Chain Breakdown below.
-        var cb = agg.custodian_breakdown || {};
+        //
+        // Prefer `custodian_breakdown_corrected` when the analyzer publishes
+        // it (Ethereum on-chain sweep caught tokens absent from /reserve API,
+        // currently AUSD at Ops Safe). Falls through to the API-only breakdown
+        // when the corrected fields are missing — same graceful degradation
+        // as the headline cards. Caption explaining the delta is appended in
+        // render() after common.js paints the table.
+        var cb = agg.custodian_breakdown_corrected || agg.custodian_breakdown || {};
         var total = (cb.hot_usd || 0) + (cb.cold_usd || 0) + (cb.ops_usd || 0);
         function pct(v) { return total > 0 ? (v / total) * 100 : 0; }
         data.backing_breakdown = [
@@ -298,6 +311,22 @@ var USDmRenderer = {
         html += USDmRenderer._renderDataIntegrity(specific);
 
         container.innerHTML = html;
+
+        // Backing Breakdown caption — append after common.renderBreakdownTable
+        // paints. common.js owns #breakdown-caption (writes the generic
+        // "% column is share of displayed backing" note); we tack on the USDm
+        // on-chain-corrected note when the analyzer has flagged the API
+        // undercount. Idempotent in case render() runs twice.
+        var agg = specific.aggregate || {};
+        var hasCorrectedCustody = (agg.custodian_breakdown_corrected != null);
+        var cap = document.getElementById('breakdown-caption');
+        if (cap && hasCorrectedCustody && cap.querySelector('[data-usdm-corrected]') == null) {
+            var addendum = document.createElement('div');
+            addendum.setAttribute('data-usdm-corrected', '1');
+            addendum.className = 'mt-2 text-xs text-slate-500 dark:text-slate-400 border-l-2 border-amber-300 pl-3 py-1';
+            addendum.innerHTML = '<span class="font-semibold text-slate-700 dark:text-slate-200">ⓘ </span>' + USDM_CORRECTED_BREAKDOWN_NOTE;
+            cap.appendChild(addendum);
+        }
     },
 
     // ============================================================
@@ -469,10 +498,17 @@ var USDmRenderer = {
     // stETH) explicitly so "is the volatile counted as collateral?" is
     // answered at a glance.
     _renderReserveBuckets: function(agg) {
-        var usd = agg.total_reserve_usd_stable_bucket;
-        var eur = agg.total_reserve_eur_stable_bucket;
-        var vol = agg.total_reserve_volatile_bucket;
-        var other = agg.total_reserve_other_bucket;
+        // Prefer on-chain corrected bucket totals when the analyzer publishes
+        // them. The corrected USD-stable bucket folds in AUSD held at the
+        // Ethereum Ops Safe — absent from the Mento /reserve API headline.
+        // EUR-stable / Volatile / Other are typically unchanged from API
+        // values but their displayed % shares rebase against the corrected
+        // total. Falls back to API-only when the corrected fields are missing.
+        var hasCorrected = (agg.total_reserve_usd_stable_bucket_corrected != null);
+        var usd = hasCorrected ? agg.total_reserve_usd_stable_bucket_corrected : agg.total_reserve_usd_stable_bucket;
+        var eur = hasCorrected ? agg.total_reserve_eur_stable_bucket_corrected : agg.total_reserve_eur_stable_bucket;
+        var vol = hasCorrected ? agg.total_reserve_volatile_bucket_corrected : agg.total_reserve_volatile_bucket;
+        var other = hasCorrected ? agg.total_reserve_other_bucket_corrected : agg.total_reserve_other_bucket;
         if (usd == null && eur == null && vol == null && other == null) return '';
 
         usd = usd || 0; eur = eur || 0; vol = vol || 0; other = other || 0;
@@ -503,8 +539,18 @@ var USDmRenderer = {
             '</tr>';
         }).join('');
 
+        var titleSuffix = hasCorrected ?
+            ' <span class="text-xs font-normal text-slate-500">stable vs volatile · on-chain verified</span>' :
+            ' <span class="text-xs font-normal text-slate-500">stable vs volatile</span>';
+
+        var captionRow = hasCorrected ?
+            '<div class="mt-3 text-xs text-slate-500 dark:text-slate-400 border-l-2 border-amber-300 pl-3 py-1">' +
+                '<span class="font-semibold text-slate-700 dark:text-slate-200">ⓘ </span>' +
+                USDM_CORRECTED_BUCKETS_NOTE +
+            '</div>' : '';
+
         return '<div class="panel">' +
-            '<div class="panel-title">Reserve Composition by Bucket <span class="text-xs font-normal text-slate-500">stable vs volatile</span></div>' +
+            '<div class="panel-title">Reserve Composition by Bucket' + titleSuffix + '</div>' +
             '<div class="text-xs text-slate-500 mb-3">Mento Reserve totals ' + CommonRenderer.formatCurrencyExact(total) + '. The Volatile bucket (CELO + stETH) is the slice that pulls the headline Collateral Ratio above the Stable-Only Coverage figure.</div>' +
             '<div class="flex h-4 rounded overflow-hidden bg-slate-200 mb-3">' + bar + '</div>' +
             '<table class="data-table">' +
@@ -515,6 +561,7 @@ var USDmRenderer = {
                 '</tr></thead>' +
                 '<tbody>' + rows + '</tbody>' +
             '</table>' +
+            captionRow +
         '</div>';
     },
 
