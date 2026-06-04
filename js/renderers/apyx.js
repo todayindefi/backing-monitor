@@ -164,8 +164,11 @@ var ApyxRenderer = {
         banner.className = 'risk-flag risk-warning mb-4';
         banner.innerHTML =
             '<strong>Trust posture — read before acting:</strong> ' +
-            'Backing sits off-chain with an unnamed custodian/broker (legal structure not publicly ' +
-            'disclosed) and is published via Accountable\'s real-time TEE-attested proof-of-solvency ' +
+            'apxUSD is issuer-push — every token was minted by an Apyx team transaction with ' +
+            'no atomic USDC settlement at the mint moment; backing depends on Apyx selling ' +
+            'inventory and routing USDC through a Kraken off-ramp to its Alpaca brokerage ' +
+            'off-chain, not on a per-mint on-chain invariant. ' +
+            'Solvency is published via Accountable\'s real-time TEE-attested proof-of-solvency ' +
             'feed — not on-chain proof-of-reserves and not a PCAOB-firm audit. ' +
             'Cash composition is not itemized, and the bridge-admin Safe (3-of-6) can re-configure ' +
             'rate limits, chain peers, and RMN with no timelock. Treat panels below as analyst ' +
