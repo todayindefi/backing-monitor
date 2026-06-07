@@ -145,6 +145,70 @@ body {
     margin-bottom: 1rem;
 }
 
+/* ====== 5-axis frame ====== */
+/* Each risk axis is a top-level section; the head carries a numbered marker,
+   the axis title, a one-line summary, and the computed rating chip. */
+.axis-section { margin-bottom: 2rem; scroll-margin-top: 3rem; }
+.axis-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.5rem 0.75rem;
+    padding-bottom: 0.6rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 2px solid #e2e8f0;
+}
+.axis-head:empty { display: none; }
+.axis-num {
+    flex: none;
+    width: 1.5rem; height: 1.5rem;
+    display: inline-flex; align-items: center; justify-content: center;
+    align-self: center;
+    border-radius: 9999px;
+    background: #eef2ff; color: #4f46e5;
+    font-size: 0.8rem; font-weight: 700;
+}
+.axis-title { font-size: 1.2rem; font-weight: 700; color: #0f172a; }
+.axis-sub { font-size: 0.8rem; color: #64748b; align-self: center; }
+.axis-rating {
+    margin-left: auto; align-self: center;
+    display: inline-flex; align-items: center; gap: 0.4rem;
+    padding: 0.2rem 0.7rem;
+    border-radius: 9999px;
+    font-size: 0.8rem; font-weight: 600;
+}
+.axis-rating.r-ok   { background: #f0fdf4; color: #15803d; }
+.axis-rating.r-warn { background: #fffbeb; color: #b45309; }
+.axis-rating.r-crit { background: #fef2f2; color: #b91c1c; }
+.axis-rating.r-na   { background: #f1f5f9; color: #64748b; }
+
+/* Dependency / generic link cards */
+.dep-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.75rem; }
+.dep-card {
+    display: block;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 0.75rem;
+    padding: 1rem 1.1rem;
+    transition: all 0.15s;
+}
+a.dep-card:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59,130,246,0.1); transform: translateY(-1px); }
+.dep-card.dep-stub { border-style: dashed; background: #f8fafc; }
+.dep-card-name { font-weight: 700; color: #0f172a; font-size: 0.95rem; }
+.dep-card-metric { font-size: 0.8rem; color: #64748b; margin-top: 0.2rem; }
+.dep-card-link { font-size: 0.7rem; color: #6366f1; margin-top: 0.5rem; font-weight: 600; }
+
+body.dark .axis-head { border-color: #334155; }
+body.dark .axis-title { color: #f1f5f9; }
+body.dark .axis-num { background: #312e81; color: #c7d2fe; }
+body.dark .axis-rating.r-ok   { background: #052e16; color: #86efac; }
+body.dark .axis-rating.r-warn { background: #451a03; color: #fcd34d; }
+body.dark .axis-rating.r-crit { background: #450a0a; color: #fca5a5; }
+body.dark .axis-rating.r-na   { background: #1e293b; color: #94a3b8; }
+body.dark .dep-card { background: #1e293b; border-color: #334155; }
+body.dark .dep-card.dep-stub { background: #0f172a; }
+body.dark .dep-card-name { color: #f1f5f9; }
+
 /* Chart container */
 .chart-container {
     position: relative;

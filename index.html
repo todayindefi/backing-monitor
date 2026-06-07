@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Backing Monitor</title>
+    <title>Risk Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/styles.css?v=20260514g">
+    <link rel="stylesheet" href="css/styles.css?v=20260607a">
 </head>
 <body class="min-h-screen">
 
@@ -18,7 +18,7 @@
     <div class="page-header">
         <div class="max-w-6xl mx-auto px-4 flex items-center justify-between">
             <div>
-                <a href="?" class="text-lg font-bold text-slate-800 hover:text-blue-600 transition-colors">Backing Monitor</a>
+                <a href="?" class="text-lg font-bold text-slate-800 hover:text-blue-600 transition-colors">Risk Dashboard</a>
                 <span id="header-subtitle" class="ml-3 text-sm text-slate-500"></span>
                 <a id="header-report-link" class="hidden ml-3 text-xs text-slate-500 hover:text-blue-600 transition-colors" target="_blank" rel="noopener noreferrer">Full report &#8599;</a>
                 <a id="header-companion-link" class="hidden ml-3 text-xs text-slate-500 hover:text-blue-600 transition-colors">View companion &#8599;</a>
@@ -44,8 +44,8 @@
     <div class="max-w-6xl mx-auto px-4 py-6">
         <!-- Index view (asset cards) -->
         <div id="index-view" class="hidden">
-            <h1 class="text-2xl font-bold text-slate-800 mb-1">Asset Backing Dashboards</h1>
-            <p class="text-slate-500 mb-6">On-chain collateral analysis and risk monitoring</p>
+            <h1 class="text-2xl font-bold text-slate-800 mb-1">Asset Risk Dashboards</h1>
+            <p class="text-slate-500 mb-6">On-chain risk monitoring across peg, liquidity, backing, dependencies &amp; issuer</p>
             <div id="asset-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 <div class="loading-pulse text-slate-400 text-sm p-8 text-center">Loading assets...</div>
             </div>
@@ -58,54 +58,94 @@
                 &larr; All assets
             </a>
 
-            <!-- Summary cards -->
+            <!-- Risk summary band: 5 axis cards in 5-axis mode, legacy CR cards otherwise.
+                 ID retained so existing renderers (and common.renderSummaryCards) keep working. -->
             <div id="summary-cards" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6"></div>
 
-            <!-- CR Trend Chart -->
-            <div class="panel" id="chart-panel">
-                <div class="panel-title">Collateral Ratio History</div>
-                <div class="chart-container">
-                    <canvas id="cr-chart"></canvas>
-                </div>
-            </div>
+            <!-- ============ Axis 1 · PEG ============ -->
+            <!-- 5-axis sections only reveal when the asset carries Layer-1 blocks; legacy
+                 assets keep the old backing-only layout (summary cards + backing section). -->
+            <section id="section-peg" class="axis-section hidden">
+                <div class="axis-head" id="axis-peg-head"></div>
+                <div id="axis-peg-body"></div>
+                <div id="peg-extra-panels"></div>
+            </section>
 
-            <!-- Two columns: breakdown + risk -->
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                <!-- Backing breakdown -->
-                <div class="panel lg:col-span-2">
-                    <div class="panel-title">Backing Breakdown</div>
-                    <table class="data-table" id="breakdown-table">
-                        <thead>
-                            <tr>
-                                <th>Strategy</th>
-                                <th class="text-right">Value (USD)</th>
-                                <th class="text-right">%</th>
-                                <th style="width: 120px"></th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                    <p id="breakdown-caption" class="text-xs text-slate-400 mt-2"></p>
-                </div>
+            <!-- ============ Axis 2 · LIQUIDITY ============ -->
+            <section id="section-liquidity" class="axis-section hidden">
+                <div class="axis-head" id="axis-liquidity-head"></div>
+                <div id="axis-liquidity-body"></div>
+                <div id="liquidity-extra-panels"></div>
+            </section>
 
-                <!-- Risk flags + pie -->
-                <div>
-                    <div class="panel">
-                        <div class="panel-title">Risk Flags</div>
-                        <div id="risk-flags">
-                            <div class="text-slate-400 text-sm">Loading...</div>
-                        </div>
-                    </div>
-                    <div class="panel">
-                        <div class="panel-title">Allocation</div>
-                        <div style="height: 200px; position: relative;">
-                            <canvas id="pie-chart"></canvas>
-                        </div>
+            <!-- ============ Axis 3 · BACKING ============ -->
+            <!-- Always rendered. Holds the original backing DOM (chart-panel, breakdown-table,
+                 risk-flags, pie-chart) by their original IDs so every existing renderer that
+                 targets them keeps working. The head div is only filled in 5-axis mode. -->
+            <section id="section-backing" class="axis-section">
+                <div class="axis-head" id="axis-backing-head"></div>
+
+                <!-- CR Trend Chart -->
+                <div class="panel" id="chart-panel">
+                    <div class="panel-title">Collateral Ratio History</div>
+                    <div class="chart-container">
+                        <canvas id="cr-chart"></canvas>
                     </div>
                 </div>
-            </div>
 
-            <!-- Asset-specific panels -->
+                <!-- Two columns: breakdown + risk -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <!-- Backing breakdown -->
+                    <div class="panel lg:col-span-2">
+                        <div class="panel-title">Backing Breakdown</div>
+                        <table class="data-table" id="breakdown-table">
+                            <thead>
+                                <tr>
+                                    <th>Strategy</th>
+                                    <th class="text-right">Value (USD)</th>
+                                    <th class="text-right">%</th>
+                                    <th style="width: 120px"></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <p id="breakdown-caption" class="text-xs text-slate-400 mt-2"></p>
+                    </div>
+
+                    <!-- Risk flags + pie -->
+                    <div>
+                        <div class="panel">
+                            <div class="panel-title">Risk Flags</div>
+                            <div id="risk-flags">
+                                <div class="text-slate-400 text-sm">Loading...</div>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-title">Allocation</div>
+                            <div style="height: 200px; position: relative;">
+                                <canvas id="pie-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="backing-extra-panels"></div>
+            </section>
+
+            <!-- ============ Axis 4 · DEPENDENCIES ============ -->
+            <section id="section-dependencies" class="axis-section hidden">
+                <div class="axis-head" id="axis-dependencies-head"></div>
+                <div id="axis-dependencies-body"></div>
+                <div id="dependencies-extra-panels"></div>
+            </section>
+
+            <!-- ============ Axis 5 · ISSUER ============ -->
+            <section id="section-issuer" class="axis-section hidden">
+                <div class="axis-head" id="axis-issuer-head"></div>
+                <div id="axis-issuer-body"></div>
+                <div id="issuer-extra-panels"></div>
+            </section>
+
+            <!-- Asset-specific panels (legacy bespoke dump for non-piloted renderers) -->
             <div id="asset-specific-panels"></div>
         </div>
 
@@ -144,14 +184,14 @@
         }
     })();
     </script>
-    <script src="js/renderers/common.js?v=20260526a"></script>
+    <script src="js/renderers/common.js?v=20260607a"></script>
     <script src="js/renderers/ousd.js?v=20260513d"></script>
     <script src="js/renderers/frax.js?v=20260402"></script>
     <script src="js/renderers/crvusd.js?v=20260601a"></script>
     <script src="js/renderers/usg.js?v=20260526b"></script>
     <script src="js/renderers/usdd.js?v=20260331"></script>
     <script src="js/renderers/syrupusdc.js?v=20260506a"></script>
-    <script src="js/renderers/apyx.js?v=20260604a"></script>
+    <script src="js/renderers/apyx.js?v=20260607a"></script>
     <script src="js/renderers/strc.js?v=20260602a"></script>
     <script src="js/renderers/mstr.js?v=20260602a"></script>
     <script src="js/renderers/bmnr.js?v=20260531a"></script>

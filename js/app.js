@@ -223,8 +223,15 @@ async function renderAsset(slug) {
             }
         }
 
-        // Common sections
-        CommonRenderer.renderSummaryCards(data);
+        // Common sections.
+        // 5-axis mode (asset carries the Layer-1 axis blocks): the summary band
+        // shows the 5 axis cards. Legacy assets keep the old CR summary cards.
+        var has5axis = CommonRenderer.hasAxisBlocks(data);
+        if (has5axis) {
+            CommonRenderer.renderAxisBand(data, history);
+        } else {
+            CommonRenderer.renderSummaryCards(data);
+        }
         CommonRenderer.renderRiskFlags(data);
         var chartOpts = {};
         if (data.asset_specific) {
@@ -279,6 +286,12 @@ async function renderAsset(slug) {
             // Also hide the empty breakdown panel
             document.getElementById('breakdown-table').closest('.panel').style.display = 'none';
         }
+
+        // 5-axis sections (peg / liquidity / dependencies / issuer + backing head).
+        // Reveals & fills the standard axis sections in 5-axis mode; a no-op that
+        // keeps them hidden for legacy assets. Runs BEFORE the bespoke renderer so
+        // that renderer can slot its panels into already-revealed axis sections.
+        CommonRenderer.renderAxisSections(data, history);
 
         // Asset-specific renderer
         var renderer = findAssetRenderer(data);

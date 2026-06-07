@@ -378,23 +378,51 @@ var ApyxRenderer = {
         }
 
         var anc = ApyxRenderer._anchor;
-        html += anc('panel-headline',    ApyxRenderer._renderHeadlineCard(specific, s, slug));
-        // R9: Family panel promoted to row 2 — cross-asset framing sets context
-        // before the asset-specific panels. _loadFamilyPanel(slug) populates
-        // this placeholder via async fetch later in this same render() call.
-        html += '<div id="apyx-family-panel"></div>';
-        html += anc('panel-attestation', ApyxRenderer._renderBackingAttestation(specific, slug));
-        html += anc('panel-stress',      ApyxRenderer._renderStressLens(specific, slug));
-        html += anc('panel-watch',       ApyxRenderer._renderExternalWatch(specific, slug));
-        if (slug === 'apyusd') {
-            html += anc('panel-yield',   ApyxRenderer._renderYieldTrajectory(specific, s));
-            html += anc('panel-unlock',  ApyxRenderer._renderUnlockQueue(specific));
-        }
-        html += anc('panel-liquidity',   ApyxRenderer._renderLiquidity(specific, s, slug));
-        html += anc('panel-bridge',      ApyxRenderer._renderMultiChainBridge(specific, slug));
-        html += anc('panel-trust',       ApyxRenderer._renderTrustStack(specific));
 
-        container.innerHTML = html;
+        // Build each panel's HTML once, then route to the matching 5-axis section
+        // slot when the common layer is in 5-axis mode (apxUSD/apyUSD carry the
+        // Layer-1 blocks). Mapping (handoff Part 3):
+        //   Backing      ← headline · attestation · stress · yield
+        //   Liquidity    ← DEX pools / slippage (liquidity) · bridge · unlock
+        //   Issuer       ← Trust Stack (admin Safes / AccessManager / bridge posture)
+        //   Dependencies ← family panel · external watch (STRC/MSTR)
+        // The §STRCx reserve exposure surfaces as the common Dependencies→upstream
+        // STRCx card. The family placeholder + all chart canvases keep their ids,
+        // so the post-render async loaders below are unaffected by the relocation.
+        var familyPlaceholder = '<div id="apyx-family-panel"></div>';
+        var pHeadline    = anc('panel-headline',    ApyxRenderer._renderHeadlineCard(specific, s, slug));
+        var pAttestation = anc('panel-attestation', ApyxRenderer._renderBackingAttestation(specific, slug));
+        var pStress      = anc('panel-stress',      ApyxRenderer._renderStressLens(specific, slug));
+        var pWatch       = anc('panel-watch',       ApyxRenderer._renderExternalWatch(specific, slug));
+        var pYield = '', pUnlock = '';
+        if (slug === 'apyusd') {
+            pYield  = anc('panel-yield',  ApyxRenderer._renderYieldTrajectory(specific, s));
+            pUnlock = anc('panel-unlock', ApyxRenderer._renderUnlockQueue(specific));
+        }
+        var pLiquidity = anc('panel-liquidity', ApyxRenderer._renderLiquidity(specific, s, slug));
+        var pBridge    = anc('panel-bridge',    ApyxRenderer._renderMultiChainBridge(specific, slug));
+        var pTrust     = anc('panel-trust',     ApyxRenderer._renderTrustStack(specific));
+
+        var axisMode = (typeof CommonRenderer !== 'undefined' &&
+                        CommonRenderer.hasAxisBlocks && CommonRenderer.hasAxisBlocks(data) &&
+                        document.getElementById('backing-extra-panels'));
+
+        if (axisMode) {
+            var setSlot = function(id, markup) {
+                var el = document.getElementById(id);
+                if (el) el.innerHTML = markup;
+            };
+            setSlot('backing-extra-panels',      pHeadline + pAttestation + pStress + pYield);
+            setSlot('liquidity-extra-panels',    pLiquidity + pBridge + pUnlock);
+            setSlot('issuer-extra-panels',       pTrust);
+            setSlot('dependencies-extra-panels', familyPlaceholder + pWatch);
+            container.innerHTML = '';  // bottom dump unused in 5-axis mode
+        } else {
+            // Legacy single-column dump (kept for any non-5-axis context).
+            html += pHeadline + familyPlaceholder + pAttestation + pStress + pWatch +
+                    pYield + pUnlock + pLiquidity + pBridge + pTrust;
+            container.innerHTML = html;
+        }
 
         // R13/R14: populate sticky nav + companion-asset header link.
         ApyxRenderer._setupAnchorNav(slug);
@@ -421,8 +449,13 @@ var ApyxRenderer = {
         // already carries Supply / Backing / Collateralization / Status with
         // richer context (chain pills, asset tagline, status pill, NAV for
         // apyUSD). The top strip is pure duplication.
+        // 5-axis mode: #summary-cards is now the 5-card risk band (rendered by
+        // CommonRenderer.renderAxisBand) — keep it; only the legacy CR strip is
+        // the duplication we suppress.
+        var axisMode = (typeof CommonRenderer !== 'undefined' &&
+                        CommonRenderer.hasAxisBlocks && CommonRenderer.hasAxisBlocks(data));
         var summaryCards = document.getElementById('summary-cards');
-        if (summaryCards) summaryCards.style.display = 'none';
+        if (summaryCards && !axisMode) summaryCards.style.display = 'none';
 
         // §2 Backing Attestation supplies a custom reserves donut + table —
         // hide the default breakdown panel and the default pie panel.
