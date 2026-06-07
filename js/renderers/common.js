@@ -528,7 +528,13 @@ const CommonRenderer = {
         var pegArrow = this._pegTrendArrow(data, history);
 
         var nUp = Array.isArray(dep.upstream) ? dep.upstream.length : 0;
+        // Downstream is a reserved stub until a consumer analyzer exists; an
+        // absent/false `downstream_tracked` flag means "not tracked", NOT "0".
+        var downTracked = dep.downstream_tracked === true;
         var nDown = Array.isArray(dep.downstream) ? dep.downstream.length : 0;
+        var depDownHtml = downTracked
+            ? nDown + ' <span class="text-sm font-normal text-slate-400">down</span>'
+            : '<span class="text-base font-normal text-slate-400">downstream not tracked</span>';
 
         var depthTxt = (liq.total_2pct_depth != null) ? this.formatCurrency(liq.total_2pct_depth) : 'n/a';
 
@@ -553,8 +559,7 @@ const CommonRenderer = {
             },
             {
                 label: 'Dependencies',
-                valueHtml: nUp + ' <span class="text-sm font-normal text-slate-400">up</span> / ' +
-                           nDown + ' <span class="text-sm font-normal text-slate-400">down</span>',
+                valueHtml: nUp + ' <span class="text-sm font-normal text-slate-400">up</span> · ' + depDownHtml,
                 sub: 'upstream / downstream',
                 chip: '<a href="#section-dependencies" class="axis-rating r-na">View links →</a>'
             },
@@ -651,8 +656,10 @@ const CommonRenderer = {
         // 4 · Dependencies
         var dep = data.dependencies || {};
         var nUp = Array.isArray(dep.upstream) ? dep.upstream.length : 0;
-        var nDown = Array.isArray(dep.downstream) ? dep.downstream.length : 0;
-        this._renderAxisHead('dependencies', 4, 'Dependencies', nUp + ' upstream · ' + nDown + ' downstream', '');
+        var downSub = (dep.downstream_tracked === true)
+            ? (Array.isArray(dep.downstream) ? dep.downstream.length : 0) + ' downstream'
+            : 'downstream not tracked';
+        this._renderAxisHead('dependencies', 4, 'Dependencies', nUp + ' upstream · ' + downSub, '');
         this._renderDependenciesSection(data);
 
         // 5 · Issuer
@@ -834,14 +841,21 @@ const CommonRenderer = {
             ? '<div class="dep-grid">' + up.map(card).join('') + '</div>'
             : '<div class="text-sm text-slate-400">No upstream dependencies tracked.</div>';
 
-        // Downstream is an empty-array stub by contract; render the future-version
-        // placeholder, but auto-render real cards the moment the array fills.
-        var downBlock = down.length
-            ? '<div class="dep-grid">' + down.map(card).join('') + '</div>'
-            : '<div class="dep-card dep-stub">' +
-                  '<div class="dep-card-name text-slate-500">Downstream consumers</div>' +
+        // Downstream is a reserved stub until a consumer analyzer exists. An
+        // absent/false `downstream_tracked` flag means "not tracked" (NOT "0") —
+        // show the future-version placeholder. Once the analyzer flips the flag
+        // true, real cards (or an honest empty state) render with no code change.
+        var downBlock;
+        if (dep.downstream_tracked === true) {
+            downBlock = down.length
+                ? '<div class="dep-grid">' + down.map(card).join('') + '</div>'
+                : '<div class="text-sm text-slate-400">No downstream consumers currently tracked.</div>';
+        } else {
+            downBlock = '<div class="dep-card dep-stub">' +
+                  '<div class="dep-card-name text-slate-500">Downstream not tracked</div>' +
                   '<div class="dep-card-metric">Consumer tracking (Morpho / Pendle / etc.) coming in a future version.</div>' +
               '</div>';
+        }
 
         body.innerHTML = '<div class="panel">' +
             '<div class="panel-title">Dependencies</div>' +

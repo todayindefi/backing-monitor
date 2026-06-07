@@ -429,12 +429,13 @@ var ApyxRenderer = {
         ApyxRenderer._setupCompanionLink(slug);
 
         // Post-render chart renders — DOM nodes must exist first.
+        // Exit cost / slippage is owned by the common Liquidity section's
+        // market-basis exit_mark ladder; apxUSD peg history is owned by the
+        // common Peg section. Both bespoke par-basis charts were removed, so
+        // their loaders (apyx-slippage-chart, apyx-peg-history) are no longer
+        // invoked here.
         ApyxRenderer._renderReservesDonut(specific, slug);
         ApyxRenderer._renderAttestationTimeline(specific, slug);
-        ApyxRenderer._renderSlippageChart(specific, slug);
-        if (slug === 'apxusd') {
-            ApyxRenderer._loadPegHistoryChart(slug);
-        }
         if (slug === 'apyusd') {
             ApyxRenderer._loadMarketPriceTrajectory(slug);
             ApyxRenderer._loadMarketDiscountChart(slug);
@@ -578,32 +579,15 @@ var ApyxRenderer = {
         if (slug === 'apxusd') {
             headerLeft = '<div class="text-xl font-bold text-slate-800">apxUSD</div>' +
                 '<div class="text-xs text-slate-500 mt-1">Apyx · RWA-backed synthetic stablecoin (non-yield)</div>';
-            var crCls = (s.collateral_ratio >= 100) ? 'text-green-600' : 'text-red-600';
+            // Supply / Backing / Collateralization / Buffer are owned by the
+            // 5-axis summary band (Backing card carries CR + surplus/deficit).
+            // This card keeps only the non-redundant identity context: status
+            // and reserve-proof provenance (TEE-signed Accountable attestation).
             metricsRow =
-                '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
-                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Supply</div>' +
-                        '<div class="text-lg font-bold text-slate-800">' + CommonRenderer.formatCurrency(s.total_supply) + '</div></div>' +
-                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Backing</div>' +
-                        '<div class="text-lg font-bold text-slate-800">' + CommonRenderer.formatCurrency(s.total_backing) + '</div></div>' +
-                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Collateralization</div>' +
-                        '<div class="text-lg font-bold ' + crCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 2) + '</div>' +
-                        '<div class="mt-1">' + teePill + '</div>' +
-                        // R6: surface the absolute buffer alongside CR — assets/apxusd.md
-                        // §Key Risk Notes flags "thin absolute buffer" as a binding
-                        // constraint; the percentage form hides how thin the cushion is.
-                        (function() {
-                            var buf = s.surplus_deficit;
-                            if (buf == null) return '';
-                            var sign = buf >= 0 ? '+' : '−';
-                            var bufCls = buf >= 0 ? 'text-green-600' : 'text-red-600';
-                            var bufMag = '$' + (Math.abs(buf) / 1e6).toFixed(2) + 'M';
-                            return '<div class="text-xs text-slate-500 mt-0.5">' +
-                                'Buffer: <span class="font-mono ' + bufCls + '">' + sign + bufMag + '</span>' +
-                            '</div>';
-                        })() +
-                    '</div>' +
-                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
-                        '<div class="text-lg">' + ApyxRenderer._statusPill(pausedLabel, pausedState) + '</div></div>' +
+                '<div class="flex flex-wrap items-center gap-2 mt-4">' +
+                    ApyxRenderer._statusPill(pausedLabel, pausedState) +
+                    teePill +
+                    '<span class="text-xs text-slate-500">Reserves proof: Accountable TEE attestation</span>' +
                 '</div>';
         } else {
             // apyUSD
@@ -674,7 +658,8 @@ var ApyxRenderer = {
                     ApyxRenderer._statusPill('Last attested', freshState, ApyxRenderer._formatAge(ba.attestation_age_seconds)) +
                 '</span>' +
                 '<span class="ml-auto text-xs text-slate-500">' +
-                    'Collateralization: <span class="font-mono text-base font-bold ' + collatCls + '">' +
+                    'Collateralization <span class="text-slate-400">(Accountable, as-attested)</span>: ' +
+                    '<span class="font-mono text-base font-bold ' + collatCls + '">' +
                         CommonRenderer.formatPercent(collat, 2) +
                     '</span> ' + teePill +
                 '</span>' +
@@ -1614,19 +1599,26 @@ var ApyxRenderer = {
     // ============================================================
     _renderLiquidity: function(specific, s, slug) {
         var divider = '<div class="border-t border-slate-200 pt-6 mt-6"></div>';
-        // Vault-share peg metric is discount-to-NAV, not absolute price vs $1 —
-        // sub-section heading reflects that for apyUSD.
-        var pegHeading = (slug === 'apxusd') ? 'Peg Performance' : 'Discount to NAV';
-        return '<div class="panel">' +
+        var html = '<div class="panel">' +
             '<div class="panel-title">Liquidity</div>' +
-            ApyxRenderer._renderLiquidityScoreSection(specific, s, slug) +
-            divider +
-            '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">' + pegHeading + '</h3>' +
-            ApyxRenderer._renderLiquidityPegSection(specific, s, slug) +
-            divider +
+            ApyxRenderer._renderLiquidityScoreSection(specific, s, slug);
+
+        // Peg sub-section: the common 5-axis Peg section now owns apxUSD's
+        // market price / premium-discount / peg-history chart (market-basis).
+        // Only apyUSD keeps a sub-section here — its contract-NAV-vs-Curve-market
+        // "Discount to NAV" (redemption-cooldown story) is a distinct metric the
+        // common Peg card (CoinGecko premium/discount) does not cover.
+        if (slug === 'apyusd') {
+            html += divider +
+                '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">Discount to NAV</h3>' +
+                ApyxRenderer._renderApyusdDiscountBody(specific);
+        }
+
+        html += divider +
             '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">Secondary Market Depth</h3>' +
             ApyxRenderer._renderLiquidityDepthSection(specific, slug) +
         '</div>';
+        return html;
     },
 
     // Score sub-section — summary tile (derived score · editorial · Δ · badge)
@@ -1776,107 +1768,6 @@ var ApyxRenderer = {
         return scoreHeader + componentsReveal;
     },
 
-    // Peg sub-section — slug-branched body.
-    // apxUSD: Peg Performance (market price vs theoretical $1, 7d premium/discount chart).
-    // apyUSD: Discount to NAV (contract NAV vs Curve market price, trajectory + discount chart).
-    // Canvas IDs preserved so the existing chart loaders find their targets:
-    //   apxUSD: apyx-peg-history → _loadPegHistoryChart
-    //   apyUSD: apyx-market-price-trajectory + apyx-market-discount
-    //           → _loadMarketPriceTrajectory + _loadMarketDiscountChart
-    _renderLiquidityPegSection: function(specific, s, slug) {
-        if (slug === 'apxusd') {
-            return ApyxRenderer._renderApxusdPegBody(specific);
-        }
-        return ApyxRenderer._renderApyusdDiscountBody(specific);
-    },
-
-    _renderApxusdPegBody: function(specific) {
-        var peg = specific.peg || {};
-        var hasMarket = peg.market_price != null;
-
-        if (!hasMarket) {
-            return '<div class="risk-flag risk-info">' +
-                '<strong>Peg data not yet tracked.</strong> ' +
-                'apxUSD has not been added to the upstream peg-tracker feed yet — DEX-implied state ' +
-                'is visible in the Secondary Market Depth sub-section below. This sub-section will populate ' +
-                'automatically once <span class="font-mono">peg_tracker_latest_usd.json</span> ' +
-                'begins emitting apxUSD entries.' +
-            '</div>';
-        }
-
-        var pdPct = peg.premium_discount_pct;
-        var state = ApyxRenderer._pegStatusClass(pdPct);
-        var pdCls = ApyxRenderer._pegPctClass(state);
-
-        var marketTxt = '$' + peg.market_price.toFixed(4);
-        var theoTxt = (peg.theoretical_price != null) ?
-            '$' + peg.theoretical_price.toFixed(4) : '$1.0000';
-
-        var statCards =
-            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">' +
-                '<div class="summary-card"><div class="card-label">Market price</div>' +
-                    '<div class="card-value">' + marketTxt + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">vs theoretical ' + theoTxt + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Premium / Discount</div>' +
-                    '<div class="card-value ' + pdCls + '">' + ApyxRenderer._pegPctText(pdPct) + '</div></div>' +
-                '<div class="summary-card"><div class="card-label">Status</div>' +
-                    '<div class="mt-2">' + ApyxRenderer._statusPill(ApyxRenderer._pegStatusLabel(state), state) + '</div></div>' +
-            '</div>';
-
-        var chartBlock =
-            '<div class="mt-4">' +
-                '<div class="text-sm font-semibold text-slate-700 mb-2">7-day premium / discount vs $1</div>' +
-                '<div style="height: 360px; position: relative;">' +
-                    '<canvas id="apyx-peg-history"></canvas>' +
-                '</div>' +
-            '</div>';
-
-        // Secondary metrics — slippage and Curve pool balance ratio are
-        // contemporaneous proxies for peg pressure; rising exit-cost or a
-        // tilting pool signals the same stress before the price moves.
-        var liq = specific.liquidity || {};
-        var quotes = liq.quotes || {};
-        var slip100k = (quotes.apxUSD_to_USDC && quotes.apxUSD_to_USDC['100000']) ?
-            quotes.apxUSD_to_USDC['100000'].slippage_pct : null;
-
-        var pools = liq.pools || [];
-        var curveApxPool = null;
-        for (var i = 0; i < pools.length; i++) {
-            var p = pools[i];
-            if (p.venue === 'curve' && p.pair && p.pair.indexOf('apxUSD/USDC') >= 0) {
-                curveApxPool = p;
-                break;
-            }
-        }
-        var poolRatio = (curveApxPool && curveApxPool.balance_ratio != null) ?
-            curveApxPool.balance_ratio : null;
-
-        var sourceTxt = peg.source || '—';
-        var obsAgo = '—';
-        if (peg.timestamp) {
-            var pegMs = new Date(peg.timestamp).getTime();
-            if (!isNaN(pegMs)) {
-                obsAgo = ApyxRenderer._formatAge((Date.now() - pegMs) / 1000);
-            }
-        }
-
-        var secondaryRow =
-            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 text-xs">' +
-                '<div><div class="text-slate-400 uppercase font-medium">Source</div>' +
-                    '<div class="font-mono text-slate-700 mt-0.5">' + sourceTxt + '</div></div>' +
-                '<div><div class="text-slate-400 uppercase font-medium">Last observation</div>' +
-                    '<div class="text-slate-700 mt-0.5">' + obsAgo + '</div></div>' +
-                '<div><div class="text-slate-400 uppercase font-medium">$100K slippage</div>' +
-                    '<div class="font-mono text-slate-700 mt-0.5">' + (slip100k != null ? slip100k.toFixed(3) + '%' : '—') + '</div>' +
-                    '<div class="text-slate-400">peg-pressure proxy</div></div>' +
-                '<div><div class="text-slate-400 uppercase font-medium">Curve apxUSD share</div>' +
-                    '<div class="font-mono text-slate-700 mt-0.5">' + (poolRatio != null ? poolRatio.toFixed(4) : '—') + '</div>' +
-                    '<div class="text-slate-400">drift from 0.5 = pressure</div></div>' +
-            '</div>';
-
-        return statCards + chartBlock + secondaryRow;
-    },
-
     // Discount-to-NAV body for apyUSD. Contract NAV vs Curve market price
     // (apyUSD/apxUSD) — no APY tile row; the Yield Trajectory panel is the
     // canonical home for yield metrics, this sub-section covers exit cost.
@@ -1982,102 +1873,9 @@ var ApyxRenderer = {
         };
     },
 
-    _loadPegHistoryChart: function(slug) {
-        var ctx = document.getElementById('apyx-peg-history');
-        if (!ctx || typeof Chart === 'undefined') return;
-        var nocache = Math.floor(Date.now() / 60000);
-        fetch('data/' + slug + '_backing_history.json?nocache=' + nocache)
-            .then(function(r) { return r.ok ? r.json() : null; })
-            .then(function(hist) {
-                if (!hist || !Array.isArray(hist.entries)) {
-                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Peg history unavailable.</div>';
-                    return;
-                }
-                var cutoff = Date.now() - 7 * 24 * 3600 * 1000;
-                var pts = hist.entries.filter(function(e) {
-                    if (e.peg_premium_discount_pct == null) return false;
-                    var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
-                    return new Date(ts).getTime() >= cutoff;
-                });
-                if (pts.length < 2) {
-                    ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">' +
-                        'Peg history not yet populated — chart will appear once the upstream peg tracker emits apxUSD readings.</div>';
-                    return;
-                }
-                ApyxRenderer._drawPegHistory(ctx, pts);
-            })
-            .catch(function() {
-                ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Peg history unavailable.</div>';
-            });
-    },
-
-    _drawPegHistory: function(ctx, entries) {
-        var labels = entries.map(function(e) {
-            var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
-            return new Date(ts);
-        });
-        var pdSeries = entries.map(function(e) { return e.peg_premium_discount_pct; });
-        var pointColors = pdSeries.map(function(v) {
-            var st = ApyxRenderer._pegStatusClass(v);
-            if (st === 'ok') return '#3b82f6';
-            if (st === 'warn') return '#f59e0b';
-            if (st === 'critical') return '#ef4444';
-            return '#94a3b8';
-        });
-
-        if (window._apyxPegChart) {
-            try { window._apyxPegChart.destroy(); } catch (e) {}
-        }
-        window._apyxPegChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Premium / Discount',
-                    data: pdSeries,
-                    borderColor: '#3b82f6',
-                    backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                    pointBackgroundColor: pointColors,
-                    pointBorderColor: pointColors,
-                    fill: false,
-                    tension: 0.25,
-                    pointRadius: 2,
-                    borderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        type: 'time',
-                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
-                        grid: { display: false },
-                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
-                    },
-                    y: {
-                        grid: { color: '#f1f5f9' },
-                        suggestedMin: -1.0,
-                        suggestedMax: 1.0,
-                        ticks: {
-                            font: { size: 11 },
-                            callback: function(v) { return (v > 0 ? '+' : '') + Number(v).toFixed(2) + '%'; }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(c) { return c.dataset.label + ': ' + (c.raw != null ? c.raw.toFixed(3) + '%' : '—'); }
-                        }
-                    },
-                    annotation: { annotations: ApyxRenderer._pegBandAnnotations() }
-                },
-                interaction: { intersect: false, mode: 'index' }
-            }
-        });
-    },
+    // (Removed: _loadPegHistoryChart / _drawPegHistory — the apxUSD peg-history
+    // chart is now owned by the common 5-axis Peg section. _pegBandAnnotations()
+    // is still used by the apyUSD market-discount chart below.)
 
     _loadMarketPriceTrajectory: function(slug) {
         var ctx = document.getElementById('apyx-market-price-trajectory');
@@ -2456,10 +2254,10 @@ var ApyxRenderer = {
     },
 
     // ============================================================
-    // Depth sub-section — pool table + KyberSwap slippage tiers bar chart.
-    // Renamed from _renderLiquidity; panel/title wrap moved to the parent
-    // _renderLiquidity. Preserves apxUSD-vs-apyUSD pool-table branching and
-    // canvas id apyx-slippage-chart so _renderSlippageChart finds its target.
+    // Depth sub-section — per-venue pool tables (depth_usd + Curve balance
+    // ratio), split into primary-exit (→USDC) vs cross-asset for apxUSD.
+    // Exit-cost/slippage is owned by the common Liquidity section's market-basis
+    // exit_mark ladder, so no slippage chart is rendered here.
     // ============================================================
     _renderLiquidityDepthSection: function(specific, slug) {
         var liq = specific.liquidity || {};
@@ -2546,102 +2344,20 @@ var ApyxRenderer = {
             sectionsHtml = sectionHtml('Pools', pools, null);
         }
 
-        var quotes = liq.quotes || {};
-        var quoteKey = (slug === 'apxusd') ? 'apxUSD_to_USDC' : 'apyUSD_to_apxUSD';
-        var qm = quotes[quoteKey] || {};
-        var tiers = ['1000', '10000', '50000', '100000'];
-        var has100k = qm['100000'] && qm['100000'].slippage_pct != null;
-        var slip100k = has100k ? qm['100000'].slippage_pct : null;
-        var routeState = ApyxRenderer._slippageState(slip100k);
-        var routeLabel = (routeState === 'ok') ? 'Aggregator route OK' :
-                         (routeState === 'warn') ? 'Aggregator route — moderate slippage' :
-                         'Aggregator route — heavy slippage';
-        var routePill = ApyxRenderer._statusPill(routeLabel, routeState,
-            slip100k != null ? slip100k.toFixed(3) + '% @ $100K' : '');
-
-        var hasAnyQuotes = tiers.some(function(t) { return qm[t] && qm[t].slippage_pct != null; });
-
-        var slippageBlock = '';
-        if (hasAnyQuotes) {
-            slippageBlock =
-                '<div class="mt-6">' +
-                    '<div class="flex items-center justify-between mb-2">' +
-                        '<div class="text-sm font-semibold text-slate-700">KyberSwap slippage tiers — ' +
-                            (slug === 'apxusd' ? 'apxUSD → USDC' : 'apyUSD → apxUSD') +
-                        '</div>' +
-                        routePill +
-                    '</div>' +
-                    '<div style="height: 200px; position: relative;">' +
-                        '<canvas id="apyx-slippage-chart"></canvas>' +
-                    '</div>' +
-                '</div>';
-        }
-
-        return (sectionsHtml || '<div class="text-xs text-slate-400 italic mt-2">No pools enumerated in this snapshot.</div>') +
-            slippageBlock;
+        // Exit cost / slippage is intentionally NOT shown here. The old
+        // KyberSwap "slippage tiers" chart + route pill read the par-basis
+        // `liquidity.quotes[...].slippage_pct` (output ÷ $1-par ≈ 7.9% at $100K),
+        // which bundles the peg discount and contradicts the market-basis
+        // exit_mark ladder (~0.7–1.1%). Exit cost now lives in exactly one
+        // place: the common Liquidity section's `exit_mark`. This sub-section
+        // keeps only the unique per-venue depth / balance-ratio tables above.
+        return (sectionsHtml || '<div class="text-xs text-slate-400 italic mt-2">No pools enumerated in this snapshot.</div>');
     },
 
-    _renderSlippageChart: function(specific, slug) {
-        var ctx = document.getElementById('apyx-slippage-chart');
-        if (!ctx || typeof Chart === 'undefined') return;
-        var quotes = (specific.liquidity || {}).quotes || {};
-        var quoteKey = (slug === 'apxusd') ? 'apxUSD_to_USDC' : 'apyUSD_to_apxUSD';
-        var qm = quotes[quoteKey] || {};
-        var tiers = ['1000', '10000', '50000', '100000'];
-        var labels = tiers.map(function(t) {
-            var n = Number(t);
-            return (n >= 1000) ? '$' + (n / 1000) + 'K' : '$' + n;
-        });
-        var values = tiers.map(function(t) {
-            return qm[t] && qm[t].slippage_pct != null ? qm[t].slippage_pct : null;
-        });
-        var colors = values.map(function(v) {
-            var st = ApyxRenderer._slippageState(v);
-            if (st === 'ok') return '#22c55e';
-            if (st === 'warn') return '#f59e0b';
-            return '#ef4444';
-        });
-
-        if (window._apyxSlippageChart) window._apyxSlippageChart.destroy();
-        window._apyxSlippageChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Slippage %',
-                    data: values,
-                    backgroundColor: colors,
-                    borderWidth: 0,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-                    y: {
-                        beginAtZero: true,
-                        grid: { color: '#f1f5f9' },
-                        ticks: {
-                            font: { size: 11 },
-                            callback: function(v) { return v.toFixed(2) + '%'; }
-                        }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(c) {
-                                return 'Slippage: ' + (c.raw != null ? c.raw.toFixed(4) + '%' : '—');
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    },
+    // (Removed: _renderSlippageChart — it plotted the par-basis
+    // `liquidity.quotes[...].slippage_pct` ladder (~7.9% at $100K, peg-discount
+    // bundled). Exit cost is now owned solely by the common Liquidity section's
+    // market-basis exit_mark ladder.)
 
     // ============================================================
     // §5 Multi-chain + CCIP Bridge
@@ -2969,13 +2685,14 @@ var ApyxRenderer = {
 
         // ----- Shared backing summary -----
         var backingState = ba.fetch_status === 'ok' ? 'ok' : 'critical';
+        // Collateralization is owned by the summary band (headline) and the
+        // Backing Attestation panel (as-attested); not repeated here. This block
+        // only makes the cross-token point — one Accountable feed backs both.
         var backingBlock =
             '<div class="mt-4">' +
                 '<div class="text-sm font-semibold text-slate-700 mb-2">Shared backing</div>' +
                 '<div class="flex flex-wrap items-center gap-2">' +
                     ApyxRenderer._statusPill('Accountable feed', backingState, ba.source || '—') +
-                    ApyxRenderer._statusPill('Collateralization', (ba.collateralization_pct != null && ba.collateralization_pct >= 100) ? 'ok' : 'critical',
-                        (ba.collateralization_pct != null) ? ba.collateralization_pct.toFixed(2) + '%' : '—') +
                     '<span class="text-xs text-slate-500">Reserves ' + CommonRenderer.formatCurrency(ba.total_reserves_usd) + ' · same feed powers both tokens</span>' +
                 '</div>' +
             '</div>';
