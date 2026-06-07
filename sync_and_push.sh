@@ -52,12 +52,26 @@ cp /home/danger/PegTracker/data/usdai_family.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/bmnr_treasury.json data/bmnr_backing.json 2>/dev/null
 cp /home/danger/PegTracker/data/bmnr_treasury_history.json data/bmnr_backing_history.json 2>/dev/null
 
+# Integrate any remote changes first (e.g. dashboard claude's commits) so our
+# data-only push fast-forwards. Without this, a non-fast-forward push is
+# rejected, the cron silently strands data commits, and dashboards go stale.
+git fetch origin main 2>&1
+if ! git rebase origin/main 2>&1; then
+    echo "$(date): ERROR rebase onto origin/main failed (conflict) — aborting, manual fix needed" >&2
+    git rebase --abort 2>/dev/null
+    exit 1
+fi
+
 # Commit and push if changed
 git add data/
 if ! git diff --cached --quiet; then
     git commit -m "Update backing $(date +'%Y-%m-%d %H:%M')"
-    git push
-    echo "$(date): Pushed updated backing data"
+    if git push; then
+        echo "$(date): Pushed updated backing data"
+    else
+        echo "$(date): ERROR git push failed — backing data NOT published" >&2
+        exit 1
+    fi
 else
     echo "$(date): No changes to push"
 fi
