@@ -3,24 +3,24 @@
   "asset": "apxUSD",
   "asset_slug": "apxusd",
   "chain": "ethereum",
-  "timestamp": "2026-06-07T07:44:59Z",
+  "timestamp": "2026-06-07T08:44:57Z",
   "summary": {
     "total_supply": 414947485.86,
     "supply_unit": "USD",
-    "total_backing": 398838000.14,
-    "collateral_ratio": 96.1177,
-    "surplus_deficit": -16109485.72,
+    "total_backing": 397572956.7,
+    "collateral_ratio": 95.8128,
+    "surplus_deficit": -17374529.16,
     "nav": 1.0,
     "deployment_ratio_pct": null,
     "unrealized_losses": null,
     "paused": false,
     "liquidity_depth_derived": {
       "score": 1.5,
-      "as_of": "2026-06-07T07:44:59Z",
+      "as_of": "2026-06-07T08:44:57Z",
       "components": {
         "depth_tier": 4.5,
         "effective_max_under_25bps_usd": 10000,
-        "baseline_bps": 596.58,
+        "baseline_bps": 464.67,
         "baseline_adj": -2.0,
         "peg_band_30d_bps": 891.0663,
         "peg_band_30d_partial": true,
@@ -33,12 +33,15 @@
         "pool_adj": -0.5
       }
     },
-    "liquidity_depth_derived_score": 1.5
+    "liquidity_depth_derived_score": 1.5,
+    "collateral_ratio_strcx_haircut_usd": 3949321.53,
+    "collateral_ratio_independent_lb": 94.8611,
+    "collateral_ratio_note": "Accountable headline marks raw STRC at an undisclosed price; this lower bound re-marks the on-chain STRCx slice at real NASDAQ STRC ($93.40) and haircuts reserves by the xStock-vs-real delta. Accountable's raw-STRC mark is unverifiable and may also be optimistic."
   },
   "risk_flags": [
     {
       "severity": "critical",
-      "message": "Undercollateralized per Accountable: 96.12%"
+      "message": "Undercollateralized per Accountable: 95.81%"
     },
     {
       "severity": "warning",
@@ -46,15 +49,19 @@
     },
     {
       "severity": "warning",
+      "message": "STRCx on-chain feed (xStock) diverges from real STRC by 646 bps \u2014 on-chain price discovery thin; slice marked at real STRC $93.40, not xStock $99.43"
+    },
+    {
+      "severity": "warning",
       "message": "APXUSD bridge surplus \u2014 locked-on-ETH exceeds Base totalSupply by 2,086,637 (over-collateralized; excess/trapped locked capital)"
     },
     {
       "severity": "critical",
-      "message": "Token-side CR < 100% (96.12%)"
+      "message": "Token-side CR < 100% (95.81%)"
     },
     {
       "severity": "warning",
-      "message": "Peg discount -5.17%"
+      "message": "Peg discount -5.43%"
     }
   ],
   "vault_status": null,
@@ -73,21 +80,21 @@
       "fetch_status": "ok",
       "signing_key": "0x5fd592cD004F9089ee56356BD5a46Fa0E62eAf7f",
       "signing_key_match": true,
-      "attestation_timestamp": "2026-06-07T07:29:24Z",
-      "attestation_age_seconds": 922,
-      "collateralization_pct": 96.1177,
-      "total_reserves_usd": 398838000.14,
+      "attestation_timestamp": "2026-06-07T08:42:54Z",
+      "attestation_age_seconds": 104,
+      "collateralization_pct": 95.8128,
+      "total_reserves_usd": 397572956.7,
       "total_supply_usd": 414947485.86,
-      "surplus_usd": -16109485.72,
+      "surplus_usd": -17374529.16,
       "reserves_split": {
-        "STRC": 259456365.8,
-        "Cash & Equivalents": 139303922.83,
+        "STRC": 259456383.41,
+        "Cash & Equivalents": 138038891.34,
         "SATA": 48748.5,
-        "Other": 28963.01
+        "Other": 28933.45
       },
       "reserves_split_pct": {
-        "STRC": 0.6505,
-        "Cash & Equivalents": 0.3493,
+        "STRC": 0.6526,
+        "Cash & Equivalents": 0.3472,
         "SATA": 0.0001,
         "Other": 0.0001
       },
@@ -480,12 +487,12 @@
           "point": "10631"
         },
         {
-          "reserves": 398838000.14,
+          "reserves": 397572956.7,
           "date": "2026-06-07",
           "supply": 414947485.86,
-          "ts": "1780816600598",
+          "ts": "1780818406895",
           "verifiability": "100",
-          "point": "10701"
+          "point": "10706"
         }
       ],
       "cross_source_supply_consistency": true,
@@ -495,7 +502,7 @@
         "type": "gnosis_safe_v1.4.1",
         "etherscan_url": "https://etherscan.io/address/0x37b0779a66edc491df83e59a56d485835323a555",
         "fetch_status": "ok",
-        "last_observed_at": "2026-06-07T07:44:47Z",
+        "last_observed_at": "2026-06-07T08:44:39Z",
         "threshold": 3,
         "owner_count": 6,
         "owners": [
@@ -510,24 +517,28 @@
         "threshold_match": true,
         "singleton_match": true,
         "balance_strcx": 654945.5279656979,
-        "price_usd": 99.43,
-        "balance_usd": 65121233.84562935,
+        "price_usd": 93.4,
+        "balance_usd": 61171912.31199619,
+        "price_source": "strc_backing_sibling",
+        "strcx_xstock_price_usd": 99.43,
+        "strcx_xstock_price_discovery": "thin",
+        "strcx_real_strc_divergence_bps": 645.6,
         "prev_balance_strcx": 654945.5279656979,
         "outflow_tokens_since_last_snapshot": 0.0,
         "implied_price_per_token_usd": 103.0454,
         "implied_price_source": "wolf_april_2026",
         "onchain_verified_usd": 67489123.91,
-        "coverage_pct_of_total_reserves": 0.1692,
+        "coverage_pct_of_total_reserves": 0.1698,
         "coverage_pct_of_strc_bucket": 0.2601,
         "delta_vs_last_wolf_attestation_pct": 0.3099
       }
     },
     "peg": {
-      "market_price": 0.9483341566449438,
+      "market_price": 0.9457329215150312,
       "theoretical_price": 1.0,
-      "premium_discount_pct": -5.16658433550562,
+      "premium_discount_pct": -5.426707848496881,
       "source": "coingecko",
-      "timestamp": "2026-06-07T07:16:10.038075Z",
+      "timestamp": "2026-06-07T08:16:11.703982Z",
       "liquidity": {
         "source": "kyberswap",
         "chain": "ethereum",
@@ -558,28 +569,28 @@
       "quotes": {
         "apxUSD_to_USDC": {
           "1000": {
-            "output_token": 940.342147,
-            "output_usd": 940.34,
-            "slippage_pct": 5.9658,
-            "gas_usd": "0.044215028190385426"
+            "output_token": 953.532757,
+            "output_usd": 953.53,
+            "slippage_pct": 4.6467,
+            "gas_usd": "0.047803105459974175"
           },
           "10000": {
-            "output_token": 9396.060366,
-            "output_usd": 9396.06,
-            "slippage_pct": 6.0394,
-            "gas_usd": "0.04421302677477843"
+            "output_token": 9530.084516,
+            "output_usd": 9530.08,
+            "slippage_pct": 4.6992,
+            "gas_usd": "0.047803105459974175"
           },
           "50000": {
-            "output_token": 46806.35947,
-            "output_usd": 46806.36,
-            "slippage_pct": 6.3873,
-            "gas_usd": "0.04421302677477843"
+            "output_token": 47527.169812,
+            "output_usd": 47527.17,
+            "slippage_pct": 4.9457,
+            "gas_usd": "0.047727053557397404"
           },
           "100000": {
-            "output_token": 93124.360392,
-            "output_usd": 93124.36,
-            "slippage_pct": 6.8756,
-            "gas_usd": "0.04421302677477843"
+            "output_token": 94711.64542,
+            "output_usd": 94711.65,
+            "slippage_pct": 5.2884,
+            "gas_usd": "0.047727053557397404"
           }
         }
       },
@@ -590,11 +601,11 @@
           "address": "0xE1B96555BbecA40E583BbB41a11C68Ca4706A414",
           "pair": "apxUSD/USDC",
           "balances": {
-            "apxUSD": 4197882.66446937,
-            "USDC": 666415.215321
+            "apxUSD": 4101519.096941235,
+            "USDC": 757765.965129
           },
-          "depth_usd": 4864297.88,
-          "balance_ratio": 0.1588
+          "depth_usd": 4859285.06,
+          "balance_ratio": 0.1848
         },
         {
           "venue": "curve",
@@ -602,11 +613,11 @@
           "address": "0xe41be7b340f7c2eda4da1e99b42ee1b228b526b7",
           "pair": "apyUSD/apxUSD",
           "balances": {
-            "apyUSD": 6168599.825780671,
-            "apxUSD": 6632753.638830672
+            "apyUSD": 6162902.087058141,
+            "apxUSD": 6640335.259581817
           },
-          "depth_usd": 12801353.46,
-          "balance_ratio": 0.93
+          "depth_usd": 12803237.35,
+          "balance_ratio": 0.9281
         },
         {
           "venue": "pcs_v3",
@@ -614,11 +625,11 @@
           "address": "0x7413522ca4b846ff826e6d757af70a2cb4083065",
           "pair": "apyUSD/apxUSD",
           "balances": {
-            "apyUSD": 620071.2441207963,
-            "apxUSD": 636360.2672645964
+            "apyUSD": 618679.9646229828,
+            "apxUSD": 637555.3793123808
           },
-          "depth_usd": 1256431.51,
-          "balance_ratio": 0.9744
+          "depth_usd": 1256235.34,
+          "balance_ratio": 0.9704
         },
         {
           "venue": "pcs_v3",
