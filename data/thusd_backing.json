@@ -3,13 +3,13 @@
   "asset": "thUSD",
   "asset_slug": "thusd",
   "chain": "Ethereum",
-  "timestamp": "2026-06-07T06:39:44Z",
+  "timestamp": "2026-06-07T07:39:39Z",
   "summary": {
     "circulating_supply": 107972584.356425,
     "total_supply": 107972584.356425,
     "sthusd_supply": 19370604.882068,
     "staking_ratio": 0.179403,
-    "sthusd_share_price": 1.00909,
+    "sthusd_share_price": 1.009096,
     "total_backing": null,
     "collateral_ratio": null,
     "backing_provenance": "off_chain_undisclosed",
@@ -35,8 +35,8 @@
     {
       "label": "thUSD on Arbitrum (OFT mirror)",
       "category": "bridged",
-      "value": 291832.610128,
-      "note": null
+      "value": null,
+      "note": "totalSupply revert handled \u2014 value may be unreliable"
     },
     {
       "label": "sthUSD on Ethereum",
@@ -113,12 +113,14 @@
           "errors": []
         },
         "arbitrum": {
-          "thusd_supply": 291832.610128,
+          "thusd_supply": null,
           "thusd_decimals": 6,
-          "thusd_supply_unreliable": false,
+          "thusd_supply_unreliable": true,
           "sthusd_supply": 0.25,
           "sthusd_decimals": 6,
-          "errors": []
+          "errors": [
+            "totalSupply: HTTPError"
+          ]
         },
         "stable": {
           "thusd_supply": 64282287.000848,
@@ -136,14 +138,14 @@
       "conservation": {
         "thusd": {
           "per_chain": {
-            "arbitrum": 291832.610128,
+            "arbitrum": null,
             "stable": 64282287.000848
           },
-          "dest_chain_supply_sum": 64574119.610976,
+          "readable_supply_sum": 64282287.000848,
           "eth_lockbox": 64574119.610976,
-          "delta": 0.0,
-          "delta_pct": 0.0,
-          "verified": true
+          "implied_unread_dest_chains": 291832.6101280004,
+          "verified": "partial",
+          "reason": "unreadable_chains: arbitrum"
         },
         "sthusd": {
           "per_chain": {
@@ -171,16 +173,16 @@
       "off_chain_backing_implied_usd": 23349913.38205017,
       "on_chain_coverage_provenance": "thbill_at_reserve_at_nav + usdt + usdc at thUSD reserve Safe (0xec417ccb6dd26868cca993a92f37217b1d4b3c2f)",
       "off_chain_backing_provenance": "inferred from on_chain_coverage_gap; NOT direct proof-of-reserves; covers gold-carry strategy + first-loss + any other off-chain backing components",
-      "history_points": 638
+      "history_points": 639
     },
     "tier2_peg_nav": {
       "sthusd_nav": {
-        "share_price": 1.00909,
-        "share_price_implied_from_assets": 1.0090907170604164,
-        "total_assets_thusd": 19546697.57034,
+        "share_price": 1.009096,
+        "share_price_implied_from_assets": 1.0090969166945905,
+        "total_assets_thusd": 19546817.661004,
         "total_supply_sthusd": 19370604.882068,
-        "previous_share_price": 1.009084,
-        "previous_timestamp": "2026-06-07T05:39:47Z",
+        "previous_share_price": 1.00909,
+        "previous_timestamp": "2026-06-07T06:40:00Z",
         "regression": false,
         "regression_bp": 0.0595,
         "error": null
@@ -392,15 +394,15 @@
     "events_scan_summary": {
       "chains_scanned": {
         "Ethereum Mainnet": {
-          "head": 25263785,
-          "from_block": 25263487,
-          "scanned_to": 25263785,
+          "head": 25264085,
+          "from_block": 25263786,
+          "scanned_to": 25264085,
           "early_abort": false,
           "logs_found": 0,
           "baseline_run": false
         },
         "Arbitrum Mainnet": {
-          "head": 470915829,
+          "head": 470930223,
           "from_block": 465576461,
           "scanned_to": 465576460,
           "early_abort": true,
@@ -408,9 +410,9 @@
           "baseline_run": false
         },
         "Stable Mainnet": {
-          "head": 27141881,
-          "from_block": 27136752,
-          "scanned_to": 27141881,
+          "head": 27147014,
+          "from_block": 27141882,
+          "scanned_to": 27147014,
           "early_abort": false,
           "logs_found": 0,
           "baseline_run": false
@@ -618,27 +620,27 @@
       }
     ],
     "reserve_outflow_scan": {
-      "head_block": 25263789,
+      "head_block": 25264089,
       "per_token": {
         "thBILL": {
           "scanned": 0,
           "new_destinations_seen": 0,
-          "from_block": 25263492,
-          "to_block": 25263789,
+          "from_block": 25263790,
+          "to_block": 25264089,
           "baseline_run": false
         },
         "USDC": {
           "scanned": 0,
           "new_destinations_seen": 0,
-          "from_block": 25263492,
-          "to_block": 25263789,
+          "from_block": 25263790,
+          "to_block": 25264089,
           "baseline_run": false
         },
         "USDT": {
           "scanned": 0,
           "new_destinations_seen": 0,
-          "from_block": 25263492,
-          "to_block": 25263789,
+          "from_block": 25263790,
+          "to_block": 25264089,
           "baseline_run": false
         }
       },
