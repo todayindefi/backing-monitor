@@ -52,18 +52,6 @@ var APYX_RESERVES_ISSUER = {
     'Other':              '—'
 };
 
-// Editorial Liquidity scores from riskAnalyst/assets/<slug>.md frontmatter.
-// Kept in sync manually — update when the internal report rescore lands.
-// apxusd updated 2026-05-21: derived 8.0 = editorial 8.0 (rescore landed in
-// riskAnalyst — old editorial was 4.5; bundled redemption-opacity + pool-vs-supply
-// concerns now correctly attributed to Peg/Backing axes per the discipline reset).
-// Namespaced (not bare EDITORIAL_LIQUIDITY) because saturn.js declares its own
-// top-level EDITORIAL_LIQUIDITY for usdat/susdat — bare names collide at load.
-var APYX_EDITORIAL_LIQUIDITY = {
-    apxusd: 8.0,
-    apyusd: 5.5
-};
-
 var ApyxRenderer = {
 
     // ============================================================
@@ -1621,10 +1609,11 @@ var ApyxRenderer = {
         return html;
     },
 
-    // Score sub-section — summary tile (derived score · editorial · Δ · badge)
-    // with a <details> reveal for the components breakdown. No chart canvas;
-    // the underlying time-series story is covered by the Peg sub-section's
-    // chart below, so a separate score chart is redundant.
+    // Score sub-section — live-derived liquidity score + its component breakdown
+    // (the "How this score is computed" reveal). No editorial reference: the
+    // score is fully derivable (depth + peg + venues) and recomputed each
+    // refresh, so the dashboard shows the live number only — qualitative
+    // judgment lives in the linked report, not a stale-prone constant here.
     _renderLiquidityScoreSection: function(specific, s, slug) {
         var ld = (s && s.liquidity_depth_derived) || null;
         if (!ld) {
@@ -1634,15 +1623,8 @@ var ApyxRenderer = {
             '</div>';
         }
 
-        var editorial = APYX_EDITORIAL_LIQUIDITY[slug];
         var derived = ld.score;
         var derivedTxt = (derived != null) ? derived.toFixed(1) + ' / 10' : '—';
-        var editorialTxt = (editorial != null) ? editorial.toFixed(1) : '—';
-        var delta = (editorial != null && derived != null) ? (derived - editorial) : null;
-        var deltaTxt = (delta == null) ? '—' :
-                       (delta === 0) ? '0.0' :
-                       (delta > 0 ? '+' : '−') + Math.abs(delta).toFixed(1);
-        var badge = ApyxRenderer._liquidityReconciliationBadge(delta);
 
         var comp = ld.components || {};
 
@@ -1735,11 +1717,7 @@ var ApyxRenderer = {
             '<div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">' +
                 '<div>' +
                     '<h3 class="text-sm font-semibold text-slate-900" style="margin:0;">Derived Score</h3>' +
-                    '<div class="text-xs text-slate-500 mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">' +
-                        '<span>Editorial: <strong>' + editorialTxt + '</strong></span>' +
-                        '<span>· Δ <span class="font-mono">' + deltaTxt + '</span></span>' +
-                        badge +
-                    '</div>' +
+                    '<div class="text-xs text-slate-500 mt-1">Live metric — recomputed each refresh from depth · peg · venues</div>' +
                 '</div>' +
                 '<div class="text-2xl font-bold text-slate-800 sm:text-right whitespace-nowrap">' + derivedTxt + '</div>' +
             '</div>';
@@ -1833,24 +1811,6 @@ var ApyxRenderer = {
             '</div>';
 
         return statCards + trajectoryBlock + discountChartBlock + methodology;
-    },
-
-    _liquidityReconciliationBadge: function(delta) {
-        if (delta == null) {
-            return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">No editorial reference</span>';
-        }
-        var abs = Math.abs(delta);
-        var label, bg, fg, icon;
-        if (abs <= 0.5) {
-            label = 'aligned';                              bg = 'bg-emerald-50'; fg = 'text-emerald-800'; icon = '✓';
-        } else if (abs <= 1.0) {
-            label = 'slight drift';                         bg = 'bg-amber-50';   fg = 'text-amber-800';   icon = '△';
-        } else {
-            label = 'stale editorial — refresh recommended'; bg = 'bg-red-50';    fg = 'text-red-800';     icon = '⚠';
-        }
-        return '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ' + bg + ' ' + fg + '">' +
-            '<span>' + icon + '</span><span>' + label + '</span>' +
-        '</span>';
     },
 
     _pegBandAnnotations: function(slug) {
