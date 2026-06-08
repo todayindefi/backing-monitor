@@ -55,8 +55,13 @@ cp /home/danger/PegTracker/data/bmnr_treasury_history.json data/bmnr_backing_his
 # Integrate any remote changes first (e.g. dashboard claude's commits) so our
 # data-only push fast-forwards. Without this, a non-fast-forward push is
 # rejected, the cron silently strands data commits, and dashboards go stale.
+# --autostash is REQUIRED: by this point the cp's above have left data/ dirty,
+# and plain `git rebase` refuses on a dirty tree ("cannot rebase: You have
+# unstaged changes") whenever origin has actually moved — which stranded ~28h
+# of data updates on 2026-06-08. --autostash stashes the dirty data, replays,
+# and pops it back.
 git fetch origin main 2>&1
-if ! git rebase origin/main 2>&1; then
+if ! git rebase --autostash origin/main 2>&1; then
     echo "$(date): ERROR rebase onto origin/main failed (conflict) — aborting, manual fix needed" >&2
     git rebase --abort 2>/dev/null
     exit 1
