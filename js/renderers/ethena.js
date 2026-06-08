@@ -278,10 +278,25 @@ var EthenaRenderer = {
     },
 
     _suppressCommonPanels: function(data, slug) {
-        // Drop the common top summary-card strip — the §1 Headline carries
-        // richer per-asset metrics.
+        var has5axis = (typeof CommonRenderer !== 'undefined') && CommonRenderer.hasAxisBlocks(data);
+
+        // #summary-cards holds the legacy CR cards in legacy mode, but the 5-axis
+        // summary BAND in 5-axis mode. Band-only design: KEEP it when 5-axis (show
+        // the band), hide it only in legacy mode where the §1 Headline supersedes it.
         var summaryCards = document.getElementById('summary-cards');
-        if (summaryCards) summaryCards.style.display = 'none';
+        if (summaryCards && !has5axis) summaryCards.style.display = 'none';
+
+        // Band-only: hide the generic per-axis SECTIONS (app.js reveals them in
+        // renderAxisSections, which runs before this bespoke renderer) so they don't
+        // duplicate Ethena's rich custom panels. NOTE: do NOT hide #section-backing —
+        // it contains #chart-panel (the USDe Coverage chart we keep); we only clear
+        // its axis head. The backing breakdown/pie/risk-flags inside it are suppressed
+        // separately below.
+        if (has5axis) {
+            ['section-peg', 'section-liquidity', 'section-dependencies', 'section-issuer']
+                .forEach(function(id) { var s = document.getElementById(id); if (s) s.style.display = 'none'; });
+            var bh = document.getElementById('axis-backing-head'); if (bh) bh.innerHTML = '';
+        }
 
         // Hide the empty common breakdown table + pie (we backfilled [] ).
         var bd = document.getElementById('breakdown-table');
