@@ -41,6 +41,8 @@ var ACCOUNTABLE_INFO = {
 var APYX_RESERVES_COLORS = {
     'Cash & Equivalents': '#3b82f6',
     'STRC':               '#f59e0b',
+    'Protocol Owned Liquidity': '#10b981',
+    'Inventory':          '#cbd5e1',
     'SATA':               '#a855f7',
     'Other':              '#94a3b8'
 };
@@ -48,6 +50,8 @@ var APYX_RESERVES_COLORS = {
 var APYX_RESERVES_ISSUER = {
     'Cash & Equivalents': '(unitemized)',
     'STRC':               'Strategy (MSTR)',
+    'Protocol Owned Liquidity': 'Apyx (reflexive)',
+    'Inventory':          'net-zero',
     'SATA':               'Other DAT',
     'Other':              '—'
 };
@@ -658,14 +662,21 @@ var ApyxRenderer = {
         var splitUsd = ba.reserves_split || {};
         var splitPct = ba.reserves_split_pct || {};
         var totalReserves = ba.total_reserves_usd || 0;
-        var reserveOrder = ['Cash & Equivalents', 'STRC', 'SATA', 'Other'];
+        var reserveOrder = ['Cash & Equivalents', 'STRC', 'Protocol Owned Liquidity', 'SATA', 'Other', 'Inventory'];
+        var splitPctEx = ba.reserves_split_pct_ex_inventory || {};
+        var inventoryUsd = (ba.inventory_usd != null) ? ba.inventory_usd : (splitUsd['Inventory'] || 0);
+        var netBacking = (ba.reserves_ex_inventory_usd != null) ? ba.reserves_ex_inventory_usd : (totalReserves - inventoryUsd);
         // Preserve any unknown keys at the end so the renderer doesn't silently drop them.
         Object.keys(splitUsd).forEach(function(k) {
             if (reserveOrder.indexOf(k) < 0) reserveOrder.push(k);
         });
         var resRows = reserveOrder.filter(function(k) { return splitUsd[k] != null; }).map(function(k) {
             var usd = splitUsd[k] || 0;
-            var pct = (splitPct[k] != null) ? (splitPct[k] * 100) : (totalReserves > 0 ? (usd / totalReserves * 100) : 0);
+            var isInv = (k === 'Inventory');
+            // % is over NET backing (ex-Inventory) so STRC reads at its true ~74% weight,
+            // not diluted by the net-zero Inventory line.
+            var pct = (splitPctEx[k] != null) ? (splitPctEx[k] * 100)
+                    : (splitPct[k] != null ? (splitPct[k] * 100) : (netBacking > 0 ? (usd / netBacking * 100) : 0));
             var color = APYX_RESERVES_COLORS[k] || '#94a3b8';
             var issuer = APYX_RESERVES_ISSUER[k] || '—';
             // R5: promote "(unitemized)" from faint gray to an amber
@@ -684,25 +695,41 @@ var ApyxRenderer = {
             // inline so a reader doesn't miss the brokerage-vs-on-chain split.
             // The STRCx Safe is identified on-chain (0x37b0779a…) — see Wolf
             // section below for the split's last attested breakdown.
-            var nameCell = '<td class="font-medium">' +
-                '<span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:' + color + '"></span>' +
-                k +
-                (k === 'STRC' ?
-                    ' <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 ml-1 cursor-help" ' +
-                    'title="Bundles brokerage-custodied STRC (at Alpaca) and on-chain STRCx (in a 3-of-6 Gnosis Safe at 0x37b0779a…323a555 — same six owners as Apyx\'s MAINTAINER + ADMIN Safes, verified on-chain). Accountable publishes this as one mark-to-market STRC-family bucket; the public feed does not disclose the per-instrument pricing rule. Wolf & Company discloses the brokerage-vs-on-chain split monthly (latest: 4/30/2026 — $76.8M STRC + $51.5M STRCx). The STRCx slice is directly observable via balanceOf() on the Safe — see the On-Chain Verified tile below.">ⓘ incl. STRCx</span>' :
-                    '') +
+            var nameBadge = '';
+            if (k === 'STRC') {
+                nameBadge = ' <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 ml-1 cursor-help" ' +
+                    'title="Bundles brokerage-custodied STRC (at Alpaca) and on-chain STRCx (in a 3-of-6 Gnosis Safe at 0x37b0779a…323a555 — same six owners as Apyx\'s MAINTAINER + ADMIN Safes, verified on-chain). Accountable publishes this as one mark-to-market STRC-family bucket; the public feed does not disclose the per-instrument pricing rule. Wolf & Company discloses the brokerage-vs-on-chain split monthly (latest: 4/30/2026 — $76.8M STRC + $51.5M STRCx). The STRCx slice is directly observable via balanceOf() on the Safe — see the On-Chain Verified tile below.">ⓘ incl. STRCx</span>';
+            } else if (k === 'Protocol Owned Liquidity') {
+                nameBadge = ' <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200 ml-1 cursor-help" ' +
+                    'title="Protocol-deployed liquidity: DEX LP plus USDC lent into Morpho markets collateralized by Apyx\'s own assets (capped at 15% of reserves per the June-2026 post-mortem). Real, liquid (USDC) backing but reflexively deployed — quality between cash and STRC.">⟳ reflexive</span>';
+            } else if (isInv) {
+                nameBadge = ' <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-500 border border-slate-300 ml-1 cursor-help" ' +
+                    'title="Minted-but-unsold apxUSD held by the protocol — an asset offset by an equal burnable liability, netting to zero. Not net backing: excluded from the backing %s and the composition donut. Per Apyx June-2026 post-mortem.">⊘ net-zero</span>';
+            }
+            var nameCell = '<td class="font-medium' + (isInv ? ' text-slate-400' : '') + '">' +
+                '<span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:' + color + (isInv ? ';opacity:0.5' : '') + '"></span>' +
+                k + nameBadge +
             '</td>';
-            return '<tr>' +
+            var pctCell = isInv
+                ? '<td class="text-right text-xs text-slate-400 italic">net-zero</td>'
+                : '<td class="text-right font-mono">' + pct.toFixed(2) + '%</td>';
+            return '<tr' + (isInv ? ' class="text-slate-400"' : '') + '>' +
                 nameCell +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(usd) + '</td>' +
-                '<td class="text-right font-mono">' + pct.toFixed(2) + '%</td>' +
+                '<td class="text-right font-mono' + (isInv ? ' text-slate-400' : '') + '">' + CommonRenderer.formatCurrencyExact(usd) + '</td>' +
+                pctCell +
                 '<td>' + issuerCell + '<div class="mt-1">' + teePill + '</div></td>' +
             '</tr>';
         }).join('');
         resRows += '<tr class="font-bold border-t-2 border-slate-200">' +
-            '<td>Total reserves</td>' +
-            '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(totalReserves) + '</td>' +
+            '<td>Net backing <span class="text-xs font-normal text-slate-500">(ex-Inventory)</span></td>' +
+            '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(netBacking) + '</td>' +
             '<td class="text-right">100.00%</td>' +
+            '<td></td>' +
+        '</tr>';
+        resRows += '<tr class="text-xs text-slate-400">' +
+            '<td>Gross reserves <span class="font-normal">(incl. net-zero Inventory)</span></td>' +
+            '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(totalReserves) + '</td>' +
+            '<td class="text-right">—</td>' +
             '<td></td>' +
         '</tr>';
 
@@ -1420,8 +1447,10 @@ var ApyxRenderer = {
         if (!ctx || typeof Chart === 'undefined') return;
         var ba = specific.backing_attestation || {};
         var split = ba.reserves_split || {};
-        var order = ['Cash & Equivalents', 'STRC', 'SATA', 'Other'];
-        Object.keys(split).forEach(function(k) { if (order.indexOf(k) < 0) order.push(k); });
+        // Inventory is net-zero (minted-but-unsold, burnable) — exclude it so the
+        // composition donut shows real backing weights (STRC ~74%, not diluted).
+        var order = ['Cash & Equivalents', 'STRC', 'Protocol Owned Liquidity', 'SATA', 'Other'];
+        Object.keys(split).forEach(function(k) { if (order.indexOf(k) < 0 && k !== 'Inventory') order.push(k); });
         var labels = order.filter(function(k) { return split[k] != null && split[k] > 0; });
         var values = labels.map(function(k) { return split[k]; });
         var colors = labels.map(function(k) { return APYX_RESERVES_COLORS[k] || '#94a3b8'; });
