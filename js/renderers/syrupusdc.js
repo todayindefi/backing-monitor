@@ -1,19 +1,27 @@
 /**
- * syrupUSDC renderer — v2 layout (8 visible blocks).
+ * syrupUSDC renderer — 5-axis section layout (band-only common path).
  *
- * Render order:
- *   §1 Backing            — Pool TVL / cap / NAV / fee + asset composition + 2-slice donut
- *   §2 Loan Book Health   — 4 sub-blocks: A status · B buffer (NEW) · C collateral mix · D loan table
- *   §3 Borrower Concentration
- *   §4 Repayment Schedule (renamed from Payment Ladder)
- *   §5  Liquidity & Peg   — folds Exit Realism + Stress Anchor + new Peg deviation row
- *   §5b Multi-Chain Distribution — Phase-1 per-chain token supply (Ethereum + L2/Solana via CCIP+CCT)
- *   §6  Trust Stack       — Governance + 1-line audit roll-up
- *   §7  Yield (demoted)
+ * The common #summary-cards band carries the 5 axis ratings; the bespoke
+ * panels below render under matching axis section-header dividers so the page
+ * reads top-to-bottom in Peg→Liquidity→Backing→Dependencies→Issuer order
+ * (mirroring the crvUSD dashboard).
+ *
+ * Render order (each panel keeps its own content; this layer just groups + heads):
+ *   §1 Peg         — short NAV-anchored note (rating lives in the band)
+ *   §2 Liquidity   — Liquidity & Peg (free buffer / queue / NAV / peg deviation)
+ *                    · Liquidity Layer (pool-owned positions)
+ *                    · Repayment Schedule (when capital returns)
+ *   §3 Backing     — Pool Coverage chart (relocated #chart-panel) · Risk Flags
+ *                    (relocated #risk-flags) · Backing (TVL/cap/NAV/fee + donut)
+ *                    · Loan Book Health · Strategy contract slots · Yield
+ *   §4 Dependencies — Borrower Concentration (upstream credit)
+ *   §5 Issuer      — Trust Stack · Multi-Chain Distribution · Cross-Pool Family
  *
  * Suppresses the common-header Backing Breakdown table + Allocation pie panel for
- * syrupUSDC only — they're replaced by §1's asset-composition table + donut.
- * OUSD / crvUSD / USDD don't run this renderer, so they keep the common layout.
+ * syrupUSDC only — they're replaced by §3 Backing's asset-composition table + donut.
+ * #section-backing is hidden and its two live nodes (#chart-panel, #risk-flags)
+ * are relocated into the §3 group in render(). OUSD / crvUSD / USDD don't run this
+ * renderer, so they keep the common layout.
  */
 
 // Static metadata for the Collateral Mix sub-block + loan-table column.
@@ -172,13 +180,43 @@ var SyrupUSDCRenderer = {
         }
         // Band-only 5-axis: the common summary band (#summary-cards) shows the 5 axis cards;
         // hide the generic per-axis SECTIONS so they don't duplicate the bespoke Syrup panels.
-        // Keep #section-backing (it holds #chart-panel, the repurposed PCR/NAV chart + risk-flags);
-        // clear only its axis head.
+        // #section-backing is ALSO hidden now: render() relocates its two live nodes
+        // (#chart-panel — the repurposed Pool Coverage chart — and the #risk-flags panel)
+        // into the §3 Backing group inside #asset-specific-panels so they read in 5-axis
+        // order. The relocation runs in render() AFTER the bespoke HTML is in the DOM;
+        // here we just clear the (now-orphan) backing axis head.
         if (typeof CommonRenderer !== 'undefined' && CommonRenderer.hasAxisBlocks(data)) {
-            ['section-peg', 'section-liquidity', 'section-dependencies', 'section-issuer']
+            ['section-peg', 'section-liquidity', 'section-backing', 'section-dependencies', 'section-issuer']
                 .forEach(function(id) { var s = document.getElementById(id); if (s) s.style.display = 'none'; });
             var bh = document.getElementById('axis-backing-head'); if (bh) bh.innerHTML = '';
         }
+    },
+
+    // Lightweight axis section-header divider for the bespoke panel stream —
+    // reuses the common layer's .axis-head / .axis-num / .axis-title / .axis-sub
+    // visual style so the in-#asset-specific-panels headers match the band above.
+    _axisHead: function(num, title, sub) {
+        return '<div class="axis-head">' +
+            '<span class="axis-num">' + num + '</span>' +
+            '<span class="axis-title">' + title + '</span>' +
+            (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
+        '</div>';
+    },
+
+    // §1 Peg — peg is NAV-anchored for a credit vault; the band's Peg card
+    // carries the rating. Short standalone note; the live market-vs-NAV peg
+    // deviation numbers stay in the Liquidity panel (_renderLiquidityAndPeg).
+    _renderPegNote: function(slug) {
+        var underlying = SyrupUSDCRenderer._underlying(slug);
+        return '<div class="panel">' +
+            '<div class="panel-title">Peg</div>' +
+            '<p class="text-sm text-slate-700 leading-relaxed">' +
+                'syrup' + underlying + ' is a credit-vault share, so its peg is <strong>NAV-anchored</strong>, not a $1.00 stablecoin peg. ' +
+                'Shares redeem at NAV (Pool Coverage Ratio 100% by ERC-4626 design — a binary loss-recognition alarm) ' +
+                'via Maple\'s withdrawal queue against free ' + underlying + '; there is no instant secondary peg. ' +
+                'Live market-price vs NAV deviation is tracked under <span class="font-medium">§2 Liquidity</span> below.' +
+            '</p>' +
+        '</div>';
     },
 
     // ----- pre-render hook (fires before common summary cards render) ----
@@ -369,26 +407,73 @@ var SyrupUSDCRenderer = {
         var s = data.summary;
         var html = '';
 
+        // Panels are grouped under 5-axis section headers so the page reads
+        // top-to-bottom: [band] → §1 Peg → §2 Liquidity → §3 Backing →
+        // §4 Dependencies → §5 Issuer. Each _render* helper still returns its
+        // own self-contained .panel; this layer only reorders + adds the
+        // .axis-head dividers (matching the band's visual style).
+
+        // ---- §1 Peg ----
+        html += this._axisHead(1, 'Peg', 'NAV-anchored credit-vault share');
+        html += this._renderPegNote(data.asset_slug);
+
+        // ---- §2 Liquidity ----
+        html += this._axisHead(2, 'Liquidity', 'exit paths · free buffer · when capital returns');
+        html += this._renderLiquidityAndPeg(specific, s, data.asset_slug);  // free liquidity / queue / NAV / peg deviation
+        html += this._renderLiquidityLayer(specific, data.asset_slug);      // pool-owned positions
+        html += this._renderRepaymentSchedule(specific);                    // future liquidity (when loans return capital)
+
+        // ---- §3 Backing ----
+        html += this._axisHead(3, 'Backing', 'reserves · collateral ratio · loan-book health');
+        // Relocation slot for the common #chart-panel (Pool Coverage CR chart).
+        // The DOM node is physically moved into here after innerHTML so its
+        // canvas (#cr-chart) and chart logic keep working unchanged.
+        html += '<div id="syrup-coverage-chart-slot"></div>';
+        html += this._renderBacking(specific, s, data.asset_slug);
+        html += this._renderLoanBookHealth(specific);                       // loans-only (third-party credit)
+        html += this._renderStrategySlots(specific, data.asset_slug);       // unused contract slots
+        html += this._renderYield(specific);
+
+        // ---- §4 Dependencies ----
+        html += this._axisHead(4, 'Dependencies', 'upstream credit — borrowers');
+        html += this._renderBorrowerConcentration(specific);
+
+        // ---- §5 Issuer ----
+        html += this._axisHead(5, 'Issuer', 'governance · audits · multi-chain · family');
+        html += this._renderTrustStack(specific);
+        html += this._renderMultiChain(specific, data.asset_slug);
         // Reserved div for the cross-pool family panel — async-populated below
         // by _loadCrossPoolFamily once data/syrup_family.json resolves. Stays
         // empty (zero-height) when the file is missing so the page doesn't
         // visibly regress.
         html += '<div id="syrup-family-panel"></div>';
 
-        html += this._renderBacking(specific, s, data.asset_slug);          // §1
-        html += this._renderLoanBookHealth(specific);                       // §2  (loans-only)
-        html += this._renderLiquidityLayer(specific, data.asset_slug);      // §2b (pool-owned positions)
-        html += this._renderStrategySlots(specific, data.asset_slug);       // §2c (unused contract slots)
-        html += this._renderBorrowerConcentration(specific);                // §3
-        html += this._renderRepaymentSchedule(specific);                    // §4
-        html += this._renderLiquidityAndPeg(specific, s, data.asset_slug);  // §5
-        html += this._renderMultiChain(specific, data.asset_slug);          // §5b multi-chain distribution
-        html += this._renderTrustStack(specific);                   // §6
-        html += this._renderYield(specific);                        // §7
-
         container.innerHTML = html;
 
-        // Post-render canvases (after innerHTML so the DOM nodes exist).
+        // Relocate the common Backing nodes (#chart-panel = Pool Coverage chart,
+        // and the #risk-flags panel) out of the now-hidden #section-backing and
+        // into the §3 Backing group, preserving the live canvas/DOM so the chart
+        // still paints. Move the chart panel first, then the risk-flags panel
+        // directly beneath it.
+        var slot = document.getElementById('syrup-coverage-chart-slot');
+        var chartPanel = document.getElementById('chart-panel');
+        if (slot && chartPanel) {
+            chartPanel.style.display = '';   // unhide in case the common path suppressed it
+            slot.appendChild(chartPanel);
+            var riskFlags = document.getElementById('risk-flags');
+            var riskPanel = riskFlags && riskFlags.closest('.panel');
+            if (riskPanel) {
+                var wrapper = riskPanel.parentElement;
+                // Drop the lg:col-span-3 stretch added for the old 2-col backing grid;
+                // the relocated panel now stands alone full-width in the panel stream.
+                if (wrapper && wrapper.classList.contains('lg:col-span-3')) {
+                    wrapper.classList.remove('lg:col-span-3');
+                }
+                slot.appendChild(riskPanel);
+            }
+        }
+
+        // Post-render canvases (after innerHTML + relocation so the DOM nodes exist).
         this._renderBackingDonut(specific, data.asset_slug);
         this._renderRepaymentScheduleChart(specific);
         this._renderAumCoverageChart(specific, data.asset_slug);
