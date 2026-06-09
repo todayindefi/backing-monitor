@@ -149,7 +149,7 @@ var SyrupUSDCRenderer = {
         return '';
     },
 
-    _suppressCommonPanels: function() {
+    _suppressCommonPanels: function(data) {
         // §1 Backing absorbs the breakdown-table + allocation pie. Hide the
         // common-header panels and stretch the (now-orphan) Risk Flags wrapper
         // to span the full row width.
@@ -169,6 +169,15 @@ var SyrupUSDCRenderer = {
             if (wrapper && !wrapper.classList.contains('lg:col-span-3')) {
                 wrapper.classList.add('lg:col-span-3');
             }
+        }
+        // Band-only 5-axis: the common summary band (#summary-cards) shows the 5 axis cards;
+        // hide the generic per-axis SECTIONS so they don't duplicate the bespoke Syrup panels.
+        // Keep #section-backing (it holds #chart-panel, the repurposed PCR/NAV chart + risk-flags);
+        // clear only its axis head.
+        if (typeof CommonRenderer !== 'undefined' && CommonRenderer.hasAxisBlocks(data)) {
+            ['section-peg', 'section-liquidity', 'section-dependencies', 'section-issuer']
+                .forEach(function(id) { var s = document.getElementById(id); if (s) s.style.display = 'none'; });
+            var bh = document.getElementById('axis-backing-head'); if (bh) bh.innerHTML = '';
         }
     },
 
@@ -355,7 +364,7 @@ var SyrupUSDCRenderer = {
         var specific = data.asset_specific;
         if (!specific || (specific.type !== 'syrupusdc' && specific.type !== 'syrupusdt')) return;
 
-        this._suppressCommonPanels();
+        this._suppressCommonPanels(data);
 
         var s = data.summary;
         var html = '';

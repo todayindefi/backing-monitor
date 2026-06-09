@@ -482,6 +482,8 @@ const CommonRenderer = {
     },
 
     liquidityRating(data) {
+        // Credit vaults emit an explicit 1-5 band_score (from free-liquidity %); prefer it.
+        if (data.liquidity && data.liquidity.band_score != null) return data.liquidity.band_score;
         var th = this._axisThresholds(data).liquidity.depth_usd;
         return this._rate(data.liquidity ? data.liquidity.total_2pct_depth : null, th, 'high');
     },
@@ -493,6 +495,12 @@ const CommonRenderer = {
             ? data.backing.collateral_ratio
             : (data.summary && data.summary.collateral_ratio);
         if (cr == null) return null;
+        // Explicit per-asset cr_pct override (finer 5/4/3/2/1) wins over chart_bands' binary
+        // 5/3/1 — credit vaults (PCR ~100 by construction) need the finer bands so PCR 100 reads
+        // Healthy 4, not a perfect 5 (chart_bands stays for the CR-chart rendering).
+        var bOv = data.asset_specific && data.asset_specific.axis_thresholds
+                  && data.asset_specific.axis_thresholds.backing;
+        if (bOv && Array.isArray(bOv.cr_pct)) return this._rate(cr, bOv.cr_pct, 'high');
         var bands = data.asset_specific && data.asset_specific.chart_bands;
         if (bands) {
             // verbose {critical,thin,amber,healthy:[lo,hi]} or short {pcr|thresholds:[a,b,c,d]}
@@ -536,7 +544,13 @@ const CommonRenderer = {
             ? nDown + ' <span class="text-sm font-normal text-slate-400">down</span>'
             : '<span class="text-base font-normal text-slate-400">downstream not tracked</span>';
 
-        var depthTxt = (liq.total_2pct_depth != null) ? this.formatCurrency(liq.total_2pct_depth) : 'n/a';
+        // Liquidity metric: credit vaults (e.g. Maple Syrup) expose free-liquidity % (instant-exit
+        // capacity, rest queues at NAV) rather than a DEX 2% depth — show whichever the asset emits.
+        var liqIsFree = liq.free_liquidity_pct != null;
+        var depthTxt = liqIsFree
+            ? (liq.free_liquidity_pct.toFixed(1) + '% free')
+            : ((liq.total_2pct_depth != null) ? this.formatCurrency(liq.total_2pct_depth) : 'n/a');
+        var liqSub = liqIsFree ? 'instant · rest queues at NAV' : '2% depth · vol n/a';
 
         var cards = [
             {
@@ -548,7 +562,7 @@ const CommonRenderer = {
             {
                 label: 'Liquidity',
                 valueHtml: depthTxt,
-                sub: '2% depth · vol n/a',
+                sub: liqSub,
                 chip: this._ratingChipHtml(this.liquidityRating(data))
             },
             {
