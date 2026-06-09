@@ -427,6 +427,51 @@ var STRCRenderer = {
     },
 
     // ============================================================
+    // Per-token mark card — multiplier-adjusted Jupiter price (matches the
+    // scaled on-chain balanceOf). The CoinGecko xStock figure is the PRE-scaled
+    // price (overstates by ~the multiplier, ~$25k/day venue) and is shown as a
+    // labeled reference only, never the headline mark.
+    _renderStrcxMarkCard: function (wrapper) {
+        var mark = wrapper.market_price_usd;
+        // Back-compat: pre-fix snapshots only carried the pre-scaled CG price.
+        // Rescale it by the multiplier so a stale-data window still shows the
+        // per-token mark, never the inflated pre-scaled figure.
+        if (mark == null) mark = wrapper.coingecko_scaled_price_usd;
+        if (mark == null && wrapper.coingecko_price_usd != null
+                && wrapper.multiplier) {
+            mark = wrapper.coingecko_price_usd / wrapper.multiplier;
+        }
+        var src = wrapper.market_price_source || '';
+        var srcLabel =
+            src === 'jupiter_usdprice' ? 'Jupiter v3' :
+            src === 'jupiter_stockdata_fallback' ? 'Jupiter (NAV-bounded)' :
+            src === 'jupiter_stockdata' ? 'Jupiter stockData' :
+            src === 'coingecko_scaled_fallback' ? 'CoinGecko (scaled)' :
+            (src || '—');
+        var underlying = wrapper.underlying_strc_price_usd;
+        var cgPre = wrapper.coingecko_price_usd;
+        var xbps = wrapper.price_crosscheck_bps;
+        var sub = srcLabel +
+            (underlying != null ? ' · STRC $' + underlying.toFixed(2) : '') +
+            (cgPre != null ? ' · CG pre-scaled $' + cgPre.toFixed(2) : '');
+        var xchk = (xbps != null)
+            ? '<div class="text-xs text-slate-400 mt-0.5">CG cross-check ' +
+              (xbps >= 0 ? '+' : '') + xbps.toFixed(0) + ' bps</div>'
+            : '';
+        var titleAttr = 'STRCx is a scaled-UI token: on-chain balanceOf returns ' +
+            'shares×multiplier, so the matching mark is the multiplier-adjusted ' +
+            'Jupiter usdPrice. The CoinGecko xStock feed is PRE-scaled (overstates ' +
+            'the per-token value by ~the multiplier, on a thin ~$25k/day venue) and ' +
+            'is a reference only.';
+        return '<div class="summary-card">' +
+            '<div class="card-label" title="' + titleAttr + '">Per-token mark ' +
+                '<span class="text-slate-400 font-normal">(multiplier-adj.)</span></div>' +
+            '<div class="card-value">' + (mark != null ? '$' + mark.toFixed(2) : '—') + '</div>' +
+            '<div class="text-xs text-slate-400 mt-1">' + sub + '</div>' +
+            xchk +
+        '</div>';
+    },
+
     // Panel 4 — STRCx wrapper
     // ============================================================
     _renderStrcxWrapper: function (wrapper, riskFlags) {
@@ -521,11 +566,7 @@ var STRCRenderer = {
                     '<div class="card-value">' + (multiplier != null ? multiplier.toFixed(6) : '—') + '</div>' +
                     '<div class="text-xs text-slate-400 mt-1">from ethereum.multiplier()</div>' +
                 '</div>' +
-                '<div class="summary-card">' +
-                    '<div class="card-label">Implied per-token USD</div>' +
-                    '<div class="card-value">' + (wrapper.coingecko_price_usd != null ? '$' + wrapper.coingecko_price_usd.toFixed(2) : '—') + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">CoinGecko cross-chain aggregate</div>' +
-                '</div>' +
+                STRCRenderer._renderStrcxMarkCard(wrapper) +
             '</div>' +
             '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-4 mb-2">Per-chain breakdown</div>' +
             '<div class="data-table-scroll">' +
