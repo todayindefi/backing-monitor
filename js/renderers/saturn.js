@@ -259,11 +259,24 @@ var SaturnRenderer = {
     },
 
     _suppressCommonPanels: function(data) {
-        // Hide the top summary-card strip — our §1 Headline card carries
-        // richer per-asset metrics (NAV, buffer ratio, paused, on-chain
-        // verifiability badge) with proper context.
+        var has5axis = (typeof CommonRenderer !== 'undefined') && CommonRenderer.hasAxisBlocks(data);
+
+        // #summary-cards holds the legacy CR cards in legacy mode, but the 5-axis
+        // summary BAND in 5-axis mode. Band-only design: KEEP it when 5-axis (show
+        // the band), hide only in legacy mode where the §1 Headline supersedes it.
         var summaryCards = document.getElementById('summary-cards');
-        if (summaryCards) summaryCards.style.display = 'none';
+        if (summaryCards && !has5axis) summaryCards.style.display = 'none';
+
+        // Band-only: hide ALL the generic per-axis sections (app.js reveals them in
+        // renderAxisSections, which runs before this bespoke renderer). Saturn keeps
+        // none of them — every axis has a richer custom panel below, and #chart-panel
+        // (inside #section-backing) is already hidden — so we can hide section-backing
+        // too, unlike Ethena which keeps its Coverage chart there.
+        if (has5axis) {
+            ['section-peg', 'section-liquidity', 'section-backing', 'section-dependencies', 'section-issuer']
+                .forEach(function(id) { var s = document.getElementById(id); if (s) s.style.display = 'none'; });
+            var bh = document.getElementById('axis-backing-head'); if (bh) bh.innerHTML = '';
+        }
 
         // Hide the common CR History chart — for USDat the meaningful trend
         // is the supply/backing ratio (always ~100% by design), and for sUSDat
