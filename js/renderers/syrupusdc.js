@@ -7,8 +7,8 @@
  * (mirroring the crvUSD dashboard).
  *
  * Render order (each panel keeps its own content; this layer just groups + heads):
- *   §1 Peg         — short NAV-anchored note (rating lives in the band)
- *   §2 Liquidity   — Liquidity & Peg (free buffer / queue / NAV / peg deviation)
+ *   §1 Peg         — Peg Performance (market vs NAV metric row + peg-vs-NAV chart)
+ *   §2 Liquidity   — Liquidity (free buffer / queue / DEX slippage)
  *                    · Liquidity Layer (pool-owned positions)
  *                    · Repayment Schedule (when capital returns)
  *   §3 Backing     — Pool Coverage chart (relocated #chart-panel) · Risk Flags
@@ -203,20 +203,94 @@ var SyrupUSDCRenderer = {
         '</div>';
     },
 
-    // §1 Peg — peg is NAV-anchored for a credit vault; the band's Peg card
-    // carries the rating. Short standalone note; the live market-vs-NAV peg
-    // deviation numbers stay in the Liquidity panel (_renderLiquidityAndPeg).
-    _renderPegNote: function(slug) {
-        var underlying = SyrupUSDCRenderer._underlying(slug);
+    // §1 Peg — syrup HAS a real secondary market-vs-NAV signal (CoinGecko),
+    // it's just small (≈ −0.05% usdc / −0.10% usdt). Render a proper Peg panel
+    // mirroring CommonRenderer._renderPegSection's metric row (Market price /
+    // NAV / Premium-Discount % / Status), plus a peg-vs-NAV history chart.
+    // The chart canvas (#peg-chart) is wired by reusing
+    // CommonRenderer._renderPegChart(data, history) — see _loadPegChart, which
+    // fetches the backing-history file (data.peg.history_ref) AFTER the panel
+    // HTML is in the DOM (the bespoke render() only receives `data`, not the
+    // history). Primary redemption is still at NAV via Maple's queue; the
+    // secondary discount is the instant-but-thin path, now charted here.
+    _renderPegPanel: function(data) {
+        var peg = (data && data.peg) || {};
+        var pct = peg.premium_discount_pct;
+        var mkt = peg.market_price;
+        var nav = peg.nav;
+        var fmtP = function(v) { return v != null ? v.toFixed(4) : '—'; };
+
+        // Mirror common.js helpers when present; degrade gracefully if the
+        // common layer isn't loaded for some reason.
+        var hasCommon = (typeof CommonRenderer !== 'undefined');
+        var st = hasCommon ? CommonRenderer.pegStatusClass(pct) :
+                 (pct == null ? 'unknown' : Math.abs(pct) < 0.25 ? 'ok' : Math.abs(pct) < 0.5 ? 'warn' : 'critical');
+        var pctCls = hasCommon ? CommonRenderer.pegPctClass(st) :
+                 (st === 'ok' ? 'text-green-600' : st === 'warn' ? 'text-amber-600' : st === 'critical' ? 'text-red-600' : 'text-slate-500');
+        var pctText = hasCommon ? CommonRenderer.pegPctText(pct, 3) :
+                 (pct == null ? '—' : (pct >= 0 ? '+' : '') + pct.toFixed(3) + '%');
+        var statusLabel = hasCommon ? CommonRenderer.pegStatusLabel(st) :
+                 (st === 'ok' ? 'Healthy' : st === 'warn' ? 'Watch' : st === 'critical' ? 'Stress' : '—');
+
+        var metricRow =
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Market price</div>' +
+                    '<div class="text-lg font-bold font-mono">' + fmtP(mkt) + '</div></div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">NAV / theoretical</div>' +
+                    '<div class="text-lg font-bold font-mono">' + fmtP(nav) + '</div></div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Premium / discount</div>' +
+                    '<div class="text-lg font-bold font-mono ' + pctCls + '">' + pctText + '</div></div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
+                    '<div class="text-lg font-bold ' + pctCls + '">' + statusLabel + '</div></div>' +
+            '</div>';
+
+        // Chart canvas is always emitted (id="peg-chart"); _loadPegChart fetches
+        // the history and paints it, or removes the slot if no history is
+        // available (e.g. data not yet synced with peg_market_price fields).
+        var chartBlock = '<div id="syrup-peg-chart-slot" class="chart-container"><canvas id="peg-chart"></canvas></div>';
+
+        var note = peg.note ||
+            'Primary redemption is at NAV via Maple\'s withdrawal queue; secondary trades at a small discount (charted).';
+
         return '<div class="panel">' +
-            '<div class="panel-title">Peg</div>' +
-            '<p class="text-sm text-slate-700 leading-relaxed">' +
-                'syrup' + underlying + ' is a credit-vault share, so its peg is <strong>NAV-anchored</strong>, not a $1.00 stablecoin peg. ' +
-                'Shares redeem at NAV (Pool Coverage Ratio 100% by ERC-4626 design — a binary loss-recognition alarm) ' +
-                'via Maple\'s withdrawal queue against free ' + underlying + '; there is no instant secondary peg. ' +
-                'Live market-price vs NAV deviation is tracked under <span class="font-medium">§2 Liquidity</span> below.' +
-            '</p>' +
+            '<div class="panel-title">Peg Performance</div>' +
+            metricRow +
+            chartBlock +
+            '<p class="text-xs text-slate-500 mt-3 leading-relaxed">' + note + '</p>' +
         '</div>';
+    },
+
+    // Fetch the peg history (flat peg_market_price series in the pool's own
+    // backing-history file) and hand it to CommonRenderer._renderPegChart,
+    // which targets #peg-chart and draws the market-price line + a NAV
+    // reference line. Mirrors _loadCrossPoolFamily's fetch pattern. Runs after
+    // the panel HTML is in the DOM so the canvas exists. The history file/field
+    // come from data.peg.history_ref / data.peg.history_field (apxUSD pattern);
+    // if absent or the fetch yields no usable series, the chart slot is removed
+    // so the panel degrades to metric-row-only rather than an empty canvas.
+    _loadPegChart: function(data) {
+        var slot = document.getElementById('syrup-peg-chart-slot');
+        if (!slot) return;
+        var peg = (data && data.peg) || {};
+        var field = peg.history_field || 'peg_market_price';
+        var ref = peg.history_ref ||
+                  ((data.asset_slug || 'syrupusdc') + '_backing_history.json');
+        if (typeof CommonRenderer === 'undefined' || typeof CommonRenderer._renderPegChart !== 'function') {
+            slot.remove();
+            return;
+        }
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + ref + '?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                var entries = hist && Array.isArray(hist.entries) ? hist.entries : null;
+                var hasSeries = entries && entries.some(function(e) { return e && e[field] != null; });
+                if (!hasSeries) { slot.remove(); return; }
+                // CommonRenderer._renderPegChart reads data.peg.history_field +
+                // data.peg.nav and history.entries[].<field>; the shapes match.
+                CommonRenderer._renderPegChart(data, hist);
+            })
+            .catch(function() { slot.remove(); });
     },
 
     // ----- pre-render hook (fires before common summary cards render) ----
@@ -414,12 +488,12 @@ var SyrupUSDCRenderer = {
         // .axis-head dividers (matching the band's visual style).
 
         // ---- §1 Peg ----
-        html += this._axisHead(1, 'Peg', 'NAV-anchored credit-vault share');
-        html += this._renderPegNote(data.asset_slug);
+        html += this._axisHead(1, 'Peg', 'market vs NAV · secondary discount');
+        html += this._renderPegPanel(data);
 
         // ---- §2 Liquidity ----
         html += this._axisHead(2, 'Liquidity', 'exit paths · free buffer · when capital returns');
-        html += this._renderLiquidityAndPeg(specific, s, data.asset_slug);  // free liquidity / queue / NAV / peg deviation
+        html += this._renderLiquidityAndPeg(specific, s, data.asset_slug);  // free liquidity / queue / DEX slippage (peg moved to §1)
         html += this._renderLiquidityLayer(specific, data.asset_slug);      // pool-owned positions
         html += this._renderRepaymentSchedule(specific);                    // future liquidity (when loans return capital)
 
@@ -478,6 +552,7 @@ var SyrupUSDCRenderer = {
         this._renderRepaymentScheduleChart(specific);
         this._renderAumCoverageChart(specific, data.asset_slug);
         this._attachLoanTableSort();
+        this._loadPegChart(data);
         this._loadCrossPoolFamily(data);
     },
 
@@ -2015,16 +2090,18 @@ var SyrupUSDCRenderer = {
         });
     },
 
-    // ----- §5 Liquidity & Peg (folds Exit Realism + Stress Anchor + Peg) --
+    // ----- §2 Liquidity (Exit Realism + free buffer + Stress Anchor) ------
+    // §2 Liquidity panel — exit/free-liquidity only. The market-vs-NAV peg
+    // deviation that used to live here moved to the §1 Peg panel
+    // (_renderPegPanel); this panel is now liquidity-pure to match its axis.
     _renderLiquidityAndPeg: function(specific, s, slug) {
         var wq = specific.withdrawal_queue;
         var liq = specific.liquidity;
-        var peg = specific.peg;
         var lb = specific.loan_book || {};
         var underlying = SyrupUSDCRenderer._underlying(slug);
 
-        var html = '<div class="panel"><div class="panel-title">Liquidity &amp; Peg</div>' +
-            '<p class="text-sm text-slate-500 mb-3">Two exit paths: (a) instant queue exit redeems against free ' + underlying + ' at NAV; (b) DEX/aggregator sell takes a slippage hit but settles immediately. Peg deviation = market price vs theoretical NAV.</p>';
+        var html = '<div class="panel"><div class="panel-title">Liquidity</div>' +
+            '<p class="text-sm text-slate-500 mb-3">Two exit paths: (a) instant queue exit redeems against free ' + underlying + ' at NAV; (b) DEX/aggregator sell takes a slippage hit but settles immediately.</p>';
 
         // Free underlying + queue-based time-context cards. Maple Syrup's
         // WithdrawalManager is queue-based (NOT cyclical) — getCurrentCycleId()
@@ -2106,23 +2183,6 @@ var SyrupUSDCRenderer = {
             html += '<div class="text-sm font-semibold text-slate-700 mt-2 mb-1">DEX aggregator slippage → ' + underlying + sourceLabel + '</div>' +
                 '<table class="data-table"><thead><tr><th>Notional</th><th class="text-right">Slippage</th><th class="text-right">Output</th></tr></thead><tbody>' + rows + '</tbody></table>' +
                 (liq.pool_tvl ? '<div class="text-xs text-slate-400 mt-2">DEX pool TVL: ' + CommonRenderer.formatCurrency(liq.pool_tvl) + (liq.pool_count ? ' across ' + liq.pool_count + ' pools' : '') + '</div>' : '');
-        }
-
-        // NEW: Peg deviation row
-        if (peg && (peg.market_price != null || peg.theoretical_price != null)) {
-            // premium_discount_pct is a percentage (e.g. -0.06 = -6 bps roughly).
-            // 1% = 100 bps. So bps = pct * 100.
-            var pdPct = peg.premium_discount_pct;
-            var pdBps = (pdPct != null) ? pdPct * 100 : null;
-            var pdSign = pdBps != null && pdBps >= 0 ? '+' : '';
-            var pdCls = pdBps != null && Math.abs(pdBps) > 50 ? 'text-red-600 font-semibold' :
-                        pdBps != null && Math.abs(pdBps) > 20 ? 'text-amber-600' : 'text-slate-700';
-            html += '<div class="text-sm font-semibold text-slate-700 mt-4 mb-1">Peg deviation</div>' +
-                '<div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-2">' +
-                    '<div class="summary-card"><div class="card-label">Market price</div><div class="card-value">' + (peg.market_price != null ? '$' + peg.market_price.toFixed(4) : '—') + '</div><div class="text-xs text-slate-400 mt-1">' + (peg.source || 'external') + '</div></div>' +
-                    '<div class="summary-card"><div class="card-label">NAV (theoretical)</div><div class="card-value">' + (peg.theoretical_price != null ? '$' + peg.theoretical_price.toFixed(4) : '—') + '</div><div class="text-xs text-slate-400 mt-1">on-chain</div></div>' +
-                    '<div class="summary-card"><div class="card-label">Discount</div><div class="card-value ' + pdCls + '">' + (pdBps != null ? pdSign + pdBps.toFixed(1) + ' bps' : '—') + '</div><div class="text-xs text-slate-400 mt-1">market vs NAV</div></div>' +
-                '</div>';
         }
 
         // Stress anchor
