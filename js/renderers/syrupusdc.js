@@ -188,6 +188,12 @@ var SyrupUSDCRenderer = {
         if (typeof CommonRenderer !== 'undefined' && CommonRenderer.hasAxisBlocks(data)) {
             ['section-peg', 'section-liquidity', 'section-backing', 'section-dependencies', 'section-issuer']
                 .forEach(function(id) { var s = document.getElementById(id); if (s) s.style.display = 'none'; });
+            // Clear the hidden common axis bodies — they contain duplicate-id nodes (notably a
+            // #peg-chart canvas from renderAxisSections) that would shadow our bespoke §1 Peg
+            // canvas under getElementById, binding the chart to a 0×0 hidden canvas. Removing
+            // them lets the bespoke peg chart bind correctly.
+            ['axis-peg-body', 'axis-liquidity-body', 'axis-dependencies-body', 'axis-issuer-body']
+                .forEach(function(id) { var b = document.getElementById(id); if (b) b.innerHTML = ''; });
             var bh = document.getElementById('axis-backing-head'); if (bh) bh.innerHTML = '';
         }
     },
