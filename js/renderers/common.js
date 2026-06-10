@@ -550,7 +550,7 @@ const CommonRenderer = {
         var depthTxt = liqIsFree
             ? (liq.free_liquidity_pct.toFixed(1) + '% free')
             : ((liq.total_2pct_depth != null) ? this.formatCurrency(liq.total_2pct_depth) : 'n/a');
-        var liqSub = liqIsFree ? 'instant · rest queues at NAV' : '2% depth · vol n/a';
+        var liqSub = liqIsFree ? 'redemption · free at NAV, rest queues' : '2% depth · vol n/a';
 
         var cards = [
             {

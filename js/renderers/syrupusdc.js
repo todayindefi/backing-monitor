@@ -250,10 +250,13 @@ var SyrupUSDCRenderer = {
                     '<div class="text-lg font-bold ' + pctCls + '">' + statusLabel + '</div></div>' +
             '</div>';
 
-        // Chart canvas is always emitted (id="peg-chart"); _loadPegChart fetches
-        // the history and paints it, or removes the slot if no history is
-        // available (e.g. data not yet synced with peg_market_price fields).
-        var chartBlock = '<div id="syrup-peg-chart-slot" class="chart-container"><canvas id="peg-chart"></canvas></div>';
+        // Chart canvas is always emitted; _loadPegChart fetches the history and
+        // paints a bespoke TWO-line chart (market price + historical NAV), or
+        // removes the slot if no history is available (e.g. data not yet synced
+        // with peg_market_price fields). Canvas uses a UNIQUE id (#syrup-peg-chart)
+        // to avoid colliding with the hidden common-section #peg-chart, which
+        // would otherwise leave this canvas 0×0 / let the common layer paint it.
+        var chartBlock = '<div id="syrup-peg-chart-slot" class="chart-container"><canvas id="syrup-peg-chart"></canvas></div>';
 
         var note = peg.note ||
             'Primary redemption is at NAV via Maple\'s withdrawal queue; secondary trades at a small discount (charted).';
@@ -266,37 +269,95 @@ var SyrupUSDCRenderer = {
         '</div>';
     },
 
-    // Fetch the peg history (flat peg_market_price series in the pool's own
-    // backing-history file) and hand it to CommonRenderer._renderPegChart,
-    // which targets #peg-chart and draws the market-price line + a NAV
-    // reference line. Mirrors _loadCrossPoolFamily's fetch pattern. Runs after
-    // the panel HTML is in the DOM so the canvas exists. The history file/field
-    // come from data.peg.history_ref / data.peg.history_field (apxUSD pattern);
-    // if absent or the fetch yields no usable series, the chart slot is removed
-    // so the panel degrades to metric-row-only rather than an empty canvas.
+    // Fetch the peg history (the pool's own backing-history file) and paint a
+    // bespoke TWO-line Chart.js line chart on #syrup-peg-chart:
+    //   • Market price — entries[].peg_market_price (indigo)
+    //   • NAV          — entries[].peg_theoretical_price (slate)
+    // We deliberately plot peg_theoretical_price for the NAV line, NOT the
+    // on-chain `nav` field: `nav` carries a historical ~3.7% early discrepancy
+    // (and on syrupUSDT is only populated for the latest entry) that would draw
+    // a fake premium; peg_theoretical_price is consistent with the market
+    // series. This replaces the prior CommonRenderer._renderPegChart call (flat
+    // NAV reference line) — the moving NAV line makes the small gap visible.
+    // Mirrors _loadCrossPoolFamily's fetch pattern. Runs after the panel HTML
+    // is in the DOM so the canvas exists. If the fetch yields no usable series,
+    // the slot is removed so the panel degrades to metric-row-only.
     _loadPegChart: function(data) {
         var slot = document.getElementById('syrup-peg-chart-slot');
         if (!slot) return;
         var peg = (data && data.peg) || {};
-        var field = peg.history_field || 'peg_market_price';
+        var mktField = peg.history_field || 'peg_market_price';
+        var navField = 'peg_theoretical_price';
         var ref = peg.history_ref ||
                   ((data.asset_slug || 'syrupusdc') + '_backing_history.json');
-        if (typeof CommonRenderer === 'undefined' || typeof CommonRenderer._renderPegChart !== 'function') {
-            slot.remove();
-            return;
-        }
+        if (typeof Chart === 'undefined') { slot.remove(); return; }
         var nocache = Math.floor(Date.now() / 60000);
         fetch('data/' + ref + '?nocache=' + nocache)
             .then(function(r) { return r.ok ? r.json() : null; })
             .then(function(hist) {
                 var entries = hist && Array.isArray(hist.entries) ? hist.entries : null;
-                var hasSeries = entries && entries.some(function(e) { return e && e[field] != null; });
-                if (!hasSeries) { slot.remove(); return; }
-                // CommonRenderer._renderPegChart reads data.peg.history_field +
-                // data.peg.nav and history.entries[].<field>; the shapes match.
-                CommonRenderer._renderPegChart(data, hist);
+                // Keep only points where BOTH series are present, so the two
+                // lines share an identical x-axis and the gap reads cleanly.
+                var pts = (entries || []).filter(function(e) {
+                    return e && e[mktField] != null && e[navField] != null && e.timestamp;
+                });
+                if (!pts.length) { slot.remove(); return; }
+                SyrupUSDCRenderer._paintPegChart(pts, mktField, navField);
             })
             .catch(function() { slot.remove(); });
+    },
+
+    // Build the bespoke 2-line peg chart on #syrup-peg-chart. Uses
+    // window._syrupPegChart for teardown so it never touches the common
+    // layer's window._pegChart / #peg-chart instance.
+    _paintPegChart: function(pts, mktField, navField) {
+        var ctx = document.getElementById('syrup-peg-chart');
+        if (!ctx) return;
+        var labels = pts.map(function(e) {
+            return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z');
+        });
+        var mkt = pts.map(function(e) { return e[mktField]; });
+        var nav = pts.map(function(e) { return e[navField]; });
+
+        if (window._syrupPegChart) window._syrupPegChart.destroy();
+        window._syrupPegChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: labels, datasets: [
+                {
+                    label: 'Market price',
+                    data: mkt,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                    fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2
+                },
+                {
+                    label: 'NAV',
+                    data: nav,
+                    borderColor: '#94a3b8',
+                    backgroundColor: 'rgba(148, 163, 184, 0.06)',
+                    fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2,
+                    borderDash: [5, 4]
+                }
+            ] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                         grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+                    // y zoomed to the data (no forced baseline) so the small
+                    // market-vs-NAV gap is actually visible.
+                    y: { grid: { color: '#f1f5f9' },
+                         ticks: { font: { size: 11 }, callback: function(v) { return v.toFixed(3); } } }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: { callbacks: { label: function(c) {
+                        return c.dataset.label + ': ' + Number(c.raw).toFixed(4);
+                    } } }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
     },
 
     // ----- pre-render hook (fires before common summary cards render) ----
@@ -2107,7 +2168,15 @@ var SyrupUSDCRenderer = {
         var underlying = SyrupUSDCRenderer._underlying(slug);
 
         var html = '<div class="panel"><div class="panel-title">Liquidity</div>' +
-            '<p class="text-sm text-slate-500 mb-3">Two exit paths: (a) instant queue exit redeems against free ' + underlying + ' at NAV; (b) DEX/aggregator sell takes a slippage hit but settles immediately.</p>';
+            '<p class="text-sm text-slate-500 mb-3">Two distinct liquidity types, not to be conflated: <span class="font-semibold text-slate-600">Redemption (at NAV)</span> is the primary full-size exit via Maple\'s queue — constraint is <span class="font-semibold">time</span>; <span class="font-semibold text-slate-600">Secondary market</span> is an instant-but-thin DEX alternative at a small discount — constraint is <span class="font-semibold">size / price</span>.</p>';
+
+        // ===== Sub-section A: Redemption (at NAV) =========================
+        // Free-liquidity %, withdrawal queue / request IDs, deployment ratio.
+        // The primary full-size exit; constraint is TIME (queue) not price.
+        html += '<div class="text-sm font-semibold text-slate-700 mt-1 mb-1 flex items-center gap-2">' +
+            '<span class="inline-block w-1.5 h-3.5 rounded-sm" style="background:#6366f1"></span>' +
+            'Redemption (at NAV)</div>' +
+            '<p class="text-xs text-slate-400 mb-3">Full-size exit: redeems against free ' + underlying + ' at NAV instantly; the rest queues until loan repayments return capital. Constraint is time.</p>';
 
         // Free underlying + queue-based time-context cards. Maple Syrup's
         // WithdrawalManager is queue-based (NOT cyclical) — getCurrentCycleId()
@@ -2172,6 +2241,37 @@ var SyrupUSDCRenderer = {
             '</div>';
         }
 
+        // Stress anchor — redemption-path context: how far free liquidity
+        // carries an exit before it queues, and what (loan repayments) clears
+        // the queue. Belongs under Redemption (constraint = time), not the
+        // secondary market.
+        var freePct2 = SyrupUSDCRenderer._freeLiquidityPct(s);
+        var freeUsd2 = (s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency) ? s.collateral_ratio_alt.value : null;
+        var paymentInterval = lb.weighted_avg_payment_interval_days;
+        if (paymentInterval == null) paymentInterval = lb.weighted_avg_remaining_days_to_due;
+        var freePctText = freePct2 != null ? freePct2.toFixed(1) + '%' : '?';
+        var freeUsdText = freeUsd2 != null ?
+            (freeUsd2 >= 1e6 ? '$' + (freeUsd2 / 1e6).toFixed(0) + 'M' : '$' + (freeUsd2 / 1e3).toFixed(0) + 'K') : '?';
+        var intervalText = paymentInterval != null ? paymentInterval.toFixed(0) + '-day' : 'multi-week';
+        var monthlyInflow = lb.payment_ladder && lb.payment_ladder.totals && lb.payment_ladder.totals.expected_inflow_30d_usd;
+        var inflowFragment = (monthlyInflow != null) ?
+            ' (interest-only ≈ <span class="font-mono">' + CommonRenderer.formatCurrency(monthlyInflow) + '/30d</span>)' : '';
+
+        html += '<div class="text-sm font-semibold text-slate-700 mt-4 mb-1">Stress anchor</div>' +
+            '<p class="text-sm text-slate-700">' +
+                'Free liquidity (<span class="font-semibold">' + freePctText + '</span>, ' + freeUsdText + ') covers redemptions to ~<span class="font-semibold">' + freeUsdText + '</span> before queueing. ' +
+                'Above that, exits depend on incoming loan repayments' + inflowFragment + '. ' +
+                'Avg loan payment interval <span class="font-semibold">' + intervalText + '</span>; the pool has 24h notice + 48h grace to call a delinquent loan.' +
+            '</p>';
+
+        // ===== Sub-section B: Secondary market ===========================
+        // DEX-aggregator slippage→underlying ladder + pool depth. Instant but
+        // thin; an alternative at a small discount. Constraint is SIZE / price.
+        html += '<div class="text-sm font-semibold text-slate-700 mt-6 mb-1 flex items-center gap-2">' +
+            '<span class="inline-block w-1.5 h-3.5 rounded-sm" style="background:#94a3b8"></span>' +
+            'Secondary market</div>' +
+            '<p class="text-xs text-slate-400 mb-3">Instant-but-thin alternative to the redemption queue: sell into DEX/aggregator liquidity for ' + underlying + ' immediately, taking a slippage hit. Constraint is size / price.</p>';
+
         // DEX aggregator slippage
         if (liq && liq.quotes) {
             var sizes = Object.keys(liq.quotes).sort(function(a, b) { return parseFloat(a) - parseFloat(b); });
@@ -2191,26 +2291,7 @@ var SyrupUSDCRenderer = {
                 (liq.pool_tvl ? '<div class="text-xs text-slate-400 mt-2">DEX pool TVL: ' + CommonRenderer.formatCurrency(liq.pool_tvl) + (liq.pool_count ? ' across ' + liq.pool_count + ' pools' : '') + '</div>' : '');
         }
 
-        // Stress anchor
-        var freePct2 = SyrupUSDCRenderer._freeLiquidityPct(s);
-        var freeUsd2 = (s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency) ? s.collateral_ratio_alt.value : null;
-        var paymentInterval = lb.weighted_avg_payment_interval_days;
-        if (paymentInterval == null) paymentInterval = lb.weighted_avg_remaining_days_to_due;
-        var freePctText = freePct2 != null ? freePct2.toFixed(1) + '%' : '?';
-        var freeUsdText = freeUsd2 != null ?
-            (freeUsd2 >= 1e6 ? '$' + (freeUsd2 / 1e6).toFixed(0) + 'M' : '$' + (freeUsd2 / 1e3).toFixed(0) + 'K') : '?';
-        var intervalText = paymentInterval != null ? paymentInterval.toFixed(0) + '-day' : 'multi-week';
-        var monthlyInflow = lb.payment_ladder && lb.payment_ladder.totals && lb.payment_ladder.totals.expected_inflow_30d_usd;
-        var inflowFragment = (monthlyInflow != null) ?
-            ' (interest-only ≈ <span class="font-mono">' + CommonRenderer.formatCurrency(monthlyInflow) + '/30d</span>)' : '';
-
-        html += '<div class="text-sm font-semibold text-slate-700 mt-4 mb-1">Stress anchor</div>' +
-            '<p class="text-sm text-slate-700">' +
-                'Free liquidity (<span class="font-semibold">' + freePctText + '</span>, ' + freeUsdText + ') covers redemptions to ~<span class="font-semibold">' + freeUsdText + '</span> before queueing. ' +
-                'Above that, exits depend on incoming loan repayments' + inflowFragment + '. ' +
-                'Avg loan payment interval <span class="font-semibold">' + intervalText + '</span>; the pool has 24h notice + 48h grace to call a delinquent loan.' +
-            '</p>' +
-        '</div>';
+        html += '</div>';
         return html;
     },
 
