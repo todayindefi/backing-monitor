@@ -737,8 +737,13 @@ var SyrupUSDCRenderer = {
         var usdtLoansOnlyCR = loansOnlyCR(usdtPool);
         var usdcInitCR = usdcSummary && usdcSummary.pool_collateral_ratio_pct;
         var usdtInitCR = usdtSummary && usdtSummary.pool_collateral_ratio_pct;
-        var usdcBelowInit = usdcSummary && usdcSummary.loans_below_init_count;
-        var usdtBelowInit = usdtSummary && usdtSummary.loans_below_init_count;
+        var usdcSetAHealth = usdcSummary && usdcSummary.set_a_collateral_health;
+        var usdtSetAHealth = usdtSummary && usdtSummary.set_a_collateral_health;
+        var setAThresholds = usdcSetAHealth || usdtSetAHealth || {};
+        var setACritPct = setAThresholds.crit_level_pct != null ? setAThresholds.crit_level_pct : 100;
+        var setAWarnPct = setAThresholds.warn_level_pct != null ? setAThresholds.warn_level_pct : 120;
+        var setAHealthSubLabel = '<span class="text-xs font-normal text-slate-500">(CRIT &lt; ' +
+            setACritPct + '% · WARN &lt; ' + setAWarnPct + '%)</span>';
 
         function pendingCell() {
             return '<span class="text-slate-400 italic text-xs">pending classification fix</span>';
@@ -752,11 +757,20 @@ var SyrupUSDCRenderer = {
             if ((lo == null || lo === 0) && (lq == null || lq === 0)) return pendingCell();
             return '<span class="font-mono">' + (lo || 0) + ' / ' + (lq || 0) + '</span>';
         }
-        function belowInitCell(below, denom) {
-            if (below == null) return '<span class="text-slate-400">—</span>';
-            var cls = below > 0 ? 'text-red-600 font-semibold' : 'text-green-600 font-semibold';
-            var denomStr = denom ? ' / ' + denom : ' / <span class="text-slate-400 italic text-xs">denom pending</span>';
-            return '<span class="font-mono ' + cls + '">' + below + '</span>' + denomStr;
+        function setAHealthCell(health) {
+            if (!health) return '<span class="text-slate-400">—</span>';
+            var crit = health.crit_count || 0;
+            var warn = health.warn_count || 0;
+            if (crit > 0) {
+                return '<span class="font-mono text-red-600 font-semibold">' + crit + ' CRIT</span>' +
+                    '<span class="text-xs text-red-500"> · ' + CommonRenderer.formatCurrency(health.crit_principal_usd || 0) + '</span>' +
+                    (warn > 0 ? '<br><span class="font-mono text-amber-600 text-xs">' + warn + ' WARN · ' + CommonRenderer.formatCurrency(health.warn_principal_usd || 0) + '</span>' : '');
+            }
+            if (warn > 0) {
+                return '<span class="font-mono text-amber-600 font-semibold">' + warn + ' WARN</span>' +
+                    '<span class="text-xs text-amber-500"> · ' + CommonRenderer.formatCurrency(health.warn_principal_usd || 0) + '</span>';
+            }
+            return '<span class="font-mono text-green-600 font-semibold">all clear</span>';
         }
 
         var perPoolBlock =
@@ -782,14 +796,16 @@ var SyrupUSDCRenderer = {
                     '<td class="text-right">' + countsCell(usdtPool) + '</td>' +
                 '</tr>' +
                 '<tr>' +
-                    '<td class="font-medium">Loans below init level <span class="text-xs font-normal text-slate-500">(stress signal)</span></td>' +
-                    '<td class="text-right">' + belowInitCell(usdcBelowInit, usdcPool.loans_only_count) + '</td>' +
-                    '<td class="text-right">' + belowInitCell(usdtBelowInit, usdtPool.loans_only_count) + '</td>' +
+                    '<td class="font-medium">Set A loans near/under par ' + setAHealthSubLabel + '</td>' +
+                    '<td class="text-right">' + setAHealthCell(usdcSetAHealth) + '</td>' +
+                    '<td class="text-right">' + setAHealthCell(usdtSetAHealth) + '</td>' +
                 '</tr>' +
             '</tbody></table></div>' +
             '<div class="text-xs text-slate-500 mt-2 mb-4">' +
                 'CR is per-pool: depositors in one pool aren\'t covered by collateral in the other. ' +
-                '"Below init level" = collateral has dropped below the level required at loan funding (loan still active but under-cushioned).' +
+                'Set A health is measured as current collateralization vs par (100%) on the crypto-overcollateralized loan book: ' +
+                'CRIT = collateral worth less than principal, WARN = thin buffer. ' +
+                'Set B (at-par pool-owned positions) is excluded — it sits at ~100% by construction.' +
             '</div>';
 
         // ---- By collateral asset — split into Loans and Liquidity tables ----
@@ -1599,9 +1615,10 @@ var SyrupUSDCRenderer = {
         var cs = lb.collateral_summary;
         if (!cs) return '';  // Collateral Mix sub-block handles the unavailable case below.
 
-        var hasBuffer = cs.loans_below_init_count != null &&
+        var hasBuffer = (cs.loans_below_init_count != null &&
                         cs.weighted_avg_buffer_pp != null &&
-                        cs.tightest_loan;
+                        cs.tightest_loan) ||
+                        cs.set_a_collateral_health != null;
 
         if (!hasBuffer) {
             return '<div class="mb-4 p-3 rounded-lg" style="background:#f8fafc;border:1px solid #e2e8f0">' +
@@ -1622,39 +1639,65 @@ var SyrupUSDCRenderer = {
         var aboveUsd = Math.max(0, totalPrincipal - belowUsd);
         var belowPct = totalPrincipal > 0 ? (belowUsd / totalPrincipal * 100) : 0;
         var abovePct = totalPrincipal > 0 ? (aboveUsd / totalPrincipal * 100) : 0;
-        var wab = cs.weighted_avg_buffer_pp;
+        var wab = cs.weighted_avg_buffer_pp != null ? cs.weighted_avg_buffer_pp : 0;
         var wabSign = wab >= 0 ? '+' : '';
-        var wabCls = wab >= 5 ? 'text-green-600' : wab >= 0 ? 'text-amber-600' : 'text-red-600';
 
         var t = cs.tightest_loan;
-        var tSign = t.buffer_pp >= 0 ? '+' : '';
-        var pap = (t.points_above_par != null) ? t.points_above_par.toFixed(1) :
-            (t.current_level_pct != null ? (t.current_level_pct - 100).toFixed(1) : '?');
-        var papCls = t.points_above_par <= 5 ? 'text-amber-600 font-semibold' :
-                     t.points_above_par <= 0 ? 'text-red-600 font-semibold' : 'text-slate-700';
+        var tightestBlock = '';
+        if (t) {
+            var tSign = t.buffer_pp >= 0 ? '+' : '';
+            var pap = (t.points_above_par != null) ? t.points_above_par.toFixed(1) :
+                (t.current_level_pct != null ? (t.current_level_pct - 100).toFixed(1) : '?');
+            var papCls = t.points_above_par <= 0 ? 'text-red-600 font-semibold' :
+                         t.points_above_par <= 5 ? 'text-amber-600 font-semibold' : 'text-slate-700';
+            tightestBlock =
+                '<div class="text-sm mt-2">' +
+                    'Tightest loan: <span class="font-mono">' + CommonRenderer.formatCurrency(t.principal_usd) + ' ' + t.asset + '</span> @ ' +
+                    CommonRenderer.formatPercent(t.current_level_pct, 1) +
+                    ' (init ' + CommonRenderer.formatPercent(t.init_level_pct, 0) + ', ' + tSign + t.buffer_pp.toFixed(1) + 'pp)' +
+                    ' — only <span class="' + papCls + '">' + pap + 'pp above par</span>' +
+                '</div>';
+        }
+
+        // Lead with Set A distance-to-par tiers — par (100%), not init, is the health threshold.
+        var h = cs.set_a_collateral_health;
+        var setACritPct = (h && h.crit_level_pct != null) ? h.crit_level_pct : 100;
+        var setAWarnPct = (h && h.warn_level_pct != null) ? h.warn_level_pct : 120;
+        var setABlock = '';
+        if (h) {
+            var critN = h.crit_count || 0;
+            var warnN = h.warn_count || 0;
+            if (critN > 0) {
+                setABlock +=
+                    '<div class="text-sm text-red-700 mb-1">' +
+                        '🚨 <strong>' + critN + ' Set A loan' + (critN === 1 ? '' : 's') + ' below ' + setACritPct + '% collateralization</strong> · ' +
+                        CommonRenderer.formatCurrency(h.crit_principal_usd || 0) +
+                        '<div class="text-xs text-red-600 mt-1 ml-4">Collateral worth less than principal; delegate has discretion to call but has not.</div>' +
+                    '</div>';
+            }
+            if (warnN > 0) {
+                setABlock +=
+                    '<div class="text-sm text-amber-700 mb-1">' +
+                        '⚠ <strong>' + warnN + ' Set A loan' + (warnN === 1 ? '' : 's') + ' in ' + setACritPct + '–' + setAWarnPct + '% thin-buffer band</strong> · ' +
+                        CommonRenderer.formatCurrency(h.warn_principal_usd || 0) +
+                    '</div>';
+            }
+            if (critN === 0 && warnN === 0) {
+                setABlock =
+                    '<div class="text-sm text-green-600 mb-1">All Set A loans ≥ ' + setAWarnPct + '% collateralized.</div>';
+            }
+        }
 
         return '<div class="mb-4 p-3 rounded-lg" style="background:#f8fafc;border:1px solid #e2e8f0">' +
-            '<div class="text-sm font-semibold text-slate-700 mb-2">Buffer health</div>' +
-            '<div class="text-sm text-slate-700 mb-1">' +
-                'Above init level: <strong>' + above + ' loan' + (above === 1 ? '' : 's') + '</strong> · ' +
-                CommonRenderer.formatCurrency(aboveUsd) + ' (' + CommonRenderer.formatPercent(abovePct, 1) + ')' +
-            '</div>' +
+            '<div class="text-sm font-semibold text-slate-700 mb-2">Buffer health <span class="text-xs font-normal text-slate-500">(distance to par)</span></div>' +
+            setABlock +
+            tightestBlock +
             (below > 0 ?
-                '<div class="text-sm text-amber-700 mb-1">' +
-                    '⚠ Below init level: <strong>' + below + ' loan' + (below === 1 ? '' : 's') + '</strong> · ' +
-                    CommonRenderer.formatCurrency(belowUsd) + ' (' + CommonRenderer.formatPercent(belowPct, 1) + ')' +
-                    '<div class="text-xs text-amber-600 mt-1 ml-4">Delegate has discretion to call but has not — these are out of compliance with funding-time collateral terms.</div>' +
-                '</div>' :
-                '<div class="text-xs text-green-600 mb-1">All active loans above their funding-time required collateral level.</div>') +
-            '<div class="text-sm mt-2">' +
-                'Wtd-avg buffer: <span class="font-mono font-semibold ' + wabCls + '">' + wabSign + wab.toFixed(1) + 'pp</span>' +
-            '</div>' +
-            '<div class="text-sm mt-1">' +
-                'Tightest loan: <span class="font-mono">' + CommonRenderer.formatCurrency(t.principal_usd) + ' ' + t.asset + '</span> @ ' +
-                CommonRenderer.formatPercent(t.current_level_pct, 1) +
-                ' (init ' + CommonRenderer.formatPercent(t.init_level_pct, 0) + ', ' + tSign + t.buffer_pp.toFixed(1) + 'pp)' +
-                ' — only <span class="' + papCls + '">' + pap + 'pp above par</span>' +
-            '</div>' +
+                '<div class="text-xs text-slate-400 mt-2">' +
+                    below + ' loan' + (below === 1 ? '' : 's') + ' below their funding-time init level (' +
+                    CommonRenderer.formatCurrency(belowUsd) + ') — informational; init is not the health threshold, see distance-to-par above. ' +
+                    'Wtd-avg buffer-to-init ' + wabSign + wab.toFixed(1) + 'pp.' +
+                '</div>' : '') +
         '</div>';
     },
 
