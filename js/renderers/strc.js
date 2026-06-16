@@ -19,6 +19,15 @@
  * Analyzer:  PegTracker strc_backing_analyzer.py
  */
 
+// STRC dividend cadence: monthly → semi-monthly effective 2026-06-30 (rate
+// unchanged at 11.50%, per SEC 8-K A&R Certificate of Designations
+// 0001193125-26-270366). Namespaced top-level fallbacks — these renderer files
+// share JS global scope, so NEVER use a bare `frequency`/`effective`. Driven off
+// the PegTracker JSON fields (strc_dividend_frequency / semi_monthly_effective)
+// when present; these constants are the fallback until the analyzer republishes.
+var STRC_DIVIDEND_FREQUENCY = 'semi-monthly';
+var STRC_SEMIMONTHLY_EFFECTIVE = '2026-06-30';
+
 var STRCRenderer = {
 
     // ============================================================
@@ -383,6 +392,15 @@ var STRCRenderer = {
         var div = tradfi.strc_dividend || {};
         var rate = div.current_rate;
         var rateTxt = (rate != null) ? (rate * 100).toFixed(2) + '%' : '—';
+        // Dividend cadence: prefer PegTracker JSON, fall back to namespaced const.
+        var divFreq = div.strc_dividend_frequency || STRC_DIVIDEND_FREQUENCY;
+        var semiMonthlyEff = div.semi_monthly_effective || STRC_SEMIMONTHLY_EFFECTIVE;
+        var cadenceNote =
+            '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
+                '<strong>Dividend:</strong> <span class="font-semibold">' + rateTxt + '</span> p.a. — ' +
+                '<span class="font-semibold">' + divFreq + ' from ' + semiMonthlyEff + '</span> ' +
+                '(two payment dates/month; monthly prior). Rate and aggregate obligation unchanged; frequency only.' +
+            '</div>';
         var history = Array.isArray(div.rate_history) ? div.rate_history : [];
         var prevRate = history.length >= 2 ? history[history.length - 2].rate : null;
         var rateChangeBadge = '';
@@ -406,6 +424,7 @@ var STRCRenderer = {
                         '<div class="text-4xl font-bold text-slate-800 dark:text-slate-100">' + rateTxt + '</div>' +
                         rateChangeBadge +
                     '</div>' +
+                    cadenceNote +
                     '<div class="text-xs text-slate-500 mt-4 mb-1">Rate history (last ' + history.length + ' months)</div>' +
                     '<div style="height: 180px; position: relative;"><canvas id="strc-rate-chart"></canvas></div>' +
                 '</div>' +

@@ -583,6 +583,16 @@ var MSTRRenderer = {
                     'Cash runway assumes ZERO new issuance inflow. In practice Strategy continuously refills cash via preferred + ATM activity. ' +
                     'Treat as a stress-scenario watermark, not a forward forecast.' +
                 '</div>';
+            // STRC dividend cadence footnote — semi-monthly is presentational;
+            // the monthly burn math above is unchanged. Cadence values come from
+            // the STRC namespaced globals (strc.js loads first); guard in case
+            // load order ever changes.
+            var mstrSemiMonthlyEff = (typeof STRC_SEMIMONTHLY_EFFECTIVE !== 'undefined') ? STRC_SEMIMONTHLY_EFFECTIVE : '2026-06-30';
+            var cadenceFootnote =
+                '<div class="text-xs text-slate-500 italic mt-1 leading-relaxed">' +
+                    'STRC dividends move to semi-monthly (2× / month) from ' + mstrSemiMonthlyEff + ' — same annual obligation, ' +
+                    'paid in two installments (first record ' + mstrSemiMonthlyEff + ', first payment 07-15). Cash burn rate unchanged.' +
+                '</div>';
 
             cashSubPanel =
                 '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4 mt-4 bg-slate-50/40 dark:bg-slate-800/30">' +
@@ -590,6 +600,7 @@ var MSTRRenderer = {
                     cashRunwayRow +
                     cashCaption +
                     cashCaveat +
+                    cadenceFootnote +
                 '</div>';
         }
 
