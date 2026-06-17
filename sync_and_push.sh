@@ -1,6 +1,19 @@
 #!/bin/bash
 cd /home/danger/backing-monitor
 
+# Guard: GitHub Pages deploys ONLY from `main`. If the working tree is ever left
+# on another branch (e.g. a feature branch after its PR is merged), the hourly
+# data commits land where Pages never sees them and every dashboard silently
+# freezes — this stranded all dashboards for ~48h starting 2026-06-15 when the
+# tree was left on the merged feat/syrup-loan-health branch. Refuse loudly
+# rather than push fresh data to a non-deploy branch. The dashboard_freshness
+# daily digest is the backstop that surfaces it if this ever trips.
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$BRANCH" != "main" ]; then
+    echo "$(date): ERROR working tree on '$BRANCH', not 'main' — refusing to commit backing data (Pages deploys from main only). Fix: cd /home/danger/backing-monitor && git checkout main" >&2
+    exit 1
+fi
+
 # Sync backing data from PegTracker
 cp /home/danger/PegTracker/data/ousd_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/ousd_backing_history.json data/ 2>/dev/null
