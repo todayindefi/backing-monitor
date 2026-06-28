@@ -3,24 +3,34 @@
   "asset": "USDm",
   "asset_slug": "usdm",
   "chain": "monad",
-  "timestamp": "2026-06-28T02:50:22Z",
+  "timestamp": "2026-06-28T03:50:14Z",
   "summary": {
-    "total_supply": null,
+    "total_supply": 16930705.44,
     "supply_unit": "USDm",
-    "total_backing": null,
-    "collateral_ratio": null,
-    "surplus_deficit": null,
+    "total_backing": 15165775.1,
+    "collateral_ratio": 0.9299,
+    "surplus_deficit": -1143162.58,
     "nav": 1.0,
     "paused": null
   },
   "risk_flags": [
     {
-      "severity": "info",
-      "message": "Mento analytics API unreachable; running RPC-only mode (Monad-only data)."
+      "severity": "medium",
+      "message": "Stable-collateral coverage of all Mento stablecoin debt fell below 1.0x (now 0.992x, on-chain-corrected) \u2014 Reserve excluding CELO+stETH no longer fully covers user-circulating debt."
     },
     {
       "severity": "high",
       "message": "Monad USDm on-chain Reserve coverage fell below 75% (now 64.4%)."
+    },
+    {
+      "severity": "medium",
+      "type": "mento_api_eth_undercount",
+      "message": "Mento API Ethereum bucket undercounts on-chain reserves by $4.39M (34.9%). API: $8.21M vs on-chain: $12.61M. Tokens absent from API: AUSD.",
+      "delta_usd": 4393609.47,
+      "delta_pct": 0.3485,
+      "missing_symbols": [
+        "AUSD"
+      ]
     }
   ],
   "asset_specific": {
@@ -32,8 +42,8 @@
       "usdm_supply_retail_or_other": 418261.28,
       "reserve_v2_usd_value": 976387.96,
       "reserve_v2_coverage_ratio": 0.6445,
-      "reserve_per_api_usd": null,
-      "api_vs_rpc_drift_pct": null,
+      "reserve_per_api_usd": 1063483.21,
+      "api_vs_rpc_drift_pct": 0.0819,
       "reserve_v2_breakdown": {
         "USDC": 882159.943363,
         "AUSD": 84925.135852,
@@ -59,7 +69,11 @@
           "tier": 3
         }
       },
-      "api_monad_symbols": [],
+      "api_monad_symbols": [
+        "AUSD",
+        "USDC",
+        "USDT0"
+      ],
       "rls_pools_usdm": {
         "USDC_USDM": 282877.1,
         "AUSD_USDM": 60045.64,
@@ -71,7 +85,28 @@
         "JPYM_USDM": 29876.66,
         "CHFM_USDM": 29797.9
       },
-      "fx_synthetic_supplies": {},
+      "fx_synthetic_supplies": {
+        "EURm": {
+          "supply": 366210.36,
+          "in_pool": 366003.98,
+          "pct_in_pool": 99.94
+        },
+        "GBPm": {
+          "supply": 208789.89,
+          "in_pool": 208199.26,
+          "pct_in_pool": 99.72
+        },
+        "CHFm": {
+          "supply": 23394.51,
+          "in_pool": 23390.61,
+          "pct_in_pool": 99.98
+        },
+        "JPYm": {
+          "supply": 4761281.19,
+          "in_pool": 4760011.06,
+          "pct_in_pool": 99.97
+        }
+      },
       "cdp_system_deployed": false,
       "ntt_operational": false,
       "ops_wallets_active": {
@@ -90,18 +125,13 @@
       }
     },
     "ethereum_state": {
-      "reserve_on_chain_usd": 12606966.85,
-      "reserve_on_chain_stable_only_usd": 12210431.81,
-      "reserve_per_api_usd": null,
-      "api_vs_on_chain_delta_usd": null,
-      "api_vs_on_chain_delta_pct": null,
+      "reserve_on_chain_usd": 12606271.27,
+      "reserve_on_chain_stable_only_usd": 12210450.57,
+      "reserve_per_api_usd": 8212661.8,
+      "api_vs_on_chain_delta_usd": 4393609.47,
+      "api_vs_on_chain_delta_pct": 0.3485,
       "missing_from_api_symbols": [
-        "AUSD",
-        "EURC",
-        "USDC",
-        "USDT",
-        "sUSDS",
-        "stETH"
+        "AUSD"
       ],
       "reserve_breakdown": {
         "USDC": {
@@ -142,8 +172,8 @@
         },
         "sUSDS": {
           "balance": 4234485.751044,
-          "price_usd": 1.101212,
-          "usd_value": 4663066.69,
+          "price_usd": 1.101216,
+          "usd_value": 4663085.45,
           "bucket": "usd_stable",
           "by_holder": {
             "v2_liquidity_reserve": 0.0,
@@ -166,8 +196,8 @@
         },
         "stETH": {
           "balance": 251.84264,
-          "price_usd": 1574.53494,
-          "usd_value": 396535.04,
+          "price_usd": 1571.698509,
+          "usd_value": 395820.7,
           "bucket": "volatile",
           "by_holder": {
             "v2_liquidity_reserve": 0.0,
@@ -181,9 +211,9 @@
         "USDC": 1.0,
         "USDT": 1.0,
         "AUSD": 1.0,
-        "sUSDS": 1.101212,
+        "sUSDS": 1.101216,
         "EURC": 1.1385,
-        "stETH": 1574.53494
+        "stETH": 1571.698509
       },
       "reserve_holders": {
         "v2_liquidity_reserve": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
@@ -193,48 +223,48 @@
       }
     },
     "celo_state": {
-      "usdm_supply": null,
-      "reserve_debt": null,
-      "reserve_held": null,
-      "lost": null,
+      "usdm_supply": 15415750.57,
+      "reserve_debt": 11667749.81,
+      "reserve_held": 3677624.19,
+      "lost": 70376.57,
       "cdp_troves_active_count": null,
       "cdp_troves_collateral_usdm": null,
       "cdp_troves_debt_usd": null
     },
     "aggregate": {
-      "total_supply_usd": null,
-      "total_reserve_usd": null,
-      "total_stablecoin_supply_usd": null,
-      "total_stablecoin_debt_usd": null,
-      "reserve_to_supply_ratio": null,
-      "stablecoin_aggregate_ratio": null,
-      "total_reserve_usd_stable_bucket": 0.0,
-      "total_reserve_eur_stable_bucket": 0.0,
-      "total_reserve_volatile_bucket": 0.0,
+      "total_supply_usd": 16930705.44,
+      "total_reserve_usd": 15165775.1,
+      "total_stablecoin_supply_usd": 20794630.5,
+      "total_stablecoin_debt_usd": 16308937.68,
+      "reserve_to_supply_ratio": 0.8958,
+      "stablecoin_aggregate_ratio": 0.9299,
+      "total_reserve_usd_stable_bucket": 8828161.67,
+      "total_reserve_eur_stable_bucket": 2957203.09,
+      "total_reserve_volatile_bucket": 3380410.34,
       "total_reserve_other_bucket": 0.0,
-      "total_reserve_stable_only_usd": 0.0,
-      "stablecoin_aggregate_ratio_stable_only": null,
-      "reserve_to_supply_ratio_stable_only": null,
+      "total_reserve_stable_only_usd": 11785364.76,
+      "stablecoin_aggregate_ratio_stable_only": 0.7226,
+      "reserve_to_supply_ratio_stable_only": 0.5668,
       "custodian_breakdown": {
-        "hot_usd": 0,
-        "cold_usd": 0,
-        "ops_usd": 0
+        "hot_usd": 2807056.84,
+        "cold_usd": 12080687.54,
+        "ops_usd": 278030.72
       },
-      "total_reserve_usd_corrected": null,
-      "total_reserve_stable_only_corrected": 0.0,
-      "stablecoin_aggregate_ratio_corrected": null,
-      "reserve_to_supply_ratio_corrected": null,
-      "stablecoin_aggregate_ratio_stable_only_corrected": null,
-      "reserve_to_supply_ratio_stable_only_corrected": null,
-      "total_reserve_usd_stable_bucket_corrected": 10279318.93,
-      "total_reserve_eur_stable_bucket_corrected": 1931112.88,
-      "total_reserve_volatile_bucket_corrected": 396535.04,
+      "total_reserve_usd_corrected": 19559384.57,
+      "total_reserve_stable_only_corrected": 16178856.46,
+      "stablecoin_aggregate_ratio_corrected": 1.1993,
+      "reserve_to_supply_ratio_corrected": 1.1553,
+      "stablecoin_aggregate_ratio_stable_only_corrected": 0.992,
+      "reserve_to_supply_ratio_stable_only_corrected": 0.778,
+      "total_reserve_usd_stable_bucket_corrected": 13223071.84,
+      "total_reserve_eur_stable_bucket_corrected": 2957203.09,
+      "total_reserve_volatile_bucket_corrected": 3380528.11,
       "total_reserve_other_bucket_corrected": 0.0,
-      "total_reserve_stable_only_usd_corrected": 12210431.81,
+      "total_reserve_stable_only_usd_corrected": 16180274.93,
       "custodian_breakdown_corrected": {
-        "hot_usd": 0.0,
-        "cold_usd": 8199224.93,
-        "ops_usd": 4407741.92
+        "hot_usd": 2807056.84,
+        "cold_usd": 12082262.49,
+        "ops_usd": 4671483.72
       }
     },
     "governance_state": {
@@ -245,7 +275,7 @@
     },
     "data_sources": {
       "mento_api_base": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2",
-      "mento_api_ok": false,
+      "mento_api_ok": true,
       "monad_rpc_ok": true,
       "ethereum_rpc_ok": true,
       "celo_rpc_ok": true
