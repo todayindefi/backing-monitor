@@ -19,6 +19,15 @@
  * Pattern mirrored: js/renderers/strc.js
  */
 
+// Digital Credit Capital Framework card — MSTR (issuer-lens) entry point.
+// Asset-namespaced per the renderer global-scope rule. The card body is built
+// by renderDigitalCreditFrameworkCard() (defined in strc.js, which loads
+// before mstr.js per index.html); this const is the MSTR-side handle the
+// handoff names so the two views never share a bare `framework`/`card` const.
+var MSTR_FRAMEWORK_CARD = function (dcf) {
+    return renderDigitalCreditFrameworkCard(dcf, 'issuer');
+};
+
 var MSTRRenderer = {
 
     // ============================================================
@@ -154,6 +163,7 @@ var MSTRRenderer = {
         html += MSTRRenderer._renderBalanceSheet(mv);
         html += MSTRRenderer._renderCapitalStructure(mv);
         html += MSTRRenderer._renderCashServiceWaterfall(data);
+        html += MSTR_FRAMEWORK_CARD(data.digital_credit_framework);
         html += MSTRRenderer._renderPerShareNavTrajectory(tradfi, mv);
         html += MSTRRenderer._renderDilutionMaturityWall(mv);
         html += MSTRRenderer._renderFreshness(data);
@@ -310,6 +320,11 @@ var MSTRRenderer = {
             '</div>' +
             '<div class="mt-4 p-3 rounded border ' + bandCls + '">' +
                 '<div class="text-sm">' + caption + '</div>' +
+            '</div>' +
+            '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
+                '<span class="font-semibold">06-28 armed mNAV cut → VOIDED.</span> mNAV reverted above 1.0 (low-parity) and the ' +
+                '06-29 8-K added a $2.55B USD reserve build + BTC-monetization authorization as mitigants. Sub-1.0 mNAV is a ' +
+                '<strong>live watch, not a fired score cut</strong> — scores held (MSTR 4.5 / STRC 4.0).' +
             '</div>' +
         '</div>';
     },

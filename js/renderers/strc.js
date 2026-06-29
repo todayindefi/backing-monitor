@@ -19,6 +19,116 @@
  * Analyzer:  PegTracker strc_backing_analyzer.py
  */
 
+// ============================================================
+// Digital Credit Capital Framework (06-29 8-K, acc 0001193125-26-286871).
+// Asset-namespaced top-level consts per the renderer global-scope rule
+// (strc.js + mstr.js share JS global scope — bare `framework`/`policy`/`card`
+// names would silently collide across files). STRC-side definitions live here;
+// MSTR-side mirrors live in mstr.js as MSTR_FRAMEWORK_CARD.
+// ============================================================
+
+// STRC dividend-defense regime copy — the 06-29 reframing from a rate-ratchet
+// "par defense" to a discretionary soft floor (mirrors strc.md §II addendum).
+var STRC_DIV_POLICY_REGIME = {
+    label: 'Discretionary soft floor (not a peg)',
+    blurb: 'As of the 06-29 Digital Credit Capital Framework, Strategy ' +
+        '<strong>will not necessarily raise the STRC dividend just because STRC trades below par</strong>. ' +
+        'It may instead defend value via a <strong>$1B STRC-priority buyback</strong> (BTC-funded), reserve ' +
+        'management, or BTC monetization. Net: a discretionary issuer <strong>bid under</strong> STRC plus a ' +
+        '$2.55B reserve cushioning the downside — but <strong>no commitment to return STRC to $100</strong>, ' +
+        'no put, no contractual floor. Mark to secondary price with a soft floor beneath it.'
+};
+
+// Shared status-pill for the framework card. `executed:false` / `executed_usd:0`
+// programs are AUTHORIZATIONS Strategy has armed, not actions taken → amber
+// "ARMED — not yet used", never "active".
+function strcFrameworkPill(kind) {
+    var base = 'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ';
+    if (kind === 'armed')   return '<span class="' + base + 'border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">ARMED — not yet used</span>';
+    if (kind === 'policy')  return '<span class="' + base + 'border-blue-300 bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">STANDING POLICY</span>';
+    if (kind === 'discr')   return '<span class="' + base + 'border-slate-300 bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200">DISCRETIONARY</span>';
+    return '';
+}
+
+// Builds the Digital Credit Capital Framework card from the `digital_credit_framework`
+// JSON block. Used by BOTH views (the STRC view passes lens='credit', the MSTR
+// view's MSTR_FRAMEWORK_CARD delegates here with lens='issuer').
+function renderDigitalCreditFrameworkCard(dcf, lens) {
+    if (!dcf) return '';
+    var fmt = (typeof STRCRenderer !== 'undefined' && STRCRenderer._fmtMoneyShort)
+        ? STRCRenderer._fmtMoneyShort
+        : function (n) { return n != null ? '$' + n : '—'; };
+
+    var reserve = dcf.usd_reserve_policy || {};
+    var div = dcf.strc_dividend_policy || {};
+    var dcs = dcf.dcs_repurchase_program || {};
+    var common = dcf.common_repurchase_program || {};
+    var btc = dcf.btc_monetization_program || {};
+
+    var dcsArmed = (dcs.executed_usd == null) || (dcs.executed_usd === 0);
+    var commonArmed = (common.executed_usd == null) || (common.executed_usd === 0);
+    var btcArmed = (btc.executed === false) || (btc.observed_btc_count != null && btc.baseline_btc_count != null && btc.observed_btc_count <= btc.baseline_btc_count);
+
+    function row(component, detail, pillHtml) {
+        return '<tr>' +
+            '<td class="font-medium align-top whitespace-nowrap">' + component + '</td>' +
+            '<td class="text-xs text-slate-600 dark:text-slate-300 leading-snug align-top">' + detail + '</td>' +
+            '<td class="align-top text-right whitespace-nowrap">' + pillHtml + '</td>' +
+        '</tr>';
+    }
+
+    var reserveDetail = '<span class="font-mono font-semibold">' + fmt(reserve.balance_usd) + '</span> balance · ' +
+        '<strong>' + (reserve.min_months_coverage != null ? reserve.min_months_coverage + '-mo-minimum' : '—') + '</strong> coverage floor (Board policy) · ' +
+        'restricted to ' + (reserve.restricted_use || 'preferred dividends + interest') +
+        (reserve.as_of ? ' · as of <span class="font-mono">' + reserve.as_of + '</span>' : '');
+
+    var divDetail = '<strong>Discretionary soft floor</strong> — <em>will not necessarily hike solely because STRC &lt; par</em>' +
+        (div.auto_hike_on_subpar === false ? '' : '') +
+        ' · evaluated monthly on price / yields / spreads / BTC vol / reserve coverage.';
+
+    var dcsDetail = '<span class="font-mono font-semibold">' + fmt(dcs.authorized_usd) + '</span> authorized · ' +
+        '<strong>' + (dcs.initial_priority || 'STRC') + ' = initial priority</strong> (if accretive) · BTC-funded · ' +
+        'executed <span class="font-mono">' + fmt(dcs.executed_usd != null ? dcs.executed_usd : 0) + '</span>';
+
+    var commonDetail = '<span class="font-mono font-semibold">' + fmt(common.authorized_usd) + '</span> authorized · BTC-funded · ' +
+        'executed <span class="font-mono">' + fmt(common.executed_usd != null ? common.executed_usd : 0) + '</span>';
+
+    var btcDetail = '≤ <span class="font-mono font-semibold">' + fmt(btc.reserve_funding_cap_usd) + '</span> to reserve ' +
+        '(+ uncapped dividend / interest / buyback funding) · not yet executed · ' +
+        (btc.observed_btc_count != null ? '<span class="font-mono">' + btc.observed_btc_count.toLocaleString('en-US') + '</span> BTC flat' : '');
+
+    var rows =
+        row('USD Reserve policy', reserveDetail, strcFrameworkPill('policy')) +
+        row('STRC dividend policy', divDetail, strcFrameworkPill('discr')) +
+        row('DCS repurchase', dcsDetail, strcFrameworkPill(dcsArmed ? 'armed' : 'policy')) +
+        row('Common repurchase', commonDetail, strcFrameworkPill(commonArmed ? 'armed' : 'policy')) +
+        row('BTC Monetization', btcDetail, strcFrameworkPill(btcArmed ? 'armed' : 'policy'));
+
+    var lensLine = (lens === 'issuer')
+        ? 'Standing capital-allocation programs the 06-29 8-K introduced. Each <span class="text-amber-700 dark:text-amber-300 font-semibold">ARMED</span> row is capacity Strategy has authorized, <strong>not capital deployed</strong> — buybacks and BTC sales are at $0 / not-yet-executed.'
+        : 'Issuer-level capacity that backstops STRC holders. The reserve + STRC-priority buyback are the discretionary <strong>bid under</strong> STRC; each <span class="text-amber-700 dark:text-amber-300 font-semibold">ARMED</span> row is authorized capacity, <strong>not capital deployed</strong>.';
+
+    var acc = dcf.source_accession ? ' · 8-K acc ' + dcf.source_accession : '';
+
+    return '<div class="panel">' +
+        '<div class="panel-title">Digital Credit Capital Framework ' +
+            '<span class="text-xs font-normal text-slate-500">— 06-29 8-K (standing programs)</span></div>' +
+        '<div class="text-xs text-slate-500 leading-relaxed mb-3">' + lensLine +
+            ' <span class="text-slate-400">Announced ' + (dcf.announced || '—') + acc + '.</span></div>' +
+        '<div class="data-table-scroll">' +
+            '<table class="data-table">' +
+                '<thead><tr><th>Component</th><th>Policy / authorization</th><th class="text-right">Status</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody>' +
+            '</table>' +
+        '</div>' +
+    '</div>';
+}
+
+// STRC-view entry point (asset-namespaced per the global-scope rule).
+var STRC_FRAMEWORK_CARD = function (dcf) {
+    return renderDigitalCreditFrameworkCard(dcf, 'credit');
+};
+
 var STRCRenderer = {
 
     // ============================================================
@@ -178,6 +288,7 @@ var STRCRenderer = {
         html += STRCRenderer._renderHeadlineBanner(tradfi);
         html += STRCRenderer._renderStrcInstrument(tradfi);
         html += STRCRenderer._renderStrcDividendObligation(data);
+        html += STRC_FRAMEWORK_CARD(data.digital_credit_framework);
         html += STRCRenderer._renderStrcxWrapper(wrapper, riskFlags);
         html += STRCRenderer._renderDownstreamExposure(downstream);
         html += STRCRenderer._renderDependencyStrategyFunding(tradfi);
@@ -280,7 +391,7 @@ var STRCRenderer = {
                 '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">' +
                     '<div class="text-xs uppercase font-semibold text-slate-500">Current monthly rate</div>' +
                     '<div class="text-3xl font-bold mt-1 text-slate-800 dark:text-slate-100">' + rateTxt + '</div>' +
-                    '<div class="text-xs text-slate-500 mt-1">annualized · VWAP-driven reset</div>' +
+                    '<div class="text-xs text-slate-500 mt-1">annualized · discretionary monthly reset</div>' +
                 '</div>' +
                 '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">' +
                     '<div class="text-xs uppercase font-semibold text-slate-500">Next rate decision (est.)</div>' +
@@ -366,6 +477,11 @@ var STRCRenderer = {
             '<div class="mt-4 p-3 rounded border ' + bandCls + '">' +
                 '<div class="text-sm">' + caption + '</div>' +
             '</div>' +
+            '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
+                '<span class="font-semibold">06-28 armed mNAV cut → VOIDED.</span> mNAV bounced back above 1.0 (low-parity) and the ' +
+                '06-29 8-K added a $2.55B USD reserve + BTC-monetization authorization. Sub-1.0 mNAV is a ' +
+                '<strong>live watch, not a fired score cut</strong> — scores held (MSTR 4.5 / STRC 4.0).' +
+            '</div>' +
             snapshotRow +
             '<div class="text-xs text-slate-500 mt-3">' +
                 'Methodology: mNAV = enterprise value ÷ (Strategy BTC count × BTC spot). See ' +
@@ -414,8 +530,13 @@ var STRCRenderer = {
                     '<div style="height: 220px; position: relative;"><canvas id="strc-price-chart"></canvas></div>' +
                 '</div>' +
             '</div>' +
-            '<div class="text-xs text-slate-500 mt-4 leading-relaxed">' +
-                '<strong>VWAP-based monthly reset:</strong> ' +
+            '<div class="mt-4 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700">' +
+                '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">STRC defense = ' + STRC_DIV_POLICY_REGIME.label + '</div>' +
+                '<div class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' + STRC_DIV_POLICY_REGIME.blurb + '</div>' +
+            '</div>' +
+            '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
+                '<strong>Indicative VWAP rate schedule</strong> (prospectus mechanic — <em>no longer an automatic par defense</em> ' +
+                'as of the 06-29 framework; the monthly reset is now discretionary): ' +
                 '&lt;$95 → +50 bps or more · ' +
                 '$95–$98.99 → +25 bps · ' +
                 '$99–$100.99 → no change · ' +
@@ -791,7 +912,7 @@ var STRCRenderer = {
         var data = STRCRenderer._seriesXY(series, 'strc_price');
         var ann = {
             hike: { type: 'line', yMin: 95, yMax: 95, borderColor: '#ef4444', borderWidth: 1, borderDash: [4, 4],
-                    label: { content: '$95 hike trigger', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+                    label: { content: '$95 · soft-floor watch (discretionary)', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
             parLow: { type: 'line', yMin: 99, yMax: 99, borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3],
                       label: { content: '$99 no-change band', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
             cut: { type: 'line', yMin: 101, yMax: 101, borderColor: '#3b82f6', borderWidth: 1, borderDash: [4, 4],
