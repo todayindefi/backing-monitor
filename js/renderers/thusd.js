@@ -980,7 +980,8 @@ var ThusdRenderer = {
     // §10 DEX peg + venues
     // ============================================================
     _renderDexPeg: function(spec) {
-        var dex = (spec.tier2_peg_nav && spec.tier2_peg_nav.arb_dex_peg) || {};
+        var t2 = spec.tier2_peg_nav || {};
+        var dex = t2.dex_peg || t2.arb_dex_peg || {};
         var totalTvl = dex.total_tvl_usd || 0;
         if (totalTvl < 1000) {
             return ''; // suppress entirely — sub-$1K is noise
@@ -998,12 +999,29 @@ var ThusdRenderer = {
                     bpState === 'warn' ? 'text-amber-600' :
                     bpState === 'critical' ? 'text-red-600' : 'text-slate-600';
 
+        // Uniswap V4 pools key on a 32-byte poolId, not a contract address, so an
+        // etherscan /address/<poolId> link won't resolve. Link those to
+        // GeckoTerminal (which indexes by poolId) instead of emitting a dead link.
+        var poolLink = function(p) {
+            var chain = p.chain || 'ethereum';
+            var isV4 = (p.dex_id || '').toLowerCase().indexOf('uniswap-v4') >= 0;
+            if (isV4 && p.pool_address) {
+                var net = chain.toLowerCase().indexOf('arbitrum') >= 0 ? 'arbitrum' : 'eth';
+                return '<span class="font-mono text-xs" title="' + p.pool_address + '">' +
+                    ThusdRenderer._truncAddr(p.pool_address) + '</span> ' +
+                    '<a href="https://www.geckoterminal.com/' + net + '/pools/' + p.pool_address +
+                    '" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline text-xs">↗</a>';
+            }
+            return ThusdRenderer._addrLink(p.pool_address, chain);
+        };
+
         var pools = Array.isArray(dex.pools) ? dex.pools.slice().sort(function(a, b) {
             return (b.tvl_usd || 0) - (a.tvl_usd || 0);
         }) : [];
         var topRows = pools.slice(0, 5).map(function(p) {
             return '<tr>' +
-                '<td>' + ThusdRenderer._addrLink(p.pool_address, 'arbitrum') + '</td>' +
+                '<td>' + poolLink(p) + '</td>' +
+                '<td>' + ThusdRenderer._chainBadge(p.chain || 'ethereum') + '</td>' +
                 '<td class="text-xs">' + (p.dex_id || '—') + '</td>' +
                 '<td class="text-xs">' + (p.pair || '—') + '</td>' +
                 '<td class="text-right font-mono">' + (p.thusd_price_usd != null ? '$' + p.thusd_price_usd.toFixed(6) : '—') + '</td>' +
@@ -1012,8 +1030,28 @@ var ThusdRenderer = {
             '</tr>';
         }).join('');
 
+        // Compact per-chain split — where the liquidity actually lives.
+        var byChain = dex.by_chain || {};
+        var chainSplit = '';
+        var chainRow = function(name, c) {
+            if (!c) return '';
+            return '<div class="flex items-baseline justify-between gap-3 py-0.5">' +
+                '<span>' + ThusdRenderer._chainBadge(name) + '</span>' +
+                '<span class="font-mono">' + CommonRenderer.formatCurrencyExact(c.total_tvl_usd || 0) + ' TVL' +
+                    ' · $' + (c.weighted_price_usd != null ? c.weighted_price_usd.toFixed(6) : '—') +
+                    ' · ' + (c.pool_count != null ? c.pool_count : '—') + ' pools</span>' +
+            '</div>';
+        };
+        if (byChain.ethereum || byChain.arbitrum) {
+            chainSplit = '<div class="text-sm font-semibold text-slate-700 mb-1">By chain</div>' +
+                '<div class="text-xs text-slate-600 mb-4">' +
+                    chainRow('ethereum', byChain.ethereum) +
+                    chainRow('arbitrum', byChain.arbitrum) +
+                '</div>';
+        }
+
         return '<div class="panel">' +
-            '<div class="panel-title">Arbitrum DEX Peg <span class="text-xs font-normal text-slate-500">phase-0 anchor</span></div>' +
+            '<div class="panel-title">DEX Peg — Ethereum + Arbitrum <span class="text-xs font-normal text-slate-500">phase-0 anchor</span></div>' +
             '<div class="text-xs text-slate-500 mb-3">' +
                 (dex.anchor_note || 'Phase-0 anchor of $1.00. Replace with NAV oracle if Theo discloses one.') +
             '</div>' +
@@ -1029,22 +1067,26 @@ var ThusdRenderer = {
                     '<div class="text-lg font-bold font-mono">' + CommonRenderer.formatCurrencyExact(dex.total_volume_h24_usd || 0) + '</div></div>' +
             '</div>' +
 
+            chainSplit +
+
             '<div class="text-sm font-semibold text-slate-700 mb-2">Top pools by TVL <span class="text-xs font-normal text-slate-500">(of ' + (dex.pool_count || pools.length) + ' total)</span></div>' +
             '<div class="data-table-scroll">' +
                 '<table class="data-table">' +
                     '<thead><tr>' +
                         '<th>Pool</th>' +
+                        '<th>Chain</th>' +
                         '<th>DEX</th>' +
                         '<th>Pair</th>' +
                         '<th class="text-right">Price</th>' +
                         '<th class="text-right">TVL</th>' +
                         '<th class="text-right">24h vol</th>' +
                     '</tr></thead>' +
-                    '<tbody>' + (topRows || '<tr><td colspan="6" class="text-slate-400 text-sm">No pools.</td></tr>') + '</tbody>' +
+                    '<tbody>' + (topRows || '<tr><td colspan="7" class="text-slate-400 text-sm">No pools.</td></tr>') + '</tbody>' +
                 '</table>' +
             '</div>' +
             '<div class="text-xs text-slate-500 mt-3">' +
-                'All ' + (dex.pool_count || pools.length) + ' Arbitrum pools surfaced upstream; bulk are sub-$1K and exist for listing rather than depth.' +
+                'Ethereum Uniswap V4 (thUSD/USDC) is the deep venue (~$4.75M); the Arbitrum OFT-mirror pools are dust (sub-$1K, listing-only). ' +
+                (dex.pool_count || pools.length) + ' pools surfaced upstream across both chains.' +
             '</div>' +
         '</div>';
     },
