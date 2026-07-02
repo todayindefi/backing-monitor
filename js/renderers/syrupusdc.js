@@ -759,18 +759,30 @@ var SyrupUSDCRenderer = {
         }
         function setAHealthCell(health) {
             if (!health) return '<span class="text-slate-400">—</span>';
-            var crit = health.crit_count || 0;
+            // Corroborated bucket drives the red CRIT styling. Fall back to the
+            // total crit_count when the split fields are absent (older cached
+            // JSON) so a real alarm is never silently hidden.
+            var corrN = (health.crit_corroborated_count != null) ? health.crit_corroborated_count : (health.crit_count || 0);
+            var corrUsd = (health.crit_corroborated_count != null) ? (health.crit_corroborated_principal_usd || 0) : (health.crit_principal_usd || 0);
+            var uncorrN = health.crit_uncorroborated_count || 0;
+            var uncorrUsd = health.crit_uncorroborated_principal_usd || 0;
             var warn = health.warn_count || 0;
-            if (crit > 0) {
-                return '<span class="font-mono text-red-600 font-semibold">' + crit + ' CRIT</span>' +
-                    '<span class="text-xs text-red-500"> · ' + CommonRenderer.formatCurrency(health.crit_principal_usd || 0) + '</span>' +
-                    (warn > 0 ? '<br><span class="font-mono text-amber-600 text-xs">' + warn + ' WARN · ' + CommonRenderer.formatCurrency(health.warn_principal_usd || 0) + '</span>' : '');
+            var suspectTitle = 'Below 100% in Maple GraphQL but uncorroborated (unrealizedLosses=0, none impaired/called) — likely collateral-amount data artifact; PCR authoritative';
+            var parts = [];
+            if (corrN > 0) {
+                parts.push('<span class="font-mono text-red-600 font-semibold">' + corrN + ' CRIT</span>' +
+                    '<span class="text-xs text-red-500"> · ' + CommonRenderer.formatCurrency(corrUsd) + '</span>');
+            }
+            if (uncorrN > 0) {
+                parts.push('<span class="font-mono text-slate-500 text-xs" title="' + suspectTitle + '">ⓘ ' + uncorrN + ' data-suspect · ' + CommonRenderer.formatCurrency(uncorrUsd) + '</span>');
             }
             if (warn > 0) {
-                return '<span class="font-mono text-amber-600 font-semibold">' + warn + ' WARN</span>' +
-                    '<span class="text-xs text-amber-500"> · ' + CommonRenderer.formatCurrency(health.warn_principal_usd || 0) + '</span>';
+                parts.push('<span class="font-mono text-amber-600 text-xs">' + warn + ' WARN · ' + CommonRenderer.formatCurrency(health.warn_principal_usd || 0) + '</span>');
             }
-            return '<span class="font-mono text-green-600 font-semibold">all clear</span>';
+            if (parts.length === 0) {
+                return '<span class="font-mono text-green-600 font-semibold">all clear</span>';
+            }
+            return parts.join('<br>');
         }
 
         var perPoolBlock =
@@ -1665,14 +1677,28 @@ var SyrupUSDCRenderer = {
         var setAWarnPct = (h && h.warn_level_pct != null) ? h.warn_level_pct : 120;
         var setABlock = '';
         if (h) {
-            var critN = h.crit_count || 0;
+            // Corroborated bucket drives the red 🚨 block. Fall back to the total
+            // crit_count when the split fields are absent (older cached JSON) so a
+            // real alarm is never silently hidden.
+            var corrN = (h.crit_corroborated_count != null) ? h.crit_corroborated_count : (h.crit_count || 0);
+            var corrUsd = (h.crit_corroborated_count != null) ? (h.crit_corroborated_principal_usd || 0) : (h.crit_principal_usd || 0);
+            var uncorrN = h.crit_uncorroborated_count || 0;
+            var uncorrUsd = h.crit_uncorroborated_principal_usd || 0;
             var warnN = h.warn_count || 0;
-            if (critN > 0) {
+            if (corrN > 0) {
                 setABlock +=
                     '<div class="text-sm text-red-700 mb-1">' +
-                        '🚨 <strong>' + critN + ' Set A loan' + (critN === 1 ? '' : 's') + ' below ' + setACritPct + '% collateralization</strong> · ' +
-                        CommonRenderer.formatCurrency(h.crit_principal_usd || 0) +
+                        '🚨 <strong>' + corrN + ' Set A loan' + (corrN === 1 ? '' : 's') + ' below ' + setACritPct + '% collateralization</strong> · ' +
+                        CommonRenderer.formatCurrency(corrUsd) +
                         '<div class="text-xs text-red-600 mt-1 ml-4">Collateral worth less than principal; delegate has discretion to call but has not.</div>' +
+                    '</div>';
+            }
+            if (uncorrN > 0) {
+                setABlock +=
+                    '<div class="text-sm text-slate-500 mb-1">' +
+                        'ⓘ ' + uncorrN + ' Set A loan' + (uncorrN === 1 ? '' : 's') + ' read below ' + setACritPct + '% in Maple GraphQL · ' +
+                        CommonRenderer.formatCurrency(uncorrUsd) +
+                        '<div class="text-xs text-slate-400 mt-1 ml-4">Uncorroborated (unrealizedLosses=0, none impaired/called); treat as a collateral-amount data artifact. PCR is the authoritative solvency alarm.</div>' +
                     '</div>';
             }
             if (warnN > 0) {
@@ -1682,7 +1708,7 @@ var SyrupUSDCRenderer = {
                         CommonRenderer.formatCurrency(h.warn_principal_usd || 0) +
                     '</div>';
             }
-            if (critN === 0 && warnN === 0) {
+            if (corrN === 0 && uncorrN === 0 && warnN === 0) {
                 setABlock =
                     '<div class="text-sm text-green-600 mb-1">All Set A loans ≥ ' + setAWarnPct + '% collateralized.</div>';
             }
