@@ -45,6 +45,7 @@ var STRC_DIV_POLICY_REGIME = {
 function strcFrameworkPill(kind) {
     var base = 'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ';
     if (kind === 'armed')   return '<span class="' + base + 'border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">ARMED — not yet used</span>';
+    if (kind === 'live')    return '<span class="' + base + 'border-green-300 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-200">LIVE</span>';
     if (kind === 'policy')  return '<span class="' + base + 'border-blue-300 bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">STANDING POLICY</span>';
     if (kind === 'discr')   return '<span class="' + base + 'border-slate-300 bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200">DISCRETIONARY</span>';
     return '';
@@ -67,7 +68,23 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
 
     var dcsArmed = (dcs.executed_usd == null) || (dcs.executed_usd === 0);
     var commonArmed = (common.executed_usd == null) || (common.executed_usd === 0);
-    var btcArmed = (btc.executed === false) || (btc.observed_btc_count != null && btc.baseline_btc_count != null && btc.observed_btc_count <= btc.baseline_btc_count);
+
+    // BTC Monetization state. It went LIVE 2026-07-05 (first at-scale
+    // dividend-service BTC sale, 8-K acc 0001193125-26-295586). Drive the
+    // LIVE flip off the explicit `dividend_service_executed` flag, but fall
+    // back to an inferred stack draw (btc_drawn, or baseline−observed) so an
+    // old-schema JSON landing via the cron cp does NOT revert the tile to
+    // ARMED. The $1.25B reserve-BUILD sub-cap is a DISTINCT untapped leg —
+    // never merge it into the print (reserve_build_executed_usd stays 0).
+    var btcDrawn = (btc.btc_drawn != null)
+        ? btc.btc_drawn
+        : ((btc.observed_btc_count != null && btc.baseline_btc_count != null)
+            ? Math.max(0, btc.baseline_btc_count - btc.observed_btc_count) : null);
+    var btcLive = (btc.dividend_service_executed === true) || (btcDrawn != null && btcDrawn > 0);
+    // reserve_funding_cap_usd was RENAMED reserve_build_cap_usd — read new,
+    // fall back to old so the tile never renders blank.
+    var reserveBuildCap = (btc.reserve_build_cap_usd != null) ? btc.reserve_build_cap_usd : btc.reserve_funding_cap_usd;
+    var reserveBuildUsed = (btc.reserve_build_executed_usd != null) ? btc.reserve_build_executed_usd : 0;
 
     function row(component, detail, pillHtml) {
         return '<tr>' +
@@ -93,20 +110,42 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
     var commonDetail = '<span class="font-mono font-semibold">' + fmt(common.authorized_usd) + '</span> authorized · BTC-funded · ' +
         'executed <span class="font-mono">' + fmt(common.executed_usd != null ? common.executed_usd : 0) + '</span>';
 
-    var btcDetail = '≤ <span class="font-mono font-semibold">' + fmt(btc.reserve_funding_cap_usd) + '</span> to reserve ' +
-        '(+ uncapped dividend / interest / buyback funding) · not yet executed · ' +
-        (btc.observed_btc_count != null ? '<span class="font-mono">' + btc.observed_btc_count.toLocaleString('en-US') + '</span> BTC flat' : '');
+    var btcDetail;
+    if (btcLive) {
+        var fp = btc.first_print || {};
+        var soldBtc = (fp.btc_sold != null) ? fp.btc_sold : btcDrawn;
+        var printDate = (typeof fp.period === 'string' && fp.period.indexOf('..') >= 0)
+            ? fp.period.split('..').pop() : '2026-07-05';
+        var periodTxt = (typeof fp.period === 'string') ? fp.period.replace('..', '→') : null;
+        btcDetail = '<strong class="text-green-700 dark:text-green-300">LIVE — first at-scale print ' + printDate + '</strong>: ' +
+            '<span class="font-mono font-semibold">−' + (soldBtc != null ? soldBtc.toLocaleString('en-US') : '—') + ' BTC</span>' +
+            (fp.proceeds_usd != null ? ' (~<span class="font-mono">' + fmt(fp.proceeds_usd) + '</span>)' : '') +
+            ' sold to fund preferred distributions + replenish reserve' +
+            (periodTxt ? ' · period <span class="font-mono">' + periodTxt + '</span>' : '') +
+            (fp.avg_sale_price != null ? ' · blended ~<span class="font-mono">' + fmt(fp.avg_sale_price) + '</span>' : '') +
+            '<br><span class="text-slate-500">Reserve-build sub-cap: <span class="font-mono font-semibold">' + fmt(reserveBuildCap) + '</span> untapped' +
+            ' (<span class="font-mono">' + fmt(reserveBuildUsed) + '</span> used — distinct from the dividend-service print above)</span>';
+    } else {
+        btcDetail = '≤ <span class="font-mono font-semibold">' + fmt(reserveBuildCap) + '</span> to reserve ' +
+            '(+ uncapped dividend / interest / buyback funding) · not yet executed · ' +
+            (btc.observed_btc_count != null ? '<span class="font-mono">' + btc.observed_btc_count.toLocaleString('en-US') + '</span> BTC flat' : '');
+    }
 
     var rows =
         row('USD Reserve policy', reserveDetail, strcFrameworkPill('policy')) +
         row('STRC dividend policy', divDetail, strcFrameworkPill('discr')) +
         row('DCS repurchase', dcsDetail, strcFrameworkPill(dcsArmed ? 'armed' : 'policy')) +
         row('Common repurchase', commonDetail, strcFrameworkPill(commonArmed ? 'armed' : 'policy')) +
-        row('BTC Monetization', btcDetail, strcFrameworkPill(btcArmed ? 'armed' : 'policy'));
+        row('BTC Monetization', btcDetail, strcFrameworkPill(btcLive ? 'live' : 'armed'));
 
+    // Deployment note — softens once BTC monetization is live (buybacks are
+    // still $0, but BTC sales are no longer "not-yet-executed").
+    var deployNote = btcLive
+        ? ' Buybacks remain at $0; <span class="text-green-700 dark:text-green-300 font-semibold">BTC monetization is now LIVE</span> (first dividend-service print 2026-07-05).'
+        : ' <strong>not capital deployed</strong> — buybacks and BTC sales are at $0 / not-yet-executed.';
     var lensLine = (lens === 'issuer')
-        ? 'Standing capital-allocation programs the 06-29 8-K introduced. Each <span class="text-amber-700 dark:text-amber-300 font-semibold">ARMED</span> row is capacity Strategy has authorized, <strong>not capital deployed</strong> — buybacks and BTC sales are at $0 / not-yet-executed.'
-        : 'Issuer-level capacity that backstops STRC holders. The reserve + STRC-priority buyback are the discretionary <strong>bid under</strong> STRC; each <span class="text-amber-700 dark:text-amber-300 font-semibold">ARMED</span> row is authorized capacity, <strong>not capital deployed</strong>.';
+        ? 'Standing capital-allocation programs the 06-29 8-K introduced. Each row is capacity Strategy authorized;' + deployNote
+        : 'Issuer-level capacity that backstops STRC holders. The reserve + STRC-priority buyback are the discretionary <strong>bid under</strong> STRC.' + deployNote;
 
     var acc = dcf.source_accession ? ' · 8-K acc ' + dcf.source_accession : '';
 
@@ -291,7 +330,7 @@ var STRCRenderer = {
         html += STRC_FRAMEWORK_CARD(data.digital_credit_framework);
         html += STRCRenderer._renderStrcxWrapper(wrapper, riskFlags);
         html += STRCRenderer._renderDownstreamExposure(downstream);
-        html += STRCRenderer._renderDependencyStrategyFunding(tradfi);
+        html += STRCRenderer._renderDependencyStrategyFunding(tradfi, data.digital_credit_framework);
         html += '<div id="strc-event-log-panel" class="panel"><div class="panel-title">Strategy Event Log <span class="text-xs font-normal text-slate-500">— EDGAR 8-K monitor</span></div><div class="text-xs text-slate-500 loading-pulse">Loading EDGAR feed…</div></div>';
         html += STRCRenderer._renderFreshness(data);
 
@@ -417,7 +456,7 @@ var STRCRenderer = {
     // stack) for STRC holders, with explicit dependency framing so the
     // chart isn't mistaken for STRC-native analysis.
     // ============================================================
-    _renderDependencyStrategyFunding: function (tradfi) {
+    _renderDependencyStrategyFunding: function (tradfi, dcf) {
         var mnav = tradfi.mnav || {};
         var mstr = tradfi.mstr || {};
         var btc = tradfi.btc || {};
@@ -428,6 +467,17 @@ var STRCRenderer = {
         var bandCls = STRCRenderer._mnavBandClass(regime);
         var label = STRCRenderer._mnavBandLabel(regime);
         var btcNav = (hold.count != null && btc.price_usd != null) ? hold.count * btc.price_usd : null;
+
+        // 2026-07-05: first BTC monetization (dividend-service). Stack draw +
+        // $0-common-ATM week feed the trajectory note + funding-mix caption.
+        var btcm = (dcf && dcf.btc_monetization_program) || {};
+        var btcDrawn = (btcm.btc_drawn != null) ? btcm.btc_drawn
+            : ((btcm.observed_btc_count != null && btcm.baseline_btc_count != null)
+                ? Math.max(0, btcm.baseline_btc_count - btcm.observed_btc_count) : null);
+        var monetizationLive = (btcm.dividend_service_executed === true) || (btcDrawn != null && btcDrawn > 0);
+        var declineNote = monetizationLive && btcDrawn
+            ? '<div class="text-[10px] text-red-600 dark:text-red-400 mt-0.5">−' + btcDrawn.toLocaleString('en-US') + ' since 06-28 · first monetization 07-05</div>'
+            : '';
 
         // BTC/MSTR snapshot row — issuer-side inputs the regime is derived from.
         var snapshotRow =
@@ -445,6 +495,7 @@ var STRCRenderer = {
                     '<div class="text-[10px] uppercase font-semibold text-slate-500">Strategy BTC holdings</div>' +
                     '<div class="text-lg font-bold text-slate-800 dark:text-slate-100 mt-0.5">' + STRCRenderer._fmtNum(hold.count) + ' BTC</div>' +
                     '<div class="text-[10px] text-slate-500">NAV ' + STRCRenderer._fmtMoneyShort(btcNav) + '</div>' +
+                    declineNote +
                 '</div>' +
                 '<div class="rounded border border-slate-200 dark:border-slate-700 p-3">' +
                     '<div class="text-[10px] uppercase font-semibold text-slate-500">Implied mNAV</div>' +
@@ -478,10 +529,18 @@ var STRCRenderer = {
                 '<div class="text-sm">' + caption + '</div>' +
             '</div>' +
             '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
-                '<span class="font-semibold">06-28 armed mNAV cut → VOIDED.</span> mNAV bounced back above 1.0 (low-parity) and the ' +
-                '06-29 8-K added a $2.55B USD reserve + BTC-monetization authorization. Sub-1.0 mNAV is a ' +
-                '<strong>live watch, not a fired score cut</strong> — scores held (MSTR 4.5 / STRC 4.0).' +
+                '<span class="font-semibold">06-28 armed mNAV cut → VOIDED.</span> mNAV recovered off the sub-1.0 nadir to the ' +
+                '<strong>parity / low-premium boundary</strong> (well above the voided sub-1.0 notch) — live-BTC-sensitive ' +
+                '(~1.09 at BTC $60.7K, easing toward parity at higher BTC). The 06-29 8-K added a $2.55B USD reserve build + ' +
+                'BTC-monetization program (now <span class="text-green-700 dark:text-green-300 font-semibold">LIVE</span> — first ' +
+                'dividend-service print 07-05). Sub-1.0 mNAV is a <strong>live watch, not a fired score cut</strong> — scores held (MSTR 4.5 / STRC 4.0).' +
             '</div>' +
+            (monetizationLive ?
+            '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
+                '<span class="font-semibold">Funding mix inverted this week</span> — accretive common ATM idle by choice' +
+                (btcm.common_atm_week_usd != null ? ' ($' + (btcm.common_atm_week_usd / 1e6).toFixed(0) + 'M common ATM)' : '') +
+                '; preferred dividends funded by BTC sales.' +
+            '</div>' : '') +
             snapshotRow +
             '<div class="text-xs text-slate-500 mt-3">' +
                 'Methodology: mNAV = enterprise value ÷ (Strategy BTC count × BTC spot). See ' +

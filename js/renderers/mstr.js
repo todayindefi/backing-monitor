@@ -159,7 +159,7 @@ var MSTRRenderer = {
         //   7. Dilution + maturity wall
         var html = '';
         html += MSTRRenderer._renderHeadlineBanner(tradfi, mv);
-        html += MSTRRenderer._renderMnavRegime(tradfi);
+        html += MSTRRenderer._renderMnavRegime(tradfi, data.digital_credit_framework);
         html += MSTRRenderer._renderBalanceSheet(mv);
         html += MSTRRenderer._renderCapitalStructure(mv);
         html += MSTRRenderer._renderCashServiceWaterfall(data);
@@ -294,13 +294,20 @@ var MSTRRenderer = {
     // ============================================================
     // Panel 2 — mNAV regime (load-bearing — equity caption variant)
     // ============================================================
-    _renderMnavRegime: function (tradfi) {
+    _renderMnavRegime: function (tradfi, dcf) {
         var mnav = tradfi.mnav || {};
         var val = (mnav.value != null) ? mnav.value.toFixed(4) : '—';
         var regime = mnav.regime || 'unknown';
         var caption = MSTRRenderer._mnavCaptionEquity(regime);
         var bandCls = MSTRRenderer._mnavBandClass(regime);
         var label = MSTRRenderer._mnavBandLabel(regime);
+
+        // 2026-07-05 first BTC monetization → funding-mix inversion caption.
+        var btcm = (dcf && dcf.btc_monetization_program) || {};
+        var btcDrawn = (btcm.btc_drawn != null) ? btcm.btc_drawn
+            : ((btcm.observed_btc_count != null && btcm.baseline_btc_count != null)
+                ? Math.max(0, btcm.baseline_btc_count - btcm.observed_btc_count) : null);
+        var monetizationLive = (btcm.dividend_service_executed === true) || (btcDrawn != null && btcDrawn > 0);
 
         return '<div class="panel">' +
             '<div class="panel-title">mNAV Regime (EV/BTC) <span class="text-xs font-normal text-slate-500">— equity issuance accretion signal</span></div>' +
@@ -322,10 +329,18 @@ var MSTRRenderer = {
                 '<div class="text-sm">' + caption + '</div>' +
             '</div>' +
             '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
-                '<span class="font-semibold">06-28 armed mNAV cut → VOIDED.</span> mNAV reverted above 1.0 (low-parity) and the ' +
-                '06-29 8-K added a $2.55B USD reserve build + BTC-monetization authorization as mitigants. Sub-1.0 mNAV is a ' +
-                '<strong>live watch, not a fired score cut</strong> — scores held (MSTR 4.5 / STRC 4.0).' +
+                '<span class="font-semibold">06-28 armed mNAV cut → VOIDED.</span> mNAV recovered off the sub-1.0 nadir to the ' +
+                '<strong>parity / low-premium boundary</strong> (well above the voided sub-1.0 notch) — live-BTC-sensitive ' +
+                '(~1.09 at BTC $60.7K, easing toward parity at higher BTC). The 06-29 8-K added a $2.55B USD reserve build + ' +
+                'BTC-monetization program (now <span class="text-green-700 dark:text-green-300 font-semibold">LIVE</span> — first ' +
+                'dividend-service print 07-05) as mitigants. Sub-1.0 mNAV is a <strong>live watch, not a fired score cut</strong> — scores held (MSTR 4.5 / STRC 4.0).' +
             '</div>' +
+            (monetizationLive ?
+            '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
+                '<span class="font-semibold">Funding mix inverted this week</span> — accretive common ATM idle by choice' +
+                (btcm.common_atm_week_usd != null ? ' ($' + (btcm.common_atm_week_usd / 1e6).toFixed(0) + 'M common ATM)' : '') +
+                '; preferred dividends funded by BTC sales.' +
+            '</div>' : '') +
         '</div>';
     },
 
@@ -1317,6 +1332,23 @@ var MSTRRenderer = {
                 position: 'start',
                 font: { size: 9 },
                 color: '#475569'
+            }
+        };
+        // First BTC monetization (dividend service) — the stack's first
+        // sustained decline (847,363 → 843,775 BTC). Event-anchored 8-K marker.
+        ann.firstMonetization = {
+            type: 'line',
+            xMin: new Date('2026-07-05T00:00:00Z').getTime(),
+            xMax: new Date('2026-07-05T00:00:00Z').getTime(),
+            borderColor: '#dc2626',
+            borderWidth: 1.5,
+            borderDash: [2, 3],
+            label: {
+                content: 'first BTC monetization — dividend service (07-05)',
+                display: true,
+                position: 'end',
+                font: { size: 9 },
+                color: '#b91c1c'
             }
         };
 
