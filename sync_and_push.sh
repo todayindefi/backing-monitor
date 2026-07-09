@@ -61,6 +61,8 @@ cp /home/danger/PegTracker/data/usdai_backing_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/susdai_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/susdai_backing_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/usdai_family.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/usds_backing.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/usds_backing_history.json data/ 2>/dev/null
 # BMNR: PegTracker emits *_treasury.json; dashboard app.js convention is *_backing.json
 cp /home/danger/PegTracker/data/bmnr_treasury.json data/bmnr_backing.json 2>/dev/null
 cp /home/danger/PegTracker/data/bmnr_treasury_history.json data/bmnr_backing_history.json 2>/dev/null
