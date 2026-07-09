@@ -666,6 +666,9 @@ const CommonRenderer = {
         // 3 · Backing (head only — panels are rendered by the existing common path)
         this._renderAxisHead('backing', 3, 'Backing', 'reserves & collateral ratio',
             this._ratingChipHtml(this.backingRating(data)));
+        // Optional composition sub-panel (USDC held-vs-denominated split + per-Star
+        // breakdown). Data-gated & additive: no-op for assets lacking the fields.
+        this._renderBackingComposition(data);
 
         // 4 · Dependencies
         var dep = data.dependencies || {};
@@ -680,6 +683,131 @@ const CommonRenderer = {
         this._renderAxisHead('issuer', 5, 'Issuer', 'editorial — subjective axis', '');
         this._renderIssuerSection(data);
         return true;
+    },
+
+    // ------ Backing composition sub-panel (data-gated, additive) ------
+    // Renders into #backing-extra-panels ONLY when the analyzer emits the
+    // composition fields (backing.usdc_raw_held / usdc_denominated and/or
+    // backing.stars[]). For every other asset the slot is cleared, so this is a
+    // pure no-op that cannot regress a page lacking the fields. Same safe/additive,
+    // gated-on-data pattern as the syrup credit-vault primitives (liquidityRating
+    // band_score, free_liquidity_pct, backingRating cr_pct).
+    _renderBackingComposition(data) {
+        var slot = document.getElementById('backing-extra-panels');
+        if (!slot) return;
+        var b = data.backing || {};
+        var raw = b.usdc_raw_held, den = b.usdc_denominated;
+        var hasUsdcSplit = (raw && raw.value != null) || (den && den.value != null);
+        var stars = Array.isArray(b.stars) ? b.stars : [];
+        if (!hasUsdcSplit && !stars.length) { slot.innerHTML = ''; return; }
+
+        var fmt = this.formatCurrencyExact.bind(this);
+        var pct1 = function(v) { return v != null ? CommonRenderer.formatPercent(v, 1) : '—'; };
+        // Compact $ for the star cards (billions read cleanly in a narrow card).
+        var fmtBig = function(v) {
+            if (v == null) return '—';
+            if (Math.abs(v) >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+            return CommonRenderer.formatCurrency(v);
+        };
+        var esc = function(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        };
+        // Trust chip: on-chain / trustless → green; attested / off-chain source → amber.
+        var trustChip = function(trust, source, labelOverride) {
+            var t = String(trust || '').toLowerCase();
+            var s = String(source || '').toLowerCase();
+            var onchain = t === 'trustless' || t === 'onchain' || s === 'onchain';
+            var cls = onchain ? 'r-ok' : 'r-warn';
+            var txt = labelOverride || (onchain ? 'on-chain' : 'attested');
+            return '<span class="axis-rating ' + cls + '">' + esc(txt) + '</span>';
+        };
+        var palette = ['#6366f1', '#3b82f6', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16'];
+
+        var html = '';
+
+        // ---- Dual-USDC row: held (raw) vs denominated ----
+        if (hasUsdcSplit) {
+            var usdcTile = function(obj, label, badgeText) {
+                if (!obj || obj.value == null) return '';
+                return '<div class="dep-card">' +
+                    '<div class="flex items-center justify-between mb-1 gap-2">' +
+                        '<div class="card-label">' + esc(label) + '</div>' +
+                        trustChip(obj.trust, obj.source, badgeText) +
+                    '</div>' +
+                    '<div class="card-value">' + fmt(obj.value) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' + pct1(obj.pct) + ' of supply · source: ' + esc(obj.source || '—') + '</div>' +
+                    (obj.note ? '<div class="text-xs text-slate-400 mt-1">' + esc(obj.note) + '</div>' : '') +
+                '</div>';
+            };
+            html +=
+                '<div class="panel">' +
+                    '<div class="panel-title">USDC exposure — held vs denominated</div>' +
+                    '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+                        usdcTile(raw, 'USDC held (raw)', 'on-chain') +
+                        usdcTile(den, 'USDC-denominated exposure', 'attested · denominated, not held') +
+                    '</div>' +
+                    '<p class="text-xs text-slate-400 mt-3">Raw = actual USDC held on-chain (trustless). Denominated = USDC-settled instruments (T-bills / CLO / OTC lending) attested by BlockAnalitica — denominated in USDC but not held as USDC.</p>' +
+                '</div>';
+        }
+
+        // ---- Per-Star composition cards ----
+        if (stars.length) {
+            var recon = b.reconciliation || {};
+            var driftByStar = {};
+            (Array.isArray(recon.star_drift) ? recon.star_drift : []).forEach(function(d) {
+                if (d && d.star) driftByStar[d.star] = d;
+            });
+
+            var cards = stars.map(function(st) {
+                var trust = st.trust || {};
+                var sizeChip = trustChip(trust.size, st.size_source, null);
+                var mix = Array.isArray(st.mix) ? st.mix : [];
+                var mixHtml = '';
+                if (mix.length) {
+                    mixHtml = '<div class="mt-3">' + mix.map(function(m, i) {
+                        var color = palette[i % palette.length];
+                        var w = Math.max(0, Math.min(100, m.pct || 0));
+                        return '<div class="flex items-center justify-between text-xs mb-0.5">' +
+                                '<span>' + esc(m.category) + '</span>' +
+                                '<span class="font-mono text-slate-500">' + pct1(m.pct) + '</span>' +
+                            '</div>' +
+                            '<div class="pct-bar-container mb-1.5"><div class="pct-bar" style="width:' + w + '%; background:' + color + '"></div></div>';
+                    }).join('') + '</div>';
+                    mixHtml += '<div class="text-[11px] text-slate-400 mt-1">mix source: ' + esc(st.mix_source || (trust.mix || 'aggregate')) + '</div>';
+                } else {
+                    mixHtml = '<div class="text-[11px] text-slate-400 mt-3">Per-star asset mix not itemised in this snapshot (aggregate-only).</div>';
+                }
+                // Surface a size-drift caveat where BA-backed and on-chain size disagree.
+                var drift = driftByStar[st.star];
+                var driftHtml = '';
+                if (drift && drift.status && String(drift.status).toUpperCase() === 'WARN' && drift.drift_pct != null) {
+                    driftHtml = '<div class="text-[11px] text-amber-600 mt-1" title="On-chain allocator debt vs BlockAnalitica backed value">' +
+                        'size drift vs attested: ' + CommonRenderer.formatPercent(drift.drift_pct, 1) + '</div>';
+                }
+                var vaultHtml = st.allocator_vault
+                    ? '<div class="text-[11px] font-mono text-slate-400 mt-1" title="Allocator vault">' + esc(st.allocator_vault.slice(0, 6) + '…' + st.allocator_vault.slice(-4)) + '</div>'
+                    : '';
+                return '<div class="dep-card">' +
+                    '<div class="flex items-center justify-between mb-1 gap-2">' +
+                        '<div class="dep-card-name">' + esc(st.label || st.star) + '</div>' +
+                        sizeChip +
+                    '</div>' +
+                    '<div class="card-value" style="font-size:1.25rem">' + fmtBig(st.size_usd) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-0.5">' + pct1(st.size_pct) + ' of supply · size: ' + esc(st.size_source || '—') + '</div>' +
+                    driftHtml +
+                    vaultHtml +
+                    mixHtml +
+                '</div>';
+            }).join('');
+
+            html +=
+                '<div class="panel">' +
+                    '<div class="panel-title">Per-Star composition</div>' +
+                    '<div class="dep-grid">' + cards + '</div>' +
+                '</div>';
+        }
+
+        slot.innerHTML = html;
     },
 
     _renderPegSection(data, history) {
