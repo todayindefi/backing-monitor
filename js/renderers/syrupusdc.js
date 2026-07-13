@@ -68,6 +68,19 @@ var SYRUP_AUDIT_INFO = {
     bug_bounty: 'Immunefi $1M+'
 };
 
+// §2b Liquidity Layer — functional-sleeve definitions. Each liquidity
+// position is grouped by *what it's doing* (parked cash vs deployed
+// market-making vs RWA), not just "how much". `custodied` sleeves get the
+// on-chain reconciliation column; AMM/lending do not (LP-token / protocol
+// balances aren't the raw stablecoin). Keyed by sleeve id; see
+// SyrupUSDCRenderer._liquiditySleeveKey for the meta/category → id mapping.
+var SYRUP_LIQUIDITY_SLEEVES = {
+    parked:  { label: 'Parked reserve',          axis: 'Issuer + custody',                  readiness: 'T+0 · custodied',                    custodied: true },
+    amm:     { label: 'Market-making (AMM LP)',  axis: 'Smart-contract + IL + reflexivity', readiness: 'Instant · slippage + reflexive haircut', custodied: false },
+    rwa:     { label: 'RWA / T-bills',            axis: 'Issuer + T+1 settlement',           readiness: 'T+1 · settlement',                   custodied: true },
+    lending: { label: 'Yield strategy (lending)', axis: 'Protocol',                          readiness: 'varies',                             custodied: false }
+};
+
 var SyrupUSDCRenderer = {
 
     // ----- helpers --------------------------------------------------------
@@ -1488,10 +1501,53 @@ var SyrupUSDCRenderer = {
         '</div>';
     },
 
+    // ----- §2b Liquidity Layer helpers ------------------------------------
+    // Map a liquidity position (by asset) to its functional sleeve id.
+    // `metaMap` is asset → {meta, venue} harvested from the visible loans[]
+    // (which carry loan_meta_type / custody.venue); by_asset tail entries
+    // that have no visible row fall through to category-only classification.
+    _liquiditySleeveKey: function(asset, category, metaMap) {
+        var m = SYRUP_COLLATERAL_META[asset] || {};
+        var cat = category || m.category;
+        var info = (metaMap && metaMap[asset]) || {};
+        var meta = info.meta;
+        var venue = info.venue || '';
+        if (cat === 'rwa') return 'rwa';                                   // USTB — genuine T-bill exposure
+        if (meta === 'amm' || /amm|lp/i.test(venue)) return 'amm';         // deployed market-making
+        // `tBills` on a stablecoin is a LoanManager artifact — parked cash
+        // held at par, NOT T-bills. Parked reserve is also the safe default
+        // for any at-par stablecoin sleeve we can't otherwise resolve.
+        return 'parked';
+    },
+
+    // Custody-level on-chain reconciliation for a custodied sleeve. Dedupes
+    // positions by custody.address (the JSON repeats the wallet-level balance
+    // on every position sharing a wallet — summing raw double-counts) and
+    // returns the on-chain total plus data-quality flags.
+    _reconcileCustody: function(positions) {
+        var seen = {}, onChain = 0, hasOnChain = false, anomaly = false;
+        (positions || []).forEach(function(l) {
+            var cu = l.custody || {};
+            if ((l.collateral || {}).usd_source === 'data_anomaly') anomaly = true;
+            var addr = cu.address, bal = cu.asset_balance_usd;
+            if (addr && bal != null && bal > 0 && !seen[addr]) {
+                seen[addr] = true;
+                onChain += bal;
+                hasOnChain = true;
+            }
+        });
+        return { onChain: onChain, hasOnChain: hasOnChain, anomaly: anomaly };
+    },
+
     // ----- §2b Liquidity Layer (pool-owned positions) ---------------------
     // Hidden when the analyzer hasn't shipped position_type yet (older
     // snapshots) — the heuristic _isLiquidity classifier still works but
     // the custody fields needed for the table only land with the new schema.
+    // Positions are grouped into functional sleeves (parked / market-making
+    // / RWA), sleeve subtotals come from the complete collateral_summary
+    // (not the top-25-truncated loans[]), and custodied sleeves reconcile
+    // booked GraphQL figures against on-chain wallet balances. Degrades on
+    // syrupUSDT (custody/venue null) to sleeve grouping + GraphQL-only badges.
     _renderLiquidityLayer: function(specific, slug) {
         var lb = specific.loan_book || {};
         var ct = (specific.governance || {}).custody_topology || {};
@@ -1522,53 +1578,171 @@ var SyrupUSDCRenderer = {
                 CommonRenderer.formatCurrency(custodyEoaUsd) + ' across ' + custodyEntries.length +
                 ' MPC wallet' + (custodyEntries.length === 1 ? '' : 's') +
                 ' under Maple Labs operational control. Residual axis is centralization-of-control (a firm-level event affects all wallets), not custody-primitive weakness.</div>' : '';
-        var bigIssuers = loans.filter(function(l) { return (l.principal || 0) >= 50000000; })
-            .map(function(l) {
-                var c = l.collateral || {};
-                var meta = SYRUP_COLLATERAL_META[c.asset] || {};
-                var issuer = meta.issuer && meta.issuer !== '—' ? meta.issuer : (c.asset || '?');
-                return issuer + ' (' + (c.asset || '?') + ', ' + CommonRenderer.formatCurrency(l.principal) + ')';
-            });
-        var issuerFlag = bigIssuers.length > 0 ?
-            '<div class="risk-flag risk-warning mb-2">⚠ <strong>Issuer-axis exposure</strong> — concentrated single-issuer positions over $50M: ' +
-                bigIssuers.join(' · ') + '.</div>' : '';
+        // ---- Sleeve grouping -------------------------------------------
+        // meta/venue harvested from the visible rows, used to classify both
+        // the rows and the (complete) by_asset subtotals into sleeves.
+        var metaMap = {};
+        loans.forEach(function(l) {
+            var a = (l.collateral || {}).asset;
+            if (!a || metaMap[a]) return;
+            metaMap[a] = { meta: l.loan_meta_type, venue: (l.custody || {}).venue || '' };
+        });
 
-        // ---- Per-position table ----
-        var tableRows = loans.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).map(function(l) {
+        var cs = lb.collateral_summary || {};
+        // Liquidity subset of the complete by_asset summary (crypto = borrower
+        // collateral; stablecoin/RWA = liquidity layer). Sums exactly to
+        // principal_liquidity_usd, so sleeve subtotals stay correct even when
+        // member rows are dropped by the top-25 truncation.
+        var byAssetLiq = (cs.by_asset || []).filter(function(a) {
+            return !SyrupUSDCRenderer._isLoanAsset(a.asset);
+        });
+
+        // Accumulate sleeve subtotals from by_asset, members from loans[].
+        var sleeves = {};
+        function ensureSleeve(key) {
+            if (!sleeves[key]) sleeves[key] = { key: key, subtotal: 0, members: [] };
+            return sleeves[key];
+        }
+        byAssetLiq.forEach(function(a) {
+            var key = SyrupUSDCRenderer._liquiditySleeveKey(a.asset, a.category, metaMap);
+            ensureSleeve(key).subtotal += (a.principal_usd || 0);
+        });
+        loans.forEach(function(l) {
             var c = l.collateral || {};
-            var cu = l.custody || {};
-            var meta = SYRUP_COLLATERAL_META[c.asset] || {};
-            var issuer = meta.issuer && meta.issuer !== '—' ? meta.issuer : '—';
-            if (cu.venue) issuer += ' <span class="text-xs text-slate-400">· ' + cu.venue + '</span>';
-            var custodyAddr = cu.address || l.borrower || '—';
-            var custodyChain = (cu.chain || 'ethereum').charAt(0).toUpperCase() + (cu.chain || 'ethereum').slice(1);
-            var eoaBadge = cu.is_eoa ?
-                '<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600" title="MPC + policy (per Maple\'s 2026-05-04 attestation)">MPC</span>' : '';
-            var custodyCell = custodyAddr === '—' ?
-                '<span class="text-slate-400">—</span>' :
-                '<span class="font-mono text-xs" title="' + custodyAddr + '">' + SyrupUSDCRenderer._truncAddr(custodyAddr) + '</span> ' +
-                    SyrupUSDCRenderer._ethLink(custodyAddr) + eoaBadge;
-            return '<tr>' +
-                '<td><span class="font-mono font-semibold">' + (c.asset || '—') + '</span></td>' +
-                '<td class="text-xs text-slate-600">' + issuer + '</td>' +
-                '<td>' + custodyCell + '</td>' +
-                '<td class="text-xs text-slate-500">' + custodyChain + '</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(l.principal || 0) + '</td>' +
-            '</tr>';
+            var key = SyrupUSDCRenderer._liquiditySleeveKey(c.asset, c.category, metaMap);
+            ensureSleeve(key).members.push(l);
+        });
+
+        // Render order: subtotal desc; drop sub-threshold dust sleeves (the
+        // ~$5 USTB slot, dormant lending) — their principal is acknowledged
+        // by the tail line below so nothing is silently lost.
+        var visibleSleeves = Object.keys(sleeves).map(function(k) { return sleeves[k]; })
+            .filter(function(s) { return s.subtotal >= SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD; })
+            .sort(function(a, b) { return b.subtotal - a.subtotal; });
+
+        // ---- Concentration line (Change 3) -----------------------------
+        var topAsset = byAssetLiq.slice().sort(function(a, b) {
+            return (b.principal_usd || 0) - (a.principal_usd || 0);
+        })[0];
+        var topAssetPct = (topAsset && liqTotal) ? (topAsset.principal_usd / liqTotal * 100) : null;
+        var walletTotals = {};
+        loans.forEach(function(l) {
+            var addr = (l.custody || {}).address;
+            if (!addr) return;
+            walletTotals[addr] = (walletTotals[addr] || 0) + (l.principal || 0);
+        });
+        var topWalletAddr = null, topWalletUsd = 0;
+        Object.keys(walletTotals).forEach(function(a) {
+            if (walletTotals[a] > topWalletUsd) { topWalletUsd = walletTotals[a]; topWalletAddr = a; }
+        });
+        var topWalletPct = (topWalletAddr && liqTotal) ? (topWalletUsd / liqTotal * 100) : null;
+        var concAmber = (topAssetPct != null && topAssetPct > 60) || (topWalletPct != null && topWalletPct > 60);
+        var concParts = [];
+        if (topAssetPct != null) concParts.push('top asset <strong>' + topAsset.asset + ' ' + CommonRenderer.formatPercent(topAssetPct, 1) + '</strong> of layer');
+        if (topWalletPct != null) concParts.push('top custody wallet <strong>' + CommonRenderer.formatPercent(topWalletPct, 1) + '</strong> <span class="font-mono text-xs">(' + SyrupUSDCRenderer._truncAddr(topWalletAddr) + ')</span>');
+        var concentration = concParts.length ?
+            '<div class="risk-flag ' + (concAmber ? 'risk-warning' : 'risk-info') + ' mb-2">' +
+                (concAmber ? '⚠ ' : 'ⓘ ') + '<strong>Layer concentration</strong> — ' + concParts.join(' · ') +
+                (concAmber ? '. Single-issuer / single-custody exposure is the dominant residual axis for this layer.' : '.') +
+            '</div>' : '';
+
+        // ---- Per-sleeve tables (Changes 1 + 2) -------------------------
+        var renderedRows = 0, renderedPrincipal = 0;
+        var sleeveHtml = visibleSleeves.map(function(s) {
+            var def = SYRUP_LIQUIDITY_SLEEVES[s.key] || { label: s.key, axis: '—', readiness: '—', custodied: false };
+            var recon = def.custodied ? SyrupUSDCRenderer._reconcileCustody(s.members) : { hasOnChain: false, anomaly: false };
+
+            // Sleeve header: label · axis chip · subtotal + readiness tag.
+            var head =
+                '<div class="flex items-center justify-between mt-3 mb-1">' +
+                    '<div class="text-sm font-semibold text-slate-700">' + def.label +
+                        ' <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600" title="Primary risk axis">' + def.axis + '</span>' +
+                    '</div>' +
+                    '<div class="text-sm font-mono font-semibold text-slate-700">' + CommonRenderer.formatCurrency(s.subtotal) + '</div>' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 mb-1">Redemption-readiness: ' + def.readiness + '</div>';
+
+            // Reconciliation summary (custodied sleeves with on-chain data).
+            var reconLine = '';
+            if (def.custodied && recon.hasOnChain) {
+                var delta = (recon.onChain - s.subtotal) / s.subtotal * 100;
+                var absD = Math.abs(delta);
+                var cls, icon;
+                if (recon.anomaly || absD > 5)      { cls = 'text-red-600';   icon = '✕'; }
+                else if (absD > 1)                    { cls = 'text-amber-600'; icon = '~'; }
+                else                                  { cls = 'text-green-600'; icon = '✓'; }
+                var sign = delta >= 0 ? '+' : '';
+                reconLine =
+                    '<div class="text-xs ' + cls + ' mb-1">Reconciliation: Booked ' + CommonRenderer.formatCurrency(s.subtotal) +
+                        ' · On-chain ' + CommonRenderer.formatCurrency(recon.onChain) +
+                        ' · Δ ' + sign + delta.toFixed(2) + '% ' + icon +
+                        (recon.anomaly ? ' <span class="text-slate-500">(data anomaly on a member position)</span>' : '') +
+                    '</div>';
+            }
+
+            // Member rows.
+            var rows = s.members.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).map(function(l) {
+                renderedRows++;
+                renderedPrincipal += (l.principal || 0);
+                var c = l.collateral || {};
+                var cu = l.custody || {};
+                var meta = SYRUP_COLLATERAL_META[c.asset] || {};
+                var issuer = meta.issuer && meta.issuer !== '—' ? meta.issuer : '—';
+                if (cu.venue) issuer += ' <span class="text-xs text-slate-400">· ' + cu.venue + '</span>';
+                var custodyAddr = cu.address || l.borrower || '—';
+                var custodyChain = (cu.chain || 'ethereum').charAt(0).toUpperCase() + (cu.chain || 'ethereum').slice(1);
+                var eoaBadge = cu.is_eoa ?
+                    '<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600" title="MPC + policy (per Maple\'s 2026-05-04 attestation)">MPC</span>' : '';
+                var custodyCell = custodyAddr === '—' ?
+                    '<span class="text-slate-400">—</span>' :
+                    '<span class="font-mono text-xs" title="' + custodyAddr + '">' + SyrupUSDCRenderer._truncAddr(custodyAddr) + '</span> ' +
+                        SyrupUSDCRenderer._ethLink(custodyAddr) + eoaBadge;
+                // Source badge: on-chain-verified only for custodied, non-AMM,
+                // non-anomalous rows carrying a real wallet balance.
+                var verified = def.custodied && s.key !== 'amm' &&
+                    cu.address && cu.asset_balance_usd != null && cu.asset_balance_usd > 0 &&
+                    c.usd_source !== 'data_anomaly';
+                var srcBadge = verified ?
+                    '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700" title="Booked figure reconciled to on-chain custody balance">on-chain</span>' :
+                    '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-500" title="GraphQL-asserted; no on-chain reconciliation available">GraphQL-only</span>';
+                return '<tr>' +
+                    '<td><span class="font-mono font-semibold">' + (c.asset || '—') + '</span></td>' +
+                    '<td class="text-xs text-slate-600">' + issuer + '</td>' +
+                    '<td>' + custodyCell + '</td>' +
+                    '<td class="text-xs text-slate-500">' + custodyChain + '</td>' +
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(l.principal || 0) + '</td>' +
+                    '<td class="text-center">' + srcBadge + '</td>' +
+                '</tr>';
+            }).join('');
+
+            var table = rows ?
+                '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                    '<th>Asset</th><th>Issuer</th><th>Custody</th><th>Chain</th><th class="text-right">Principal</th><th class="text-center">Verified</th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div>' :
+                '<div class="text-xs text-slate-400 mb-1">Positions below top-25 display cutoff — see tail line.</div>';
+
+            return head + reconLine + table;
         }).join('');
-        var table =
-            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-2">Liquidity positions</div>' +
-            '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
-                '<th>Asset</th><th>Issuer</th><th>Custody</th><th>Chain</th><th class="text-right">Principal</th>' +
-            '</tr></thead><tbody>' + tableRows + '</tbody></table></div>';
+
+        // ---- Tail line (Change 4): rows vs complete total --------------
+        var tailCount = (lb.liquidity_count != null ? lb.liquidity_count : loans.length) - renderedRows;
+        var tailUsd = liqTotal - renderedPrincipal;
+        var tail = (tailCount > 0 && tailUsd > 0.5) ?
+            '<div class="text-xs text-slate-400 mt-2">+ ' + tailCount + ' smaller position' + (tailCount === 1 ? '' : 's') +
+                ' · ' + CommonRenderer.formatCurrency(tailUsd) + ' (below display cutoff / dust — included in sleeve subtotals above)</div>' : '';
 
         return '<div class="panel">' +
             '<div class="panel-title">Liquidity Layer <span class="text-xs font-normal text-slate-500">(pool-owned positions)</span></div>' +
-            '<p class="text-sm text-slate-500 mb-3">Pool-owned positions in yield-generating strategies — routed through Strategy 0 LoanManager as accounting wrapper, but functionally NOT third-party credit. Risk axis: issuer / RWA / AMM, not borrower default.</p>' +
+            '<p class="text-sm text-slate-500 mb-3">Pool-owned redemption reserve, not third-party credit — split by function: ' +
+                '<strong>parked reserve</strong> (custodied stablecoin — issuer + custody risk), ' +
+                '<strong>market-making</strong> (AMM LP seeding the syrup token\'s secondary market — smart-contract / IL / reflexivity risk), and ' +
+                '<strong>RWA</strong> (tokenized T-bills — issuer + settlement risk). ' +
+                'Booked figures are reconciled against on-chain custody balances where available.</p>' +
             header +
             eoaFlag +
-            issuerFlag +
-            table +
+            concentration +
+            sleeveHtml +
+            tail +
         '</div>';
     },
 
