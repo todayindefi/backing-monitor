@@ -75,7 +75,7 @@ var MSTRRenderer = {
     // Equity-holder framing: same regime bands as STRC but caption swap.
     _mnavCaptionEquity: function (regime) {
         if (regime === 'premium')  return 'ATM equity issuance accretive — BTC accumulation continues, per-share BTC NAV grows.';
-        if (regime === 'parity')   return 'ATM marginally accretive — per-share BTC NAV growth slowing.';
+        if (regime === 'parity')   return 'Parity/boundary read — band remains parity, but sub-1.0 mNAV reactivates the watch. Not a discount-regime break alert.';
         if (regime === 'discount') return 'ATM equity issuance dilutive vs gross BTC NAV — BTC accumulation via equity halted; ATM redirected to liability management. Per-share BTC NAV compresses on each issuance.';
         if (regime === 'distress') return 'Equity issuance dilutes per-share BTC NAV materially. Cash-settlement of convert maturities likely; BTC stack drain accelerating.';
         return '—';
@@ -304,10 +304,11 @@ var MSTRRenderer = {
 
         // 2026-07-05 first BTC monetization → funding-mix inversion caption.
         var btcm = (dcf && dcf.btc_monetization_program) || {};
-        var btcDrawn = (btcm.btc_drawn != null) ? btcm.btc_drawn
-            : ((btcm.observed_btc_count != null && btcm.baseline_btc_count != null)
-                ? Math.max(0, btcm.baseline_btc_count - btcm.observed_btc_count) : null);
-        var monetizationLive = (btcm.dividend_service_executed === true) || (btcDrawn != null && btcDrawn > 0);
+        var btcState = (typeof strcBtcMonetizationState === 'function')
+            ? strcBtcMonetizationState(btcm)
+            : { currentWeekLive: btcm.executed === true, historicalLive: btcm.dividend_service_executed === true || !!btcm.first_print, btcDrawn: null };
+        var monetizationLive = btcState.currentWeekLive;
+        var monetizationHistorical = btcState.historicalLive;
 
         return '<div class="panel">' +
             '<div class="panel-title">mNAV Regime (EV/BTC) <span class="text-xs font-normal text-slate-500">— equity issuance accretion signal</span></div>' +
@@ -329,17 +330,16 @@ var MSTRRenderer = {
                 '<div class="text-sm">' + caption + '</div>' +
             '</div>' +
             '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
-                '<span class="font-semibold">06-28 armed mNAV cut → VOIDED.</span> mNAV recovered off the sub-1.0 nadir to the ' +
-                '<strong>parity / low-premium boundary</strong> (well above the voided sub-1.0 notch) — live-BTC-sensitive ' +
-                '(~1.09 at BTC $60.7K, easing toward parity at higher BTC). The 06-29 8-K added a $2.55B USD reserve build + ' +
-                'BTC-monetization program (now <span class="text-green-700 dark:text-green-300 font-semibold">LIVE</span> — first ' +
-                'dividend-service print 07-05) as mitigants. Sub-1.0 mNAV is a <strong>live watch, not a fired score cut</strong> — scores held (MSTR 4.5 / STRC 4.0).' +
+                '<span class="font-semibold">Sub-1.0 watch re-activated, not a regime-break alert.</span> Current mNAV is back at the ' +
+                '<strong>parity / 1.0 boundary</strong>: the band label stays parity, while the economic accretion line is below 1.0. ' +
+                'The move is live-BTC-sensitive and offset by the record $3.0B reserve build plus resumed common ATM. ' +
+                'Scores held (MSTR 4.5 / STRC 4.0); a cut would require sustained sub-1.0 mNAV with reserve drawdown, not this reserve-building week.' +
             '</div>' +
-            (monetizationLive ?
+            ((monetizationLive || monetizationHistorical) ?
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
-                '<span class="font-semibold">Funding mix inverted this week</span> — accretive common ATM idle by choice' +
+                '<span class="font-semibold">Funding mix this week: armed / idle BTC monetization</span> — current-week needs funded by common ATM + reserve' +
                 (btcm.common_atm_week_usd != null ? ' ($' + (btcm.common_atm_week_usd / 1e6).toFixed(0) + 'M common ATM)' : '') +
-                '; preferred dividends funded by BTC sales.' +
+                '; BTC holdings flat. Historical first dividend-service print remains 07-05.' +
             '</div>' : '') +
         '</div>';
     },
@@ -738,13 +738,14 @@ var MSTRRenderer = {
         var mnavTxt = (mnav.value != null) ? mnav.value.toFixed(4) : '—';
         var atmStatus = (mnav.value != null && mnav.value < 1.0) ? 'Offline (mNAV ' + mnavTxt + ' < 1.0)' : 'Live (mNAV ' + mnavTxt + ')';
         var atmCls = (mnav.value != null && mnav.value < 1.0) ? 'text-orange-700' : 'text-green-700';
+        var cashAvailableUsd = cashRunway && cashRunway.cash_and_equivalents_usd;
         var treasuryTable =
             '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-6 mb-2">Treasury available</div>' +
             '<div class="data-table-scroll">' +
                 '<table class="data-table">' +
                     '<thead><tr><th>Source</th><th>Value</th><th>Note</th></tr></thead>' +
                     '<tbody>' +
-                        '<tr><td class="font-medium">Cash on balance sheet</td><td class="font-mono">~$0.5–1B</td><td class="text-xs text-slate-500">First-line dividend service · BTC sales not triggered until depleted</td></tr>' +
+                        '<tr><td class="font-medium">Cash on balance sheet</td><td class="font-mono">' + MSTRRenderer._fmtMoneyShort(cashAvailableUsd) + '</td><td class="text-xs text-slate-500">First-line dividend service · BTC sales not triggered until depleted</td></tr>' +
                         '<tr><td class="font-medium">BTC stack</td><td class="font-mono">' + MSTRRenderer._fmtMoneyShort(btcStackUsd) + '</td><td class="text-xs text-slate-500">Second-line (activated when cash exhausted) · ' + MSTRRenderer._fmtNum(btcStack) + ' BTC @ ' + MSTRRenderer._fmtMoney(btcPx, 0) + '</td></tr>' +
                         '<tr><td class="font-medium">Software cash flow</td><td class="font-mono">≈ $0</td><td class="text-xs text-slate-500">Immaterial</td></tr>' +
                         '<tr><td class="font-medium">ATM equity</td><td class="font-mono ' + atmCls + '">' + atmStatus + '</td><td class="text-xs text-slate-500">Accretive only at mNAV ≥ 1.0</td></tr>' +

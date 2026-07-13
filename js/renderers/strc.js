@@ -45,10 +45,26 @@ var STRC_DIV_POLICY_REGIME = {
 function strcFrameworkPill(kind) {
     var base = 'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ';
     if (kind === 'armed')   return '<span class="' + base + 'border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">ARMED — not yet used</span>';
+    if (kind === 'idle')    return '<span class="' + base + 'border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">ARMED / IDLE THIS WEEK</span>';
     if (kind === 'live')    return '<span class="' + base + 'border-green-300 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-200">LIVE</span>';
     if (kind === 'policy')  return '<span class="' + base + 'border-blue-300 bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">STANDING POLICY</span>';
     if (kind === 'discr')   return '<span class="' + base + 'border-slate-300 bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200">DISCRETIONARY</span>';
     return '';
+}
+
+function strcBtcMonetizationState(btc) {
+    btc = btc || {};
+    var inferredDraw = (btc.btc_drawn != null)
+        ? btc.btc_drawn
+        : ((btc.observed_btc_count != null && btc.baseline_btc_count != null)
+            ? Math.max(0, btc.baseline_btc_count - btc.observed_btc_count) : null);
+    var currentWeekLive = (btc.executed === true) || (inferredDraw != null && inferredDraw > 0);
+    var historicalLive = currentWeekLive || btc.dividend_service_executed === true || !!btc.first_print;
+    return {
+        currentWeekLive: currentWeekLive,
+        historicalLive: historicalLive,
+        btcDrawn: inferredDraw
+    };
 }
 
 // Builds the Digital Credit Capital Framework card from the `digital_credit_framework`
@@ -69,18 +85,13 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
     var dcsArmed = (dcs.executed_usd == null) || (dcs.executed_usd === 0);
     var commonArmed = (common.executed_usd == null) || (common.executed_usd === 0);
 
-    // BTC Monetization state. It went LIVE 2026-07-05 (first at-scale
-    // dividend-service BTC sale, 8-K acc 0001193125-26-295586). Drive the
-    // LIVE flip off the explicit `dividend_service_executed` flag, but fall
-    // back to an inferred stack draw (btc_drawn, or baseline−observed) so an
-    // old-schema JSON landing via the cron cp does NOT revert the tile to
-    // ARMED. The $1.25B reserve-BUILD sub-cap is a DISTINCT untapped leg —
-    // never merge it into the print (reserve_build_executed_usd stays 0).
-    var btcDrawn = (btc.btc_drawn != null)
-        ? btc.btc_drawn
-        : ((btc.observed_btc_count != null && btc.baseline_btc_count != null)
-            ? Math.max(0, btc.baseline_btc_count - btc.observed_btc_count) : null);
-    var btcLive = (btc.dividend_service_executed === true) || (btcDrawn != null && btcDrawn > 0);
+    // BTC Monetization state. It first fired 2026-07-05, but the current-week
+    // tile must follow this week's BTC movement. A flat week stays armed/idle
+    // while preserving the historical first-print text.
+    var btcState = strcBtcMonetizationState(btc);
+    var btcDrawn = btcState.btcDrawn;
+    var btcLive = btcState.currentWeekLive;
+    var btcHistorical = btcState.historicalLive;
     // reserve_funding_cap_usd was RENAMED reserve_build_cap_usd — read new,
     // fall back to old so the tile never renders blank.
     var reserveBuildCap = (btc.reserve_build_cap_usd != null) ? btc.reserve_build_cap_usd : btc.reserve_funding_cap_usd;
@@ -125,6 +136,17 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
             (fp.avg_sale_price != null ? ' · blended ~<span class="font-mono">' + fmt(fp.avg_sale_price) + '</span>' : '') +
             '<br><span class="text-slate-500">Reserve-build sub-cap: <span class="font-mono font-semibold">' + fmt(reserveBuildCap) + '</span> untapped' +
             ' (<span class="font-mono">' + fmt(reserveBuildUsed) + '</span> used — distinct from the dividend-service print above)</span>';
+    } else if (btcHistorical) {
+        var hist = btc.first_print || {};
+        var histDate = (typeof hist.period === 'string' && hist.period.indexOf('..') >= 0)
+            ? hist.period.split('..').pop() : '2026-07-05';
+        btcDetail = '<strong class="text-amber-700 dark:text-amber-300">ARMED / IDLE this week</strong>: ' +
+            (btc.common_atm_week_usd != null ? '<span class="font-mono font-semibold">' + fmt(btc.common_atm_week_usd) + '</span> common ATM + reserve funded current-week needs; ' : '') +
+            (btc.observed_btc_count != null ? '<span class="font-mono">' + btc.observed_btc_count.toLocaleString('en-US') + '</span> BTC flat, no new sale. ' : 'no new BTC sale. ') +
+            'Historical first print remains ' + histDate +
+            (hist.btc_sold != null ? ' (<span class="font-mono">−' + hist.btc_sold.toLocaleString('en-US') + ' BTC</span>)' : '') +
+            '.<br><span class="text-slate-500">Reserve-build sub-cap: <span class="font-mono font-semibold">' + fmt(reserveBuildCap) + '</span> untapped' +
+            ' (<span class="font-mono">' + fmt(reserveBuildUsed) + '</span> used — distinct from dividend-service history)</span>';
     } else {
         btcDetail = '≤ <span class="font-mono font-semibold">' + fmt(reserveBuildCap) + '</span> to reserve ' +
             '(+ uncapped dividend / interest / buyback funding) · not yet executed · ' +
@@ -136,13 +158,15 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
         row('STRC dividend policy', divDetail, strcFrameworkPill('discr')) +
         row('DCS repurchase', dcsDetail, strcFrameworkPill(dcsArmed ? 'armed' : 'policy')) +
         row('Common repurchase', commonDetail, strcFrameworkPill(commonArmed ? 'armed' : 'policy')) +
-        row('BTC Monetization', btcDetail, strcFrameworkPill(btcLive ? 'live' : 'armed'));
+        row('BTC Monetization', btcDetail, strcFrameworkPill(btcLive ? 'live' : (btcHistorical ? 'idle' : 'armed')));
 
     // Deployment note — softens once BTC monetization is live (buybacks are
     // still $0, but BTC sales are no longer "not-yet-executed").
     var deployNote = btcLive
-        ? ' Buybacks remain at $0; <span class="text-green-700 dark:text-green-300 font-semibold">BTC monetization is now LIVE</span> (first dividend-service print 2026-07-05).'
-        : ' <strong>not capital deployed</strong> — buybacks and BTC sales are at $0 / not-yet-executed.';
+        ? ' Buybacks remain at $0; <span class="text-green-700 dark:text-green-300 font-semibold">BTC monetization is LIVE this week</span>.'
+        : btcHistorical
+            ? ' Buybacks remain at $0; BTC monetization has a historical first print (2026-07-05) but is <span class="text-amber-700 dark:text-amber-300 font-semibold">idle this week</span>.'
+            : ' <strong>not capital deployed</strong> — buybacks and BTC sales are at $0 / not-yet-executed.';
     var lensLine = (lens === 'issuer')
         ? 'Standing capital-allocation programs the 06-29 8-K introduced. Each row is capacity Strategy authorized;' + deployNote
         : 'Issuer-level capacity that backstops STRC holders. The reserve + STRC-priority buyback are the discretionary <strong>bid under</strong> STRC.' + deployNote;
@@ -245,7 +269,7 @@ var STRCRenderer = {
 
     _mnavCaption: function (regime) {
         if (regime === 'premium')  return 'ATM equity issuance accretive — BTC accumulation funding model intact.';
-        if (regime === 'parity')   return 'ATM marginally accretive — funding model under mild compression.';
+        if (regime === 'parity')   return 'Parity/boundary read — band remains parity, but sub-1.0 mNAV reactivates the watch. Not a discount-regime break alert.';
         if (regime === 'discount') return 'ATM equity issuance dilutive vs gross BTC NAV. BTC-accumulation funding leg compressed; STRC issuance + BTC sales the load-bearing legs for preferred service.';
         if (regime === 'distress') return 'Funding model under acute stress. STRC dividend coverage analysis required.';
         return '—';
@@ -471,11 +495,11 @@ var STRCRenderer = {
         // 2026-07-05: first BTC monetization (dividend-service). Stack draw +
         // $0-common-ATM week feed the trajectory note + funding-mix caption.
         var btcm = (dcf && dcf.btc_monetization_program) || {};
-        var btcDrawn = (btcm.btc_drawn != null) ? btcm.btc_drawn
-            : ((btcm.observed_btc_count != null && btcm.baseline_btc_count != null)
-                ? Math.max(0, btcm.baseline_btc_count - btcm.observed_btc_count) : null);
-        var monetizationLive = (btcm.dividend_service_executed === true) || (btcDrawn != null && btcDrawn > 0);
-        var declineNote = monetizationLive && btcDrawn
+        var btcState = strcBtcMonetizationState(btcm);
+        var btcDrawn = btcState.btcDrawn;
+        var monetizationLive = btcState.currentWeekLive;
+        var monetizationHistorical = btcState.historicalLive;
+        var declineNote = monetizationHistorical && btcDrawn
             ? '<div class="text-[10px] text-red-600 dark:text-red-400 mt-0.5">−' + btcDrawn.toLocaleString('en-US') + ' since 06-28 · first monetization 07-05</div>'
             : '';
 
@@ -529,17 +553,16 @@ var STRCRenderer = {
                 '<div class="text-sm">' + caption + '</div>' +
             '</div>' +
             '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
-                '<span class="font-semibold">06-28 armed mNAV cut → VOIDED.</span> mNAV recovered off the sub-1.0 nadir to the ' +
-                '<strong>parity / low-premium boundary</strong> (well above the voided sub-1.0 notch) — live-BTC-sensitive ' +
-                '(~1.09 at BTC $60.7K, easing toward parity at higher BTC). The 06-29 8-K added a $2.55B USD reserve build + ' +
-                'BTC-monetization program (now <span class="text-green-700 dark:text-green-300 font-semibold">LIVE</span> — first ' +
-                'dividend-service print 07-05). Sub-1.0 mNAV is a <strong>live watch, not a fired score cut</strong> — scores held (MSTR 4.5 / STRC 4.0).' +
+                '<span class="font-semibold">Sub-1.0 watch re-activated, not a regime-break alert.</span> Current mNAV is back at the ' +
+                '<strong>parity / 1.0 boundary</strong>: the band label stays parity, while the economic accretion line is below 1.0. ' +
+                'The move is live-BTC-sensitive and offset by the record $3.0B reserve build plus resumed common ATM. ' +
+                'Scores held (MSTR 4.5 / STRC 4.0); a cut would require sustained sub-1.0 mNAV with reserve drawdown, not this reserve-building week.' +
             '</div>' +
-            (monetizationLive ?
+            ((monetizationLive || monetizationHistorical) ?
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
-                '<span class="font-semibold">Funding mix inverted this week</span> — accretive common ATM idle by choice' +
+                '<span class="font-semibold">Funding mix this week: armed / idle BTC monetization</span> — current-week needs funded by common ATM + reserve' +
                 (btcm.common_atm_week_usd != null ? ' ($' + (btcm.common_atm_week_usd / 1e6).toFixed(0) + 'M common ATM)' : '') +
-                '; preferred dividends funded by BTC sales.' +
+                '; BTC holdings flat. Historical first dividend-service print remains 07-05.' +
             '</div>' : '') +
             snapshotRow +
             '<div class="text-xs text-slate-500 mt-3">' +
@@ -1151,7 +1174,10 @@ var STRCRenderer = {
         var seq = csw.sequenced_runway || null;
         var cashSubPanel = '';
         if (cashRunway) {
-            var totalMonths = (cashRunway.months_until_btc_sales_required || {}).total_preferred_plus_interest;
+            var monthsByTier = cashRunway.months_until_btc_sales_required || {};
+            var monthlyObl = cashRunway.monthly_obligation_usd || {};
+            var totalMonths = monthsByTier.total_preferred_plus_interest;
+            var strcOnlyMonths = monthsByTier.strc_only;
             var monthsCls = STRCRenderer._cashRunwayClass(totalMonths);
             var cashTxt = STRCRenderer._fmtMoneyShort(cashRunway.cash_and_equivalents_usd);
             var asOf = cashRunway.cash_as_of || '—';
@@ -1183,6 +1209,20 @@ var STRCRenderer = {
                     'until BTC sales operationally required. ' +
                     'Cash <span class="font-mono">' + cashTxt + '</span> as of <span class="font-mono">' + asOf + '</span>.' +
                 '</div>';
+            function cashRunwayCard(label, sub, months, monthly) {
+                var cls = STRCRenderer._cashRunwayClass(months);
+                return '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3">' +
+                    '<div class="text-xs uppercase font-semibold text-slate-500">' + label + '</div>' +
+                    '<div class="text-xs text-slate-500 mt-0.5">' + sub + '</div>' +
+                    '<div class="text-2xl font-bold mt-1 ' + cls + '">' + (months != null ? '~' + months.toFixed(1) + ' mo' : '—') + '</div>' +
+                    '<div class="text-[10px] text-slate-500 mt-1 font-mono">' + (monthly != null ? STRCRenderer._fmtMoneyShort(monthly) + '/mo obligation' : '—') + '</div>' +
+                '</div>';
+            }
+            var cashRunwayCards =
+                '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">' +
+                    cashRunwayCard('Total preferred + interest', 'All preferred + STRK/STRD residual', totalMonths, monthlyObl.total_preferred_plus_interest) +
+                    cashRunwayCard('STRC-only cash runway', 'STRC dividend only', strcOnlyMonths, monthlyObl.strc_only) +
+                '</div>';
 
             var cashCaption =
                 '<div class="text-xs text-slate-500 italic leading-relaxed">' +
@@ -1196,6 +1236,7 @@ var STRCRenderer = {
                     '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Strategy cash service horizon <span class="text-xs font-normal text-slate-500">— Phase 1 buffer before BTC sales activate</span></div>' +
                     saleStartCard +
                     cashDetail +
+                    cashRunwayCards +
                     cashCaption +
                 '</div>';
         }
