@@ -309,6 +309,7 @@ var MSTRRenderer = {
             : { currentWeekLive: btcm.executed === true, historicalLive: btcm.dividend_service_executed === true || !!btcm.first_print, btcDrawn: null };
         var monetizationLive = btcState.currentWeekLive;
         var monetizationHistorical = btcState.historicalLive;
+        var observedBtcTxt = btcm.observed_btc_count != null ? btcm.observed_btc_count.toLocaleString('en-US') : '843,775';
 
         return '<div class="panel">' +
             '<div class="panel-title">mNAV Regime (EV/BTC) <span class="text-xs font-normal text-slate-500">— equity issuance accretion signal</span></div>' +
@@ -330,16 +331,15 @@ var MSTRRenderer = {
                 '<div class="text-sm">' + caption + '</div>' +
             '</div>' +
             '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
-                '<span class="font-semibold">Sub-1.0 watch re-activated, not a regime-break alert.</span> Current mNAV is back at the ' +
-                '<strong>parity / 1.0 boundary</strong>: the band label stays parity, while the economic accretion line is below 1.0. ' +
-                'The move is live-BTC-sensitive and offset by the record $3.0B reserve build plus resumed common ATM. ' +
-                'Scores held (MSTR 4.5 / STRC 4.0); a cut would require sustained sub-1.0 mNAV with reserve drawdown, not this reserve-building week.' +
+                '<span class="font-semibold">mNAV slipped back below 1.0 to ' + val + ' (parity band) on the 07-13 MSTR selloff — sub-1.0 watch RE-ACTIVATED.</span> ' +
+                'Single week-end mark, not a durable crossing: ATM resumed accretively and the reserve built to $3.0B (~20mo) — the offsets. ' +
+                'Scores held (MSTR 4.5 / STRC 4.0).' +
             '</div>' +
             ((monetizationLive || monetizationHistorical) ?
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
-                '<span class="font-semibold">Funding mix this week: armed / idle BTC monetization</span> — current-week needs funded by common ATM + reserve' +
-                (btcm.common_atm_week_usd != null ? ' ($' + (btcm.common_atm_week_usd / 1e6).toFixed(0) + 'M common ATM)' : '') +
-                '; BTC holdings flat. Historical first dividend-service print remains 07-05.' +
+                '<span class="font-semibold">Funding mix reverted</span> — accretive common ATM RESUMED' +
+                (btcm.common_atm_week_usd != null ? ' ($' + (btcm.common_atm_week_usd / 1e6).toFixed(0) + 'M common)' : '') +
+                '; BTC held FLAT at ' + observedBtcTxt + ' (no sales); dividends funded from ATM + reserve. The BTC-sale leg is idle this week.' +
             '</div>' : '') +
         '</div>';
     },

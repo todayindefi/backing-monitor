@@ -35,7 +35,7 @@ var STRC_DIV_POLICY_REGIME = {
         '<strong>will not necessarily raise the STRC dividend just because STRC trades below par</strong>. ' +
         'It may instead defend value via a <strong>$1B STRC-priority buyback</strong> (BTC-funded), reserve ' +
         'management, or BTC monetization. Net: a discretionary issuer <strong>bid under</strong> STRC plus a ' +
-        '$2.55B reserve cushioning the downside — but <strong>no commitment to return STRC to $100</strong>, ' +
+        '$3.0B reserve cushioning the downside — but <strong>no commitment to return STRC to $100</strong>, ' +
         'no put, no contractual floor. Mark to secondary price with a soft floor beneath it.'
 };
 
@@ -112,7 +112,7 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
 
     var divDetail = '<strong>Discretionary soft floor</strong> — <em>will not necessarily hike solely because STRC &lt; par</em>' +
         (div.auto_hike_on_subpar === false ? '' : '') +
-        ' · evaluated monthly on price / yields / spreads / BTC vol / reserve coverage.';
+        ' · $3.0B reserve cushioning the downside · evaluated monthly on price / yields / spreads / BTC vol / reserve coverage.';
 
     var dcsDetail = '<span class="font-mono font-semibold">' + fmt(dcs.authorized_usd) + '</span> authorized · ' +
         '<strong>' + (dcs.initial_priority || 'STRC') + ' = initial priority</strong> (if accretive) · BTC-funded · ' +
@@ -499,6 +499,7 @@ var STRCRenderer = {
         var btcDrawn = btcState.btcDrawn;
         var monetizationLive = btcState.currentWeekLive;
         var monetizationHistorical = btcState.historicalLive;
+        var observedBtcTxt = btcm.observed_btc_count != null ? btcm.observed_btc_count.toLocaleString('en-US') : '843,775';
         var declineNote = monetizationHistorical && btcDrawn
             ? '<div class="text-[10px] text-red-600 dark:text-red-400 mt-0.5">−' + btcDrawn.toLocaleString('en-US') + ' since 06-28 · first monetization 07-05</div>'
             : '';
@@ -553,16 +554,15 @@ var STRCRenderer = {
                 '<div class="text-sm">' + caption + '</div>' +
             '</div>' +
             '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
-                '<span class="font-semibold">Sub-1.0 watch re-activated, not a regime-break alert.</span> Current mNAV is back at the ' +
-                '<strong>parity / 1.0 boundary</strong>: the band label stays parity, while the economic accretion line is below 1.0. ' +
-                'The move is live-BTC-sensitive and offset by the record $3.0B reserve build plus resumed common ATM. ' +
-                'Scores held (MSTR 4.5 / STRC 4.0); a cut would require sustained sub-1.0 mNAV with reserve drawdown, not this reserve-building week.' +
+                '<span class="font-semibold">mNAV slipped back below 1.0 to ' + val + ' (parity band) on the 07-13 MSTR selloff — sub-1.0 watch RE-ACTIVATED.</span> ' +
+                'Single week-end mark, not a durable crossing: ATM resumed accretively and the reserve built to $3.0B (~20mo) — the offsets. ' +
+                'Scores held (MSTR 4.5 / STRC 4.0).' +
             '</div>' +
             ((monetizationLive || monetizationHistorical) ?
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
-                '<span class="font-semibold">Funding mix this week: armed / idle BTC monetization</span> — current-week needs funded by common ATM + reserve' +
-                (btcm.common_atm_week_usd != null ? ' ($' + (btcm.common_atm_week_usd / 1e6).toFixed(0) + 'M common ATM)' : '') +
-                '; BTC holdings flat. Historical first dividend-service print remains 07-05.' +
+                '<span class="font-semibold">Funding mix reverted</span> — accretive common ATM RESUMED' +
+                (btcm.common_atm_week_usd != null ? ' ($' + (btcm.common_atm_week_usd / 1e6).toFixed(0) + 'M common)' : '') +
+                '; BTC held FLAT at ' + observedBtcTxt + ' (no sales); dividends funded from ATM + reserve. The BTC-sale leg is idle this week.' +
             '</div>' : '') +
             snapshotRow +
             '<div class="text-xs text-slate-500 mt-3">' +
