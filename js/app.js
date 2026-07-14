@@ -36,6 +36,7 @@ var ASSET_RENDERERS = {
     thusd:     typeof ThusdRenderer     !== 'undefined' ? ThusdRenderer     : null,
     usde:      typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
     susde:     typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
+    cusd:      typeof CapRenderer       !== 'undefined' ? CapRenderer       : null,
     strc:      typeof STRCRenderer      !== 'undefined' ? STRCRenderer      : null,
     mstr:      typeof MSTRRenderer      !== 'undefined' ? MSTRRenderer      : null,
     bmnr:      typeof BMNRRenderer      !== 'undefined' ? BMNRRenderer      : null,

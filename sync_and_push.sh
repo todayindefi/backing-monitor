@@ -66,6 +66,12 @@ cp /home/danger/PegTracker/data/usds_backing_history.json data/ 2>/dev/null
 # BMNR: PegTracker emits *_treasury.json; dashboard app.js convention is *_backing.json
 cp /home/danger/PegTracker/data/bmnr_treasury.json data/bmnr_backing.json 2>/dev/null
 cp /home/danger/PegTracker/data/bmnr_treasury_history.json data/bmnr_backing_history.json 2>/dev/null
+# Cap (cUSD): common per-asset schema in cusd_backing.json (drives common summary/
+# risk/coverage-chart) + rich shared cap_family.json (peg quotes, operator book,
+# restaker coverage) consumed by js/renderers/cap.js — mirrors the ethena split.
+cp /home/danger/PegTracker/data/cusd_backing.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/cusd_backing_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/cap_family.json data/ 2>/dev/null
 
 # Integrate any remote changes first (e.g. dashboard claude's commits) so our
 # data-only push fast-forwards. Without this, a non-fast-forward push is
