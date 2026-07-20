@@ -35,7 +35,7 @@ var STRC_DIV_POLICY_REGIME = {
         '<strong>will not necessarily raise the STRC dividend just because STRC trades below par</strong>. ' +
         'It may instead defend value via a <strong>$1B STRC-priority buyback</strong> (BTC-funded), reserve ' +
         'management, or BTC monetization. Net: a discretionary issuer <strong>bid under</strong> STRC plus a ' +
-        '$3.0B reserve cushioning the downside — but <strong>no commitment to return STRC to $100</strong>, ' +
+        'current USD reserve cushioning the downside — but <strong>no commitment to return STRC to $100</strong>, ' +
         'no put, no contractual floor. Mark to secondary price with a soft floor beneath it.'
 };
 
@@ -65,6 +65,39 @@ function strcBtcMonetizationState(btc) {
         historicalLive: historicalLive,
         btcDrawn: inferredDraw
     };
+}
+
+function strcMnavWatchCaption(tradfi) {
+    tradfi = tradfi || {};
+    var mnav = tradfi.mnav || {};
+    var watch = mnav.rearm_watch || {};
+    var prints = Array.isArray(watch.weekly_prints) ? watch.weekly_prints : [];
+    var currentPrint = prints.length ? prints[prints.length - 1] : null;
+    var previousPrint = prints.length > 1 ? prints[prints.length - 2] : null;
+    var val = (mnav.value != null) ? mnav.value.toFixed(4) : '—';
+    var current = (currentPrint && currentPrint.mnav != null) ? currentPrint.mnav : mnav.value;
+    var previous = previousPrint && previousPrint.mnav;
+    var improving = current != null && previous != null && current > previous;
+    var reserveTrail = Array.isArray(watch.reserve_trajectory) ? watch.reserve_trajectory : [];
+    var latestReserve = reserveTrail.length ? reserveTrail[reserveTrail.length - 1] : null;
+    var reserveTxt = latestReserve && latestReserve.cash_and_equivalents_usd != null && typeof STRCRenderer !== 'undefined'
+        ? STRCRenderer._fmtMoneyShort(latestReserve.cash_and_equivalents_usd)
+        : null;
+    var reserveAsOf = latestReserve && latestReserve.as_of;
+    var printCount = watch.sub_1_0_weekly_prints != null ? watch.sub_1_0_weekly_prints : null;
+    var watchState = watch.state || (watch.armed === false ? 'watch_not_armed' : null);
+    var stateTxt = watchState ? ' <span class="font-mono">' + watchState + '</span>.' : '.';
+    var trendTxt = improving && previous != null
+        ? ' rose from ' + previous.toFixed(4)
+        : (previous != null ? ' follows ' + previous.toFixed(4) : '');
+    var reserveClause = reserveTxt
+        ? ' Reserve built to ' + reserveTxt + (reserveAsOf ? ' as of ' + reserveAsOf : '') + ', so the reserve drawdown leg is not satisfied.'
+        : ' Reserve drawdown is not satisfied.';
+
+    return '<span class="font-semibold">mNAV is still below 1.0 at ' + val + trendTxt + ' — below the line but improving.</span> ' +
+        (printCount != null ? 'This is sub-1.0 weekly print #' + printCount + '; ' : '') +
+        'no discount-regime break alert because the re-arm rule requires sustained sub-1.0 mNAV plus a flat-to-declining reserve.' +
+        reserveClause + stateTxt + ' Scores held (MSTR 4.5 / STRC 4.0).';
 }
 
 // Builds the Digital Credit Capital Framework card from the `digital_credit_framework`
@@ -110,9 +143,10 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
         'restricted to ' + (reserve.restricted_use || 'preferred dividends + interest') +
         (reserve.as_of ? ' · as of <span class="font-mono">' + reserve.as_of + '</span>' : '');
 
+    var reserveBalanceTxt = fmt(reserve.balance_usd);
     var divDetail = '<strong>Discretionary soft floor</strong> — <em>will not necessarily hike solely because STRC &lt; par</em>' +
         (div.auto_hike_on_subpar === false ? '' : '') +
-        ' · $3.0B reserve cushioning the downside · evaluated monthly on price / yields / spreads / BTC vol / reserve coverage.';
+        ' · ' + reserveBalanceTxt + ' reserve cushioning the downside · evaluated monthly on price / yields / spreads / BTC vol / reserve coverage.';
 
     var dcsDetail = '<span class="font-mono font-semibold">' + fmt(dcs.authorized_usd) + '</span> authorized · ' +
         '<strong>' + (dcs.initial_priority || 'STRC') + ' = initial priority</strong> (if accretive) · BTC-funded · ' +
@@ -165,7 +199,7 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
     var deployNote = btcLive
         ? ' Buybacks remain at $0; <span class="text-green-700 dark:text-green-300 font-semibold">BTC monetization is LIVE this week</span>.'
         : btcHistorical
-            ? ' Buybacks remain at $0; BTC monetization has a historical first print (2026-07-05) but is <span class="text-amber-700 dark:text-amber-300 font-semibold">idle this week</span>.'
+            ? ' Buybacks remain at $0; BTC monetization <span class="text-amber-700 dark:text-amber-300 font-semibold">fired once; armed and available, not habitual</span>.'
             : ' <strong>not capital deployed</strong> — buybacks and BTC sales are at $0 / not-yet-executed.';
     var lensLine = (lens === 'issuer')
         ? 'Standing capital-allocation programs the 06-29 8-K introduced. Each row is capacity Strategy authorized;' + deployNote
@@ -269,7 +303,7 @@ var STRCRenderer = {
 
     _mnavCaption: function (regime) {
         if (regime === 'premium')  return 'ATM equity issuance accretive — BTC accumulation funding model intact.';
-        if (regime === 'parity')   return 'Parity/boundary read — band remains parity, but sub-1.0 mNAV reactivates the watch. Not a discount-regime break alert.';
+        if (regime === 'parity')   return 'Parity/boundary read — band remains parity. Sub-1.0 mNAV alone does not arm the discount-regime watch; reserve trajectory is the gate.';
         if (regime === 'discount') return 'ATM equity issuance dilutive vs gross BTC NAV. BTC-accumulation funding leg compressed; STRC issuance + BTC sales the load-bearing legs for preferred service.';
         if (regime === 'distress') return 'Funding model under acute stress. STRC dividend coverage analysis required.';
         return '—';
@@ -554,15 +588,13 @@ var STRCRenderer = {
                 '<div class="text-sm">' + caption + '</div>' +
             '</div>' +
             '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
-                '<span class="font-semibold">mNAV slipped back below 1.0 to ' + val + ' (parity band) on the 07-13 MSTR selloff — sub-1.0 watch RE-ACTIVATED.</span> ' +
-                'Single week-end mark, not a durable crossing: ATM resumed accretively and the reserve built to $3.0B (~20mo) — the offsets. ' +
-                'Scores held (MSTR 4.5 / STRC 4.0).' +
+                strcMnavWatchCaption(tradfi) +
             '</div>' +
             ((monetizationLive || monetizationHistorical) ?
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
-                '<span class="font-semibold">Funding mix reverted</span> — accretive common ATM RESUMED' +
-                (btcm.common_atm_week_usd != null ? ' ($' + (btcm.common_atm_week_usd / 1e6).toFixed(0) + 'M common)' : '') +
-                '; BTC held FLAT at ' + observedBtcTxt + ' (no sales); dividends funded from ATM + reserve. The BTC-sale leg is idle this week.' +
+                '<span class="font-semibold">BTC monetization fired once; armed and available, not habitual.</span> Current-week funding came from common ATM' +
+                (btcm.common_atm_week_usd != null ? ' (' + STRCRenderer._fmtMoneyShort(btcm.common_atm_week_usd) + ' common)' : '') +
+                ' + reserve; BTC held FLAT at ' + observedBtcTxt + ' (no sales). The BTC-sale leg is idle this week.' +
             '</div>' : '') +
             snapshotRow +
             '<div class="text-xs text-slate-500 mt-3">' +

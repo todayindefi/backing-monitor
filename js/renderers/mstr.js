@@ -75,7 +75,7 @@ var MSTRRenderer = {
     // Equity-holder framing: same regime bands as STRC but caption swap.
     _mnavCaptionEquity: function (regime) {
         if (regime === 'premium')  return 'ATM equity issuance accretive — BTC accumulation continues, per-share BTC NAV grows.';
-        if (regime === 'parity')   return 'Parity/boundary read — band remains parity, but sub-1.0 mNAV reactivates the watch. Not a discount-regime break alert.';
+        if (regime === 'parity')   return 'Parity/boundary read — band remains parity. Sub-1.0 mNAV alone does not arm the discount-regime watch; reserve trajectory is the gate.';
         if (regime === 'discount') return 'ATM equity issuance dilutive vs gross BTC NAV — BTC accumulation via equity halted; ATM redirected to liability management. Per-share BTC NAV compresses on each issuance.';
         if (regime === 'distress') return 'Equity issuance dilutes per-share BTC NAV materially. Cash-settlement of convert maturities likely; BTC stack drain accelerating.';
         return '—';
@@ -331,15 +331,13 @@ var MSTRRenderer = {
                 '<div class="text-sm">' + caption + '</div>' +
             '</div>' +
             '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
-                '<span class="font-semibold">mNAV slipped back below 1.0 to ' + val + ' (parity band) on the 07-13 MSTR selloff — sub-1.0 watch RE-ACTIVATED.</span> ' +
-                'Single week-end mark, not a durable crossing: ATM resumed accretively and the reserve built to $3.0B (~20mo) — the offsets. ' +
-                'Scores held (MSTR 4.5 / STRC 4.0).' +
+                strcMnavWatchCaption(tradfi) +
             '</div>' +
             ((monetizationLive || monetizationHistorical) ?
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
-                '<span class="font-semibold">Funding mix reverted</span> — accretive common ATM RESUMED' +
-                (btcm.common_atm_week_usd != null ? ' ($' + (btcm.common_atm_week_usd / 1e6).toFixed(0) + 'M common)' : '') +
-                '; BTC held FLAT at ' + observedBtcTxt + ' (no sales); dividends funded from ATM + reserve. The BTC-sale leg is idle this week.' +
+                '<span class="font-semibold">BTC monetization fired once; armed and available, not habitual.</span> Current-week funding came from common ATM' +
+                (btcm.common_atm_week_usd != null ? ' (' + MSTRRenderer._fmtMoneyShort(btcm.common_atm_week_usd) + ' common)' : '') +
+                ' + reserve; BTC held FLAT at ' + observedBtcTxt + ' (no sales). The BTC-sale leg is idle this week.' +
             '</div>' : '') +
         '</div>';
     },
