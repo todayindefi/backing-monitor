@@ -71,13 +71,7 @@ function strcMnavWatchCaption(tradfi) {
     tradfi = tradfi || {};
     var mnav = tradfi.mnav || {};
     var watch = mnav.rearm_watch || {};
-    var prints = Array.isArray(watch.weekly_prints) ? watch.weekly_prints : [];
-    var currentPrint = prints.length ? prints[prints.length - 1] : null;
-    var previousPrint = prints.length > 1 ? prints[prints.length - 2] : null;
     var val = (mnav.value != null) ? mnav.value.toFixed(4) : '—';
-    var current = (currentPrint && currentPrint.mnav != null) ? currentPrint.mnav : mnav.value;
-    var previous = previousPrint && previousPrint.mnav;
-    var improving = current != null && previous != null && current > previous;
     var reserveTrail = Array.isArray(watch.reserve_trajectory) ? watch.reserve_trajectory : [];
     var latestReserve = reserveTrail.length ? reserveTrail[reserveTrail.length - 1] : null;
     var reserveTxt = latestReserve && latestReserve.cash_and_equivalents_usd != null && typeof STRCRenderer !== 'undefined'
@@ -87,14 +81,17 @@ function strcMnavWatchCaption(tradfi) {
     var printCount = watch.sub_1_0_weekly_prints != null ? watch.sub_1_0_weekly_prints : null;
     var watchState = watch.state || (watch.armed === false ? 'watch_not_armed' : null);
     var stateTxt = watchState ? ' <span class="font-mono">' + watchState + '</span>.' : '.';
-    var trendTxt = improving && previous != null
-        ? ' rose from ' + previous.toFixed(4)
-        : (previous != null ? ' follows ' + previous.toFixed(4) : '');
+    var thresholdSide = 'at';
+    if (mnav.value != null && mnav.value < 1.0) thresholdSide = 'below';
+    else if (mnav.value != null && mnav.value > 1.0) thresholdSide = 'above';
+    var thresholdTxt = (mnav.value != null)
+        ? 'mNAV is near the 1.0 line at ' + val + ' (' + thresholdSide + ' 1.0).'
+        : 'mNAV is near the 1.0 line.';
     var reserveClause = reserveTxt
         ? ' Reserve built to ' + reserveTxt + (reserveAsOf ? ' as of ' + reserveAsOf : '') + ', so the reserve drawdown leg is not satisfied.'
         : ' Reserve drawdown is not satisfied.';
 
-    return '<span class="font-semibold">mNAV is still below 1.0 at ' + val + trendTxt + ' — below the line but improving.</span> ' +
+    return '<span class="font-semibold">' + thresholdTxt + '</span> ' +
         (printCount != null ? 'This is sub-1.0 weekly print #' + printCount + '; ' : '') +
         'no discount-regime break alert because the re-arm rule requires sustained sub-1.0 mNAV plus a flat-to-declining reserve.' +
         reserveClause + stateTxt + ' Scores held (MSTR 4.5 / STRC 4.0).';
