@@ -33,7 +33,8 @@ var STRC_DIV_POLICY_REGIME = {
     label: 'Discretionary soft floor (not a peg)',
     blurb: 'As of the 06-29 Digital Credit Capital Framework, Strategy ' +
         '<strong>will not necessarily raise the STRC dividend just because STRC trades below par</strong>. ' +
-        'It may instead defend value via a <strong>$1B STRC-priority buyback</strong> (BTC-funded), reserve ' +
+        'It has now exercised the <strong>$1B STRC-priority buyback</strong> for the first time: ' +
+        '<strong>$25.0M at ~$86.5</strong>. It may continue to defend value through that program, reserve ' +
         'management, or BTC monetization. Net: a discretionary issuer <strong>bid under</strong> STRC plus a ' +
         'current USD reserve cushioning the downside — but <strong>no commitment to return STRC to $100</strong>, ' +
         'no put, no contractual floor. Mark to secondary price with a soft floor beneath it.'
@@ -94,7 +95,7 @@ function strcMnavWatchCaption(tradfi) {
     return '<span class="font-semibold">' + thresholdTxt + '</span> ' +
         (printCount != null ? 'This is sub-1.0 weekly print #' + printCount + '; ' : '') +
         'no discount-regime break alert because the re-arm rule requires sustained sub-1.0 mNAV plus a flat-to-declining reserve.' +
-        reserveClause + stateTxt + ' Scores held (MSTR 4.5 / STRC 4.0).';
+        reserveClause + stateTxt + ' The ~0.98 print is held down partly by the record cash deduction, not equity weakness; MSTR rose this week. Scores held (MSTR 4.5 / STRC 4.0 / STRCx 3.0).';
 }
 
 // Builds the Digital Credit Capital Framework card from the `digital_credit_framework`
@@ -137,17 +138,23 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
 
     var reserveDetail = '<span class="font-mono font-semibold">' + fmt(reserve.balance_usd) + '</span> balance · ' +
         '<strong>' + (reserve.min_months_coverage != null ? reserve.min_months_coverage + '-mo-minimum' : '—') + '</strong> coverage floor (Board policy) · ' +
+        (reserve.coverage_months_total != null ? '<strong>~' + reserve.coverage_months_total + ' mo</strong> total-preferred / <strong>~' + reserve.coverage_months_strc_only + ' mo</strong> STRC-only · ' : '') +
+        (reserve.slack_months_above_minimum != null ? '<strong>~' + reserve.slack_months_above_minimum + ' mo slack</strong> above the floor · ' : '') +
+        (reserve.build_streak_weeks != null ? reserve.build_streak_weeks + 'th straight weekly build; <strong>+' + fmt(reserve.weekly_build_usd) + '</strong>, largest in the series · ' : '') +
         'restricted to ' + (reserve.restricted_use || 'preferred dividends + interest') +
         (reserve.as_of ? ' · as of <span class="font-mono">' + reserve.as_of + '</span>' : '');
 
     var reserveBalanceTxt = fmt(reserve.balance_usd);
-    var divDetail = '<strong>Discretionary soft floor</strong> — <em>will not necessarily hike solely because STRC &lt; par</em>' +
+    var divDetail = '<strong>Discretionary soft floor — exercised</strong> · first print <span class="font-mono font-semibold">$25.0M at ~$86.5</span> · <em>will not necessarily hike solely because STRC &lt; par</em>' +
         (div.auto_hike_on_subpar === false ? '' : '') +
         ' · ' + reserveBalanceTxt + ' reserve cushioning the downside · evaluated monthly on price / yields / spreads / BTC vol / reserve coverage.';
 
     var dcsDetail = '<span class="font-mono font-semibold">' + fmt(dcs.authorized_usd) + '</span> authorized · ' +
         '<strong>' + (dcs.initial_priority || 'STRC') + ' = initial priority</strong> (if accretive) · BTC-funded · ' +
-        'executed <span class="font-mono">' + fmt(dcs.executed_usd != null ? dcs.executed_usd : 0) + '</span>';
+        'executed <span class="font-mono font-semibold">' + fmt(dcs.executed_usd != null ? dcs.executed_usd : 0) + '</span>' +
+        (dcs.used_pct != null ? ' (<strong>' + dcs.used_pct.toFixed(1) + '% used</strong>)' : '') +
+        (dcs.shares_repurchased != null ? ' · <span class="font-mono">' + dcs.shares_repurchased.toLocaleString('en-US') + ' sh @ ~$' + dcs.average_price_usd.toFixed(2) + '</span>' : '') +
+        (dcs.remaining_usd != null ? ' · <span class="font-mono">' + fmt(dcs.remaining_usd) + ' remaining</span>' : '');
 
     var commonDetail = '<span class="font-mono font-semibold">' + fmt(common.authorized_usd) + '</span> authorized · BTC-funded · ' +
         'executed <span class="font-mono">' + fmt(common.executed_usd != null ? common.executed_usd : 0) + '</span>';
@@ -187,16 +194,19 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
     var rows =
         row('USD Reserve policy', reserveDetail, strcFrameworkPill('policy')) +
         row('STRC dividend policy', divDetail, strcFrameworkPill('discr')) +
-        row('DCS repurchase', dcsDetail, strcFrameworkPill(dcsArmed ? 'armed' : 'policy')) +
+        row('DCS repurchase', dcsDetail, strcFrameworkPill(dcsArmed ? 'armed' : 'live')) +
         row('Common repurchase', commonDetail, strcFrameworkPill(commonArmed ? 'armed' : 'policy')) +
         row('BTC Monetization', btcDetail, strcFrameworkPill(btcLive ? 'live' : (btcHistorical ? 'idle' : 'armed')));
 
     // Deployment note — softens once BTC monetization is live (buybacks are
     // still $0, but BTC sales are no longer "not-yet-executed").
+    var buybackNote = dcsArmed
+        ? ' Buybacks remain at $0;'
+        : ' <span class="text-green-700 dark:text-green-300 font-semibold">STRC buyback is LIVE — first $25.0M print;</span>';
     var deployNote = btcLive
-        ? ' Buybacks remain at $0; <span class="text-green-700 dark:text-green-300 font-semibold">BTC monetization is LIVE this week</span>.'
+        ? buybackNote + ' <span class="text-green-700 dark:text-green-300 font-semibold">BTC monetization is LIVE this week</span>.'
         : btcHistorical
-            ? ' Buybacks remain at $0; BTC monetization <span class="text-amber-700 dark:text-amber-300 font-semibold">fired once; armed and available, not habitual</span>.'
+            ? buybackNote + ' BTC monetization <span class="text-amber-700 dark:text-amber-300 font-semibold">fired once; armed and available, not habitual</span>.'
             : ' <strong>not capital deployed</strong> — buybacks and BTC sales are at $0 / not-yet-executed.';
     var lensLine = (lens === 'issuer')
         ? 'Standing capital-allocation programs the 06-29 8-K introduced. Each row is capacity Strategy authorized;' + deployNote
@@ -481,6 +491,7 @@ var STRCRenderer = {
                     '<div class="text-3xl font-bold mt-1 ' + priceCls + '">' + priceVal + '</div>' +
                     '<div class="text-xs text-slate-500 mt-1">' + bpsTxt + '</div>' +
                     '<div class="text-[10px] text-slate-400 mt-0.5">' + quoteLabel + (quoteDetail ? ' · ' + quoteDetail : '') + '</div>' +
+                    '<div class="text-[10px] text-slate-500 mt-1">07-26 weekly close ~$88.90 · ~−11% to par · best since early July</div>' +
                 '</div>' +
                 '<div class="rounded-lg border border-slate-200 dark:border-slate-700 p-4">' +
                     '<div class="text-xs uppercase font-semibold text-slate-500">Current monthly rate</div>' +
@@ -591,7 +602,8 @@ var STRCRenderer = {
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
                 '<span class="font-semibold">BTC monetization fired once; armed and available, not habitual.</span> Current-week funding came from common ATM' +
                 (btcm.common_atm_week_usd != null ? ' (' + STRCRenderer._fmtMoneyShort(btcm.common_atm_week_usd) + ' common)' : '') +
-                ' + reserve; BTC held FLAT at ' + observedBtcTxt + ' (no sales). The BTC-sale leg is idle this week.' +
+                ' + reserve; BTC held FLAT at ' + observedBtcTxt + ' for a third week (no sales). The BTC-sale leg is idle this week. ' +
+                '<strong>BTC purchases are paused until STRC returns to $100 par</strong> — a par-conditioned pause, not an indefinite halt.' +
             '</div>' : '') +
             snapshotRow +
             '<div class="text-xs text-slate-500 mt-3">' +
@@ -644,6 +656,9 @@ var STRCRenderer = {
             '<div class="mt-4 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700">' +
                 '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">STRC defense = ' + STRC_DIV_POLICY_REGIME.label + '</div>' +
                 '<div class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' + STRC_DIV_POLICY_REGIME.blurb + '</div>' +
+            '</div>' +
+            '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
+                '<strong>Next reset:</strong> pending late July. Base case remains +50 bps to 12.50%, but a hold at 12.00% is now a live outcome: the record reserve and exercised buyback are already defending STRC.' +
             '</div>' +
             '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
                 '<strong>Indicative VWAP rate schedule</strong> (prospectus mechanic — <em>no longer an automatic par defense</em> ' +
@@ -1289,8 +1304,8 @@ var STRCRenderer = {
     // ============================================================
     // Strategy Event Log (v2b) — async-loaded after main render.
     // ============================================================
-    _loadStrategyEventLog: function () {
-        var target = document.getElementById('strc-event-log-panel');
+    _loadStrategyEventLog: function (targetId) {
+        var target = document.getElementById(targetId || 'strc-event-log-panel');
         if (!target) return;
         var nocache = Math.floor(Date.now() / 60000);
         fetch('data/strategy_events.json?nocache=' + nocache)
@@ -1313,10 +1328,11 @@ var STRCRenderer = {
 
         // Type-count badges across the top.
         var counts = events.events_by_type_count_last_90d || {};
-        var typeOrder = ['BTC_SALE', 'BTC_PURCHASE', 'PREFERRED_ISSUANCE', 'STRC_RATE_ANNOUNCEMENT', 'ATM_PROGRAM_UPDATE', 'OTHER'];
+        var typeOrder = ['DCS_REPURCHASE', 'BTC_SALE', 'BTC_PURCHASE', 'PREFERRED_ISSUANCE', 'STRC_RATE_ANNOUNCEMENT', 'ATM_PROGRAM_UPDATE', 'OTHER'];
         function badgeClass(type, count) {
             if (type === 'BTC_SALE')              return count > 0 ? 'bg-red-100 text-red-800 border-red-200'      : 'bg-slate-100 text-slate-500';
             if (type === 'BTC_PURCHASE')          return count > 0 ? 'bg-blue-100 text-blue-800 border-blue-200'   : 'bg-slate-100 text-slate-500';
+            if (type === 'DCS_REPURCHASE')        return count > 0 ? 'bg-green-100 text-green-800 border-green-200' : 'bg-slate-100 text-slate-500';
             if (type === 'PREFERRED_ISSUANCE')    return count > 0 ? 'bg-amber-100 text-amber-800 border-amber-200' : 'bg-slate-100 text-slate-500';
             return 'bg-slate-100 text-slate-700';
         }
@@ -1382,6 +1398,9 @@ var STRCRenderer = {
         var detailParts = [];
         if (extracted.btc_count != null) detailParts.push(STRCRenderer._fmtNum(extracted.btc_count) + ' BTC');
         if (extracted.shares != null) detailParts.push(STRCRenderer._fmtNum(extracted.shares) + ' shares');
+        if (extracted.amount_usd != null) detailParts.push(STRCRenderer._fmtMoneyShort(extracted.amount_usd));
+        if (extracted.average_price_usd != null) detailParts.push('~' + STRCRenderer._fmtMoney(extracted.average_price_usd, 2) + '/sh');
+        if (extracted.remaining_authorization_usd != null) detailParts.push(STRCRenderer._fmtMoneyShort(extracted.remaining_authorization_usd) + ' remaining');
         if (extracted.series) detailParts.push(extracted.series);
         if (extracted.new_rate != null) detailParts.push((extracted.new_rate * 100).toFixed(2) + '%');
         var detail = detailParts.join(' · ');

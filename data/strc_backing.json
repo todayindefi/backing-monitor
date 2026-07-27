@@ -1,26 +1,26 @@
 {
   "asset": "strc",
-  "timestamp_utc": "2026-07-27T14:49:04Z",
+  "timestamp_utc": "2026-07-27T16:19:31Z",
   "freshness_seconds": 10,
   "tradfi": {
     "mstr": {
-      "price_usd": 96.76,
-      "market_cap_usd": 35348327695.40691,
+      "price_usd": 96.34,
+      "market_cap_usd": 35454705083.063446,
       "source": "yfinance",
       "market_cap_source": "yfinance_price_x_class_a_plus_class_b_common_shares",
-      "fetched_at": "2026-07-27T14:48:54Z"
+      "fetched_at": "2026-07-27T16:16:54Z"
     },
     "btc": {
-      "price_usd": 64557.0,
+      "price_usd": 64495.0,
       "source": "coingecko"
     },
     "strategy_btc_holdings": {
       "count": 843775,
       "source": "bitcointreasuries.net",
-      "fetched_at": "2026-07-27T04:00:07Z"
+      "fetched_at": "2026-07-27T16:16:59Z"
     },
     "mnav": {
-      "value": 0.9973,
+      "value": 0.9905,
       "regime": "parity",
       "regime_thresholds": {
         "premium": ">= 1.05",
@@ -30,19 +30,19 @@
       },
       "definition": "EV / BTC Reserve, where EV = MktCap + Debt + Pref - Cash",
       "definition_version": "v2",
-      "ev_usd": 54323327695.0,
-      "btc_reserve_usd": 54471582675.0,
+      "ev_usd": 53904705083.0,
+      "btc_reserve_usd": 54419268625.0,
       "rearm_watch": {
         "armed": false,
         "state": "watch_not_armed",
         "condition": "sustained_sub_1_0_mnav_and_flat_to_declining_reserve",
-        "weekly_print_convention": "weekly_8k_period_close",
-        "live_mnav": 0.9973,
-        "sub_1_0_weekly_prints": 1,
+        "weekly_print_convention": "weekly_analyzer_anchor",
+        "live_mnav": 0.9905,
+        "sub_1_0_weekly_prints": 3,
         "required_sub_1_0_weekly_prints": 3,
-        "persistence_leg_satisfied": false,
+        "persistence_leg_satisfied": true,
         "reserve_flat_to_down_leg_satisfied": false,
-        "reserve_direction": "up_three_weeks",
+        "reserve_direction": "up_four_weeks",
         "reserve_trajectory": [
           {
             "as_of": "2026-07-05",
@@ -55,38 +55,49 @@
           {
             "as_of": "2026-07-19",
             "cash_and_equivalents_usd": 3225000000
+          },
+          {
+            "as_of": "2026-07-26",
+            "cash_and_equivalents_usd": 3750000000
           }
         ],
         "weekly_prints": [
           {
             "as_of": "2026-07-13",
-            "mnav": 1.0019,
-            "basis": "period_close_price_x_class_a_plus_class_b_common_shares",
-            "convention": "weekly_8k_period_close",
+            "mnav": 0.9836,
+            "basis": "weekly_anchor_price_x_class_a_plus_class_b_common_shares",
+            "convention": "weekly_analyzer_anchor",
             "source_history_ts": null
           },
           {
-            "as_of": "2026-07-19",
-            "mnav": 0.9852,
-            "basis": "period_close_price_x_class_a_plus_class_b_common_shares",
-            "convention": "weekly_8k_period_close",
+            "as_of": "2026-07-21",
+            "mnav": 0.9971,
+            "basis": "weekly_anchor_price_x_class_a_plus_class_b_common_shares",
+            "convention": "weekly_analyzer_anchor",
+            "source_history_ts": null
+          },
+          {
+            "as_of": "2026-07-27",
+            "mnav": 0.984,
+            "basis": "weekly_anchor_price_x_class_a_plus_class_b_common_shares",
+            "convention": "weekly_analyzer_anchor",
             "source_history_ts": null
           }
         ],
-        "note": "Do not arm from consecutive sub-1.0 mNAV prints alone. The re-arm condition also requires the USD reserve to be flat-to-down or drawing down; current reserve is a record and has built for three consecutive weekly 8-K prints."
+        "note": "Do not arm from consecutive sub-1.0 mNAV prints alone. The re-arm condition also requires the USD reserve to be flat-to-down or drawing down; current reserve is a record and has built for four consecutive weekly 8-K prints."
       }
     },
     "common_btc_coverage": {
-      "value": 0.6489,
+      "value": 0.6515,
       "definition": "MktCap / BTC Reserve - leverage indicator for common, NOT mNAV",
       "note": "Less than 1.0 is mechanically expected given senior claims; do NOT regime-classify"
     },
     "strc_secondary": {
-      "price_usd": 88.638,
+      "price_usd": 88.0,
       "par_usd": 100.0,
-      "discount_to_par_bps": -1136,
+      "discount_to_par_bps": -1200,
       "source": "yfinance",
-      "quote_fetched_at": "2026-07-27T14:48:55Z",
+      "quote_fetched_at": "2026-07-27T16:16:54Z",
       "market_session": "regular",
       "quote_label": "Live market quote",
       "quote_detail": "NYSE regular session"
@@ -135,17 +146,27 @@
           "rate": 0.12
         }
       ],
-      "outstanding_shares": 104895000,
-      "outstanding_par_usd": 10489500000.0,
-      "annual_dividend_obligation_usd": 1258740000,
+      "next_rate_declaration": {
+        "month": "2026-08",
+        "status": "pending",
+        "declared_rate": null,
+        "outcome": null,
+        "hold_rate": 0.12,
+        "mechanical_hike_case_rate": 0.125,
+        "expected_timing": "late July 2026; record dates on/after 2026-08-01",
+        "note": "A 12.00% hold is a live, distinct outcome under the discretionary soft-floor policy; status=pending is not interpreted as a hold."
+      },
+      "outstanding_shares": 104606070,
+      "outstanding_par_usd": 10460607000.0,
+      "annual_dividend_obligation_usd": 1255272840,
       "dividend_frequency": "semi-monthly",
       "semi_monthly_effective": "2026-06-30",
-      "source": "Strategy.com STRC dashboard notional ($10,489.5M); 2026-06-29 8-K (accession 0001193125-26-286871) declared +50bp July reset \u2192 12.00% effective 2026-07-01, semi-monthly (record dates on/after 07-01); dividend rate history manual cadence"
+      "source": "Strategy.com STRC dashboard notional ($10,489.5M), less 288,930 shares repurchased in the 2026-07-27 8-K (accession 0001193125-26-316917); 2026-06-29 8-K (accession 0001193125-26-286871) declared +50bp July reset \u2192 12.00% effective 2026-07-01, semi-monthly (record dates on/after 07-01); dividend rate history manual cadence"
     },
     "strf": {
-      "price_usd": 96.76,
+      "price_usd": 96.9,
       "par_usd": 100.0,
-      "discount_to_par_bps": -324,
+      "discount_to_par_bps": -310,
       "outstanding_shares": 12839689,
       "outstanding_par_usd": 1283968900.0,
       "annual_dividend_rate": 0.1,
@@ -154,20 +175,20 @@
     }
   },
   "wrapper_strcx": {
-    "total_supply_all_chains": 2729935.1991,
+    "total_supply_all_chains": 2741230.8051,
     "total_supply_source": "coingecko_aggregate",
-    "total_supply_usd": 256914201.59,
-    "implied_other_chains_supply": 576362.7187,
+    "total_supply_usd": 256716264.9,
+    "implied_other_chains_supply": 587658.3248,
     "multiplier": 1.06384024,
     "multiplier_source": "ethereum.multiplier()",
-    "market_price_usd": 88.5109,
+    "market_price_usd": 87.9864,
     "market_price_source": "jupiter_usdprice",
-    "underlying_strc_price_usd": 88.62,
-    "jupiter_liquidity_usd": 73889.28,
-    "prescaled_price_usd": 94.1615,
-    "coingecko_price_usd": 94.11,
-    "coingecko_scaled_price_usd": 88.4625,
-    "price_crosscheck_bps": -5.5,
+    "underlying_strc_price_usd": 88.075,
+    "jupiter_liquidity_usd": 66001.04,
+    "prescaled_price_usd": 93.6034,
+    "coingecko_price_usd": 93.65,
+    "coingecko_scaled_price_usd": 88.0301,
+    "price_crosscheck_bps": 5.0,
     "per_chain": {
       "ethereum": {
         "fetch_status": "ok",
@@ -218,42 +239,42 @@
   "downstream_exposure": {
     "apyx": {
       "source_file": "apxusd_backing.json",
-      "source_timestamp": "2026-07-27T14:48:52Z",
-      "strc_bucket_usd": 189536379.28,
-      "strc_share_of_reserves": 0.6204,
+      "source_timestamp": "2026-07-27T15:50:28Z",
+      "strc_bucket_usd": 188768565.44,
+      "strc_share_of_reserves": 0.6197,
       "strcx_onchain_balance": 579536.6915744648,
-      "strcx_onchain_usd": 51295342.05974121,
-      "strc_raw_implied_usd": 138241037.2202588,
-      "total_reserves_usd": 305504044.16,
-      "attestation_timestamp": "2026-07-27T14:44:04Z"
+      "strcx_onchain_usd": 51014273.2203567,
+      "strc_raw_implied_usd": 137754292.2196433,
+      "total_reserves_usd": 304623581.04,
+      "attestation_timestamp": "2026-07-27T15:48:29Z"
     },
     "saturn": {
       "source_file": "susdat_backing.json",
-      "source_timestamp": "2026-07-27T14:46:30Z",
-      "strc_raw_usd": 72258198.79,
-      "strc_share_of_reserves": 0.893682,
+      "source_timestamp": "2026-07-27T15:48:01Z",
+      "strc_raw_usd": 71985620.58,
+      "strc_share_of_reserves": 0.893322,
       "verifiable": "oracle_unverified",
-      "total_assets_usd": 80854497.62
+      "total_assets_usd": 80581920.03
     },
-    "portfolio_total_strc_family_usd": 261794578.07
+    "portfolio_total_strc_family_usd": 260754186.02
   },
   "cash_service_waterfall": {
     "annual_obligation_usd": {
       "senior_convert_interest": 34522000,
       "strf_dividend": 128396890,
-      "strc_dividend": 1258740000,
+      "strc_dividend": 1255272840,
       "strk_dividend": 112165920,
       "strd_dividend": 140242200,
       "stre_dividend_est": 92203500,
       "junior_preferred_dividends": 344611620,
       "junior_preferred_estimate": 344611620,
-      "total": 1766270510
+      "total": 1762803350
     },
     "senior_convert_2030_maturity_wall_usd": 2700000000,
     "btc_per_year_at_current_price": {
-      "strc_only": 19498,
-      "senior_to_strc": 22022,
-      "total_preferred_plus_interest": 27360
+      "strc_only": 19463,
+      "senior_to_strc": 21989,
+      "total_preferred_plus_interest": 27332
     },
     "pct_of_stack_per_year": {
       "strc_only": 0.0231,
@@ -266,7 +287,7 @@
       "total_preferred_plus_interest": 31
     },
     "assumptions": {
-      "btc_price_usd": 64557.0,
+      "btc_price_usd": 64495.0,
       "btc_stack": 843775,
       "frozen_outstanding": true,
       "frozen_rates": true,
@@ -286,27 +307,27 @@
       "note": "Framework \u00a7IV.5: STRC rate ratchets monotonically upward over multi-year horizons (sticky on recovery). Each ~125bp stress cycle consumes ceiling headroom; at 14-16% Strategy plausibly elects dividend suspension over further hikes."
     },
     "cash_runway": {
-      "cash_and_equivalents_usd": 3225000000,
-      "cash_as_of": "2026-07-19",
-      "cash_source": "2026-07-20 8-K (accession 0001193125-26-308369) + Q1 2026 10-Q",
+      "cash_and_equivalents_usd": 3750000000,
+      "cash_as_of": "2026-07-26",
+      "cash_source": "2026-07-27 8-K (accession 0001193125-26-316917) + Q1 2026 10-Q",
       "monthly_obligation_usd": {
-        "strc_only": 104895000,
-        "senior_to_strc": 118471574,
-        "total_preferred_plus_interest": 147189209
+        "strc_only": 104606070,
+        "senior_to_strc": 118182644,
+        "total_preferred_plus_interest": 146900279
       },
       "months_until_btc_sales_required": {
-        "strc_only": 30.7,
-        "senior_to_strc": 27.2,
-        "total_preferred_plus_interest": 21.9
+        "strc_only": 35.8,
+        "senior_to_strc": 31.7,
+        "total_preferred_plus_interest": 25.5
       },
       "note": "Cash runway represents months until Strategy must begin BTC sales assuming ZERO new issuance inflow (no STRC issuance, no MSTR ATM). In practice, Strategy continuously refills cash via preferred issuance + ATM; this is a stress-scenario watermark. See strc.md \u00a7IV and mstr.md \u00a7II for the analytical framing. Cash position is stale-by-date \u2014 refresh on each new 10-Q + transaction 8-K disclosure."
     },
     "sequenced_runway": {
       "assumption": "zero_inflow_worst_case",
       "phase1_cash_months": {
-        "strc_only": 30.7,
-        "senior_to_strc": 27.2,
-        "total_preferred_plus_interest": 21.9
+        "strc_only": 35.8,
+        "senior_to_strc": 31.7,
+        "total_preferred_plus_interest": 25.5
       },
       "phase2_btc_years_after_cash": {
         "strc_only": 43,
@@ -314,51 +335,52 @@
         "total_preferred_plus_interest": 31
       },
       "total_operational_timeline_years": {
-        "strc_only": 45.6,
-        "senior_to_strc": 40.3,
-        "total_preferred_plus_interest": 32.8
+        "strc_only": 46.0,
+        "senior_to_strc": 40.6,
+        "total_preferred_plus_interest": 33.1
       },
-      "btc_sale_start_date_approx": "2028-05-24",
+      "btc_sale_start_date_approx": "2028-09-10",
       "note": "Sequenced model: cash funds Phase 1, BTC sales fund Phase 2. Assumes ZERO new issuance refill (no STRC, no MSTR ATM). The total_operational_timeline_years field is barely distinguishable from runway_years_flat_btc (Phase 1 is months, Phase 2 is decades) \u2014 the load-bearing field is btc_sale_start_date_approx / phase1_cash_months. See cash_runway block for the parallel short-term watermark and runway_years_flat_btc for the parallel long-term solvency framing. See strc.md \u00a7IV.View 1 for analytical context."
     }
   },
   "mstr_view": {
-    "share_count": 365319625,
-    "share_count_basic": 365319625,
-    "share_count_class_a": 345679375,
+    "share_count": 368016467,
+    "share_count_basic": 368016467,
+    "share_count_class_a": 348376217,
     "share_count_class_b": 19640250,
-    "share_count_basis": "Class A sharesOutstanding + Class B shares from 2026-03-31 10-Q",
+    "share_count_basis": "Class A + Class B; 2026-07-26 8-K floor (362,587,307 prior corrected A+B + 5,429,160 weekly ATM shares), with higher Yahoo A+B reads allowed",
+    "share_count_8k_floor": 368016467,
     "share_count_diluted": 382770000,
-    "market_cap_usd": 35348327695.40691,
-    "btc_nav_per_share_usd": 149.11,
-    "btc_nav_per_share_basic_usd": 149.11,
-    "btc_nav_per_share_diluted_usd": 142.31,
-    "premium_discount_per_share_usd": -52.35,
-    "premium_discount_pct": -0.3511,
+    "market_cap_usd": 35454705083.063446,
+    "btc_nav_per_share_usd": 147.87,
+    "btc_nav_per_share_basic_usd": 147.87,
+    "btc_nav_per_share_diluted_usd": 142.17,
+    "premium_discount_per_share_usd": -51.53,
+    "premium_discount_pct": -0.3485,
     "balance_sheet": {
-      "as_of": "2026-07-19",
-      "cash_and_equivalents_usd": 3225000000,
+      "as_of": "2026-07-26",
+      "cash_and_equivalents_usd": 3750000000,
       "senior_convertible_debt_usd": 6700000000,
       "total_preferred_notional_usd": 15500000000,
-      "btc_holdings_usd": 54471582675.0,
-      "implied_equity_book_value_usd": 35496582675.0,
-      "source": "2026-07-20 8-K (accession 0001193125-26-308369) + Q1 2026 10-Q"
+      "btc_holdings_usd": 54419268625.0,
+      "implied_equity_book_value_usd": 35969268625.0,
+      "source": "2026-07-27 8-K (accession 0001193125-26-316917) + Q1 2026 10-Q"
     },
     "capital_structure": {
-      "as_of": "2026-07-19",
+      "as_of": "2026-07-26",
       "senior_convertible_debt_usd": 6700000000,
       "strf_preferred_usd": 1283968900,
-      "strc_preferred_usd_est": 10489500000,
+      "strc_preferred_usd_est": 10460607000,
       "strk_preferred_usd": 1402074000,
       "strd_preferred_usd": 1402422000,
       "stre_preferred_usd_est": 922035000,
       "other_preferred_usd": 3726531000,
-      "preferred_stack_sum_usd": 15499999900,
+      "preferred_stack_sum_usd": 15471106900,
       "total_preferred_notional_usd": 15500000000,
-      "preferred_stack_diff_usd": -100,
+      "preferred_stack_diff_usd": -28893100,
       "preferred_stack_tolerance_usd": 200000000,
-      "common_equity_market_cap_usd": 35348327695.40691,
-      "total_capitalization_usd": 57548327695
+      "common_equity_market_cap_usd": 35454705083.063446,
+      "total_capitalization_usd": 57654705083
     },
     "convertible_maturity_wall": [
       {
@@ -393,7 +415,7 @@
       }
     ],
     "atm_cadence_90d": {
-      "mstr_atm_count_usd": 2010900000,
+      "mstr_atm_count_usd": 2555400000,
       "strc_atm_count_usd": 3949000000,
       "buyback_count_usd": 0,
       "btc_purchased_count": 53395,
@@ -404,9 +426,14 @@
       "source_accession": "0001193125-26-286871",
       "usd_reserve_policy": {
         "min_months_coverage": 12,
-        "balance_usd": 3225000000,
-        "as_of": "2026-07-19",
-        "restricted_use": "preferred dividends + interest only (other uses require Board authorization)"
+        "balance_usd": 3750000000,
+        "as_of": "2026-07-26",
+        "restricted_use": "preferred dividends + interest only (other uses require Board authorization)",
+        "coverage_months_total": 25.5,
+        "coverage_months_strc_only": 35.8,
+        "slack_months_above_minimum": 13.5,
+        "build_streak_weeks": 4,
+        "weekly_build_usd": 525000000
       },
       "strc_dividend_policy": {
         "regime": "discretionary_soft_floor",
@@ -430,7 +457,30 @@
         ],
         "initial_priority": "STRC",
         "funding": "btc_sales",
-        "executed_usd": 0
+        "state": "partially_used",
+        "executed": true,
+        "executed_usd": 25000000,
+        "remaining_usd": 975000000,
+        "used_pct": 2.5,
+        "shares_repurchased": 288930,
+        "average_price_usd": 86.53,
+        "first_print_period": "2026-07-20..2026-07-26",
+        "source_accession": "0001193125-26-316917",
+        "transition": {
+          "event": "first_print",
+          "from": "armed_unused",
+          "to": "partially_used",
+          "as_of": "2026-07-26"
+        },
+        "first_print": {
+          "period": "2026-07-20..2026-07-26",
+          "security": "STRC",
+          "shares_repurchased": 288930,
+          "cost_usd": 25000000,
+          "avg_price_usd": 86.53,
+          "accretive_vs_par": true,
+          "source_accession": "0001193125-26-316917"
+        }
       },
       "common_repurchase_program": {
         "authorized_usd": 1000000000,
@@ -447,6 +497,16 @@
         ],
         "dividend_service_executed": true,
         "executed": false,
+        "state": "armed_not_used",
+        "monetization_regime": "episodic_available",
+        "consecutive_flat_btc_weeks": 3,
+        "flat_btc_week_streak": 3,
+        "btc_purchase_resume_condition": "STRC trades back to or above $100 par",
+        "btc_purchase_posture": {
+          "state": "conditional_pause",
+          "resume_condition": "STRC trades back to or above $100 par",
+          "note": "BTC purchases are par-conditioned, not indefinitely paused."
+        },
         "at_scale": true,
         "first_print": {
           "period": "2026-06-29..2026-07-05",
@@ -456,8 +516,12 @@
           "purpose": "fund_preferred_distributions + replenish_usd_reserve",
           "source_accession": "0001193125-26-295586"
         },
-        "common_atm_week_usd": 263500000,
+        "common_atm_week_usd": 544500000,
+        "common_atm_week_shares": 5429160,
+        "common_atm_available_usd": 22980000000,
         "preferred_atm_week_usd": 0,
+        "preferred_atm_paused_consecutive_weeks": 9,
+        "strc_atm_available_usd": 17510000000,
         "baseline_btc_count": 843775,
         "observed_btc_count": 843775
       }
@@ -468,9 +532,14 @@
     "source_accession": "0001193125-26-286871",
     "usd_reserve_policy": {
       "min_months_coverage": 12,
-      "balance_usd": 3225000000,
-      "as_of": "2026-07-19",
-      "restricted_use": "preferred dividends + interest only (other uses require Board authorization)"
+      "balance_usd": 3750000000,
+      "as_of": "2026-07-26",
+      "restricted_use": "preferred dividends + interest only (other uses require Board authorization)",
+      "coverage_months_total": 25.5,
+      "coverage_months_strc_only": 35.8,
+      "slack_months_above_minimum": 13.5,
+      "build_streak_weeks": 4,
+      "weekly_build_usd": 525000000
     },
     "strc_dividend_policy": {
       "regime": "discretionary_soft_floor",
@@ -494,7 +563,30 @@
       ],
       "initial_priority": "STRC",
       "funding": "btc_sales",
-      "executed_usd": 0
+      "state": "partially_used",
+      "executed": true,
+      "executed_usd": 25000000,
+      "remaining_usd": 975000000,
+      "used_pct": 2.5,
+      "shares_repurchased": 288930,
+      "average_price_usd": 86.53,
+      "first_print_period": "2026-07-20..2026-07-26",
+      "source_accession": "0001193125-26-316917",
+      "transition": {
+        "event": "first_print",
+        "from": "armed_unused",
+        "to": "partially_used",
+        "as_of": "2026-07-26"
+      },
+      "first_print": {
+        "period": "2026-07-20..2026-07-26",
+        "security": "STRC",
+        "shares_repurchased": 288930,
+        "cost_usd": 25000000,
+        "avg_price_usd": 86.53,
+        "accretive_vs_par": true,
+        "source_accession": "0001193125-26-316917"
+      }
     },
     "common_repurchase_program": {
       "authorized_usd": 1000000000,
@@ -511,6 +603,16 @@
       ],
       "dividend_service_executed": true,
       "executed": false,
+      "state": "armed_not_used",
+      "monetization_regime": "episodic_available",
+      "consecutive_flat_btc_weeks": 3,
+      "flat_btc_week_streak": 3,
+      "btc_purchase_resume_condition": "STRC trades back to or above $100 par",
+      "btc_purchase_posture": {
+        "state": "conditional_pause",
+        "resume_condition": "STRC trades back to or above $100 par",
+        "note": "BTC purchases are par-conditioned, not indefinitely paused."
+      },
       "at_scale": true,
       "first_print": {
         "period": "2026-06-29..2026-07-05",
@@ -520,8 +622,12 @@
         "purpose": "fund_preferred_distributions + replenish_usd_reserve",
         "source_accession": "0001193125-26-295586"
       },
-      "common_atm_week_usd": 263500000,
+      "common_atm_week_usd": 544500000,
+      "common_atm_week_shares": 5429160,
+      "common_atm_available_usd": 22980000000,
       "preferred_atm_week_usd": 0,
+      "preferred_atm_paused_consecutive_weeks": 9,
+      "strc_atm_available_usd": 17510000000,
       "baseline_btc_count": 843775,
       "observed_btc_count": 843775
     }
@@ -530,7 +636,7 @@
     {
       "code": "STRC_SUBPAR_SOFT_FLOOR_WATCH",
       "severity": "high",
-      "message": "STRC trading at $88.64 (below $95) \u2014 discretionary soft-floor watch. Under the 06-29 revised dividend policy a rate hike is NOT automatic; it is one of several discretionary defenses (alongside the $1B STRC-priority buyback, USD Reserve management, and BTC monetization) evaluated across price, yields, spreads, BTC, and reserve coverage. Sub-par still warrants watch, but do not assume a reset-driven hike."
+      "message": "STRC trading at $88.00 (below $95) \u2014 discretionary soft-floor watch. Under the 06-29 revised dividend policy a rate hike is NOT automatic; it is one of several discretionary defenses (alongside the $1B STRC-priority buyback, USD Reserve management, and BTC monetization) evaluated across price, yields, spreads, BTC, and reserve coverage. Sub-par still warrants watch, but do not assume a reset-driven hike."
     }
   ],
   "framework_version": "strc-framework.md 2026-06-04 mnav-v2"

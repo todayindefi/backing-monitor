@@ -149,7 +149,7 @@ var MSTRRenderer = {
         var mv = data.mstr_view || {};
         var riskFlags = data.risk_flags || [];
 
-        // 7-panel layout (post-reorg, MSTR owns issuer-side analysis):
+        // 8-panel layout (post-reorg, MSTR owns issuer-side analysis):
         //   1. MSTR headline (equity-holder lens)
         //   2. mNAV regime (equity-caption variant)
         //   3. Balance sheet snapshot
@@ -157,6 +157,7 @@ var MSTRRenderer = {
         //   5. Cash-Service Waterfall + Rate-Ceiling Overlay (moved from STRC)
         //   6. Per-share BTC NAV trajectory
         //   7. Dilution + maturity wall
+        //   8. Strategy event log (shared EDGAR feed)
         var html = '';
         html += MSTRRenderer._renderHeadlineBanner(tradfi, mv);
         html += MSTRRenderer._renderMnavRegime(tradfi, data.digital_credit_framework);
@@ -166,6 +167,7 @@ var MSTRRenderer = {
         html += MSTR_FRAMEWORK_CARD(data.digital_credit_framework);
         html += MSTRRenderer._renderPerShareNavTrajectory(tradfi, mv);
         html += MSTRRenderer._renderDilutionMaturityWall(mv);
+        html += '<div id="mstr-event-log-panel" class="panel"><div class="panel-title">Strategy Event Log <span class="text-xs font-normal text-slate-500">— EDGAR 8-K monitor</span></div><div class="text-xs text-slate-500 loading-pulse">Loading EDGAR feed…</div></div>';
         html += MSTRRenderer._renderFreshness(data);
 
         container.innerHTML = html;
@@ -177,6 +179,7 @@ var MSTRRenderer = {
         MSTRRenderer._paintCapitalStructureChart(mv);
         MSTRRenderer._paintMaturityWallChart(mv);
         MSTRRenderer._loadHistoryAndPaintTrajectory(tradfi, mv);
+        STRCRenderer._loadStrategyEventLog('mstr-event-log-panel');
     },
 
     // Persistent header link to the sibling STRC dashboard. Reuses the
@@ -337,7 +340,8 @@ var MSTRRenderer = {
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
                 '<span class="font-semibold">BTC monetization fired once; armed and available, not habitual.</span> Current-week funding came from common ATM' +
                 (btcm.common_atm_week_usd != null ? ' (' + MSTRRenderer._fmtMoneyShort(btcm.common_atm_week_usd) + ' common)' : '') +
-                ' + reserve; BTC held FLAT at ' + observedBtcTxt + ' (no sales). The BTC-sale leg is idle this week.' +
+                ' + reserve; BTC held FLAT at ' + observedBtcTxt + ' for a third week (no sales). The BTC-sale leg is idle this week. ' +
+                '<strong>BTC purchases are paused until STRC returns to $100 par</strong> — a par-conditioned pause, not an indefinite halt.' +
             '</div>' : '') +
         '</div>';
     },
