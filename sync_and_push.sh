@@ -72,6 +72,15 @@ cp /home/danger/PegTracker/data/bmnr_treasury_history.json data/bmnr_backing_his
 cp /home/danger/PegTracker/data/cusd_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/cusd_backing_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/cap_family.json data/ 2>/dev/null
+# Hastra PRIME / wYLDS: independent multi-source reserve monitor. The dashboard
+# snapshot is only ever overwritten by a run where EVERY leg (Provenance
+# balances + Solana + Ethereum supply) succeeded, so on failure it freezes at
+# last-good rather than publishing a ratio with a hole in it. The last_attempt
+# slot carries the failed run — hastra-prime.js reads it purely to name the
+# failing leg in the staleness badge, so its absence is harmless.
+cp /home/danger/PegTracker/data/hastra_prime_backing.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/hastra_prime_backing_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/hastra_prime_backing_last_attempt.json data/ 2>/dev/null
 
 # Integrate any remote changes first (e.g. dashboard claude's commits) so our
 # data-only push fast-forwards. Without this, a non-fast-forward push is

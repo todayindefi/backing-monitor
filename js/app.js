@@ -40,6 +40,9 @@ var ASSET_RENDERERS = {
     strc:      typeof STRCRenderer      !== 'undefined' ? STRCRenderer      : null,
     mstr:      typeof MSTRRenderer      !== 'undefined' ? MSTRRenderer      : null,
     bmnr:      typeof BMNRRenderer      !== 'undefined' ? BMNRRenderer      : null,
+    // Reads hastra_prime_backing.json via assets.json `data_source` (the
+    // analyzer's filename is underscored; the URL slug is dashed).
+    'hastra-prime': typeof HastraPrimeRenderer !== 'undefined' ? HastraPrimeRenderer : null,
     'fiat-stable-reserve-backed': typeof USDmRenderer !== 'undefined' ? USDmRenderer : null
 };
 
