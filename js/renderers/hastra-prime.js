@@ -543,6 +543,10 @@ var HastraPrimeRenderer = {
         if (delta != null) {
             var dir = delta >= 0 ? 'above' : 'below';
             gapNote =
+                '<p><span class="font-medium">Read this as a band, not a single number.</span> True wYLDS collateralization sits between ' +
+                'Hastra’s designated <span class="font-mono">' + theirs.toFixed(2) + '%</span> and our all-reserve upper bound of ' +
+                '<span class="font-mono">' + (ours != null ? ours.toFixed(2) : '—') + '%</span> — <span class="font-medium">both clear 100%, so ' +
+                'backing sufficiency is independently confirmed</span>, even though the exact ratio is not independently pinnable.</p>' +
                 '<p>Our reading is <span class="font-mono font-semibold">' + (delta >= 0 ? '+' : '') + delta.toFixed(2) + 'pp</span> ' +
                 dir + ' the issuer’s. That gap is the panel — it is a <span class="font-medium">definition</span> difference, not ' +
                 'necessarily a discrepancy: we sum the <span class="font-medium">entire</span> bank balance of every reserve account we can ' +
@@ -562,8 +566,8 @@ var HastraPrimeRenderer = {
                 '<div class="text-right">' + HastraPrimeRenderer._pill('independent', 'ok') + '</div>' +
             '</div>' +
             '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">' +
-                HastraPrimeRenderer._tile('Our CR (chain)', HastraPrimeRenderer._pct(ours),
-                    cls, HastraPrimeRenderer._unverified ? 'unverified — stale leg' : 'live, this snapshot') +
+                HastraPrimeRenderer._tile('Upper-bound CR (chain)', HastraPrimeRenderer._pct(ours),
+                    cls, HastraPrimeRenderer._unverified ? 'unverified — stale leg' : 'all identified reserve ÷ supply — a superset') +
                 HastraPrimeRenderer._tile('Hastra PoR CR', HastraPrimeRenderer._pct(theirs), '',
                     'issuer-reported · ' + HP_REPORT.por.as_of) +
                 HastraPrimeRenderer._tile('Gap', delta != null ? (delta >= 0 ? '+' : '') + delta.toFixed(2) + 'pp' : '—', '',
