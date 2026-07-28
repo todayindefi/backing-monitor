@@ -25,25 +25,61 @@ var CrvUSDRenderer = {
 
         var html = '';
         var s = data.summary;
+        var supplyRecon = s.supply_reconciliation || {};
 
         // ====== 1. Supply Breakdown ======
         var sb = specific.supply_breakdown;
         if (sb) {
             var total = sb.total || 1;
+            var rawSupply = supplyRecon.total_supply_raw != null ? supplyRecon.total_supply_raw : sb.total_supply_raw;
+            var lensSupply = supplyRecon.lens_circulating;
+            var cgSupply = supplyRecon.cg_circulating != null ? supplyRecon.cg_circulating : sb.cg_circulating;
+            var constructedSupply = supplyRecon.constructed_supply != null ? supplyRecon.constructed_supply : sb.total;
 
             var rc = specific.recirculation || {};
+            var formatSupplyDefinition = function(value) {
+                if (Math.abs(value) >= 1e9) return '$' + (value / 1e9).toFixed(2) + 'B';
+                if (Math.abs(value) >= 1e6) return '$' + (value / 1e6).toFixed(2) + 'M';
+                return CommonRenderer.formatCurrency(value);
+            };
+            var supplyDefinitions = '';
+            if (rawSupply != null || lensSupply != null) {
+                supplyDefinitions = ' Other supply definitions:' +
+                    (rawSupply != null ? ' <code>totalSupply()</code> returns <strong>' + formatSupplyDefinition(rawSupply) + '</strong> (mint authorization capacity, including undeployed ceiling buffers)' : '') +
+                    (rawSupply != null && lensSupply != null ? ';' : '') +
+                    (lensSupply != null ? ' <code>StablecoinLens.circulating_supply</code> returns <strong>' + formatSupplyDefinition(lensSupply) + '</strong> (Controllers + PegKeepers only — excludes YieldBasis and operator mints)' : '') +
+                    '.';
+            }
+            var reconciliationBlock = '';
+            if (constructedSupply != null && cgSupply != null &&
+                    supplyRecon.delta_usd != null && supplyRecon.delta_pct != null) {
+                var deltaUsd = supplyRecon.delta_usd;
+                var deltaPct = supplyRecon.delta_pct;
+                var deltaClass = Math.abs(deltaPct) < 3 ? 'positive' : Math.abs(deltaPct) <= 10 ? 'warning' : 'negative';
+                var signedDeltaUsd = (deltaUsd >= 0 ? '+' : '-') + CommonRenderer.formatCurrency(Math.abs(deltaUsd));
+                var signedDeltaPct = (deltaPct >= 0 ? '+' : '-') + Math.abs(deltaPct).toFixed(2) + '%';
+                reconciliationBlock =
+                    '<div class="mt-4 pt-3 border-t border-slate-200">' +
+                        '<div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Reconciliation</div>' +
+                        '<div class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">' +
+                            '<div>Constructed supply (this table)</div><div class="text-right font-mono">' + CommonRenderer.formatCurrency(constructedSupply) + '</div>' +
+                            '<div>CoinGecko circulating (cross-check)</div><div class="text-right font-mono">' + CommonRenderer.formatCurrency(cgSupply) + '</div>' +
+                            '<div class="font-semibold">Delta</div><div class="text-right font-mono font-semibold ' + deltaClass + '">' + signedDeltaUsd + ' (' + signedDeltaPct + ')</div>' +
+                        '</div>' +
+                        (supplyRecon.note ? '<p class="text-xs text-slate-400 mt-2">' + supplyRecon.note + '</p>' : '') +
+                    '</div>';
+            }
 
             html += '<div class="panel">' +
                 '<div class="panel-title">Supply Breakdown</div>' +
-                '<p class="text-sm text-slate-500 mb-3">Only sources that mint new crvUSD. totalSupply() returns ' + CommonRenderer.formatCurrency(sb.total_supply_raw) + ' (includes undeployed ceiling buffers).' +
-                (sb.cg_circulating ? ' Curve/CoinGecko cross-check: ' + CommonRenderer.formatCurrency(sb.cg_circulating) + '.' : '') + '</p>' +
+                '<p class="text-sm text-slate-500 mb-3">Issuance-side and Ethereum-scoped: only sources that mint new crvUSD. crvUSD on other chains is bridged from Ethereum (lock-and-mint), so it is already counted here — cross-chain balances must not be added on top.' + supplyDefinitions + '</p>' +
                 '<table class="data-table"><thead><tr><th colspan="3" class="text-xs uppercase tracking-wide text-slate-500">Minting Sources (create new crvUSD)</th></tr><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">%</th></tr></thead><tbody>' +
                 '<tr><td>YieldBasis deployed (AMM get_debt)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.yb_deployed) + '</td><td class="text-right">' + (sb.yb_deployed / total * 100).toFixed(1) + '%</td></tr>' +
                 '<tr><td>Minting markets (collateral-backed CDPs)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.minting_markets) + '</td><td class="text-right">' + (sb.minting_markets / total * 100).toFixed(1) + '%</td></tr>' +
                 (sb.operator_minted ? '<tr><td>CurveLendOperator (sreUSD market)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.operator_minted) + '</td><td class="text-right">' + (sb.operator_minted / total * 100).toFixed(1) + '%</td></tr>' : '') +
                 '<tr><td>PegKeeper debt</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.pegkeeper_debt) + '</td><td class="text-right">' + (sb.pegkeeper_debt / total * 100).toFixed(1) + '%</td></tr>' +
-                '<tr class="font-bold border-t-2 border-slate-200"><td>Total crvUSD Supply</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(total) + '</td><td class="text-right">100%</td></tr>' +
-                '</tbody></table>' +
+                '<tr class="font-bold border-t-2 border-slate-200"><td>Total crvUSD minted (Ethereum, issuance-side)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(total) + '</td><td class="text-right">100%</td></tr>' +
+                '</tbody></table>' + reconciliationBlock +
                 '<table class="data-table mt-4"><thead><tr><th colspan="2" class="text-xs uppercase tracking-wide text-slate-500">Recirculation (uses existing crvUSD, not minting)</th></tr></thead><tbody>' +
                 '<tr><td>LlamaLend borrowed</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(rc.llamalend_borrowed || 0) + '</td></tr>' +
                 '<tr><td>scrvUSD savings vault</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(rc.scrvusd_savings || 0) + '</td></tr>' +
@@ -155,13 +191,19 @@ var CrvUSDRenderer = {
         // ====== 4. Minting Markets ======
         var markets = specific.markets;
         if (markets && markets.length > 0) {
-            var activeMarkets = markets.filter(function(m) { return m.debt >= 1; });
+            var debtMarkets = markets.filter(function(m) { return m.debt >= 1; });
+            var activeMarkets = debtMarkets.filter(function(m) { return !m.wind_down; });
+            var windDownMarkets = debtMarkets.filter(function(m) { return m.wind_down; });
+            var summaryCountsReady = typeof s.n_active_markets === 'number' && typeof s.n_winddown_markets === 'number';
+            var activeCount = summaryCountsReady ? s.n_active_markets : activeMarkets.length;
+            var windDownCount = summaryCountsReady ? s.n_winddown_markets : windDownMarkets.length;
+            var countLabel = activeCount + ' active' + (windDownCount ? ' + ' + windDownCount + ' wind-down' : '');
             html += '<div class="panel">' +
-                '<div class="panel-title">Minting Markets (' + activeMarkets.length + ' active, CR ' + CommonRenderer.formatPercent(s.mint_cr, 1) + ')</div>' +
+                '<div class="panel-title">Minting Markets (' + countLabel + ', CR ' + CommonRenderer.formatPercent(s.mint_cr, 1) + ')</div>' +
                 '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
                 '<th>Collateral</th><th class="text-right">Debt</th><th class="text-right">Ceiling</th><th class="text-right">CR</th><th class="text-right">Loans</th><th class="text-right">APR</th>' +
                 '</tr></thead><tbody>';
-            activeMarkets.forEach(function(m) {
+            debtMarkets.forEach(function(m) {
                 var crClass = m.collateral_ratio < 120 ? 'text-red-600' : m.collateral_ratio < 150 ? 'text-amber-600' : 'text-green-600';
                 var windDown = m.wind_down ? ' <span class="tag" style="background:#fef2f2;color:#dc2626">WIND-DOWN</span>' : '';
                 html += '<tr><td class="font-medium">' + m.collateral + windDown + '</td>' +
