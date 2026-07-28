@@ -1224,9 +1224,6 @@ var HastraPrimeRenderer = {
             prime_nav_accrual_below_target: true
         };
         var warehouseAlerts = flags.filter(function(f) { return alertCodes[f.code]; });
-        var headlineState = unverified ? 'neutral' : (warehouseAlerts.length ? 'critical' : 'ok');
-        var headlineLabel = unverified ? 'stale · last-good values' :
-            (warehouseAlerts.length ? 'live threshold firing' : 'live monitoring');
         var tokens = w.loan_tokens || {};
         var tokenRows = Object.keys(tokens).sort().map(function(denom) {
             var row = tokens[denom] || {};
@@ -1275,6 +1272,29 @@ var HastraPrimeRenderer = {
         if (unverified || yr.oracle_stale === true) yieldState = 'neutral';
         var liveFlags = Array.isArray(monitor.live) ? monitor.live : [];
         var pendingFlags = Array.isArray(monitor.pending) ? monitor.pending : [];
+        var totalThresholds = liveFlags.length + pendingFlags.length;
+        var armedThresholds = liveFlags.filter(function(f) {
+            // The analyzer publishes the NAV threshold definition before a
+            // 30d observation exists. It cannot fire until that window fills.
+            return f.code !== 'prime_nav_accrual_below_target' || yield30 != null;
+        }).length;
+        var headlineState, headlineLabel;
+        if (unverified) {
+            headlineState = 'neutral';
+            headlineLabel = 'stale · last-good values';
+        } else if (warehouseAlerts.length) {
+            headlineState = 'critical';
+            headlineLabel = 'live threshold firing';
+        } else if (!totalThresholds) {
+            headlineState = 'neutral';
+            headlineLabel = 'threshold status unavailable';
+        } else if (armedThresholds < totalThresholds) {
+            headlineState = 'warn';
+            headlineLabel = armedThresholds + ' of ' + totalThresholds + ' thresholds live';
+        } else {
+            headlineState = 'ok';
+            headlineLabel = 'live monitoring';
+        }
 
         return '<div class="panel">' +
             '<div class="flex items-start justify-between gap-4 mb-3">' +
