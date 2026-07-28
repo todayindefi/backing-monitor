@@ -92,6 +92,20 @@ var HP_REPORT = {
         note: 'Hastra’s public Proof-of-Reserves dashboard, as read for the research report'
     },
 
+    // Figure Certificate Company qualified-asset coverage. Quarterly,
+    // regulator-filed reference data — never a live monitor or alert input.
+    // Add one object per filing; ratios are derived at render time.
+    sec_filings: {
+        source: 'Figure Certificate Company (CIK 0001974395), ICA §28 qualified assets — KPMG-audited',
+        cik: '0001974395',
+        url: 'https://www.sec.gov/edgar/browse/?CIK=0001974395&owner=exclude',
+        points: [
+            { period: '2025-12-31', filed: '2026-03-20', form: '10-K', qualified_assets_usd: 329526000, certificate_reserve_usd: 328796000 },
+            { period: '2026-03-31', filed: '2026-05-15', form: '10-Q', qualified_assets_usd: 601524000, certificate_reserve_usd: 599706000 }
+        ],
+        next_expected: '2026-08-14'
+    },
+
     // Secondary-market depth. The analyzer emits no DEX feed today, so these are
     // report figures, not live quotes.
     liquidity: {
@@ -414,6 +428,7 @@ var HastraPrimeRenderer = {
         HastraPrimeRenderer._drawSupplyCharts(spec);
         HastraPrimeRenderer._drawHolderChart(spec);
         HastraPrimeRenderer._drawWarehouseChart();
+        HastraPrimeRenderer._addCRReferenceSeries(data);
         HastraPrimeRenderer._setupAnchorNav();
         HastraPrimeRenderer._loadLastAttempt(data);
     },
@@ -522,10 +537,96 @@ var HastraPrimeRenderer = {
     // ============================================================
     // §1 Collateralization — ours vs theirs
     // ============================================================
+    _secFilingPoints: function() {
+        var filing = HP_REPORT.sec_filings || {};
+        return (filing.points || []).map(function(p) {
+            var ratio = p.certificate_reserve_usd
+                ? p.qualified_assets_usd / p.certificate_reserve_usd * 100 : null;
+            return {
+                period: p.period,
+                filed: p.filed,
+                form: p.form,
+                qualified_assets_usd: p.qualified_assets_usd,
+                certificate_reserve_usd: p.certificate_reserve_usd,
+                ratio: ratio
+            };
+        });
+    },
+
+    _secFilingState: function(timestamp) {
+        var points = HastraPrimeRenderer._secFilingPoints();
+        var latest = points.length ? points[points.length - 1] : null;
+        var ageDays = latest && timestamp
+            ? (Date.parse(timestamp) - Date.parse(latest.period + 'T00:00:00Z')) / 86400000
+            : null;
+        return {
+            points: points,
+            latest: latest,
+            awaiting: ageDays != null && ageDays > 120,
+            age_days: ageDays
+        };
+    },
+
+    _addCRReferenceSeries: function(data) {
+        var chart = typeof window !== 'undefined' ? window._crChart : null;
+        if (!chart || !chart.data || !Array.isArray(chart.data.labels)) return;
+
+        var labels = chart.data.labels;
+        var por = HP_REPORT.por || {};
+        var secState = HastraPrimeRenderer._secFilingState(data.timestamp);
+        var secPoints = secState.points;
+        var secData = labels.map(function(label) {
+            if (secState.awaiting) return null;
+            var at = Date.parse(label);
+            var known = null;
+            secPoints.forEach(function(p) {
+                // A filing cannot appear in the observed series before it was
+                // public, even though its badge is keyed to the period end.
+                if (Date.parse(p.filed + 'T00:00:00Z') <= at) known = p;
+            });
+            return known ? known.ratio : null;
+        });
+
+        chart.data.datasets.push({
+            label: 'Hastra PoR (issuer snapshot ' + por.as_of + ')',
+            data: labels.map(function() { return por.collateralization_pct; }),
+            borderColor: '#f59e0b',
+            backgroundColor: 'transparent',
+            borderDash: [6, 4],
+            tension: 0,
+            pointRadius: 0,
+            borderWidth: 1.5,
+            fill: false
+        });
+        chart.data.datasets.push({
+            label: 'SEC-filed (KPMG-audited, quarterly)' +
+                (secState.awaiting ? ' · awaiting next filing' : ''),
+            data: secData,
+            borderColor: '#7c3aed',
+            backgroundColor: 'transparent',
+            borderDash: [2, 3],
+            stepped: 'after',
+            tension: 0,
+            pointRadius: 0,
+            borderWidth: 2,
+            fill: false
+        });
+        chart.update();
+    },
+
     _renderHeadline: function(data, spec, s) {
         var ours = spec.collateralization_pct != null ? spec.collateralization_pct : s.collateral_ratio;
         var theirs = HP_REPORT.por.collateralization_pct;
         var delta = (ours != null && theirs != null) ? (ours - theirs) : null;
+        var secState = HastraPrimeRenderer._secFilingState(data.timestamp);
+        var secLatest = secState.latest;
+        var secRows = secState.points.map(function(p) {
+            return '<tr><td>' + p.period + '</td><td>' + p.filed + '</td><td>' + p.form + '</td>' +
+                '<td class="text-right font-mono">' + HastraPrimeRenderer._money(p.qualified_assets_usd) + '</td>' +
+                '<td class="text-right font-mono">' + HastraPrimeRenderer._money(p.certificate_reserve_usd) + '</td>' +
+                '<td class="text-right font-mono font-semibold">' +
+                    (p.ratio != null ? p.ratio.toFixed(2) + '%' : '—') + '</td></tr>';
+        }).join('');
 
         var state = HastraPrimeRenderer._gate(HastraPrimeRenderer._crState(ours));
         var cls = HastraPrimeRenderer._stateCls(state);
@@ -547,8 +648,10 @@ var HastraPrimeRenderer = {
             gapNote =
                 '<p><span class="font-medium">Read this as a band, not a single number.</span> True wYLDS collateralization sits between ' +
                 'Hastra’s designated <span class="font-mono">' + theirs.toFixed(2) + '%</span> and our all-reserve upper bound of ' +
-                '<span class="font-mono">' + (ours != null ? ours.toFixed(2) : '—') + '%</span> — <span class="font-medium">both clear 100%, so ' +
-                'backing sufficiency is independently confirmed</span>, even though the exact ratio is not independently pinnable.</p>' +
+                '<span class="font-mono">' + (ours != null ? ours.toFixed(2) : '—') + '%</span>. The latest SEC-filed §28 ratio was ' +
+                '<span class="font-mono">' + (secLatest && secLatest.ratio != null ? secLatest.ratio.toFixed(2) : '—') +
+                '%</span> for ' + (secLatest ? secLatest.period : '—') + ' — <span class="font-medium">all three clear 100%</span>, ' +
+                'though only the chain line is live.</p>' +
                 '<p>Our reading is <span class="font-mono font-semibold">' + (delta >= 0 ? '+' : '') + delta.toFixed(2) + 'pp</span> ' +
                 dir + ' the issuer’s. That gap is the panel — it is a <span class="font-medium">definition</span> difference, not ' +
                 'necessarily a discrepancy: we sum the <span class="font-medium">entire</span> bank balance of every reserve account we can ' +
@@ -585,6 +688,26 @@ var HastraPrimeRenderer = {
                     'YLDS') +
             '</div>' +
             '<div class="text-sm text-slate-600 space-y-2">' + gapNote +
+                '<div class="risk-flag risk-info mt-3">' +
+                    '<div class="flex flex-wrap items-center justify-between gap-2 mb-2">' +
+                        '<span><span class="font-semibold">Independent quarterly corroboration:</span> ICA §28 qualified assets ÷ certificate reserve.</span>' +
+                        (secLatest
+                            ? HastraPrimeRenderer._pill('as of ' + secLatest.period + ' · filed ' + secLatest.filed,
+                                secState.awaiting ? 'warn' : 'neutral')
+                            : HastraPrimeRenderer._pill('unavailable', 'neutral')) +
+                    '</div>' +
+                    '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Period end</th><th>Filed</th><th>Form</th>' +
+                        '<th class="text-right">Qualified assets</th><th class="text-right">Certificate reserve</th>' +
+                        '<th class="text-right">Ratio</th></tr></thead><tbody>' + secRows + '</tbody></table></div>' +
+                    '<div class="text-xs text-slate-500 mt-2">' +
+                        (HP_REPORT.sec_filings.source || '') + '. ' +
+                        (secState.awaiting
+                            ? '<span class="font-medium text-amber-700">Awaiting the next filing; the quarterly chart line is not extended to today.</span> '
+                            : '') +
+                        'Next filing expected around ' + HP_REPORT.sec_filings.next_expected + '. ' +
+                        HastraPrimeRenderer._link(HP_REPORT.sec_filings.url, 'SEC filings ↗') +
+                    '</div>' +
+                '</div>' +
                 (provSupply != null
                     ? '<p class="text-xs text-slate-400">Total YLDS in existence on Provenance is <span class="font-mono">' +
                       HastraPrimeRenderer._tok(provSupply) + '</span>; the reserve set above is the subset held by accounts we can ' +
@@ -1479,6 +1602,12 @@ var HastraPrimeRenderer = {
                     'a live loan-scope read exposes 16 record names, but every record value is only a SHA-256 hash. The payloads live in ' +
                     'Provenance’s permissioned Object Store. Schema and record names are public; loan data is not. With no Reg-AB tape ' +
                     'for this 144A warehouse, per-loan delinquency, LTV/FICO, cure rates and loss severity are structurally unobservable.</div>' +
+                '<div class="risk-flag risk-info mb-3">' +
+                    HastraPrimeRenderer._pill('SEC-filed · KPMG-audited', 'ok') + ' ' +
+                    '<span class="font-semibold">The certificate reserve itself is not HELOC-exposed.</span> Figure Certificate Company’s ' +
+                    'filings identify its qualified assets as cash, Treasuries, money-market funds and Treasury-collateralized repo, with ' +
+                    'Level 3 assets of $0. The HELOC credit leg sits at the holder/warehouse level, not inside the YLDS reserve.' +
+                '</div>' +
                 '<span class="font-medium text-slate-600">Standing proxy caveats:</span>' +
                 '<ul class="list-disc ml-5 mt-1 space-y-1">' + caveats + '</ul>' +
             '</div>' +
