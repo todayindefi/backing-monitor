@@ -405,13 +405,15 @@ var HastraPrimeRenderer = {
         html += anc('hp-panel-supply',     HastraPrimeRenderer._renderSupplyByChain(spec));
         html += anc('hp-panel-control',    HastraPrimeRenderer._renderControlSurface(spec));
         html += anc('hp-panel-liquidity',  HastraPrimeRenderer._renderLiquidity(data, spec));
-        html += anc('hp-panel-heloc',      HastraPrimeRenderer._renderHeloc());
+        html += anc('hp-panel-warehouse',  HastraPrimeRenderer._renderWarehouse(data, spec));
+        html += anc('hp-panel-heloc-credit', HastraPrimeRenderer._renderHelocCredit());
         html += anc('hp-panel-provenance', HastraPrimeRenderer._renderDataProvenance(data, spec));
 
         container.innerHTML = html;
 
         HastraPrimeRenderer._drawSupplyCharts(spec);
         HastraPrimeRenderer._drawHolderChart(spec);
+        HastraPrimeRenderer._drawWarehouseChart();
         HastraPrimeRenderer._setupAnchorNav();
         HastraPrimeRenderer._loadLastAttempt(data);
     },
@@ -436,10 +438,10 @@ var HastraPrimeRenderer = {
     _injectStyles: function() {
         if (document.getElementById('hp-styles')) return;
         var css = '' +
-            '#hp-panel-heloc{border:1px dashed #c7d2fe;background:#f8fafc}' +
-            'body.dark #hp-panel-heloc{border-color:#4338ca;background:#0f172a}' +
-            '#hp-panel-heloc .panel-title{color:#4338ca}' +
-            'body.dark #hp-panel-heloc .panel-title{color:#c7d2fe}' +
+            '#hp-panel-heloc-credit{border:1px dashed #c7d2fe;background:#f8fafc}' +
+            'body.dark #hp-panel-heloc-credit{border-color:#4338ca;background:#0f172a}' +
+            '#hp-panel-heloc-credit .panel-title{color:#4338ca}' +
+            'body.dark #hp-panel-heloc-credit .panel-title{color:#c7d2fe}' +
             '.hp-stale-banner{border-left:4px solid #f59e0b;background:#fffbeb;color:#92400e;' +
             'padding:0.75rem 1rem;border-radius:0.5rem;margin-bottom:1.25rem;font-size:0.875rem}' +
             'body.dark .hp-stale-banner{background:#451a03;color:#fcd34d}' +
@@ -888,7 +890,8 @@ var HastraPrimeRenderer = {
                 '<span class="font-mono">nq.heloc.forge</span>, <span class="font-mono">rtl.forge</span> and ' +
                 '<span class="font-mono">dscr.forge</span> denominations. It is a working account, not a ring-fenced reserve. This is a ' +
                 'structural property of the design and is expected to be true on every run; it does not fire a flag, and its absence would ' +
-                'be the surprising event.' +
+                'be the surprising event. <a href="#hp-panel-warehouse" class="text-blue-600 hover:underline">Panel 8a measures the live ' +
+                'warehouse inventory and turnover signal ↓</a>' +
             '</div>' +
 
             '<div class="text-sm font-semibold panel-title mt-4 mb-2" style="font-size:0.9rem">Drift check</div>' +
@@ -1206,9 +1209,193 @@ var HastraPrimeRenderer = {
     },
 
     // ============================================================
-    // §8 HELOC proxy — issuer-reported, periodic, NOT chain-verified
+    // §8a HELOC warehouse turnover — live, chain-derived + EDGAR
     // ============================================================
-    _renderHeloc: function() {
+    _renderWarehouse: function(data, spec) {
+        var w = spec.warehouse || {};
+        var sec = spec.securitization || {};
+        var yr = spec.yield_realization || {};
+        var monitor = spec.warehouse_monitoring_flags || {};
+        var flags = Array.isArray(data.risk_flags) ? data.risk_flags : [];
+        var failed = Array.isArray(data.failed_legs) ? data.failed_legs : [];
+        var unverified = data.stale === true || failed.length > 0;
+        var alertCodes = {
+            securitization_cadence_stalled: true,
+            prime_nav_accrual_below_target: true
+        };
+        var warehouseAlerts = flags.filter(function(f) { return alertCodes[f.code]; });
+        var headlineState = unverified ? 'neutral' : (warehouseAlerts.length ? 'critical' : 'ok');
+        var headlineLabel = unverified ? 'stale · last-good values' :
+            (warehouseAlerts.length ? 'live threshold firing' : 'live monitoring');
+        var tokens = w.loan_tokens || {};
+        var tokenRows = Object.keys(tokens).sort().map(function(denom) {
+            var row = tokens[denom] || {};
+            return '<tr><td class="font-mono">' + denom + '</td>' +
+                '<td class="text-right font-mono">' + HastraPrimeRenderer._num(row.balance, 0) + '</td>' +
+                '<td class="text-right font-mono">' + HastraPrimeRenderer._num(row.supply, 0) + '</td>' +
+                '<td>' + HastraPrimeRenderer._pill(
+                    row.fully_in_warehouse ? '✓ fully in warehouse' : 'partial',
+                    row.fully_in_warehouse ? 'ok' : 'warn') + '</td></tr>';
+        }).join('');
+
+        var hist = HastraPrimeRenderer._history;
+        var warehouseHistory = hist && Array.isArray(hist.entries)
+            ? hist.entries.filter(function(e) {
+                return e.warehouse && e.warehouse.loan_token_total_native != null &&
+                    e.warehouse.scope_count != null;
+            }) : [];
+        var hasHistory = warehouseHistory.length >= 2;
+        var turnover = w.turnover || {};
+        var loanTrend = turnover.loan_notional_delta_7d_pct != null
+            ? (turnover.loan_notional_delta_7d_pct >= 0 ? '+' : '') +
+                turnover.loan_notional_delta_7d_pct.toFixed(2) + '%'
+            : 'insufficient history';
+        var scopeTrend = turnover.scope_count_delta_7d != null
+            ? (turnover.scope_count_delta_7d >= 0 ? '+' : '') +
+                HastraPrimeRenderer._num(turnover.scope_count_delta_7d, 0)
+            : 'insufficient history';
+
+        var decimalsResolved = w.decimals_resolved === true;
+        var hasUsd = decimalsResolved && w.usd_value != null;
+        var cominglingPct = hasUsd && w.ylds_in_warehouse != null &&
+            (w.usd_value + w.ylds_in_warehouse) > 0
+            ? w.usd_value / (w.usd_value + w.ylds_in_warehouse) * 100 : null;
+        var cominglingValue = cominglingPct != null ? cominglingPct.toFixed(1) + '%' : 'unresolved';
+        var cominglingSub = cominglingPct != null ? 'loan assets ÷ loan assets + YLDS' :
+            'loan-token decimals unavailable; no cross-unit ratio';
+
+        var cadenceState = sec.available === false ? 'neutral' :
+            (sec.days_since_last_deal != null && sec.trailing_median_gap_days != null &&
+             sec.days_since_last_deal > 2 * sec.trailing_median_gap_days ? 'critical' : 'ok');
+        if (unverified) cadenceState = 'neutral';
+        var yield30 = yr.nav_accrual_apy_30d;
+        var target = yr.target_apy;
+        var yieldState = yield30 == null ? 'neutral' :
+            (target != null && yield30 <= target - 2 ? 'critical' : 'ok');
+        if (unverified || yr.oracle_stale === true) yieldState = 'neutral';
+        var liveFlags = Array.isArray(monitor.live) ? monitor.live : [];
+        var pendingFlags = Array.isArray(monitor.pending) ? monitor.pending : [];
+
+        return '<div class="panel">' +
+            '<div class="flex items-start justify-between gap-4 mb-3">' +
+                '<div><div class="panel-title" style="margin:0">HELOC Warehouse — turnover</div>' +
+                    '<div class="text-xs text-slate-500 mt-1">Live inventory, clearing cadence and realized NAV accrual — the leg that can strand capital.</div></div>' +
+                HastraPrimeRenderer._pill(headlineLabel, headlineState) +
+            '</div>' +
+
+            (unverified
+                ? '<div class="risk-flag risk-warning mb-4"><span class="font-semibold">Warehouse reads are stale — showing last-good values.</span> ' +
+                  'A failed Provenance metadata or EDGAR request is not a turnover event, so warehouse verdicts are suppressed.</div>'
+                : '') +
+
+            '<div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">' +
+                HastraPrimeRenderer._tile('Loan-token inventory',
+                    w.loan_token_total_native != null ? HastraPrimeRenderer._num(w.loan_token_total_native, 0) : '—', '',
+                    decimalsResolved ? (hasUsd ? HastraPrimeRenderer._money(w.usd_value) : 'decimals resolved; valuation unavailable') :
+                        'native units · USD suppressed') +
+                HastraPrimeRenderer._tile('Loan scopes',
+                    w.scope_count != null ? HastraPrimeRenderer._num(w.scope_count, 0) : '—', '', scopeTrend + ' over 7d') +
+                HastraPrimeRenderer._tile('Days since ABS-15G',
+                    sec.days_since_last_deal != null ? HastraPrimeRenderer._num(sec.days_since_last_deal, 0) : '—',
+                    HastraPrimeRenderer._stateCls(cadenceState),
+                    'trailing median ' + (sec.trailing_median_gap_days != null ? sec.trailing_median_gap_days.toFixed(1) + 'd' : '—')) +
+                HastraPrimeRenderer._tile('Co-mingling ratio', cominglingValue, '', cominglingSub) +
+            '</div>' +
+
+            '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase mb-2">Inventory on Warehouse B</div>' +
+                    '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Denom</th>' +
+                    '<th class="text-right">Balance</th><th class="text-right">Supply</th><th>Custody</th></tr></thead>' +
+                    '<tbody>' + tokenRows + '</tbody></table></div>' +
+                    '<div class="text-xs text-slate-400 mt-2">Balances are native units. ' +
+                    (decimalsResolved ? 'Denom decimals are resolved.' :
+                        'Provenance exposes no denom metadata for these loan tokens, so no decimal guess or USD scale is shown.') + '</div></div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase mb-2">Inventory + scope-count trend</div>' +
+                    (hasHistory
+                        ? '<div style="height:230px;position:relative"><canvas id="hp-warehouse-chart"></canvas></div>'
+                        : '<div class="text-sm text-slate-400 border border-slate-200 dark:border-slate-700 rounded-lg p-4">' +
+                          '<span class="font-medium">Insufficient history.</span> At least two warehouse observations are required; a single point is not a trend.</div>') +
+                    '<div class="grid grid-cols-2 gap-3 mt-3">' +
+                        HastraPrimeRenderer._tile('Loan notional 7d', loanTrend, '', 'threshold pending') +
+                        HastraPrimeRenderer._tile('Scope count 7d', scopeTrend, '', 'threshold pending') +
+                    '</div></div>' +
+            '</div>' +
+
+            '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase mb-2">Securitization cadence</div>' +
+                    '<div class="grid grid-cols-2 gap-3">' +
+                        HastraPrimeRenderer._tile('Deals TTM', sec.deals_ttm != null ? String(sec.deals_ttm) : '—') +
+                        HastraPrimeRenderer._tile('Threshold', 'live', HastraPrimeRenderer._stateCls(cadenceState),
+                            'alert above 2× trailing median') +
+                    '</div><div class="text-xs text-slate-400 mt-2">Source: EDGAR ABS-15G filings. ' +
+                        (sec.source_caveat || '') + '</div></div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase mb-2">Realized NAV accrual vs target</div>' +
+                    '<div class="grid grid-cols-3 gap-3">' +
+                        HastraPrimeRenderer._tile('7d APY', yr.nav_accrual_apy_7d != null ? yr.nav_accrual_apy_7d.toFixed(2) + '%' : '—') +
+                        HastraPrimeRenderer._tile('30d APY', yield30 != null ? yield30.toFixed(2) + '%' : '—',
+                            HastraPrimeRenderer._stateCls(yieldState)) +
+                        HastraPrimeRenderer._tile('Target', target != null ? target.toFixed(1) + '%' : '—') +
+                    '</div><div class="text-xs text-slate-400 mt-2"><span class="font-medium">Issuer-administered NAV:</span> ' +
+                        (yr.source_caveat || 'This is a lagging symptom gauge, not an independent impairment read.') + '</div></div>' +
+            '</div>' +
+
+            '<div class="risk-flag risk-info mb-3"><span class="font-medium">Co-mingling, quantified when units permit:</span> ' +
+                (w.loan_vs_ylds_note || 'Warehouse B holds both loan tokens and YLDS.') + ' ' +
+                '<a href="#hp-panel-reserves" class="text-blue-600 hover:underline">See the reserve-map custody caveat ↑</a></div>' +
+
+            '<div class="flex flex-wrap gap-1.5">' +
+                liveFlags.map(function(f) {
+                    return HastraPrimeRenderer._pill('live · ' + f.code, unverified ? 'neutral' : 'ok');
+                }).join('') +
+                pendingFlags.map(function(f) {
+                    return HastraPrimeRenderer._pill('pending · ' + f.metric, 'warn');
+                }).join('') +
+            '</div>' +
+        '</div>';
+    },
+
+    _drawWarehouseChart: function() {
+        var hist = HastraPrimeRenderer._history;
+        if (!hist || !Array.isArray(hist.entries) || typeof Chart === 'undefined') return;
+        var entries = hist.entries.filter(function(e) {
+            return e.warehouse && e.warehouse.loan_token_total_native != null &&
+                e.warehouse.scope_count != null;
+        });
+        if (entries.length < 2) return;
+        var ctx = document.getElementById('hp-warehouse-chart');
+        if (!ctx) return;
+        if (window._hpWarehouseChart) window._hpWarehouseChart.destroy();
+        window._hpWarehouseChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: entries.map(function(e) { return new Date(e.timestamp); }),
+                datasets: [
+                    { label: 'Loan-token inventory (native)', data: entries.map(function(e) {
+                        return e.warehouse.loan_token_total_native;
+                    }), borderColor: '#6366f1', yAxisID: 'y', tension: 0.25, pointRadius: 1, borderWidth: 2 },
+                    { label: 'Loan scopes', data: entries.map(function(e) {
+                        return e.warehouse.scope_count;
+                    }), borderColor: '#14b8a6', yAxisID: 'y1', tension: 0.25, pointRadius: 1, borderWidth: 2 }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                scales: {
+                    x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                         grid: { display: false }, ticks: { maxTicksLimit: 5, font: { size: 10 } } },
+                    y: { position: 'left', grid: { color: '#f1f5f9' }, ticks: { font: { size: 10 } } },
+                    y1: { position: 'right', grid: { drawOnChartArea: false }, ticks: { precision: 0, font: { size: 10 } } }
+                },
+                plugins: { legend: { position: 'top', labels: { boxWidth: 10, font: { size: 10 } } } }
+            }
+        });
+    },
+
+    // ============================================================
+    // §8b HELOC credit proxy — issuer-reported, permanently opaque
+    // ============================================================
+    _renderHelocCredit: function() {
         var h = HP_REPORT.heloc;
         var iss = h.issuer, px = h.proxy, dq = h.figure_delinquency;
 
@@ -1219,7 +1406,7 @@ var HastraPrimeRenderer = {
         return '<div class="panel">' +
             '<div class="flex items-start justify-between gap-4 mb-3">' +
                 '<div>' +
-                    '<div class="panel-title" style="margin:0">HELOC Warehouse — issuer proxy</div>' +
+                    '<div class="panel-title" style="margin:0">HELOC Warehouse — credit proxy</div>' +
                     '<div class="text-xs text-slate-500 mt-1">PRIME’s yield comes from financing Figure-originated HELOCs ' +
                         'pre-securitization, not from Treasuries. This is the credit leg.</div>' +
                 '</div>' +
@@ -1268,7 +1455,11 @@ var HastraPrimeRenderer = {
             '<div class="text-xs text-slate-400">' + dq.source + '. ' + dq.note + '</div>' +
 
             '<div class="text-xs text-slate-500 mt-4">' +
-                '<span class="font-medium text-slate-600">Why it stays a proxy:</span>' +
+                '<div class="risk-flag risk-info mb-3"><span class="font-semibold">Why this can never become a live public panel:</span> ' +
+                    'a live loan-scope read exposes 16 record names, but every record value is only a SHA-256 hash. The payloads live in ' +
+                    'Provenance’s permissioned Object Store. Schema and record names are public; loan data is not. With no Reg-AB tape ' +
+                    'for this 144A warehouse, per-loan delinquency, LTV/FICO, cure rates and loss severity are structurally unobservable.</div>' +
+                '<span class="font-medium text-slate-600">Standing proxy caveats:</span>' +
                 '<ul class="list-disc ml-5 mt-1 space-y-1">' + caveats + '</ul>' +
             '</div>' +
         '</div>';
@@ -1366,7 +1557,8 @@ var HastraPrimeRenderer = {
             { id: 'hp-panel-supply',     label: 'Supply' },
             { id: 'hp-panel-control',    label: 'Control' },
             { id: 'hp-panel-liquidity',  label: 'Liquidity' },
-            { id: 'hp-panel-heloc',      label: 'HELOC proxy' },
+            { id: 'hp-panel-warehouse',  label: 'HELOC turnover' },
+            { id: 'hp-panel-heloc-credit', label: 'HELOC credit proxy' },
             { id: 'hp-panel-provenance', label: 'Provenance' }
         ];
         inner.innerHTML = items.map(function(item) {
