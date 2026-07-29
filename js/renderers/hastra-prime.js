@@ -351,10 +351,9 @@ var HastraPrimeRenderer = {
         var s = data.summary;
         if (!s) return;
 
-        // renderSummaryCards() dereferences s.collateral_ratio_alt.label; this
-        // feed has no alt ratio. Backfill a hidden placeholder — the whole
-        // summary-cards row is hidden in _suppressCommonPanels anyway, but the
-        // NPE would fire before we get there.
+        // Legacy renderSummaryCards() dereferences s.collateral_ratio_alt.label.
+        // Backfill a hidden placeholder for old snapshots; in 5-axis mode the
+        // same #summary-cards node remains visible and carries the risk band.
         if (!s.collateral_ratio_alt) {
             s.collateral_ratio_alt = { label: '_hpAlt', value: 0, is_currency: false };
         }
@@ -405,26 +404,50 @@ var HastraPrimeRenderer = {
         var s = data.summary || {};
         HastraPrimeRenderer._unverified = data.stale === true;
 
-        HastraPrimeRenderer._suppressCommonPanels();
+        HastraPrimeRenderer._suppressCommonPanels(data);
         HastraPrimeRenderer._injectStyles();
 
         var anc = HastraPrimeRenderer._anchor;
         var html = '';
         html += HastraPrimeRenderer._renderStaleBanner(data);
-        html += anc('hp-panel-headline',   HastraPrimeRenderer._renderHeadline(data, spec, s));
+
+        // Cross-cutting flags stay above the numbered axis stream.
         html += anc('hp-panel-flags',      HastraPrimeRenderer._renderRiskFlags(data));
-        html += anc('hp-panel-recon',      HastraPrimeRenderer._renderReconciliation(spec));
+
+        html += HastraPrimeRenderer._axisHead(1, 'Peg', 'discount to wYLDS-denominated NAV');
+        html += anc('hp-panel-peg', HastraPrimeRenderer._renderPeg(data, spec));
+
+        html += HastraPrimeRenderer._axisHead(2, 'Liquidity', 'secondary market vs admin-mediated redemption');
+        html += HastraPrimeRenderer._subHead('Secondary market');
+        html += anc('hp-panel-liquidity',  HastraPrimeRenderer._renderLiquidity(data, spec));
+        html += HastraPrimeRenderer._subHead('Redemption (admin-mediated)');
         html += anc('hp-panel-redemption', HastraPrimeRenderer._renderRedemption(spec));
+
+        html += HastraPrimeRenderer._axisHead(3, 'Backing', 'headline · reconciliation · reserves · supply');
+        html += anc('hp-panel-headline',   HastraPrimeRenderer._renderHeadline(data, spec, s));
+        html += '<div id="hp-cr-chart-slot"></div>';
+        html += anc('hp-panel-recon',      HastraPrimeRenderer._renderReconciliation(spec));
         html += anc('hp-panel-reserves',   HastraPrimeRenderer._renderReserveMap(spec));
         html += anc('hp-panel-supply',     HastraPrimeRenderer._renderSupplyByChain(spec));
-        html += anc('hp-panel-control',    HastraPrimeRenderer._renderControlSurface(spec));
-        html += anc('hp-panel-liquidity',  HastraPrimeRenderer._renderLiquidity(data, spec));
+
+        html += HastraPrimeRenderer._axisHead(4, 'Dependencies', 'upstream credit · warehouse turnover · loan quality');
+        html += HastraPrimeRenderer._renderUpstreamDependencies(data);
         html += anc('hp-panel-warehouse',  HastraPrimeRenderer._renderWarehouse(data, spec));
         html += anc('hp-panel-heloc-credit', HastraPrimeRenderer._renderHelocCredit());
+
+        html += HastraPrimeRenderer._axisHead(5, 'Issuer', 'control surface · related-party structure');
+        html += anc('hp-panel-control',    HastraPrimeRenderer._renderControlSurface(spec, data));
+
+        // Provenance remains outside the five axes at the bottom.
         html += anc('hp-panel-provenance', HastraPrimeRenderer._renderDataProvenance(data, spec));
 
         container.innerHTML = html;
 
+        var chartPanel = document.getElementById('chart-panel');
+        var chartSlot = document.getElementById('hp-cr-chart-slot');
+        if (chartPanel && chartSlot) chartSlot.appendChild(chartPanel);
+
+        HastraPrimeRenderer._drawPegChart(data);
         HastraPrimeRenderer._drawSupplyCharts(spec);
         HastraPrimeRenderer._drawHolderChart(spec);
         HastraPrimeRenderer._drawWarehouseChart();
@@ -433,18 +456,50 @@ var HastraPrimeRenderer = {
         HastraPrimeRenderer._loadLastAttempt(data);
     },
 
-    _suppressCommonPanels: function() {
-        // Legacy mode (no axis blocks). Hide the legacy CR summary cards, the
-        // common backing-breakdown table, the allocation pie and the common
-        // risk-flags panel — all four are rendered bespoke below. Keep
-        // #chart-panel: it is the collateralization series.
+    _suppressCommonPanels: function(data) {
+        var has5axis = typeof CommonRenderer !== 'undefined' &&
+            CommonRenderer.hasAxisBlocks(data);
+
+        // In axis mode #summary-cards is the five-card band and must remain
+        // visible. Old snapshots retain the legacy behavior.
         var summaryCards = document.getElementById('summary-cards');
-        if (summaryCards) summaryCards.style.display = 'none';
+        if (summaryCards) summaryCards.style.display = has5axis ? '' : 'none';
 
         ['breakdown-table', 'pie-chart', 'risk-flags'].forEach(function(id) {
             var el = document.getElementById(id);
             if (el) { var p = el.closest('.panel'); if (p) p.style.display = 'none'; }
         });
+
+        if (has5axis) {
+            ['section-peg', 'section-liquidity', 'section-backing', 'section-dependencies', 'section-issuer']
+                .forEach(function(id) {
+                    var section = document.getElementById(id);
+                    if (section) section.style.display = 'none';
+                });
+            // renderAxisSections has already populated these nodes, including a
+            // hidden #peg-chart. Clear them so no duplicate/hidden canvas can
+            // shadow the hp-prefixed bespoke charts.
+            ['axis-peg-body', 'axis-liquidity-body', 'axis-dependencies-body', 'axis-issuer-body']
+                .forEach(function(id) {
+                    var body = document.getElementById(id);
+                    if (body) body.innerHTML = '';
+                });
+            var backingHead = document.getElementById('axis-backing-head');
+            if (backingHead) backingHead.innerHTML = '';
+        }
+    },
+
+    _axisHead: function(num, title, sub) {
+        return '<div class="axis-head">' +
+            '<span class="axis-num">' + num + '</span>' +
+            '<span class="axis-title">' + title + '</span>' +
+            (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
+        '</div>';
+    },
+
+    _subHead: function(title) {
+        return '<div class="text-xs font-semibold uppercase tracking-wide text-slate-400 mt-2 mb-2">' +
+            title + '</div>';
     },
 
     // Scoped styles: the issuer-proxy panel has to be unmistakably NOT part of
@@ -1140,7 +1195,7 @@ var HastraPrimeRenderer = {
     // ============================================================
     // §6 Control surface
     // ============================================================
-    _renderControlSurface: function(spec) {
+    _renderControlSurface: function(spec, data) {
         var auth = spec.authority_state || {};
         var tokens = [
             { key: 'wylds', label: 'wYLDS', mint: HP_ADDR.wylds_sol_mint },
@@ -1226,6 +1281,17 @@ var HastraPrimeRenderer = {
                 'A single EOA holding a supermajority of Solana PRIME is a governance-free but liquidity-relevant concentration: its exit ' +
                 'would move through the same unbonding queue and the same secondary pools as everyone else’s.' +
             '</div>' +
+
+            '<div class="risk-flag risk-warning mt-4">' +
+                '<div class="flex flex-wrap items-center gap-2 mb-1">' +
+                    HastraPrimeRenderer._pill((data.issuer && data.issuer.badge) || 'Issuer 5.5/10', 'warn') +
+                    HastraPrimeRenderer._link((data.issuer && data.issuer.report_url) || HP_REPORT.url, 'Full issuer report ↗') +
+                '</div>' +
+                '<span class="font-semibold">Hastra–Figure is a related-party dependency.</span> ' +
+                'Hastra (Signum Ltd.) is disclosed as a Figure related party under a licensed Figure software agreement expiring ' +
+                'December 2028. Figure originates the HELOCs and Figure Certificate Company issues YLDS, while Hastra administers ' +
+                'the PRIME wrapper and its redemption path.' +
+            '</div>' +
         '</div>';
     },
 
@@ -1257,76 +1323,196 @@ var HastraPrimeRenderer = {
     },
 
     // ============================================================
-    // §7 Liquidity & peg
+    // §1 Peg — canonical mark is PRIME vs wYLDS NAV, not the USD conversion.
+    // ============================================================
+    _renderPeg: function(data, spec) {
+        var peg = data.peg || {};
+        var oracle = (spec.solana && spec.solana.prime_oracle) || {};
+        var pct = peg.premium_discount_pct;
+        var usd = peg.usd_conversion || {};
+        var pctText = pct == null ? '—' : (pct >= 0 ? '+' : '') + pct.toFixed(2) + '%';
+        var rating = typeof CommonRenderer !== 'undefined' ?
+            CommonRenderer.pegRating(data, HastraPrimeRenderer._history) : null;
+        var ratingHtml = typeof CommonRenderer !== 'undefined' ?
+            CommonRenderer._ratingChipHtml(rating) : '';
+
+        return '<div class="panel">' +
+            '<div class="flex flex-wrap items-start justify-between gap-3 mb-4">' +
+                '<div><div class="panel-title" style="margin:0">PRIME discount to NAV</div>' +
+                    '<div class="text-xs text-slate-500 mt-1">Canonical basis: PRIME market price vs wYLDS-denominated staking NAV</div></div>' +
+                ratingHtml +
+            '</div>' +
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+                HastraPrimeRenderer._tile('Market mark',
+                    peg.market_price != null ? peg.market_price.toFixed(6) : '—', '',
+                    'wYLDS-par normalized') +
+                HastraPrimeRenderer._tile('NAV',
+                    peg.nav_wylds_per_prime != null ? peg.nav_wylds_per_prime.toFixed(6) : '—', '',
+                    'wYLDS per PRIME') +
+                HastraPrimeRenderer._tile('Discount to NAV', pctText,
+                    pct != null && Math.abs(pct) >= 0.5 ? 'warning' : 'positive',
+                    'canonical PRIME mark') +
+                HastraPrimeRenderer._tile('USD conversion',
+                    usd.premium_discount_pct != null
+                        ? (usd.premium_discount_pct >= 0 ? '+' : '') + usd.premium_discount_pct.toFixed(2) + '%'
+                        : '—', '',
+                    'secondary · includes wYLDS/USD noise') +
+            '</div>' +
+            '<div class="flex flex-wrap items-center gap-2 mb-3">' +
+                HastraPrimeRenderer._pill('NAV oracle ' + (oracle.stale === true ? 'stale' : 'fresh'),
+                    HastraPrimeRenderer._gate(oracle.stale === true ? 'warn' : 'ok')) +
+                (oracle.price_age_seconds != null
+                    ? HastraPrimeRenderer._pill('age ' + Math.round(oracle.price_age_seconds / 60) + 'm', 'neutral')
+                    : '') +
+                (oracle.source ? HastraPrimeRenderer._pill(oracle.source, 'neutral') : '') +
+                (oracle.pda ? HastraPrimeRenderer._pill('PDA ' +
+                    HastraPrimeRenderer._trunc(oracle.pda, 6, 4), 'neutral') : '') +
+            '</div>' +
+            '<div id="hp-peg-chart-slot" class="chart-container">' +
+                '<canvas id="hp-peg-chart"></canvas>' +
+                '<div id="hp-peg-history-note" class="hidden h-full items-center justify-center text-sm text-slate-400">' +
+                    'Insufficient history — 6 of 54 observations currently carry a PRIME market mark.' +
+                '</div>' +
+            '</div>' +
+            '<div class="text-xs text-slate-500 mt-3">' +
+                'The USD-converted premium is deliberately secondary: movement in wYLDS/USD changes that figure without changing ' +
+                'PRIME’s mark against the wYLDS NAV holders receive.' +
+            '</div>' +
+        '</div>';
+    },
+
+    _drawPegChart: function(data) {
+        var hist = HastraPrimeRenderer._history;
+        var entries = hist && Array.isArray(hist.entries) ? hist.entries : [];
+        var points = entries.filter(function(e) {
+            return e && e.timestamp && e.peg_market_price != null &&
+                e.nav_wylds_per_prime != null;
+        });
+        var canvas = document.getElementById('hp-peg-chart');
+        var note = document.getElementById('hp-peg-history-note');
+        // Seven valid observations is the minimum useful series. Tracking has
+        // just started (currently 6/54), so render an explicit state instead of
+        // implying a trend from a handful of nearly simultaneous points.
+        if (!canvas || points.length < 7 || typeof Chart === 'undefined') {
+            if (canvas) canvas.style.display = 'none';
+            if (note) {
+                note.textContent = 'Insufficient history — ' + points.length + ' of ' +
+                    entries.length + ' observations carry a PRIME market mark.';
+                note.classList.remove('hidden');
+                note.classList.add('flex');
+            }
+            return;
+        }
+        if (window._hpPegChart) window._hpPegChart.destroy();
+        window._hpPegChart = new Chart(canvas, {
+            type: 'line',
+            data: {
+                labels: points.map(function(e) { return new Date(e.timestamp); }),
+                datasets: [
+                    {
+                        label: 'Market mark (wYLDS-par)',
+                        data: points.map(function(e) { return e.peg_market_price; }),
+                        borderColor: '#6366f1', borderWidth: 2, pointRadius: 0,
+                        fill: false, tension: 0.25
+                    },
+                    {
+                        label: 'wYLDS NAV',
+                        data: points.map(function(e) { return e.nav_wylds_per_prime; }),
+                        borderColor: '#94a3b8', borderWidth: 2, borderDash: [5, 4],
+                        pointRadius: 0, fill: false, tension: 0.25
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'time', time: { unit: 'day' }, grid: { display: false } },
+                    y: { grid: { color: '#f1f5f9' } }
+                },
+                plugins: { legend: { position: 'top', labels: { boxWidth: 12 } } },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    // ============================================================
+    // §2 Liquidity — live Ethereum depth; peg has moved to §1.
     // ============================================================
     _renderLiquidity: function(data, spec) {
-        var sol = spec.solana || {};
-        var eth = spec.ethereum || {};
-        var oracle = sol.prime_oracle || {};
-        var price = data.price || {};
-
-        var oracleStale = oracle.stale === true;
-        var ageS = oracle.price_age_seconds;
-        var maxS = oracle.price_max_staleness;
-
-        var venueRows = HP_REPORT.liquidity.venues.map(function(v) {
+        var liq = data.liquidity || {};
+        var ceiling = liq.capacity_ceiling || {};
+        var rating = typeof CommonRenderer !== 'undefined' ?
+            CommonRenderer.liquidityRating(data) : null;
+        var ratingHtml = typeof CommonRenderer !== 'undefined' ?
+            CommonRenderer._ratingChipHtml(rating) : '';
+        var venueRows = (Array.isArray(liq.pools) ? liq.pools : []).map(function(v) {
             return '<tr>' +
-                '<td class="font-medium">' + v.venue + '</td>' +
-                '<td>' + v.chain + '</td>' +
+                '<td class="font-medium">' + (v.venue || '—') + ' ' + (v.pair || '') + '</td>' +
+                '<td>' + (v.chain || '—') + '</td>' +
                 '<td class="text-right font-mono">' + (v.tvl_usd != null ? HastraPrimeRenderer._money(v.tvl_usd) : '—') + '</td>' +
-                '<td class="text-right font-mono">' + (v.vol24h_usd != null ? HastraPrimeRenderer._money(v.vol24h_usd) : '—') + '</td>' +
-                '<td class="text-right font-mono">' + (v.price != null ? '$' + v.price.toFixed(3) : '—') + '</td>' +
-                '<td class="text-xs text-slate-500">' + v.note + '</td>' +
+                '<td class="text-right font-mono">' + (v.depth_usd != null ? HastraPrimeRenderer._money(v.depth_usd) : '—') + '</td>' +
+                '<td class="text-right font-mono">' + (v.volume_24h != null ? HastraPrimeRenderer._money(v.volume_24h) : 'unavailable') + '</td>' +
             '</tr>';
         }).join('');
 
         return '<div class="panel">' +
-            '<div class="panel-title">Liquidity &amp; Peg ' +
-                '<span class="text-xs font-normal text-slate-400">— NAV is live; venue depth is not</span></div>' +
+            '<div class="flex flex-wrap items-center gap-2 mb-3">' +
+                '<div class="panel-title" style="margin:0">Executable secondary-market depth</div>' +
+                ratingHtml +
+                '<span class="font-semibold text-sm">' +
+                    HastraPrimeRenderer._money(liq.capacity_ceiling_usd) + ' hard ceiling · ' +
+                    (liq.capacity_ceiling_pct_mcap != null ? liq.capacity_ceiling_pct_mcap.toFixed(2) + '% of market cap' : '—') +
+                '</span>' +
+            '</div>' +
 
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
-                HastraPrimeRenderer._tile('PRIME NAV',
-                    oracle.nav_wylds_per_prime != null ? oracle.nav_wylds_per_prime.toFixed(6) : '—', '',
-                    'wYLDS per PRIME · on-chain oracle') +
-                HastraPrimeRenderer._tile('Oracle age',
-                    ageS != null ? Math.round(ageS / 60) + 'm' : '—',
-                    HastraPrimeRenderer._gate(oracleStale ? 'warn' : 'ok') === 'warn' ? 'warning' : '',
-                    maxS != null ? 'max ' + Math.round(maxS / 60) + 'm' : '') +
-                HastraPrimeRenderer._tile('YLDS mark',
-                    price.value != null ? '$' + price.value.toFixed(4) : '—', '',
-                    price.source || '') +
-                HastraPrimeRenderer._tile('Morpho vault wYLDS',
-                    HastraPrimeRenderer._tok(eth.morpho_prime_wylds), '',
-                    'Sentora PRIME Main · live') +
+                HastraPrimeRenderer._tile('2% depth',
+                    HastraPrimeRenderer._money(liq.total_2pct_depth), '',
+                    'capacity-capped, not slippage-capped') +
+                HastraPrimeRenderer._tile('Max input ≤100bps',
+                    HastraPrimeRenderer._money(ceiling.max_input_within_100bps_usd), '',
+                    'PRIME → USDC') +
+                HastraPrimeRenderer._tile('First saturated input',
+                    HastraPrimeRenderer._money(ceiling.first_saturated_input_usd), 'warning',
+                    'output stops increasing') +
+                HastraPrimeRenderer._tile('24h volume',
+                    liq.volume_24h != null ? HastraPrimeRenderer._money(liq.volume_24h) : 'unavailable', '',
+                    'context-only · unscored') +
             '</div>' +
 
-            '<div class="flex flex-wrap items-center gap-2 mb-3">' +
-                HastraPrimeRenderer._pill('NAV oracle ' + (oracleStale ? 'stale' : 'fresh'),
-                    HastraPrimeRenderer._gate(oracleStale ? 'warn' : 'ok')) +
-                (oracle.pda ? HastraPrimeRenderer._pill('PDA ' + HastraPrimeRenderer._trunc(oracle.pda, 6, 4), 'neutral') : '') +
-                (oracle.source ? HastraPrimeRenderer._pill(oracle.source, 'neutral') : '') +
-                HastraPrimeRenderer._pill('Morpho vault ' + HastraPrimeRenderer._trunc(HP_ADDR.morpho_vault_eth, 6, 4), 'neutral') +
+            '<div class="risk-flag risk-warning mb-3">' +
+                '<span class="font-semibold">5/5 depth, and only ' +
+                (liq.capacity_ceiling_pct_mcap != null ? liq.capacity_ceiling_pct_mcap.toFixed(2) + '%' : '—') +
+                ' of market cap can use it.</span> This is a hard inventory wall, not a slippage curve: beyond ' +
+                HastraPrimeRenderer._money(liq.capacity_ceiling_usd) +
+                ' the pool cannot return more USDC at any input size. Coverage is Ethereum-only; Solana Orca, where roughly 35% ' +
+                'of PRIME supply sits, is not quoted. The USDC inventory is PRIME Roots campaign-supported and may not persist.' +
             '</div>' +
+            '<div class="text-xs text-slate-500 mb-3">Capacity method: <span class="font-mono">' +
+                (ceiling.method || 'unavailable') + '</span>.</div>' +
 
-            '<div class="risk-flag risk-info mb-3">' +
-                '<span class="font-medium">This monitor has no live DEX feed.</span> The four tiles above are read from chain every run; ' +
-                'the venue table below is <span class="font-medium">not</span> — it is carried from the research report and only moves when ' +
-                'that report is refreshed. Do not size an exit off it without re-checking depth.' +
-            '</div>' +
-
-            '<div class="flex items-center justify-between gap-2 mb-2">' +
-                '<div class="text-sm font-semibold panel-title" style="font-size:0.9rem;margin:0">Secondary venues</div>' +
-                HastraPrimeRenderer._reportBadge(HP_REPORT.liquidity.as_of) +
-            '</div>' +
             '<div class="data-table-scroll"><table class="data-table">' +
                 '<thead><tr><th>Venue</th><th>Chain</th><th class="text-right">TVL</th>' +
-                '<th class="text-right">24h vol</th><th class="text-right">Price</th><th>Note</th></tr></thead>' +
+                '<th class="text-right">Depth</th><th class="text-right">24h volume</th></tr></thead>' +
                 '<tbody>' + venueRows + '</tbody></table></div>' +
+        '</div>';
+    },
 
-            '<div class="text-xs text-slate-400 mt-2">' +
-                'The Ethereum Uniswap V3 pool is the only exit that does not route through the nil-buffer redeem pipeline, which makes it ' +
-                'the load-bearing liquidity fact for this asset — and it is campaign-supported, so its durability is an open question rather ' +
-                'than an established one. ' + HastraPrimeRenderer._link(HP_REPORT.url, 'Full report ↗') +
+    _renderUpstreamDependencies: function(data) {
+        var upstream = data.dependencies && Array.isArray(data.dependencies.upstream)
+            ? data.dependencies.upstream : [];
+        if (!upstream.length) return '';
+        return '<div class="panel">' +
+            '<div class="panel-title">Upstream dependency map</div>' +
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">' +
+                upstream.map(function(dep) {
+                    return '<div class="dep-card">' +
+                        '<div class="font-semibold text-sm">' + dep.name + '</div>' +
+                        '<div class="text-xs text-slate-500 mt-1">' + dep.metric + '</div>' +
+                        (dep.link ? '<div class="text-xs mt-2">' +
+                            HastraPrimeRenderer._link(dep.link, 'Source ↗') + '</div>' : '') +
+                    '</div>';
+                }).join('') +
             '</div>' +
         '</div>';
     },
@@ -1698,16 +1884,18 @@ var HastraPrimeRenderer = {
         var inner = document.getElementById('asset-anchor-nav-inner');
         if (!navEl || !inner) return;
         var items = [
+            { id: 'hp-panel-flags',      label: 'Risk flags' },
+            { id: 'hp-panel-peg',        label: 'Peg' },
+            { id: 'hp-panel-liquidity',  label: 'Liquidity' },
+            { id: 'hp-panel-redemption', label: 'Redemption' },
             { id: 'hp-panel-headline',   label: 'Ours vs theirs' },
             { id: 'chart-panel',         label: 'CR history' },
             { id: 'hp-panel-recon',      label: 'Reconciliation' },
-            { id: 'hp-panel-redemption', label: 'Redemption' },
             { id: 'hp-panel-reserves',   label: 'Reserve map' },
             { id: 'hp-panel-supply',     label: 'Supply' },
-            { id: 'hp-panel-control',    label: 'Control' },
-            { id: 'hp-panel-liquidity',  label: 'Liquidity' },
             { id: 'hp-panel-warehouse',  label: 'HELOC turnover' },
             { id: 'hp-panel-heloc-credit', label: 'HELOC credit proxy' },
+            { id: 'hp-panel-control',    label: 'Issuer control' },
             { id: 'hp-panel-provenance', label: 'Provenance' }
         ];
         inner.innerHTML = items.map(function(item) {
