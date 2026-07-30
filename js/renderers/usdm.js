@@ -103,15 +103,11 @@ var USDmRenderer = {
         return 'critical';
     },
 
-    // Monad reserve coverage: how much of Monad-bucket USDm supply is
-    // demonstrably backed by ReserveV2 holdings on-chain. The single most
-    // important number on the page.
-    _coverageState: function(ratio) {
+    // Monad ex-POL coverage: ReserveV2 holdings divided by USDm outside the
+    // Mento-seeded RLS/OLS pools. Par is the user-protection threshold.
+    _exPolCoverageState: function(ratio) {
         if (ratio == null) return 'unknown';
-        var pct = ratio * 100;
-        if (pct >= 90) return 'ok';
-        if (pct >= 75) return 'warn';
-        return 'critical';
+        return ratio >= 1 ? 'ok' : 'critical';
     },
 
     // Stable-only Reserve coverage state. Thresholds from the editorial
@@ -282,7 +278,11 @@ var USDmRenderer = {
             amber: [100, 102],
             healthy: [102, 200],
             min_line: 100,
-            max_line: null
+            max_line: null,
+            // USDm opts into display-only artifact defense. common.js remains
+            // unbounded for every other renderer unless it explicitly opts in.
+            cr_sanity_floor: 50,
+            hard_y_bounds: true
         };
         specific.chart_title = 'Collateral Ratio History — Reserve vs All Stablecoin Debt';
         specific.chart_dataset_label = stableOnlyAggRatio != null ? 'All Collateral' : 'Reserve / Σ(stablecoins)';
@@ -704,12 +704,16 @@ var USDmRenderer = {
         var eth = specific.ethereum_state || {};
         var hasEth = (eth.reserve_on_chain_usd != null);
 
-        var coverage = monad.reserve_v2_coverage_ratio;
-        var coverageState = USDmRenderer._coverageState(coverage);
-        var covCls = coverageState === 'ok' ? 'text-green-600' :
-                     coverageState === 'warn' ? 'text-amber-600' :
-                     coverageState === 'critical' ? 'text-red-600' : 'text-slate-600';
-        var covPct = (coverage != null) ? (coverage * 100).toFixed(2) + '%' : '—';
+        var grossCoverage = monad.reserve_v2_coverage_ratio;
+        var grossCovPct = (grossCoverage != null) ? (grossCoverage * 100).toFixed(2) + '%' : '—';
+        var retailFloat = monad.usdm_supply_retail_or_other;
+        var exPolCoverage = (monad.reserve_v2_usd_value != null && retailFloat != null && retailFloat > 0) ?
+            monad.reserve_v2_usd_value / retailFloat : null;
+        var exPolState = USDmRenderer._exPolCoverageState(exPolCoverage);
+        var exPolCls = exPolState === 'ok' ? 'text-green-600' :
+                       exPolState === 'critical' ? 'text-red-600' : 'text-slate-600';
+        var exPolPct = (exPolCoverage != null) ? (exPolCoverage * 100).toFixed(2) + '%' : '—';
+        var coverageTooltip = 'POL (RLS + OLS pools) is Mento-seeded inventory. Gross coverage includes that inventory; ex-POL coverage compares ReserveV2 with the USDm users actually hold.';
 
         var lostCell = (celo.lost != null && celo.lost > 0) ?
             '<span class="text-amber-600 font-mono" title="Mento\'s own &quot;lost&quot; transparency field">' + USDmRenderer._formatToken(celo.lost) + ' USDm</span>' :
@@ -790,12 +794,18 @@ var USDmRenderer = {
                     '<dl class="text-sm space-y-1">' +
                         '<div class="flex justify-between"><dt class="text-slate-500">USDm Supply</dt><dd class="font-mono">' + USDmRenderer._formatToken(monad.usdm_supply_total) + '</dd></div>' +
                         '<div class="flex justify-between"><dt class="text-slate-500">ReserveV2 (on-chain)</dt><dd class="font-mono">' + CommonRenderer.formatCurrencyExact(monad.reserve_v2_usd_value) + '</dd></div>' +
-                        '<div class="flex justify-between items-baseline border-t border-slate-100 dark:border-slate-700 pt-2 mt-2">' +
-                            '<dt class="text-slate-700 dark:text-slate-200 font-semibold" title="The on-chain answer to &quot;is Monad USDm actually backed?&quot;">ReserveV2 Coverage</dt>' +
-                            '<dd class="text-xl font-bold font-mono ' + covCls + '">' + covPct + '</dd>' +
+                        '<div class="grid grid-cols-2 gap-3 border-t border-slate-100 dark:border-slate-700 pt-2 mt-2">' +
+                            '<div title="' + coverageTooltip + '">' +
+                                '<dt class="text-xs text-slate-500 font-semibold">Coverage (gross)</dt>' +
+                                '<dd class="text-xl font-bold font-mono text-slate-600 dark:text-slate-300">' + grossCovPct + '</dd>' +
+                            '</div>' +
+                            '<div class="text-right" title="' + coverageTooltip + '">' +
+                                '<dt class="text-xs text-slate-700 dark:text-slate-200 font-semibold">ReserveV2 ÷ Retail Float (ex-POL)</dt>' +
+                                '<dd class="text-xl font-bold font-mono ' + exPolCls + '">' + exPolPct + '</dd>' +
+                            '</div>' +
                         '</div>' +
                     '</dl>' +
-                    '<div class="text-xs text-slate-400 mt-2">Pool-resident USDm pulls local coverage below 100%. The gap is closed by Mento operational top-ups (visible in chart), not by an on-chain bridge — Wormhole NTT is announced but not yet operational.</div>' +
+                    '<div class="text-xs text-slate-400 mt-2">Gross includes Mento-seeded RLS + OLS pool inventory. Ex-POL is the user-relevant measure; below 100% means ReserveV2 does not cover the retail float.</div>' +
                 '</div>' +
 
                 // Ethereum card (rendered only when analyzer publishes ethereum_state)

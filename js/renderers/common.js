@@ -276,12 +276,30 @@ const CommonRenderer = {
         // suggestedMin/Max default keeps the original 80-150 range; tight ratios (PCR) want to override
         var yMin = opts.y_min !== undefined ? opts.y_min : 80;
         var yMax = opts.y_max !== undefined ? opts.y_max : 150;
+        // Asset-specific renderers can opt in through chart_bands metadata;
+        // absence preserves the shared renderer's historical behavior.
+        var sanityFloor = opts.cr_sanity_floor !== undefined ? opts.cr_sanity_floor : bands.cr_sanity_floor;
+        var hardYBounds = opts.hard_y_bounds !== undefined ? opts.hard_y_bounds : bands.hard_y_bounds;
+        var hasSanityFloor = sanityFloor !== undefined && sanityFloor !== null;
+        function saneCR(v) {
+            if (v === null || v === undefined) return false;
+            // Preserve the old null-only behavior unless the asset opted in.
+            return !hasSanityFloor || (Number.isFinite(v) && v >= sanityFloor);
+        }
         // Update panel title if overridden
         var titleEl = document.querySelector('#chart-panel .panel-title');
         if (titleEl) titleEl.textContent = title;
 
         // Min/max CR stats
-        var crValues = historyData.entries.map(function(e) { return e.collateral_ratio; }).filter(function(v) { return v !== null && v !== undefined; });
+        var rawCRValues = historyData.entries.map(function(e) { return e.collateral_ratio; });
+        var rawAltCRValues = historyData.entries.map(function(e) { return e.collateral_ratio_alt; });
+        var crValues = rawCRValues.filter(saneCR);
+        var excludedCount = 0;
+        if (hasSanityFloor) {
+            excludedCount = rawCRValues.concat(rawAltCRValues).filter(function(v) {
+                return v !== null && v !== undefined && !saneCR(v);
+            }).length;
+        }
         if (crValues.length > 0) {
             var minCR = Math.min.apply(null, crValues);
             var maxCR = Math.max.apply(null, crValues);
@@ -297,13 +315,14 @@ const CommonRenderer = {
             var minCls = minCR < 100 ? 'text-red-600 font-semibold' : minCR < 110 ? 'text-amber-600 font-semibold' : '';
             statsEl.innerHTML = '<span>30d Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
                 '<span>30d Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
-                '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>';
+                '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>' +
+                (excludedCount > 0 ? '<span class="text-amber-600">' + excludedCount + ' values excluded as incomplete reads (&lt;' + sanityFloor + '%)</span>' : '');
         }
 
         var entries = historyData.entries;
         var labels = entries.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });
-        var crData = entries.map(function(e) { return e.collateral_ratio; });
-        var crAltData = entries.map(function(e) { return e.collateral_ratio_alt; });
+        var crData = rawCRValues.map(function(v) { return saneCR(v) ? v : null; });
+        var crAltData = rawAltCRValues.map(function(v) { return saneCR(v) ? v : null; });
 
         // Drop the second series if explicitly suppressed, or if every value is null/undefined.
         var altHasData = !opts.omit_alt && crAltData.some(function(v) { return v !== null && v !== undefined; });
@@ -361,8 +380,10 @@ const CommonRenderer = {
                     },
                     y: {
                         grid: { color: '#f1f5f9' },
-                        suggestedMin: yMin,
-                        suggestedMax: yMax,
+                        min: hardYBounds ? yMin : undefined,
+                        max: hardYBounds ? yMax : undefined,
+                        suggestedMin: hardYBounds ? undefined : yMin,
+                        suggestedMax: hardYBounds ? undefined : yMax,
                         ticks: {
                             callback: function(v) { return v + '%'; },
                             font: { size: 11 }
