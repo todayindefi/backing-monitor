@@ -268,10 +268,10 @@ var USDmRenderer = {
             { label: 'Ops Wallets',  value: cb.ops_usd  || 0, pct: pct(cb.ops_usd  || 0), tags: [] }
         ];
 
-        // CR chart band — Mento targets ~par with small surplus; meaningful
-        // range is tighter than common.js defaults.
-        specific.chart_y_min = 95;
-        specific.chart_y_max = 110;
+        // CR chart band — stable-only clusters near par while gross coverage
+        // sits around 126%; keep both named series continuously visible.
+        specific.chart_y_min = 90;
+        specific.chart_y_max = 130;
         specific.chart_bands = {
             critical: [0, 98],
             thin: [98, 100],

@@ -294,8 +294,18 @@ const CommonRenderer = {
         var rawCRValues = historyData.entries.map(function(e) { return e.collateral_ratio; });
         var rawAltCRValues = historyData.entries.map(function(e) { return e.collateral_ratio_alt; });
         var crValues = rawCRValues.filter(saneCR);
+        var rawAltHasData = !opts.omit_alt && rawAltCRValues.some(function(v) {
+            return v !== null && v !== undefined;
+        });
+        var missingReadCount = 0;
         var excludedCount = 0;
         if (hasSanityFloor) {
+            missingReadCount = historyData.entries.filter(function(e, i) {
+                var primaryMissing = rawCRValues[i] === null || rawCRValues[i] === undefined;
+                var altMissing = rawAltHasData &&
+                    (rawAltCRValues[i] === null || rawAltCRValues[i] === undefined);
+                return primaryMissing || altMissing;
+            }).length;
             excludedCount = rawCRValues.concat(rawAltCRValues).filter(function(v) {
                 return v !== null && v !== undefined && !saneCR(v);
             }).length;
@@ -316,7 +326,8 @@ const CommonRenderer = {
             statsEl.innerHTML = '<span>30d Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
                 '<span>30d Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
                 '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>' +
-                (excludedCount > 0 ? '<span class="text-amber-600">' + excludedCount + ' values excluded as incomplete reads (&lt;' + sanityFloor + '%)</span>' : '');
+                (missingReadCount > 0 ? '<span class="text-slate-400">' + missingReadCount + ' observations unavailable (missing/incomplete reads)</span>' : '') +
+                (excludedCount > 0 ? '<span class="text-amber-600">' + excludedCount + ' implausible values excluded (&lt;' + sanityFloor + '%)</span>' : '');
         }
 
         var entries = historyData.entries;
@@ -325,7 +336,7 @@ const CommonRenderer = {
         var crAltData = rawAltCRValues.map(function(v) { return saneCR(v) ? v : null; });
 
         // Drop the second series if explicitly suppressed, or if every value is null/undefined.
-        var altHasData = !opts.omit_alt && crAltData.some(function(v) { return v !== null && v !== undefined; });
+        var altHasData = rawAltHasData && crAltData.some(function(v) { return v !== null && v !== undefined; });
         var datasets = [{
             label: datasetLabel,
             data: crData,
