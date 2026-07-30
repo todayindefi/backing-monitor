@@ -106,20 +106,6 @@ var HP_REPORT = {
         next_expected: '2026-08-14'
     },
 
-    // Secondary-market depth. The analyzer emits no DEX feed today, so these are
-    // report figures, not live quotes.
-    liquidity: {
-        as_of: '2026-07-24',
-        venues: [
-            { venue: 'Uniswap V3 PRIME/USDC', chain: 'Ethereum', tvl_usd: 9.0e6, vol24h_usd: 23.4e6,
-              price: 1.049, note: 'Tight to NAV (+0.02%). Primary venue. Depth is PRIME Roots campaign-supported — re-verify post-campaign.' },
-            { venue: 'Orca PYUSD/PRIME', chain: 'Solana', tvl_usd: null, vol24h_usd: 2.47e6,
-              price: null, note: 'Secondary Solana venue.' },
-            { venue: 'Manifest PRIME/USDC', chain: 'Solana', tvl_usd: null, vol24h_usd: null,
-              price: null, note: 'Listed venue; depth not sized in the report.' }
-        ]
-    },
-
     // HELOC-warehouse credit. Issuer-reported, cross-checked against an
     // independent securitization proxy. Never chain-verified.
     heloc: {
@@ -335,6 +321,18 @@ var HastraPrimeRenderer = {
         var t = new Date(iso.endsWith && iso.endsWith('Z') ? iso : iso + 'Z');
         if (isNaN(t.getTime())) return iso;
         return t.toISOString().slice(0, 16).replace('T', ' ') + 'Z';
+    },
+
+    _indexerLabel: function(source) {
+        if (!source || typeof source !== 'string') return null;
+        var normalized = source.trim().toLowerCase();
+        var known = {
+            geckoterminal: 'GeckoTerminal'
+        };
+        if (known[normalized]) return known[normalized];
+        return source.trim().replace(/[_-]+/g, ' ').replace(/\b\w/g, function(c) {
+            return c.toUpperCase();
+        });
     },
 
     // ============================================================
@@ -1441,6 +1439,12 @@ var HastraPrimeRenderer = {
     _renderLiquidity: function(data, spec) {
         var liq = data.liquidity || {};
         var ceiling = liq.capacity_ceiling || {};
+        var volumeSub = ['context-only', 'unscored'];
+        var volumeSource = HastraPrimeRenderer._indexerLabel(liq.volume_24h_source);
+        if (volumeSource) volumeSub.push(volumeSource);
+        if (liq.volume_24h_as_of) {
+            volumeSub.push('as of ' + HastraPrimeRenderer._hhmm(liq.volume_24h_as_of));
+        }
         var rating = typeof CommonRenderer !== 'undefined' ?
             CommonRenderer.liquidityRating(data) : null;
         var ratingHtml = typeof CommonRenderer !== 'undefined' ?
@@ -1477,7 +1481,7 @@ var HastraPrimeRenderer = {
                     'output stops increasing') +
                 HastraPrimeRenderer._tile('24h volume',
                     liq.volume_24h != null ? HastraPrimeRenderer._money(liq.volume_24h) : 'unavailable', '',
-                    'context-only · unscored') +
+                    volumeSub.join(' · ')) +
             '</div>' +
 
             '<div class="risk-flag risk-warning mb-3">' +
@@ -1485,8 +1489,8 @@ var HastraPrimeRenderer = {
                 (liq.capacity_ceiling_pct_mcap != null ? liq.capacity_ceiling_pct_mcap.toFixed(2) + '%' : '—') +
                 ' of market cap can use it.</span> This is a hard inventory wall, not a slippage curve: beyond ' +
                 HastraPrimeRenderer._money(liq.capacity_ceiling_usd) +
-                ' the pool cannot return more USDC at any input size. Coverage is Ethereum-only; Solana Orca, where roughly 35% ' +
-                'of PRIME supply sits, is not quoted. The USDC inventory is PRIME Roots campaign-supported and may not persist.' +
+                ' the pool cannot return more USDC at any input size. The venue table below is the source of truth for currently covered chains and pools. ' +
+                'The USDC inventory is PRIME Roots campaign-supported and may not persist.' +
             '</div>' +
             '<div class="text-xs text-slate-500 mb-3">Capacity method: <span class="font-mono">' +
                 (ceiling.method || 'unavailable') + '</span>.</div>' +
