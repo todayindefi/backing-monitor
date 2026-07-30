@@ -279,10 +279,12 @@ var USDmRenderer = {
             healthy: [102, 200],
             min_line: 100,
             max_line: null,
-            // USDm opts into display-only artifact defense. common.js remains
-            // unbounded for every other renderer unless it explicitly opts in.
-            cr_sanity_floor: 50,
-            hard_y_bounds: true
+            // Analyzer provenance is authoritative: flagged snapshots remain
+            // in the export for auditability but are excluded from the chart.
+            // Missing `suspect` keys in older cached exports remain visible.
+            // Suggested bounds keep today's two bands legible but yield to a
+            // genuine, unflagged deterioration outside the normal envelope.
+            exclude_suspect: true
         };
         specific.chart_title = 'Collateral Ratio History — Reserve vs All Stablecoin Debt';
         specific.chart_dataset_label = stableOnlyAggRatio != null ? 'All Collateral' : 'Reserve / Σ(stablecoins)';

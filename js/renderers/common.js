@@ -279,12 +279,25 @@ const CommonRenderer = {
         // Asset-specific renderers can opt in through chart_bands metadata;
         // absence preserves the shared renderer's historical behavior.
         var sanityFloor = opts.cr_sanity_floor !== undefined ? opts.cr_sanity_floor : bands.cr_sanity_floor;
+        var excludeSuspect = opts.exclude_suspect !== undefined ? opts.exclude_suspect : bands.exclude_suspect;
         var hardYBounds = opts.hard_y_bounds !== undefined ? opts.hard_y_bounds : bands.hard_y_bounds;
         var hasSanityFloor = sanityFloor !== undefined && sanityFloor !== null;
         function saneCR(v) {
             if (v === null || v === undefined) return false;
             // Preserve the old null-only behavior unless the asset opted in.
             return !hasSanityFloor || (Number.isFinite(v) && v >= sanityFloor);
+        }
+        function isSuspect(e) {
+            // Missing keys are intentionally treated as false for pre-flag
+            // history exports and cached data.
+            return !!excludeSuspect && e && e.suspect === true;
+        }
+        function escapeAttr(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
         }
         // Update panel title if overridden
         var titleEl = document.querySelector('#chart-panel .panel-title');
@@ -293,22 +306,53 @@ const CommonRenderer = {
         // Min/max CR stats
         var rawCRValues = historyData.entries.map(function(e) { return e.collateral_ratio; });
         var rawAltCRValues = historyData.entries.map(function(e) { return e.collateral_ratio_alt; });
-        var crValues = rawCRValues.filter(saneCR);
         var rawAltHasData = !opts.omit_alt && rawAltCRValues.some(function(v) {
             return v !== null && v !== undefined;
         });
+        var crValues = rawCRValues.filter(function(v, i) {
+            return !isSuspect(historyData.entries[i]) && saneCR(v);
+        });
         var missingReadCount = 0;
+        var suspectReadCount = 0;
+        var suspectReasonCounts = {};
         var excludedCount = 0;
-        if (hasSanityFloor) {
+        if (hasSanityFloor || excludeSuspect) {
             missingReadCount = historyData.entries.filter(function(e, i) {
                 var primaryMissing = rawCRValues[i] === null || rawCRValues[i] === undefined;
                 var altMissing = rawAltHasData &&
                     (rawAltCRValues[i] === null || rawAltCRValues[i] === undefined);
                 return primaryMissing || altMissing;
             }).length;
-            excludedCount = rawCRValues.concat(rawAltCRValues).filter(function(v) {
-                return v !== null && v !== undefined && !saneCR(v);
-            }).length;
+            historyData.entries.forEach(function(e, i) {
+                var primaryPresent = rawCRValues[i] !== null && rawCRValues[i] !== undefined;
+                var altPresent = !rawAltHasData ||
+                    (rawAltCRValues[i] !== null && rawAltCRValues[i] !== undefined);
+                if (!isSuspect(e) || !primaryPresent || !altPresent) return;
+                suspectReadCount++;
+                var reasons = Array.isArray(e.suspect_reasons) ? e.suspect_reasons.slice() : [];
+                ['mento_api_ok', 'monad_rpc_ok', 'ethereum_rpc_ok', 'celo_rpc_ok'].forEach(function(key) {
+                    if (e[key] === false && !reasons.some(function(reason) {
+                        return String(reason).indexOf(key + '=false') !== -1;
+                    })) {
+                        reasons.push(key + '=false');
+                    }
+                });
+                if (reasons.length === 0) reasons.push('flagged by analyzer (no reason supplied)');
+                Array.from(new Set(reasons.map(String))).forEach(function(reason) {
+                    suspectReasonCounts[reason] = (suspectReasonCounts[reason] || 0) + 1;
+                });
+            });
+            if (hasSanityFloor) {
+                historyData.entries.forEach(function(e, i) {
+                    if (isSuspect(e)) return;
+                    if (rawCRValues[i] !== null && rawCRValues[i] !== undefined &&
+                        !saneCR(rawCRValues[i])) excludedCount++;
+                    if (rawAltHasData && rawAltCRValues[i] !== null &&
+                        rawAltCRValues[i] !== undefined && !saneCR(rawAltCRValues[i])) {
+                        excludedCount++;
+                    }
+                });
+            }
         }
         if (crValues.length > 0) {
             var minCR = Math.min.apply(null, crValues);
@@ -323,17 +367,27 @@ const CommonRenderer = {
                 if (titleEl) titleEl.after(statsEl);
             }
             var minCls = minCR < 100 ? 'text-red-600 font-semibold' : minCR < 110 ? 'text-amber-600 font-semibold' : '';
+            var suspectTooltip = Object.keys(suspectReasonCounts).sort(function(a, b) {
+                return suspectReasonCounts[b] - suspectReasonCounts[a] || a.localeCompare(b);
+            }).map(function(reason) {
+                return reason + (suspectReasonCounts[reason] > 1 ? ' (' + suspectReasonCounts[reason] + ')' : '');
+            }).join('; ');
             statsEl.innerHTML = '<span>30d Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
                 '<span>30d Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
                 '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>' +
                 (missingReadCount > 0 ? '<span class="text-slate-400">' + missingReadCount + ' observations unavailable (missing/incomplete reads)</span>' : '') +
+                (suspectReadCount > 0 ? '<span class="text-amber-600" title="' + escapeAttr(suspectReadCount + ' excluded: ' + suspectTooltip) + '">' + suspectReadCount + ' flagged observations excluded as incomplete reads ⓘ</span>' : '') +
                 (excludedCount > 0 ? '<span class="text-amber-600">' + excludedCount + ' implausible values excluded (&lt;' + sanityFloor + '%)</span>' : '');
         }
 
         var entries = historyData.entries;
         var labels = entries.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });
-        var crData = rawCRValues.map(function(v) { return saneCR(v) ? v : null; });
-        var crAltData = rawAltCRValues.map(function(v) { return saneCR(v) ? v : null; });
+        var crData = rawCRValues.map(function(v, i) {
+            return !isSuspect(entries[i]) && saneCR(v) ? v : null;
+        });
+        var crAltData = rawAltCRValues.map(function(v, i) {
+            return !isSuspect(entries[i]) && saneCR(v) ? v : null;
+        });
 
         // Drop the second series if explicitly suppressed, or if every value is null/undefined.
         var altHasData = rawAltHasData && crAltData.some(function(v) { return v !== null && v !== undefined; });
