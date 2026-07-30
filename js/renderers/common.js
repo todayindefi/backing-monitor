@@ -429,6 +429,25 @@ const CommonRenderer = {
             annotations.maxLine = { type: 'line', yMin: maxLine, yMax: maxLine, borderColor: '#16a34a', borderWidth: 1, borderDash: [4, 4], label: { content: maxLine + '%', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } };
         }
 
+        // Keep the raw Chart.js config unambiguous: a scale has either hard
+        // bounds or suggested bounds, never min/max keys whose values happen
+        // to be undefined. Suggested bounds yield to genuine data outside the
+        // normal envelope after asset-level artifact filtering.
+        var yScaleOptions = {
+            grid: { color: '#f1f5f9' },
+            ticks: {
+                callback: function(v) { return v + '%'; },
+                font: { size: 11 }
+            }
+        };
+        if (hardYBounds) {
+            yScaleOptions.min = yMin;
+            yScaleOptions.max = yMax;
+        } else {
+            yScaleOptions.suggestedMin = yMin;
+            yScaleOptions.suggestedMax = yMax;
+        }
+
         if (window._crChart) window._crChart.destroy();
         window._crChart = new Chart(ctx, {
             type: 'line',
@@ -443,17 +462,7 @@ const CommonRenderer = {
                         grid: { display: false },
                         ticks: { maxTicksLimit: 8, font: { size: 11 } }
                     },
-                    y: {
-                        grid: { color: '#f1f5f9' },
-                        min: hardYBounds ? yMin : undefined,
-                        max: hardYBounds ? yMax : undefined,
-                        suggestedMin: hardYBounds ? undefined : yMin,
-                        suggestedMax: hardYBounds ? undefined : yMax,
-                        ticks: {
-                            callback: function(v) { return v + '%'; },
-                            font: { size: 11 }
-                        }
-                    }
+                    y: yScaleOptions
                 },
                 plugins: {
                     legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
