@@ -5,10 +5,11 @@
  * claims." The feed (hastra_prime_backing.json) is reconstructed entirely from
  * public sources — Provenance LCD bank balances + Solana RPC + Ethereum RPC —
  * with Hastra's own Proof-of-Reserves page deliberately NOT a primary source.
- * That independence is the product: the PoR-named "PRIME pool" / "AUTO pool"
- * Provenance accounts hold 0 bank YLDS today, and ~99.8% of the reserve sits in
- * two accounts Hastra does not name — one of them co-mingled with Figure's
- * tokenized loan book. None of that is visible from the issuer dashboard.
+ * That independence is the product: the live reads identify the Democratized
+ * Prime lending-pool contract, its CW20 receipt token, bank-module YLDS and the
+ * issuer-minted loan markers pledged to the pool. Consensus verifies that the
+ * balances and markers exist; it does not authenticate the off-chain loans the
+ * markers represent. The issuer dashboard does not expose that distinction.
  *
  * Data:
  *   - data/hastra_prime_backing.json           (dashboard snapshot — last GOOD)
@@ -71,9 +72,9 @@ var HP_RESERVE_ROLES = {
     redeem_vault:   { label: 'Redeem vault',              note: 'Liquid redemption buffer — the only account also holding USDC', kind: 'liquid' },
     dp_sweep:       { label: 'DP sweep',                  note: 'Democratized Prime sweep account', kind: 'reserve' },
     reserve_a:      { label: 'Reserve A',                 note: 'Not named on Hastra’s PoR page — found by reading bank balances', kind: 'unnamed' },
-    warehouse_b:    { label: 'Warehouse B',               note: 'Not named on the PoR page, and co-mingled with Figure loan-scope tokens (heloc.forge / nq.heloc.forge / rtl.forge / dscr.forge) — not a segregated reserve', kind: 'comingled' },
-    por_prime_pool: { label: 'PoR-named "PRIME pool"',    note: 'Named on Hastra’s PoR page as a reserve pool; holds 0 bank YLDS', kind: 'por_named' },
-    por_auto_pool:  { label: 'PoR-named "AUTO pool"',     note: 'Named on Hastra’s PoR page as a reserve pool; holds 0 bank YLDS', kind: 'por_named' }
+    warehouse_b:    { label: 'DP pool contract',           note: 'Democratized Prime lending-pool contract: holds idle YLDS and issuer-minted .forge collateral markers as part of the facility design', kind: 'pool_contract' },
+    por_prime_pool: { label: 'PoR-named "PRIME pool"',    note: 'CW20 receipt-token contract, not a bank-module YLDS custody account', kind: 'por_named' },
+    por_auto_pool:  { label: 'PoR-named "AUTO pool"',     note: 'CW20 receipt-token contract, not a bank-module YLDS custody account', kind: 'por_named' }
 };
 
 /**
@@ -519,7 +520,6 @@ var HastraPrimeRenderer = {
             'body.dark .hp-stale-banner{background:#451a03;color:#fcd34d}' +
             '.hp-stale-banner.hp-unverified{border-left-color:#dc2626;background:#fef2f2;color:#991b1b}' +
             'body.dark .hp-stale-banner.hp-unverified{background:#450a0a;color:#fca5a5}' +
-            '.hp-comingled td{background:rgba(245,158,11,0.06)}' +
             '.hp-zero td{color:#94a3b8}';
         var el = document.createElement('style');
         el.id = 'hp-styles';
@@ -693,8 +693,8 @@ var HastraPrimeRenderer = {
         var surplus = s.surplus_deficit;
         var provSupply = spec.provenance_ylds_supply;
 
-        // How much of the reserve is the co-mingled account — the single
-        // biggest reason our number and the issuer's can legitimately differ.
+        // How much of the reserve is the lending-pool contract's idle YLDS —
+        // a material definition difference versus the issuer's designated set.
         var rb = spec.reserve_balances || {};
         var wb = rb.warehouse_b ? rb.warehouse_b.ylds : null;
         var wbShare = (wb != null && reserve) ? (wb / reserve * 100) : null;
@@ -713,7 +713,8 @@ var HastraPrimeRenderer = {
                 dir + ' the issuer’s. That gap is the panel — it is a <span class="font-medium">definition</span> difference, not ' +
                 'necessarily a discrepancy: we sum the <span class="font-medium">entire</span> bank balance of every reserve account we can ' +
                 'identify, including ' + (wbShare != null ? '<span class="font-mono">' + wbShare.toFixed(1) + '%</span> of the reserve sitting in ' : '') +
-                'the co-mingled Warehouse B account, which also holds Figure loan-scope tokens. Hastra’s PoR counts a designated subset. ' +
+                'the Democratized Prime pool contract as idle YLDS. That contract also holds issuer-defined loan markers as pledged ' +
+                'collateral; both are expected lending-facility state. Hastra’s PoR counts a designated subset. ' +
                 'Neither number is independently reconstructable from the labels the PoR page publishes — that is precisely why this monitor ' +
                 'reads the raw balances instead.</p>';
         }
@@ -1003,10 +1004,10 @@ var HastraPrimeRenderer = {
             var ylds = acct.ylds;
             var share = total ? (ylds / total * 100) : null;
             var d = driftKeys[k] || driftKeys[acct.address];
-            var rowCls = role.kind === 'comingled' ? 'hp-comingled' : (!ylds ? 'hp-zero' : '');
+            var rowCls = !ylds ? 'hp-zero' : '';
 
             var marker = '';
-            if (role.kind === 'comingled') marker = ' ' + HastraPrimeRenderer._pill('co-mingled', 'warn');
+            if (role.kind === 'pool_contract') marker = ' ' + HastraPrimeRenderer._pill('lending pool', 'neutral');
             else if (role.kind === 'unnamed') marker = ' ' + HastraPrimeRenderer._pill('unnamed on PoR', 'neutral');
             else if (role.kind === 'por_named') marker = ' ' + HastraPrimeRenderer._pill('PoR-named', 'neutral');
             else if (role.kind === 'liquid') marker = ' ' + HastraPrimeRenderer._pill('liquid', 'ok');
@@ -1018,7 +1019,7 @@ var HastraPrimeRenderer = {
                 '<td class="text-right font-mono">' + HastraPrimeRenderer._num(ylds, 2) + '</td>' +
                 '<td class="text-right font-mono">' + (share != null ? share.toFixed(2) + '%' : '—') + '</td>' +
                 '<td style="width:110px"><div class="pct-bar-container"><div class="pct-bar" style="width:' +
-                    (share || 0) + '%;background:' + (role.kind === 'comingled' ? '#f59e0b' : '#6366f1') + '"></div></div></td>' +
+                    (share || 0) + '%;background:#6366f1"></div></div></td>' +
                 '<td>' + (d ? HastraPrimeRenderer._pill('drift', 'warn') : '') + '</td>' +
             '</tr>';
         }).join('');
@@ -1065,13 +1066,13 @@ var HastraPrimeRenderer = {
                 '<tbody>' + rows + '</tbody></table></div>' +
 
             '<div class="risk-flag risk-info mt-3">' +
-                '<span class="font-medium">Standing caveat, not an alert:</span> Warehouse B is <span class="font-medium">co-mingled</span> ' +
-                'with Figure’s tokenized loan book — the same account holds <span class="font-mono">heloc.forge</span>, ' +
+                '<span class="font-medium">Pool-contract structure:</span> the Democratized Prime pool contract ' +
+                'holds idle YLDS alongside <span class="font-mono">heloc.forge</span>, ' +
                 '<span class="font-mono">nq.heloc.forge</span>, <span class="font-mono">rtl.forge</span> and ' +
-                '<span class="font-mono">dscr.forge</span> denominations. It is a working account, not a ring-fenced reserve. This is a ' +
-                'structural property of the design and is expected to be true on every run; it does not fire a flag, and its absence would ' +
-                'be the surprising event. <a href="#hp-panel-warehouse" class="text-blue-600 hover:underline">Panel 8a measures the live ' +
-                'warehouse inventory and turnover signal ↓</a>' +
+                '<span class="font-mono">dscr.forge</span> collateral markers because it is the working lending facility. ' +
+                'That account structure is expected; the residual limitation is what the markers prove about the underlying loans. ' +
+                '<a href="#hp-panel-warehouse" class="text-blue-600 hover:underline">Panel 8a qualifies that evidence and measures ' +
+                'inventory and turnover ↓</a>' +
             '</div>' +
 
             '<div class="text-sm font-semibold panel-title mt-4 mb-2" style="font-size:0.9rem">Drift check</div>' +
@@ -1250,6 +1251,13 @@ var HastraPrimeRenderer = {
                 '<span class="font-medium">Live keys, not renounced.</span> Both mints retain an active mint authority <em>and</em> an active ' +
                 'freeze authority at the token layer — not a renounced mint, and not behind a Squads multisig. "Unchanged" above means the ' +
                 'keys still match the values we pinned; it does not mean the powers are absent. A holder’s balance can be frozen unilaterally.' +
+            '</div>' +
+
+            '<div class="risk-flag risk-warning mt-3">' +
+                '<span class="font-medium">Provenance application logic is also admin-gated.</span> The Democratized Prime pool contract ' +
+                'and its receipt CW20 retained a live contract admin (<span class="font-mono">pb1qu33du…</span>) able to migrate their code ' +
+                'when checked on 2026-07-31. ' +
+                'Provenance consensus can remain live while this application layer remains upgradeable by that key.' +
             '</div>' +
 
             '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 items-center">' +
@@ -1624,11 +1632,11 @@ var HastraPrimeRenderer = {
 
         var decimalsResolved = w.decimals_resolved === true;
         var hasUsd = decimalsResolved && w.usd_value != null;
-        var cominglingPct = hasUsd && w.ylds_in_warehouse != null &&
+        var loanMarkerSharePct = hasUsd && w.ylds_in_warehouse != null &&
             (w.usd_value + w.ylds_in_warehouse) > 0
             ? w.usd_value / (w.usd_value + w.ylds_in_warehouse) * 100 : null;
-        var cominglingValue = cominglingPct != null ? cominglingPct.toFixed(1) + '%' : 'unresolved';
-        var cominglingSub = cominglingPct != null ? 'loan assets ÷ loan assets + YLDS' :
+        var loanMarkerShareValue = loanMarkerSharePct != null ? loanMarkerSharePct.toFixed(1) + '%' : 'unresolved';
+        var loanMarkerShareSub = loanMarkerSharePct != null ? 'loan assets ÷ loan assets + idle YLDS' :
             'loan-token decimals unavailable; no cross-unit ratio';
 
         var cadenceState = sec.available === false ? 'neutral' :
@@ -1643,6 +1651,7 @@ var HastraPrimeRenderer = {
         var liveFlags = Array.isArray(monitor.live) ? monitor.live : [];
         var pendingFlags = Array.isArray(monitor.pending) ? monitor.pending : [];
         var totalThresholds = liveFlags.length + pendingFlags.length;
+        var markerCaveat = w.marker_semantics_caveat;
         var armedThresholds = liveFlags.filter(function(f) {
             // The analyzer publishes the NAV threshold definition before a
             // 30d observation exists. It cannot fire until that window fills.
@@ -1689,11 +1698,21 @@ var HastraPrimeRenderer = {
                     sec.days_since_last_deal != null ? HastraPrimeRenderer._num(sec.days_since_last_deal, 0) : '—',
                     HastraPrimeRenderer._stateCls(cadenceState),
                     'trailing median ' + (sec.trailing_median_gap_days != null ? sec.trailing_median_gap_days.toFixed(1) + 'd' : '—')) +
-                HastraPrimeRenderer._tile('Co-mingling ratio', cominglingValue, '', cominglingSub) +
+                HastraPrimeRenderer._tile('Loan-marker share', loanMarkerShareValue, '', loanMarkerShareSub) +
             '</div>' +
 
+            (markerCaveat
+                ? '<div class="risk-flag risk-info mb-4">' +
+                    '<div class="flex flex-wrap items-center gap-2 mb-1">' +
+                        '<span class="font-medium">Loan-token inventory and scope count:</span> ' +
+                        HastraPrimeRenderer._pill('chain-verified balance · issuer-defined meaning', 'warn') +
+                    '</div>' +
+                    HastraPrimeRenderer._esc(markerCaveat) +
+                  '</div>'
+                : '') +
+
             '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">' +
-                '<div><div class="text-xs text-slate-400 font-medium uppercase mb-2">Inventory on Warehouse B</div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase mb-2">Inventory on DP pool contract</div>' +
                     '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Denom</th>' +
                     '<th class="text-right">Balance</th><th class="text-right">Supply</th><th>Custody</th></tr></thead>' +
                     '<tbody>' + tokenRows + '</tbody></table></div>' +
@@ -1729,9 +1748,9 @@ var HastraPrimeRenderer = {
                         (yr.source_caveat || 'This is a lagging symptom gauge, not an independent impairment read.') + '</div></div>' +
             '</div>' +
 
-            '<div class="risk-flag risk-info mb-3"><span class="font-medium">Co-mingling, quantified when units permit:</span> ' +
-                (w.loan_vs_ylds_note || 'Warehouse B holds both loan tokens and YLDS.') + ' ' +
-                '<a href="#hp-panel-reserves" class="text-blue-600 hover:underline">See the reserve-map custody caveat ↑</a></div>' +
+            '<div class="risk-flag risk-info mb-3"><span class="font-medium">Pool composition, quantified when units permit:</span> ' +
+                (w.loan_vs_ylds_note || 'The pool contract holds idle YLDS and issuer-defined loan markers.') + ' ' +
+                '<a href="#hp-panel-reserves" class="text-blue-600 hover:underline">See the reserve-map structure note ↑</a></div>' +
 
             '<div class="flex flex-wrap gap-1.5">' +
                 liveFlags.map(function(f) {
