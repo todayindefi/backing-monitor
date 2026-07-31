@@ -10,8 +10,10 @@
  * issuer-minted loan markers pledged to the pool. Consensus verifies that the
  * balances and markers exist; it does not authenticate the off-chain loans the
  * markers represent, and it does not make balances immutable when marker
- * permissions allow forced transfer by keys outside this system. The issuer
- * dashboard does not expose those distinctions.
+ * permissions allow forced transfer by keys outside this system. The dominant
+ * receipt holder is itself a three-member x/group policy whose current
+ * threshold lets any one member execute immediately. The issuer dashboard does
+ * not expose those distinctions.
  *
  * Data:
  *   - data/hastra_prime_backing.json           (dashboard snapshot — last GOOD)
@@ -105,7 +107,21 @@ var HP_REPORT = {
         mint_burn_accounts: 5,
         transfer_only_accounts: 4,
         backing_holder_concentration_pct: 99.7,
-        one_force_transfer_account_never_used: true
+        one_force_transfer_account_never_used: true,
+        custody_group: {
+            account: 'pb1wthe4f9fs7ykgt2srfttsjautkyr33hf6amwkqnw7lxjpqfkspns8jxej5',
+            group_id: 1600,
+            version: 5,
+            member_count: 3,
+            member_weight: 100,
+            total_weight: 300,
+            threshold: 100,
+            min_execution_period_seconds: 0,
+            voting_period_seconds: 86400,
+            policy_count: 1,
+            self_administered: true,
+            fee_granted_member_count: 2
+        }
     },
 
     // Figure Certificate Company qualified-asset coverage. Quarterly,
@@ -1023,6 +1039,7 @@ var HastraPrimeRenderer = {
     _renderReserveMap: function(spec) {
         var rb = spec.reserve_balances || {};
         var markerControl = HP_REPORT.marker_control || {};
+        var custodyGroup = markerControl.custody_group || {};
         var drift = Array.isArray(spec.reserve_account_drift) ? spec.reserve_account_drift : [];
         var driftKeys = {};
         drift.forEach(function(d) {
@@ -1264,6 +1281,20 @@ var HastraPrimeRenderer = {
                 'the token’s permission set, not the network. About ' +
                 HastraPrimeRenderer._pct(markerControl.backing_holder_concentration_pct, 1) +
                 ' of backing sat in one account: consensus proves the balance is there; it does not prove the balance will stay there.' +
+                '<div class="mt-2"><span class="font-medium">Custody policy:</span> that dominant holder ' +
+                    HastraPrimeRenderer._pbLink(custodyGroup.account) + ' is a ' +
+                    HastraPrimeRenderer._num(custodyGroup.member_count, 0) + '-member Cosmos ' +
+                    '<span class="font-mono">x/group</span> policy (group ' +
+                    HastraPrimeRenderer._num(custodyGroup.group_id, 0) + ', version ' +
+                    HastraPrimeRenderer._num(custodyGroup.version, 0) + ') with a threshold of ' +
+                    HastraPrimeRenderer._num(custodyGroup.threshold, 0) + ' against member weight ' +
+                    HastraPrimeRenderer._num(custodyGroup.member_weight, 0) + '. Any single member can therefore act alone and immediately; ' +
+                    'the execution delay is ' + HastraPrimeRenderer._num(custodyGroup.min_execution_period_seconds, 0) +
+                    ' seconds. ' + HastraPrimeRenderer._num(custodyGroup.fee_granted_member_count, 0) +
+                    ' of the three are fee-granted platform accounts rather than dedicated operational keys, and the group administers itself.' +
+                '</div>' +
+                '<div class="mt-2 text-xs"><span class="font-medium">What would improve this:</span> threshold ' +
+                    (Number(custodyGroup.member_weight || 0) * 2) + ' (2-of-3), or any non-zero execution delay.</div>' +
             '</div>' +
 
             '<div class="text-sm font-semibold panel-title mt-4 mb-2" style="font-size:0.9rem">Drift check</div>' +
