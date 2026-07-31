@@ -1458,19 +1458,12 @@ var HastraPrimeRenderer = {
         }).map(function(pool) {
             return HastraPrimeRenderer._scopeLabel(pool.chain);
         })));
-        var nonMonotonicUnmeasured = pools.some(function(pool) {
-            return pool && pool.depth_usd == null &&
-                String(pool.ceiling_method || '').indexOf('non_monotonic') !== -1;
-        });
         var unmeasuredNote = unmeasuredChains.length ?
             ' ' + unmeasuredChains.join(', ') + ' capacity ceiling: not established' +
-                (nonMonotonicUnmeasured
-                    ? ' because aggregated router quotes there are non-monotonic and cannot identify saturation.'
-                    : '.')
+                ' because the fallback routing data does not establish a reliable inventory limit.'
             : '';
         var additionalMeasuredNote = additionalMeasuredPools.map(function(pool) {
             var poolCeiling = pool.capacity_ceiling || {};
-            var method = pool.ceiling_method || poolCeiling.method || 'method unavailable';
             var direction = poolCeiling.exit_direction || pool.pair || 'exit route';
             var inventoryWall = (
                 poolCeiling.counter_token_inventory_value_usd != null
@@ -1478,7 +1471,7 @@ var HastraPrimeRenderer = {
             ) ? ' It is a counter-token inventory wall.' : '';
             return ' ' + HastraPrimeRenderer._scopeLabel(pool.chain) + ' has a separate ' +
                 HastraPrimeRenderer._money(pool.depth_usd) + ' ' + direction +
-                ' ceiling measured by ' + HastraPrimeRenderer._esc(method) + '.' +
+                ' ceiling measured from live pool liquidity.' +
                 inventoryWall;
         }).join('');
         var splitExitNote = measuredPools.length > 1 ?
@@ -1514,17 +1507,14 @@ var HastraPrimeRenderer = {
         var ratingHtml = typeof CommonRenderer !== 'undefined' ?
             CommonRenderer._ratingChipHtml(rating) : '';
         var venueRows = pools.map(function(v) {
-            var poolCeiling = v.capacity_ceiling || {};
-            var method = v.ceiling_method || poolCeiling.method;
             var depthCell = v.depth_usd != null
                 ? HastraPrimeRenderer._money(v.depth_usd)
-                : (method ? 'not established' : '—');
+                : (v.ceiling_method || v.capacity_ceiling ? 'not established' : '—');
             return '<tr>' +
                 '<td class="font-medium">' + (v.venue || '—') + ' ' + (v.pair || '') + '</td>' +
                 '<td>' + (v.chain || '—') + '</td>' +
                 '<td class="text-right font-mono">' + (v.tvl_usd != null ? HastraPrimeRenderer._money(v.tvl_usd) : '—') + '</td>' +
                 '<td class="text-right font-mono">' + depthCell + '</td>' +
-                '<td class="font-mono text-xs">' + HastraPrimeRenderer._esc(method || '—') + '</td>' +
                 '<td class="text-right font-mono">' + (v.volume_24h != null ? HastraPrimeRenderer._money(v.volume_24h) : 'unavailable') + '</td>' +
             '</tr>';
         }).join('');
@@ -1561,12 +1551,10 @@ var HastraPrimeRenderer = {
                 ' The venue table below is the source of truth for currently covered chains and pools. ' +
                 'The USDC inventory is PRIME Roots campaign-supported and may not persist.' +
             '</div>' +
-            '<div class="text-xs text-slate-500 mb-3">Primary ceiling method (' + ceilingScope + '): <span class="font-mono">' +
-                (ceiling.method || 'unavailable') + '</span>. Per-venue methods are shown below.</div>' +
 
             '<div class="data-table-scroll"><table class="data-table">' +
                 '<thead><tr><th>Venue</th><th>Chain</th><th class="text-right">TVL</th>' +
-                '<th class="text-right">Depth</th><th>Ceiling method</th><th class="text-right">24h volume</th></tr></thead>' +
+                '<th class="text-right">Depth</th><th class="text-right">24h volume</th></tr></thead>' +
                 '<tbody>' + venueRows + '</tbody></table></div>' +
         '</div>';
     },
