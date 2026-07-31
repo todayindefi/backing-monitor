@@ -1788,11 +1788,22 @@ var HastraPrimeRenderer = {
     _renderHelocCredit: function(data, spec) {
         var h = (spec && spec.heloc_credit) || {};
         var stats = h.stats || {};
+        var facility = h.facility_terms || {};
         var px = HP_REPORT.credit_proxy || {};
         var dq = h.figure_delinquency || {};
         var series = Array.isArray(dq.series) ? dq.series : [];
         var originator = h.originator || 'Originator unavailable';
         var fetched = h.fetched_at ? HastraPrimeRenderer._hhmm(h.fetched_at) : 'unavailable';
+        var marginBandPp = (
+            facility.margin_call_pct != null && facility.liquidation_pct != null
+        ) ? facility.liquidation_pct - facility.margin_call_pct : null;
+        var lenderCushion = (
+            facility.contractual_cushion_pct != null || facility.actual_cushion_pct != null
+        ) ? HastraPrimeRenderer._pct(facility.contractual_cushion_pct) + ' contractual · ' +
+            (facility.actual_cushion_pct != null
+                ? '~' + HastraPrimeRenderer._pct(facility.actual_cushion_pct)
+                : '—') + ' actual'
+            : '—';
         var nextExpectedPassed = !!(dq.next_expected && data && data.timestamp &&
             Date.parse(data.timestamp) > Date.parse(dq.next_expected + 'T23:59:59Z'));
 
@@ -1847,8 +1858,32 @@ var HastraPrimeRenderer = {
                 '<div>' +
                     '<div class="text-xs text-slate-400 font-medium uppercase mb-2">Originator-reported (' +
                         HastraPrimeRenderer._esc(originator) + ')</div>' +
-                    '<div class="grid grid-cols-2 gap-3 mb-3">' +
-                        HastraPrimeRenderer._tile('WA CLTV (post)', HastraPrimeRenderer._pct(stats.wa_cltv_post_pct)) +
+                    '<div class="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-3">' +
+                        '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">' +
+                            HastraPrimeRenderer._tile('WA CLTV (post)', HastraPrimeRenderer._pct(stats.wa_cltv_post_pct)) +
+                            HastraPrimeRenderer._tile('Facility advance rate',
+                                HastraPrimeRenderer._pct(facility.advance_rate_pct), 'warning') +
+                            HastraPrimeRenderer._tile('Lender cushion', lenderCushion, 'warning') +
+                        '</div>' +
+                        '<div class="text-xs text-amber-800 mt-2">The loan-to-value figure describes the borrower’s equity in the ' +
+                            'property. The advance rate describes the lender’s — they are different cushions, and they stack in sequence.</div>' +
+                    '</div>' +
+                    '<div class="rounded-lg border border-amber-200 bg-amber-50 p-3 mb-3">' +
+                        '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3">' +
+                            HastraPrimeRenderer._tile('Margin call', HastraPrimeRenderer._pct(facility.margin_call_pct), 'warning') +
+                            HastraPrimeRenderer._tile('Forced liquidation',
+                                HastraPrimeRenderer._pct(facility.liquidation_pct), 'warning') +
+                            HastraPrimeRenderer._tile('Facility utilization',
+                                HastraPrimeRenderer._pct(facility.utilization_pct)) +
+                        '</div>' +
+                        '<div class="text-xs text-amber-800 mt-2">' +
+                            (marginBandPp != null
+                                ? '<span class="font-semibold">' + HastraPrimeRenderer._num(marginBandPp, 2) +
+                                    ' percentage points</span> between margin call and forced liquidation — a tight intervention window.'
+                                : 'Distance between margin call and forced liquidation unavailable.') +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">' +
                         HastraPrimeRenderer._tile('WA credit score', HastraPrimeRenderer._num(stats.wa_credit_score, 2)) +
                         HastraPrimeRenderer._tile('WA coupon', HastraPrimeRenderer._pct(stats.wa_coupon_pct)) +
                         HastraPrimeRenderer._tile('Avg loan', HastraPrimeRenderer._money(stats.avg_loan_amount_usd)) +
