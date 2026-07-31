@@ -19,11 +19,11 @@
  *
  * STALENESS — the USDD-class guard, and why it is split two ways
  * --------------------------------------------------------------
- * collateralization_pct is a ratio of a multi-source sum: Provenance balances
- * (numerator) over Solana + Ethereum supply (denominator). One dead RPC craters
- * it — exactly the 2026-07-13 USDD incident, where a single failed TRON read
- * dropped the headline CR from 101.3% to a false 48.55% CRITICAL that reached
- * the live dashboard.
+ * collateralization_pct is a ratio of a multi-source sum: Provenance CW20
+ * receipt claims plus directly-held YLDS (numerator) over Solana + Ethereum
+ * supply (denominator). One dead RPC craters it — exactly the 2026-07-13 USDD
+ * incident, where a single failed TRON read dropped the headline CR from 101.3%
+ * to a false 48.55% CRITICAL that reached the live dashboard.
  *
  * The analyzer's guard means the dashboard JSON is *never* overwritten with a
  * failed snapshot; it simply freezes at the last good read. So there are two
@@ -73,8 +73,8 @@ var HP_RESERVE_ROLES = {
     dp_sweep:       { label: 'DP sweep',                  note: 'Issuer-documented HELOC management label; its bank balance is not the receipt claim', kind: 'direct' },
     reserve_a:      { label: 'Borrower account',           note: 'Figure’s drawn YLDS balance, offset by debt to the pool — facility context, not backing', kind: 'borrower' },
     warehouse_b:    { label: 'DP pool contract',           note: 'Democratized Prime lending-pool contract: holds idle YLDS and issuer-minted .forge collateral markers as part of the facility design', kind: 'pool_contract' },
-    por_prime_pool: { label: 'PoR-named "PRIME pool"',    note: 'CW20 receipt-token contract, not a bank-module YLDS custody account', kind: 'por_named' },
-    por_auto_pool:  { label: 'PoR-named "AUTO pool"',     note: 'CW20 receipt-token contract, not a bank-module YLDS custody account', kind: 'por_named' }
+    por_prime_pool: { label: 'HEYLDS receipt-token contract',   note: 'CW20 receipt-token contract, not a bank-module YLDS custody account', kind: 'receipt_contract' },
+    por_auto_pool:  { label: 'AUTOYLDS receipt-token contract', note: 'CW20 receipt-token contract, not a bank-module YLDS custody account', kind: 'receipt_contract' }
 };
 
 /**
@@ -88,9 +88,9 @@ var HP_REPORT = {
 
     // Issuer's own PoR headline, for the ours-vs-theirs comparison.
     por: {
-        collateralization_pct: 100.31,
-        as_of: '2026-07-27',
-        note: 'Hastra’s public Proof-of-Reserves dashboard, as read for the research report'
+        collateralization_pct: 100.20,
+        as_of: '2026-07-31',
+        note: 'Hastra’s public Proof-of-Reserves dashboard; hand-maintained comparison, never an analyzer input'
     },
 
     // Figure Certificate Company qualified-asset coverage. Quarterly,
@@ -692,51 +692,46 @@ var HastraPrimeRenderer = {
         var supply = spec.wylds_supply_total;
         var surplus = s.surplus_deficit;
         var provSupply = spec.provenance_ylds_supply;
-
-        // How much of the reserve is the lending-pool contract's idle YLDS —
-        // a material definition difference versus the issuer's designated set.
         var rb = spec.reserve_balances || {};
-        var wb = rb.warehouse_b ? rb.warehouse_b.ylds : null;
-        var wbShare = (wb != null && reserve) ? (wb / reserve * 100) : null;
+        var sweepYlds = rb.dp_sweep && rb.dp_sweep.ylds != null ? rb.dp_sweep.ylds : null;
 
         var gapNote = '';
         if (delta != null) {
             var dir = delta >= 0 ? 'above' : 'below';
             gapNote =
-                '<p><span class="font-medium">Read this as a band, not a single number.</span> True wYLDS collateralization sits between ' +
-                'Hastra’s designated <span class="font-mono">' + theirs.toFixed(2) + '%</span> and our all-reserve upper bound of ' +
-                '<span class="font-mono">' + (ours != null ? ours.toFixed(2) : '—') + '%</span>. The latest SEC-filed §28 ratio was ' +
+                '<p>Our independent receipt-claim basis is <span class="font-mono">' +
+                (ours != null ? ours.toFixed(2) : '—') + '%</span>; Hastra’s dated page headline is ' +
+                '<span class="font-mono">' + theirs.toFixed(2) + '%</span>. The latest SEC-filed §28 ratio was ' +
                 '<span class="font-mono">' + (secLatest && secLatest.ratio != null ? secLatest.ratio.toFixed(2) : '—') +
                 '%</span> for ' + (secLatest ? secLatest.period : '—') + ' — <span class="font-medium">all three clear 100%</span>, ' +
                 'though only the chain line is live.</p>' +
                 '<p>Our reading is <span class="font-mono font-semibold">' + (delta >= 0 ? '+' : '') + delta.toFixed(2) + 'pp</span> ' +
-                dir + ' the issuer’s. That gap is the panel — it is a <span class="font-medium">definition</span> difference, not ' +
-                'necessarily a discrepancy: we sum the <span class="font-medium">entire</span> bank balance of every reserve account we can ' +
-                'identify, including ' + (wbShare != null ? '<span class="font-mono">' + wbShare.toFixed(1) + '%</span> of the reserve sitting in ' : '') +
-                'the Democratized Prime pool contract as idle YLDS. That contract also holds issuer-defined loan markers as pledged ' +
-                'collateral; both are expected lending-facility state. Hastra’s PoR counts a designated subset. ' +
-                'Neither number is independently reconstructable from the labels the PoR page publishes — that is precisely why this monitor ' +
-                'reads the raw balances instead.</p>';
+                dir + ' the issuer’s rounded headline. <span class="font-medium">The sweep account explains the difference:</span> ' +
+                'our figure counts its own ' +
+                (sweepYlds != null ? '<span class="font-mono">' + HastraPrimeRenderer._num(sweepYlds, 2) + ' YLDS</span>' : 'YLDS balance') +
+                '; the issuer’s page uses that row to display the receipt claim instead, so the sweep’s bank balance is omitted from its ' +
+                'formula. The receipt reserve itself reconciles to roughly 0.0003%, so this is an account-labelling defect, not a reserve ' +
+                'shortfall — and it makes the issuer’s published ratio slightly conservative.</p>';
         }
 
         return '<div class="panel">' +
             '<div class="flex items-start justify-between gap-4 mb-4">' +
                 '<div>' +
                     '<div class="text-xl font-bold panel-title" style="margin:0">Collateralization — ours vs Hastra’s</div>' +
-                    '<div class="text-xs text-slate-500 mt-1">Reserve YLDS on Provenance ÷ complete wYLDS supply (Solana + Ethereum), ' +
-                        'computed from raw bank balances. Hastra’s Proof-of-Reserves page is not an input.</div>' +
+                    '<div class="text-xs text-slate-500 mt-1">Provenance receipt-token claims plus directly-held YLDS ÷ complete wYLDS ' +
+                        'supply (Solana + Ethereum). Hastra’s Proof-of-Reserves page is a dated comparison, not an input.</div>' +
                 '</div>' +
                 '<div class="text-right">' + HastraPrimeRenderer._pill('independent', 'ok') + '</div>' +
             '</div>' +
             '<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">' +
-                HastraPrimeRenderer._tile('Upper-bound CR (chain)', HastraPrimeRenderer._pct(ours),
-                    cls, HastraPrimeRenderer._unverified ? 'unverified — stale leg' : 'all identified reserve ÷ supply — a superset') +
+                HastraPrimeRenderer._tile('Independent CR (chain)', HastraPrimeRenderer._pct(ours),
+                    cls, HastraPrimeRenderer._unverified ? 'unverified — stale leg' : 'receipt claims + direct YLDS ÷ supply') +
                 HastraPrimeRenderer._tile('Hastra PoR CR', HastraPrimeRenderer._pct(theirs), '',
                     'issuer-reported · ' + HP_REPORT.por.as_of) +
                 HastraPrimeRenderer._tile('Gap', delta != null ? (delta >= 0 ? '+' : '') + delta.toFixed(2) + 'pp' : '—', '',
                     'ours − theirs') +
-                HastraPrimeRenderer._tile('Reserve YLDS', HastraPrimeRenderer._tok(reserve), '',
-                    'summed across ' + Object.keys(rb).length + ' accounts') +
+                HastraPrimeRenderer._tile('Backing claim', HastraPrimeRenderer._tok(reserve), '',
+                    'receipt claims + direct YLDS') +
                 HastraPrimeRenderer._tile('wYLDS supply', HastraPrimeRenderer._tok(supply), '',
                     'both chains') +
                 HastraPrimeRenderer._tile('Surplus / deficit',
@@ -768,9 +763,9 @@ var HastraPrimeRenderer = {
                 '</div>' +
                 (provSupply != null
                     ? '<p class="text-xs text-slate-400">Total YLDS in existence on Provenance is <span class="font-mono">' +
-                      HastraPrimeRenderer._tok(provSupply) + '</span>; the reserve set above is the subset held by accounts we can ' +
-                      'attribute to the wYLDS wrapper. A reserve reshuffle into an unattributed account would show up as ' +
-                      'drift (see the reserve map).</p>'
+                      HastraPrimeRenderer._tok(provSupply) + '</span>; the backing figure above uses Hastra’s independently-read CW20 ' +
+                      'receipt claims plus its direct YLDS balances, not every YLDS in existence. A direct-balance custody reshuffle into ' +
+                      'an unattributed account would show up as drift (see the reserve map).</p>'
                     : '') +
             '</div>' +
         '</div>';
@@ -998,85 +993,107 @@ var HastraPrimeRenderer = {
         var keys = Object.keys(rb).sort(function(a, b) { return (rb[b].ylds || 0) - (rb[a].ylds || 0); });
         var redeem = rb.redeem_vault || {};
         var sweep = rb.dp_sweep || {};
-        var pool = rb.warehouse_b || {};
-        var borrower = rb.reserve_a || {};
+        var receiptClaims = Array.isArray(spec.receipt_claims)
+            ? spec.receipt_claims.slice()
+            : [spec.autoylds_claim, spec.heylds_claim].filter(function(c) { return c && typeof c === 'object'; });
+        receiptClaims.sort(function(a, b) { return (b.balance || 0) - (a.balance || 0); });
 
-        // The renderer lands before the analyzer starts exporting this CW20
-        // balance. Accept the likely scalar/object shapes, but never derive a
-        // claim percentage from the bank-only subset when the receipt is absent.
-        var receiptRaw = spec.heylds_claim;
-        var receiptAmount = null;
-        if (typeof receiptRaw === 'number') {
-            receiptAmount = receiptRaw;
-        } else if (receiptRaw && typeof receiptRaw === 'object') {
-            ['balance', 'value', 'amount', 'heylds', 'receipt_balance', 'held_by_redeem_vault'].some(function(k) {
-                if (receiptRaw[k] != null && !isNaN(receiptRaw[k])) {
-                    receiptAmount = Number(receiptRaw[k]);
-                    return true;
-                }
-                return false;
-            });
-        }
-        if (receiptAmount == null && redeem.heylds != null && !isNaN(redeem.heylds)) {
-            receiptAmount = Number(redeem.heylds);
+        var directKeys = keys.filter(function(k) {
+            var acct = rb[k] || {};
+            return acct.included_in_backing_total === true || acct.economic_role === 'direct_backing';
+        });
+        // Backward-compatible cached snapshots predate the role fields.
+        if (!directKeys.length) {
+            directKeys = ['redeem_vault', 'dp_sweep'].filter(function(k) { return rb[k]; });
         }
 
-        var claimTotal = receiptAmount != null
-            ? receiptAmount + (redeem.ylds || 0) + (sweep.ylds || 0)
-            : null;
-        var facilityTotal = (pool.ylds != null || borrower.ylds != null)
-            ? (pool.ylds || 0) + (borrower.ylds || 0)
-            : null;
-
-        var claimRows = [
-            {
-                key: 'heylds_claim',
-                label: 'Redeem vault — HEYLDS claim',
-                note: 'Primary lender claim on the Democratized Prime pool',
+        var claimRows = receiptClaims.map(function(claim) {
+            var symbol = claim.symbol || claim.unit || 'receipt';
+            return {
+                key: 'receipt_claim:' + (claim.contract || symbol),
+                label: 'Redeem vault — ' + HastraPrimeRenderer._esc(symbol) + ' claim',
+                note: HastraPrimeRenderer._esc(claim.pool_name || claim.leverage_type || 'Pool') +
+                    ' receipt-token position' +
+                    (claim.contract ? ' · contract ' + HastraPrimeRenderer._pbLink(claim.contract) : ''),
                 kind: 'claim',
-                address: redeem.address,
-                amount: receiptAmount,
-                unit: 'HEYLDS'
-            },
-            {
-                key: 'redeem_vault',
-                label: 'Redeem vault — direct balance',
-                note: 'Bank-module YLDS held alongside the receipt position',
+                address: claim.holder || redeem.address,
+                amount: claim.balance,
+                unit: symbol
+            };
+        }).concat(directKeys.map(function(k) {
+            var acct = rb[k] || {};
+            var role = HP_RESERVE_ROLES[k] || {};
+            return {
+                key: k,
+                label: k === 'redeem_vault'
+                    ? 'Redeem vault — direct balance'
+                    : (role.label || k.replace(/_/g, ' ')),
+                note: k === 'redeem_vault'
+                    ? 'Bank-module YLDS held alongside the receipt positions'
+                    : (role.note || 'Directly-held YLDS included in backing'),
                 kind: 'direct',
-                address: redeem.address,
-                amount: redeem.ylds,
+                address: acct.address,
+                amount: acct.ylds,
                 unit: 'YLDS'
-            },
-            {
-                key: 'dp_sweep',
-                label: 'DP sweep',
-                note: HP_RESERVE_ROLES.dp_sweep.note,
-                kind: 'direct',
-                address: sweep.address,
-                amount: sweep.ylds,
+            };
+        }));
+
+        var receiptsComplete = spec.receipt_claims_complete === true ||
+            (spec.receipt_claims_complete == null && receiptClaims.length > 0);
+        var receiptAmountsComplete = receiptClaims.length > 0 && receiptClaims.every(function(c) {
+            return c.balance != null && !isNaN(c.balance);
+        });
+        var claimTotal = receiptsComplete && receiptAmountsComplete
+            ? (spec.receipt_claim_total != null ? spec.receipt_claim_total
+                : receiptClaims.reduce(function(sum, c) { return sum + Number(c.balance); }, 0)) +
+              (spec.direct_ylds_total != null ? spec.direct_ylds_total
+                : directKeys.reduce(function(sum, k) { return sum + Number((rb[k] || {}).ylds || 0); }, 0))
+            : null;
+
+        var facilityKeys = keys.filter(function(k) {
+            var acct = rb[k] || {};
+            return acct.included_in_backing_total === false ||
+                acct.economic_role === 'borrower_drawn_ylds' ||
+                (typeof acct.economic_role === 'string' && acct.economic_role.indexOf('facility_') === 0);
+        });
+        // Backward-compatible cached snapshots predate the role fields.
+        if (!facilityKeys.length) {
+            facilityKeys = ['warehouse_b', 'reserve_a', 'por_prime_pool', 'por_auto_pool']
+                .filter(function(k) { return rb[k]; });
+        }
+
+        var facilityRows = facilityKeys.map(function(k) {
+            var acct = rb[k] || {};
+            var role = HP_RESERVE_ROLES[k] || {};
+            var economicRole = acct.economic_role || '';
+            var matchingClaim = receiptClaims.find(function(c) { return c.pool_contract === acct.address; });
+            var kind = economicRole === 'borrower_drawn_ylds' ? 'borrower'
+                : economicRole === 'facility_pool_idle_ylds' ? 'pool_contract'
+                : 'facility_context';
+            var baseLabel = role.label || (matchingClaim
+                ? (matchingClaim.leverage_type || matchingClaim.pool_name) + ' pool contract'
+                : k.replace(/_/g, ' '));
+            var label = kind === 'pool_contract' ? baseLabel + ' — idle balance'
+                : kind === 'borrower' ? baseLabel + ' — drawn balance'
+                : baseLabel;
+            var note = role.note || (kind === 'pool_contract'
+                ? 'Facility pool’s idle YLDS; context only, excluded from backing'
+                : kind === 'borrower'
+                    ? 'Borrower-drawn YLDS, offset by debt to the pool; not backing'
+                    : 'Facility contract reference; excluded from backing');
+            return {
+                key: k,
+                label: label,
+                note: note,
+                kind: kind,
+                address: acct.address,
+                amount: acct.ylds,
                 unit: 'YLDS'
-            }
-        ];
-        var facilityRows = [
-            {
-                key: 'warehouse_b',
-                label: 'DP pool contract — idle balance',
-                note: HP_RESERVE_ROLES.warehouse_b.note,
-                kind: 'pool_contract',
-                address: pool.address,
-                amount: pool.ylds,
-                unit: 'YLDS'
-            },
-            {
-                key: 'reserve_a',
-                label: 'Borrower account — drawn balance',
-                note: HP_RESERVE_ROLES.reserve_a.note,
-                kind: 'borrower',
-                address: borrower.address,
-                amount: borrower.ylds,
-                unit: 'YLDS'
-            }
-        ];
+            };
+        });
+        var facilityTotal = facilityRows.some(function(row) { return row.amount != null; })
+            ? facilityRows.reduce(function(sum, row) { return sum + Number(row.amount || 0); }, 0)
+            : null;
 
         var groupTable = function(title, subtitle, rows, groupTotal, color) {
             var body = rows.map(function(row) {
@@ -1087,6 +1104,7 @@ var HastraPrimeRenderer = {
                 if (row.kind === 'claim') marker = ' ' + HastraPrimeRenderer._pill('backing claim', 'ok');
                 else if (row.kind === 'borrower') marker = ' ' + HastraPrimeRenderer._pill('borrower · not backing', 'warn');
                 else if (row.kind === 'pool_contract') marker = ' ' + HastraPrimeRenderer._pill('facility idle', 'neutral');
+                else if (row.kind === 'facility_context') marker = ' ' + HastraPrimeRenderer._pill('contract · not custody', 'neutral');
                 else marker = ' ' + HastraPrimeRenderer._pill('direct YLDS', 'neutral');
 
                 return '<tr class="' + (row.amount === 0 ? 'hp-zero' : '') + '">' +
@@ -1131,7 +1149,7 @@ var HastraPrimeRenderer = {
             }).join('');
         }
 
-        // Largest YLDS holders not in the reserve set — the drift check's raw
+        // Largest YLDS holders not in the monitored account set — the drift check's raw
         // material, useful even when nothing tripped.
         var top = spec.ylds_top_holders || {};
         var reserveAddrs = {};
@@ -1153,9 +1171,9 @@ var HastraPrimeRenderer = {
 
             groupTable(
                 'Hastra’s claim',
-                receiptAmount != null
-                    ? 'HEYLDS receipt claim plus directly-held YLDS. Percentages use this claim group only.'
-                    : 'The HEYLDS receipt amount is not yet exported in this snapshot. Claim-group percentages are suppressed rather than calculated from an incomplete bank-only subset.',
+                claimTotal != null
+                    ? 'All exported receipt-token claims plus directly-held YLDS. Percentages use this claim group only.'
+                    : 'The receipt-claim set is incomplete in this snapshot. Claim-group percentages are suppressed rather than calculated from an incomplete subset.',
                 claimRows,
                 claimTotal,
                 '#6366f1'
@@ -1163,7 +1181,8 @@ var HastraPrimeRenderer = {
 
             groupTable(
                 'Facility, for context — not additive to backing',
-                'Idle pool YLDS and the borrower’s drawn YLDS. Percentages use this facility group only, never the backing total.',
+                'All feed rows explicitly excluded from backing: idle pool YLDS, borrower-drawn YLDS and contract references. ' +
+                    'Percentages use this facility group only, never the backing total.',
                 facilityRows,
                 facilityTotal,
                 '#14b8a6'
