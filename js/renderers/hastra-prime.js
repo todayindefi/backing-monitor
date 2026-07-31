@@ -330,6 +330,15 @@ var HastraPrimeRenderer = {
         });
     },
 
+    _scopeLabel: function(scope) {
+        if (!scope || typeof scope !== 'string') return 'scope unavailable';
+        return scope.split('_').filter(function(part) {
+            return part && part !== 'only';
+        }).map(function(part) {
+            return part.charAt(0).toUpperCase() + part.slice(1);
+        }).join(' ');
+    },
+
     // ============================================================
     // pre-render — runs before common.js paints the summary row / chart.
     // The feed carries the common envelope but not the exact fields common.js
@@ -1434,6 +1443,24 @@ var HastraPrimeRenderer = {
     _renderLiquidity: function(data, spec) {
         var liq = data.liquidity || {};
         var ceiling = liq.capacity_ceiling || {};
+        var pools = Array.isArray(liq.pools) ? liq.pools : [];
+        var ceilingScope = HastraPrimeRenderer._scopeLabel(liq.ceiling_scope);
+        var exitDirection = ceiling.exit_direction || 'exit route';
+        var unmeasuredChains = Array.from(new Set(pools.filter(function(pool) {
+            return pool && pool.depth_usd == null && pool.chain;
+        }).map(function(pool) {
+            return HastraPrimeRenderer._scopeLabel(pool.chain);
+        })));
+        var nonMonotonicUnmeasured = pools.some(function(pool) {
+            return pool && pool.depth_usd == null &&
+                String(pool.ceiling_method || '').indexOf('non_monotonic') !== -1;
+        });
+        var unmeasuredNote = unmeasuredChains.length ?
+            ' No capacity ceiling is established for ' + unmeasuredChains.join(', ') +
+                (nonMonotonicUnmeasured
+                    ? ' because aggregated router quotes there are non-monotonic and cannot identify saturation.'
+                    : '.')
+            : '';
         var volumeSub = ['context-only', 'unscored'];
         var volumeSource = HastraPrimeRenderer._indexerLabel(liq.volume_24h_source);
         if (volumeSource) volumeSub.push(volumeSource);
@@ -1444,12 +1471,15 @@ var HastraPrimeRenderer = {
             CommonRenderer.liquidityRating(data) : null;
         var ratingHtml = typeof CommonRenderer !== 'undefined' ?
             CommonRenderer._ratingChipHtml(rating) : '';
-        var venueRows = (Array.isArray(liq.pools) ? liq.pools : []).map(function(v) {
+        var venueRows = pools.map(function(v) {
+            var depthCell = v.depth_usd != null
+                ? HastraPrimeRenderer._money(v.depth_usd)
+                : (v.ceiling_method ? 'not established' : '—');
             return '<tr>' +
                 '<td class="font-medium">' + (v.venue || '—') + ' ' + (v.pair || '') + '</td>' +
                 '<td>' + (v.chain || '—') + '</td>' +
                 '<td class="text-right font-mono">' + (v.tvl_usd != null ? HastraPrimeRenderer._money(v.tvl_usd) : '—') + '</td>' +
-                '<td class="text-right font-mono">' + (v.depth_usd != null ? HastraPrimeRenderer._money(v.depth_usd) : '—') + '</td>' +
+                '<td class="text-right font-mono" title="' + HastraPrimeRenderer._esc(v.ceiling_method || '') + '">' + depthCell + '</td>' +
                 '<td class="text-right font-mono">' + (v.volume_24h != null ? HastraPrimeRenderer._money(v.volume_24h) : 'unavailable') + '</td>' +
             '</tr>';
         }).join('');
@@ -1459,7 +1489,7 @@ var HastraPrimeRenderer = {
                 '<div class="panel-title" style="margin:0">Executable secondary-market depth</div>' +
                 ratingHtml +
                 '<span class="font-semibold text-sm">' +
-                    HastraPrimeRenderer._money(liq.capacity_ceiling_usd) + ' hard ceiling · ' +
+                    HastraPrimeRenderer._money(liq.capacity_ceiling_usd) + ' hard ceiling (' + ceilingScope + ') · ' +
                     (liq.capacity_ceiling_pct_mcap != null ? liq.capacity_ceiling_pct_mcap.toFixed(2) + '% of market cap' : '—') +
                 '</span>' +
             '</div>' +
@@ -1467,24 +1497,25 @@ var HastraPrimeRenderer = {
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
                 HastraPrimeRenderer._tile('2% depth',
                     HastraPrimeRenderer._money(liq.total_2pct_depth), '',
-                    'capacity-capped, not slippage-capped') +
+                    ceilingScope + ' · capacity-capped, not slippage-capped') +
                 HastraPrimeRenderer._tile('Max input ≤100bps',
                     HastraPrimeRenderer._money(ceiling.max_input_within_100bps_usd), '',
-                    'PRIME → USDC') +
+                    ceilingScope + ' · ' + exitDirection) +
                 HastraPrimeRenderer._tile('First saturated input',
                     HastraPrimeRenderer._money(ceiling.first_saturated_input_usd), 'warning',
-                    'output stops increasing') +
+                    ceilingScope + ' · output stops increasing') +
                 HastraPrimeRenderer._tile('24h volume',
                     liq.volume_24h != null ? HastraPrimeRenderer._money(liq.volume_24h) : 'unavailable', '',
                     volumeSub.join(' · ')) +
             '</div>' +
 
             '<div class="risk-flag risk-warning mb-3">' +
-                '<span class="font-semibold">5/5 depth, and only ' +
+                '<span class="font-semibold">' + ceilingScope + ' depth is 5/5, and only ' +
                 (liq.capacity_ceiling_pct_mcap != null ? liq.capacity_ceiling_pct_mcap.toFixed(2) + '%' : '—') +
                 ' of market cap can use it.</span> This is a hard inventory wall, not a slippage curve: beyond ' +
                 HastraPrimeRenderer._money(liq.capacity_ceiling_usd) +
-                ' the pool cannot return more USDC at any input size. The venue table below is the source of truth for currently covered chains and pools. ' +
+                ' the measured ' + exitDirection + ' pool cannot return more counter-token value at any input size.' +
+                unmeasuredNote + ' The venue table below is the source of truth for currently covered chains and pools. ' +
                 'The USDC inventory is PRIME Roots campaign-supported and may not persist.' +
             '</div>' +
             '<div class="text-xs text-slate-500 mb-3">Capacity method: <span class="font-mono">' +
