@@ -69,9 +69,9 @@ var HP_ADDR = {
 // labels — and the labels ARE the independent-verification story (which
 // accounts Hastra names on its PoR vs where the YLDS actually sits).
 var HP_RESERVE_ROLES = {
-    redeem_vault:   { label: 'Redeem vault',              note: 'Liquid redemption buffer — the only account also holding USDC', kind: 'liquid' },
-    dp_sweep:       { label: 'DP sweep',                  note: 'Democratized Prime sweep account', kind: 'reserve' },
-    reserve_a:      { label: 'Reserve A',                 note: 'Not named on Hastra’s PoR page — found by reading bank balances', kind: 'unnamed' },
+    redeem_vault:   { label: 'Redeem vault',              note: 'Holds Hastra’s HEYLDS receipt claim plus directly-held YLDS', kind: 'claim' },
+    dp_sweep:       { label: 'DP sweep',                  note: 'Issuer-documented HELOC management label; its bank balance is not the receipt claim', kind: 'direct' },
+    reserve_a:      { label: 'Borrower account',           note: 'Figure’s drawn YLDS balance, offset by debt to the pool — facility context, not backing', kind: 'borrower' },
     warehouse_b:    { label: 'DP pool contract',           note: 'Democratized Prime lending-pool contract: holds idle YLDS and issuer-minted .forge collateral markers as part of the facility design', kind: 'pool_contract' },
     por_prime_pool: { label: 'PoR-named "PRIME pool"',    note: 'CW20 receipt-token contract, not a bank-module YLDS custody account', kind: 'por_named' },
     por_auto_pool:  { label: 'PoR-named "AUTO pool"',     note: 'CW20 receipt-token contract, not a bank-module YLDS custody account', kind: 'por_named' }
@@ -988,7 +988,6 @@ var HastraPrimeRenderer = {
     // ============================================================
     _renderReserveMap: function(spec) {
         var rb = spec.reserve_balances || {};
-        var total = spec.reserve_ylds_total || 0;
         var drift = Array.isArray(spec.reserve_account_drift) ? spec.reserve_account_drift : [];
         var driftKeys = {};
         drift.forEach(function(d) {
@@ -997,37 +996,127 @@ var HastraPrimeRenderer = {
         });
 
         var keys = Object.keys(rb).sort(function(a, b) { return (rb[b].ylds || 0) - (rb[a].ylds || 0); });
+        var redeem = rb.redeem_vault || {};
+        var sweep = rb.dp_sweep || {};
+        var pool = rb.warehouse_b || {};
+        var borrower = rb.reserve_a || {};
 
-        var rows = keys.map(function(k) {
-            var acct = rb[k] || {};
-            var role = HP_RESERVE_ROLES[k] || { label: k, note: '', kind: 'reserve' };
-            var ylds = acct.ylds;
-            var share = total ? (ylds / total * 100) : null;
-            var d = driftKeys[k] || driftKeys[acct.address];
-            var rowCls = !ylds ? 'hp-zero' : '';
+        // The renderer lands before the analyzer starts exporting this CW20
+        // balance. Accept the likely scalar/object shapes, but never derive a
+        // claim percentage from the bank-only subset when the receipt is absent.
+        var receiptRaw = spec.heylds_claim;
+        var receiptAmount = null;
+        if (typeof receiptRaw === 'number') {
+            receiptAmount = receiptRaw;
+        } else if (receiptRaw && typeof receiptRaw === 'object') {
+            ['balance', 'value', 'amount', 'heylds', 'receipt_balance', 'held_by_redeem_vault'].some(function(k) {
+                if (receiptRaw[k] != null && !isNaN(receiptRaw[k])) {
+                    receiptAmount = Number(receiptRaw[k]);
+                    return true;
+                }
+                return false;
+            });
+        }
+        if (receiptAmount == null && redeem.heylds != null && !isNaN(redeem.heylds)) {
+            receiptAmount = Number(redeem.heylds);
+        }
 
-            var marker = '';
-            if (role.kind === 'pool_contract') marker = ' ' + HastraPrimeRenderer._pill('lending pool', 'neutral');
-            else if (role.kind === 'unnamed') marker = ' ' + HastraPrimeRenderer._pill('unnamed on PoR', 'neutral');
-            else if (role.kind === 'por_named') marker = ' ' + HastraPrimeRenderer._pill('PoR-named', 'neutral');
-            else if (role.kind === 'liquid') marker = ' ' + HastraPrimeRenderer._pill('liquid', 'ok');
+        var claimTotal = receiptAmount != null
+            ? receiptAmount + (redeem.ylds || 0) + (sweep.ylds || 0)
+            : null;
+        var facilityTotal = (pool.ylds != null || borrower.ylds != null)
+            ? (pool.ylds || 0) + (borrower.ylds || 0)
+            : null;
 
-            return '<tr class="' + rowCls + '">' +
-                '<td><div class="font-medium">' + role.label + marker + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-0.5">' + role.note + '</div></td>' +
-                '<td>' + HastraPrimeRenderer._pbLink(acct.address) + '</td>' +
-                '<td class="text-right font-mono">' + HastraPrimeRenderer._num(ylds, 2) + '</td>' +
-                '<td class="text-right font-mono">' + (share != null ? share.toFixed(2) + '%' : '—') + '</td>' +
-                '<td style="width:110px"><div class="pct-bar-container"><div class="pct-bar" style="width:' +
-                    (share || 0) + '%;background:#6366f1"></div></div></td>' +
-                '<td>' + (d ? HastraPrimeRenderer._pill('drift', 'warn') : '') + '</td>' +
-            '</tr>';
-        }).join('');
+        var claimRows = [
+            {
+                key: 'heylds_claim',
+                label: 'Redeem vault — HEYLDS claim',
+                note: 'Primary lender claim on the Democratized Prime pool',
+                kind: 'claim',
+                address: redeem.address,
+                amount: receiptAmount,
+                unit: 'HEYLDS'
+            },
+            {
+                key: 'redeem_vault',
+                label: 'Redeem vault — direct balance',
+                note: 'Bank-module YLDS held alongside the receipt position',
+                kind: 'direct',
+                address: redeem.address,
+                amount: redeem.ylds,
+                unit: 'YLDS'
+            },
+            {
+                key: 'dp_sweep',
+                label: 'DP sweep',
+                note: HP_RESERVE_ROLES.dp_sweep.note,
+                kind: 'direct',
+                address: sweep.address,
+                amount: sweep.ylds,
+                unit: 'YLDS'
+            }
+        ];
+        var facilityRows = [
+            {
+                key: 'warehouse_b',
+                label: 'DP pool contract — idle balance',
+                note: HP_RESERVE_ROLES.warehouse_b.note,
+                kind: 'pool_contract',
+                address: pool.address,
+                amount: pool.ylds,
+                unit: 'YLDS'
+            },
+            {
+                key: 'reserve_a',
+                label: 'Borrower account — drawn balance',
+                note: HP_RESERVE_ROLES.reserve_a.note,
+                kind: 'borrower',
+                address: borrower.address,
+                amount: borrower.ylds,
+                unit: 'YLDS'
+            }
+        ];
+
+        var groupTable = function(title, subtitle, rows, groupTotal, color) {
+            var body = rows.map(function(row) {
+                var share = groupTotal != null && groupTotal > 0 && row.amount != null
+                    ? row.amount / groupTotal * 100 : null;
+                var d = driftKeys[row.key] || driftKeys[row.address];
+                var marker = '';
+                if (row.kind === 'claim') marker = ' ' + HastraPrimeRenderer._pill('backing claim', 'ok');
+                else if (row.kind === 'borrower') marker = ' ' + HastraPrimeRenderer._pill('borrower · not backing', 'warn');
+                else if (row.kind === 'pool_contract') marker = ' ' + HastraPrimeRenderer._pill('facility idle', 'neutral');
+                else marker = ' ' + HastraPrimeRenderer._pill('direct YLDS', 'neutral');
+
+                return '<tr class="' + (row.amount === 0 ? 'hp-zero' : '') + '">' +
+                    '<td><div class="font-medium">' + row.label + marker + '</div>' +
+                        '<div class="text-xs text-slate-400 mt-0.5">' + row.note + '</div></td>' +
+                    '<td>' + HastraPrimeRenderer._pbLink(row.address) + '</td>' +
+                    '<td class="text-right font-mono">' +
+                        (row.amount != null ? HastraPrimeRenderer._num(row.amount, 2) + ' ' + row.unit : '—') + '</td>' +
+                    '<td class="text-right font-mono">' + (share != null ? share.toFixed(2) + '%' : '—') + '</td>' +
+                    '<td style="width:110px"><div class="pct-bar-container"><div class="pct-bar" style="width:' +
+                        (share != null ? Math.max(0, Math.min(100, share)) : 0) + '%;background:' + color +
+                        '"></div></div></td>' +
+                    '<td>' + (d ? HastraPrimeRenderer._pill('drift', 'warn') : '') + '</td>' +
+                '</tr>';
+            }).join('');
+
+            return '<div class="mb-4">' +
+                '<div class="text-sm font-semibold panel-title mb-1" style="font-size:0.9rem">' + title + '</div>' +
+                '<div class="text-xs text-slate-500 mb-2">' + subtitle + '</div>' +
+                '<div class="data-table-scroll"><table class="data-table">' +
+                    '<thead><tr><th>Account / position</th><th>Address</th><th class="text-right">Amount</th>' +
+                    '<th class="text-right">% of group</th><th></th><th></th></tr></thead>' +
+                    '<tbody>' + body + '</tbody></table></div>' +
+            '</div>';
+        };
 
         var driftBody;
         if (!drift.length) {
             driftBody = '<div class="text-sm"><span class="text-green-600 font-medium">No drift.</span> ' +
-                '<span class="text-slate-500">Every account in the configured reserve set still holds its expected balance, and the live ' +
+                '<span class="text-slate-500">Every account in the configured monitored set still holds its expected balance, and the live ' +
                 '<span class="font-mono">denom_owners</span> enumeration surfaced no unexpected large YLDS holder' +
                 (spec.denom_owners_complete === false ? ' <span class="text-amber-600">(enumeration incomplete this run)</span>' : '') +
                 '.</span></div>';
@@ -1056,14 +1145,37 @@ var HastraPrimeRenderer = {
             return '<tr><td>' + HastraPrimeRenderer._pbLink(a) + '</td>' +
                 '<td class="text-right font-mono">' + HastraPrimeRenderer._num(top[a], 2) + '</td></tr>';
         }).join('');
+        var sweepVsIssuerPct = sweep.ylds != null ? sweep.ylds / 503000000 * 100 : null;
 
         return '<div class="panel">' +
             '<div class="panel-title">Reserve Map ' +
-                '<span class="text-xs font-normal text-slate-400">— where the YLDS actually sits, and whether it moved</span></div>' +
-            '<div class="data-table-scroll"><table class="data-table">' +
-                '<thead><tr><th>Account</th><th>Address</th><th class="text-right">YLDS</th>' +
-                '<th class="text-right">% of reserve</th><th></th><th></th></tr></thead>' +
-                '<tbody>' + rows + '</tbody></table></div>' +
+                '<span class="text-xs font-normal text-slate-400">— lender claim separated from facility-side balances</span></div>' +
+
+            groupTable(
+                'Hastra’s claim',
+                receiptAmount != null
+                    ? 'HEYLDS receipt claim plus directly-held YLDS. Percentages use this claim group only.'
+                    : 'The HEYLDS receipt amount is not yet exported in this snapshot. Claim-group percentages are suppressed rather than calculated from an incomplete bank-only subset.',
+                claimRows,
+                claimTotal,
+                '#6366f1'
+            ) +
+
+            groupTable(
+                'Facility, for context — not additive to backing',
+                'Idle pool YLDS and the borrower’s drawn YLDS. Percentages use this facility group only, never the backing total.',
+                facilityRows,
+                facilityTotal,
+                '#14b8a6'
+            ) +
+
+            '<div class="risk-flag risk-warning mt-3">' +
+                '<span class="font-medium">The issuer’s sweep address is a label, not the custody location.</span> Hastra’s documentation ' +
+                'and PoR name ' + HastraPrimeRenderer._pbLink(sweep.address) + ' as managing the HELOC position and attribute roughly ' +
+                '503M YLDS to it. Its live bank balance is only ' + HastraPrimeRenderer._num(sweep.ylds, 2) + ' YLDS' +
+                (sweepVsIssuerPct != null ? ' — about ' + sweepVsIssuerPct.toFixed(3) + '% of that documented figure' : '') +
+                '. Following the label alone lands on a near-empty wallet, not the receipt claim or facility custody.' +
+            '</div>' +
 
             '<div class="risk-flag risk-info mt-3">' +
                 '<span class="font-medium">Pool-contract structure:</span> the Democratized Prime pool contract ' +
@@ -1079,11 +1191,11 @@ var HastraPrimeRenderer = {
             driftBody +
 
             (outsideRows
-                ? '<div class="text-sm font-semibold panel-title mt-4 mb-2" style="font-size:0.9rem">Largest YLDS holders outside the reserve set</div>' +
+                ? '<div class="text-sm font-semibold panel-title mt-4 mb-2" style="font-size:0.9rem">Largest YLDS holders outside the monitored set</div>' +
                   '<div class="data-table-scroll"><table class="data-table">' +
                   '<thead><tr><th>Address</th><th class="text-right">YLDS</th></tr></thead><tbody>' + outsideRows + '</tbody></table></div>' +
                   '<div class="text-xs text-slate-400 mt-2">These are ordinary YLDS holders, not reserve accounts. They are listed because a ' +
-                  'reserve reshuffle would appear here first — as a new large holder — before any balance in the configured set changed.</div>'
+                  'custody reshuffle would appear here first — as a new large holder — before any balance in the configured set changed.</div>'
                 : '') +
         '</div>';
     },
