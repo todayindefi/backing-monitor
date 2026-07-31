@@ -619,6 +619,40 @@ const CommonRenderer = {
         return this._rate(cr, this._axisThresholds(data).backing.cr_pct, 'high');
     },
 
+    _escapeAttr(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    },
+
+    _indexerLabel(source) {
+        if (!source || typeof source !== 'string') return null;
+        var known = { geckoterminal: 'GeckoTerminal' };
+        var normalized = source.trim().toLowerCase();
+        if (known[normalized]) return known[normalized];
+        return source.trim().replace(/[_-]+/g, ' ').replace(/\b\w/g, function(c) {
+            return c.toUpperCase();
+        });
+    },
+
+    // 24h volume for the Liquidity card subtitle. Two contracts to keep:
+    //   1. `volume_24h` is emitted as null (never 0) when the lookup fails — an absent
+    //      figure must render "n/a", never a false $0 on a pool doing tens of millions.
+    //   2. It is indexer-derived (GeckoTerminal), unlike the 2% depth beside it, which is
+    //      an executable on-chain quote — so it carries an explicit (indexer) qualifier
+    //      and its source/as-of in the tooltip rather than reading as a chain verification.
+    // The upstream cadence is daily, so the as-of is context only: no staleness warning.
+    _volumeSubHtml(liq) {
+        var vol = liq ? liq.volume_24h : null;
+        if (vol == null) return 'vol n/a';
+        var src = this._indexerLabel(liq.volume_24h_source);
+        var tip = '24h volume ' + this.formatCurrencyExact(vol) + ' · ' +
+            (src ? src + ' — indexer-derived, not an on-chain quote'
+                 : 'indexer-derived, not an on-chain quote');
+        if (liq.volume_24h_as_of) tip += ' · as of ' + this.formatDate(liq.volume_24h_as_of);
+        return '<span class="indexer-figure" title="' +
+            this._escapeAttr(tip) + '">vol ' + this.formatCurrency(vol) + ' (indexer)</span>';
+    },
+
     // --- summary band (replaces the legacy 5 CR cards in 5-axis mode) ---
     renderAxisBand(data, history) {
         var container = document.getElementById('summary-cards');
@@ -645,7 +679,9 @@ const CommonRenderer = {
         var depthTxt = liqIsFree
             ? (liq.free_liquidity_pct.toFixed(1) + '% free')
             : ((liq.total_2pct_depth != null) ? this.formatCurrency(liq.total_2pct_depth) : 'n/a');
-        var liqSub = liqIsFree ? 'redemption · free at NAV, rest queues' : '2% depth · vol n/a';
+        var liqSub = liqIsFree
+            ? 'redemption · free at NAV, rest queues'
+            : '2% depth · ' + this._volumeSubHtml(liq);
 
         var cards = [
             {
