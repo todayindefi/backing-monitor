@@ -106,28 +106,14 @@ var HP_REPORT = {
         next_expected: '2026-08-14'
     },
 
-    // HELOC-warehouse credit. Issuer-reported, cross-checked against an
-    // independent securitization proxy. Never chain-verified.
-    heloc: {
+    // Independent securitization reference. The originator-attested live
+    // tear-sheet fields come from asset_specific.heloc_credit instead.
+    credit_proxy: {
         as_of: '2026-07-27',
-        issuer: {
-            source: 'Hastra /prime page (issuer-reported)',
-            avg_ltv_pct: 59.37,
-            avg_fico: 741.58,
-            avg_coupon_pct: 9.19,
-            cum_gross_loss: '<1.25%'
-        },
-        proxy: {
-            source: 'FIGRE Trust securitizations — Morningstar DBRS / KBRA presales, 2026 deals',
-            wa_fico: 734,
-            orig_cltv_pct: 63
-        },
-        figure_delinquency: {
-            source: 'Figure SEC filings — loans held for sale',
-            y2024_pct: 3.91,
-            y2025_pct: 5.46,
-            note: 'A Morpheus Research short report puts this at ~2× bank/originator peers; the source is short-biased, the underlying filing figures are not.'
-        },
+        source: 'FIGRE Trust securitizations — Morningstar DBRS / KBRA presales, 2026 deals',
+        wa_fico: 734,
+        orig_cltv_pct: 63,
+        dd_series_note: 'A parsed 31-deal third-party due-diligence series exists but is not yet exported into this feed.',
         caveats: [
             'The Democratized Prime warehouse’s own loan quality is not independently observable — 144A private deals, no Reg-AB loan tape, no per-warehouse delinquency feed.',
             'The warehouse now also blends auto (Agora) and SMB (Credibly) receivables, so "HELOC" is not the whole book.'
@@ -172,6 +158,15 @@ var HastraPrimeRenderer = {
     _pct: function(n, dp) {
         if (n === null || n === undefined || isNaN(n)) return '—';
         return n.toFixed(dp === undefined ? 2 : dp) + '%';
+    },
+
+    _esc: function(value) {
+        return String(value === null || value === undefined ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     },
 
     _trunc: function(addr, head, tail) {
@@ -431,7 +426,7 @@ var HastraPrimeRenderer = {
         html += HastraPrimeRenderer._axisHead(4, 'Dependencies', 'upstream credit · warehouse turnover · loan quality');
         html += HastraPrimeRenderer._renderUpstreamDependencies(data);
         html += anc('hp-panel-warehouse',  HastraPrimeRenderer._renderWarehouse(data, spec));
-        html += anc('hp-panel-heloc-credit', HastraPrimeRenderer._renderHelocCredit());
+        html += anc('hp-panel-heloc-credit', HastraPrimeRenderer._renderHelocCredit(data, spec));
 
         html += HastraPrimeRenderer._axisHead(5, 'Issuer', 'control surface · related-party structure');
         html += anc('hp-panel-control',    HastraPrimeRenderer._renderControlSurface(spec, data));
@@ -500,7 +495,7 @@ var HastraPrimeRenderer = {
             title + '</div>';
     },
 
-    // Scoped styles: the issuer-proxy panel has to be unmistakably NOT part of
+    // Scoped styles: the originator-proxy panel has to be unmistakably NOT part of
     // the chain-verified set, and Tailwind's dark: variant does not track this
     // app's body.dark toggle, so the dark rules are written explicitly.
     _injectStyles: function() {
@@ -1726,15 +1721,45 @@ var HastraPrimeRenderer = {
     },
 
     // ============================================================
-    // §8b HELOC credit proxy — issuer-reported, permanently opaque
+    // §8b HELOC credit proxy — originator-attested, permanently opaque
     // ============================================================
-    _renderHelocCredit: function() {
-        var h = HP_REPORT.heloc;
-        var iss = h.issuer, px = h.proxy, dq = h.figure_delinquency;
+    _renderHelocCredit: function(data, spec) {
+        var h = (spec && spec.heloc_credit) || {};
+        var stats = h.stats || {};
+        var px = HP_REPORT.credit_proxy || {};
+        var dq = h.figure_delinquency || {};
+        var series = Array.isArray(dq.series) ? dq.series : [];
+        var originator = h.originator || 'Originator unavailable';
+        var fetched = h.fetched_at ? HastraPrimeRenderer._hhmm(h.fetched_at) : 'unavailable';
+        var nextExpectedPassed = !!(dq.next_expected && data && data.timestamp &&
+            Date.parse(data.timestamp) > Date.parse(dq.next_expected + 'T23:59:59Z'));
 
-        var caveats = h.caveats.map(function(c) {
+        var caveats = (px.caveats || []).map(function(c) {
             return '<li>' + c + '</li>';
         }).join('');
+        var delinquencyTiles = series.map(function(point, i) {
+            var previous = i > 0 ? series[i - 1] : null;
+            var delta = previous && point.pct != null && previous.pct != null ?
+                point.pct - previous.pct : null;
+            return HastraPrimeRenderer._tile(
+                'Delinquency ' + (point.period || '—'),
+                HastraPrimeRenderer._pct(point.pct),
+                i === series.length - 1 ? 'warning' : '',
+                delta != null ? (delta >= 0 ? '+' : '') + delta.toFixed(2) + 'pp vs prior' : ''
+            );
+        }).join('');
+        var subordinatePct = (
+            stats.second_lien_pct != null && stats.third_lien_pct != null
+        ) ? stats.second_lien_pct + stats.third_lien_pct : null;
+        var freshnessPill = HastraPrimeRenderer._pill(
+            'Figure API fetched ' + fetched,
+            h.fetched_at ? 'warn' : 'neutral'
+        );
+        var delinquencyPill = HastraPrimeRenderer._pill(
+            'filing as of ' + (dq.as_of || 'unavailable') +
+                (dq.next_expected ? ' · next expected ' + dq.next_expected : ''),
+            nextExpectedPassed ? 'warn' : 'neutral'
+        );
 
         return '<div class="panel">' +
             '<div class="flex items-start justify-between gap-4 mb-3">' +
@@ -1744,48 +1769,75 @@ var HastraPrimeRenderer = {
                         'pre-securitization, not from Treasuries. This is the credit leg.</div>' +
                 '</div>' +
                 '<div class="text-right whitespace-nowrap">' +
-                    HastraPrimeRenderer._pill('issuer-proxy — not independently verified', 'warn') +
+                    HastraPrimeRenderer._pill('originator-attested — not independently verified', 'warn') +
                 '</div>' +
             '</div>' +
 
             '<div class="risk-flag risk-warning mb-4">' +
                 '<span class="font-semibold">Everything in this panel sits outside the chain-verified set.</span> Panels 1–7 above are ' +
-                'recomputed from Provenance, Solana and Ethereum on every run. Nothing here is: these are issuer disclosures and ' +
-                'third-party ratings figures, refreshed only when the research report is. Treat this as a monitored proxy with a standing ' +
-                'opacity caveat, not a metric. ' + HastraPrimeRenderer._reportBadge(h.as_of) +
+                'recomputed from Provenance, Solana and Ethereum on every run. Nothing here is: the live fields are Figure’s own ' +
+                'measurements of Figure’s loan book, supplemented by dated filing and ratings references. Treat this as a monitored ' +
+                'proxy with a standing opacity caveat, not independent verification.' +
+                '<div class="flex flex-wrap gap-2 mt-2">' + freshnessPill + delinquencyPill + '</div>' +
             '</div>' +
 
             '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">' +
                 '<div>' +
-                    '<div class="text-xs text-slate-400 font-medium uppercase mb-2">Issuer-reported loan pool</div>' +
-                    '<div class="grid grid-cols-2 gap-3 mb-2">' +
-                        HastraPrimeRenderer._tile('Avg LTV', iss.avg_ltv_pct.toFixed(2) + '%') +
-                        HastraPrimeRenderer._tile('Avg FICO', iss.avg_fico.toFixed(0)) +
-                        HastraPrimeRenderer._tile('Avg coupon', iss.avg_coupon_pct.toFixed(2) + '%') +
-                        HastraPrimeRenderer._tile('Cum. gross loss', iss.cum_gross_loss) +
+                    '<div class="text-xs text-slate-400 font-medium uppercase mb-2">Originator-reported (' +
+                        HastraPrimeRenderer._esc(originator) + ')</div>' +
+                    '<div class="grid grid-cols-2 gap-3 mb-3">' +
+                        HastraPrimeRenderer._tile('WA CLTV (post)', HastraPrimeRenderer._pct(stats.wa_cltv_post_pct)) +
+                        HastraPrimeRenderer._tile('WA credit score', HastraPrimeRenderer._num(stats.wa_credit_score, 2)) +
+                        HastraPrimeRenderer._tile('WA coupon', HastraPrimeRenderer._pct(stats.wa_coupon_pct)) +
+                        HastraPrimeRenderer._tile('Avg loan', HastraPrimeRenderer._money(stats.avg_loan_amount_usd)) +
                     '</div>' +
-                    '<div class="text-xs text-slate-400">' + iss.source + '</div>' +
+                    '<div class="text-xs text-slate-400 font-medium uppercase mt-4 mb-2">Lien position</div>' +
+                    '<div class="grid grid-cols-3 gap-3 mb-2">' +
+                        HastraPrimeRenderer._tile('1st lien', HastraPrimeRenderer._pct(stats.first_lien_pct)) +
+                        HastraPrimeRenderer._tile('2nd lien', HastraPrimeRenderer._pct(stats.second_lien_pct), 'warning') +
+                        HastraPrimeRenderer._tile('3rd lien', HastraPrimeRenderer._pct(stats.third_lien_pct), 'warning') +
+                    '</div>' +
+                    '<div class="text-xs text-amber-700 mb-3">' +
+                        (subordinatePct != null
+                            ? HastraPrimeRenderer._pct(subordinatePct) + ' of the pool is subordinate-lien collateral.'
+                            : 'Subordinate-lien concentration unavailable.') +
+                    '</div>' +
+                    '<div class="grid grid-cols-2 gap-3">' +
+                        HastraPrimeRenderer._tile('WA DTI (post)', HastraPrimeRenderer._pct(stats.wa_dti_post_pct)) +
+                        HastraPrimeRenderer._tile('WA PTI', HastraPrimeRenderer._pct(stats.wa_pti_pct)) +
+                        HastraPrimeRenderer._tile('NOO concentration', HastraPrimeRenderer._pct(stats.noo_concentration_pct)) +
+                        HastraPrimeRenderer._tile('WA term', stats.wa_term_months != null
+                            ? HastraPrimeRenderer._num(stats.wa_term_months, 0) + ' mo' : '—') +
+                        HastraPrimeRenderer._tile('WA income', HastraPrimeRenderer._money(stats.wa_income_usd)) +
+                        HastraPrimeRenderer._tile('WA home value', HastraPrimeRenderer._money(stats.wa_home_value_adj_usd)) +
+                    '</div>' +
+                    '<div class="text-xs text-slate-400 mt-2">Source: ' +
+                        HastraPrimeRenderer._esc(h.source || 'unavailable') + '</div>' +
                 '</div>' +
                 '<div>' +
                     '<div class="text-xs text-slate-400 font-medium uppercase mb-2">Independent proxy — rated securitizations</div>' +
                     '<div class="grid grid-cols-2 gap-3 mb-2">' +
-                        HastraPrimeRenderer._tile('WA FICO', '~' + px.wa_fico) +
-                        HastraPrimeRenderer._tile('Orig. CLTV', '~' + px.orig_cltv_pct + '%') +
+                        HastraPrimeRenderer._tile('WA FICO', px.wa_fico != null ? '~' + px.wa_fico : '—') +
+                        HastraPrimeRenderer._tile('Orig. CLTV', px.orig_cltv_pct != null ? '~' + px.orig_cltv_pct + '%' : '—') +
                     '</div>' +
-                    '<div class="text-xs text-slate-400">' + px.source + '</div>' +
-                    '<div class="text-xs text-slate-500 mt-2">The issuer’s figures are <span class="font-medium">consistent</span> with ' +
+                    '<div class="text-xs text-slate-400">' + (px.source || '—') + ' · as of ' + (px.as_of || '—') + '</div>' +
+                    '<div class="text-xs text-slate-500 mt-2">The originator’s figures are <span class="font-medium">consistent</span> with ' +
                         'these independently-rated deals — reassuring, but the warehouse’s own book is a different pool.</div>' +
+                    '<div class="text-xs text-slate-400 mt-2">' + (px.dd_series_note || '') + '</div>' +
                 '</div>' +
             '</div>' +
 
             '<div class="text-xs text-slate-400 font-medium uppercase mt-5 mb-2">Parent-originator signal</div>' +
-            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">' +
-                HastraPrimeRenderer._tile('Delinquency 2024', dq.y2024_pct.toFixed(2) + '%') +
-                HastraPrimeRenderer._tile('Delinquency 2025', dq.y2025_pct.toFixed(2) + '%', 'warning',
-                    '+' + (dq.y2025_pct - dq.y2024_pct).toFixed(2) + 'pp YoY') +
-                HastraPrimeRenderer._tile('Trend', '↑ rising', 'warning', 'loans held for sale') +
+            '<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-2">' +
+                delinquencyTiles +
+                HastraPrimeRenderer._tile('Trend', series.length ? '↑ rising' : '—', series.length ? 'warning' : '',
+                    dq.basis || 'loans held for sale') +
             '</div>' +
-            '<div class="text-xs text-slate-400">' + dq.source + '. ' + dq.note + '</div>' +
+            '<div class="text-xs text-slate-400">' + HastraPrimeRenderer._esc(dq.source || '—') + '</div>' +
+            (h.risk_parameters
+                ? '<div class="risk-flag risk-warning mt-3"><span class="font-semibold">Pool selection rule:</span> ' +
+                    HastraPrimeRenderer._esc(h.risk_parameters) + '</div>'
+                : '') +
 
             '<div class="text-xs text-slate-500 mt-4">' +
                 '<div class="risk-flag risk-info mb-3"><span class="font-semibold">Why this can never become a live public panel:</span> ' +
