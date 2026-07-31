@@ -1445,7 +1445,14 @@ var HastraPrimeRenderer = {
         var ceiling = liq.capacity_ceiling || {};
         var pools = Array.isArray(liq.pools) ? liq.pools : [];
         var ceilingScope = HastraPrimeRenderer._scopeLabel(liq.ceiling_scope);
+        var primaryScopeKey = String(liq.ceiling_scope || '').replace(/_only$/, '').toLowerCase();
         var exitDirection = ceiling.exit_direction || 'exit route';
+        var measuredPools = pools.filter(function(pool) {
+            return pool && pool.depth_usd != null;
+        });
+        var additionalMeasuredPools = measuredPools.filter(function(pool) {
+            return String(pool.chain || '').toLowerCase() !== primaryScopeKey;
+        });
         var unmeasuredChains = Array.from(new Set(pools.filter(function(pool) {
             return pool && pool.depth_usd == null && pool.chain;
         }).map(function(pool) {
@@ -1456,11 +1463,46 @@ var HastraPrimeRenderer = {
                 String(pool.ceiling_method || '').indexOf('non_monotonic') !== -1;
         });
         var unmeasuredNote = unmeasuredChains.length ?
-            ' No capacity ceiling is established for ' + unmeasuredChains.join(', ') +
+            ' ' + unmeasuredChains.join(', ') + ' capacity ceiling: not established' +
                 (nonMonotonicUnmeasured
                     ? ' because aggregated router quotes there are non-monotonic and cannot identify saturation.'
                     : '.')
             : '';
+        var additionalMeasuredNote = additionalMeasuredPools.map(function(pool) {
+            var poolCeiling = pool.capacity_ceiling || {};
+            var method = pool.ceiling_method || poolCeiling.method || 'method unavailable';
+            var direction = poolCeiling.exit_direction || pool.pair || 'exit route';
+            var inventoryWall = (
+                poolCeiling.counter_token_inventory_value_usd != null
+                && pool.depth_usd != null
+            ) ? ' It is a counter-token inventory wall.' : '';
+            return ' ' + HastraPrimeRenderer._scopeLabel(pool.chain) + ' has a separate ' +
+                HastraPrimeRenderer._money(pool.depth_usd) + ' ' + direction +
+                ' ceiling measured by ' + HastraPrimeRenderer._esc(method) + '.' +
+                inventoryWall;
+        }).join('');
+        var splitExitNote = measuredPools.length > 1 ?
+            ' The measured ceilings require splitting a position across chains and different counter-tokens; they are not one single-clip exit.'
+            : '';
+        var ceilingHeadlineHtml = measuredPools.length ? measuredPools.map(function(pool) {
+            var poolCeiling = pool.capacity_ceiling || {};
+            var pctMcap = (
+                poolCeiling.capacity_ceiling_pct_of_market_cap != null
+                    ? poolCeiling.capacity_ceiling_pct_of_market_cap
+                    : poolCeiling.inventory_ceiling_pct_of_market_cap
+            );
+            return '<span class="whitespace-nowrap">' +
+                HastraPrimeRenderer._money(pool.depth_usd) + ' hard ceiling (' +
+                HastraPrimeRenderer._scopeLabel(pool.chain) + ') · ' +
+                (pctMcap != null ? pctMcap.toFixed(2) + '% of market cap' : '—') +
+            '</span>';
+        }).join('<span class="text-slate-300">|</span>') :
+            '<span class="whitespace-nowrap">' +
+                HastraPrimeRenderer._money(liq.capacity_ceiling_usd) + ' hard ceiling (' +
+                ceilingScope + ') · ' +
+                (liq.capacity_ceiling_pct_mcap != null
+                    ? liq.capacity_ceiling_pct_mcap.toFixed(2) + '% of market cap' : '—') +
+            '</span>';
         var volumeSub = ['context-only', 'unscored'];
         var volumeSource = HastraPrimeRenderer._indexerLabel(liq.volume_24h_source);
         if (volumeSource) volumeSub.push(volumeSource);
@@ -1472,14 +1514,17 @@ var HastraPrimeRenderer = {
         var ratingHtml = typeof CommonRenderer !== 'undefined' ?
             CommonRenderer._ratingChipHtml(rating) : '';
         var venueRows = pools.map(function(v) {
+            var poolCeiling = v.capacity_ceiling || {};
+            var method = v.ceiling_method || poolCeiling.method;
             var depthCell = v.depth_usd != null
                 ? HastraPrimeRenderer._money(v.depth_usd)
-                : (v.ceiling_method ? 'not established' : '—');
+                : (method ? 'not established' : '—');
             return '<tr>' +
                 '<td class="font-medium">' + (v.venue || '—') + ' ' + (v.pair || '') + '</td>' +
                 '<td>' + (v.chain || '—') + '</td>' +
                 '<td class="text-right font-mono">' + (v.tvl_usd != null ? HastraPrimeRenderer._money(v.tvl_usd) : '—') + '</td>' +
-                '<td class="text-right font-mono" title="' + HastraPrimeRenderer._esc(v.ceiling_method || '') + '">' + depthCell + '</td>' +
+                '<td class="text-right font-mono">' + depthCell + '</td>' +
+                '<td class="font-mono text-xs">' + HastraPrimeRenderer._esc(method || '—') + '</td>' +
                 '<td class="text-right font-mono">' + (v.volume_24h != null ? HastraPrimeRenderer._money(v.volume_24h) : 'unavailable') + '</td>' +
             '</tr>';
         }).join('');
@@ -1488,10 +1533,7 @@ var HastraPrimeRenderer = {
             '<div class="flex flex-wrap items-center gap-2 mb-3">' +
                 '<div class="panel-title" style="margin:0">Executable secondary-market depth</div>' +
                 ratingHtml +
-                '<span class="font-semibold text-sm">' +
-                    HastraPrimeRenderer._money(liq.capacity_ceiling_usd) + ' hard ceiling (' + ceilingScope + ') · ' +
-                    (liq.capacity_ceiling_pct_mcap != null ? liq.capacity_ceiling_pct_mcap.toFixed(2) + '% of market cap' : '—') +
-                '</span>' +
+                '<span class="font-semibold text-sm flex flex-wrap gap-x-2">' + ceilingHeadlineHtml + '</span>' +
             '</div>' +
 
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
@@ -1515,15 +1557,16 @@ var HastraPrimeRenderer = {
                 ' of market cap can use it.</span> This is a hard inventory wall, not a slippage curve: beyond ' +
                 HastraPrimeRenderer._money(liq.capacity_ceiling_usd) +
                 ' the measured ' + exitDirection + ' pool cannot return more counter-token value at any input size.' +
-                unmeasuredNote + ' The venue table below is the source of truth for currently covered chains and pools. ' +
+                additionalMeasuredNote + unmeasuredNote + splitExitNote +
+                ' The venue table below is the source of truth for currently covered chains and pools. ' +
                 'The USDC inventory is PRIME Roots campaign-supported and may not persist.' +
             '</div>' +
-            '<div class="text-xs text-slate-500 mb-3">Capacity method: <span class="font-mono">' +
-                (ceiling.method || 'unavailable') + '</span>.</div>' +
+            '<div class="text-xs text-slate-500 mb-3">Primary ceiling method (' + ceilingScope + '): <span class="font-mono">' +
+                (ceiling.method || 'unavailable') + '</span>. Per-venue methods are shown below.</div>' +
 
             '<div class="data-table-scroll"><table class="data-table">' +
                 '<thead><tr><th>Venue</th><th>Chain</th><th class="text-right">TVL</th>' +
-                '<th class="text-right">Depth</th><th class="text-right">24h volume</th></tr></thead>' +
+                '<th class="text-right">Depth</th><th>Ceiling method</th><th class="text-right">24h volume</th></tr></thead>' +
                 '<tbody>' + venueRows + '</tbody></table></div>' +
         '</div>';
     },
