@@ -9,7 +9,9 @@
  * Prime lending-pool contract, its CW20 receipt token, bank-module YLDS and the
  * issuer-minted loan markers pledged to the pool. Consensus verifies that the
  * balances and markers exist; it does not authenticate the off-chain loans the
- * markers represent. The issuer dashboard does not expose that distinction.
+ * markers represent, and it does not make balances immutable when marker
+ * permissions allow forced transfer by keys outside this system. The issuer
+ * dashboard does not expose those distinctions.
  *
  * Data:
  *   - data/hastra_prime_backing.json           (dashboard snapshot — last GOOD)
@@ -47,7 +49,7 @@ var HP_THRESHOLDS = {
     cr_par:            100.0,  // % — below par is a genuine shortfall
     cr_thin:           100.5,  // % — above par but no cushion
     recon_tolerance:   0.5,    // % — per-chain coverage break (analyzer default)
-    redeem_cov_warn:   1.25,   // × — liquid buffer ÷ pending queue
+    redeem_cov_warn:   1.25,   // × — liquid buffer ÷ chain-verifiable outstanding, when available
     holder_conc_warn:  50.0,   // % of PRIME supply in one owner
     stale_warn_hours:  3,      // matches the dashboard freshness digest
     stale_crit_hours:  12
@@ -91,6 +93,19 @@ var HP_REPORT = {
         collateralization_pct: 100.20,
         as_of: '2026-07-31',
         note: 'Hastra’s public Proof-of-Reserves dashboard; hand-maintained comparison, never an analyzer input'
+    },
+
+    // Dated control-surface context. This is deliberately not a live analyzer
+    // leg or an alert: the level is static; a future permission-set change
+    // would require its own stored baseline and change detector.
+    marker_control: {
+        as_of: '2026-07-31',
+        denom: 'uylds.fcc',
+        force_transfer_accounts: 6,
+        mint_burn_accounts: 5,
+        transfer_only_accounts: 4,
+        backing_holder_concentration_pct: 99.7,
+        one_force_transfer_account_never_used: true
     },
 
     // Figure Certificate Company qualified-asset coverage. Quarterly,
@@ -206,13 +221,14 @@ var HastraPrimeRenderer = {
         return '<span class="inline-block w-2 h-2 rounded-full align-middle" style="background:' + color + '"></span>';
     },
 
-    _pill: function(label, state) {
+    _pill: function(label, state, title) {
         var bg, fg;
         if (state === 'ok') { bg = '#f0fdf4'; fg = '#15803d'; }
         else if (state === 'warn') { bg = '#fffbeb'; fg = '#b45309'; }
         else if (state === 'critical') { bg = '#fef2f2'; fg = '#b91c1c'; }
         else { bg = '#f1f5f9'; fg = '#475569'; }
         return '<span class="hp-pill inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium" ' +
+            (title ? 'title="' + HastraPrimeRenderer._esc(title) + '" ' : '') +
             'style="background:' + bg + ';color:' + fg + '">' + HastraPrimeRenderer._dot(state) +
             '<span>' + label + '</span></span>';
     },
@@ -235,9 +251,17 @@ var HastraPrimeRenderer = {
         if (source === null || source === undefined || source === 'unavailable') {
             return HastraPrimeRenderer._pill('unavailable', 'neutral');
         }
-        return HastraPrimeRenderer._isIssuerSourced(source)
-            ? HastraPrimeRenderer._pill('issuer-reported', 'warn')
-            : HastraPrimeRenderer._pill('chain-verified', 'ok');
+        if (HastraPrimeRenderer._isIssuerSourced(source)) {
+            return HastraPrimeRenderer._pill('issuer-reported', 'warn');
+        }
+        var provenance = typeof source === 'string' && source.toLowerCase().indexOf('provenance') !== -1;
+        return HastraPrimeRenderer._pill(
+            'chain-verified',
+            'ok',
+            provenance
+                ? 'Consensus verifies the observed balance exists; uylds.fcc marker permissions can still force-transfer it. Verified does not mean immutable.'
+                : 'Read directly from chain state rather than an issuer page.'
+        );
     },
 
     _reportBadge: function(asOf) {
@@ -780,7 +804,7 @@ var HastraPrimeRenderer = {
             return '<div class="panel">' +
                 '<div class="panel-title">Risk Flags</div>' +
                 '<div class="text-sm"><span class="text-green-600 font-medium">No flags firing.</span> ' +
-                '<span class="text-slate-500">Thresholds watched: CR &lt; 100%, per-chain backing break, redemption coverage &lt; ' +
+                '<span class="text-slate-500">Thresholds watched: CR &lt; 100%, per-chain backing break, chain-verifiable redemption coverage &lt; ' +
                 HP_THRESHOLDS.redeem_cov_warn.toFixed(2) + '×, reserve-account drift, mint/freeze authority change, top-holder step change.</span></div>' +
             '</div>';
         }
@@ -888,33 +912,44 @@ var HastraPrimeRenderer = {
     _renderRedemption: function(spec) {
         var lb = spec.liquid_buffer || {};
         var bufUsd = spec.liquid_buffer_usd;
-        var pending = spec.pending_redeem_wylds || {};
+        var pending = spec.por_pending_redeem_wylds || {};
         var pendingSale = spec.ylds_pending_sale || {};
         var ratio = spec.redeem_coverage_ratio;
+        var coverageReason = spec.redeem_coverage_reason;
 
         var state = HastraPrimeRenderer._gate(
             ratio == null ? 'neutral'
             : ratio >= HP_THRESHOLDS.redeem_cov_warn ? 'ok'
             : ratio >= 1 ? 'warn' : 'critical');
 
-        // Buffer vs queue, both in ~$1-face units.
-        var queueUsd = pending.value;
-        var maxSide = Math.max(bufUsd || 0, queueUsd || 0) || 1;
+        // Visual comparison only: the issuer number is never used to derive a
+        // chain-verified coverage ratio.
+        var reportedPendingUsd = pending.value;
+        var maxSide = Math.max(bufUsd || 0, reportedPendingUsd || 0) || 1;
+        var pendingAsOf = pending.as_of ? HastraPrimeRenderer._hhmm(pending.as_of) : null;
+        var saleAsOf = pendingSale.as_of ? HastraPrimeRenderer._hhmm(pendingSale.as_of) : null;
 
         return '<div class="panel">' +
             '<div class="panel-title">Redemption Health ' +
-                '<span class="text-xs font-normal text-slate-400">— liquid buffer vs the pending queue</span></div>' +
+                '<span class="text-xs font-normal text-slate-400">— liquid buffer and issuer-reported pending activity</span></div>' +
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
                 HastraPrimeRenderer._tile('Coverage ratio',
                     ratio != null ? ratio.toFixed(2) + '×' : '—',
-                    HastraPrimeRenderer._stateCls(state), 'buffer ÷ pending queue') +
+                    HastraPrimeRenderer._stateCls(state),
+                    ratio != null ? 'buffer ÷ chain-verifiable outstanding'
+                        : 'suppressed · no chain-verifiable queue') +
                 HastraPrimeRenderer._tile('Liquid buffer', HastraPrimeRenderer._money(bufUsd), '',
                     'redeem vault only') +
-                HastraPrimeRenderer._tile('Pending redemptions', HastraPrimeRenderer._tok(pending.value) + ' wYLDS', '',
-                    (pending.request_count != null ? pending.request_count + ' open requests' : '')) +
+                HastraPrimeRenderer._tile('Pending redemptions',
+                    pending.value != null ? HastraPrimeRenderer._tok(pending.value) + ' wYLDS' : '—', '',
+                    HastraPrimeRenderer._sourceBadge(pending.source) +
+                        (pendingAsOf ? ' <span class="ml-1">as of ' + pendingAsOf + '</span>' : '')) +
                 HastraPrimeRenderer._tile('YLDS pending sale',
                     pendingSale.value != null ? HastraPrimeRenderer._tok(pendingSale.value) : '—', '',
-                    pendingSale.value == null ? 'not readable on-chain' : '') +
+                    pendingSale.value != null
+                        ? HastraPrimeRenderer._sourceBadge(pendingSale.source) +
+                            (saleAsOf ? ' <span class="ml-1">as of ' + saleAsOf + '</span>' : '')
+                        : '—') +
             '</div>' +
 
             '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">' +
@@ -932,18 +967,24 @@ var HastraPrimeRenderer = {
                     '</div>' +
                 '</div>' +
                 '<div>' +
-                    '<div class="text-xs text-slate-400 font-medium uppercase mb-1">Buffer vs queue</div>' +
+                    '<div class="text-xs text-slate-400 font-medium uppercase mb-1">Buffer vs issuer-reported pending</div>' +
                     HastraPrimeRenderer._bar([{ pct: (bufUsd || 0) / maxSide * 100, color: '#6366f1', title: 'Liquid buffer' }]) +
                     '<div class="mt-1"></div>' +
-                    HastraPrimeRenderer._bar([{ pct: (queueUsd || 0) / maxSide * 100, color: '#f59e0b', title: 'Pending queue' }]) +
+                    HastraPrimeRenderer._bar([{ pct: (reportedPendingUsd || 0) / maxSide * 100, color: '#f59e0b',
+                        title: 'Issuer-reported pending redemptions' }]) +
                     '<div class="flex flex-wrap gap-3 text-xs text-slate-500 mt-1">' +
                         '<span><span class="inline-block w-2.5 h-2.5 rounded-sm mr-1 align-middle" style="background:#6366f1"></span>' +
                             'buffer ' + HastraPrimeRenderer._money(bufUsd) + '</span>' +
                         '<span><span class="inline-block w-2.5 h-2.5 rounded-sm mr-1 align-middle" style="background:#f59e0b"></span>' +
-                            'queue ' + HastraPrimeRenderer._tok(queueUsd) + ' wYLDS</span>' +
+                            'issuer pending ' + HastraPrimeRenderer._tok(reportedPendingUsd) + ' wYLDS</span>' +
                     '</div>' +
                 '</div>' +
             '</div>' +
+
+            (coverageReason
+                ? '<div class="risk-flag risk-info mb-3"><span class="font-medium">Coverage ratio withheld:</span> ' +
+                    HastraPrimeRenderer._esc(coverageReason) + '</div>'
+                : '') +
 
             '<div class="data-table-scroll"><table class="data-table">' +
                 '<thead><tr><th>Field</th><th class="text-right">Value</th><th>Source</th><th>Read from</th></tr></thead>' +
@@ -956,11 +997,10 @@ var HastraPrimeRenderer = {
                         '<td class="text-right font-mono">' + HastraPrimeRenderer._num(lb.redeem_vault_usdc, 6) + '</td>' +
                         '<td>' + HastraPrimeRenderer._sourceBadge('provenance_bank') + '</td>' +
                         '<td class="text-xs text-slate-500">Provenance bank balance</td></tr>' +
-                    '<tr><td class="font-medium">Pending redemptions</td>' +
+                    '<tr><td class="font-medium">Issuer-reported pending redemptions</td>' +
                         '<td class="text-right font-mono">' + HastraPrimeRenderer._num(pending.value, 2) + '</td>' +
                         '<td>' + HastraPrimeRenderer._sourceBadge(pending.source) + '</td>' +
-                        '<td class="text-xs text-slate-500">' + (pending.source || '—') +
-                            (pending.program ? '<br>' + HastraPrimeRenderer._solLink(pending.program) : '') + '</td></tr>' +
+                        '<td class="text-xs text-slate-500">' + (pending.source || '—') + '</td></tr>' +
                     '<tr><td class="font-medium">YLDS pending sale</td>' +
                         '<td class="text-right font-mono">' + (pendingSale.value != null ? HastraPrimeRenderer._num(pendingSale.value, 2) : '—') + '</td>' +
                         '<td>' + HastraPrimeRenderer._sourceBadge(pendingSale.source) + '</td>' +
@@ -968,12 +1008,11 @@ var HastraPrimeRenderer = {
                 '</tbody></table></div>' +
 
             '<div class="text-xs text-slate-400 mt-2">' +
-                'The queue is read from the vault-mint program’s redemption-request accounts, so it is chain-verified rather than ' +
-                'taken from the issuer’s dashboard. Read the ratio with the structure in mind: the buffer is <span class="font-medium">' +
-                'not a standing USDC reserve</span> — it is almost entirely YLDS, and honouring redemptions means selling YLDS at Figure ' +
-                'Markets (off-chain, market hours) and wiring USDC back. Orderly in calm conditions; there is nothing here to draw down in a run. ' +
-                'The warn line is on the queue-growth side (&lt;' + HP_THRESHOLDS.redeem_cov_warn.toFixed(2) + '×), because a buffer-side ' +
-                'threshold would fire permanently by design.' +
+                'Solana RedemptionRequest PDAs are reusable per-user records with no status, timestamp or fulfilled flag, so their retained ' +
+                'amounts are not presented as an open queue. The two pending figures above come from Hastra’s page and remain explicitly ' +
+                'issuer-reported; they do not silently become a chain-verified coverage denominator. The liquid buffer is ' +
+                '<span class="font-medium">not a standing USDC reserve</span> — it is almost entirely YLDS, and honouring redemptions means ' +
+                'selling YLDS at Figure Markets (off-chain, market hours) and wiring USDC back.' +
             '</div>' +
         '</div>';
     },
@@ -983,6 +1022,7 @@ var HastraPrimeRenderer = {
     // ============================================================
     _renderReserveMap: function(spec) {
         var rb = spec.reserve_balances || {};
+        var markerControl = HP_REPORT.marker_control || {};
         var drift = Array.isArray(spec.reserve_account_drift) ? spec.reserve_account_drift : [];
         var driftKeys = {};
         drift.forEach(function(d) {
@@ -1166,8 +1206,11 @@ var HastraPrimeRenderer = {
         var sweepVsIssuerPct = sweep.ylds != null ? sweep.ylds / 503000000 * 100 : null;
 
         return '<div class="panel">' +
-            '<div class="panel-title">Reserve Map ' +
-                '<span class="text-xs font-normal text-slate-400">— lender claim separated from facility-side balances</span></div>' +
+            '<div class="flex items-start justify-between gap-3">' +
+                '<div class="panel-title">Reserve Map ' +
+                    '<span class="text-xs font-normal text-slate-400">— lender claim separated from facility-side balances</span></div>' +
+                HastraPrimeRenderer._sourceBadge('provenance_bank') +
+            '</div>' +
 
             groupTable(
                 'Hastra’s claim',
@@ -1204,6 +1247,23 @@ var HastraPrimeRenderer = {
                 'That account structure is expected; the residual limitation is what the markers prove about the underlying loans. ' +
                 '<a href="#hp-panel-warehouse" class="text-blue-600 hover:underline">Panel 8a qualifies that evidence and measures ' +
                 'inventory and turnover ↓</a>' +
+            '</div>' +
+
+            '<div class="risk-flag risk-info mt-3">' +
+                '<div class="flex flex-wrap items-center gap-2 mb-2">' +
+                    HastraPrimeRenderer._reportBadge(markerControl.as_of) +
+                    '<span class="font-medium">Marker permissions — not validator trust</span>' +
+                '</div>' +
+                'The <span class="font-mono">' + HastraPrimeRenderer._esc(markerControl.denom || 'uylds.fcc') +
+                '</span> certificate backing these positions permits forced transfer. ' +
+                HastraPrimeRenderer._num(markerControl.force_transfer_accounts, 0) +
+                ' separate ordinary accounts can move holdings without the holder’s consent; ' +
+                HastraPrimeRenderer._num(markerControl.mint_burn_accounts, 0) +
+                ' of them can also mint and burn, and one force-transfer account had never signed a transaction at the dated check. ' +
+                'The chain itself was broadly validated — 100 bonded validators, with no party near control — so this is a property of ' +
+                'the token’s permission set, not the network. About ' +
+                HastraPrimeRenderer._pct(markerControl.backing_holder_concentration_pct, 1) +
+                ' of backing sat in one account: consensus proves the balance is there; it does not prove the balance will stay there.' +
             '</div>' +
 
             '<div class="text-sm font-semibold panel-title mt-4 mb-2" style="font-size:0.9rem">Drift check</div>' +
