@@ -33,20 +33,19 @@ var STRC_DIV_POLICY_REGIME = {
     label: 'Discretionary soft floor (not a peg)',
     blurb: 'As of the 06-29 Digital Credit Capital Framework, Strategy ' +
         '<strong>will not necessarily raise the STRC dividend just because STRC trades below par</strong>. ' +
-        'It has now exercised the <strong>$1B STRC-priority buyback</strong> for the first time: ' +
-        '<strong>$25.0M at ~$86.5</strong>. It may continue to defend value through that program, reserve ' +
+        'It may defend value through the <strong>$1B STRC-priority buyback</strong>, reserve ' +
         'management, or BTC monetization. Net: a discretionary issuer <strong>bid under</strong> STRC plus a ' +
         'current USD reserve cushioning the downside — but <strong>no commitment to return STRC to $100</strong>, ' +
         'no put, no contractual floor. Mark to secondary price with a soft floor beneath it.'
 };
 
-// Shared status-pill for the framework card. `executed:false` / `executed_usd:0`
-// programs are AUTHORIZATIONS Strategy has armed, not actions taken → amber
-// "ARMED — not yet used", never "active".
+// Shared status-pill for the framework card. A zero/missing execution field
+// means only that the current payload reports no execution; it must not erase
+// historical activity that may be absent from a stale payload.
 function strcFrameworkPill(kind) {
     var base = 'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold border ';
-    if (kind === 'armed')   return '<span class="' + base + 'border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">ARMED — not yet used</span>';
-    if (kind === 'idle')    return '<span class="' + base + 'border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">ARMED / IDLE THIS WEEK</span>';
+    if (kind === 'armed')   return '<span class="' + base + 'border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">NO EXECUTION REPORTED</span>';
+    if (kind === 'idle')    return '<span class="' + base + 'border-amber-300 bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-200">IDLE THIS PERIOD</span>';
     if (kind === 'live')    return '<span class="' + base + 'border-green-300 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-200">LIVE</span>';
     if (kind === 'policy')  return '<span class="' + base + 'border-blue-300 bg-blue-50 text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">STANDING POLICY</span>';
     if (kind === 'discr')   return '<span class="' + base + 'border-slate-300 bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200">DISCRETIONARY</span>';
@@ -59,13 +58,42 @@ function strcBtcMonetizationState(btc) {
         ? btc.btc_drawn
         : ((btc.observed_btc_count != null && btc.baseline_btc_count != null)
             ? Math.max(0, btc.baseline_btc_count - btc.observed_btc_count) : null);
-    var currentWeekLive = (btc.executed === true) || (inferredDraw != null && inferredDraw > 0);
+    // `btc_drawn` may be cumulative from an older baseline. Prefer the explicit
+    // current-period flag when the analyzer supplies it, and only infer state
+    // from the draw for older payloads that do not have `executed`.
+    var currentWeekLive = (typeof btc.executed === 'boolean')
+        ? btc.executed
+        : (inferredDraw != null && inferredDraw > 0);
     var historicalLive = currentWeekLive || btc.dividend_service_executed === true || !!btc.first_print;
     return {
         currentWeekLive: currentWeekLive,
         historicalLive: historicalLive,
         btcDrawn: inferredDraw
     };
+}
+
+function strcBtcMonetizationCaption(btc) {
+    btc = btc || {};
+    var state = strcBtcMonetizationState(btc);
+    var holdingsTxt = btc.observed_btc_count != null
+        ? btc.observed_btc_count.toLocaleString('en-US') + ' BTC'
+        : 'unavailable';
+    var drawTxt = state.btcDrawn != null && state.btcDrawn > 0
+        ? ', down ' + state.btcDrawn.toLocaleString('en-US') + ' from the reported baseline'
+        : '';
+
+    if (state.currentWeekLive) {
+        return '<span class="font-semibold">BTC monetization is LIVE in the current reporting period.</span> ' +
+            'Reported holdings are <span class="font-mono">' + holdingsTxt + '</span>' + drawTxt + '. ' +
+            'The current payload reports an active BTC-sale leg; amounts and use of proceeds should follow the latest filing fields as they become available.';
+    }
+    if (state.historicalLive) {
+        return '<span class="font-semibold">BTC monetization has historical execution, but no current-period sale is reported.</span> ' +
+            'Reported holdings are <span class="font-mono">' + holdingsTxt + '</span>. ' +
+            'This is an idle-period status, not a claim that holdings were unchanged.';
+    }
+    return '<span class="font-semibold">BTC monetization is authorized but no execution is reported.</span> ' +
+        'Reported holdings are <span class="font-mono">' + holdingsTxt + '</span>.';
 }
 
 function strcMnavWatchCaption(tradfi) {
@@ -113,12 +141,12 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
     var common = dcf.common_repurchase_program || {};
     var btc = dcf.btc_monetization_program || {};
 
-    var dcsArmed = (dcs.executed_usd == null) || (dcs.executed_usd === 0);
+    var dcsLive = dcs.executed === true || (dcs.executed_usd != null && dcs.executed_usd > 0);
+    var dcsArmed = !dcsLive;
     var commonArmed = (common.executed_usd == null) || (common.executed_usd === 0);
 
-    // BTC Monetization state. It first fired 2026-07-05, but the current-week
-    // tile must follow this week's BTC movement. A flat week stays armed/idle
-    // while preserving the historical first-print text.
+    // BTC monetization state: current-period status follows the explicit
+    // execution field while historical first-print context is preserved.
     var btcState = strcBtcMonetizationState(btc);
     var btcDrawn = btcState.btcDrawn;
     var btcLive = btcState.currentWeekLive;
@@ -145,7 +173,7 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
         (reserve.as_of ? ' · as of <span class="font-mono">' + reserve.as_of + '</span>' : '');
 
     var reserveBalanceTxt = fmt(reserve.balance_usd);
-    var divDetail = '<strong>Discretionary soft floor — exercised</strong> · first print <span class="font-mono font-semibold">$25.0M at ~$86.5</span> · <em>will not necessarily hike solely because STRC &lt; par</em>' +
+    var divDetail = '<strong>Discretionary soft floor</strong> · <em>will not necessarily hike solely because STRC &lt; par</em>' +
         (div.auto_hike_on_subpar === false ? '' : '') +
         ' · ' + reserveBalanceTxt + ' reserve cushioning the downside · evaluated monthly on price / yields / spreads / BTC vol / reserve coverage.';
 
@@ -153,7 +181,8 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
         '<strong>' + (dcs.initial_priority || 'STRC') + ' = initial priority</strong> (if accretive) · BTC-funded · ' +
         'executed <span class="font-mono font-semibold">' + fmt(dcs.executed_usd != null ? dcs.executed_usd : 0) + '</span>' +
         (dcs.used_pct != null ? ' (<strong>' + dcs.used_pct.toFixed(1) + '% used</strong>)' : '') +
-        (dcs.shares_repurchased != null ? ' · <span class="font-mono">' + dcs.shares_repurchased.toLocaleString('en-US') + ' sh @ ~$' + dcs.average_price_usd.toFixed(2) + '</span>' : '') +
+        (dcs.shares_repurchased != null ? ' · <span class="font-mono">' + dcs.shares_repurchased.toLocaleString('en-US') + ' sh' +
+            (dcs.average_price_usd != null ? ' @ ~$' + dcs.average_price_usd.toFixed(2) : '') + '</span>' : '') +
         (dcs.remaining_usd != null ? ' · <span class="font-mono">' + fmt(dcs.remaining_usd) + ' remaining</span>' : '');
 
     var commonDetail = '<span class="font-mono font-semibold">' + fmt(common.authorized_usd) + '</span> authorized · BTC-funded · ' +
@@ -162,25 +191,22 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
     var btcDetail;
     if (btcLive) {
         var fp = btc.first_print || {};
-        var soldBtc = (fp.btc_sold != null) ? fp.btc_sold : btcDrawn;
         var printDate = (typeof fp.period === 'string' && fp.period.indexOf('..') >= 0)
-            ? fp.period.split('..').pop() : '2026-07-05';
-        var periodTxt = (typeof fp.period === 'string') ? fp.period.replace('..', '→') : null;
-        btcDetail = '<strong class="text-green-700 dark:text-green-300">LIVE — first at-scale print ' + printDate + '</strong>: ' +
-            '<span class="font-mono font-semibold">−' + (soldBtc != null ? soldBtc.toLocaleString('en-US') : '—') + ' BTC</span>' +
-            (fp.proceeds_usd != null ? ' (~<span class="font-mono">' + fmt(fp.proceeds_usd) + '</span>)' : '') +
-            ' sold to fund preferred distributions + replenish reserve' +
-            (periodTxt ? ' · period <span class="font-mono">' + periodTxt + '</span>' : '') +
-            (fp.avg_sale_price != null ? ' · blended ~<span class="font-mono">' + fmt(fp.avg_sale_price) + '</span>' : '') +
+            ? fp.period.split('..').pop() : 'date unavailable';
+        btcDetail = '<strong class="text-green-700 dark:text-green-300">LIVE — current reporting period</strong>: ' +
+            (btc.observed_btc_count != null ? '<span class="font-mono font-semibold">' + btc.observed_btc_count.toLocaleString('en-US') + ' BTC</span>' : 'holdings unavailable') +
+            (btcDrawn != null && btcDrawn > 0 ? ' · <span class="font-mono">−' + btcDrawn.toLocaleString('en-US') + ' BTC from reported baseline</span>' : '') +
+            '. Historical first reported print: ' + printDate +
+            (fp.btc_sold != null ? ' (<span class="font-mono">−' + fp.btc_sold.toLocaleString('en-US') + ' BTC</span>)' : '') +
             '<br><span class="text-slate-500">Reserve-build sub-cap: <span class="font-mono font-semibold">' + fmt(reserveBuildCap) + '</span> untapped' +
             ' (<span class="font-mono">' + fmt(reserveBuildUsed) + '</span> used — distinct from the dividend-service print above)</span>';
     } else if (btcHistorical) {
         var hist = btc.first_print || {};
         var histDate = (typeof hist.period === 'string' && hist.period.indexOf('..') >= 0)
-            ? hist.period.split('..').pop() : '2026-07-05';
-        btcDetail = '<strong class="text-amber-700 dark:text-amber-300">ARMED / IDLE this week</strong>: ' +
-            (btc.common_atm_week_usd != null ? '<span class="font-mono font-semibold">' + fmt(btc.common_atm_week_usd) + '</span> common ATM + reserve funded current-week needs; ' : '') +
-            (btc.observed_btc_count != null ? '<span class="font-mono">' + btc.observed_btc_count.toLocaleString('en-US') + '</span> BTC flat, no new sale. ' : 'no new BTC sale. ') +
+            ? hist.period.split('..').pop() : 'date unavailable';
+        btcDetail = '<strong class="text-amber-700 dark:text-amber-300">IDLE — current reporting period</strong>: ' +
+            'no current-period BTC sale is reported; ' +
+            (btc.observed_btc_count != null ? '<span class="font-mono">' + btc.observed_btc_count.toLocaleString('en-US') + '</span> BTC reported. ' : 'BTC holdings unavailable. ') +
             'Historical first print remains ' + histDate +
             (hist.btc_sold != null ? ' (<span class="font-mono">−' + hist.btc_sold.toLocaleString('en-US') + ' BTC</span>)' : '') +
             '.<br><span class="text-slate-500">Reserve-build sub-cap: <span class="font-mono font-semibold">' + fmt(reserveBuildCap) + '</span> untapped' +
@@ -188,7 +214,7 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
     } else {
         btcDetail = '≤ <span class="font-mono font-semibold">' + fmt(reserveBuildCap) + '</span> to reserve ' +
             '(+ uncapped dividend / interest / buyback funding) · not yet executed · ' +
-            (btc.observed_btc_count != null ? '<span class="font-mono">' + btc.observed_btc_count.toLocaleString('en-US') + '</span> BTC flat' : '');
+            (btc.observed_btc_count != null ? '<span class="font-mono">' + btc.observed_btc_count.toLocaleString('en-US') + '</span> BTC reported' : 'BTC holdings unavailable');
     }
 
     var rows =
@@ -198,15 +224,15 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
         row('Common repurchase', commonDetail, strcFrameworkPill(commonArmed ? 'armed' : 'policy')) +
         row('BTC Monetization', btcDetail, strcFrameworkPill(btcLive ? 'live' : (btcHistorical ? 'idle' : 'armed')));
 
-    // Deployment note — softens once BTC monetization is live (buybacks are
-    // still $0, but BTC sales are no longer "not-yet-executed").
+    // Deployment note follows the execution fields without treating a zero or
+    // missing DCS value as proof that the program has never been used.
     var buybackNote = dcsArmed
-        ? ' Buybacks remain at $0;'
-        : ' <span class="text-green-700 dark:text-green-300 font-semibold">STRC buyback is LIVE — first $25.0M print;</span>';
+        ? ' No DCS execution is reported in the current payload;'
+        : ' <span class="text-green-700 dark:text-green-300 font-semibold">STRC buyback is LIVE;</span>';
     var deployNote = btcLive
         ? buybackNote + ' <span class="text-green-700 dark:text-green-300 font-semibold">BTC monetization is LIVE this week</span>.'
         : btcHistorical
-            ? buybackNote + ' BTC monetization <span class="text-amber-700 dark:text-amber-300 font-semibold">fired once; armed and available, not habitual</span>.'
+            ? buybackNote + ' BTC monetization has historical execution and is <span class="text-amber-700 dark:text-amber-300 font-semibold">idle in the current reporting period</span>.'
             : ' <strong>not capital deployed</strong> — buybacks and BTC sales are at $0 / not-yet-executed.';
     var lensLine = (lens === 'issuer')
         ? 'Standing capital-allocation programs the 06-29 8-K introduced. Each row is capacity Strategy authorized;' + deployNote
@@ -534,16 +560,17 @@ var STRCRenderer = {
         var label = STRCRenderer._mnavBandLabel(regime);
         var btcNav = (hold.count != null && btc.price_usd != null) ? hold.count * btc.price_usd : null;
 
-        // 2026-07-05: first BTC monetization (dividend-service). Stack draw +
-        // $0-common-ATM week feed the trajectory note + funding-mix caption.
+        // BTC monetization state and stack draw feed the trajectory note and
+        // shared funding caption.
         var btcm = (dcf && dcf.btc_monetization_program) || {};
         var btcState = strcBtcMonetizationState(btcm);
         var btcDrawn = btcState.btcDrawn;
         var monetizationLive = btcState.currentWeekLive;
         var monetizationHistorical = btcState.historicalLive;
-        var observedBtcTxt = btcm.observed_btc_count != null ? btcm.observed_btc_count.toLocaleString('en-US') : '843,775';
+        var baselineTxt = btcm.baseline_btc_count != null ? btcm.baseline_btc_count.toLocaleString('en-US') : null;
         var declineNote = monetizationHistorical && btcDrawn
-            ? '<div class="text-[10px] text-red-600 dark:text-red-400 mt-0.5">−' + btcDrawn.toLocaleString('en-US') + ' since 06-28 · first monetization 07-05</div>'
+            ? '<div class="text-[10px] text-red-600 dark:text-red-400 mt-0.5">−' + btcDrawn.toLocaleString('en-US') +
+                (baselineTxt ? ' from ' + baselineTxt + ' reported baseline' : ' from reported baseline') + '</div>'
             : '';
 
         // BTC/MSTR snapshot row — issuer-side inputs the regime is derived from.
@@ -600,9 +627,7 @@ var STRCRenderer = {
             '</div>' +
             ((monetizationLive || monetizationHistorical) ?
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
-                '<span class="font-semibold">BTC monetization fired once; armed and available, not habitual.</span> Current-week funding came from common ATM' +
-                (btcm.common_atm_week_usd != null ? ' (' + STRCRenderer._fmtMoneyShort(btcm.common_atm_week_usd) + ' common)' : '') +
-                ' + reserve; BTC held FLAT at ' + observedBtcTxt + ' for a third week (no sales). The BTC-sale leg is idle this week. ' +
+                strcBtcMonetizationCaption(btcm) + ' ' +
                 '<strong>BTC purchases are paused until STRC returns to $100 par</strong> — a par-conditioned pause, not an indefinite halt.' +
             '</div>' : '') +
             snapshotRow +

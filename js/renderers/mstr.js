@@ -305,14 +305,13 @@ var MSTRRenderer = {
         var bandCls = MSTRRenderer._mnavBandClass(regime);
         var label = MSTRRenderer._mnavBandLabel(regime);
 
-        // 2026-07-05 first BTC monetization → funding-mix inversion caption.
+        // Current and historical BTC monetization state feed the shared caption.
         var btcm = (dcf && dcf.btc_monetization_program) || {};
         var btcState = (typeof strcBtcMonetizationState === 'function')
             ? strcBtcMonetizationState(btcm)
             : { currentWeekLive: btcm.executed === true, historicalLive: btcm.dividend_service_executed === true || !!btcm.first_print, btcDrawn: null };
         var monetizationLive = btcState.currentWeekLive;
         var monetizationHistorical = btcState.historicalLive;
-        var observedBtcTxt = btcm.observed_btc_count != null ? btcm.observed_btc_count.toLocaleString('en-US') : '843,775';
 
         return '<div class="panel">' +
             '<div class="panel-title">mNAV Regime (EV/BTC) <span class="text-xs font-normal text-slate-500">— equity issuance accretion signal</span></div>' +
@@ -338,9 +337,7 @@ var MSTRRenderer = {
             '</div>' +
             ((monetizationLive || monetizationHistorical) ?
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
-                '<span class="font-semibold">BTC monetization fired once; armed and available, not habitual.</span> Current-week funding came from common ATM' +
-                (btcm.common_atm_week_usd != null ? ' (' + MSTRRenderer._fmtMoneyShort(btcm.common_atm_week_usd) + ' common)' : '') +
-                ' + reserve; BTC held FLAT at ' + observedBtcTxt + ' for a third week (no sales). The BTC-sale leg is idle this week. ' +
+                strcBtcMonetizationCaption(btcm) + ' ' +
                 '<strong>BTC purchases are paused until STRC returns to $100 par</strong> — a par-conditioned pause, not an indefinite halt.' +
             '</div>' : '') +
         '</div>';
