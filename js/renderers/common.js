@@ -709,8 +709,8 @@ const CommonRenderer = {
                 chip: '<a href="#section-dependencies" class="axis-rating r-na">View links →</a>'
             },
             {
-                label: 'Issuer',
-                valueHtml: this._issuerBadgeText(issuer),
+                label: this._escapeAttr(this._issuerAxisInfo(issuer).label),
+                valueHtml: this._issuerBadgeHtml(issuer),
                 sub: 'editorial · subjective',
                 chip: issuer.report_url
                     ? '<a href="' + issuer.report_url + '" target="_blank" rel="noopener noreferrer" class="axis-rating r-na">Report →</a>'
@@ -755,10 +755,67 @@ const CommonRenderer = {
         return (sd >= 0 ? 'surplus +' : 'deficit −') + this.formatCurrency(Math.abs(sd));
     },
 
+    _issuerAxisInfo(issuer) {
+        issuer = issuer || {};
+        var badge = typeof issuer.badge === 'string' ? issuer.badge.trim() : '';
+        // Only treat a badge as an axis score when it ends in a numeric N/10.
+        // Names such as USDS's "Sky (MakerDAO)" must remain opaque badge text.
+        var scoredBadge = badge.match(/^(.+?)\s+(\d+(?:\.\d+)?)\/10$/i);
+        var isStructural = Object.prototype.hasOwnProperty.call(issuer, 'structural_score') ||
+            issuer.structural_score_status != null;
+        var prefix = isStructural ? 'structural' : 'issuer';
+        var score = issuer[prefix + '_score'];
+        var status = issuer[prefix + '_score_status'];
+        var label = scoredBadge ? scoredBadge[1].trim() : (isStructural ? 'Structural' : 'Issuer');
+
+        return {
+            label: label,
+            badge: badge,
+            scoredBadge: scoredBadge,
+            score: score,
+            status: status,
+            source: issuer[prefix + '_score_source'],
+            generatedAt: issuer[prefix + '_score_generated_at'],
+            ageHours: issuer[prefix + '_score_age_hours'],
+            inheritedFrom: issuer[prefix + '_score_inherited_from'] ||
+                (prefix !== 'issuer' ? null : issuer.issuer_score_inherited_from)
+        };
+    },
+
     _issuerBadgeText(issuer) {
-        if (issuer.badge) return issuer.badge.replace(/^Issuer\s+/i, '');
-        if (issuer.issuer_score != null) return issuer.issuer_score + '/10';
+        var info = this._issuerAxisInfo(issuer);
+        if (info.scoredBadge) return info.scoredBadge[2] + '/10';
+        if (info.badge) {
+            // The unavailable badge follows the same "Axis unavailable" contract,
+            // but the summary card already carries the axis label above it.
+            if (info.status === 'unavailable' && /\s+unavailable$/i.test(info.badge)) return 'unavailable';
+            return info.badge;
+        }
+        if (info.score != null) return info.score + '/10';
+        if (info.status === 'unavailable') return 'unavailable';
         return '—';
+    },
+
+    _issuerScoreTooltip(info) {
+        var parts = [];
+        if (info.inheritedFrom) parts.push(info.label + ' score inherited from ' + info.inheritedFrom);
+        if (info.status && info.status !== 'ok') parts.push('Status: ' + info.status.replace(/_/g, ' '));
+        if (info.generatedAt) parts.push('Generated ' + this.formatDate(info.generatedAt));
+        if (info.ageHours != null) parts.push('Age ' + Number(info.ageHours).toFixed(1) + 'h');
+        if (info.source) parts.push('Source: ' + info.source);
+        return parts.join(' · ');
+    },
+
+    _issuerBadgeHtml(issuer) {
+        var info = this._issuerAxisInfo(issuer);
+        var text = this._issuerBadgeText(issuer);
+        var tooltip = this._issuerScoreTooltip(info);
+        var status = info.status && info.status !== 'ok'
+            ? ' <span class="text-xs font-normal text-amber-600">· ' +
+                this._escapeAttr(info.status.replace(/_/g, ' ')) + '</span>'
+            : '';
+        return '<span' + (tooltip ? ' title="' + this._escapeAttr(tooltip) + '"' : '') + '>' +
+            this._escapeAttr(text) + '</span>' + status;
     },
 
     // --- section heads ---
@@ -810,8 +867,9 @@ const CommonRenderer = {
         this._renderAxisHead('dependencies', 4, 'Dependencies', nUp + ' upstream · ' + downSub, '');
         this._renderDependenciesSection(data);
 
-        // 5 · Issuer
-        this._renderAxisHead('issuer', 5, 'Issuer', 'editorial — subjective axis', '');
+        // 5 · Editorial axis (issuer, structural, or a future per-asset label)
+        var issuerInfo = this._issuerAxisInfo(data.issuer || {});
+        this._renderAxisHead('issuer', 5, this._escapeAttr(issuerInfo.label), 'editorial — subjective axis', '');
         this._renderIssuerSection(data);
         return true;
     },
@@ -1143,11 +1201,25 @@ const CommonRenderer = {
         var body = document.getElementById('axis-issuer-body');
         if (!body) return;
         var issuer = data.issuer || {};
-        var badge = issuer.badge || (issuer.issuer_score != null ? 'Issuer ' + issuer.issuer_score + '/10' : null);
+        var info = this._issuerAxisInfo(issuer);
+        var badge = info.badge || (info.score != null ? info.label + ' ' + info.score + '/10' :
+            (info.status === 'unavailable' ? info.label + ' unavailable' : null));
         var age = issuer.attestation_age_days;
+        var scoreTooltip = this._issuerScoreTooltip(info);
+        var methodology = info.label.toLowerCase() === 'issuer'
+            ? 'The issuer axis is an editorial, subjective rating — KYC, permissioning, governance and admin posture are assessed in the full report rather than scored live here.'
+            : 'The ' + this._escapeAttr(info.label.toLowerCase()) +
+                ' axis is an editorial, subjective rating. Its asset-specific methodology is assessed in the full report rather than scored live here.';
 
         var chips =
-            (badge ? '<span class="axis-rating r-warn">' + badge + '</span>' : '') +
+            (badge ? '<span class="axis-rating r-warn"' +
+                (scoreTooltip ? ' title="' + this._escapeAttr(scoreTooltip) + '"' : '') + '>' +
+                this._escapeAttr(badge) + '</span>' : '') +
+            (info.status && info.status !== 'ok'
+                ? '<span class="axis-rating r-na"' +
+                    (scoreTooltip ? ' title="' + this._escapeAttr(scoreTooltip) + '"' : '') +
+                    '>Score ' + this._escapeAttr(info.status.replace(/_/g, ' ')) + '</span>'
+                : '') +
             (age != null ? '<span class="axis-rating r-na" title="Last attestation age">Attested ' + age + 'd ago</span>' : '');
 
         var reportLink = issuer.report_url
@@ -1157,9 +1229,9 @@ const CommonRenderer = {
             : '<span class="text-sm text-slate-400">No report linked.</span>';
 
         body.innerHTML = '<div class="panel">' +
-            '<div class="panel-title">Issuer</div>' +
+            '<div class="panel-title">' + this._escapeAttr(info.label) + '</div>' +
             '<div class="flex flex-wrap items-center gap-2 mb-3">' + chips + '</div>' +
-            '<p class="text-sm text-slate-500 mb-3">The issuer axis is an editorial, subjective rating — KYC, permissioning, governance and admin posture are assessed in the full report rather than scored live here.</p>' +
+            '<p class="text-sm text-slate-500 mb-3">' + methodology + '</p>' +
             reportLink +
         '</div>';
     }
