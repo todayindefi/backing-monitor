@@ -114,19 +114,21 @@ var USGRenderer = {
         if (!specific || specific.type !== 'usg') return;
         var s = data.summary;
         var html = '';
+        var hasPolDeployed = s.pol_deployed > 0;
 
         // ====== 1. Supply Composition ======
         var sc = specific.supply_composition;
         if (sc) {
             var rows = [
                 { label: 'CDP debt', sub: 'user-minted against collateral', value: sc.cdp, pct: sc.cdp_pct, color: '#3b82f6' },
-                { label: 'POL deployed', sub: 'protocol-owned USG minted into PegKeeper pools (circular)', value: sc.pol, pct: sc.pol_pct, color: '#f97316' },
+                { label: 'POL deployed', sub: hasPolDeployed ? 'protocol-owned USG minted into PegKeeper pools (circular)' : 'none currently outstanding', value: sc.pol, pct: sc.pol_pct, color: '#f97316' },
                 { label: 'sUSG', sub: 'staked USG (derivative of minted supply)', value: sc.susg, pct: sc.susg_pct, color: '#94a3b8' }
             ];
             html += '<div class="panel"><div class="panel-title">Supply Composition</div>' +
                 '<p class="text-sm text-slate-500 mb-3">Real supply ' + CommonRenderer.formatCurrency(s.real_supply) +
                 ' = CDP debt + POL deployed. totalSupply() reads ' + CommonRenderer.formatCurrency(s.total_supply_raw) +
-                ' — inflated by pre-minted PegKeeper ceiling buffer (the crvUSD artifact), not circulating. POL is the largest source: protocol-owned USG minted into its own PegKeeper pools.</p>' +
+                ' — inflated by pre-minted PegKeeper ceiling buffer (the crvUSD artifact), not circulating. ' +
+                (hasPolDeployed ? 'POL is protocol-owned USG minted into its own PegKeeper pools.' : 'No POL-minted USG is currently outstanding.') + '</p>' +
                 '<table class="data-table"><thead><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">%</th><th></th></tr></thead><tbody>';
             rows.forEach(function(r) {
                 html += '<tr><td class="font-medium">' + r.label +
@@ -142,7 +144,7 @@ var USGRenderer = {
         // ====== 2. Backing Ratios ======
         var cb = specific.collateral_breakdown;
         html += '<div class="panel"><div class="panel-title">Backing Ratios</div>' +
-            '<p class="text-sm text-slate-500 mb-3">USG collateral sits in two buckets: external CDP-market collateral, and the stablecoin counter-side of its protocol-owned PegKeeper pools. Three lenses on the same backing:</p>' +
+            '<p class="text-sm text-slate-500 mb-3">USG collateral sits in two buckets: external CDP-market collateral, and the stablecoin counter-side inventory in its PegKeeper pools. Three lenses on the same backing:</p>' +
             '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">' +
                 '<div class="summary-card"><div class="card-label">CDP-book CR</div><div class="card-value ' + (s.mint_cr >= 100 ? 'positive' : 'negative') + '">' + CommonRenderer.formatPercent(s.mint_cr, 1) + '</div><div class="text-xs text-slate-400 mt-1">CDP collateral ÷ CDP debt</div></div>' +
                 '<div class="summary-card"><div class="card-label">Inclusive CR</div><div class="card-value ' + (s.collateral_ratio_inclusive >= 100 ? 'positive' : 'negative') + '">' + CommonRenderer.formatPercent(s.collateral_ratio_inclusive, 1) + '</div><div class="text-xs text-slate-400 mt-1">(CDP collateral + POL pool stables) ÷ real supply</div></div>' +
@@ -151,10 +153,10 @@ var USGRenderer = {
         if (cb) {
             html += '<table class="data-table"><thead><tr><th>Collateral component</th><th class="text-right">Value</th></tr></thead><tbody>' +
                 '<tr><td>CDP-market collateral (external)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(cb.cdp_collateral) + '</td></tr>' +
-                '<tr><td>POL pool stables (PegKeeper counter-side)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(cb.pol_pool_stables) + '</td></tr>' +
+                '<tr><td>' + (hasPolDeployed ? 'POL pool stables' : 'PegKeeper pool stables') + ' (counter-side)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(cb.pol_pool_stables) + '</td></tr>' +
                 '<tr class="font-bold border-t-2 border-slate-200"><td>Total backing (inclusive)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(cb.total) + '</td></tr>' +
                 '</tbody></table>' +
-                '<p class="text-xs text-slate-400 mt-2">POL pool stables are user-supplied USDC/frxUSD paired against protocol-minted USG — they back the POL leg but carry no redemption right; peg rests on keepers, dynamic rates and arbitrage.</p>';
+                '<p class="text-xs text-slate-400 mt-2">' + ((s.collateral_ratio_alt || {}).note || '') + '</p>';
         }
         html += '</div>';
 
@@ -179,6 +181,24 @@ var USGRenderer = {
             });
             html += '</tbody></table></div>' +
                 '<p class="text-xs text-slate-400 mt-2">Total bad debt across markets: <span class="font-mono">' + CommonRenderer.formatCurrencyExact(s.total_bad_debt) + '</span>. maxLTV 84–90% with liquidation thresholds ~1–1.5% above and a 20% liquidation fee.</p></div>';
+
+            var paused = specific.paused_markets || [];
+            if (paused.length) {
+                html += '<div class="panel"><div class="panel-title">Markets in wind-down (' + (s.n_paused_markets != null ? s.n_paused_markets : paused.length) + ')</div>' +
+                    '<p class="text-sm text-slate-500 mb-3">Closed to new deposits, borrows and leverage; existing debt remains live and liquidatable on the ordinary path, so these markets are running off rather than frozen.</p>' +
+                    '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Market</th><th class="text-right">Live debt</th><th>Status</th></tr></thead><tbody>';
+                paused.forEach(function(m) {
+                    var closed = [];
+                    if (m.deposit_paused) closed.push('deposits');
+                    if (m.borrow_paused) closed.push('borrows');
+                    if (m.leverage_paused) closed.push('leverage');
+                    html += '<tr><td class="font-medium">' + m.name + '</td>' +
+                        '<td class="text-right font-mono">$' + Number(m.debt || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</td>' +
+                        '<td class="text-sm text-amber-600">Closed to new ' + closed.join(' / ') + '; existing book running off</td></tr>';
+                });
+                html += '</tbody></table></div>' +
+                    '<p class="text-xs text-slate-400 mt-2">' + (specific.paused_settings_semantics || '') + '</p></div>';
+            }
         }
 
         // ====== 4. Oracle Integrity (independent NAV vs oracle read) ======
@@ -240,31 +260,39 @@ var USGRenderer = {
                 '<p class="text-xs text-slate-400 mt-2">sDOLA and scrvUSD are yield-bearing wrappers — their price sits above $1 by accrued yield, which is not a depeg. reUSD (Resupply) is the most cascade-sensitive leg: a recursive-CDP stablecoin reached via two markets.</p></div>';
         }
 
-        // ====== 6. PegKeeper Pools (POL peg defense) ======
+        // ====== 6. PegKeeper Pools ======
         var pks = specific.pegkeepers;
         if (pks && pks.length) {
-            html += '<div class="panel"><div class="panel-title">PegKeeper Pools (POL peg defense, ' + pks.length + ')</div>' +
-                '<p class="text-sm text-slate-500 mb-3">Protocol-owned liquidity. The stablecoin side (' + CommonRenderer.formatCurrency(s.pol_pool_stables) + ') is the counter-side backing POL-minted USG and the first line of peg defense; a high USG % signals selling pressure (balanced = 50%).</p>' +
-                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">PK debt</th><th class="text-right">Stables</th><th class="text-right">USG</th><th class="text-right">USG %</th><th class="text-right">USG price</th></tr></thead><tbody>';
-            var tStable = 0, tUsg = 0, tDebt = 0;
+            var pegDefense = specific.peg_defense || {};
+            var defenseCapacity = s.keeper_defense_capacity != null ? s.keeper_defense_capacity : pegDefense.keeper_defense_capacity;
+            var worstShare = s.worst_keeper_usg_share_pct != null ? s.worst_keeper_usg_share_pct : pegDefense.worst_keeper_usg_share_pct;
+            var keeperFraming = hasPolDeployed
+                ? 'Protocol-owned liquidity. The stablecoin side (' + CommonRenderer.formatCurrency(s.pol_pool_stables) + ') is the counter-side backing POL-minted USG and the first line of peg defense;'
+                : (pegDefense.note || (s.collateral_ratio_alt || {}).note || '');
+            html += '<div class="panel"><div class="panel-title">PegKeeper Pools' + (hasPolDeployed ? ' (POL peg defense, ' : ' (') + pks.length + ')</div>' +
+                '<p class="text-sm text-slate-500 mb-3">' + keeperFraming + ' A high USG % signals selling pressure (balanced = 50%).</p>' +
+                '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">' +
+                    '<div class="summary-card"><div class="card-label">Keeper defense capacity</div><div class="card-value ' + (defenseCapacity > 0 ? 'positive' : 'negative') + '">' + CommonRenderer.formatCurrency(defenseCapacity || 0) + '</div><div class="text-xs text-slate-400 mt-1">outstanding keeper debt available to withdraw and burn</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Worst pool USG share</div><div class="card-value ' + (worstShare > 70 ? 'negative' : worstShare > 60 ? 'text-amber-600' : 'positive') + '">' + CommonRenderer.formatPercent(worstShare, 2) + '</div><div class="text-xs text-slate-400 mt-1">balanced = 50%; higher signals selling pressure</div></div>' +
+                '</div>' +
+                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">Defense capacity</th><th class="text-right">Stables</th><th class="text-right">USG</th><th class="text-right">USG %</th><th class="text-right">USG price</th></tr></thead><tbody>';
+            var tStable = 0, tUsg = 0;
             pks.forEach(function(pk) {
-                var poolTotal = pk.stable_in_pool + pk.usg_in_pool;
-                var usgPct = poolTotal > 0 ? pk.usg_in_pool / poolTotal * 100 : 0;
+                var usgPct = pk.usg_share_pct;
                 var pctCls = usgPct > 70 ? 'text-red-600 font-bold' : usgPct > 60 ? 'text-amber-600' : 'text-green-600';
-                tStable += pk.stable_in_pool; tUsg += pk.usg_in_pool; tDebt += pk.debt;
+                tStable += pk.stable_in_pool; tUsg += pk.usg_in_pool;
                 html += '<tr><td class="font-mono text-xs">' + pk.stable_symbol + '/USG</td>' +
-                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(pk.debt) + '</td>' +
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(pk.defense_capacity) + '</td>' +
                     '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(pk.stable_in_pool) + ' <span class="text-xs text-slate-400">' + pk.stable_symbol + '</span></td>' +
                     '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(pk.usg_in_pool) + '</td>' +
                     '<td class="text-right font-mono ' + pctCls + '">' + usgPct.toFixed(0) + '%</td>' +
                     '<td class="text-right font-mono">$' + pk.usg_price.toFixed(4) + '</td></tr>';
             });
-            var totPct = (tStable + tUsg) > 0 ? tUsg / (tStable + tUsg) * 100 : 0;
             html += '<tr class="font-bold border-t-2 border-slate-200"><td>Total</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(tDebt) + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(defenseCapacity) + '</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(tStable) + '</td>' +
                 '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(tUsg) + '</td>' +
-                '<td class="text-right font-mono">' + totPct.toFixed(0) + '%</td><td></td></tr>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatPercent(worstShare, 0) + ' worst</td><td></td></tr>' +
                 '</tbody></table></div>';
         }
 
