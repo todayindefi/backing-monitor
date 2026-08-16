@@ -110,6 +110,33 @@ if [ -n "$DIRTY_FRONTEND" ]; then
     echo "$DIRTY_FRONTEND" >> sync.log
 fi
 
+# A committed renderer can still be invisible to returning browsers when its
+# script URL token in index.html predates the renderer. Compare the token's
+# date with the renderer's latest commit date and surface stale tokens; this
+# is advisory so sync never rewrites cache-bust tokens or commits frontend
+# work automatically.
+TOKEN_WARNINGS=""
+for RENDERER in js/renderers/*.js; do
+    RENDERER_NAME=$(basename "$RENDERER")
+    TOKEN=$(sed -n "s#.*js/renderers/$RENDERER_NAME?v=\([^\"']*\).*#\1#p" index.html | head -1)
+    if [ -z "$TOKEN" ]; then
+        continue
+    fi
+    TOKEN_DATE=${TOKEN%%[!0-9]*}
+    COMMIT_DATE=$(git log -1 --format='%cs' -- "$RENDERER")
+    TOKEN_ISO=${TOKEN_DATE:0:4}-${TOKEN_DATE:4:2}-${TOKEN_DATE:6:2}
+    if [ -n "$COMMIT_DATE" ] && [ "$COMMIT_DATE" \> "$TOKEN_ISO" ]; then
+        TOKEN_WARNINGS="${TOKEN_WARNINGS}$(printf '%s\n' "js/renderers/$RENDERER_NAME: latest commit $COMMIT_DATE is newer than cache token $TOKEN")"
+    fi
+done
+if [ -n "$TOKEN_WARNINGS" ]; then
+    TOKEN_WARNING_HEADER="$(date): WARNING renderer cache tokens are stale (index.html may serve cached code):"
+    echo "$TOKEN_WARNING_HEADER" >&2
+    echo "$TOKEN_WARNING_HEADER" >> sync.log
+    printf '%s' "$TOKEN_WARNINGS" >&2
+    printf '%s' "$TOKEN_WARNINGS" >> sync.log
+fi
+
 # Commit and push if changed
 git add data/
 if ! git diff --cached --quiet; then
