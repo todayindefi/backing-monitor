@@ -129,6 +129,16 @@ var UsdaiRenderer = {
         return storedDiscount != null ? -storedDiscount : null;
     },
 
+    _susdaiNavBasis: function(s) {
+        if (s && s.discount_to_nav_basis === 'nav_per_share_deposit_fallback') {
+            return s.nav_per_share;
+        }
+        if (s && s.discount_to_nav_basis === 'redemption_share_price' && s.redemption_share_price != null) {
+            return s.redemption_share_price;
+        }
+        return s && s.redemption_share_price != null ? s.redemption_share_price : (s || {}).nav_per_share;
+    },
+
     _navDevState: function(disp) {
         if (disp == null) return 'unknown';
         if (disp >= 0) {
@@ -262,7 +272,7 @@ var UsdaiRenderer = {
             html += anc('panel-decomp', UsdaiRenderer._renderSusdaiDecomposition(specific, s));
             html += anc('panel-nav',    UsdaiRenderer._renderSusdaiNav(specific, s));
         }
-        html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, slug));
+        html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug));
         html += '<div id="usdai-gov-panel"></div>';      // §5 governance (async, family)
         html += '<div id="usdai-family-panel"></div>';   // §6 family (async)
 
@@ -415,8 +425,8 @@ var UsdaiRenderer = {
                 '<div class="text-xl font-bold text-slate-800">sUSDai</div>' +
                 '<div class="text-xs text-slate-500 mt-1">Permian Labs · ERC-7540 vault over USDai — GPU/equipment loan book (MetaStreet engine)</div>';
 
-            var nav = s.nav_per_share;
-            var d = UsdaiRenderer._navDevDisplay(s.nav_per_share, s.peg_secondary_px, s.discount_to_nav_pct);
+            var nav = UsdaiRenderer._susdaiNavBasis(s);
+            var d = UsdaiRenderer._navDevDisplay(nav, s.peg_secondary_px, s.discount_to_nav_pct);
             var dState = UsdaiRenderer._navDevState(d);
             var dCls = UsdaiRenderer._stateTextCls(dState);
             var dWord = UsdaiRenderer._navDevWord(d);
@@ -874,7 +884,7 @@ var UsdaiRenderer = {
     // ============================================================
     // §4 Secondary Market (both)
     // ============================================================
-    _renderSecondaryMarket: function(specific, slug) {
+    _renderSecondaryMarket: function(specific, s, slug) {
         var sec = specific.secondary || {};
         var slip = specific.slippage_tiers || {};
         var pools = Array.isArray(sec.top_pools) ? sec.top_pools : [];
@@ -885,7 +895,7 @@ var UsdaiRenderer = {
         // Headline tile: price-vs-NAV (sUSDai) vs price-vs-$1 (USDai).
         var headlineTile;
         if (isVault) {
-            var nav = specific.nav_per_share;
+            var nav = UsdaiRenderer._susdaiNavBasis(s);
             var disc = UsdaiRenderer._navDevDisplay(nav, sec.price_usd, sec.discount_to_nav_pct);
             var dState = UsdaiRenderer._navDevState(disc);
             var dCls = UsdaiRenderer._pegPctClass(dState);

@@ -593,7 +593,7 @@ var SyrupUSDCRenderer = {
         html += this._renderBorrowerConcentration(specific);
 
         // ---- §5 Issuer ----
-        html += this._axisHead(5, 'Issuer', 'governance · audits · multi-chain · family');
+        html += this._axisHead(5, 'Structural', 'governance · audits · multi-chain · family');
         html += this._renderTrustStack(specific);
         html += this._renderMultiChain(specific, data.asset_slug);
         // Reserved div for the cross-pool family panel — async-populated below

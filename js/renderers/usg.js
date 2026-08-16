@@ -266,9 +266,8 @@ var USGRenderer = {
             var pegDefense = specific.peg_defense || {};
             var defenseCapacity = s.keeper_defense_capacity != null ? s.keeper_defense_capacity : pegDefense.keeper_defense_capacity;
             var worstShare = s.worst_keeper_usg_share_pct != null ? s.worst_keeper_usg_share_pct : pegDefense.worst_keeper_usg_share_pct;
-            var keeperFraming = hasPolDeployed
-                ? 'Protocol-owned liquidity. The stablecoin side (' + CommonRenderer.formatCurrency(s.pol_pool_stables) + ') is the counter-side backing POL-minted USG and the first line of peg defense;'
-                : (pegDefense.note || (s.collateral_ratio_alt || {}).note || '');
+            var keeperFraming = pegDefense.note || (s.collateral_ratio_alt || {}).note ||
+                (hasPolDeployed ? 'Protocol-owned liquidity is a direct peg-defense resource.' : '');
             html += '<div class="panel"><div class="panel-title">PegKeeper Pools' + (hasPolDeployed ? ' (POL peg defense, ' : ' (') + pks.length + ')</div>' +
                 '<p class="text-sm text-slate-500 mb-3">' + keeperFraming + ' A high USG % signals selling pressure (balanced = 50%).</p>' +
                 '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">' +
