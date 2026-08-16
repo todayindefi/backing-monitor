@@ -97,6 +97,19 @@ if ! git rebase --autostash origin/main 2>&1; then
     exit 1
 fi
 
+# Frontend changes are easy to leave unpublished: local JS/index.html edits can
+# pass verification while Pages still serves the previous commit. Surface them
+# at every sync so the operator can publish them deliberately; do not commit
+# or discard them here.
+DIRTY_FRONTEND=$(git status --porcelain -- js/ index.html)
+if [ -n "$DIRTY_FRONTEND" ]; then
+    FRONTEND_WARNING="$(date): WARNING frontend files are dirty at sync time (js/ or index.html) — publish intentionally; sync will not auto-commit them:"
+    echo "$FRONTEND_WARNING" >&2
+    echo "$FRONTEND_WARNING" >> sync.log
+    echo "$DIRTY_FRONTEND" >&2
+    echo "$DIRTY_FRONTEND" >> sync.log
+fi
+
 # Commit and push if changed
 git add data/
 if ! git diff --cached --quiet; then

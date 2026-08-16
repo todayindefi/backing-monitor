@@ -139,6 +139,16 @@ var UsdaiRenderer = {
         return s && s.redemption_share_price != null ? s.redemption_share_price : (s || {}).nav_per_share;
     },
 
+    _susdaiNavBasisSource: function(s) {
+        if (s && s.discount_to_nav_basis === 'nav_per_share_deposit_fallback') {
+            return 'convertToAssets(1e18)';
+        }
+        if (s && s.discount_to_nav_basis === 'redemption_share_price' && s.redemption_share_price != null) {
+            return 'redemptionSharePrice()';
+        }
+        return s && s.redemption_share_price != null ? 'redemptionSharePrice()' : 'convertToAssets(1e18)';
+    },
+
     _navDevState: function(disp) {
         if (disp == null) return 'unknown';
         if (disp >= 0) {
@@ -436,9 +446,10 @@ var UsdaiRenderer = {
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Total Assets</div>' +
                         '<div class="text-lg font-bold text-slate-800">' + CommonRenderer.formatCurrency(s.total_assets_usd) + '</div>' +
                         '<div class="text-xs text-slate-500 mt-0.5">USDai-denominated</div></div>' +
-                    '<div><div class="text-xs text-slate-400 font-medium uppercase">NAV per share</div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">NAV per share (' +
+                        (UsdaiRenderer._susdaiNavBasisSource(s) === 'redemptionSharePrice()' ? 'redemption' : 'deposit fallback') + ')</div>' +
                         '<div class="text-lg font-bold text-slate-800">' + (nav != null ? nav.toFixed(6) : '—') + '</div>' +
-                        '<div class="text-xs text-slate-500 mt-0.5 font-mono">convertToAssets(1e18)</div></div>' +
+                        '<div class="text-xs text-slate-500 mt-0.5 font-mono">' + UsdaiRenderer._susdaiNavBasisSource(s) + '</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Price vs NAV</div>' +
                         '<div class="text-lg font-bold ' + dCls + '">' + UsdaiRenderer._pegPctText(d, 3) + '</div>' +
                         '<div class="text-xs text-slate-500 mt-0.5">' + dWord + '</div></div>' +
@@ -698,7 +709,9 @@ var UsdaiRenderer = {
                 'reconciles on-chain to within ' + reconTxt + '. Verify the escrow directly: ' +
                 '<span class="font-mono">PYUSD/USDai balanceOf(' + UsdaiRenderer._truncAddr(USDAI_ADDRS.DEPOSIT_TIMELOCK) + ')</span> ' +
                 UsdaiRenderer._explorerLink(USDAI_ADDRS.DEPOSIT_TIMELOCK) + '. ' +
-                'NAV per share = <span class="font-mono">convertToAssets(1e18)</span>; 1 sUSDai ≠ $1 by design.' +
+                'NAV per share (deposit) = <span class="font-mono">convertToAssets(1e18)</span>; ' +
+                'the exit-relevant NAV (redemption) uses <span class="font-mono">redemptionSharePrice()</span>; ' +
+                '1 sUSDai ≠ $1 by design.' +
             '</div>';
 
         return '<div class="panel">' +
@@ -722,7 +735,7 @@ var UsdaiRenderer = {
     _renderSusdaiNav: function(specific, s) {
         var statCards =
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
-                '<div class="summary-card"><div class="card-label">NAV per share</div>' +
+                '<div class="summary-card"><div class="card-label">NAV per share (deposit)</div>' +
                     '<div class="card-value">' + (s.nav_per_share != null ? s.nav_per_share.toFixed(6) : '—') + '</div>' +
                     '<div class="text-xs text-slate-400 mt-1 font-mono">convertToAssets(1e18)</div></div>' +
                 '<div class="summary-card"><div class="card-label">Realized APY (7d)</div>' +
