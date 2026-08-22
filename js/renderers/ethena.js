@@ -20,7 +20,7 @@
  * same preRender backfill, same async family-panel + anchor-nav patterns.
  *
  * IMPORTANT on data semantics (from ethena_family.json `notes`):
- *   - custody_breakdown sums to LlamaRisk "Unallocated" (Liquid Cash);
+ *   - custody_breakdown sums to LlamaRisk "Unallocated";
  *     custody + cex_hedge ≈ total_backing.
  *   - defi_protocol_breakdown is a DRILL-DOWN of the Coinbase Onchain
  *     Wallets custody slice, NOT additive to total backing. The DeFi panel
@@ -38,7 +38,7 @@ var ETHENA_CUSTODY_COLORS = {
     'Anchorage Digital Bank':    '#10b981',
     'Ceffu':                     '#eab308',
     'Kraken Custody':            '#a855f7',
-    'Unattributed Liquid Cash':  '#94a3b8',
+    'Unattributed':             '#94a3b8',
     'MintRedeem Contract':       '#64748b',
     'Reserve Fund (on-chain)':   '#475569'
 };
@@ -305,8 +305,9 @@ var EthenaRenderer = {
         if (pie) { var p2 = pie.closest('.panel'); if (p2) p2.style.display = 'none'; }
 
         // Hide the common risk-flags panel — we render the real (family-sourced)
-        // flags in §8. The per-asset risk_flags array is empty; the meaningful
-        // flags (e.g. Aave DeFi concentration) live in ethena_family.json.
+        // flags in §8. The family panel is the authoritative superset: it
+        // includes the asset-level flags plus family-only pipeline-health
+        // flags, so showing both panels would duplicate warnings.
         var risk = document.getElementById('risk-flags');
         if (risk) { var rp = risk.closest('.panel'); if (rp) rp.style.display = 'none'; }
 
@@ -532,6 +533,10 @@ var EthenaRenderer = {
         var rows = (fam.custody_breakdown || []).slice();
         var asOf = EthenaRenderer._attestAsOf(fam);
         var total = rows.reduce(function(a, r) { return a + (r.usd || 0); }, 0);
+        var custodyNote = fam.notes && fam.notes.custody_vs_total ? fam.notes.custody_vs_total : '';
+        // Older payloads included a parenthetical composition claim. Keep the
+        // explanatory note compatible without reviving that claim.
+        custodyNote = custodyNote.replace(/\s*\([^)]*cash[^)]*\)/gi, '');
 
         // Horizontal stacked bar.
         var segs = rows.map(function(r) {
@@ -549,7 +554,7 @@ var EthenaRenderer = {
                 '<td class="text-right font-mono">' + (r.pct != null ? r.pct.toFixed(2) : '-') + '%</td>' +
             '</tr>';
         }).join('');
-        tbody += '<tr class="font-bold border-t-2 border-slate-200"><td>Total (Liquid Cash)</td><td></td>' +
+        tbody += '<tr class="font-bold border-t-2 border-slate-200"><td>Total — LlamaRisk Unallocated</td><td></td>' +
             '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(total) + '</td><td class="text-right">100%</td></tr>';
 
         EthenaRenderer._set('ethena-custody-panel',
@@ -562,9 +567,11 @@ var EthenaRenderer = {
                 bar +
                 '<table class="data-table"><thead><tr><th>Venue</th><th>Source</th><th class="text-right">Value (USD)</th><th class="text-right">%</th></tr></thead>' +
                 '<tbody>' + tbody + '</tbody></table>' +
+                ((rows.some(function(r) { return r.venue === 'Unattributed' && r.composition === 'unknown'; })) ?
+                    '<div class="risk-flag risk-warning mt-3">Unattributed backing is not composition-classified.</div>' : '') +
                 '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 items-center">' +
                     '<div class="md:col-span-1" style="height:180px;position:relative;"><canvas id="ethena-custody-donut"></canvas></div>' +
-                    '<div class="md:col-span-2 text-xs text-slate-400">' + (fam.notes && fam.notes.custody_vs_total ? fam.notes.custody_vs_total : '') + '</div>' +
+                    '<div class="md:col-span-2 text-xs text-slate-400">' + custodyNote + '</div>' +
                 '</div>' +
             '</div>');
     },
@@ -610,7 +617,7 @@ var EthenaRenderer = {
             '<div class="panel">' +
                 '<div class="panel-title">DeFi Protocol Breakdown <span class="text-xs font-normal text-slate-400">— drill-down of Coinbase Onchain Wallets</span></div>' +
                 '<div class="risk-flag mb-3" style="background:#eff6ff;color:#1e40af;border-left:4px solid #3b82f6;">' +
-                    'Of the <span class="font-mono">' + EthenaRenderer._money(walletsTotal) + '</span> held across the 5 Coinbase Onchain Wallets, ' +
+                    'Of the <span class="font-mono">' + EthenaRenderer._money(walletsTotal) + '</span> held across the ' + (fam.coinbase_wallets || []).length + ' Coinbase Onchain Wallets, ' +
                     '<span class="font-mono">' + EthenaRenderer._money(defiTotal) + '</span> is deployed in DeFi protocols (resolved via DeBank). ' +
                     'This is a <strong>drill-down of one custody slice</strong> — not additive to total backing.</div>' +
                 (concWarn ? '<div class="risk-flag risk-warning mb-3">Aave V3 is ' + aavePct.toFixed(1) + '% of wallet DeFi positions (> ' + ETHENA_THRESHOLDS.defi_aave_concentration_warn + '% concentration threshold).</div>' : '') +
@@ -651,6 +658,18 @@ var EthenaRenderer = {
     _fillWallets: function(fam) {
         var wallets = (fam.coinbase_wallets || []).slice().sort(function(a, b) { return (b.total_usd || 0) - (a.total_usd || 0); });
         var hist = Array.isArray(fam.coinbase_wallets_history) ? fam.coinbase_wallets_history : [];
+        var bucket = fam.onchain_bucket_vs_attested || {};
+        var tracked = bucket.tracked_accounts != null ? bucket.tracked_accounts : (fam.coinbase_wallets || []).length;
+        var untracked = Array.isArray(fam.wallet_set_untracked) ? fam.wallet_set_untracked.length : (typeof fam.wallet_set_untracked === 'number' ? fam.wallet_set_untracked : null);
+        var disclosed = bucket.disclosed_accounts != null ? bucket.disclosed_accounts : (untracked != null ? tracked + untracked : null);
+        var bucketComparison = (bucket.aligned_usd != null && bucket.attested_at_snapshot_usd != null) ?
+            '<div class="text-xs text-slate-500 mt-1">Aligned bucket check: our read <span class="font-mono">' + EthenaRenderer._money(bucket.aligned_usd) + '</span> on ' + (bucket.aligned_date || '—') +
+            ' vs <span class="font-mono">' + EthenaRenderer._money(bucket.attested_at_snapshot_usd) + '</span> attested at the snapshot' +
+            (bucket.aligned_delta_pct != null ? ' · <span class="font-mono">' + bucket.aligned_delta_pct.toFixed(1) + '%</span>' : '') + '.</div>' : '';
+        var walletSetLine = disclosed != null ?
+            '<div class="text-xs text-slate-500 mt-1">Wallet set: <span class="font-mono">' + tracked + '/' + disclosed + '</span> disclosed accounts tracked.</div>' : '';
+        var namingNote = fam.notes && fam.notes.coinbase_wallets_naming ?
+            '<div class="text-xs text-slate-500 mt-1">' + fam.notes.coinbase_wallets_naming + '</div>' : '';
 
         function topProtocols(protocols) {
             var agg = {};
@@ -691,11 +710,12 @@ var EthenaRenderer = {
         EthenaRenderer._set('ethena-wallets-panel',
             '<div class="panel">' +
                 '<div class="flex items-start justify-between gap-3 flex-wrap">' +
-                    '<div class="panel-title" style="margin-bottom:0">Coinbase Onchain Wallets <span class="text-xs font-normal text-slate-400">— ' + EthenaRenderer._money(fam.coinbase_wallets_total_usd) + ' across ' + (fam.coinbase_wallets || []).length + ' wallets</span></div>' +
+                    '<div class="panel-title" style="margin-bottom:0">Coinbase Onchain Wallets <span class="text-xs font-normal text-slate-400">— ' + EthenaRenderer._money(fam.coinbase_wallets_total_usd) + ' across ' + (fam.coinbase_wallets || []).length + ' tracked wallets</span></div>' +
                     EthenaRenderer._walletFreshnessBadge(fam) +
                 '</div>' +
                 '<div class="text-xs text-slate-500 mt-1 mb-3">The on-chain reserve slice (≈$2.0B of ≈$4.5B backing) — the only custody DeBank can track per-position. ' +
                     'Off-exchange custodians and the CEX hedge stay attestation / LlamaRisk-sourced. Wallet positions refresh <span class="font-medium">daily</span> (headline coverage above is hourly).</div>' +
+                walletSetLine + bucketComparison + namingNote +
                 EthenaRenderer._reserveTrendSection(hist) +
                 '<table class="data-table"><thead><tr><th>Address</th><th class="text-right">Total</th><th class="text-right">In DeFi</th><th>Top protocols</th><th></th></tr></thead>' +
                 '<tbody>' + rows + '</tbody></table>' +
@@ -908,7 +928,9 @@ var EthenaRenderer = {
     _fillAttestation: function(fam) {
         var a = fam.attestation_snapshot;
         if (!a) { EthenaRenderer._set('ethena-attestation-panel', ''); return; }
-        var stale = (a.age_days != null && a.age_days > ETHENA_THRESHOLDS.attestation_stale_days);
+        var embeddedAge = a.embedded_age_days != null ? a.embedded_age_days : a.age_days;
+        var latestAge = a.latest_published_age_days;
+        var stale = (embeddedAge != null && embeddedAge > ETHENA_THRESHOLDS.attestation_stale_days);
         var ageState = stale ? 'warn' : 'ok';
         var borderStyle = stale ? 'border-left:4px solid #f59e0b;' : '';
         var asOf = EthenaRenderer._attestAsOf(fam);
@@ -924,7 +946,8 @@ var EthenaRenderer = {
                 '<div class="flex flex-wrap items-center gap-2 mb-3">' +
                     EthenaRenderer._statusPill(a.month || 'Latest', 'neutral') +
                     EthenaRenderer._statusPill('Snapshot', 'neutral', asOf || '—') +
-                    EthenaRenderer._statusPill(stale ? 'Attestation stale' : 'Current', ageState, (a.age_days != null ? Math.round(a.age_days) + 'd old' : '')) +
+                    EthenaRenderer._statusPill(stale ? 'Snapshot stale' : 'Snapshot current', ageState, (embeddedAge != null ? Math.round(embeddedAge) + 'd old' : '')) +
+                    (latestAge != null ? EthenaRenderer._statusPill('Latest published', 'neutral', Math.round(latestAge) + 'd ago') : '') +
                     '<span class="ml-auto text-xs text-slate-500">Coverage at snapshot: <span class="font-mono text-base font-bold text-green-600">' + (a.coverage_pct_with_rf != null ? a.coverage_pct_with_rf.toFixed(2) + '%' : '—') + '</span> <span class="text-slate-400">(incl. RF)</span></span>' +
                 '</div>' +
                 '<table class="data-table"><thead><tr><th>Custodian (off-chain)</th><th class="text-right">Attested (USD)</th></tr></thead>' +
