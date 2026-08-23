@@ -525,7 +525,8 @@ var MSTRRenderer = {
         var waterfallRows =
             rowHtml('SENIOR', 'Senior Converts (0.42% blended)', seniorConvertFace, obl.senior_convert_interest,
                 annualToBtc(obl.senior_convert_interest),
-                '2030 wall ' + MSTRRenderer._fmtMoneyShort(csw.senior_convert_2030_maturity_wall_usd), false) +
+                MSTRRenderer._fmtMoneyShort(csw.senior_convert_2030_maturity_wall_usd) +
+                    ' at <em>stated</em> 2030 maturity <span class="text-amber-700 dark:text-amber-300">\u2020</span>', false) +
             rowHtml('SENIOR', 'STRF (10% fixed)', strfPar, obl.strf_dividend,
                 annualToBtc(obl.strf_dividend), '', false) +
             rowHtml('STRC', 'STRC (variable, ' + strcRateLabel + ')',
@@ -559,6 +560,16 @@ var MSTRRenderer = {
                 runwayCard('STRC alone', 'STRC dividend only', runway.strc_only, btcYr.strc_only, pctStack.strc_only) +
                 runwayCard('Senior-to-STRC', 'STRF + STRC + senior convert interest', runway.senior_to_strc, btcYr.senior_to_strc, pctStack.senior_to_strc) +
                 runwayCard('All preferred + interest', 'Adds STRK + STRD residual', runway.total_preferred_plus_interest, btcYr.total_preferred_plus_interest, pctStack.total_preferred_plus_interest) +
+            '</div>' +
+            // These runways model the RECURRING obligation only. No convert
+            // principal repayment is in them at all, so a multi-decade figure
+            // here is not a statement that nothing large comes due sooner.
+            '<div class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 ' +
+                'border border-amber-200 dark:border-amber-800 rounded p-2 mb-4">' +
+                '<span class="font-semibold">Recurring obligations only.</span> ' +
+                'These runways count preferred dividends and convert interest. They exclude ' +
+                'repayment of convert <em>principal</em> entirely \u2014 including the noncontingent ' +
+                'holder puts noted above, which fall well inside these horizons.' +
             '</div>';
 
         // ---- Cash runway sub-panel: short-term operational stress horizon
@@ -838,6 +849,23 @@ var MSTRRenderer = {
                     '<tbody>' + waterfallRows + '</tbody>' +
                 '</table>' +
             '</div>' +
+            // The analyzer emits a single scalar keyed on STATED MATURITY
+            // (senior_convert_2030_maturity_wall_usd). Per the Q2 2026 10-Q,
+            // Note 6, every tranche also carries a noncontingent holder put at
+            // 100% of principal in cash, which binds years earlier while the
+            // conversion options are out of the money. The put schedule is not
+            // in the payload yet, so this is stated as a caveat rather than
+            // rendered as a number — deriving one here would restate a claim
+            // away from the reads that resolve it.
+            '<div class="text-xs text-amber-800 dark:text-amber-200 mb-4">' +
+                '<span class="text-amber-700 dark:text-amber-300 font-semibold">\u2020</span> ' +
+                'Keyed on <em>stated maturity</em>. Strategy\u2019s Q2 2026 10-Q (unaudited, accession ' +
+                '<span class="font-mono">0001050446-26-000044</span>, Note 6) reports a noncontingent ' +
+                'holder put at 100% of principal, in cash, on every convert tranche \u2014 so the binding ' +
+                'date is the put, not the maturity, whenever the conversion option is out of the money. ' +
+                'The dated put schedule is not yet in this dashboard\u2019s payload; treat the maturity-year ' +
+                'figures as an upper bound on timing, not a forecast of when cash is required.' +
+            '</div>' +
             // Three runway readouts (long-term, flat BTC).
             '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-4 mb-2">Phase 2 BTC-only runway by obligation slice</div>' +
             runwayRow +
@@ -1049,6 +1077,15 @@ var MSTRRenderer = {
                         '<span class="font-mono font-semibold text-red-700 dark:text-red-300">' + MSTRRenderer._fmtMoneyShort(cashLikelySum) + '</span>' +
                         ' of ' + MSTRRenderer._fmtMoneyShort(totalFace) + ' total. ' +
                         'Recent pattern: convert buybacks funded by MSTR ATM + new STRC issuance (see 5/26 transaction).' +
+                    '</div>' +
+                    '<div class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 ' +
+                        'border border-amber-200 dark:border-amber-800 rounded p-2 mt-2">' +
+                        'Bars are placed at <span class="font-semibold">stated maturity</span>. Each tranche also ' +
+                        'carries a noncontingent holder put at par in cash (Q2 2026 10-Q, accession ' +
+                        '<span class="font-mono">0001050446-26-000044</span>, Note 6) that binds earlier while the ' +
+                        'conversion option is out of the money \u2014 the same condition the red ' +
+                        '\u201cdeep OTM\u201d bars already flag. Cash is therefore likely required ' +
+                        '<span class="font-semibold">before</span> the years shown.' +
                     '</div>' +
                 '</div>' +
             '</div>' +

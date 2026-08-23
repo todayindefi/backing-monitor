@@ -1478,6 +1478,7 @@ var STRCRenderer = {
 
     // Surface events-side risk flags into the common Risk Flags panel.
     // Appends rather than overwriting so the backing-side flags remain visible.
+    // Shared by the STRC and MSTR dashboards (MSTR reuses _loadStrategyEventLog).
     _appendEventRiskFlags: function (flags) {
         if (!Array.isArray(flags) || !flags.length) return;
         var container = document.getElementById('risk-flags');
@@ -1485,6 +1486,12 @@ var STRCRenderer = {
         // If the panel was hidden because backing had no flags, reveal it.
         var panel = container.closest('.panel');
         if (panel) panel.style.display = '';
+        // CommonRenderer.renderRiskFlags writes a "No risk flags" placeholder
+        // when the backing payload has none. Appending an EDGAR flag beneath
+        // that placeholder renders a panel that says both at once — and the
+        // reassuring half reads first. Drop it before appending: absence of
+        // backing flags is not absence of flags once EDGAR has one.
+        if (!container.querySelector('.risk-flag')) container.innerHTML = '';
         var wrap = panel && panel.parentElement;
         if (wrap && !wrap.classList.contains('lg:col-span-3')) wrap.classList.add('lg:col-span-3');
 
