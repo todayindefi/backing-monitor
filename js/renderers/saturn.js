@@ -47,6 +47,13 @@ var SaturnRenderer = {
         return addr.slice(0, 6) + '...' + addr.slice(-4);
     },
 
+    _escHtml: function(v) {
+        if (v == null) return '';
+        return String(v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    },
+
     _explorerLink: function(addr) {
         if (!addr) return '';
         return '<a href="https://etherscan.io/address/' + addr + '" target="_blank" rel="noopener noreferrer" ' +
@@ -1959,6 +1966,67 @@ var SaturnRenderer = {
             .catch(function() { target.innerHTML = ''; });
     },
 
+    // Control paths over the Saturn stack, straight from `shared_control`.
+    //
+    // Framing rule, deliberate: `single_authority` is forced FALSE by the
+    // analyzer whenever any path is unresolved. "Not single_authority" therefore
+    // means "not established", NEVER "independent gates confirmed" — absence of
+    // a resolved single authority is not evidence of multiple authorities. The
+    // unresolved case must read as unknown, not as reassurance.
+    _renderSharedControlHtml: function(sc) {
+        if (!sc || !Array.isArray(sc.paths) || !sc.paths.length) return '';
+
+        var rows = sc.paths.map(function(p) {
+            var resolved = p.resolved === true;
+            return '<tr>' +
+                '<td class="font-medium">' + SaturnRenderer._escHtml(p.path) + '</td>' +
+                '<td>' + (resolved ? SaturnRenderer._addrCell(p.holder) :
+                    '<span class="text-slate-400 text-xs">unresolved</span>') + '</td>' +
+                '<td>' + (resolved ?
+                    '<span class="text-xs text-slate-600">' + SaturnRenderer._escHtml(p.kind || '—') + '</span>' :
+                    SaturnRenderer._statusPill('unknown', 'unknown')) + '</td>' +
+            '</tr>';
+        }).join('');
+
+        var unresolved = sc.paths.filter(function(p) { return p.resolved !== true; }).length;
+        var count = sc.distinct_authority_count;
+        var headline;
+        if (sc.single_authority === true) {
+            headline = SaturnRenderer._statusPill('Single point of control over both layers', 'critical');
+        } else if (sc.all_paths_resolved === true && count != null) {
+            headline = SaturnRenderer._statusPill(count + ' distinct authorities resolved', 'warn');
+        } else {
+            headline = SaturnRenderer._statusPill(
+                'Not established — ' + unresolved + ' of ' + sc.paths.length + ' path(s) unresolved', 'unknown');
+        }
+
+        var caveat = (sc.single_authority !== true && sc.all_paths_resolved !== true) ?
+            '<div class="text-xs text-slate-500 mt-2">' +
+                'Unresolved paths mean <em>unknown</em>, not "no authority". These layers are not ' +
+                'confirmed to be independent gates.' +
+            '</div>' : '';
+
+        var note = sc.note ?
+            '<div class="text-xs mt-2 ' +
+                (sc.single_authority === true ?
+                    'text-red-800 bg-red-50 border border-red-200 rounded p-2' :
+                    'text-slate-500 italic') + '">' +
+                SaturnRenderer._escHtml(sc.note) +
+            '</div>' : '';
+
+        return '<div class="mt-4 pt-3 border-t border-slate-200">' +
+            '<div class="flex flex-wrap items-center gap-2 mb-2">' +
+                '<span class="text-sm font-semibold text-slate-700">Control paths</span>' +
+                headline +
+            '</div>' +
+            '<table class="data-table"><thead><tr>' +
+                '<th>Path</th><th>Holder</th><th>Kind</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table>' +
+            note +
+            caveat +
+        '</div>';
+    },
+
     _renderFamilyHtml: function(fam, currentSlug) {
         var admin = fam.shared_admin_eoa || {};
         var totals = fam.totals || {};
@@ -1998,9 +2066,16 @@ var SaturnRenderer = {
         // (on-chain shape is EOA-shaped — no contract code, low nonce). Title
         // + subtitle carry the MPC framing; the on-chain shape stays visible
         // in the Type row so the indistinguishability is legible.
+        //
+        // This key is a WATCH target, not the controller. It holds none of the
+        // Saturn control paths — those resolve to the timelock and are rendered
+        // from `shared_control` below. Never restate control from `controls` or
+        // from any address comparison done here: a hardcoded `controls` list on
+        // this block once published exactly that false claim.
+        var adminRole = admin.role ? SaturnRenderer._escHtml(admin.role) : '';
         var adminCard =
             '<div>' +
-                '<div class="text-sm font-semibold text-slate-700 mb-1">Shared admin MPC</div>' +
+                '<div class="text-sm font-semibold text-slate-700 mb-1">Shared admin MPC — watched key</div>' +
                 '<div class="text-xs text-slate-500 mb-2">Saturn-stated Fireblocks 2-of-3 — on-chain EOA-shaped</div>' +
                 '<table class="data-table"><tbody>' +
                     '<tr><td class="font-medium">Address</td><td>' + SaturnRenderer._addrCell(admin.address) + '</td></tr>' +
@@ -2009,6 +2084,12 @@ var SaturnRenderer = {
                             SaturnRenderer._statusPill('EOA (no code)', 'warn') :
                             SaturnRenderer._statusPill('Contract', 'warn')) +
                     '</td></tr>' +
+                    (admin.holds_listed_authority != null ?
+                        '<tr><td class="font-medium">Listed authority</td><td>' +
+                            (admin.holds_listed_authority ?
+                                SaturnRenderer._statusPill('Holds a listed control path', 'critical') :
+                                SaturnRenderer._statusPill('None — watch only', 'ok')) +
+                        '</td></tr>' : '') +
                     '<tr><td class="font-medium">Outbound nonce</td><td><span class="font-mono">' +
                         (admin.nonce != null ? admin.nonce : '—') +
                     '</span> <span class="text-xs text-slate-500">(any tick is a signal)</span></td></tr>' +
@@ -2016,11 +2097,12 @@ var SaturnRenderer = {
                         (admin.balance_eth != null ? admin.balance_eth.toFixed(6) + ' ETH' : '—') +
                     '</span></td></tr>' +
                 '</tbody></table>' +
-                (Array.isArray(admin.controls) && admin.controls.length ?
-                    '<div class="text-xs text-slate-500 mt-2">' +
-                        '<strong>Controls:</strong> ' + admin.controls.join(' · ') +
-                    '</div>' : '') +
+                (adminRole ?
+                    '<div class="text-xs text-slate-500 mt-2">' + adminRole + '</div>' : '') +
             '</div>';
+
+        // Control paths — rendered ONLY from the analyzer's resolved reads.
+        var controlBlock = SaturnRenderer._renderSharedControlHtml(fam.shared_control);
 
         // Accountable feed status
         var accBlock = '';
@@ -2050,6 +2132,7 @@ var SaturnRenderer = {
                 aumCard +
                 adminCard +
             '</div>' +
+            controlBlock +
             accBlock +
             '<div class="text-xs text-slate-400 mt-3">As of ' + CommonRenderer.formatDate(asOf) + ' · self-computed.</div>' +
         '</div>';
