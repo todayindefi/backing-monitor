@@ -183,7 +183,16 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
         (dcs.used_pct != null ? ' (<strong>' + dcs.used_pct.toFixed(1) + '% used</strong>)' : '') +
         (dcs.shares_repurchased != null ? ' · <span class="font-mono">' + dcs.shares_repurchased.toLocaleString('en-US') + ' sh' +
             (dcs.average_price_usd != null ? ' @ ~$' + dcs.average_price_usd.toFixed(2) : '') + '</span>' : '') +
-        (dcs.remaining_usd != null ? ' · <span class="font-mono">' + fmt(dcs.remaining_usd) + ' remaining</span>' : '');
+        (dcs.remaining_usd != null ? ' · <span class="font-mono">' + fmt(dcs.remaining_usd) + ' remaining</span>' : '') +
+        // This block is a filing-stamped constant, not a live figure — the event
+        // stream (strategy_events.json repurchase_program) advances ahead of it.
+        // The payload dates it honestly; the renderer used to drop the stamp, so
+        // a stale number appeared as current. Surface the date and accession so a
+        // reader who sees a newer figure elsewhere can tell which is older rather
+        // than which is wrong.
+        (dcs.as_of ? ' <span class="text-slate-500">(as of ' + dcs.as_of +
+            (dcs.source_accession ? ', accession <span class="font-mono">' + dcs.source_accession + '</span>' : '') +
+            '; later filings may supersede)</span>' : '');
 
     var commonDetail = '<span class="font-mono font-semibold">' + fmt(common.authorized_usd) + '</span> authorized · BTC-funded · ' +
         'executed <span class="font-mono">' + fmt(common.executed_usd != null ? common.executed_usd : 0) + '</span>';
