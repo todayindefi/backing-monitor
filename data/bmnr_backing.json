@@ -1,18 +1,19 @@
 {
   "asset": "bmnr",
-  "as_of": "2026-08-23T00:45:26Z",
+  "as_of": "2026-08-24T00:16:28Z",
   "freshness_seconds": 1,
   "freshness": {
-    "price_age_seconds": 0,
-    "treasury_8k_age_days": 90,
-    "stale": true
+    "price_age_seconds": 1,
+    "treasury_8k_age_days": 91,
+    "stale": true,
+    "stale_effect": "eth_value_usd and treasury_nav_eth_only_usd are marked at the 8-K's own stamped ETH price, not the live one; see treasury.eth_value_basis"
   },
   "live": {
     "bmnr_price_usd": 22.83,
     "shares_outstanding": 603226394,
     "market_cap_usd": 13771658529,
-    "eth_price_usd": 2427.88,
-    "btc_price_usd": 77246.0,
+    "eth_price_usd": 2458.41,
+    "btc_price_usd": null,
     "source": {
       "bmnr": "yfinance",
       "eth": "coingecko",
@@ -23,28 +24,40 @@
     "as_of_8k": "2026-05-25",
     "source_url": "https://www.prnewswire.com/apac/news-releases/bitmine-immersion-technologies-bmnr-announces-eth-holdings-reach-5-39-million-tokens-and-total-crypto-and-total-cash-holdings-of-12-3-billion-302781524.html",
     "eth_count": 5390404,
-    "eth_value_usd": 13087254063.52,
+    "eth_value_usd": 11503122136.0,
     "eth_staked_count": 4712917,
     "eth_staked_pct": 0.8743,
     "btc_count": 203,
-    "btc_value_usd": 15680938.0,
+    "btc_value_usd": null,
     "cash_usd": 444000000,
     "strategic_stakes_usd": 295000000,
-    "treasury_nav_eth_only_usd": 13087254063.52,
-    "treasury_nav_full_usd": 13841935001.52,
-    "eth_pct_of_supply": 0.04466
+    "treasury_nav_eth_only_usd": 11503122136.0,
+    "treasury_nav_full_usd": null,
+    "eth_pct_of_supply": 0.04466,
+    "constant_stale": true,
+    "constant_age_days": 91,
+    "stamped_eth_price_usd": 2134.0,
+    "eth_mark_price_usd": 2134.0,
+    "eth_value_basis": "stamped_8k_price",
+    "btc_value_basis": "live_price",
+    "treasury_nav_eth_only_basis": "stamped_8k_price",
+    "treasury_nav_full_basis": "mixed_stamped_eth_live_btc"
   },
   "mnav": {
-    "eth_only": 1.0523,
-    "full_treasury": 0.9949,
-    "regime": "premium_to_parity",
-    "regime_band": "Premium on ETH-only basis; parity on full treasury \u2014 divergence indicates cash + strategic-stakes drag on the equity multiple.",
+    "eth_only": 1.1972,
+    "full_treasury": null,
+    "regime": "premium",
+    "regime_band": null,
     "regime_thresholds": {
       "premium": ">= 1.05",
       "parity": "0.95 - 1.05",
       "discount": "0.85 - 0.95",
       "distress": "< 0.85"
-    }
+    },
+    "nav_basis_eth_only": "stamped_8k_price",
+    "nav_basis_full": "mixed_stamped_eth_live_btc",
+    "nav_constant_stale": true,
+    "basis_caveat": "NAV is struck on the 8-K's stamped price against a frozen ETH count; a current count would move this ratio and is the only thing that fixes it"
   },
   "cadence_4w": {
     "window_start": "2026-05-04",
@@ -61,11 +74,11 @@
     "atm_drawn_through_10q_usd": 10070000000,
     "atm_drawn_post_10q_est_usd": 1080000000,
     "atm_remaining_usd": 13350000000,
-    "cash_only_eth_at_spot": 182876.0,
+    "cash_only_eth_at_spot": 180605.0,
     "weeks_to_5pct_target_at_current_pace": 10,
     "atm_runway_weeks_at_current_pace": 90,
     "eth_needed_for_5pct_target": 644596,
-    "usd_needed_for_5pct_target": 1565001736,
+    "usd_needed_for_5pct_target": 1584681252,
     "target": {
       "eth_supply_pct": 0.05,
       "current_eth_supply_estimate": 120700000,
@@ -74,7 +87,7 @@
   },
   "yield": {
     "projected_annual_staking_usd": 276000000,
-    "weekly_eth_from_staking_est": 2186.0,
+    "weekly_eth_from_staking_est": 2159.0,
     "weekly_usd_from_staking_est": 5307692,
     "annualized_yield_pct": 0.0275,
     "note": "Pure derivation from framework's $276M/yr figure. Refresh when framework reprojects (ETH price assumption + staking APR drift)."
@@ -119,9 +132,9 @@
   ],
   "risk_flags": [
     {
-      "code": "BMNR_CADENCE_BROKEN",
+      "code": "BMNR_TREASURY_CONSTANT_STALE",
       "severity": "warning",
-      "message": "No BMNR 8-K in 90 days \u2014 weekly cadence broken. Either ATM access disrupted or reporting change."
+      "message": "BMNR treasury constant is 91 days behind its source \u2014 figures below are as of 2026-05-25 and may be stale. This is a gap in our own data refresh, not a finding about BMNR's filing cadence."
     }
   ]
 }
