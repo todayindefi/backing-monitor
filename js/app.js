@@ -111,9 +111,12 @@ async function renderIndex() {
         grid.innerHTML = cardData.map(function(item) {
             var a = item.asset;
             var d = item.data;
-            // Some analyzers (USDm) emit collateral_ratio as a ratio (1.01)
-            // instead of a percentage (101). Normalize for display so all
-            // cards share the same scale.
+            // Some analyzers (USDm) emit collateral_ratio as a ratio (1.296)
+            // instead of a percentage (129.60). Normalize for display so all
+            // cards share the same scale. Resolution is by declared scale or
+            // explicit asset list — NEVER by the value's magnitude, which
+            // mis-scales in both directions at the boundary. See
+            // CommonRenderer.normalizeCollateralRatio.
             // USG-shape analyzers emit collateral_ratio as a conservative
             // "collateral-backed share of supply" (~55%); the headline ratio is the
             // CDP-book mint CR. Prefer it (only when both fields are present, which
@@ -123,7 +126,7 @@ async function renderIndex() {
             // a single off-schema asset doesn't NPE the whole grid render.
             var s = d && d.summary;
             var crRaw = s ? ((s.mint_cr != null && s.collateral_ratio_inclusive != null) ? s.mint_cr : s.collateral_ratio) : null;
-            var crNorm = (crRaw != null && crRaw < 2) ? crRaw * 100 : crRaw;
+            var crNorm = CommonRenderer.normalizeCollateralRatio(crRaw, a.slug, s);
             var cr = (crNorm != null) ? CommonRenderer.formatPercent(crNorm) : '-';
             var crClass = (crNorm != null && crNorm >= 100) ? 'text-green-600' : 'text-red-600';
             var supply = s ? CommonRenderer.formatCurrency(s.total_supply || s.real_supply) : '-';

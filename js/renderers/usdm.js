@@ -129,17 +129,22 @@ var USDmRenderer = {
         var s = data.summary;
         if (!s) return;
 
-        // PegTracker emits collateral_ratio as a ratio (1.0101); common.js
-        // expects percentage (101.01). Normalize the live datum + every
-        // history entry so the standard summary card + CR chart work.
-        if (s.collateral_ratio != null && s.collateral_ratio < 2) {
-            s.collateral_ratio = s.collateral_ratio * 100;
-        }
+        // PegTracker emits USDm's collateral_ratio as a raw ratio (1.296);
+        // common.js expects percentage (129.60). Normalize the live datum +
+        // every history entry so the standard summary card + CR chart work.
+        //
+        // The old guard here was `if (cr < 2) cr *= 100`, which inverted at and
+        // above 2.0: double-collateralised — the healthiest state this asset
+        // can reach — rendered as "2.00%", the most alarming number on the
+        // page. Reachable on roughly a 35% supply contraction against a flat
+        // reserve. Scale is now resolved from the feed's declaration or an
+        // explicit asset list, never from the value's magnitude.
+        s.collateral_ratio = CommonRenderer.normalizeCollateralRatio(
+            s.collateral_ratio, 'usdm', s);
         if (history && Array.isArray(history.entries)) {
             history.entries.forEach(function(e) {
-                if (e.collateral_ratio != null && e.collateral_ratio < 2) {
-                    e.collateral_ratio = e.collateral_ratio * 100;
-                }
+                e.collateral_ratio = CommonRenderer.normalizeCollateralRatio(
+                    e.collateral_ratio, 'usdm', e);
             });
         }
 

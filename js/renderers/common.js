@@ -13,6 +13,42 @@ var RISK_AXIS_THRESHOLDS = {
 
 const CommonRenderer = {
 
+    // ------ Collateral-ratio scale resolution ------
+    //
+    // Feeds disagree on units: USDm publishes collateral_ratio as a RAW ratio
+    // (1.296) while every other feed publishes percent (129.60). This used to
+    // be resolved with `if (cr < 2) cr *= 100` — inferring the unit from the
+    // value's magnitude. That is the same class of bug as guessing token
+    // decimals from a number's size: correct until the value enters the
+    // ambiguous range, then silently and confidently wrong.
+    //
+    // It fails BOTH ways. A raw feed reaching 2.0 (double-collateralised, the
+    // healthiest state it can reach) rendered as "2.00%". A percent feed
+    // falling below 2% (near-total loss of backing) would be multiplied to
+    // "150%" and coloured green.
+    //
+    // Resolution order — never magnitude:
+    //   1. summary.collateral_ratio_scale, if the feed declares it
+    //   2. RAW_CR_ASSETS, an explicit per-asset list
+    //   3. default: percent, returned unchanged
+    //
+    // The default is deliberate. An undeclared raw feed renders alarmingly low
+    // and gets investigated; the reverse — a distressed feed silently rendered
+    // healthy — is the failure that sits on a public page unnoticed.
+    RAW_CR_ASSETS: ['usdm'],
+
+    normalizeCollateralRatio(value, assetSlug, summary) {
+        if (value === null || value === undefined) return value;
+        var declared = summary && summary.collateral_ratio_scale;
+        if (declared === 'percent') return value;
+        if (declared === 'ratio') return value * 100;
+        if (declared) return value;  // unrecognised declaration: trust it as-is
+        if (assetSlug && CommonRenderer.RAW_CR_ASSETS.indexOf(assetSlug) !== -1) {
+            return value * 100;
+        }
+        return value;
+    },
+
     formatCurrency(num) {
         if (num === null || num === undefined) return '-';
         if (Math.abs(num) >= 1e6) return '$' + (num / 1e6).toFixed(1) + 'M';
