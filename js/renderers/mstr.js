@@ -770,7 +770,7 @@ var MSTRRenderer = {
                 '<strong>Caveat.</strong> Runway assumes flat BTC, frozen preferred outstanding, and frozen rates. ' +
                 'All three are fragile — a BTC bear case + continued preferred growth + rising STRC rate could collapse runway materially. ' +
                 'The rate-ceiling overlay shows the <em>rate stress dimension only</em> — it does NOT compound with BTC stress; in a joint stress scenario, runway compresses faster than either alone. ' +
-                'See <a href="https://github.com/todayindefi/riskAnalyst/blob/master/assets/_frameworks/strc-framework.md" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">framework §IV</a> (waterfall) and §IV.5 (rate-ratchet thesis).' +
+                'See the <a href="https://tidresearch.com/reports/strcx" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">STRC + STRCx report ↗</a> — “How much runway?” and “The rate ceiling — STRC\u2019s hidden constraint”.' +
             '</div>';
 
         // ---- History charts (runway over time + STRC rate trajectory).
@@ -1012,8 +1012,8 @@ var MSTRRenderer = {
             '<div style="height: 280px; position: relative;"><canvas id="mstr-pershare-chart"></canvas></div>' +
             '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
                 'Vertical markers denote major EDGAR-filed dilution events (PREFERRED_ISSUANCE, ATM_PROGRAM_UPDATE). ' +
-                'Per-share BTC NAV growth is the structural equity-holder thesis — see ' +
-                '<a href="https://github.com/todayindefi/biz/blob/master/assets/mstr.md" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">mstr.md framework</a>. ' +
+                'Per-share BTC NAV growth is the structural equity-holder thesis — see the ' +
+                '<a href="https://tidresearch.com/reports/mstr" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">MSTR report ↗</a>. ' +
                 'Trajectory series populates over time (sparse early as the analyzer began emitting the field on 2026-05-30).' +
             '</div>' +
         '</div>';

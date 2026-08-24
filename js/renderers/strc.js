@@ -633,8 +633,9 @@ var STRCRenderer = {
             snapshotRow +
             '<div class="text-xs text-slate-500 mt-3">' +
                 'Methodology: mNAV = enterprise value ÷ (Strategy BTC count × BTC spot). See ' +
-                '<a href="https://github.com/todayindefi/riskAnalyst/blob/master/assets/_frameworks/strc-framework.md" ' +
-                'target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">framework §IV (MSTR cash-flow stack)</a>. ' +
+                '<a href="https://tidresearch.com/reports/mstr" ' +
+                'target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">' +
+                'MSTR report — “The mNAV mechanism” ↗</a>. ' +
                 'Canonical issuer analysis: <a href="?asset=mstr" class="text-blue-500 hover:underline">MSTR dashboard →</a>' +
             '</div>' +
         '</div>';
@@ -663,6 +664,15 @@ var STRCRenderer = {
 
         return '<div class="panel">' +
             '<div class="panel-title">STRC instrument <span class="text-xs font-normal text-slate-500">— monthly-reset preferred</span></div>' +
+            // The published report links forward to this dashboard; link back.
+            // A reader who needs the instrument explained (Token-2022 scaled-UI
+            // multiplier, the Backed/Kraken/Alpaca redemption path) is on this
+            // page precisely because the numbers alone did not explain it.
+            '<div class="text-xs text-slate-500 mb-3">' +
+                'What this instrument is, in full: ' +
+                '<a href="https://tidresearch.com/reports/strcx" target="_blank" rel="noopener noreferrer" ' +
+                'class="text-blue-500 hover:underline">STRC + STRCx retail risk report \u2197</a>' +
+            '</div>' +
             '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">' +
                 '<div>' +
                     '<div class="text-xs uppercase font-semibold text-slate-500 mb-1">Current annualized rate</div>' +
