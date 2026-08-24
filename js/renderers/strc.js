@@ -905,12 +905,38 @@ var STRCRenderer = {
 
         var apyxRow = apyx ?
             dataRow('Apyx (apxUSD + apyUSD)', 'apxusd', apyx.strc_bucket_usd, apyx.strc_share_of_reserves,
-                'Accountable feed; STRC bucket bundles brokerage STRC + on-chain STRCx') :
+                'Accountable feed; bucket bundles brokerage STRC + on-chain STRCx. Raw-STRC portion (' +
+                STRCRenderer._fmtMoneyShort(apyx.strc_raw_implied_usd) + ') is implied \u2014 bucket less the measured STRCx balance') :
             unavailableRow('Apyx (apxUSD + apyUSD)', 'apxusd');
         var saturnRow = saturn ?
             dataRow('Saturn (sUSDat)', 'susdat', saturn.strc_raw_usd, saturn.strc_share_of_reserves,
-                (saturn.verifiable === 'oracle_unverified') ? 'Off-chain STRC; oracle unverified (PoR feed planned)' : '') :
+                (saturn.verifiable === 'oracle_unverified') ? 'Off-chain STRC; oracle unverified (PoR feed planned) \u2014 not an independently attested balance' : '') :
             unavailableRow('Saturn (sUSDat)', 'susdat');
+
+        // Only one component of this total is directly measured: Apyx's on-chain
+        // STRCx balance. Apyx's raw-STRC leg is the bucket MINUS that balance
+        // (the payload names it *_implied), and Saturn's leg is flagged
+        // oracle_unverified. Rendering the sum as one figure presents a mostly
+        // derived number as if it were uniformly attested — the aggregate is
+        // the weakest of its parts, not the strongest. Split it, using only
+        // fields the payload already carries; nothing is re-derived here.
+        var measuredUsd = (apyx && apyx.strcx_onchain_usd != null) ? apyx.strcx_onchain_usd : null;
+        var splitNote = '';
+        if (measuredUsd != null && total) {
+            var derivedUsd = total - measuredUsd;
+            var measuredPct = measuredUsd / total * 100;
+            splitNote =
+                '<div class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 ' +
+                    'border border-amber-200 dark:border-amber-800 rounded p-2 mt-2">' +
+                    'Directly measured on-chain: <span class="font-mono font-semibold">' +
+                        STRCRenderer._fmtMoneyShort(measuredUsd) + '</span> (' + measuredPct.toFixed(1) + '%) \u2014 ' +
+                    'Apyx\u2019s STRCx balance. The remaining <span class="font-mono font-semibold">' +
+                        STRCRenderer._fmtMoneyShort(derivedUsd) + '</span> (' + (100 - measuredPct).toFixed(1) + '%) ' +
+                    'is <em>implied by subtraction</em> or oracle-unverified, not an attested holding. ' +
+                    'The raw-STRC share and the unmeasured share are the same positions \u2014 read this ' +
+                    'total as an upper bound on what is verifiable, not as a confirmed balance.' +
+                '</div>';
+        }
 
         return '<div class="panel">' +
             '<div class="panel-title">Downstream portfolio exposure</div>' +
@@ -918,6 +944,7 @@ var STRCRenderer = {
                 '<div class="card-label">Combined portfolio STRC-family exposure</div>' +
                 '<div class="card-value">' + STRCRenderer._fmtMoneyShort(total) + '</div>' +
                 '<div class="text-xs text-slate-400 mt-1">Apyx + Saturn aggregation</div>' +
+                splitNote +
             '</div>' +
             '<div class="data-table-scroll">' +
                 '<table class="data-table">' +
