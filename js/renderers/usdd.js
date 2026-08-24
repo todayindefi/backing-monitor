@@ -88,8 +88,37 @@ var USDDRenderer = {
             var totalCov = specific.psm_coverage_pct || 0;
             var covCls = totalCov >= 30 ? 'positive' : totalCov >= 15 ? 'warning' : 'negative';
 
+            // The headline CR is nearly blind to this panel. PSM is a low single-digit
+            // share of backing, so even a severe PSM drawdown barely moves the number
+            // that gets quoted — while it is the only instant-redemption venue USDD
+            // has. State the sensitivity in pp so the two panels can be read together
+            // rather than leaving the reader to notice the CR did not react.
+            var psmShareTxt = '';
+            var totalBackingUsd = s.total_backing;
+            var psmDeltaBlock = specific.psm_delta;
+            if (totalBackingUsd && totalPsm) {
+                var shareOfBacking = totalPsm / totalBackingUsd * 100;
+                var crImpactTxt = '';
+                if (psmDeltaBlock && psmDeltaBlock.h24_delta_usd != null && s.total_supply) {
+                    var pp = psmDeltaBlock.h24_delta_usd / s.total_supply * 100;
+                    crImpactTxt = ' Its ' + (psmDeltaBlock.h24_delta_pct != null
+                            ? Math.abs(psmDeltaBlock.h24_delta_pct).toFixed(1) + '% 24h move'
+                            : ' recent 24h move') +
+                        ' shifts the headline CR by only <span class="font-mono">' +
+                        (pp >= 0 ? '+' : '\u2212') + Math.abs(pp).toFixed(2) + 'pp</span>.';
+                }
+                psmShareTxt = '<div class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 ' +
+                    'dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded p-2 mb-3">' +
+                    'PSM is <span class="font-mono font-semibold">' + shareOfBacking.toFixed(1) + '%</span> of backing, ' +
+                    'so the headline collateral ratio is close to insensitive to it.' + crImpactTxt +
+                    ' Read this panel alongside the CR, not through it \u2014 this is the only ' +
+                    'instant-redemption venue USDD has.' +
+                '</div>';
+            }
+
             html += '<div class="panel"><div class="panel-title">PSM Exit Liquidity</div>' +
                 '<p class="text-sm text-slate-500 mb-3">Peg Stability Module: 1:1 USDT redemption. This is the "real exit" for USDD holders.</p>' +
+                psmShareTxt +
                 '<div class="grid grid-cols-2 md:grid-cols-2 gap-4 mb-4">' +
                     '<div class="summary-card"><div class="card-label">Total PSM Reserves</div><div class="card-value">' + CommonRenderer.formatCurrency(totalPsm) + '</div></div>' +
                     '<div class="summary-card"><div class="card-label">Total Coverage</div><div class="card-value ' + covCls + '">' + CommonRenderer.formatPercent(totalCov, 1) + '</div><div class="text-xs text-slate-400 mt-1">of total supply</div></div>' +

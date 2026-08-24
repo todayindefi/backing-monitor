@@ -4,6 +4,36 @@
 
 var OUSDRenderer = {
 
+    // ------ Strategy label provenance ------
+    //
+    // The analyzer builds backing_breakdown from the OUSD Vault's own
+    // getAllStrategies() registry, then labels each address from a hardcoded
+    // STRATEGY_LABELS map, falling back to "Unknown (0x…)" on a miss. So
+    // "Unknown" means only "absent from that map" — every line in this list is
+    // a registered Vault strategy by construction; the enumeration source
+    // guarantees it.
+    //
+    // Rendered as-is, "Unknown" against 18.3% of backing reads as an
+    // unidentified counterparty holding a fifth of the reserve — a custody gap.
+    // It is a metadata gap. Relabel to say what is actually not known: the
+    // strategy's name, not the strategy's legitimacy.
+    //
+    // Deliberately structural, not a per-address lookup: mapping this one
+    // address to a specific strategy name would hardcode an identity that goes
+    // stale if the Vault deregisters it, which is how the analyzer's own map
+    // fell behind in the first place. The proper fix is analyzer-side — resolve
+    // the name on-chain or extend STRATEGY_LABELS — and is not this repo's.
+    preRender(data) {
+        var rows = data && data.backing_breakdown;
+        if (!Array.isArray(rows)) return;
+        rows.forEach(function(r) {
+            if (r && typeof r.label === 'string') {
+                r.label = r.label.replace(/^Unknown \((0x[0-9a-fA-F]+)\.\.\.\)$/,
+                    'Unlabeled strategy ($1\u2026)');
+            }
+        });
+    },
+
     render(data) {
         var container = document.getElementById('asset-specific-panels');
         var specific = data.asset_specific;
