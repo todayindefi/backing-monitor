@@ -28,13 +28,41 @@
 set -uo pipefail
 cd "$(dirname "$0")"
 
-# data/assets.json carries per-asset report_url, rendered by index.html as the
-# header "Full report" link. It is repo-owned (not synced from PegTracker) and
-# is where BOTH private-repo links actually lived — a renderer-only grep misses
-# them entirely, which is exactly how they survived review.
+# THREE surfaces carry reader-facing links, and each one has hidden a dead link
+# that the other two would not have caught:
+#   js/, index.html   — renderer copy
+#   data/assets.json  — repo-owned; the header "Full report" link. Both
+#                       private-repo links lived here, invisible to a renderer grep.
+#   data/*.json       — PegTracker-synced backing feeds carry issuer.report_url,
+#                       rendered by common.js:751 as the "Report →" chip. Five
+#                       "-retail" slugs were 404 here while assets.json held the
+#                       correct ones for the same assets.
+# Scan all three. A link surface that is not scanned is a link surface that rots.
+# From the feeds, take only READER-FACING urls — keys ending in _url (report_url,
+# filing_url, ...). Backing feeds also carry analyzer plumbing (rpc endpoints,
+# *_api_base under data_sources) that no reader ever clicks; those are bases, not
+# links, and failing on them would be the cry-wolf noise this check exists to avoid.
 URLS=$( { grep -rhoE 'https?://[^"'"'"' )]+' js/ index.html;
-          grep -rhoE 'https?://[^"]+' data/assets.json; } \
-       | sed 's/[.,]$//' | sort -u)
+          python3 - <<'PY'
+import json, glob
+out = set()
+def walk(o, key=''):
+    if isinstance(o, dict):
+        for k, v in o.items():
+            walk(v, k)
+    elif isinstance(o, list):
+        for i in o:
+            walk(i, key)
+    elif isinstance(o, str) and o.startswith('http') and key.endswith('_url'):
+        out.add(o)
+for f in glob.glob('data/*.json'):
+    try:
+        walk(json.load(open(f)))
+    except Exception:
+        pass
+print('\n'.join(sorted(out)))
+PY
+        } | sed 's/[.,]$//' | sort -u)
 
 DEAD=0; TOTAL=0; UNVERIFIED=0; SKIPPED=0
 DEAD_LIST=""; UNVER_LIST=""
