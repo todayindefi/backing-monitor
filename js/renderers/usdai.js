@@ -526,7 +526,12 @@ var UsdaiRenderer = {
                 // one layer up, except here the analyzer already reads the full figure.
                 ((s.total_shares != null && s.share_supply != null && s.total_shares > 0) ?
                     (function() {
-                        var bridged = s.total_shares - s.share_supply;
+                        // Use the published field. Deriving total_shares - share_supply
+                        // silently folds in pending_redemption_shares and overstated
+                        // this by exactly the queue (234,493.61 when first shipped).
+                        var bridged = (s.bridged_supply != null)
+                            ? s.bridged_supply
+                            : (s.total_shares - s.share_supply);
                         var pct = (s.bridged_share_pct != null)
                             ? s.bridged_share_pct : (bridged / s.total_shares * 100);
                         return '<div class="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 ' +
@@ -545,11 +550,67 @@ var UsdaiRenderer = {
             var bufState = UsdaiRenderer._bufferState(s.buffer_ratio);
             var bufTxt = (s.buffer_ratio != null) ? (s.buffer_ratio * 100).toFixed(1) + '%' : '—';
 
+            // The recon flag and the claims tie measure DIFFERENT things, and only
+            // the failing one was rendered. recon_residual_pct is loan attribution
+            // against the issuer's figure; claims_tie_residual is share accounting —
+            // total_shares x deposit_share_price against total_assets. The shares tie
+            // to a few dollars on $359M. Showing the drift alone lets a reader
+            // conclude the vault's books are broken, which is a wrong impression
+            // assembled from two correct numbers.
+            var tieUsd = s.claims_tie_residual_usd;
+            var tiePct = s.claims_tie_residual_pct;
+            var tiePill = '';
+            if (tieUsd != null) {
+                // Dollar amount only. The normalised form is ~1e-6, which renders as
+                // "2.2e-4%" and reads as noise; the prose below states the tie plainly.
+                tiePill = UsdaiRenderer._statusPill('Claims tie', 'ok',
+                    UsdaiRenderer._usdShort(Math.abs(tieUsd)));
+            }
+            // Exit haircut as one number. nav_per_share IS deposit_share_price, so
+            // the headline NAV is the ENTRY price and exits settle lower. Rendered
+            // from the published field rather than recomputed: the analyzer takes
+            // the spread on the redemption-price base (0.6506%), and differencing
+            // the two displayed prices gives 0.6464% — a number that would not
+            // match the feed.
+            var spreadPill = (s.share_price_spread_pct != null)
+                ? UsdaiRenderer._statusPill('Exit spread', 'warn',
+                    s.share_price_spread_pct.toFixed(2) + '%')
+                : '';
+            // Redemption queue DEPTH. Explicitly not a wait time: no epoch or
+            // notice-period getter exists in the implementation, and the commonly
+            // quoted cadence is documented rather than measured. Do not infer one.
+            var queuePill = '';
+            if (s.pending_redemption_shares != null && s.total_shares) {
+                var qPct = s.pending_redemption_shares / s.total_shares * 100;
+                queuePill = UsdaiRenderer._statusPill('Redemption queue',
+                    qPct >= 5 ? 'warn' : 'ok',
+                    Math.round(s.pending_redemption_shares).toLocaleString('en-US') +
+                        ' sh \u00b7 ' + qPct.toFixed(3) + '%');
+            }
+
             badgeRow =
                 '<div class="flex flex-wrap items-center gap-2 mt-3">' +
                     UsdaiRenderer._statusPill('Recon closes', reconState, reconTxt) +
+                    tiePill +
                     UsdaiRenderer._statusPill('Idle buffer', bufState, bufTxt) +
-                '</div>';
+                    spreadPill +
+                    queuePill +
+                '</div>' +
+                ((tieUsd != null) ?
+                '<div class="text-xs text-slate-600 dark:text-slate-300 mt-2">' +
+                    '<span class="font-semibold">Two residuals, two different books.</span> ' +
+                    '\u201cRecon\u201d is loan attribution against the issuer\u2019s figure; ' +
+                    '\u201cClaims tie\u201d is share accounting \u2014 total shares \u00d7 deposit price ' +
+                    'against total assets, closing to <span class="font-mono">' +
+                    UsdaiRenderer._usdShort(Math.abs(tieUsd)) + '</span> on <span class="font-mono">' +
+                    UsdaiRenderer._usdShort(s.total_assets_usd) + '</span>. A drift in the first is not ' +
+                    'evidence the share ledger is wrong.' +
+                '</div>' : '') +
+                ((s.pending_redemption_shares != null) ?
+                '<div class="text-xs text-slate-500 mt-1">' +
+                    'Queue figure is <em>depth</em>, not wait time \u2014 no epoch or notice-period ' +
+                    'getter exists on the implementation, so the cadence is not measurable from chain.' +
+                '</div>' : '');
         }
 
         return '<div class="panel">' +
