@@ -1147,6 +1147,72 @@ var UsdaiRenderer = {
             '</tr>';
         }
 
+        // ---- Two authority layers, not one. ----
+        // The panel used to describe governance.model — "48h OZ TimelockController
+        // controlled by a 3-of-3 Safe" — which is true and is entirely about
+        // UPGRADES. Minting does not pass through that timelock. OPS_SAFE holds
+        // DEFAULT_ADMIN_ROLE on USDai (governance.ops_safe_holds_usdai_admin), and
+        // under OZ AccessControl DEFAULT_ADMIN administers every other role, so it
+        // can grant mint authority in a single transaction with no delay.
+        //
+        // That boolean was already published and already rendered here, as a plain
+        // grey row reading "holds DEFAULT_ADMIN_ROLE". Nothing was hidden; the
+        // consequence was never stated. Both layers now appear side by side with
+        // their delays, because a single "48h" figure next to a 3-of-3 Safe reads
+        // as though every privileged action waits 48 hours. One does not.
+        //
+        // Nothing here is derived from off-feed reads: the delay comes from
+        // min_delay_seconds, the veto point from gov_safe_roles, the mint capability
+        // from ops_safe_holds_usdai_admin. The specific mint role and the OFT
+        // adapter that also holds it are riskAnalyst on-chain findings measured on
+        // one chain, and are deliberately NOT hardcoded here.
+        var holdsAdmin = (slug === 'susdai')
+            ? gov.ops_safe_holds_susdai_admin
+            : gov.ops_safe_holds_usdai_admin;
+        var roles = gov.gov_safe_roles || {};
+        var noIndependentVeto = (roles.canceller === true && roles.proposer === true);
+
+        var layerRows =
+            '<tr>' +
+                '<td class="font-medium">Upgrades</td>' +
+                '<td>' + UsdaiRenderer._statusPill(delayTxt + ' delay', 'ok') + '</td>' +
+                '<td class="text-xs text-slate-600 dark:text-slate-300">' +
+                    thresholdTxt + ' Safe proposes and executes' +
+                    (noIndependentVeto
+                        ? ' \u00b7 <span class="text-amber-700 dark:text-amber-300">canceller is the same Safe \u2014 no independent veto</span>'
+                        : '') +
+                '</td>' +
+            '</tr>';
+        if (holdsAdmin === true) {
+            layerRows +=
+                '<tr>' +
+                    // On USDai the mint gate itself was identified on-chain, so the
+                    // row can name minting. On sUSDai the feed supports only the
+                    // general capability — DEFAULT_ADMIN grants roles with no delay —
+                    // and shares are deposit-driven, so naming it "Minting" there
+                    // would apply a USDai finding to a contract it was not measured on.
+                    '<td class="font-medium">' +
+                        (slug === 'susdai' ? 'Role grants' : 'Minting') + '</td>' +
+                    '<td>' + UsdaiRenderer._statusPill('NO DELAY', 'critical') + '</td>' +
+                    '<td class="text-xs text-slate-600 dark:text-slate-300">' +
+                        'Ops Safe holds <span class="font-mono">DEFAULT_ADMIN_ROLE</span>, which administers ' +
+                        'every other role \u2014 ' +
+                        (slug === 'susdai'
+                            ? 'any role can be granted in one transaction. '
+                            : 'mint authority can be granted in one transaction. ') +
+                        '<span class="text-amber-700 dark:text-amber-300">Does not pass through the timelock.</span>' +
+                    '</td>' +
+                '</tr>';
+        }
+        var layerTable =
+            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Authority by action</div>' +
+            '<div class="data-table-scroll mb-4">' +
+                '<table class="data-table">' +
+                    '<thead><tr><th>Action</th><th>Delay</th><th>Who / how</th></tr></thead>' +
+                    '<tbody>' + layerRows + '</tbody>' +
+                '</table>' +
+            '</div>';
+
         var rows = '';
         rows += row('Proxy implementation', UsdaiRenderer._addrCell(uImpl), UsdaiRenderer._addrCell(sImpl));
         rows += row('Proxy admin', UsdaiRenderer._addrCell(uAdmin), UsdaiRenderer._addrCell(sAdmin));
@@ -1162,13 +1228,35 @@ var UsdaiRenderer = {
                 '<span class="text-xs text-slate-500">proposer · executor · canceller on the timelock</span>');
         }
         if (gov.ops_safe) {
+            // "same signer set" was asserted here with nothing in the feed to
+            // support it: gov_safe_owners is published, ops_safe owners are not.
+            // It happens to be true per riskAnalyst's getOwners() reads, but the
+            // renderer cannot know that — state it only if the feed ever says so.
+            var sameSet = (gov.gov_ops_owner_sets_identical === true);
             rows += row('Operational admin',
                 UsdaiRenderer._addrCell(gov.ops_safe),
-                '<span class="text-xs text-slate-500">holds DEFAULT_ADMIN_ROLE (same signer set)</span>');
+                '<span class="text-xs text-slate-500">holds DEFAULT_ADMIN_ROLE' +
+                    (sameSet ? ' \u00b7 identical owner set to the Gov Safe'
+                             : ' \u00b7 owner set not published in this feed') + '</span>');
         }
 
         // Pending-upgrade (CallScheduled) watch.
+        //
+        // SCOPE. This scan reads CallScheduled on the timelock, so it sees upgrades
+        // and nothing else. A mint does not pass through the timelock and will never
+        // appear here, and the published report points readers at this watch for
+        // advance warning. An unscoped watch is worse than no watch: "No pending
+        // upgrades" in green reads as "nothing is happening" when it only means
+        // "no upgrade is queued". Say what it does not cover, next to the result.
         var cs = gov.call_scheduled || {};
+        var watchScope =
+            '<div class="text-xs text-slate-500 mt-2">' +
+                'Scope: scheduled <em>upgrades</em> only' +
+                ((holdsAdmin === true)
+                    ? ' \u2014 ' + (slug === 'susdai' ? 'a role grant' : 'a mint') +
+                      ' does not pass through the timelock and will not appear here.'
+                    : '.') +
+            '</div>';
         var watch;
         if (Array.isArray(cs.pending_ops) && cs.pending_ops.length > 0) {
             var lines = cs.pending_ops.map(function(op) {
@@ -1202,14 +1290,23 @@ var UsdaiRenderer = {
                 '</div>';
         }
 
-        // Green strength banner — the inverse of a single-EOA red banner.
+        // Banner scoped to UPGRADES. It previously read "Governance is a relative
+        // strength" and promised an exit window, which generalises a property of one
+        // authority layer to all of them. The timelock is still a genuine strength
+        // for what it covers — the claim is narrowed, not withdrawn — but a mint
+        // needs no delay, so "exit window" cannot be stated unqualified.
         var banner =
             '<div class="risk-flag mt-3" style="background:#ecfdf5;color:#065f46;border-left:4px solid #10b981;">' +
-                '<strong>Governance is a relative strength.</strong> Upgrades to both proxies pass through a ' +
+                '<strong>Upgrade governance is a relative strength.</strong> Upgrades to both proxies pass through a ' +
                 delayTxt + ' OZ TimelockController controlled by a ' + thresholdTxt + ' Safe — there is no single ' +
                 'admin EOA. A malicious or buggy upgrade is visible on-chain for ~' + delayTxt + ' before it can land, ' +
-                'giving holders an exit window. (The residual is that admin actions are still possible at all: the ' +
-                'reserve/loan contracts are upgradeable — the timelock bounds the surprise, it does not remove the power.)' +
+                'giving holders an exit window for <em>that</em> class of change. (The residual is that admin actions ' +
+                'are still possible at all: the reserve/loan contracts are upgradeable — the timelock bounds the ' +
+                'surprise, it does not remove the power.)' +
+                ((holdsAdmin === true)
+                    ? ' <strong>This does not extend to ' + (slug === 'susdai' ? 'role grants' : 'minting') +
+                      '</strong> \u2014 see Authority by action above; that path carries no delay and no exit window.'
+                    : '') +
             '</div>';
 
         var auditLine =
@@ -1220,6 +1317,7 @@ var UsdaiRenderer = {
 
         return '<div class="panel">' +
             '<div class="panel-title">Governance &amp; Trust</div>' +
+            layerTable +
             '<div class="data-table-scroll">' +
                 '<table class="data-table">' +
                     '<thead><tr><th>Component</th><th>USDai</th><th>sUSDai</th></tr></thead>' +
@@ -1227,6 +1325,7 @@ var UsdaiRenderer = {
                 '</table>' +
             '</div>' +
             watch +
+            watchScope +
             banner +
             auditLine +
             (!fam ? '<div class="text-xs text-slate-400 italic mt-2">Live timelock / multisig details load from the family snapshot — currently unavailable; showing per-asset proxy facts only.</div>' : '') +
