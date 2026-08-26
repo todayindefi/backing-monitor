@@ -79,6 +79,15 @@ var UsdaiRenderer = {
             'style="background:' + color + '"></span>';
     },
 
+    // True when the feed itself declares the coverage denominator is Arbitrum-only.
+    // Keyed off the feed's own comment so every caveat downstream removes itself
+    // the moment the analyzer fixes the basis — a caveat must not outlive its cause.
+    _arbitrumOnlyBasis: function(specific) {
+        return !!(specific && specific.peg_leg &&
+                  typeof specific.peg_leg.comment === 'string' &&
+                  /arbitrum-only denominator/i.test(specific.peg_leg.comment));
+    },
+
     _statusPill: function(label, state, extra) {
         var bg, fg;
         if (state === 'ok')            { bg = 'bg-green-100'; fg = 'text-green-800'; }
@@ -414,8 +423,7 @@ var UsdaiRenderer = {
             // instead, from the feed's own declaration, and let the number stand as
             // what it is. Remove this once the feed publishes supply_by_chain or a
             // summed denominator.
-            var basisNote = (specific.peg_leg && typeof specific.peg_leg.comment === 'string' &&
-                             /arbitrum-only denominator/i.test(specific.peg_leg.comment));
+            var basisNote = UsdaiRenderer._arbitrumOnlyBasis(specific);
 
             metricsRow =
                 '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
@@ -527,6 +535,7 @@ var UsdaiRenderer = {
     // §2u USDai Coverage (USDai only) — the marquee panel
     // ============================================================
     _renderUsdaiCoverage: function(specific, s) {
+        var arbOnly = UsdaiRenderer._arbitrumOnlyBasis(specific);
         var cov = s.coverage_ratio;
         var covState = UsdaiRenderer._coverageState(cov);
         var covCls = UsdaiRenderer._stateTextCls(covState);
@@ -541,7 +550,8 @@ var UsdaiRenderer = {
             '<div class="mt-4 space-y-3">' +
                 '<div>' +
                     '<div class="flex justify-between text-xs text-slate-500 mb-1">' +
-                        '<span>USDai supply (the claim)</span>' +
+                        '<span>USDai supply (the claim)' +
+                            (arbOnly ? ' \u2014 <strong>Arbitrum only</strong>' : '') + '</span>' +
                         '<span class="font-mono">' + CommonRenderer.formatCurrencyExact(supply) + '</span>' +
                     '</div>' +
                     '<div class="pct-bar-container" style="height:1.5rem;">' +
@@ -565,9 +575,16 @@ var UsdaiRenderer = {
                 '<div class="text-4xl font-bold ' + covCls + ' leading-none mt-1">' +
                     (covPct != null ? covPct.toFixed(2) + '%' : '—') +
                 '</div>' +
-                '<div class="mt-2">' + UsdaiRenderer._statusPill(
-                    covState === 'ok' ? 'Over-collateralized' : covState === 'warn' ? 'Thin' : 'Under', covState) + '</div>' +
-                '<div class="text-xs text-slate-400 mt-2">PYUSD reserve ÷ USDai supply</div>' +
+                // On an Arbitrum-only denominator "Over-collateralized" is a claim about
+                // the basis, not about the token. Neither green (over-collateralized) nor
+                // amber (thin) is established, so say what IS known — the basis — in a
+                // neutral pill. Absence of a verified surplus is not evidence of a deficit.
+                '<div class="mt-2">' + (arbOnly
+                    ? UsdaiRenderer._statusPill('Arbitrum-basis only', 'unknown')
+                    : UsdaiRenderer._statusPill(
+                        covState === 'ok' ? 'Over-collateralized' : covState === 'warn' ? 'Thin' : 'Under', covState)) + '</div>' +
+                '<div class="text-xs text-slate-400 mt-2">PYUSD reserve \u00f7 ' +
+                    (arbOnly ? 'Arbitrum ' : '') + 'USDai supply</div>' +
             '</div>';
 
         var grid =
@@ -580,6 +597,18 @@ var UsdaiRenderer = {
         var apiRes = s.api_stablecoin_reserves_usd;
         var div = s.api_divergence_pct;
         var divState = UsdaiRenderer._divergenceState(div);
+        var basisCaveat = arbOnly ?
+            '<div class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 ' +
+                'border border-amber-200 dark:border-amber-800 rounded p-2 mt-4">' +
+                '<span class="font-semibold">The denominator is Arbitrum supply, the reserve is not.</span> ' +
+                'Per this feed\u2019s own note the ratio is PYUSD reserve \u00f7 <em>Arbitrum</em> totalSupply, ' +
+                'while the same reserve backs USDai minted on other chains. Supply on those chains is ' +
+                'inside what the reserve covers but outside what it is divided by, so any excess shown ' +
+                'here is a property of the basis rather than measured headroom. The two on-chain reads ' +
+                'and the api.usd.ai cross-check below are unaffected \u2014 it is the denominator\u2019s ' +
+                'scope that is narrow, not the measurement.' +
+            '</div>' : '';
+
         var crossCheck = (apiRes != null) ?
             '<div class="mt-4 flex flex-wrap items-center gap-2 text-xs">' +
                 '<span class="text-slate-500">Cross-check (api.usd.ai):</span>' +
@@ -607,6 +636,7 @@ var UsdaiRenderer = {
             '</div>' +
             '<div style="margin-bottom:0.5rem;"></div>' +
             grid +
+            basisCaveat +
             crossCheck +
             verifyBlock +
             methodology +
