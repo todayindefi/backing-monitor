@@ -401,14 +401,33 @@ var UsdaiRenderer = {
             var pegCls   = UsdaiRenderer._pegPctClass(pegState);
             var buffer = (s.pyusd_reserve_usd != null && s.supply_usd != null) ? (s.pyusd_reserve_usd - s.supply_usd) : null;
 
+            // BASIS WARNING. The feed's own comment on asset_specific.peg_leg reads
+            // "Arbitrum-only denominator": coverage is PYUSD reserve over ARBITRUM
+            // totalSupply, while the reserve backs supply on every chain. So the
+            // implied buffer is not a cushion — it is the supply on the chains the
+            // denominator leaves out, counted on one side of the ratio and not the
+            // other. Rendering it as a green "+" reads as spare capacity.
+            //
+            // The payload carries no per-chain supply, so a corrected ratio cannot
+            // be computed here and is NOT invented — hardcoding the off-chain total
+            // would be a constant that goes stale on the next mint. State the basis
+            // instead, from the feed's own declaration, and let the number stand as
+            // what it is. Remove this once the feed publishes supply_by_chain or a
+            // summed denominator.
+            var basisNote = (specific.peg_leg && typeof specific.peg_leg.comment === 'string' &&
+                             /arbitrum-only denominator/i.test(specific.peg_leg.comment));
+
             metricsRow =
                 '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Supply</div>' +
-                        '<div class="text-lg font-bold text-slate-800">' + CommonRenderer.formatCurrency(s.supply_usd) + '</div></div>' +
+                        '<div class="text-lg font-bold text-slate-800">' + CommonRenderer.formatCurrency(s.supply_usd) + '</div>' +
+                        (basisNote ? '<div class="text-xs text-slate-500 mt-0.5">Arbitrum only</div>' : '') +
+                    '</div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Coverage</div>' +
                         '<div class="text-lg font-bold ' + covCls + '">' + covTxt + '</div>' +
                         (buffer != null ?
-                            '<div class="text-xs text-slate-500 mt-0.5">Buffer: <span class="font-mono text-green-600">+' +
+                            '<div class="text-xs text-slate-500 mt-0.5">Implied: <span class="font-mono ' +
+                                (basisNote ? 'text-amber-700 dark:text-amber-300' : 'text-green-600') + '">+' +
                                 UsdaiRenderer._usdShort(buffer) + '</span></div>' : '') +
                     '</div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Peg vs $1</div>' +
@@ -428,7 +447,19 @@ var UsdaiRenderer = {
                 '<div class="flex flex-wrap items-center gap-2 mt-3">' +
                     UsdaiRenderer._onChainVerifiableBadge(true) +
                     UsdaiRenderer._statusPill('baseToken = PYUSD' + (baseOk ? ' ✓' : ''), baseOk ? 'ok' : 'warn') +
-                '</div>';
+                '</div>' +
+                (basisNote ?
+                '<div class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 ' +
+                    'border border-amber-200 dark:border-amber-800 rounded p-2 mt-3">' +
+                    '<span class="font-semibold">Coverage denominator is Arbitrum-only.</span> ' +
+                    'Per this feed\u2019s own note, coverage is the PYUSD reserve over <em>Arbitrum</em> ' +
+                    'totalSupply \u2014 but the same reserve backs USDai minted on other chains too. ' +
+                    'The implied surplus above is therefore not established headroom: supply on the ' +
+                    'excluded chains sits in the numerator\u2019s backing while being left out of the ' +
+                    'denominator. Treat coverage above 100% here as a property of the basis until the ' +
+                    'feed publishes per-chain supply. The two on-chain reads themselves are sound \u2014 ' +
+                    'it is the denominator\u2019s scope, not the measurement, that is narrow.' +
+                '</div>' : '');
         } else {
             // sUSDai
             headerLeft =
