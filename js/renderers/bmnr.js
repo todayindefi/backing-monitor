@@ -64,6 +64,47 @@ var BMNRRenderer = {
         return 'unknown';
     },
 
+    _esc: function (v) {
+        if (v == null) return '';
+        return String(v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    },
+
+    // NAV here is struck on the ETH price stamped into the last 8-K, against the
+    // ETH count from that same filing. The analyzer says so in mnav.basis_caveat
+    // and treasury.eth_value_basis; nothing rendered it, so a premium/discount
+    // call sat on the page with no indication of what it was marked against.
+    //
+    // The price gap is shown because both numbers are in the payload. A corrected
+    // mNAV is NOT computed: the count is frozen at the same filing, so re-marking
+    // price alone would produce a third number that is not right either — which is
+    // exactly what the analyzer's caveat says. Show the basis, not a substitute.
+    _renderNavBasisNote: function (data) {
+        var t = data.treasury || {};
+        var m = data.mnav || {};
+        var live = data.live || {};
+        if (!m.basis_caveat && !t.eth_value_basis) return '';
+
+        var stamped = t.stamped_eth_price_usd;
+        var spot = live.eth_price_usd;
+        var gap = '';
+        if (stamped && spot) {
+            var pct = (spot - stamped) / stamped * 100;
+            gap = ' ETH is marked at <span class="font-mono font-semibold">' +
+                BMNRRenderer._fmtMoney(stamped, 2) + '</span> from that filing against a live ' +
+                '<span class="font-mono font-semibold">' + BMNRRenderer._fmtMoney(spot, 2) + '</span> \u2014 ' +
+                '<span class="font-mono font-semibold">' + (pct >= 0 ? '+' : '\u2212') +
+                Math.abs(pct).toFixed(1) + '%</span>.';
+        }
+        return '<div class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 ' +
+            'border border-amber-200 dark:border-amber-800 rounded p-2 mt-3">' +
+            '<span class="font-semibold">Marked at a stamped price, not a live one.</span>' +
+            gap +
+            (m.basis_caveat ? ' ' + BMNRRenderer._esc(m.basis_caveat) + '.' : '') +
+            ' No re-marked ratio is shown here: the ETH count is frozen at the same filing, so ' +
+            'repricing alone would not give a correct figure either.' +
+        '</div>';
+    },
+
     _mnavBandClass: function (regime) {
         var r = BMNRRenderer._normalizeRegime(regime);
         if (r === 'premium')  return 'border-green-300 bg-green-50 text-green-800 dark:bg-green-900/20 dark:text-green-200';
@@ -200,6 +241,15 @@ var BMNRRenderer = {
         if (f.treasury_8k_age_days != null && f.treasury_8k_age_days > 14) {
             warnings.push('Treasury composition is over 2 weeks stale (' + f.treasury_8k_age_days + 'd since last 8-K refresh).');
         }
+        // The analyzer writes the CONSEQUENCE of that staleness into
+        // freshness.stale_effect — which NAV figures are struck on the 8-K's own
+        // stamped price rather than the live one. Age alone reads as "slightly
+        // behind"; the effect is that the headline ratio is marked at a price
+        // from months ago. Render the analyzer's own words rather than
+        // paraphrasing, so this cannot drift from what the feed means.
+        if (f.stale_effect) {
+            warnings.push(BMNRRenderer._esc(f.stale_effect) + '.');
+        }
         if (warnings.length === 0) return '';
         return '<div class="risk-flag risk-warning mb-4">' +
             '<strong>Freshness warning.</strong> ' + warnings.join(' ') +
@@ -238,6 +288,9 @@ var BMNRRenderer = {
                     '<div class="text-xs uppercase font-semibold opacity-70">mNAV (ETH-only)</div>' +
                     '<div class="text-3xl font-bold mt-1">' + (mnavEth != null ? mnavEth.toFixed(3) : '—') + '</div>' +
                     '<div class="text-xs font-semibold mt-1">market cap / ETH NAV</div>' +
+                    (mnav.nav_basis_eth_only ?
+                        '<div class="text-xs opacity-80 mt-1 font-mono">' +
+                            BMNRRenderer._esc(mnav.nav_basis_eth_only) + '</div>' : '') +
                 '</div>' +
                 '<div class="rounded-lg border p-4 ' + fullTileCls + '">' +
                     '<div class="text-xs uppercase font-semibold opacity-70">mNAV (full treasury)</div>' +
@@ -255,6 +308,7 @@ var BMNRRenderer = {
                     '</div>' +
                 '</div>' +
             '</div>' +
+            BMNRRenderer._renderNavBasisNote(data) +
             '<div class="mt-4 p-3 rounded border ' + bandCls + '">' +
                 '<div class="text-xs uppercase font-semibold opacity-80 mb-1">Regime · ' + regimeLabel + '</div>' +
                 '<div class="text-sm">' + caption + '</div>' +
