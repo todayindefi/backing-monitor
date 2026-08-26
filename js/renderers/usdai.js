@@ -88,6 +88,11 @@ var UsdaiRenderer = {
                   /arbitrum-only denominator/i.test(specific.peg_leg.comment));
     },
 
+    _esc: function(v) {
+        if (v == null) return '';
+        return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    },
+
     _statusPill: function(label, state, extra) {
         var bg, fg;
         if (state === 'ok')            { bg = 'bg-green-100'; fg = 'text-green-800'; }
@@ -106,11 +111,29 @@ var UsdaiRenderer = {
     },
 
     // coverage_ratio is a ratio (1.0199): green ≥1.00, amber 0.995–1.00, red <0.995.
+    // A reserve-backed 1:1 token sitting at EXACTLY par is not over-collateralized —
+    // it has no buffer at all, and the first dollar of loss is a shortfall. The old
+    // band returned 'ok' for anything >= 1.0, so a true 1.0000 would have rendered a
+    // green "Over-collateralized" pill. That matters here specifically: the current
+    // 1.00548 is an artefact of an Arbitrum-only denominator, and once the analyzer
+    // sums supply across chains the real figure is ~1.0000000. The basis caveat
+    // removes itself at that point, so without this band the fix would REVEAL a green
+    // over-collateralized pill on a token with zero headroom — worse than today.
     _coverageState: function(ratio) {
         if (ratio == null) return 'unknown';
-        if (ratio >= 1.0)   return 'ok';
+        if (ratio >= 1.001) return 'ok';
         if (ratio >= 0.995) return 'warn';
         return 'critical';
+    },
+
+    // Label is separate from state so "at par" can read as its own condition rather
+    // than being flattened into "Thin", which implies a deficit that par is not.
+    _coverageLabel: function(ratio) {
+        if (ratio == null)  return 'Unknown';
+        if (ratio >= 1.001) return 'Over-collateralized';
+        if (ratio >= 1.0)   return 'At par \u2014 no buffer';
+        if (ratio >= 0.995) return 'Thin';
+        return 'Under';
     },
 
     // buffer_ratio is a fraction (0.182): ≥10% ok, 5–10% watch, <5% stress.
@@ -494,7 +517,28 @@ var UsdaiRenderer = {
                         '<div class="text-xs text-slate-500 mt-0.5">' + dWord + '</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
                         '<div class="text-lg">' + UsdaiRenderer._statusPill(pausedLabel, pausedState) + '</div></div>' +
-                '</div>';
+                '</div>' +
+                // The feed publishes share_supply (arbitrum totalSupply, explicitly scoped
+                // by share_supply_scope) alongside total_shares, and NAV is correctly built
+                // on total_shares. But a reader seeing only the Arbitrum number would be
+                // looking at roughly two thirds of the claims on this vault. Surface the
+                // split — this is the same one-chain-denominator shape as USDai's coverage,
+                // one layer up, except here the analyzer already reads the full figure.
+                ((s.total_shares != null && s.share_supply != null && s.total_shares > 0) ?
+                    (function() {
+                        var bridged = s.total_shares - s.share_supply;
+                        var pct = (s.bridged_share_pct != null)
+                            ? s.bridged_share_pct : (bridged / s.total_shares * 100);
+                        return '<div class="text-xs text-slate-600 dark:text-slate-300 bg-slate-50 ' +
+                            'dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded p-2 mt-3">' +
+                            '<span class="font-mono font-semibold">' + pct.toFixed(1) + '%</span> of sUSDai claims ' +
+                            'sit off Arbitrum (<span class="font-mono">' + CommonRenderer.formatCurrency(bridged) +
+                            '</span> of <span class="font-mono">' + CommonRenderer.formatCurrency(s.total_shares) +
+                            '</span> shares). NAV above is computed on <em>all</em> shares' +
+                            (s.share_supply_scope ? ', not the <span class="font-mono">' +
+                                UsdaiRenderer._esc(s.share_supply_scope) + '</span> figure' : '') + '.' +
+                        '</div>';
+                    })() : '');
 
             var reconState = UsdaiRenderer._reconState(s.recon_residual_pct);
             var reconTxt = (s.recon_residual_pct != null) ? (s.recon_residual_pct * 100).toFixed(2) + '%' : '—';
@@ -581,8 +625,7 @@ var UsdaiRenderer = {
                 // neutral pill. Absence of a verified surplus is not evidence of a deficit.
                 '<div class="mt-2">' + (arbOnly
                     ? UsdaiRenderer._statusPill('Arbitrum-basis only', 'unknown')
-                    : UsdaiRenderer._statusPill(
-                        covState === 'ok' ? 'Over-collateralized' : covState === 'warn' ? 'Thin' : 'Under', covState)) + '</div>' +
+                    : UsdaiRenderer._statusPill(UsdaiRenderer._coverageLabel(cov), covState)) + '</div>' +
                 '<div class="text-xs text-slate-400 mt-2">PYUSD reserve \u00f7 ' +
                     (arbOnly ? 'Arbitrum ' : '') + 'USDai supply</div>' +
             '</div>';
