@@ -88,6 +88,17 @@ var UsdaiRenderer = {
                   /arbitrum-only denominator/i.test(specific.peg_leg.comment));
     },
 
+    // Axis section divider for the bespoke panel stream — reuses the common
+    // layer's .axis-head / .axis-num / .axis-title / .axis-sub styling so these
+    // headers match the band above. Same shape as syrupusdc.js / hastra-prime.js.
+    _axisHead: function(num, title, sub) {
+        return '<div class="axis-head">' +
+            '<span class="axis-num">' + num + '</span>' +
+            '<span class="axis-title">' + title + '</span>' +
+            (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
+        '</div>';
+    },
+
     _esc: function(v) {
         if (v == null) return '';
         return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -307,16 +318,45 @@ var UsdaiRenderer = {
         var anc = UsdaiRenderer._anchor;
         var html = '';
 
+        // 5-axis grouping. Nothing is dropped or rewritten — the same panels are
+        // regrouped under numbered axis heads so they read in the order the band
+        // above presents them. The heads render whether or not the analyzer has
+        // emitted the axis blocks yet: they are structure, not ratings, and the
+        // page is more legible with them either way.
+        var head = UsdaiRenderer._axisHead;
+
         html += anc('panel-headline', UsdaiRenderer._renderHeadlineCard(specific, s, slug));
+
         if (slug === 'usdai') {
+            // §1 Peg and §2 Liquidity both live inside the Secondary Market panel
+            // (peg price + deviation, then the slippage ladder). Splitting a working
+            // panel to satisfy the grouping would be a rewrite, not a regroup, so the
+            // head names both and the panel stays whole.
+            html += head(1, 'Peg &amp; secondary liquidity', 'market price vs $1, depth and slippage');
+            html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug));
+
+            html += head(3, 'Backing', 'PYUSD reserve held by the USDai contract');
             html += anc('panel-coverage', UsdaiRenderer._renderUsdaiCoverage(specific, s));
         } else {
+            // sUSDai's §1 is discount-to-NAV, not a peg. It has two NAVs ~0.65%
+            // apart by design with the market between them, so the NAV panel — which
+            // shows deposit, redemption and market together — is the honest §1: a
+            // single deviation number would report construction as deviation.
+            html += head(1, 'NAV band', 'deposit / redemption / market \u2014 a band, not a point');
+            html += anc('panel-nav', UsdaiRenderer._renderSusdaiNav(specific, s));
+
+            html += head(2, 'Liquidity', 'secondary market and the async redemption queue');
+            html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug));
+
+            // No collateral ratio here — sUSDai is a NAV vault and has none. The
+            // backing axis carries the decomposition and the two residual pills.
+            html += head(3, 'Backing', 'asset decomposition \u2014 NAV vault, no collateral ratio');
             html += anc('panel-decomp', UsdaiRenderer._renderSusdaiDecomposition(specific, s));
-            html += anc('panel-nav',    UsdaiRenderer._renderSusdaiNav(specific, s));
         }
-        html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug));
-        html += '<div id="usdai-gov-panel"></div>';      // §5 governance (async, family)
-        html += '<div id="usdai-family-panel"></div>';   // §6 family (async)
+
+        html += head(5, 'Issuer', 'authority by action, upgrade timelock and admin topology');
+        html += '<div id="usdai-gov-panel"></div>';      // governance (async, family)
+        html += '<div id="usdai-family-panel"></div>';   // family (async, below the axes)
 
         container.innerHTML = html;
 
@@ -332,8 +372,43 @@ var UsdaiRenderer = {
     },
 
     _suppressCommonPanels: function(data) {
+        // #summary-cards carries the 5-axis BAND once the analyzer emits the axis
+        // blocks. Hiding it unconditionally would remove the entire point of the
+        // migration the moment PegTracker starts emitting — silently, because the
+        // band would simply never appear and nothing would error. Keep it whenever
+        // the blocks are present; hide it only in the pre-migration state, where it
+        // holds generic stablecoin cards that do not fit these two assets.
+        var hasAxes = (typeof CommonRenderer !== 'undefined' &&
+                       typeof CommonRenderer.hasAxisBlocks === 'function' &&
+                       CommonRenderer.hasAxisBlocks(data));
+        // Set both ways explicitly rather than only hiding. Leaving the visible case
+        // to "don't touch it" makes the band's appearance depend on nothing else
+        // having hidden it first, which is a call-ordering assumption that would
+        // fail quietly the day it stops holding.
         var summaryCards = document.getElementById('summary-cards');
-        if (summaryCards) summaryCards.style.display = 'none';
+        if (summaryCards) summaryCards.style.display = hasAxes ? '' : 'none';
+
+        if (hasAxes) {
+            // Band-only: hide the generic per-axis SECTIONS so they do not duplicate
+            // the bespoke panels, and clear the hidden bodies. Those bodies contain
+            // duplicate-id nodes — notably a #peg-chart canvas from renderAxisSections
+            // — which would shadow a same-named bespoke canvas under getElementById
+            // and bind the chart to a hidden 0x0 element. usdai.js currently names its
+            // only canvas #usdai-nav-chart, so there is no live collision; clearing the
+            // bodies keeps it that way if a §1 chart is ever added.
+            ['section-peg', 'section-liquidity', 'section-backing',
+             'section-dependencies', 'section-issuer'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            ['axis-peg-body', 'axis-liquidity-body',
+             'axis-dependencies-body', 'axis-issuer-body'].forEach(function(id) {
+                var b = document.getElementById(id);
+                if (b) b.innerHTML = '';
+            });
+            var bh = document.getElementById('axis-backing-head');
+            if (bh) bh.innerHTML = '';
+        }
 
         var chartPanel = document.getElementById('chart-panel');
         if (chartPanel) chartPanel.style.display = 'none';
