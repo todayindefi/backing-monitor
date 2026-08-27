@@ -3,7 +3,7 @@
   "asset": "USDe",
   "asset_slug": "usde",
   "chain": "ethereum",
-  "timestamp": "2026-08-27T13:50:42Z",
+  "timestamp": "2026-08-27T15:22:18Z",
   "summary": {
     "total_supply": 4050855616.02,
     "supply_unit": "USD",
@@ -35,9 +35,9 @@
     },
     "redemption_liquidity": {
       "USDe": 0.0,
-      "USDC": 30899970.237,
+      "USDC": 30899991.5,
       "USDT": 30976951.262,
-      "total_usd": 61876921.5
+      "total_usd": 61876942.76
     },
     "backing_source": {
       "llamarisk_fetch_status": "ok",
@@ -71,12 +71,25 @@
       "latest_url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-july-3",
       "latest_lastmod": "2026-07-30T17:43:53.000Z",
       "discovery_status": "ok",
-      "latest_published_age_days": 27.8,
+      "latest_published_age_days": 27.9,
       "age_days": 34.6,
       "age_basis": "embedded_snapshot",
       "drift_status": "current"
     },
-    "history_ref": "usde_backing_history.json"
+    "history_ref": "usde_backing_history.json",
+    "axis_thresholds": {
+      "backing": {
+        "cr_pct": [
+          102,
+          100,
+          99,
+          98
+        ],
+        "basis": "Anchored on this analyzer's own flags: COVERAGE_WARN 1.0 (par) -> 4/5, COVERAGE_CRIT 0.98 -> 2/5, and par + COVERAGE_DRIFT_PP (2.0pp) -> 5/5. A delta-neutral synthetic targets par, not 130%, so the generic scale rates its design state 3/5 'Watch'. A WARN below par can no longer coexist with a 4/5.",
+        "expires": false,
+        "expires_reason": "Par and two flag thresholds; none drifts."
+      }
+    }
   },
   "report_url": "https://tidresearch.com/reports/usde",
   "peg": {
@@ -140,6 +153,8 @@
   },
   "backing": {
     "collateral_ratio": 101.4123,
+    "collateral_ratio_scale": "percent",
+    "collateral_ratio_basis": "Backing / supply INCLUDING the reserve fund (coverage_ratio_with_reserve_fund x 100). The conservative coverage excluding the reserve fund is in backing.secondary and sits lower; the two diverge precisely when the fund is absorbing something. \u26a0\ufe0f USDe is delta-neutral, not overcollateralised: par is the design target, so the generic [130,110,100,90] rates its intended state 'Watch'. Cutoffs are anchored on this analyzer's own COVERAGE_WARN (1.0) and COVERAGE_CRIT (0.98).",
     "total_backing": 4045961286.6,
     "surplus_deficit": -4894329.42,
     "breakdown": [
@@ -194,7 +209,7 @@
     "issuer_score_source": "risk-feed@2026-08-27T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-08-27T01:45:02Z",
-    "issuer_score_age_hours": 12.09,
+    "issuer_score_age_hours": 13.62,
     "attestation_age_days": 34.6
   }
 }

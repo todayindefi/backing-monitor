@@ -3,33 +3,35 @@
   "asset": "OUSD",
   "asset_slug": "ousd",
   "chain": "Ethereum",
-  "timestamp": "2026-08-27T14:35:25Z",
+  "timestamp": "2026-08-27T15:35:18Z",
   "summary": {
     "total_supply": 6212672.07,
-    "total_backing": 5664326.65,
+    "total_backing": 5664343.8,
     "collateral_ratio": 100.37,
+    "collateral_ratio_scale": "percent",
+    "collateral_ratio_basis": "Netted on both sides: (total_backing - OUSD held in Curve AMO pools) / (supply - same). Protocol-minted OUSD in its own pools is neither backing nor a claim. \u26a0\ufe0f backing/total_supply gives ~91% and is NOT the collateral ratio. OUSD is fully reserved 1:1, so 100% is the design target and the informative question is drift below par \u2014 see the analyzer's own thresholds: thin margin under 101%, undercollateralized under 100%.",
     "collateral_ratio_alt": {
       "label": "CR (gross)",
       "value": 100.33,
       "note": "Includes circular protocol-minted OUSD in Curve pools \u2014 for reference only"
     },
-    "surplus_deficit": 20723.98,
-    "defillama_tvl": 5723904.58,
+    "surplus_deficit": 20741.13,
+    "defillama_tvl": 5719342.62,
     "wousd_supply": 1188923.61,
-    "vault_total_value": 6233381.88,
+    "vault_total_value": 6233399.09,
     "circulating_supply": 5643602.67,
     "pol_self_minted": 569069.41
   },
   "backing_breakdown": [
     {
       "label": "Morpho v2",
-      "value": 2962457.55,
+      "value": 2962474.7,
       "pct": 52.3,
       "tags": [],
       "detail": {
         "address": "0x3643cafA6eF3dd7Fcc2ADaD1cabf708075AFFf6e",
         "balances": {
-          "USDC": 2962457.54592
+          "USDC": 2962474.701899
         }
       }
     },
@@ -134,11 +136,24 @@
       "note": "Remaining requires strategy withdrawal (up to 24h for cross-chain)"
     },
     "peg": {
-      "market_price": 0.9997973059463661,
+      "market_price": 0.9998833228299664,
       "theoretical_price": 1.0,
-      "premium_discount_pct": -0.02026940536339339,
+      "premium_discount_pct": -0.011667717003360778,
       "source": "coingecko",
-      "timestamp": "2026-08-27T14:18:22.650242Z"
+      "timestamp": "2026-08-27T15:18:22.684551Z"
+    },
+    "axis_thresholds": {
+      "backing": {
+        "cr_pct": [
+          101.0,
+          100.0,
+          99.5,
+          99.0
+        ],
+        "basis": "Anchored on this analyzer's own flags: thin margin under 101%, undercollateralized under 100%. OUSD is fully reserved 1:1, so par reads 4/5 and the generic scale's 3/5 at 100.37% treats the design target as a warning.",
+        "expires": false,
+        "expires_reason": "Par and policy thresholds do not drift."
+      }
     }
   }
 }
