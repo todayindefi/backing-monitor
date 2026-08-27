@@ -136,6 +136,17 @@ for slug in sorted(slugs):
                              f'(cr {cr_v}) with no cr_pct override or chart_bands — '
                              f'confirm the producer band reached this copy')
 
+    # 4d. axis_thresholds at the wrong level.
+    #
+    #     The schema location is asset_specific.axis_thresholds; common.js reads
+    #     only there. A top-level copy is a band the renderer cannot see, and the
+    #     rating silently falls to the generic cutoffs in the flattering
+    #     direction. backingRating now refuses to rate in this case, so the page
+    #     shows an unrated axis — this names why.
+    if d.get('axis_thresholds') and not (d.get('asset_specific') or {}).get('axis_thresholds'):
+        fails.append(f'{slug}: axis_thresholds is at TOP LEVEL; common.js reads '
+                     f'asset_specific.axis_thresholds — the override is unreachable')
+
     # 5. Internal dependency links must point at registered assets.
     for side in ('upstream', 'downstream'):
         for dep in ((d.get('dependencies') or {}).get(side) or []):

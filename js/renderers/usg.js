@@ -70,11 +70,34 @@ var USGRenderer = {
                     'which cannot exceed 100%. Not shown rather than shown wrong.' +
                 '</div></div>';
         }
+        // ⚠️ The caption must describe the formula that PRODUCES this number, and
+        // the producer has already changed that formula once. When the field was
+        // total_backing/real_supply the caption "external collateral / supply"
+        // was right; recomputed as cdp_debt/real_supply it is not — 100.0 under
+        // "external collateral / supply" is a correct number beneath a formula
+        // that yields 131.64. So the basis is identified by checking which
+        // arithmetic reproduces the published value, rather than asserted.
+        var basis = USGRenderer._shareBasis(s, v);
         return '<div class="summary-card">' +
             '<div class="card-label">Collateral-backed share of supply</div>' +
             '<div class="card-value">' + CommonRenderer.formatPercent(v, 1) + '</div>' +
-            '<div class="text-xs text-slate-400 mt-1">external collateral \u00f7 supply</div>' +
+            '<div class="text-xs ' + (basis ? 'text-slate-400' : 'text-amber-700 dark:text-amber-300') +
+                ' mt-1">' + (basis || 'basis not declared and no known formula reproduces this value') +
+            '</div>' +
         '</div>';
+    },
+
+    // Identify the basis by reproduction, not by assumption. Returns null when
+    // nothing matches — an undeclared basis is stated as such rather than
+    // captioned with whichever formula was true last time.
+    _shareBasis: function(s, v) {
+        if (v == null) return null;
+        var near = function(a, b) { return a != null && b != null && b !== 0 &&
+                                           Math.abs(a - (b * 100)) < 0.05; };
+        if (near(v, s.cdp_debt / s.real_supply))       return 'CDP debt \u00f7 real supply';
+        if (near(v, s.total_backing / s.real_supply))  return 'external collateral \u00f7 real supply';
+        if (near(v, s.total_collateral_value / s.real_supply)) return 'collateral value \u00f7 real supply';
+        return null;
     },
 
 

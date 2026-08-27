@@ -692,8 +692,25 @@ const CommonRenderer = {
         // Explicit per-asset cr_pct override (finer 5/4/3/2/1) wins over chart_bands' binary
         // 5/3/1 — credit vaults (PCR ~100 by construction) need the finer bands so PCR 100 reads
         // Healthy 4, not a perfect 5 (chart_bands stays for the CR-chart rendering).
-        var bOv = data.asset_specific && data.asset_specific.axis_thresholds
-                  && data.asset_specific.axis_thresholds.backing;
+        // ⚠️ Misplaced override: refuse rather than rate on the generic band.
+        //
+        // The schema location is asset_specific.axis_thresholds. A producer that
+        // emits axis_thresholds at TOP LEVEL has published a band this reader
+        // cannot see, and the failure is silent and flattering — usg's 131.64
+        // rates 5/5 HEALTHY on the generic [130,110,100,90] and 3/5 WATCH on its
+        // own [158,145,130,120], which is anchored on a measured liquidation
+        // floor. Rating on defaults while a real band sits unread would publish
+        // the reassuring answer.
+        //
+        // Deliberately NOT reading the top-level copy. Accepting an undefined
+        // location lets the renderer define the contract by what it tolerates,
+        // which is how a schema rots quietly; and check_feeds.py already surfaces
+        // the misplacement. An unrated axis is honest and visibly wrong-looking,
+        // which is what gets it fixed.
+        var aspThr = data.asset_specific && data.asset_specific.axis_thresholds;
+        if (!aspThr && data.axis_thresholds) return null;
+
+        var bOv = aspThr && aspThr.backing;
         if (bOv && Array.isArray(bOv.cr_pct)) return this._rate(cr, bOv.cr_pct, 'high');
         var bands = data.asset_specific && data.asset_specific.chart_bands;
         if (bands) {
