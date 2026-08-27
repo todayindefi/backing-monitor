@@ -22,11 +22,21 @@
  *     prints ~$0.958 while the real peg is ~$0.9998. When gated we render an
  *     "indicative" tile and NEVER a red CRITICAL off price, and drop/grey thin
  *     quotes.
- *   - Coverage 99.98% is USDC's oracle mark ($0.99979), not a shortfall — the
+ *   - Coverage just under 100% is USDC's oracle mark, not a shortfall — the
  *     stablecoin-mark band (>=99.5%) renders at-par, not alarmed.
- *   - Operator table: 27 of 42 operators carry $0 (health renders ~1e50) or
- *     dust debt (one is health 0.12 on $679). We apply a $10k min-debt floor
- *     and surface that the Bedrock operator is ~45% of borrows.
+ *     (Illustration as of 2026-05: 99.98% against a $0.99979 mark.)
+ *   - Operator table: most operators carry $0 (health renders ~1e50) or dust
+ *     debt. We apply a $10k min-debt floor and surface the Bedrock operator's
+ *     share of borrows. (Illustration as of 2026-05: 27 of 42 operators, one at
+ *     health 0.12 on $679, Bedrock ~45%. Live counts move — operator_count and
+ *     operator_material_count carry them; on 2026-08-27 it was 28 of 43.)
+ *
+ *   ⚠️ These are dated ILLUSTRATIONS of a pattern, not live values, and they are
+ *   stamped rather than refreshed. Contrast usg.js, whose header is kept
+ *   HISTORICAL because a producer repurposed a field in place — that text is
+ *   evidence and must not be rewritten. Drift and repurposing look alike from
+ *   inside one repo and have opposite fixes: date the drift, preserve the
+ *   repurposing.
  *
  * Constants are CAP_-prefixed and charts live on window._cap* per the renderer
  * global-scope convention (bare names collide across renderer files).
