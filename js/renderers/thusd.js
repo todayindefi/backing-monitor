@@ -227,9 +227,49 @@ var ThusdRenderer = {
     },
 
     _suppressCommonPanels: function(data) {
-        // Hide default summary-card strip — §1 Headline below is richer.
+        // ⚠️ Two things here are gated on the axis blocks, and both were wrong
+        // while thusd had none — which is exactly when they were written and
+        // "verified". The blocks landed afterwards and turned both on.
+        var hasAxes = (typeof CommonRenderer !== 'undefined' &&
+                       typeof CommonRenderer.hasAxisBlocks === 'function' &&
+                       CommonRenderer.hasAxisBlocks(data));
+
+        // #summary-cards holds the generic card strip in legacy mode and the
+        // 5-AXIS BAND once blocks exist. Hiding it unconditionally removed the
+        // band the moment PegTracker emitted them — silently, since nothing
+        // errors. Set both ways rather than only hiding, so visibility does not
+        // depend on nothing else having hidden it first.
         var summaryCards = document.getElementById('summary-cards');
-        if (summaryCards) summaryCards.style.display = 'none';
+        if (summaryCards) summaryCards.style.display = hasAxes ? '' : 'none';
+
+        // ⚠️ The generic per-axis SECTIONS were never suppressed, so once blocks
+        // arrived the page rendered TWO complete sets of headings: 1-5 from
+        // renderAxisSections, then 1-2/3/4/5 from the bespoke stream below. The
+        // generic #section-backing was a heading with 47 characters and no body,
+        // sitting directly above the bespoke backing panel that has the content —
+        // "the first 3 backing section is empty but the 2nd 3 backing is filled".
+        //
+        // Every other tier-3 renderer (usdai, saturn, syrupusdc, hastra-prime)
+        // already does this; thusd was the only one missing it.
+        if (hasAxes) {
+            ['section-peg', 'section-liquidity', 'section-backing',
+             'section-dependencies', 'section-issuer'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            // Clear the hidden bodies too: they contain duplicate-id nodes,
+            // notably a #peg-chart canvas, which would shadow a same-named
+            // bespoke canvas under getElementById. thusd's own canvases are
+            // namespaced (thusd-coverage-chart, thusd-yield-chart) so there is no
+            // live collision — clearing keeps it that way if one is ever added.
+            ['axis-peg-body', 'axis-liquidity-body',
+             'axis-dependencies-body', 'axis-issuer-body'].forEach(function(id) {
+                var b = document.getElementById(id);
+                if (b) b.innerHTML = '';
+            });
+            var bh = document.getElementById('axis-backing-head');
+            if (bh) bh.innerHTML = '';
+        }
 
         // Hide the empty breakdown panel and pie chart.
         var bd = document.getElementById('breakdown-table');
