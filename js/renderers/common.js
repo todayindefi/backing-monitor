@@ -1188,14 +1188,93 @@ const CommonRenderer = {
     // pure no-op that cannot regress a page lacking the fields. Same safe/additive,
     // gated-on-data pattern as the syrup credit-vault primitives (liquidityRating
     // band_score, free_liquidity_pct, backingRating cr_pct).
+    // ⚠️ backing.alternatives and backing.volatile_bucket — a SCHEMA-LEVEL
+    // convention, published and unread. The point of `alternatives` is that the
+    // rated headline is one of several legitimate readings, so publishing the
+    // headline alone reproduces exactly the ambiguity the field exists to close.
+    // usdm carries it today; usg, apxusd and susdat have the same shape.
+    //
+    // Deliberately key-agnostic. The producer renamed drawdown_to_gross_100_pct
+    // to drawdown_to_par_pct between two copies of the same file, so anything
+    // that hardcoded a key would have silently stopped rendering. Any *_pct is
+    // shown as a percent, any *_usd as currency, note as prose, *_basis as a
+    // tooltip on its sibling.
+    _humanizeKey(k) {
+        return String(k).replace(/_pct$|_usd$/, '').replace(/_/g, ' ')
+            .replace(/\bpct\b/g, '%');
+    },
+
+    _renderAlternativesHtml(b) {
+        var alt = b.alternatives;
+        var vol = b.volatile_bucket;
+        if ((!alt || typeof alt !== 'object') && (!vol || typeof vol !== 'object')) return '';
+        var self = this;
+
+        function rowsFor(obj) {
+            return Object.keys(obj).filter(function (k) {
+                return k !== 'note' && !/_basis$/.test(k) && typeof obj[k] === 'number';
+            }).map(function (k) {
+                var v = obj[k];
+                // Explicit about what it can format. An unrecognised key renders
+                // its bare number rather than being silently given a unit.
+                var val = /_usd$/.test(k) ? self.formatCurrencyExact(v)
+                        : /_pct$/.test(k) ? self.formatPercent(v, 2)
+                        : String(v) + ' <span class="text-slate-400 text-xs">(unit not declared)</span>';
+                var basis = obj[k.replace(/_pct$|_usd$/, '') + '_basis'] || obj[k + '_basis'];
+                return '<tr>' +
+                    '<td class="text-slate-600 dark:text-slate-300">' + self._escapeAttr(self._humanizeKey(k)) + '</td>' +
+                    '<td class="text-right font-mono"' + (basis ? ' title="' + self._escapeAttr(basis) + '"' : '') +
+                        '>' + val + (basis ? ' \u24d8' : '') + '</td>' +
+                '</tr>';
+            }).join('');
+        }
+
+        var head = '';
+        if (vol && typeof vol === 'object') {
+            // The drawdown figure is the one number here that does not depend on
+            // choosing a mark, so it leads.
+            var ddKey = Object.keys(vol).filter(function (k) { return /^drawdown_/.test(k) && /_pct$/.test(k); })[0];
+            var dd = ddKey ? vol[ddKey] : null;
+            head = '<div class="text-sm text-slate-700 dark:text-slate-200 mb-2">' +
+                (dd != null ? '<span class="font-semibold">Par survives a ' + this.formatPercent(dd, 1) +
+                    ' drawdown</span> in the volatile bucket' : 'Volatile bucket') +
+                (vol.pct_of_reserve != null ? ', which is <span class="font-mono">' +
+                    this.formatPercent(vol.pct_of_reserve, 1) + '</span> of the reserve' : '') +
+                (vol.composition ? ' \u2014 ' + this._escapeAttr(vol.composition) : '') + '.' +
+            '</div>';
+        }
+
+        // Table carries the ALTERNATIVE RATIOS only. The volatile bucket is
+        // already stated in the sentence above, and putting its fields through
+        // the same formatter produced "usd = 4862481.42" and "% of reserve =
+        // 24.09" — my suffix heuristic reads _usd/_pct endings and these are
+        // named `usd` and `pct_of_reserve`. Rather than widen a unit guess based
+        // on key names (the thing this repo keeps getting wrong), scope the table
+        // to the block that is actually a list of ratios.
+        var body = alt ? rowsFor(alt) : '';
+        var notes = [alt && alt.note, vol && vol.note].filter(Boolean).map(function (n) {
+            return '<div class="text-xs text-slate-500 mt-2">' + self._escapeAttr(n) + '</div>';
+        }).join('');
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Other readings of this ratio</div>' +
+            '<p class="text-sm text-slate-500 mb-3">The rated figure is one of several defensible ' +
+                'denominators. These are published so it can be audited against the ones not chosen.</p>' +
+            head +
+            (body ? '<div class="data-table-scroll"><table class="data-table"><tbody>' + body + '</tbody></table></div>' : '') +
+            notes +
+        '</div>';
+    },
+
     _renderBackingComposition(data) {
         var slot = document.getElementById('backing-extra-panels');
         if (!slot) return;
         var b = data.backing || {};
+        var altHtml = this._renderAlternativesHtml(b);
         var raw = b.usdc_raw_held, den = b.usdc_denominated;
         var hasUsdcSplit = (raw && raw.value != null) || (den && den.value != null);
         var stars = Array.isArray(b.stars) ? b.stars : [];
-        if (!hasUsdcSplit && !stars.length) { slot.innerHTML = ''; return; }
+        if (!hasUsdcSplit && !stars.length) { slot.innerHTML = altHtml; return; }
 
         var fmt = this.formatCurrencyExact.bind(this);
         var pct1 = function(v) { return v != null ? CommonRenderer.formatPercent(v, 1) : '—'; };
