@@ -998,7 +998,22 @@ const CommonRenderer = {
     _backingValueHtml(data) {
         var cr = (data.backing && data.backing.collateral_ratio != null)
             ? data.backing.collateral_ratio : (data.summary && data.summary.collateral_ratio);
-        if (cr == null) return '—';
+        // No CR, but a measured partial coverage figure — show what IS known.
+        // Uses on_chain_coverage_display_pct, which the producer publishes
+        // already-scaled beside on_chain_coverage_pct_is_fraction; the raw field
+        // is a FRACTION and rendering it directly would print 0.43%.
+        if (cr == null) {
+            var cov = data.backing && data.backing.on_chain_coverage_display_pct;
+            if (cov != null) {
+                var covCls = cov >= 70 ? 'text-green-600' : 'text-red-600';
+                var covBasis = (data.backing || {}).collateral_ratio_basis;
+                return '<span class="' + covCls + '"' +
+                    (covBasis ? ' title="' + this._escapeAttr(covBasis) + '"' : '') + '>' +
+                    this.formatPercent(cov, 2) + '</span>' +
+                    '<span class="text-slate-400 text-xs"> on-chain</span>';
+            }
+            return '—';
+        }
         var cls = cr >= 100 ? 'text-green-600' : 'text-red-600';
         var basis = this._backingBasis(data);
         // ⚠️ Never round ACROSS a rating boundary. susds is 99.999993 — seven
@@ -1018,8 +1033,17 @@ const CommonRenderer = {
     },
 
     _backingSubText(data) {
-        var sd = (data.backing && data.backing.surplus_deficit != null)
-            ? data.backing.surplus_deficit : (data.summary && data.summary.surplus_deficit);
+        var b = data.backing || {};
+        // ⚠️ A null CR is not always "nothing to show". thUSD's is deliberately
+        // null because TOTAL backing is unobservable — but on-chain coverage IS
+        // measured, is flagged critical, and was sitting six inches below a blank
+        // card. Distinguish that from susdai, whose null means a NAV vault has no
+        // backing ratio at all: there, nothing is known and a dash is honest.
+        if (b.collateral_ratio == null && b.on_chain_coverage_display_pct != null) {
+            return 'on-chain only \u2014 total backing unobservable';
+        }
+        var sd = (b.surplus_deficit != null)
+            ? b.surplus_deficit : (data.summary && data.summary.surplus_deficit);
         if (sd == null) return 'collateral ratio';
         return (sd >= 0 ? 'surplus +' : 'deficit −') + this.formatCurrency(Math.abs(sd));
     },
@@ -1585,9 +1609,32 @@ const CommonRenderer = {
                 'Read the full risk report →</a>'
             : '<span class="text-sm text-slate-400">No report linked.</span>';
 
+        // ⚠️ issuer.facts is an EXISTING feed convention that nothing rendered.
+        // usds has published four of them — "48h GSM timelock", "Pause Proxy is
+        // the sole owner/admin", "Freeze / emergency-shutdown functions exist",
+        // an allocator-visibility caveat — and every one was invisible while this
+        // section showed only the generic "editorial, subjective axis" line.
+        //
+        // This is deliberately the mechanism for issuer material rather than
+        // hardcoding prose into a renderer. Claims like "unlicensed", "not
+        // bankruptcy-remote" or a jurisdiction are assertions about a real
+        // company: they belong to the producer, must move when the assessment
+        // moves, and are exactly what this repo shipped unsourced once before.
+        // A renderer that names a custodian or a legal status is a constant that
+        // nothing recomputes.
+        var facts = (issuer.facts && Array.isArray(issuer.facts)) ? issuer.facts : [];
+        var factsHtml = facts.length
+            ? '<ul class="text-sm text-slate-600 dark:text-slate-300 list-disc ml-5 mb-3 space-y-1">' +
+                facts.map(function (f) {
+                    return '<li>' + CommonRenderer._escapeAttr(String(f)) + '</li>';
+                }).join('') +
+              '</ul>'
+            : '';
+
         body.innerHTML = '<div class="panel">' +
             '<div class="panel-title">' + this._escapeAttr(info.label) + '</div>' +
             '<div class="flex flex-wrap items-center gap-2 mb-3">' + chips + '</div>' +
+            factsHtml +
             '<p class="text-sm text-slate-500 mb-3">' + methodology + '</p>' +
             reportLink +
         '</div>';
