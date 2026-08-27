@@ -345,12 +345,18 @@ var UsdaiRenderer = {
             // (peg price + deviation, then the slippage ladder). Splitting a working
             // panel to satisfy the grouping would be a rewrite, not a regroup, so the
             // head names both and the panel stays whole.
-            html += head(1, 'Peg &amp; secondary liquidity', 'market price vs $1, depth and slippage');
+            html += head(1, 'Peg', 'market price vs $1');
             html += UsdaiRenderer._renderPegChartPanel(data, slug);
-            html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug));
+            html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'peg'));
+
+            html += head(2, 'Liquidity', 'exit depth, slippage and route');
+            html += anc('panel-liquidity', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'liquidity'));
 
             html += head(3, 'Backing', 'PYUSD reserve held by the USDai contract');
             html += anc('panel-coverage', UsdaiRenderer._renderUsdaiCoverage(specific, s));
+
+            html += head(4, 'Dependencies', 'what this depends on, and what depends on it');
+            html += UsdaiRenderer._renderDependenciesPanel(data);
         } else {
             // sUSDai's §1 is discount-to-NAV, not a peg. It has two NAVs ~0.65%
             // apart by design with the market between them, so the NAV panel — which
@@ -360,13 +366,18 @@ var UsdaiRenderer = {
             html += anc('panel-nav', UsdaiRenderer._renderSusdaiNav(specific, s));
             html += UsdaiRenderer._renderPegChartPanel(data, slug);
 
+            html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'peg'));
+
             html += head(2, 'Liquidity', 'secondary market and the async redemption queue');
-            html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug));
+            html += anc('panel-liquidity', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'liquidity'));
 
             // No collateral ratio here — sUSDai is a NAV vault and has none. The
             // backing axis carries the decomposition and the two residual pills.
             html += head(3, 'Backing', 'asset decomposition \u2014 NAV vault, no collateral ratio');
             html += anc('panel-decomp', UsdaiRenderer._renderSusdaiDecomposition(specific, s));
+
+            html += head(4, 'Dependencies', 'what this depends on, and what depends on it');
+            html += UsdaiRenderer._renderDependenciesPanel(data);
         }
 
         html += head(5, 'Issuer', 'authority by action, upgrade timelock and admin topology');
@@ -1253,7 +1264,16 @@ var UsdaiRenderer = {
     // ============================================================
     // §4 Secondary Market (both)
     // ============================================================
-    _renderSecondaryMarket: function(specific, s, slug) {
+    // `part` splits this into the §1 Peg panel and the §2 Liquidity panel.
+    // Omitted renders both in one panel (the pre-5-axis shape), which nothing
+    // uses today but keeps the function honest if called without it.
+    //
+    // The split was deferred twice: while the slippage ladder carried an
+    // unmarked gated-route leg, giving it its own numbered section would have
+    // handed a defective number its own headline. route_includes_gated_venue now
+    // marks the affected tiers row by row, so the defect travels with the number
+    // instead of being hidden by a heading. That is what changed, not the number.
+    _renderSecondaryMarket: function(specific, s, slug, part) {
         var sec = specific.secondary || {};
         var slip = specific.slippage_tiers || {};
         var pools = Array.isArray(sec.top_pools) ? sec.top_pools : [];
@@ -1407,9 +1427,63 @@ var UsdaiRenderer = {
                     'USDai is a $1 claim; deviation is measured vs $1.00.') +
             '</div>';
 
+        if (part === 'peg') {
+            return '<div class="panel">' +
+                '<div class="panel-title">Secondary Market \u2014 price</div>' +
+                topRow +
+            '</div>';
+        }
+        if (part === 'liquidity') {
+            if (!slipBlock) return '';
+            return '<div class="panel">' +
+                '<div class="panel-title">Exit depth &amp; slippage</div>' +
+                slipBlock + note +
+            '</div>';
+        }
         return '<div class="panel">' +
             '<div class="panel-title">Secondary Market</div>' +
             topRow + slipBlock + note +
+        '</div>';
+    },
+
+    // §4 Dependencies — dependencies.upstream / .downstream are published for
+    // every asset here and were rendered nowhere. Internal links route to the
+    // sibling dashboard; downstream_tracked distinguishes "nothing downstream"
+    // from "downstream not measured", which are different claims.
+    _renderDependenciesPanel: function(data) {
+        var dep = data.dependencies || {};
+        var up = Array.isArray(dep.upstream) ? dep.upstream : [];
+        var down = Array.isArray(dep.downstream) ? dep.downstream : [];
+        if (!up.length && !down.length && dep.downstream_tracked !== false) return '';
+
+        function rows(list) {
+            return list.map(function(x) {
+                var nm = UsdaiRenderer._esc(x.name || '—');
+                var label = (x.link && x.link_type === 'internal')
+                    ? '<a href="' + UsdaiRenderer._esc(x.link) + '" class="text-blue-500 hover:underline">' + nm + ' \u2192</a>'
+                    : nm;
+                return '<tr><td class="font-medium">' + label + '</td>' +
+                    '<td class="text-xs text-slate-600 dark:text-slate-300">' +
+                        UsdaiRenderer._esc(x.metric || '') + '</td></tr>';
+            }).join('');
+        }
+        var body = '';
+        if (up.length) {
+            body += '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1 mt-2">Upstream \u2014 what this depends on</div>' +
+                '<table class="data-table"><tbody>' + rows(up) + '</tbody></table>';
+        }
+        body += '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1 mt-3">Downstream \u2014 what depends on this</div>';
+        if (down.length) {
+            body += '<table class="data-table"><tbody>' + rows(down) + '</tbody></table>';
+        } else {
+            body += '<div class="text-xs text-slate-500">' +
+                (dep.downstream_tracked === false
+                    ? 'Not tracked \u2014 this feed does not measure downstream holders, which is not the same as there being none.'
+                    : 'None recorded.') +
+                '</div>';
+        }
+        return '<div class="panel" id="panel-dependencies">' +
+            '<div class="panel-title">Dependencies</div>' + body +
         '</div>';
     },
 
