@@ -101,9 +101,16 @@ for slug in sorted(slugs):
     scr = (d.get('summary') or {}).get('collateral_ratio')
     bsc = (d.get('backing') or {}).get('collateral_ratio_scale')
     ssc = (d.get('summary') or {}).get('collateral_ratio_scale')
-    if bsc and ssc and bsc != ssc:
-        fails.append(f'{slug}: backing.collateral_ratio_scale "{bsc}" contradicts '
-                     f'summary.collateral_ratio_scale "{ssc}"')
+    # ⚠️ REMOVED: a fail when the two declared scales differed as STRINGS.
+    #    It was the same mistake the renderer guard made, left behind in the
+    #    checker when the guard was dropped — so the tool went on asserting
+    #    reasoning the code had abandoned. Two blocks may legitimately declare
+    #    different scales when they hold different quantities: usdm's backing CR
+    #    is stable-only (91.02, percent) and its summary CR is gross (1.2231,
+    #    ratio), 31pp apart and both correct. A string comparison cannot tell that
+    #    from a genuine contradiction; only the values can, and only when the two
+    #    fields mean the same thing. The ~100x check below is what remains, and it
+    #    fires on the case that IS ambiguous.
     if isinstance(bcr, (int, float)) and isinstance(scr, (int, float)) and scr:
         ratio = bcr / scr
         if 50 < ratio < 200 or 0.005 < ratio < 0.02:
