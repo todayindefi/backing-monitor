@@ -49,6 +49,25 @@ cp /home/danger/PegTracker/data/usdat_backing_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/susdat_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/susdat_backing_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/saturn_family.json data/ 2>/dev/null
+
+# Per-asset peg history exports (peg_history_export.py). These back peg.history_ref.
+# Only the slugs this dashboard serves are copied — the allowlist is deliberate,
+# not a glob. thbill's export is a bare list rather than the {points,entries,...}
+# envelope and no asset here consumes it, so it is left out.
+cp /home/danger/PegTracker/data/apxusd_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/apyusd_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/crvusd_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/cusd_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/ousd_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/susdai_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/susdat_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/susde_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/syrupusdc_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/syrupusdt_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/usdai_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/usdat_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/usde_peg_history.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/usds_peg_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/usdm_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/usdm_backing_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/usde_backing.json data/ 2>/dev/null

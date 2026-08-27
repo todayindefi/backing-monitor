@@ -184,6 +184,13 @@ async function renderAsset(slug) {
         if (assetsResp0 && assetsResp0.ok) {
             var assets = await assetsResp0.json();
             assetMeta = assets.find(function(a) { return a.slug === slug; }) || null;
+            // Publish the registered slugs so renderers can tell a working
+            // ?asset= link from one that resolves to nothing. Feeds emit
+            // internal dependency links for assets this dashboard may not
+            // serve (usds points at ?asset=susds, which is not registered).
+            if (typeof CommonRenderer !== 'undefined') {
+                CommonRenderer.KNOWN_ASSET_SLUGS = assets.map(function(a) { return a.slug; });
+            }
         }
         var sourceSlug = (assetMeta && assetMeta.data_source) ? assetMeta.data_source : slug;
 

@@ -1193,8 +1193,19 @@ const CommonRenderer = {
                 '<div class="dep-card-name">' + (d.name || '—') + '</div>' +
                 (d.metric ? '<div class="dep-card-metric">' + d.metric + '</div>' : '');
             if (d.link && d.link_type === 'internal') {
-                return '<a href="' + d.link + '" class="dep-card">' + inner +
-                    '<div class="dep-card-link">Open dashboard →</div></a>';
+                // An internal link is only a link if the target is registered.
+                // Feeds name dependencies this dashboard may not serve, and an
+                // ?asset= href to an unregistered slug renders as a live link
+                // and lands on nothing. Show the dependency, not the dead link.
+                var m = /[?&]asset=([^&]+)/.exec(d.link);
+                var known = !m || !Array.isArray(CommonRenderer.KNOWN_ASSET_SLUGS) ||
+                            CommonRenderer.KNOWN_ASSET_SLUGS.indexOf(m[1]) !== -1;
+                if (known) {
+                    return '<a href="' + d.link + '" class="dep-card">' + inner +
+                        '<div class="dep-card-link">Open dashboard →</div></a>';
+                }
+                return '<div class="dep-card">' + inner +
+                    '<div class="dep-card-link text-slate-400">No dashboard</div></div>';
             }
             if (d.link && d.link_type === 'external') {
                 return '<a href="' + d.link + '" target="_blank" rel="noopener noreferrer" class="dep-card">' + inner +
