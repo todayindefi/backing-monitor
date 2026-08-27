@@ -1,10 +1,16 @@
 {
   "schema_version": 1,
-  "as_of": "2026-08-26T23:46:47Z",
-  "timestamp": "2026-08-26T23:46:47Z",
-  "block_number": 498738119,
+  "as_of": "2026-08-27T01:44:48Z",
+  "timestamp": "2026-08-27T01:44:48Z",
+  "block_number": 498765519,
   "issuer": "Permian Labs",
-  "risk_flags": [],
+  "risk_flags": [
+    {
+      "severity": "info",
+      "code": "USDAI_MINT_PATH_UNDELAYED",
+      "message": "USDai mint authority is grantable with no delay: OPS_SAFE holds DEFAULT_ADMIN on arbitrum, base, ethereum, plasma and DEFAULT_ADMIN administers BRIDGE_ADMIN_ROLE. The 48h timelock governs upgrades only and holds no role on the token."
+    }
+  ],
   "governance": {
     "model": "48h OZ TimelockController controlled by a 3-of-3 Safe (no single admin EOA)",
     "timelock": "0x0EEA1EE08611fF4A4E83BFe3916712751995639b",
@@ -30,6 +36,66 @@
     "ops_safe": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
     "ops_safe_holds_usdai_admin": true,
     "ops_safe_holds_susdai_admin": true,
+    "ops_safe_threshold": 3,
+    "ops_safe_owners": [
+      "0xe982B3F68981eFEA221F5B4F843757dEd2c0a69C",
+      "0x986868c921075f31514015E6ecdbB4A6526579b2",
+      "0xD1Affe275f09cD11bfDf38F3c9b85c016F47b75e"
+    ],
+    "gov_ops_owner_sets_identical": true,
+    "mint_authority": {
+      "role_name": "BRIDGE_ADMIN_ROLE",
+      "role_hash": "0x751b795d24b92e3d92d1d0d8f2885f4e9c9c269da350af36ae6b49069babf4bf",
+      "role_hash_source": "keccak256 of the role name, derived at runtime",
+      "delay_seconds": 0,
+      "timelocked": false,
+      "grantable_undelayed_by_ops_safe": true,
+      "note": "mint() is gated by BRIDGE_ADMIN_ROLE, whose role admin is DEFAULT_ADMIN_ROLE. OPS_SAFE holds DEFAULT_ADMIN and can therefore GRANT mint authority in one transaction with no delay. The 48h TimelockController holds no role on the token \u2014 it owns the ProxyAdmin and governs upgrades only, so it was never on this path.",
+      "by_chain": {
+        "arbitrum": {
+          "read": true,
+          "role_admin": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "role_admin_is_default_admin": true,
+          "role_admin_holder": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+          "ops_safe_holds_default_admin": true,
+          "ops_safe_holds_bridge_admin": false,
+          "timelock_holds_default_admin": false,
+          "gov_safe_holds_default_admin": false
+        },
+        "plasma": {
+          "read": true,
+          "role_admin": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "role_admin_is_default_admin": true,
+          "role_admin_holder": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+          "ops_safe_holds_default_admin": true,
+          "ops_safe_holds_bridge_admin": false,
+          "timelock_holds_default_admin": false,
+          "gov_safe_holds_default_admin": false
+        },
+        "base": {
+          "read": true,
+          "role_admin": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "role_admin_is_default_admin": true,
+          "role_admin_holder": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+          "ops_safe_holds_default_admin": true,
+          "ops_safe_holds_bridge_admin": false,
+          "timelock_holds_default_admin": false,
+          "gov_safe_holds_default_admin": false
+        },
+        "ethereum": {
+          "read": true,
+          "role_admin": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "role_admin_is_default_admin": true,
+          "role_admin_holder": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+          "ops_safe_holds_default_admin": true,
+          "ops_safe_holds_bridge_admin": false,
+          "timelock_holds_default_admin": false,
+          "gov_safe_holds_default_admin": false
+        }
+      },
+      "oft_adapter_scope": "unmeasured",
+      "oft_adapter_note": "setPeer on a LayerZero OFT adapter is a second undelayed mint route. Not enumerated: log scans are block-capped on the available endpoints. Absence here is unmeasured, not clear."
+    },
     "proxies": {
       "usdai": {
         "implementation": "0x0ab74Df531c0D8f1c46643E404B3d14723bbc212",
@@ -67,43 +133,43 @@
     }
   },
   "totals": {
-    "usdai_supply_usd": 172809466.85,
-    "susdai_total_assets_usd": 359549712.23,
-    "combined_aum_usd": 440743980.43,
+    "usdai_supply_usd": 173744335.72,
+    "susdai_total_assets_usd": 359607936.05,
+    "combined_aum_usd": 441684968.69,
     "comment": "combined_aum = usdai_supply + susdai_total_assets - idle_usdai_in_susdai - deposit_timelock_escrow (escrow is USDai minted into the credit pipeline; counting it and the USDai supply both would double-count)."
   },
   "credit_exposure": {
-    "drawn_loans_usd": 267934513.58,
+    "drawn_loans_usd": 267940632.97,
     "committed_undrawn_escrow_usd": 0.0,
-    "total_loan_destined_usd": 267934513.58
+    "total_loan_destined_usd": 267940632.97
   },
   "tokens": [
     {
       "slug": "usdai",
       "name": "USDai",
-      "supply_usd": 172809466.85,
-      "coverage_ratio": 1.00541
+      "supply_usd": 173744335.72,
+      "coverage_ratio": 1.0000000001
     },
     {
       "slug": "susdai",
       "name": "sUSDai",
-      "total_assets_usd": 359549712.23,
-      "nav_per_share": 1.108055,
-      "buffer_ratio": 0.254805
+      "total_assets_usd": 359607936.05,
+      "nav_per_share": 1.108074,
+      "buffer_ratio": 0.254909
     }
   ],
   "api_usd_ai": {
     "url": "https://api.usd.ai/usdai/dashboard/tvl",
     "raw": {
-      "tvl": 433657011.07679206,
-      "usdaiTvl": 74107287.55706885,
-      "sUsdaiTvl": 359549723.5197232,
-      "mintedUsdai": 433657011.07679206,
+      "tvl": 433660485.46766025,
+      "usdaiTvl": 74052574.59180132,
+      "sUsdaiTvl": 359607910.8758589,
+      "mintedUsdai": 433660485.46766025,
       "stablecoinReserves": 173744335.72833,
       "loansReserves": 259899527.00799853,
-      "updatedAt": "2026-08-26T23:29:59.000Z"
+      "updatedAt": "2026-08-27T01:29:59.000Z"
     },
-    "updated_at": "2026-08-26T23:29:59.000Z",
+    "updated_at": "2026-08-27T01:29:59.000Z",
     "stale": false,
     "note": "Undocumented public aggregate; cross-check only, never source-of-truth. May be cross-chain while on-chain reads are Arbitrum-only."
   }
