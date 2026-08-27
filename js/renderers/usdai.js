@@ -279,8 +279,21 @@ var UsdaiRenderer = {
         } else {
             if (s.total_supply == null)  s.total_supply  = s.total_assets_usd;
             if (s.total_backing == null) s.total_backing = s.total_assets_usd;
-            if (s.collateral_ratio == null) s.collateral_ratio = 100;
-            if (s.surplus_deficit == null)  s.surplus_deficit  = 0;
+            // ⚠️ Deliberately NOT synthesising collateral_ratio / surplus_deficit.
+            //
+            // sUSDai is a NAV-marked private-credit vault and has no collateral
+            // ratio; the feed publishes backing.collateral_ratio as null with a
+            // note saying a ratio here would be manufactured. This block used to
+            // fill in 100 / 0 "so the hidden common renderer doesn't crash" —
+            // which was true while the common panels WERE hidden. The 5-axis band
+            // now renders, CommonRenderer.backingRating falls back to
+            // summary.collateral_ratio when backing.collateral_ratio is null, and
+            // the manufactured 100 surfaced as "BACKING 100.00% · surplus +$0"
+            // with a 3/5 rating on an asset that has no such ratio.
+            //
+            // backingRating and _backingValueHtml both return null / "—" on a null
+            // cr, which is the correct empty state. A workaround whose safety
+            // depended on the panel being hidden had to change when it stopped being.
         }
 
         if (!Array.isArray(data.backing_breakdown)) {
@@ -333,6 +346,7 @@ var UsdaiRenderer = {
             // panel to satisfy the grouping would be a rewrite, not a regroup, so the
             // head names both and the panel stays whole.
             html += head(1, 'Peg &amp; secondary liquidity', 'market price vs $1, depth and slippage');
+            html += UsdaiRenderer._renderPegChartPanel(data, slug);
             html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug));
 
             html += head(3, 'Backing', 'PYUSD reserve held by the USDai contract');
@@ -344,6 +358,7 @@ var UsdaiRenderer = {
             // single deviation number would report construction as deviation.
             html += head(1, 'NAV band', 'deposit / redemption / market \u2014 a band, not a point');
             html += anc('panel-nav', UsdaiRenderer._renderSusdaiNav(specific, s));
+            html += UsdaiRenderer._renderPegChartPanel(data, slug);
 
             html += head(2, 'Liquidity', 'secondary market and the async redemption queue');
             html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug));
@@ -368,6 +383,7 @@ var UsdaiRenderer = {
         if (slug === 'susdai') {
             UsdaiRenderer._loadNavChart(slug);
         }
+        UsdaiRenderer._loadPegChart(data, slug);
         UsdaiRenderer._loadFamily(slug, data);
     },
 
@@ -1012,6 +1028,106 @@ var UsdaiRenderer = {
             chartBlock +
             methodology +
         '</div>';
+    },
+
+    // ---- §1 peg/deviation chart ----
+    //
+    // Deliberately plots DEVIATION against zero rather than price against a NAV
+    // reference line. common.js::_renderPegChart draws peg.nav as that line,
+    // which is right for a $1 claim and wrong for sUSDai: it has two NAVs 0.65%
+    // apart by design (redemption / deposit) with the market between them, so a
+    // single NAV line would render construction as error. Deviation-vs-zero is
+    // correct for both — usdai's peg_deviation_pct against $1, susdai's
+    // band_deviation_pct against the band, which reads zero while inside it.
+    //
+    // The series and field are taken from peg.history_ref / peg.history_field
+    // rather than hardcoded, so a change of basis upstream moves the chart with
+    // it. susdai's band_deviation_pct starts today by design — PegTracker did not
+    // backfill because the history stores the discounts but not the raw share
+    // prices, so older rows cannot be recomputed without fabricating them. A
+    // short series is expected for a few days and says so rather than looking broken.
+    _renderPegChartPanel: function(data, slug) {
+        var peg = data.peg || {};
+        if (!peg.history_field) return '';
+        var isVault = (slug === 'susdai');
+        return '<div class="panel" id="panel-peg-chart">' +
+            '<div class="panel-title">' + (isVault ? 'Deviation from NAV band' : 'Deviation from $1') +
+                ' <span class="text-xs font-normal text-slate-500">\u2014 history</span></div>' +
+            '<div style="height: 240px; position: relative;"><canvas id="usdai-peg-chart"></canvas></div>' +
+            (isVault ?
+                '<div class="text-xs text-slate-500 mt-2">Zero means the market is trading <em>inside</em> ' +
+                'the redemption\u2013deposit band, which is the normal state; the line only leaves zero ' +
+                'when price exits the band.</div>' : '') +
+        '</div>';
+    },
+
+    _loadPegChart: function(data, slug) {
+        var ctx = document.getElementById('usdai-peg-chart');
+        if (!ctx) return;
+        var peg = data.peg || {};
+        var field = String(peg.history_field || '').replace('entries[].', '');
+        var ref = peg.history_ref || (slug + '_backing_history.json');
+        if (!field) return;
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + ref + '?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                var entries = (hist && Array.isArray(hist.entries)) ? hist.entries : [];
+                var pts = entries.filter(function(e) { return e[field] != null && e.timestamp; })
+                    .map(function(e) {
+                        var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+                        return { x: new Date(ts).getTime(), y: e[field] };
+                    }).sort(function(a, b) { return a.x - b.x; });
+                if (typeof Chart === 'undefined' || !pts.length) {
+                    ctx.parentElement.innerHTML =
+                        '<div class="text-xs text-slate-400 italic">No deviation history yet.</div>';
+                    return;
+                }
+                if (pts.length < 2) {
+                    // One sample is a real reading, not a failure — say which.
+                    ctx.parentElement.innerHTML =
+                        '<div class="text-xs text-slate-500 italic">Series starts today (' +
+                        pts.length + ' sample, <span class="font-mono">' +
+                        UsdaiRenderer._esc(field) + '</span>). Earlier rows predate this basis and were ' +
+                        'not backfilled \u2014 they do not carry the inputs to recompute it.</div>';
+                    return;
+                }
+                UsdaiRenderer._drawPegChart(ctx, pts, slug);
+            })
+            .catch(function() {
+                if (ctx) ctx.parentElement.innerHTML =
+                    '<div class="text-xs text-slate-400 italic">Deviation history unavailable.</div>';
+            });
+    },
+
+    _drawPegChart: function(ctx, pts, slug) {
+        if (window._usdaiPegChart) window._usdaiPegChart.destroy();
+        window._usdaiPegChart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [{
+                label: (slug === 'susdai') ? 'Deviation from band (%)' : 'Deviation from $1 (%)',
+                data: pts,
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99,102,241,0.10)',
+                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2
+            }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function(c) { return c.parsed.y.toFixed(3) + '%'; } } },
+                    annotation: { annotations: { zero: {
+                        type: 'line', yMin: 0, yMax: 0,
+                        borderColor: '#94a3b8', borderWidth: 1, borderDash: [4, 4]
+                    } } }
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'day' }, grid: { display: false },
+                         ticks: { font: { size: 10 } } },
+                    y: { ticks: { font: { size: 10 }, callback: function(v) { return v + '%'; } } }
+                }
+            }
+        });
     },
 
     _loadNavChart: function(slug) {
