@@ -8,7 +8,9 @@ class needs a reader, not a suite, and this script must not be taken to cover it
 
 Run: python3 check_feeds.py     (exit 1 on any FAIL)
 """
-import json, glob, os, re, sys
+import json, glob, os, re, sys, datetime as dt
+
+TODAY = dt.date.today()
 
 DATA = 'data'
 JS = ''.join(open(f, encoding='utf-8', errors='replace').read()
@@ -146,6 +148,31 @@ for slug in sorted(slugs):
     if d.get('axis_thresholds') and not (d.get('asset_specific') or {}).get('axis_thresholds'):
         fails.append(f'{slug}: axis_thresholds is at TOP LEVEL; common.js reads '
                      f'asset_specific.axis_thresholds — the override is unreachable')
+
+    # 4e. Self-expiring thresholds, warned BEFORE they lapse.
+    #
+    #     usg's backing band declares expires/review_by and an expiry_reason
+    #     saying the floor is a property of today's book, with "re-derive it, do
+    #     not extend the date". backingRating goes unrated past that date rather
+    #     than rating on a stale band — visible, but only once it has already
+    #     lapsed. Warn in the 30 days before, so it is re-derived rather than
+    #     discovered as a blank axis.
+    asp_t = ((d.get('asset_specific') or {}).get('axis_thresholds') or {})
+    for axis_name, ov in asp_t.items():
+        if not isinstance(ov, dict) or ov.get('expires') is not True: continue
+        rb = ov.get('review_by')
+        if not rb: 
+            warns.append(f'{slug}: {axis_name} threshold declares expires:true with no review_by')
+            continue
+        try:
+            days = (dt.date.fromisoformat(rb) - TODAY).days
+        except Exception:
+            continue
+        if days < 0:
+            fails.append(f'{slug}: {axis_name} threshold EXPIRED {-days}d ago ({rb}) — '
+                         f'axis renders unrated until re-derived')
+        elif days <= 30:
+            warns.append(f'{slug}: {axis_name} threshold expires in {days}d ({rb}) — re-derive, do not extend')
 
     # 5. Internal dependency links must point at registered assets.
     for side in ('upstream', 'downstream'):

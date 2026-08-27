@@ -711,7 +711,25 @@ const CommonRenderer = {
         if (!aspThr && data.axis_thresholds) return null;
 
         var bOv = aspThr && aspThr.backing;
-        if (bOv && Array.isArray(bOv.cr_pct)) return this._rate(cr, bOv.cr_pct, 'high');
+        if (bOv && Array.isArray(bOv.cr_pct)) {
+            // ⚠️ An override may declare its own expiry. usg's carries
+            // expires:true, review_by, and an expiry_reason saying the floor is a
+            // property of TODAY'S book — an active market set the issuer opens and
+            // pauses — with an explicit "re-derive it, do not extend the date".
+            //
+            // Rating on it past that date asserts a currency the producer has
+            // said it will not have. This repo already has the scar: a hardcoded
+            // editorial score sat at 8.0 through a depeg because nothing
+            // recomputed it. Falling back to the generic band would be worse than
+            // unrated here — that is the 5/5 the override exists to prevent — so
+            // an expired band goes UNRATED, which is visible and prompts the
+            // re-derivation the producer asked for.
+            if (bOv.expires === true && bOv.review_by &&
+                Date.now() > Date.parse(bOv.review_by + 'T00:00:00Z')) {
+                return null;
+            }
+            return this._rate(cr, bOv.cr_pct, 'high');
+        }
         var bands = data.asset_specific && data.asset_specific.chart_bands;
         if (bands) {
             // verbose {critical,thin,amber,healthy:[lo,hi]} or short {pcr|thresholds:[a,b,c,d]}
