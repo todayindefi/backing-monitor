@@ -237,7 +237,25 @@ var SaturnRenderer = {
         var anc = SaturnRenderer._anchor;
         var html = '';
 
+        // 5-axis grouping (tier 3). Nothing dropped — the same panels regrouped
+        // under numbered heads so the stream reads in the order the band above
+        // presents them. The Liquidity panel already carried a peg sub-section and
+        // a depth sub-section as separate functions, so §1/§2 is a split of an
+        // existing seam rather than a rewrite.
+        var head = SaturnRenderer._axisHead;
+        var pegSub = (slug === 'susdat') ? 'market price vs NAV' : 'market price vs $1';
+
         html += anc('panel-headline', SaturnRenderer._renderHeadlineCard(specific, s, slug));
+
+        html += head(1, 'Peg', pegSub);
+        html += SaturnRenderer._renderPegPanel(specific, s, slug);
+
+        html += head(2, 'Liquidity', 'exit depth, venue spread and slippage');
+        html += anc('panel-liquidity', SaturnRenderer._renderLiquidityPanel(specific, s, slug));
+
+        html += head(3, 'Backing', (slug === 'usdat')
+            ? 'composition and the drift watchdog'
+            : 'reserve split and NAV trajectory');
         if (slug === 'usdat') {
             html += anc('panel-backing',   SaturnRenderer._renderUsdatBackingComposition(specific, s));
             html += anc('panel-drift',     SaturnRenderer._renderUsdatDriftProbe(specific));
@@ -245,7 +263,11 @@ var SaturnRenderer = {
             html += anc('panel-reserve',   SaturnRenderer._renderSusdatReserveSplit(specific, s));
             html += anc('panel-nav',       SaturnRenderer._renderSusdatNavTrajectory(specific, s));
         }
-        html += anc('panel-liquidity', SaturnRenderer._renderLiquidity(specific, s, slug));
+
+        html += head(4, 'Dependencies', 'what this depends on, and what depends on it');
+        html += SaturnRenderer._renderDependenciesPanel(data);
+
+        html += head(5, 'Issuer', 'trust stack \u2014 admin topology and attestation');
         html += anc('panel-trust',     SaturnRenderer._renderTrustStack(specific, slug));
         html += '<div id="saturn-family-panel"></div>';
 
@@ -1688,6 +1710,72 @@ var SaturnRenderer = {
     // consolidation pass — see saturn-usdat-liquidity-panel-consolidation
     // handoff for the USDat-only scope.
     // ============================================================
+    // Axis section divider — same shape/styling as syrupusdc.js, hastra-prime.js
+    // and usdai.js so the in-stream headers match the band above.
+    _axisHead: function(num, title, sub) {
+        return '<div class="axis-head">' +
+            '<span class="axis-num">' + num + '</span>' +
+            '<span class="axis-title">' + title + '</span>' +
+            (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
+        '</div>';
+    },
+
+    // §4 Dependencies — dependencies.upstream/.downstream are published and were
+    // rendered nowhere. downstream_tracked is shown as its own state: "nothing
+    // downstream" and "downstream not measured" are different claims.
+    _renderDependenciesPanel: function(data) {
+        var dep = (data && data.dependencies) || {};
+        var up = Array.isArray(dep.upstream) ? dep.upstream : [];
+        var down = Array.isArray(dep.downstream) ? dep.downstream : [];
+        if (!up.length && !down.length && dep.downstream_tracked !== false) return '';
+        function rows(list) {
+            return list.map(function(x) {
+                var nm = SaturnRenderer._escHtml(x.name || '\u2014');
+                var label = (x.link && x.link_type === 'internal')
+                    ? '<a href="' + SaturnRenderer._escHtml(x.link) + '" class="text-blue-500 hover:underline">' + nm + ' \u2192</a>'
+                    : nm;
+                return '<tr><td class="font-medium">' + label + '</td>' +
+                    '<td class="text-xs text-slate-600 dark:text-slate-300">' +
+                        SaturnRenderer._escHtml(x.metric || '') + '</td></tr>';
+            }).join('');
+        }
+        var body = '';
+        if (up.length) {
+            body += '<div class="text-sm font-semibold text-slate-700 mb-1 mt-2">Upstream \u2014 what this depends on</div>' +
+                '<table class="data-table"><tbody>' + rows(up) + '</tbody></table>';
+        }
+        body += '<div class="text-sm font-semibold text-slate-700 mb-1 mt-3">Downstream \u2014 what depends on this</div>';
+        body += down.length
+            ? '<table class="data-table"><tbody>' + rows(down) + '</tbody></table>'
+            : '<div class="text-xs text-slate-500">' + (dep.downstream_tracked === false
+                ? 'Not tracked \u2014 this feed does not measure downstream holders, which is not the same as there being none.'
+                : 'None recorded.') + '</div>';
+        return '<div class="panel" id="panel-dependencies">' +
+            '<div class="panel-title">Dependencies</div>' + body +
+        '</div>';
+    },
+
+    // Split of _renderLiquidity into its §1 (peg) and §2 (depth) halves. The
+    // combined panel is kept for any caller that wants both.
+    _renderPegPanel: function(specific, s, slug) {
+        var pegHeading = (slug === 'susdat') ? 'Price vs NAV' : 'Peg Performance';
+        return '<div class="panel" id="panel-peg">' +
+            '<div class="panel-title">' + pegHeading + '</div>' +
+            SaturnRenderer._renderLiquidityPegSection(specific, s, slug) +
+        '</div>';
+    },
+
+    _renderLiquidityPanel: function(specific, s, slug) {
+        var divider = '<div class="border-t border-slate-200 pt-6 mt-6"></div>';
+        return '<div class="panel">' +
+            '<div class="panel-title">Liquidity</div>' +
+            SaturnRenderer._renderLiquidityScoreSection(specific, s, slug) +
+            divider +
+            '<h3 class="text-sm font-semibold text-slate-900 mt-0 mb-3">Secondary Market Depth</h3>' +
+            SaturnRenderer._renderLiquidityDepthSection(specific, s, slug) +
+        '</div>';
+    },
+
     _renderLiquidity: function(specific, s, slug) {
         var divider = '<div class="border-t border-slate-200 pt-6 mt-6"></div>';
         // Vault-share peg metric is price-vs-NAV, not absolute price vs $1 —
