@@ -23,6 +23,11 @@ def load(p):
     except Exception as e:
         return None
 
+# Keys of ASSET_RENDERERS in app.js — a slug OR an asset_specific.type. Used to
+# distinguish "feed gap the page already covers" from "feed gap nothing covers".
+BESPOKE_KEYS = set(re.findall(r"^\s*'?([A-Za-z0-9_-]+)'?:\s*typeof\s",
+                              open('js/app.js', encoding='utf-8').read(), re.M))
+
 assets = load(os.path.join(DATA, 'assets.json')) or []
 if isinstance(assets, dict): assets = assets.get('assets', [])
 slugs = {a.get('slug') for a in assets}
@@ -65,12 +70,22 @@ for slug in sorted(slugs):
                             f'{slug}: peg.history_field "{fld}" resolves to key "{key}" '
                             f'which is absent from all {len(ents)} rows of {ref}')
 
-    # 4. Generic-path assets need a breakdown the common renderer can read.
-    #    (bespoke renderers synthesise or hide it; generic ones crash without it)
+    # 4. Feed publishes neither breakdown shape.
+    #
+    #    Phrasing matters here. An earlier version said only "no backing_breakdown
+    #    and no backing.breakdown", which read as a crash risk and was passed on as
+    #    one. It is not: CommonRenderer._backingBreakdown() falls back and hides the
+    #    table when neither exists, so a feed without either degrades rather than
+    #    dying. And most of these assets have a bespoke renderer that synthesises
+    #    the field anyway. State the fact, and say whether anything covers it.
     has_legacy = isinstance(d.get('backing_breakdown'), list)
     has_axis_bd = isinstance((d.get('backing') or {}).get('breakdown'), list)
     if not has_legacy and not has_axis_bd:
-        warns.append(f'{slug}: no backing_breakdown and no backing.breakdown')
+        atype = (d.get('asset_specific') or {}).get('type')
+        covered = (slug in BESPOKE_KEYS) or (atype in BESPOKE_KEYS)
+        note = ('covered by a bespoke renderer' if covered
+                else 'NO bespoke renderer — the backing table will be empty')
+        warns.append(f'{slug}: feed publishes neither breakdown shape ({note})')
 
     # 5. Internal dependency links must point at registered assets.
     for side in ('upstream', 'downstream'):
