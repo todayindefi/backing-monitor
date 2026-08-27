@@ -806,7 +806,19 @@ const CommonRenderer = {
             }
             return this._rate(cr, bOv.cr_pct, 'high');
         }
+        // ⚠️ A display band is not a rating scale. Five renderers set chart_bands
+        // in preRender purely so two series stay legible on one axis — usdm's
+        // comment says so outright ("keep both named series continuously
+        // visible") — and preRender runs BEFORE this, so those bands were
+        // silently scoring the asset. A shading boundary makes a poor rating
+        // boundary: critical:[0,98] collapses 97% and 60% into the same 1/5.
+        //
+        // Measured: apxusd and usdm each rated 1/5 on injected display bands
+        // where the real cutoffs give 2/5 — both in the alarming direction.
+        // Feed-emitted bands (syrup's `pcr`) are deliberately rating-shaped and
+        // are still honoured; only renderer-set ones carry display_only.
         var bands = data.asset_specific && data.asset_specific.chart_bands;
+        if (bands && bands.display_only === true) bands = null;
         if (bands) {
             // verbose {critical,thin,amber,healthy:[lo,hi]} or short {pcr|thresholds:[a,b,c,d]}
             var healthyFloor, watchFloor;

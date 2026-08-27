@@ -278,6 +278,12 @@ var USDmRenderer = {
         specific.chart_y_min = 90;
         specific.chart_y_max = 130;
         specific.chart_bands = {
+            // ⚠️ display_only: these bands exist to keep the CR chart legible, not to
+            // score the asset. CommonRenderer.backingRating honours chart_bands as a
+            // rating override, so without this flag a drawing decision silently
+            // becomes a scoring one — a shading boundary makes a poor rating
+            // boundary, collapsing 97% and 60% into the same 1/5.
+            display_only: true,
             critical: [0, 98],
             thin: [98, 100],
             amber: [100, 102],

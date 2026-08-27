@@ -427,6 +427,11 @@ var HastraPrimeRenderer = {
         spec.chart_y_min = 98;
         spec.chart_y_max = 108;
         spec.chart_bands = {
+            // ⚠ display_only: these bands keep the CR chart legible; they are not a
+            // rating scale. backingRating honours chart_bands as an override and
+            // preRender runs first, so without this flag a drawing decision silently
+            // becomes a scoring one — a shading boundary makes a poor rating boundary.
+            display_only: true,
             critical: [0, 100],
             thin:     [100, 100.5],
             amber:    [100.5, 101],

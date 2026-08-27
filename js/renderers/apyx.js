@@ -315,6 +315,11 @@ var ApyxRenderer = {
             specific.chart_y_min = 99;
             specific.chart_y_max = 103;
             specific.chart_bands = {
+                // ⚠ display_only: these bands keep the CR chart legible; they are not a
+                // rating scale. backingRating honours chart_bands as an override and
+                // preRender runs first, so without this flag a drawing decision silently
+                // becomes a scoring one — a shading boundary makes a poor rating boundary.
+                display_only: true,
                 critical: [0, 99.5],
                 thin: [99.5, 100],
                 amber: [100, 100.5],
@@ -326,6 +331,11 @@ var ApyxRenderer = {
             specific.chart_y_min = 99;
             specific.chart_y_max = 101;
             specific.chart_bands = {
+                // ⚠ display_only: these bands keep the CR chart legible; they are not a
+                // rating scale. backingRating honours chart_bands as an override and
+                // preRender runs first, so without this flag a drawing decision silently
+                // becomes a scoring one — a shading boundary makes a poor rating boundary.
+                display_only: true,
                 critical: [0, 99],
                 thin: [99, 99.9],
                 amber: [99.9, 100.1],
