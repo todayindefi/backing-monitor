@@ -1335,10 +1335,42 @@ const CommonRenderer = {
             : '<div class="text-sm text-slate-400">No exit-mark RFQ ladder in this snapshot.</div>';
 
         var eff = liq.effective_max_under_25bps_usd;
+
+        // ⚠️ Sell-side inventory: a MEASURED number that was going unshown.
+        //
+        // Where a pool is heavily skewed, a symmetric depth figure overstates what
+        // a SELLER can execute — usg's worst pool is 73.6% USG, so the counter-side
+        // stablecoin inventory is the real exit. The producer measured it and,
+        // correctly, refused to put it in total_2pct_depth, which is reserved for
+        // quoted depth. The result was a card showing four n/a's and a pool TVL the
+        // producer had flagged as misleading, while the one figure it had measured
+        // appeared nowhere — implying less is known than is.
+        //
+        // Displayed only. NOT fed to liquidityRating: that stays null, because an
+        // executable inventory is not quoted depth and rating one as the other is
+        // the substitution the producer declined to make. Generic on the field
+        // names, not usg-specific — other feeds will want "what a seller can
+        // execute into" as distinct from depth.
+        var sellSide = liq.sell_side_counter_inventory_usd;
+        var sellCard = (sellSide == null) ? '' :
+            '<div><div class="text-xs text-slate-400 font-medium uppercase">Sell-side inventory</div>' +
+                '<div class="text-lg font-bold">' + this.formatCurrency(sellSide) + '</div>' +
+                '<div class="text-[11px] text-slate-400"' +
+                    (liq.sell_side_basis ? ' title="' + this._escapeAttr(liq.sell_side_basis) + '"' : '') +
+                    '>executable, not quoted depth' +
+                    (liq.worst_pool_usg_share_pct != null
+                        ? ' \u00b7 worst pool ' + liq.worst_pool_usg_share_pct.toFixed(1) + '% skewed' : '') +
+                '</div></div>';
+
         var statRow =
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">2% depth</div>' +
-                    '<div class="text-lg font-bold">' + (liq.total_2pct_depth != null ? this.formatCurrency(liq.total_2pct_depth) : 'n/a') + '</div></div>' +
+                    '<div class="text-lg font-bold">' + (liq.total_2pct_depth != null ? this.formatCurrency(liq.total_2pct_depth) : 'n/a') + '</div>' +
+                    (liq.total_2pct_depth == null && liq.total_2pct_depth_note
+                        ? '<div class="text-[11px] text-slate-400" title="' +
+                          this._escapeAttr(liq.total_2pct_depth_note) + '">unmeasured, not zero \u24d8</div>' : '') +
+                '</div>' +
+                sellCard +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Max ≤25 bps</div>' +
                     '<div class="text-lg font-bold">' + (eff != null ? this.formatCurrency(eff) : 'n/a') + '</div></div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Pool TVL</div>' +
