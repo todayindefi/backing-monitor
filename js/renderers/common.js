@@ -666,7 +666,28 @@ const CommonRenderer = {
         // misrating in the alarming direction. The index grid already normalises
         // (app.js); this did not. Resolution is by declared scale or the explicit
         // asset list, never by magnitude — see normalizeCollateralRatio.
-        cr = CommonRenderer.normalizeCollateralRatio(cr, data.asset_slug, sum);
+        //
+        // ⚠️ The scale declaration must come from the block the VALUE came from.
+        // summary.collateral_ratio_scale describes summary.collateral_ratio. Once
+        // an asset migrates to 5-axis, backing.collateral_ratio becomes the source
+        // and a payload can carry both fields under near-identical names. Applying
+        // summary's declaration to a backing value is a guess, and with a raw-list
+        // asset the normaliser is not idempotent — a percent value multiplied
+        // again reads 12198 and rates 5/5, the reassuring direction.
+        var backingBlock = data.backing || {};
+        var scaleSrc = (fromBacking && backingBlock.collateral_ratio_scale)
+            ? backingBlock : sum;
+
+        // If both blocks declare a scale and they DISAGREE, the payload is
+        // self-contradictory and either reading is a guess. Refuse rather than
+        // pick — an unrated axis is honest, and this is precisely the case where
+        // guessing wrong lands on 5/5.
+        if (backingBlock.collateral_ratio_scale && sum.collateral_ratio_scale &&
+            backingBlock.collateral_ratio_scale !== sum.collateral_ratio_scale) {
+            return null;
+        }
+
+        cr = CommonRenderer.normalizeCollateralRatio(cr, data.asset_slug, scaleSrc);
         if (cr == null) return null;
         // Explicit per-asset cr_pct override (finer 5/4/3/2/1) wins over chart_bands' binary
         // 5/3/1 — credit vaults (PCR ~100 by construction) need the finer bands so PCR 100 reads

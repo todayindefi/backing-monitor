@@ -87,6 +87,30 @@ for slug in sorted(slugs):
                 else 'NO bespoke renderer — the backing table will be empty')
         warns.append(f'{slug}: feed publishes neither breakdown shape ({note})')
 
+    # 4b. One payload, two collateral ratios, two scales.
+    #
+    #     Once an asset migrates to 5-axis, backing.collateral_ratio becomes the
+    #     source backingRating reads and summary.collateral_ratio usually stays.
+    #     If the two carry different scales under near-identical names, a consumer
+    #     applying the wrong declaration mis-rates — and for a raw-list asset the
+    #     normaliser is not idempotent, so the error lands in the reassuring
+    #     direction (12198 -> 5/5). Catch it in the feed rather than in the band.
+    bcr = (d.get('backing') or {}).get('collateral_ratio')
+    scr = (d.get('summary') or {}).get('collateral_ratio')
+    bsc = (d.get('backing') or {}).get('collateral_ratio_scale')
+    ssc = (d.get('summary') or {}).get('collateral_ratio_scale')
+    if bsc and ssc and bsc != ssc:
+        fails.append(f'{slug}: backing.collateral_ratio_scale "{bsc}" contradicts '
+                     f'summary.collateral_ratio_scale "{ssc}"')
+    if isinstance(bcr, (int, float)) and isinstance(scr, (int, float)) and scr:
+        ratio = bcr / scr
+        if 50 < ratio < 200 or 0.005 < ratio < 0.02:
+            if not (bsc and ssc):
+                fails.append(
+                    f'{slug}: backing.collateral_ratio ({bcr}) and '
+                    f'summary.collateral_ratio ({scr}) differ ~100x — two scales in '
+                    f'one payload with fewer than two scale declarations')
+
     # 5. Internal dependency links must point at registered assets.
     for side in ('upstream', 'downstream'):
         for dep in ((d.get('dependencies') or {}).get(side) or []):
