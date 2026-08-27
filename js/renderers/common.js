@@ -581,6 +581,55 @@ const CommonRenderer = {
     },
 
     // Rating → display chip. 5/4 healthy, 3 watch, ≤2 stress, null = not rated.
+    // ⚠️ Why an axis is UNRATED, when the null is deliberate.
+    //
+    // "Not rated" looks worse on a live page than "Healthy 5/5", and the first
+    // person to meet a blank axis will reasonably read it as a pipeline fault.
+    // The thing it prevents — a rating that is affirmatively wrong — is
+    // invisible. So a guard that does not say what it protects gets relaxed by
+    // whoever meets it next, and "restore the fallback" is the reasonable-looking
+    // relaxation available here. Name the 5/5 explicitly or the null looks like
+    // the defect.
+    backingUnratedReason(data) {
+        var sum = data.summary || {};
+        var aspThr = data.asset_specific && data.asset_specific.axis_thresholds;
+        var bOv = aspThr && aspThr.backing;
+        var fromBacking = data.backing && data.backing.collateral_ratio != null;
+        var cr = fromBacking ? data.backing.collateral_ratio : sum.collateral_ratio;
+
+        // What the generic band WOULD say, so the reason can name it.
+        var generic = (cr == null) ? null
+            : this._rate(CommonRenderer.normalizeCollateralRatio(cr, data.asset_slug, sum),
+                         this._axisThresholds({}).backing.cr_pct, 'high');
+        var wouldSay = (generic == null) ? '' :
+            ' Falling back to the generic cutoffs would rate this ' +
+            this._ratingChip(generic).text + ' — the outcome this band exists to prevent.';
+
+        if (!aspThr && data.axis_thresholds) {
+            return 'The producer published axis_thresholds at the top level, where this ' +
+                'renderer cannot read it, so the asset-specific band is unreachable.' + wouldSay;
+        }
+        if (bOv && Array.isArray(bOv.cr_pct)) {
+            if (bOv.stale_by_floor_drift === true) {
+                return 'The band\u2019s measured floor has drifted beyond tolerance' +
+                    (bOv.live_floor_pct != null && bOv.anchored_floor_pct != null
+                        ? ' (' + bOv.anchored_floor_pct + '% \u2192 ' + bOv.live_floor_pct + '%)' : '') +
+                    ', so the cutoffs no longer describe this book. Re-derive them.' + wouldSay;
+            }
+            if (bOv.expires === true && bOv.review_by &&
+                Date.now() > Date.parse(bOv.review_by + 'T00:00:00Z')) {
+                return 'The band expired on ' + CommonRenderer._escapeAttr(bOv.review_by) +
+                    ' and is a property of the book as measured then, not of the protocol. ' +
+                    'Re-derive it rather than extending the date.' + wouldSay;
+            }
+        }
+        if (!fromBacking && sum.collateral_ratio_synthetic === true) {
+            return 'The only collateral ratio available is a placeholder synthesised by the ' +
+                'renderer, not a producer value. Rating it would invent a number.';
+        }
+        return null;
+    },
+
     _ratingChip(rating) {
         if (rating == null) return { cls: 'r-na', text: 'Not rated' };
         var cls = rating >= 4 ? 'r-ok' : (rating === 3 ? 'r-warn' : 'r-crit');
@@ -588,8 +637,12 @@ const CommonRenderer = {
         return { cls: cls, text: word + ' · ' + rating + '/5' };
     },
 
-    _ratingChipHtml(rating) {
+    _ratingChipHtml(rating, reason) {
         var c = this._ratingChip(rating);
+        if (rating == null && reason) {
+            return '<span class="axis-rating ' + c.cls + '" title="' +
+                this._escapeAttr(reason) + '">' + c.text + ' \u24d8</span>';
+        }
         return '<span class="axis-rating ' + c.cls + '">' + c.text + '</span>';
     },
 
@@ -724,6 +777,14 @@ const CommonRenderer = {
             // unrated here — that is the 5/5 the override exists to prevent — so
             // an expired band goes UNRATED, which is visible and prompts the
             // re-derivation the producer asked for.
+            // stale_by_floor_drift is the REAL trigger; review_by is the
+            // backstop. The band is derived from a measured floor that the
+            // producer recomputes every run — if an idle market activates with a
+            // different liquidation threshold the floor moves and the flag fires
+            // in September rather than waiting for November. The tolerance is a
+            // detection threshold, not a slack allowance: a drift firing early
+            // means re-derive, not widen.
+            if (bOv.stale_by_floor_drift === true) return null;
             if (bOv.expires === true && bOv.review_by &&
                 Date.now() > Date.parse(bOv.review_by + 'T00:00:00Z')) {
                 return null;
@@ -834,7 +895,8 @@ const CommonRenderer = {
                 label: 'Backing',
                 valueHtml: this._backingValueHtml(data),
                 sub: this._backingSubText(data),
-                chip: this._ratingChipHtml(this.backingRating(data))
+                chip: this._ratingChipHtml(this.backingRating(data),
+                                           this.backingUnratedReason(data))
             },
             {
                 label: 'Dependencies',

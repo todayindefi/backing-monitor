@@ -169,10 +169,23 @@ for slug in sorted(slugs):
         except Exception:
             continue
         if days < 0:
-            fails.append(f'{slug}: {axis_name} threshold EXPIRED {-days}d ago ({rb}) — '
-                         f'axis renders unrated until re-derived')
+            fails.append(f'{slug}: {axis_name} threshold EXPIRED {-days}d ago ({rb}) — axis renders '
+                         f'UNRATED on purpose; the generic cutoffs would rate it HEALTHY, which is '
+                         f'what the band exists to prevent. Re-derive; do not restore the fallback')
         elif days <= 30:
             warns.append(f'{slug}: {axis_name} threshold expires in {days}d ({rb}) — re-derive, do not extend')
+
+    # 4f. The drift flag is the real trigger; review_by is only the backstop.
+    #     A band derived from a measured floor goes stale when the floor moves,
+    #     which can happen months before the date — an idle market activating with
+    #     a different liquidation threshold is enough.
+    for axis_name, ov in asp_t.items():
+        if isinstance(ov, dict) and ov.get('stale_by_floor_drift') is True:
+            fails.append(f'{slug}: {axis_name} band is stale by floor drift '
+                         f'({ov.get("anchored_floor_pct")} -> {ov.get("live_floor_pct")}, '
+                         f'tolerance {ov.get("floor_drift_tolerance_pp")}pp) — axis renders UNRATED '
+                         f'on purpose. The tolerance is a detection threshold, not a slack '
+                         f'allowance: re-derive the cutoffs, do not widen it')
 
     # 5. Internal dependency links must point at registered assets.
     for side in ('upstream', 'downstream'):
