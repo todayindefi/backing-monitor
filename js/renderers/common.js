@@ -978,15 +978,41 @@ const CommonRenderer = {
         return blk.collateral_ratio_basis || null;
     },
 
+    // Format a CR so rounding cannot move it across a rating cutoff.
+    _crDisplay(cr, data) {
+        var cuts = [];
+        var bOv = data.asset_specific && data.asset_specific.axis_thresholds
+                  && data.asset_specific.axis_thresholds.backing;
+        if (bOv && Array.isArray(bOv.cr_pct)) cuts = bOv.cr_pct;
+        else cuts = this._axisThresholds(data).backing.cr_pct || [];
+        for (var dp = 2; dp <= 6; dp++) {
+            var rounded = Number(cr.toFixed(dp));
+            var crossed = cuts.some(function (c) {
+                return (cr < c && rounded >= c) || (cr >= c && rounded < c);
+            });
+            if (!crossed) return this.formatPercent(cr, dp);
+        }
+        return this.formatPercent(cr, 6);
+    },
+
     _backingValueHtml(data) {
         var cr = (data.backing && data.backing.collateral_ratio != null)
             ? data.backing.collateral_ratio : (data.summary && data.summary.collateral_ratio);
         if (cr == null) return '—';
         var cls = cr >= 100 ? 'text-green-600' : 'text-red-600';
         var basis = this._backingBasis(data);
+        // ⚠️ Never round ACROSS a rating boundary. susds is 99.999993 — seven
+        // millionths of a point below par, which its own basis explains as noise
+        // between a token balance and a chi-derived denominator — and it rendered
+        // "100.00%" beside a Stress chip and a deficit. The number and the chip
+        // then contradict each other and the page reads as broken when it is not.
+        // Show enough decimals that the displayed figure sits on the same side of
+        // the boundary as the real one. A no-op for every value not sitting on a
+        // cutoff.
+        var shown = this._crDisplay(cr, data);
         return '<span class="' + cls + '"' +
             (basis ? ' title="Basis: ' + this._escapeAttr(basis) + '"' : '') + '>' +
-            this.formatPercent(cr, 2) + '</span>' +
+            shown + '</span>' +
             (basis ? '<span class="text-slate-400 text-xs" title="Basis: ' +
                      this._escapeAttr(basis) + '"> \u24d8</span>' : '');
     },
