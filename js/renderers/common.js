@@ -1055,12 +1055,26 @@ const CommonRenderer = {
         this._renderBackingComposition(data);
 
         // 4 · Dependencies
+        // ⚠️ An array's LENGTH is how many rows the producer sent, not how many
+        // exist. A producer-side cap of 6 became the on-page claim "6 upstream"
+        // when there were 13 — and the length looked authoritative precisely
+        // because it was wrong. Prefer the declared count, and when the list is
+        // knowingly partial say so rather than passing the cap off as the total.
         var dep = data.dependencies || {};
-        var nUp = Array.isArray(dep.upstream) ? dep.upstream.length : 0;
+        var upRows = Array.isArray(dep.upstream) ? dep.upstream.length : 0;
+        var upTotal = (typeof dep.upstream_count === 'number') ? dep.upstream_count : upRows;
+        var upSub = (dep.upstream_complete === false || upTotal > upRows)
+            ? 'top ' + upRows + ' of ' + upTotal + ' upstream'
+            : upTotal + ' upstream';
+        // Ordering is a claim too: thinnest-first reads as largest-first to
+        // anyone who assumes size ordering, so name it when the producer does.
+        if (dep.upstream_sorted_by) {
+            upSub += ' (' + String(dep.upstream_sorted_by).replace(/_/g, ' ') + ')';
+        }
         var downSub = (dep.downstream_tracked === true)
             ? (Array.isArray(dep.downstream) ? dep.downstream.length : 0) + ' downstream'
             : 'downstream not tracked';
-        this._renderAxisHead('dependencies', 4, 'Dependencies', nUp + ' upstream · ' + downSub, '');
+        this._renderAxisHead('dependencies', 4, 'Dependencies', upSub + ' \u00b7 ' + downSub, '');
         this._renderDependenciesSection(data);
 
         // 5 · Editorial axis (issuer, structural, or a future per-asset label)

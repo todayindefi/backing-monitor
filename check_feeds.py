@@ -210,6 +210,31 @@ for f in glob.glob('js/renderers/*.js'):
         fails.append(f'{os.path.basename(f)}: declares <canvas id="peg-chart"> — '
                      f'collides with the hidden common canvas')
 
+# 8. Renderer cache tokens must not lag their file's last commit.
+#
+#    index.html serves each renderer with a ?v= token; a returning visitor keeps
+#    the cached copy until it changes. sync_and_push.sh already warns about this
+#    — but it warns into an hourly log and then EXITS SUCCESSFULLY, so the run
+#    reads as clean and the warning is never met by anyone. Today cap.js shipped
+#    a header fix behind a six-week-old token. Same signal, somewhere it is
+#    actually read.
+import subprocess
+try:
+    idx = open('index.html', encoding='utf-8').read()
+    for jf in sorted(glob.glob('js/renderers/*.js')) + ['js/app.js']:
+        name = os.path.basename(jf)
+        m = re.search(re.escape(name) + r'\?v=([0-9a-z]+)', idx)
+        if not m: continue
+        tok = re.match(r'(\d{8})', m.group(1))
+        if not tok: continue
+        last = subprocess.run(['git', 'log', '-1', '--format=%ad', '--date=format:%Y%m%d', '--', jf],
+                              capture_output=True, text=True).stdout.strip()
+        if last and last > tok.group(1):
+            fails.append(f'{name}: cache token {m.group(1)} predates last commit {last} — '
+                         f'returning visitors keep the stale file')
+except Exception:
+    pass
+
 print('CORRECTNESS CHECKS (this suite cannot judge legibility)\n')
 for w in warns: print('  WARN  ' + w)
 for f_ in fails: print('  FAIL  ' + f_)
