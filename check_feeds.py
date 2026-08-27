@@ -276,6 +276,38 @@ except Exception:
 #    So it is ONE asset, not two. The general form: a rate needs its denominator
 #    restricted to the window where the failure could occur. Arithmetically the
 #    original number was fine and it answered a different question.
+#
+#    ⚠️ ROOT CAUSE (traced with riskAnalyst, 2026-08-27). Not random timing —
+#    a schedule collision, measured from producer mtimes:
+#
+#      :35    PegTracker run_backing_analyzers.sh starts
+#      ~:44   syrupusdc base analyzer writes            0 axis blocks
+#      :45    sync_and_push.sh runs  <-- COPIES HERE
+#      ~:46   syrup_family_analyzer rewrites all three  5 axis blocks
+#
+#    The crontab comment reads ":45 — 10min headroom for analyzer", which was
+#    true when written. The syrup family enricher was added later and the chain
+#    now finishes ~:46, so for these feeds the headroom is negative. A constant
+#    in a comment describing a timing that drifted — same shape as any hardcoded
+#    figure that stops matching, except in a crontab where nothing validates it.
+#
+#    It also inverts the healthy-looking cases: a sync that lands BEFORE the base
+#    write copies last hour's COMPLETE file, so 84% "clean" was clean by being
+#    slow. syrupusdt is not structurally safer, only later in the run (base at
+#    ~:46); it races too if either analyzer speeds up.
+#
+#    Nine producer files currently write after :45 — susdai :56, usdai :56,
+#    usdt :56, usdm :53, usds :53, susds :52, cusd :52, strc :50, syrupusdt :46.
+#    Those are copied a run behind, which is harmless for hourly data because the
+#    file they copy is complete. The failure needs base-before-sync AND
+#    enricher-after-sync, which today is syrupusdc alone.
+#
+#    ⚠️ Moving the sync to :50 is the immediate fix and is the USER'S crontab, not
+#    this repo — raised rather than changed. PegTracker is taking the durable
+#    half: base writes to a staging path, enricher publishes the real filename
+#    atomically, making the incomplete state unrepresentable at any schedule.
+#    This check stays useful after both, because it is what would catch the next
+#    enricher added after a sync boundary.
 PRODUCER_DIR = '/home/danger/PegTracker/data'
 AXES_ALL = ('peg', 'liquidity', 'backing', 'dependencies', 'issuer')
 if os.path.isdir(PRODUCER_DIR):
