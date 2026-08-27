@@ -2074,6 +2074,116 @@
         100.0,
         100.5
       ]
+    },
+    "axis_thresholds": {
+      "backing": {
+        "cr_pct": [
+          101,
+          100,
+          98,
+          95
+        ]
+      }
     }
+  },
+  "report_url": "https://tidresearch.com/reports/syrupusdc",
+  "peg": {
+    "market_price": 1.17997867716626,
+    "nav": 1.180243,
+    "premium_discount_pct": -0.022395628166405057,
+    "source": "coingecko",
+    "history_ref": "syrupusdc_backing_history.json",
+    "history_field": "peg_market_price",
+    "note": "Primary redemption is full-size at NAV via Maple's withdrawal queue; secondary trades at a small discount (charted)."
+  },
+  "liquidity": {
+    "free_liquidity_pct": 0.25,
+    "band_score": 1,
+    "total_2pct_depth": null,
+    "pools": [],
+    "deployment_ratio_pct": 99.75,
+    "note": "~0% free liquidity; larger exits queue at NAV over Maple's withdrawal cycle."
+  },
+  "backing": {
+    "collateral_ratio": 100.0,
+    "collateral_ratio_scale": "percent",
+    "collateral_ratio_basis": "Principal collateral ratio: (free USDC + sum of strategy assetsUnderManagement) / pool.totalAssets(). Three INDEPENDENT contract reads, so ~100% is the vault's components agreeing with its own accounting, not an identity \u2014 a shortfall would show. \u26a0\ufe0f total_supply is denominated in SHARES: total_backing/total_supply is assets-per-share (a NAV, ~1.18) and NOT a coverage ratio. The two figures answer different questions.",
+    "total_backing": 992815348.72,
+    "surplus_deficit": 18.23,
+    "surplus_deficit_basis": "pool.totalAssets() minus its independently-read components \u2014 the reconciliation residual, currently a few dollars on a book of hundreds of millions. NOT backing minus supply, which would be meaningless here because supply is in shares.",
+    "breakdown": [
+      {
+        "label": "Free USDC",
+        "value": 203819.02,
+        "pct": 0.02,
+        "tags": [
+          "liquid"
+        ]
+      },
+      {
+        "label": "Strategy AUM (deployed)",
+        "value": 992611547.93,
+        "pct": 99.98,
+        "tags": [
+          "deployed"
+        ]
+      }
+    ],
+    "detail": {
+      "impaired_count": 0,
+      "called_count": 0,
+      "default_count": 0,
+      "unrealized_losses": 0.0,
+      "principal_loans_only_usd": 869803818.39,
+      "principal_liquidity_usd": 31994690.76,
+      "principal_total_usd": 901798509.15,
+      "loans_pct": 96.5,
+      "liquidity_pct": 3.5
+    }
+  },
+  "dependencies": {
+    "upstream": [
+      {
+        "kind": "borrowers",
+        "name": "Top borrowers",
+        "metric": "top-3 \u2248 59% of loan book \u00b7 top-1 \u2248 25%",
+        "detail": "15 counterparties",
+        "link_type": "none"
+      },
+      {
+        "kind": "collateral",
+        "name": "BTC collateral",
+        "metric": "79% of book \u00b7 19 loans",
+        "link_type": "none",
+        "link": null
+      },
+      {
+        "kind": "collateral",
+        "name": "XRP collateral",
+        "metric": "11% of book \u00b7 2 loans",
+        "link_type": "none",
+        "link": null
+      },
+      {
+        "kind": "curator",
+        "name": "Maple Finance \u2014 curator",
+        "metric": "Pool delegate / curator",
+        "link_type": "none"
+      }
+    ],
+    "downstream": [],
+    "downstream_tracked": false
+  },
+  "issuer": {
+    "report_url": "https://tidresearch.com/reports/syrupusdc",
+    "report_url_status": "published",
+    "badge": "Structural 6.5/10",
+    "structural_score": 6.5,
+    "structural_score_source": "risk-feed@2026-08-27T01:45:02Z",
+    "structural_score_status": "ok",
+    "structural_score_generated_at": "2026-08-27T01:45:02Z",
+    "structural_score_age_hours": 14.02,
+    "curator": "Maple Finance",
+    "attestation_age_days": null
   }
 }
