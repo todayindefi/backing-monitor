@@ -242,6 +242,42 @@ try:
 except Exception:
     pass
 
+# 9. Consumer vs producer: same timestamp, different content.
+#
+#    ⚠️ Timestamp equality is normally the "in sync" signal. Here it is the
+#    DETECTOR. PegTracker's pipeline runs a base analyzer and then a family
+#    enricher that adds the axis blocks; the stamp is written by the FIRST stage.
+#    If sync_and_push.sh copies between the two, the consumer gets a valid,
+#    schema-conformant, INCOMPLETE payload carrying the same timestamp as the
+#    complete one upstream. hasAxisBlocks is then false and the asset silently
+#    renders as a legacy single-panel dashboard.
+#
+#    Nothing is wrong with either repo's code — it is a race between cron
+#    schedules — and no staleness check keyed on timestamps can see it, because
+#    the timestamps agree. Only comparing CONTENT does. Observed live on
+#    syrupusdc: consumer 0/5 blocks, producer 5/5, both 2026-08-27T14:44:26Z.
+#
+#    Self-heals on the next sync, so this is a WARN unless the stamps also agree,
+#    which is the case that says the copy will not be retried on staleness alone.
+PRODUCER_DIR = '/home/danger/PegTracker/data'
+AXES_ALL = ('peg', 'liquidity', 'backing', 'dependencies', 'issuer')
+if os.path.isdir(PRODUCER_DIR):
+    for f in sorted(glob.glob(os.path.join(DATA, '*_backing.json'))):
+        name = os.path.basename(f)
+        up = os.path.join(PRODUCER_DIR, name)
+        if not os.path.exists(up): continue
+        c, pr = load(f), load(up)
+        if not isinstance(c, dict) or not isinstance(pr, dict): continue
+        cb = sum(1 for k in AXES_ALL if isinstance(c.get(k), dict))
+        pb = sum(1 for k in AXES_ALL if isinstance(pr.get(k), dict))
+        if cb >= pb: continue
+        cts = c.get('timestamp') or c.get('as_of')
+        pts = pr.get('timestamp') or pr.get('as_of')
+        slug = name.replace('_backing.json', '')
+        same = ' and the timestamps MATCH, so a staleness check cannot see it' if cts == pts else ''
+        fails.append(f'{slug}: consumer has {cb}/5 axis blocks, producer has {pb}/5'
+                     f'{same} — mid-pipeline copy; re-sync this file')
+
 print('CORRECTNESS CHECKS (this suite cannot judge legibility)\n')
 for w in warns: print('  WARN  ' + w)
 for f_ in fails: print('  FAIL  ' + f_)
