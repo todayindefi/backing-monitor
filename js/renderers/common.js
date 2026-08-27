@@ -35,7 +35,12 @@ const CommonRenderer = {
     // The default is deliberate. An undeclared raw feed renders alarmingly low
     // and gets investigated; the reverse — a distressed feed silently rendered
     // healthy — is the failure that sits on a public page unnoticed.
-    RAW_CR_ASSETS: ['usdm'],
+    // Retired 2026-08-27: usdm now declares collateral_ratio_scale on both blocks,
+    // so the declared branch resolves it and a per-asset list encoding producer
+    // knowledge in the consumer is no longer needed. Kept empty rather than
+    // deleted so the resolution order below still reads as three steps, and so
+    // re-adding an entry is visibly a fallback rather than the normal path.
+    RAW_CR_ASSETS: [],
 
     normalizeCollateralRatio(value, assetSlug, summary) {
         if (value === null || value === undefined) return value;
@@ -727,18 +732,28 @@ const CommonRenderer = {
         // summary's declaration to a backing value is a guess, and with a raw-list
         // asset the normaliser is not idempotent — a percent value multiplied
         // again reads 12198 and rates 5/5, the reassuring direction.
+        // A declaration describes ITS OWN block and nothing else. backing and
+        // summary routinely hold different quantities under the same field name —
+        // usdm's backing.collateral_ratio is stable-only reserve over Mento debt
+        // (91.02, percent) while summary.collateral_ratio is gross over the same
+        // debt (1.2231, ratio). Both declarations are right; they are 31pp apart
+        // because they measure different things.
+        //
+        // ⚠️ REMOVED: a check that rejected the payload when the two declared
+        // scales differed. It compared STRINGS, which cannot tell "two fields,
+        // two scales, both correct" from "one quantity, contradictory scales" —
+        // and it was strictly harmful. It fired ONLY when both blocks declared,
+        // which is exactly when per-block resolution already gets it right, and
+        // stayed silent on the hazard it was written for (an undeclared backing
+        // value inheriting summary's declaration), which still rated 5/5. It
+        // unrated usdm on a live page for being correct, and would have unrated
+        // every asset adopting the per-block declarations we asked for.
+        //
+        // So: never inherit across blocks. A backing value with no declaration of
+        // its own falls to the default (percent), not to summary's — guessing
+        // from a sibling field's scale is the mis-scaling this is meant to avoid.
         var backingBlock = data.backing || {};
-        var scaleSrc = (fromBacking && backingBlock.collateral_ratio_scale)
-            ? backingBlock : sum;
-
-        // If both blocks declare a scale and they DISAGREE, the payload is
-        // self-contradictory and either reading is a guess. Refuse rather than
-        // pick — an unrated axis is honest, and this is precisely the case where
-        // guessing wrong lands on 5/5.
-        if (backingBlock.collateral_ratio_scale && sum.collateral_ratio_scale &&
-            backingBlock.collateral_ratio_scale !== sum.collateral_ratio_scale) {
-            return null;
-        }
+        var scaleSrc = fromBacking ? backingBlock : sum;
 
         cr = CommonRenderer.normalizeCollateralRatio(cr, data.asset_slug, scaleSrc);
         if (cr == null) return null;
