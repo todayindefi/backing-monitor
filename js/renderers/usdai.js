@@ -1016,12 +1016,16 @@ var UsdaiRenderer = {
                     '<div class="text-xs text-slate-400 mt-1">loan-tier, disclosed — not a guarantee</div></div>' +
             '</div>';
 
+        // The standalone NAV-per-share chart is gone: it plotted the band's UPPER
+        // EDGE, so alongside the §1 band chart it was the same picture drawn twice
+        // — and the band carries the accrual in its slope plus the exit haircut in
+        // its width, which this could not show. The APY cards below still populate:
+        // _loadNavChart calls _fillApyCards before it looks for the canvas, so
+        // removing the canvas costs the chart and nothing else.
         var chartBlock =
-            '<div class="mt-6">' +
-                '<div class="text-sm font-semibold text-slate-700 mb-2">NAV per share — 30d</div>' +
-                '<div style="height: 320px; position: relative;">' +
-                    '<canvas id="usdai-nav-chart"></canvas>' +
-                '</div>' +
+            '<div class="text-xs text-slate-500 mt-4">' +
+                'NAV per share over time is the upper edge of the ' +
+                '<a href="#panel-peg-chart" class="text-blue-500 hover:underline">NAV band chart</a> above.' +
             '</div>';
 
         var methodology =
@@ -1053,28 +1057,54 @@ var UsdaiRenderer = {
     //
     // The series and field are taken from peg.history_ref / peg.history_field
     // rather than hardcoded, so a change of basis upstream moves the chart with
-    // it. susdai's band_deviation_pct starts today by design — PegTracker did not
-    // backfill because the history stores the discounts but not the raw share
-    // prices, so older rows cannot be recomputed without fabricating them. A
-    // short series is expected for a few days and says so rather than looking broken.
+    // it.
+    //
+    // CORRECTION to an earlier version of this comment: it claimed the history
+    // stores the discounts but not the raw share prices, so older rows could not
+    // be recomputed. That was wrong. nav_per_share (which IS deposit_share_price),
+    // redemption_share_price and peg_secondary_px are all present 101/101 —
+    // band_deviation_pct alone is 1/101. A backfill is therefore a reconstruction,
+    // not a fabrication, and is filed with PegTracker. It is deliberately NOT done
+    // client-side: the publisher owns the accounting model, which is the rule the
+    // bridged-supply bug established.
     _renderPegChartPanel: function(data, slug) {
         var peg = data.peg || {};
-        if (!peg.history_field) return '';
         var isVault = (slug === 'susdai');
+        // sUSDai draws the BAND itself — redemption..deposit shaded, market price
+        // through it — rather than a deviation line against zero. Deviation-vs-zero
+        // needed a caption explaining that zero meant "inside a band" rather than
+        // "at par", which is the tell that the picture was wrong: it also collapsed
+        // trading ABOVE the band (paying a premium over the exit price) and BELOW it
+        // (a real discount to the exit price) into one unsigned magnitude, and about
+        // a third of readings are excursions. The band's slope carries the NAV
+        // accrual and its width IS the exit haircut, so nothing is lost by merging.
+        //
+        // Drawn from nav_per_share / redemption_share_price / peg_secondary_px,
+        // all 101/101 in history — it does NOT depend on band_deviation_pct, which
+        // is the rating input and is still 1/101 pending backfill.
+        if (isVault) {
+            return '<div class="panel" id="panel-peg-chart">' +
+                '<div class="panel-title">NAV band vs market ' +
+                    '<span class="text-xs font-normal text-slate-500">\u2014 redemption \u2193 deposit \u2191, market through it</span></div>' +
+                '<div style="height: 320px; position: relative;"><canvas id="usdai-peg-chart"></canvas></div>' +
+                '<div class="text-xs text-slate-500 mt-2">The shaded band runs from the redemption price ' +
+                'to the deposit price; its <em>width</em> is the exit haircut and its <em>slope</em> is NAV ' +
+                'accrual. Price inside the band is the normal state \u2014 above it is a premium to the exit ' +
+                'price, below it a discount.</div>' +
+            '</div>';
+        }
+        if (!peg.history_field) return '';
         return '<div class="panel" id="panel-peg-chart">' +
-            '<div class="panel-title">' + (isVault ? 'Deviation from NAV band' : 'Deviation from $1') +
-                ' <span class="text-xs font-normal text-slate-500">\u2014 history</span></div>' +
+            '<div class="panel-title">Deviation from $1 ' +
+                '<span class="text-xs font-normal text-slate-500">\u2014 history</span></div>' +
             '<div style="height: 240px; position: relative;"><canvas id="usdai-peg-chart"></canvas></div>' +
-            (isVault ?
-                '<div class="text-xs text-slate-500 mt-2">Zero means the market is trading <em>inside</em> ' +
-                'the redemption\u2013deposit band, which is the normal state; the line only leaves zero ' +
-                'when price exits the band.</div>' : '') +
         '</div>';
     },
 
     _loadPegChart: function(data, slug) {
         var ctx = document.getElementById('usdai-peg-chart');
         if (!ctx) return;
+        if (slug === 'susdai') return UsdaiRenderer._loadBandChart(ctx, data, slug);
         var peg = data.peg || {};
         var field = String(peg.history_field || '').replace('entries[].', '');
         var ref = peg.history_ref || (slug + '_backing_history.json');
@@ -1109,6 +1139,79 @@ var UsdaiRenderer = {
                 if (ctx) ctx.parentElement.innerHTML =
                     '<div class="text-xs text-slate-400 italic">Deviation history unavailable.</div>';
             });
+    },
+
+    // Band chart: shaded redemption..deposit region with market price through it.
+    // Uses three series that are fully populated in history, so it does not wait
+    // on the band_deviation_pct backfill.
+    _loadBandChart: function(ctx, data, slug) {
+        var ref = (data.peg && data.peg.history_ref) || (slug + '_backing_history.json');
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + ref + '?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                var entries = (hist && Array.isArray(hist.entries)) ? hist.entries : [];
+                var rows = entries.filter(function(e) {
+                    return e.timestamp && e.nav_per_share != null &&
+                           e.redemption_share_price != null && e.peg_secondary_px != null;
+                }).map(function(e) {
+                    var ts = e.timestamp.endsWith('Z') ? e.timestamp : (e.timestamp + 'Z');
+                    var t = new Date(ts).getTime();
+                    // nav_per_share IS deposit_share_price (convertToAssets is struck
+                    // optimistic); ordering is asserted rather than assumed so an
+                    // inversion upstream does not silently draw an inside-out band.
+                    var lo = Math.min(e.redemption_share_price, e.nav_per_share);
+                    var hi = Math.max(e.redemption_share_price, e.nav_per_share);
+                    return { t: t, lo: lo, hi: hi, px: e.peg_secondary_px };
+                }).sort(function(a, b) { return a.t - b.t; });
+
+                if (typeof Chart === 'undefined' || rows.length < 2) {
+                    ctx.parentElement.innerHTML =
+                        '<div class="text-xs text-slate-400 italic">Band history not yet available.</div>';
+                    return;
+                }
+                UsdaiRenderer._drawBandChart(ctx, rows);
+            })
+            .catch(function() {
+                if (ctx) ctx.parentElement.innerHTML =
+                    '<div class="text-xs text-slate-400 italic">Band history unavailable.</div>';
+            });
+    },
+
+    _drawBandChart: function(ctx, rows) {
+        if (window._usdaiPegChart) window._usdaiPegChart.destroy();
+        var lo = rows.map(function(r) { return { x: r.t, y: r.lo }; });
+        var hi = rows.map(function(r) { return { x: r.t, y: r.hi }; });
+        var px = rows.map(function(r) { return { x: r.t, y: r.px }; });
+        window._usdaiPegChart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets: [
+                // Lower bound drawn first with no fill, upper bound fills DOWN to it
+                // (fill: '-1'), which shades the band between them.
+                { label: 'Redemption price', data: lo, borderColor: '#94a3b8',
+                  borderWidth: 1, pointRadius: 0, fill: false, tension: 0.25 },
+                { label: 'Deposit price (NAV)', data: hi, borderColor: '#94a3b8',
+                  borderWidth: 1, pointRadius: 0, fill: '-1',
+                  backgroundColor: 'rgba(99,102,241,0.16)', tension: 0.25 },
+                { label: 'Market price', data: px, borderColor: '#4f46e5',
+                  borderWidth: 2, pointRadius: 0, fill: false, tension: 0.25 }
+            ] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: true, labels: { boxWidth: 10, font: { size: 10 } } },
+                    tooltip: { callbacks: { label: function(c) {
+                        return c.dataset.label + ': ' + c.parsed.y.toFixed(6);
+                    } } }
+                },
+                scales: {
+                    x: { type: 'time', time: { unit: 'day' }, grid: { display: false },
+                         ticks: { font: { size: 10 } } },
+                    y: { ticks: { font: { size: 10 }, callback: function(v) { return v.toFixed(4); } } }
+                }
+            }
+        });
     },
 
     _drawPegChart: function(ctx, pts, slug) {
