@@ -166,16 +166,39 @@ var ThusdRenderer = {
         var anc = ThusdRenderer._anchor;
         var html = '';
 
+        // 5-axis grouping (tier 3). Nothing dropped — the same ten panels regrouped
+        // under numbered heads. The band itself appears once PegTracker emits the
+        // axis blocks; these heads are structure, not ratings, and stand alone.
+        var head = ThusdRenderer._axisHead;
+
         html += anc('thusd-headline',     ThusdRenderer._renderHeadlineCard(spec, s));
         html += anc('thusd-risk-banner',  ThusdRenderer._renderRiskBanner(data));
+
+        // §1 carries BOTH peg and DEX liquidity because _renderDexPeg does not
+        // split cleanly: its metric row interleaves weighted price and discount
+        // with TVL and 24h volume, and the by-chain rows carry price and pool
+        // counts together. Splitting a working panel to satisfy a numbering
+        // sequence is a rewrite, not a regroup — so there is deliberately no §2
+        // here. Same ruling as USDai's Secondary Market panel before its feed
+        // published the per-tier route flags that made a split meaningful.
+        html += head(1, 'Peg &amp; DEX liquidity', 'weighted price vs $1, depth and venue split');
+        html += anc('thusd-peg',          ThusdRenderer._renderDexPeg(spec));
+
+        html += head(3, 'Backing', ThusdRenderer._backingHeadSub(data, s));
         html += anc('thusd-reserves',     ThusdRenderer._renderReserveComposition(spec, s));
         html += anc('thusd-coverage',     ThusdRenderer._renderCoverageHistoryPanel());
-        html += anc('thusd-yield',        ThusdRenderer._renderYieldTrajectoryPanel(spec));
-        html += anc('thusd-chains',       ThusdRenderer._renderConservationTable(spec));
-        html += anc('thusd-admin',        ThusdRenderer._renderAdminChain(spec));
         html += anc('thusd-flow',         ThusdRenderer._renderFlowPanel(spec));
+
+        html += head(4, 'Dependencies', 'cross-chain conservation and the thBILL leg');
+        html += anc('thusd-chains',       ThusdRenderer._renderConservationTable(spec));
+
+        html += head(5, 'Issuer', 'admin chain and critical events');
+        html += anc('thusd-admin',        ThusdRenderer._renderAdminChain(spec));
         html += anc('thusd-events',       ThusdRenderer._renderCriticalEventsPanel(spec));
-        html += anc('thusd-peg',          ThusdRenderer._renderDexPeg(spec));
+
+        // Below the axes — methodology and the sthUSD yield trajectory are
+        // context rather than an axis.
+        html += anc('thusd-yield',        ThusdRenderer._renderYieldTrajectoryPanel(spec));
         html += anc('thusd-methodology',  ThusdRenderer._renderMethodology(spec));
 
         container.innerHTML = html;
@@ -979,6 +1002,32 @@ var ThusdRenderer = {
     // ============================================================
     // §10 DEX peg + venues
     // ============================================================
+    _axisHead: function(num, title, sub) {
+        return '<div class="axis-head">' +
+            '<span class="axis-num">' + num + '</span>' +
+            '<span class="axis-title">' + title + '</span>' +
+            (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
+        '</div>';
+    },
+
+    // The §3 subtitle carries the live coverage figure AND any firing backing
+    // criticals. A backing head reading clean beside a critical flag is the
+    // split-impression problem: the flags panel sits at the top of the page and
+    // the reader meets this head much later.
+    //
+    // ⚠️ on_chain_coverage_pct is a FRACTION (0.4284 = 42.84%) — same shape as
+    // recon_residual_pct. It is multiplied here, not rendered raw.
+    _backingHeadSub: function(data, s) {
+        var cov = s && s.on_chain_coverage_pct;
+        var txt = (cov != null) ? 'on-chain coverage ' + (cov * 100).toFixed(2) + '%' : 'reserve composition';
+        var crit = (data && Array.isArray(data.risk_flags))
+            ? data.risk_flags.filter(function(f) { return f.severity === 'critical'; }).length : 0;
+        if (crit) {
+            txt += ' \u00b7 ' + crit + ' critical flag' + (crit > 1 ? 's' : '') + ' firing';
+        }
+        return txt;
+    },
+
     _renderDexPeg: function(spec) {
         var t2 = spec.tier2_peg_nav || {};
         var dex = t2.dex_peg || t2.arb_dex_peg || {};
