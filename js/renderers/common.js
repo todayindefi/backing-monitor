@@ -1081,8 +1081,16 @@ const CommonRenderer = {
                     '<div class="text-lg font-bold ' + pctCls + '">' + this.pegStatusLabel(st) + '</div></div>' +
             '</div>';
 
-        var hasHist = history && Array.isArray(history.entries) &&
-            history.entries.some(function(e) { return e[peg.history_field] != null; });
+        // peg.history_ref may name a file OTHER than the backing history that was
+        // passed in — the per-asset {slug}_peg_history.json exports do exactly
+        // that. Until now history_ref was never fetched: this read only the
+        // backing history, so crvusd (0 peg fields in 692 rows) and usds rendered
+        // "Peg history not tracked" while a populated export sat unread beside
+        // them. Declaring a source is not the same as reading it.
+        var pegRef = peg.history_ref;
+        var usesOwnFile = !!(pegRef && !/_backing_history\.json$/.test(pegRef));
+        var hasHist = usesOwnFile || (history && Array.isArray(history.entries) &&
+            history.entries.some(function(e) { return e[peg.history_field] != null; }));
         var chartBlock = hasHist
             ? '<div class="chart-container"><canvas id="peg-chart"></canvas></div>'
             : '<div class="text-sm text-slate-400">Peg history not tracked for this asset.</div>';
@@ -1094,7 +1102,30 @@ const CommonRenderer = {
                 chartBlock +
             '</div>';
 
-        if (hasHist) this._renderPegChart(data, history);
+        if (hasHist) {
+            if (usesOwnFile) {
+                var self = this;
+                var nc = Math.floor(Date.now() / 60000);
+                fetch('data/' + pegRef + '?nocache=' + nc)
+                    .then(function(r) { return r.ok ? r.json() : null; })
+                    .then(function(h) {
+                        if (h && Array.isArray(h.entries)) self._renderPegChart(data, h);
+                        else self._pegChartUnavailable(pegRef);
+                    })
+                    .catch(function() { self._pegChartUnavailable(pegRef); });
+            } else {
+                this._renderPegChart(data, history);
+            }
+        }
+    },
+
+    _pegChartUnavailable(ref) {
+        var ctx = document.getElementById('peg-chart');
+        if (ctx && ctx.parentElement) {
+            ctx.parentElement.innerHTML =
+                '<div class="text-sm text-slate-400">Peg history unavailable (' +
+                String(ref).replace(/[<>&]/g, '') + ').</div>';
+        }
     },
 
     _renderPegChart(data, history) {
