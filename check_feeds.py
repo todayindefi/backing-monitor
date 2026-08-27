@@ -259,6 +259,23 @@ except Exception:
 #
 #    Self-heals on the next sync, so this is a WARN unless the stamps also agree,
 #    which is the case that says the copy will not be retried on staleness alone.
+#
+#    ⚠️ CORRECTION to commit 6506a0e6c, which reported "usdai 5 of 20 recent syncs
+#    landed 0/5 (25%)". That figure is WRONG and the error is worth naming because
+#    it is easy to repeat. usdai's axis blocks did not exist until 10:01 on
+#    2026-08-27 — the boundary is commit 9c80a563f, which is where THIS repo first
+#    synced them. A "last N commits" window reached back across that boundary,
+#    where a 0-block file is the correct state rather than a dropped one. A
+#    pre-migration zero and a raced zero are byte-identical.
+#
+#    Re-measured from each asset's first 5-block sync:
+#      usdai        0 of 15   0%   not racing
+#      syrupusdc  339 of 1589 21%  racing, all-time since 2026-06-09
+#                  (riskAnalyst measures 16% over a recent window; same finding)
+#
+#    So it is ONE asset, not two. The general form: a rate needs its denominator
+#    restricted to the window where the failure could occur. Arithmetically the
+#    original number was fine and it answered a different question.
 PRODUCER_DIR = '/home/danger/PegTracker/data'
 AXES_ALL = ('peg', 'liquidity', 'backing', 'dependencies', 'issuer')
 if os.path.isdir(PRODUCER_DIR):
