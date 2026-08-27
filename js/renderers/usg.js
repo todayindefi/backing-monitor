@@ -23,6 +23,34 @@
 
 var USGRenderer = {
 
+    // See the note at the call site: collateral_backed_share_pct is currently a
+    // duplicate of collateral_ratio (both total_backing / real_supply), so it is
+    // not a share at all. Render it only when it is actually share-shaped.
+    _backedShareCard: function(s) {
+        var v = (s.collateral_backed_share_pct != null)
+            ? s.collateral_backed_share_pct : s.collateral_ratio;
+        var duplicatesCr = (s.collateral_backed_share_pct != null &&
+                            s.collateral_ratio != null &&
+                            Math.abs(s.collateral_backed_share_pct - s.collateral_ratio) < 0.01);
+        var impossible = (v != null && v > 100.0001);
+        if (duplicatesCr || impossible) {
+            return '<div class="summary-card">' +
+                '<div class="card-label">Collateral-backed share of supply</div>' +
+                '<div class="card-value text-slate-400">n/a</div>' +
+                '<div class="text-xs text-amber-700 dark:text-amber-300 mt-1">' +
+                    'Feed field currently duplicates the collateral ratio (' +
+                    CommonRenderer.formatPercent(v, 1) + ') rather than reporting a share, ' +
+                    'which cannot exceed 100%. Not shown rather than shown wrong.' +
+                '</div></div>';
+        }
+        return '<div class="summary-card">' +
+            '<div class="card-label">Collateral-backed share of supply</div>' +
+            '<div class="card-value">' + CommonRenderer.formatPercent(v, 1) + '</div>' +
+            '<div class="text-xs text-slate-400 mt-1">external collateral \u00f7 supply</div>' +
+        '</div>';
+    },
+
+
     _crClass: function(cr) {
         if (cr == null) return '';
         return cr < 110 ? 'text-red-600' : cr < 120 ? 'text-amber-600' : 'text-green-600';
@@ -148,7 +176,7 @@ var USGRenderer = {
             '<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">' +
                 '<div class="summary-card"><div class="card-label">CDP-book CR</div><div class="card-value ' + (s.mint_cr >= 100 ? 'positive' : 'negative') + '">' + CommonRenderer.formatPercent(s.mint_cr, 1) + '</div><div class="text-xs text-slate-400 mt-1">CDP collateral ÷ CDP debt</div></div>' +
                 '<div class="summary-card"><div class="card-label">Inclusive CR</div><div class="card-value ' + (s.collateral_ratio_inclusive >= 100 ? 'positive' : 'negative') + '">' + CommonRenderer.formatPercent(s.collateral_ratio_inclusive, 1) + '</div><div class="text-xs text-slate-400 mt-1">(CDP collateral + POL pool stables) ÷ real supply</div></div>' +
-                '<div class="summary-card"><div class="card-label">Collateral-backed share of supply</div><div class="card-value">' + CommonRenderer.formatPercent(s.collateral_backed_share_pct != null ? s.collateral_backed_share_pct : s.collateral_ratio, 1) + '</div><div class="text-xs text-slate-400 mt-1">external collateral ÷ supply — ~half is by design for a POL-heavy model, not undercollateralization</div></div>' +
+                USGRenderer._backedShareCard(s) +
             '</div>';
         if (cb) {
             html += '<table class="data-table"><thead><tr><th>Collateral component</th><th class="text-right">Value</th></tr></thead><tbody>' +
