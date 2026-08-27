@@ -1319,10 +1319,16 @@ var UsdaiRenderer = {
                 var bps = q.slippage_bps;
                 var bpsState = (bps == null) ? 'unknown' : (bps < 25) ? 'ok' : (bps < 100) ? 'warn' : 'critical';
                 var bpsCls = UsdaiRenderer._stateTextCls(bpsState);
-                return '<tr>' +
+                // Per-tier, not per-panel: the gate applies at the sizes where the
+                // router reaches it, and marking the whole ladder would overstate it.
+                var gated = (q.route_includes_gated_venue === true);
+                return '<tr' + (gated ? ' class="bg-amber-50 dark:bg-amber-950/30"' : '') + '>' +
                     '<td class="font-mono text-right">' + sizeTxt + '</td>' +
                     '<td class="font-mono text-right">' + outTxt + '</td>' +
-                    '<td class="font-mono text-right ' + bpsCls + '">' + (bps != null ? bps.toFixed(1) + ' bps' : '—') + '</td>' +
+                    '<td class="font-mono text-right ' + (gated ? 'text-amber-700 dark:text-amber-300' : bpsCls) + '">' +
+                        (bps != null ? bps.toFixed(1) + ' bps' : '—') +
+                        (gated ? ' <span title="route includes a gated venue">\u26a0</span>' : '') +
+                    '</td>' +
                 '</tr>';
             }).join('');
             // ROUTE CAVEAT, derived only from fields this feed publishes.
@@ -1341,29 +1347,41 @@ var UsdaiRenderer = {
             // PegTracker ships route_includes_gated_venue and the ladder's
             // provenance fields; at that point the number can be trusted and
             // liquidity earns its own axis section.
-            var pools = Array.isArray(sec.top_pools) ? sec.top_pools : [];
-            var poolTvl = pools.reduce(function(a, x) { return a + ((x && x.tvl_usd) || 0); }, 0);
-            var vol24 = pools.reduce(function(a, x) { return a + ((x && x.vol_24h_usd) || 0); }, 0);
-            var overDepth = tiers.filter(function(t) {
-                return qm[t] && qm[t].slippage_bps != null && poolTvl > 0 && Number(t) > poolTvl;
+            // The feed now publishes the route itself, so this no longer infers the
+            // problem from pool depth. The earlier version compared quote size to
+            // summed top_pools TVL; top_pools_is_total_depth is now explicitly
+            // false, which means that comparison treated a partial venue list as
+            // the denominator of record. Directionally right, wrongly grounded.
+            // Use route_includes_gated_venue and route_venues instead.
+            var gatedTiers = tiers.filter(function(t) {
+                return qm[t] && qm[t].route_includes_gated_venue === true;
             });
             var routeNote = '';
-            if (overDepth.length && poolTvl > 0) {
-                var biggest = Number(overDepth[overDepth.length - 1]);
+            if (gatedTiers.length) {
+                var firstGated = Number(gatedTiers[0]);
+                var venueSet = {};
+                gatedTiers.forEach(function(t) {
+                    (qm[t].route_venues || []).forEach(function(v) { venueSet[v] = 1; });
+                });
+                var venues = Object.keys(venueSet);
                 routeNote =
                     '<div class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 ' +
                         'border border-amber-200 dark:border-amber-800 rounded p-2 mt-2">' +
-                        '<span class="font-semibold">These are route quotes, not depth against the pools above.</span> ' +
-                        'The venues listed here hold <span class="font-mono">' +
-                        UsdaiRenderer._usdShort(poolTvl) + '</span> in total' +
-                        (vol24 === 0 ? ' on <span class="font-mono">$0</span> of 24h volume' : '') +
-                        ', so the <span class="font-mono">$' + (biggest / 1000).toFixed(0) + 'K</span> quote is ' +
-                        '<span class="font-mono">' + (biggest / poolTvl).toFixed(1) + '\u00d7</span> their combined ' +
-                        'depth and must clear through venues this feed does not identify. A low bps at that size ' +
-                        'reflects the router\u2019s path, not exit liquidity in the pools shown \u2014 and the path ' +
-                        'is not published here, so what it passes through is unknown from this data.' +
+                        '<span class="font-semibold">Marked tiers route through a gated venue.</span> ' +
+                        'From <span class="font-mono">$' + (firstGated / 1000).toFixed(0) + 'K</span> upward the ' +
+                        'router\u2019s best path includes an <span class="font-mono">erc4626</span> vault leg \u2014 ' +
+                        'a <em>subscription</em> into an async-redemption instrument, priced here as though it were ' +
+                        'settled USDC. The bps on those rows is therefore not a realisable exit cost at that size. ' +
+                        'Venues on the marked routes: <span class="font-mono">' +
+                        UsdaiRenderer._esc(venues.join(', ')) + '</span>.' +
                     '</div>';
             }
+            // Pools shown are a named subset, not total depth — the feed says so.
+            var scopeNote = (sec.top_pools_is_total_depth === false) ?
+                '<div class="text-xs text-slate-500 mt-2">Pools listed above are a named subset (<span ' +
+                    'class="font-mono">' + UsdaiRenderer._esc(sec.top_pools_scope || 'scoped') + '</span>), ' +
+                    'not total depth \u2014 do not read their combined TVL as the market\u2019s capacity.' +
+                '</div>' : '';
 
             slipBlock =
                 '<div class="mt-6">' +
@@ -1373,6 +1391,7 @@ var UsdaiRenderer = {
                         '<tbody>' + rows + '</tbody>' +
                     '</table></div>' +
                     routeNote +
+                    scopeNote +
                 '</div>';
         }
 
