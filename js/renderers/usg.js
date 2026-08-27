@@ -7,15 +7,42 @@
  *   - POL deployed: protocol-owned USG minted into its PegKeeper pools (circular)
  *   - sUSG        : staked USG (a derivative holding of already-minted supply)
  *
- * Three backing ratios, all surfaced — none hidden, but the sub-100 one is
- * never shown as a headline CR:
- *   - CDP-book CR (mint_cr, ~119%): CDP collateral / CDP debt — lending-book health.
- *   - Inclusive CR (~135%): (CDP collateral + POL pool stables) / real supply.
- *   - Collateral-backed share of supply (~55%): external collateral / supply.
- *     This is the analyzer's `collateral_ratio`. For a POL-heavy design ~50% is
- *     by design, NOT undercollateralization, so preRender re-points the summary
- *     cards + history chart at the two real CRs and labels the conservative
- *     number "collateral-backed share of supply" only inside the panel below.
+ * ⚠️ THE PARAGRAPH BELOW WAS TRUE WHEN WRITTEN AND IS NO LONGER TRUE OF THE
+ * FEED. It is kept rather than rewritten: the producer repurposed a field in
+ * place, and this text is the only evidence that happened. Updating it to match
+ * today's numbers would launder the producer bug into documentation — the note
+ * would then agree with the defect and nothing downstream could catch it.
+ *
+ * HISTORICAL (pre-2026-08-27):
+ *   Three backing ratios, all surfaced — none hidden, but the sub-100 one is
+ *   never shown as a headline CR:
+ *     - CDP-book CR (mint_cr, ~119%): CDP collateral / CDP debt — lending-book health.
+ *     - Inclusive CR (~135%): (CDP collateral + POL pool stables) / real supply.
+ *     - Collateral-backed share of supply (~55%): external collateral / supply.
+ *       This is the analyzer's `collateral_ratio`. For a POL-heavy design ~50% is
+ *       by design, NOT undercollateralization, so preRender re-points the summary
+ *       cards + history chart at the two real CRs and labels the conservative
+ *       number "collateral-backed share of supply" only inside the panel below.
+ *
+ * MEASURED 2026-08-27 — four fields, all reading as a collateral ratio:
+ *     collateral_ratio            131.53
+ *     collateral_backed_share_pct 131.53   <- duplicate; NOT a share
+ *     mint_cr                     131.5
+ *     collateral_ratio_inclusive  155.46
+ *   collateral_ratio and collateral_backed_share_pct are both
+ *   total_backing / real_supply (131.5284). pol_deployed is now 0.0, so every
+ *   unit of real supply is CDP debt and an actual share would be
+ *   cdp_debt / real_supply = 100.0%. The "~55% by design" framing describes a
+ *   POL-heavy state the protocol is no longer in.
+ *
+ *   ⚠️ The trap: the field named "share" is the one a careful reader picks
+ *   believing it the conservative choice, and it is the wrong one. See
+ *   _backedShareCard, which renders n/a rather than an impossible >100% share.
+ *
+ *   ⚠️ Do NOT resolve this by editing the note alone. A note-vs-payload
+ *   disagreement across a repo boundary cannot be settled from one side: from
+ *   here it is indistinguishable from a stale note, and from the producer's side
+ *   the field looks fine. PegTracker has the fix; riskAnalyst holds both views.
  *
  * Data: data/usg_backing.json (+ data/usg_backing_history.json).
  * Modeled on crvusd.js (shared CDP + PegKeeper structure).
