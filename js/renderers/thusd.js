@@ -189,7 +189,15 @@ var ThusdRenderer = {
         // point §2 has something of its own to say and the split earns itself.
         // USDai's went exactly that way — deferred twice, then correct once
         // route_includes_gated_venue shipped.
-        html += head(1, 'Peg &amp; DEX liquidity', 'weighted price vs $1, depth and venue split');
+        // Numbered "1-2", not "1". A bare 1 · 3 · 4 · 5 sequence reads as a
+        // DEFECT — a reader's first thought is that §2 failed to render, which is
+        // what happened when this shipped. "1-2" says MERGED rather than MISSING
+        // and keeps the sequence continuous, while still not asserting a separate
+        // liquidity axis that this asset does not have. The information only
+        // survives if it is legible as information: an unlabelled gap is not.
+        // If the feed later gives §2 its own content, this splits back into 1 and
+        // 2 and the numbering is already correct for it.
+        html += head('1\u20132', 'Peg &amp; DEX liquidity', 'weighted price vs $1, depth and venue split');
         html += anc('thusd-peg',          ThusdRenderer._renderDexPeg(spec));
 
         html += head(3, 'Backing', ThusdRenderer._backingHeadSub(data, s));
@@ -1011,8 +1019,12 @@ var ThusdRenderer = {
     // §10 DEX peg + venues
     // ============================================================
     _axisHead: function(num, title, sub) {
+        // A multi-character number means a MERGED section ("1-2"), not a missing
+        // one. The circle badge is fixed-width and would clip it, so widen to a
+        // pill for those.
+        var numCls = (String(num).length > 1) ? 'axis-num axis-num-span' : 'axis-num';
         return '<div class="axis-head">' +
-            '<span class="axis-num">' + num + '</span>' +
+            '<span class="' + numCls + '">' + num + '</span>' +
             '<span class="axis-title">' + title + '</span>' +
             (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
         '</div>';
