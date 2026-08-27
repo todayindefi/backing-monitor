@@ -197,8 +197,22 @@ var SaturnRenderer = {
             if (s.total_backing == null) s.total_backing = s.total_assets_usd;
             // sUSDat is a vault share — supply_unit signals common renderer
             // to format as "shares" not USD. But we hide the card anyway.
-            if (s.collateral_ratio == null) s.collateral_ratio = 100;
-            if (s.surplus_deficit == null)  s.surplus_deficit  = 0;
+            // ⚠️ Manufactured placeholders, not producer values. They exist so the
+            // common renderer has something to format in the (hidden) legacy card.
+            // Mark them: preRender runs before rendering, so downstream a
+            // manufactured 100 is otherwise indistinguishable from an emitted one,
+            // and CommonRenderer.backingRating falls back to summary when
+            // backing.collateral_ratio is null. Rating a placeholder is the same
+            // error as manufacturing one — see susdai, where the band showed
+            // "BACKING 100.00% · Watch 3/5" on a vault with no collateral ratio.
+            if (s.collateral_ratio == null) {
+                s.collateral_ratio = 100;
+                s.collateral_ratio_synthetic = true;
+            }
+            if (s.surplus_deficit == null) {
+                s.surplus_deficit = 0;
+                s.surplus_deficit_synthetic = true;
+            }
         }
 
         // backing_breakdown — empty array so common.js loops cleanly.

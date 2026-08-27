@@ -646,9 +646,27 @@ const CommonRenderer = {
     // Backing rating honours an asset's chart_bands override (e.g. USG PCR) when
     // present, otherwise the generic CR cutoffs.
     backingRating(data) {
-        var cr = (data.backing && data.backing.collateral_ratio != null)
-            ? data.backing.collateral_ratio
-            : (data.summary && data.summary.collateral_ratio);
+        var sum = data.summary || {};
+        var fromBacking = data.backing && data.backing.collateral_ratio != null;
+        var cr = fromBacking ? data.backing.collateral_ratio : sum.collateral_ratio;
+        if (cr == null) return null;
+
+        // ⚠️ Never rate a manufactured value. Renderers synthesise a placeholder
+        // collateral_ratio in preRender so the legacy card has something to
+        // format, and preRender runs BEFORE this — so without the marker a
+        // placeholder is indistinguishable from a producer figure. An unrated
+        // axis is honest; a rating derived from a placeholder is not. The
+        // fallback itself stays: six assets rely on it legitimately (bold, frax,
+        // ousd, usdd, usdm, usg all emit a real summary.collateral_ratio).
+        if (!fromBacking && sum.collateral_ratio_synthetic === true) return null;
+
+        // ⚠️ Scale. usdm publishes a RAW ratio (1.2198); every other feed
+        // publishes percent. Unnormalised, 1.2198 falls through the default
+        // [130,110,100,90] cutoffs to 1/5 instead of 4/5 — a three-band
+        // misrating in the alarming direction. The index grid already normalises
+        // (app.js); this did not. Resolution is by declared scale or the explicit
+        // asset list, never by magnitude — see normalizeCollateralRatio.
+        cr = CommonRenderer.normalizeCollateralRatio(cr, data.asset_slug, sum);
         if (cr == null) return null;
         // Explicit per-asset cr_pct override (finer 5/4/3/2/1) wins over chart_bands' binary
         // 5/3/1 — credit vaults (PCR ~100 by construction) need the finer bands so PCR 100 reads
