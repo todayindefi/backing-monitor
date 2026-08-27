@@ -29,11 +29,25 @@ var SATURN_ADDRS = {
 };
 
 var SATURN_COLORS = {
-    M:     '#10b981',  // emerald — $M (T-bill-backed)
-    USDC:  '#3b82f6',  // blue — on-chain dollar
-    STRC:  '#f59e0b',  // amber — oracle-attested off-chain
-    OTHER: '#ef4444'   // red — would be a drift signal
+    M:      '#10b981',  // emerald — $M (T-bill-backed)
+    PYUSDx: '#8b5cf6',  // violet — Paxos-issued wrapped dollar
+    USDC:   '#3b82f6',  // blue — on-chain dollar
+    STRC:   '#f59e0b',  // amber — oracle-attested off-chain
+    OTHER:  '#ef4444',  // red — would be a drift signal
+    _FALLBACK: '#64748b' // slate — an asset the reserve rotated into that this
+                         // map does not know yet. A missing colour must never be
+                         // a reason a row does not render.
 };
+
+// Display labels for known reserve assets. A key absent here renders under its
+// own symbol rather than being skipped.
+var SATURN_ASSET_LABELS = {
+    M: '$M  <span class="text-xs text-slate-500 font-normal">(M^0 T-bill backed)</span>',
+    PYUSDx: 'PYUSDx  <span class="text-xs text-slate-500 font-normal">(Paxos-issued)</span>'
+};
+
+// Preferred display order; anything else follows in feed order.
+var SATURN_ASSET_ORDER = ['M', 'PYUSDx', 'USDC', 'STRC'];
 
 var SaturnRenderer = {
 
@@ -564,8 +578,33 @@ var SaturnRenderer = {
 
         var verifyOnchain = '<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-800 border border-emerald-200">✓ on-chain</span>';
 
-        if (comp.M)    rows.push(row('$M  <span class="text-xs text-slate-500 font-normal">(M^0 T-bill backed)</span>', comp.M, SATURN_COLORS.M, verifyOnchain));
-        if (comp.USDC) rows.push(row('USDC',                                                                              comp.USDC, SATURN_COLORS.USDC, verifyOnchain));
+        // ⚠️ ITERATE the composition. This was two hardcoded lines — comp.M and
+        // comp.USDC — written when USDat was backed by those two. The reserve
+        // rotated into PYUSDx, which is now 100% of backing and had NO ROW: the
+        // table showed $M 0%, USDC 0%, dust, then "Total backing $82,222,150"
+        // that no visible row accounted for.
+        //
+        // That is worse than an empty table. Two zero rows do not read as
+        // incomplete — they read as "USDat holds no M and no USDC", which is true,
+        // irrelevant, and leaves the reader believing they have seen the
+        // composition. A blank would have prompted the question.
+        //
+        // Adding a third `if` would fix today and re-break on the next rotation.
+        // Known assets keep their order, label and colour; anything else renders
+        // under its own symbol in a neutral colour. The table can no longer omit
+        // an asset the feed reports.
+        var seen = {};
+        SATURN_ASSET_ORDER.concat(Object.keys(comp)).forEach(function(k) {
+            if (k === 'OTHER' || seen[k]) return;
+            var entry = comp[k];
+            // Scalar reserve entries only — OTHER is an array, handled below.
+            if (!entry || Array.isArray(entry) || typeof entry !== 'object') return;
+            seen[k] = true;
+            rows.push(row(SATURN_ASSET_LABELS[k] || SaturnRenderer._escHtml(k),
+                          entry,
+                          SATURN_COLORS[k] || SATURN_COLORS._FALLBACK,
+                          verifyOnchain));
+        });
 
         // OTHER is an array of non-allowlist holdings from the drift probe. Each entry
         // carries .flagged — true for ≥$10K real drift (loud red row each), false for
@@ -618,6 +657,36 @@ var SaturnRenderer = {
         var ratio = s.backing_ratio;
         var ratioCls = (ratio != null && ratio >= 0.999) ? 'text-green-600' : 'text-red-600';
 
+        // ⚠️ Invariant: the rendered rows must sum to the printed total. When
+        // PYUSDx had no row they summed to $0 against $82,222,150 and nothing
+        // complained — the table was internally contradictory and looked fine.
+        // A composition that does not add up is the one thing this panel can
+        // always check about itself, so say so on the page rather than trusting
+        // that every asset got a row.
+        var rowSum = 0;
+        Object.keys(comp).forEach(function(k) {
+            var e = comp[k];
+            if (k === 'OTHER' && Array.isArray(e)) {
+                e.forEach(function(o) { rowSum += (o && o.value_usd) || 0; });
+            } else if (e && !Array.isArray(e) && typeof e === 'object' && e.balance != null) {
+                rowSum += e.balance;
+            }
+        });
+        var sumMismatch = '';
+        if (totalBacking != null && totalBacking > 0) {
+            var gap = Math.abs(rowSum - totalBacking);
+            if (gap / totalBacking > 0.005) {
+                sumMismatch =
+                    '<div class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 ' +
+                        'dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded p-2 mt-2">' +
+                        '<span class="font-semibold">Rows do not sum to the total.</span> Listed assets come to ' +
+                        CommonRenderer.formatCurrencyExact(rowSum) + ' against a stated ' +
+                        CommonRenderer.formatCurrencyExact(totalBacking) + '. Something in the reserve is not ' +
+                        'being displayed \u2014 treat this composition as incomplete rather than as the whole picture.' +
+                    '</div>';
+            }
+        }
+
         rows.push('<tr class="font-bold border-t-2 border-slate-200">' +
             '<td>Total backing</td>' +
             '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(totalBacking) + '</td>' +
@@ -647,6 +716,7 @@ var SaturnRenderer = {
                             '<tbody>' + rows.join('') + '</tbody>' +
                         '</table>' +
                     '</div>' +
+                    sumMismatch +
                     '<div class="text-xs text-slate-500 mt-2">' +
                         'Supply ' + CommonRenderer.formatCurrencyExact(supply) +
                         (s.net_buffer_usd != null ?
