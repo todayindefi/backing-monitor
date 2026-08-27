@@ -302,12 +302,24 @@ except Exception:
 #    file they copy is complete. The failure needs base-before-sync AND
 #    enricher-after-sync, which today is syrupusdc alone.
 #
-#    ⚠️ Moving the sync to :50 is the immediate fix and is the USER'S crontab, not
-#    this repo — raised rather than changed. PegTracker is taking the durable
-#    half: base writes to a staging path, enricher publishes the real filename
-#    atomically, making the incomplete state unrepresentable at any schedule.
-#    This check stays useful after both, because it is what would catch the next
-#    enricher added after a sync boundary.
+#    ⚠️ RESOLVED 2026-08-27, both halves, and my :50 suggestion was WRONG:
+#    strc writes at exactly :50. Measured across one full run, the chain is
+#      :44 hastra_prime | :46 syrupusdc+syrupusdt | :50 strc
+#      :52 cusd+susds   | :53 usdm+usds           | :56 susdai+usdai+usdt
+#    so it does not finish until ~:56. The sync moved :45 -> :58 (riskAnalyst's
+#    user authorised it; the crontab is theirs, not this repo's). That also fixed
+#    something bigger than the race: at :45 roughly half the board was being
+#    copied a run behind, which is why "sync lag" read as permanent rather than
+#    transient.
+#
+#    PegTracker shipped the durable half in 541c2d6 — base writes <path>.staging
+#    and the enricher is the only creator of the published filename, so the
+#    incomplete state is unrepresentable at any schedule.
+#
+#    This check is now belt-and-braces rather than load-bearing, and stays because
+#    it is what would catch the next enricher added after a sync boundary. Do not
+#    remove it on the grounds that it no longer fires — that is the state it is
+#    supposed to be in.
 PRODUCER_DIR = '/home/danger/PegTracker/data'
 AXES_ALL = ('peg', 'liquidity', 'backing', 'dependencies', 'issuer')
 if os.path.isdir(PRODUCER_DIR):
