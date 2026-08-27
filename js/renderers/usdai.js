@@ -1209,6 +1209,46 @@ var UsdaiRenderer = {
                     '<td class="font-mono text-right ' + bpsCls + '">' + (bps != null ? bps.toFixed(1) + ' bps' : '—') + '</td>' +
                 '</tr>';
             }).join('');
+            // ROUTE CAVEAT, derived only from fields this feed publishes.
+            //
+            // The quote sizes are compared against the depth of every venue the
+            // feed names. When a quote exceeds that total, the route provably
+            // reaches venues that are not published here, and the returned bps
+            // describes that unnamed route rather than the pools shown above it.
+            // The feed carries no route or venue field for the quote, so the
+            // destination is unknown from this payload and is NOT guessed at.
+            //
+            // This is not hypothetical: riskAnalyst traced a 500K USDai->USDC
+            // route through an ERC-4626 deposit into the sUSDai vault, i.e. part
+            // of a quoted "exit" is a subscription into an async-redemption
+            // instrument priced as if it were settled USDC. Re-check when
+            // PegTracker ships route_includes_gated_venue and the ladder's
+            // provenance fields; at that point the number can be trusted and
+            // liquidity earns its own axis section.
+            var pools = Array.isArray(sec.top_pools) ? sec.top_pools : [];
+            var poolTvl = pools.reduce(function(a, x) { return a + ((x && x.tvl_usd) || 0); }, 0);
+            var vol24 = pools.reduce(function(a, x) { return a + ((x && x.vol_24h_usd) || 0); }, 0);
+            var overDepth = tiers.filter(function(t) {
+                return qm[t] && qm[t].slippage_bps != null && poolTvl > 0 && Number(t) > poolTvl;
+            });
+            var routeNote = '';
+            if (overDepth.length && poolTvl > 0) {
+                var biggest = Number(overDepth[overDepth.length - 1]);
+                routeNote =
+                    '<div class="text-xs text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/40 ' +
+                        'border border-amber-200 dark:border-amber-800 rounded p-2 mt-2">' +
+                        '<span class="font-semibold">These are route quotes, not depth against the pools above.</span> ' +
+                        'The venues listed here hold <span class="font-mono">' +
+                        UsdaiRenderer._usdShort(poolTvl) + '</span> in total' +
+                        (vol24 === 0 ? ' on <span class="font-mono">$0</span> of 24h volume' : '') +
+                        ', so the <span class="font-mono">$' + (biggest / 1000).toFixed(0) + 'K</span> quote is ' +
+                        '<span class="font-mono">' + (biggest / poolTvl).toFixed(1) + '\u00d7</span> their combined ' +
+                        'depth and must clear through venues this feed does not identify. A low bps at that size ' +
+                        'reflects the router\u2019s path, not exit liquidity in the pools shown \u2014 and the path ' +
+                        'is not published here, so what it passes through is unknown from this data.' +
+                    '</div>';
+            }
+
             slipBlock =
                 '<div class="mt-6">' +
                     '<div class="text-sm font-semibold text-slate-700 mb-2">Slippage tiers — ' + pairLabel + '</div>' +
@@ -1216,6 +1256,7 @@ var UsdaiRenderer = {
                         '<thead><tr><th class="text-right">Size</th><th class="text-right">Output</th><th class="text-right">Slippage</th></tr></thead>' +
                         '<tbody>' + rows + '</tbody>' +
                     '</table></div>' +
+                    routeNote +
                 '</div>';
         }
 
