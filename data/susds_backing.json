@@ -3,35 +3,35 @@
   "asset": "sUSDS",
   "asset_slug": "susds",
   "chain": "ethereum",
-  "timestamp": "2026-08-27T06:53:25Z",
+  "timestamp": "2026-08-27T07:18:10Z",
   "summary": {
-    "total_supply": 4251949177.7,
+    "total_supply": 4251966220.96,
     "supply_unit": "shares",
-    "total_assets_usds": 4709330213.55,
-    "nav": 1.107569732548,
+    "total_assets_usds": 4709356777.32,
+    "nav": 1.107571540457,
     "price": 1.11,
     "paused": null
   },
   "risk_flags": [],
   "vault_status": null,
   "backing": {
-    "collateral_ratio": 99.999987,
+    "collateral_ratio": 100.0,
     "collateral_ratio_basis": "USDS balanceOf(sUSDS) / sUSDS totalAssets(). Two independent reads: the numerator is a token balance, the denominator is derived from the chi accumulator. 100% means the vault holds what its shares can claim.",
-    "total_backing": 4709329593.62,
-    "surplus_deficit": -619.93,
+    "total_backing": 4709356777.32,
+    "surplus_deficit": 0.0,
     "breakdown": [
       {
         "label": "USDS held by vault",
-        "value": 4709329593.62,
+        "value": 4709356777.32,
         "pct": 100
       }
     ],
     "integrity": {
-      "total_assets_reported": 4709330213.55,
-      "usds_held": 4709329593.62,
-      "divergence_pct": -1.3e-05,
+      "total_assets_reported": 4709356777.32,
+      "usds_held": 4709356777.32,
+      "divergence_pct": 0.0,
       "status": "ok",
-      "direction": "held_below_reported",
+      "direction": "exact",
       "note": "Signed (held - totalAssets) / totalAssets. A small NEGATIVE value is the expected state: interest accrues via chi continuously but is drawn from the vow periodically, so reported assets run slightly ahead of the balance."
     }
   },
@@ -40,7 +40,7 @@
       {
         "name": "USDS",
         "metric": "70.5% of USDS supply",
-        "value": 4709330213.55,
+        "value": 4709356777.32,
         "source": "onchain",
         "link": "?asset=usds",
         "link_type": "internal",
@@ -106,36 +106,62 @@
   "asset_specific": {
     "type": "susds",
     "vault_state": {
-      "total_supply_shares": 4251949177.699955,
-      "total_assets_usds": 4709330213.552162,
-      "nav_usds_per_share": 1.107569732548,
+      "total_supply_shares": 4251966220.956162,
+      "total_assets_usds": 4709356777.316053,
+      "nav_usds_per_share": 1.107571540457,
       "asset": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
       "ssr_raw": 1000000001096988989836188433,
-      "chi_raw": 1107569586748836822880007832,
-      "rho": 1787813471
+      "chi_raw": 1107571540457119443294411365,
+      "rho": 1787815079
     },
     "yield": {
       "headline_apy_pct": 3.52,
       "headline_source": "onchain_ssr",
-      "realized_apy_24h_pct": 3.5201,
+      "realized_apy_24h_pct": 3.5202,
       "realized_apy_7d_pct": 3.52,
       "nav_history_ref": "susds_backing_history.json"
     },
     "peg": {
       "market_price": 1.11,
       "market_price_source": "coingecko:susds",
-      "nav_usds_per_share": 1.107569732548,
+      "premium_discount_is_measured": true,
+      "theoretical_price_assumes_usds_par": false,
+      "nav_usds_per_share": 1.107571540457,
       "usds_peg_price": 0.99987943,
-      "theoretical_price": 1.10743619,
-      "premium_discount_pct": 0.2315,
+      "theoretical_price": 1.107438,
+      "premium_discount_pct": 0.2313,
       "source": "coingecko:susds + onchain_nav"
     },
-    "history_ref": "susds_backing_history.json"
+    "history_ref": "susds_backing_history.json",
+    "control": {
+      "pause_surface": {
+        "exists": false,
+        "checked": [
+          "paused()",
+          "stopped()",
+          "live()",
+          "isPaused()",
+          "halted()"
+        ],
+        "result": "all revert",
+        "note": "sUSDS exposes no pause state, so summary.paused is null because there is nothing to read -- not because a read failed. The equivalent risk on this asset is an implementation upgrade."
+      },
+      "upgradeable": true,
+      "proxy_admin_slot": "zero (ward-controlled, not a ProxyAdmin contract)",
+      "impl_address": "0x4e7991e5C547ce825BdEb665EE14a3274f9F61e0",
+      "impl_published": "0x4e7991e5C547ce825BdEb665EE14a3274f9F61e0",
+      "impl_matches_published": true,
+      "authority": {
+        "name": "Sky Pause Proxy",
+        "address": "0xBE8E3e3618f7474F8cB1d074A26afFef007E98FB",
+        "warded": true
+      }
+    }
   },
   "peg": {
     "market_price": 1.11,
-    "nav": 1.10743619,
-    "premium_discount_pct": 0.2315,
+    "nav": 1.107438,
+    "premium_discount_pct": 0.2313,
     "source": "coingecko:susds + onchain_nav",
     "history_ref": "susds_backing_history.json",
     "history_field": "nav"
@@ -147,6 +173,6 @@
     "issuer_score_source": "risk-feed@2026-08-27T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-08-27T01:45:02Z",
-    "issuer_score_age_hours": 5.14
+    "issuer_score_age_hours": 5.55
   }
 }
