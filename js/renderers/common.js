@@ -963,12 +963,32 @@ const CommonRenderer = {
         return '<span class="text-slate-400" title="flat vs 7d avg">▶</span>';
     },
 
+    // ⚠️ collateral_ratio_basis was published by five feeds and read by none.
+    //
+    // A CR is only comparable to another CR on the same basis, and these are not:
+    // apxusd's is netted of POL and inventory, usg's is a debt-weighted mean over
+    // active markets, usdm's backing CR is stable-only while its SUMMARY basis
+    // says in as many words "NOT USDm's own coverage". That warning was sitting
+    // in the payload, invisible, next to the number it warns about.
+    //
+    // Taken from the block the VALUE came from, same discipline as the scale.
+    _backingBasis(data) {
+        var fromBacking = data.backing && data.backing.collateral_ratio != null;
+        var blk = fromBacking ? data.backing : (data.summary || {});
+        return blk.collateral_ratio_basis || null;
+    },
+
     _backingValueHtml(data) {
         var cr = (data.backing && data.backing.collateral_ratio != null)
             ? data.backing.collateral_ratio : (data.summary && data.summary.collateral_ratio);
         if (cr == null) return '—';
         var cls = cr >= 100 ? 'text-green-600' : 'text-red-600';
-        return '<span class="' + cls + '">' + this.formatPercent(cr, 2) + '</span>';
+        var basis = this._backingBasis(data);
+        return '<span class="' + cls + '"' +
+            (basis ? ' title="Basis: ' + this._escapeAttr(basis) + '"' : '') + '>' +
+            this.formatPercent(cr, 2) + '</span>' +
+            (basis ? '<span class="text-slate-400 text-xs" title="Basis: ' +
+                     this._escapeAttr(basis) + '"> \u24d8</span>' : '');
     },
 
     _backingSubText(data) {
