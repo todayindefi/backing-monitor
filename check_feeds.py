@@ -111,6 +111,31 @@ for slug in sorted(slugs):
                     f'summary.collateral_ratio ({scr}) differ ~100x — two scales in '
                     f'one payload with fewer than two scale declarations')
 
+    # 4c. Axis blocks present but no backing threshold override.
+    #
+    #     backingRating falls back to generic cutoffs [130,110,100,90]. For an
+    #     asset whose real risk floor is higher, that reads as HEALTHY when the
+    #     asset-specific band would say WATCH — usg's 131.53 rates 5/5 on the
+    #     defaults and 3/5 on its own [158,145,130,120]. The failure is silent and
+    #     in the reassuring direction, and it happens when the producer's override
+    #     has not reached this copy. Only meaningful once blocks exist.
+    if present:
+        asp = d.get('asset_specific') or {}
+        thr = ((asp.get('axis_thresholds') or {}).get('backing') or {}).get('cr_pct')
+        if not thr and not asp.get('chart_bands'):
+            cr_v = (d.get('backing') or {}).get('collateral_ratio')
+            if cr_v is None: cr_v = (d.get('summary') or {}).get('collateral_ratio')
+            # Narrowed to the reassuring extreme. Fired on every at-par asset in
+            # its first form — 100.0 rates 3/5 "Watch" on the defaults, which is a
+            # defensible reading, not a hazard. Warning on those is the cry-wolf
+            # noise that gets a check ignored. Only a 5/5 earned purely from the
+            # generic band is worth surfacing: that is the case where a missing
+            # override reads as HEALTHY, silently and in the flattering direction.
+            if isinstance(cr_v, (int, float)) and cr_v >= 130:
+                warns.append(f'{slug}: rates 5/5 HEALTHY on generic [130,110,100,90] '
+                             f'(cr {cr_v}) with no cr_pct override or chart_bands — '
+                             f'confirm the producer band reached this copy')
+
     # 5. Internal dependency links must point at registered assets.
     for side in ('upstream', 'downstream'):
         for dep in ((d.get('dependencies') or {}).get(side) or []):
