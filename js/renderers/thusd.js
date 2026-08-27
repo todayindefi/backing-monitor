@@ -181,6 +181,14 @@ var ThusdRenderer = {
         // sequence is a rewrite, not a regroup — so there is deliberately no §2
         // here. Same ruling as USDai's Secondary Market panel before its feed
         // published the per-tier route flags that made a split meaningful.
+        //
+        // RE-CHECK TRIGGER. The accurate framing is not "this panel cannot be
+        // split" but "this feed does not yet give the liquidity axis independent
+        // content". If thusd_backing.json ever emits an exit ladder, per-venue
+        // depth, or a liquidity.* block with its own metrics, revisit: at that
+        // point §2 has something of its own to say and the split earns itself.
+        // USDai's went exactly that way — deferred twice, then correct once
+        // route_includes_gated_venue shipped.
         html += head(1, 'Peg &amp; DEX liquidity', 'weighted price vs $1, depth and venue split');
         html += anc('thusd-peg',          ThusdRenderer._renderDexPeg(spec));
 
