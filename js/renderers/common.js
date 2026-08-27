@@ -179,16 +179,39 @@ const CommonRenderer = {
         }).join('');
     },
 
+    // Legacy top-level backing_breakdown vs the 5-axis backing.breakdown.
+    //
+    // Bespoke renderers either synthesise the legacy field or hide this table, so
+    // the unguarded data.backing_breakdown.map() below only ever saw feeds that
+    // had it. susds is the first GENERIC-path asset emitting the 5-axis shape
+    // only, and it threw "Cannot read properties of undefined (reading 'map')" —
+    // which fails the WHOLE page, not just the table. Every future 5-axis-only
+    // asset would hit the same wall.
+    //
+    // Falls back to the publisher's own backing.breakdown rather than deriving
+    // anything; `tags` is optional there, so it is defaulted at the read site.
+    _backingBreakdown(data) {
+        if (data && Array.isArray(data.backing_breakdown)) return data.backing_breakdown;
+        if (data && data.backing && Array.isArray(data.backing.breakdown)) return data.backing.breakdown;
+        return [];
+    },
+
     // ------ Backing breakdown table ------
     renderBreakdownTable(data) {
         var tbody = document.querySelector('#breakdown-table tbody');
-        var rows = data.backing_breakdown.map(function(item) {
-            var tags = item.tags.map(function(t) {
+        var bd = CommonRenderer._backingBreakdown(data);
+        if (!bd.length) { var bp = tbody && tbody.closest('.panel'); if (bp) bp.style.display = 'none'; return; }
+        var rows = bd.map(function(item) {
+            // `tags` is optional in the 5-axis backing.breakdown shape. Normalise
+            // once here rather than guarding each read — the previous fix guarded
+            // .map and the very next line still threw on .indexOf.
+            var itemTags = Array.isArray(item.tags) ? item.tags : [];
+            var tags = itemTags.map(function(t) {
                 return '<span class="tag tag-' + t + '">' + t + '</span>';
             }).join('');
-            var barColor = item.tags.indexOf('amo') >= 0 ? '#ef4444' :
-                           item.tags.indexOf('cross-chain') >= 0 ? '#3b82f6' :
-                           item.tags.indexOf('idle') >= 0 ? '#22c55e' : '#6366f1';
+            var barColor = itemTags.indexOf('amo') >= 0 ? '#ef4444' :
+                           itemTags.indexOf('cross-chain') >= 0 ? '#3b82f6' :
+                           itemTags.indexOf('idle') >= 0 ? '#22c55e' : '#6366f1';
             return '<tr>' +
                 '<td class="font-medium">' + item.label + tags + '</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(item.value) + '</td>' +
@@ -198,7 +221,7 @@ const CommonRenderer = {
         });
 
         // Total row
-        var total = data.backing_breakdown.reduce(function(sum, i) { return sum + i.value; }, 0);
+        var total = bd.reduce(function(sum, i) { return sum + i.value; }, 0);
         rows.push(
             '<tr class="font-bold border-t-2 border-slate-200">' +
             '<td>Total</td>' +
@@ -220,7 +243,7 @@ const CommonRenderer = {
             var note = "Percentages are each line’s share of total displayed backing (the 100% row) — not share of token supply.";
             if (data.asset_slug === 'usg') {
                 var sc = data.asset_specific && data.asset_specific.supply_composition;
-                var polRow = (data.backing_breakdown || []).filter(function(i) {
+                var polRow = CommonRenderer._backingBreakdown(data).filter(function(i) {
                     return i.tags && i.tags.indexOf('pol') >= 0;
                 })[0];
                 var polPiePct = polRow ? CommonRenderer.formatPercent(polRow.pct, 1) : null;
@@ -241,14 +264,15 @@ const CommonRenderer = {
         var ctx = document.getElementById('pie-chart');
         if (!ctx) return;
 
-        var items = data.backing_breakdown.filter(function(i) { return i.pct > 0.5; });
+        var items = CommonRenderer._backingBreakdown(data).filter(function(i) { return i.pct > 0.5; });
         var palette = ['#6366f1', '#3b82f6', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16'];
         var colorIdx = 0;
         var colors = items.map(function(i) {
-            if (i.tags.indexOf('amo') >= 0 || i.tags.indexOf('circular') >= 0) return '#ef4444';
-            if (i.tags.indexOf('cross-chain') >= 0) return '#3b82f6';
-            if (i.tags.indexOf('idle') >= 0) return '#22c55e';
-            if (i.tags.indexOf('pegkeeper') >= 0) return '#f97316';
+            var ts = Array.isArray(i.tags) ? i.tags : [];
+            if (ts.indexOf('amo') >= 0 || ts.indexOf('circular') >= 0) return '#ef4444';
+            if (ts.indexOf('cross-chain') >= 0) return '#3b82f6';
+            if (ts.indexOf('idle') >= 0) return '#22c55e';
+            if (ts.indexOf('pegkeeper') >= 0) return '#f97316';
             return palette[colorIdx++ % palette.length];
         });
 
