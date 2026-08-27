@@ -1524,6 +1524,38 @@ const CommonRenderer = {
                   '<tbody>' + ladderRows + '</tbody></table></div>'
             : '<div class="text-sm text-slate-400">No exit-mark RFQ ladder in this snapshot.</div>';
 
+        // ⚠️ Four n/a's read as "we know nothing about this asset's liquidity".
+        // For usdm the feed says something quite different: there is no secondary
+        // depth BY DESIGN, because Mento pools are a mint/redeem venue, and the
+        // holder's actual exit is the reserve swap. Same shape as usdat's two
+        // zero rows — the page said something answerable, so nobody asked.
+        //
+        // "How does a holder get out" is the question this axis exists to
+        // answer, and for a reserve-backed asset the answer is a redemption venue
+        // rather than pool depth. Generic: any such asset has this shape and
+        // total_2pct_depth: null stays correct for all of them.
+        var pe = liq.primary_exit;
+        var exitLine = '';
+        if (pe && (pe.venue || pe.into)) {
+            exitLine =
+                '<div class="text-sm text-slate-700 dark:text-slate-200 mt-3">' +
+                    '<span class="font-semibold">Primary exit:</span> ' +
+                    this._escapeAttr(pe.venue || 'venue not named') +
+                    (pe.into ? ' \u2192 ' + this._escapeAttr(pe.into) : '') +
+                    // ⚠️ pe.gated is DELIBERATELY NOT RENDERED. usdm publishes
+                    // gated:false while riskAnalyst's report says the redemption
+                    // path is gated to allowlisted strategies. One is wrong and
+                    // it is unresolved with PegTracker. Rendering false would
+                    // assert "open to any holder" on the strength of a field
+                    // under dispute — and that is the more dangerous direction,
+                    // since it overstates how easily a holder can leave.
+                    // Restore once the producer confirms it is measured.
+                '</div>';
+        }
+        var poolsNote = liq.pools_note
+            ? '<div class="text-xs text-slate-500 mt-1">' + this._escapeAttr(liq.pools_note) + '</div>'
+            : '';
+
         var eff = liq.effective_max_under_25bps_usd;
 
         // ⚠️ Sell-side inventory: a MEASURED number that was going unshown.
@@ -1590,7 +1622,7 @@ const CommonRenderer = {
 
         body.innerHTML = '<div class="panel">' +
             '<div class="panel-title">Liquidity &amp; Exit</div>' +
-            statRow + ladderBlock + poolBlock +
+            statRow + exitLine + ladderBlock + poolBlock + poolsNote +
         '</div>';
     },
 
