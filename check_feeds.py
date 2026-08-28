@@ -339,6 +339,54 @@ if os.path.isdir(PRODUCER_DIR):
         fails.append(f'{slug}: consumer has {cb}/5 axis blocks, producer has {pb}/5'
                      f'{same} — mid-pipeline copy; re-sync this file')
 
+# 10. A collateral ratio that moved implausibly since the last sync.
+#
+#     ⚠️ PegTracker found syrup_risk_alerter would have paged CRITICAL on a
+#     FABRICATED insolvency: one failed assetsUnderManagement() call took PCR
+#     from 100% to ~0.05%, because strategy 0 holds ~100% of AUM and the
+#     denominator is an independent read. A collapsed denominator does not look
+#     like an error — it looks like a solvency event.
+#
+#     This dashboard runs no alerter, but the rendering equivalent is the same
+#     shape: 0.05% would render a red Stress 1/5 card with nothing marking it
+#     implausible, and a reader would believe it.
+#
+#     No backing ratio halves or doubles between hourly syncs. The cron commits
+#     data/ every hour, so the previous value is recoverable from git — the same
+#     technique that made the syrupusdc race history answerable.
+def _prev_value(path, dotted):
+    try:
+        blob = subprocess.run(['git', 'show', 'HEAD~1:' + path],
+                              capture_output=True, text=True, timeout=10)
+        if blob.returncode != 0: return None
+        node = json.loads(blob.stdout)
+        for part in dotted.split('.'):
+            node = node.get(part) if isinstance(node, dict) else None
+            if node is None: return None
+        return node if isinstance(node, (int, float)) else None
+    except Exception:
+        return None
+
+for f in sorted(glob.glob(os.path.join(DATA, '*_backing.json'))):
+    slug = os.path.basename(f).replace('_backing.json', '')
+    d = load(f)
+    if not isinstance(d, dict): continue
+    for dotted in ('backing.collateral_ratio', 'summary.collateral_ratio'):
+        blk, key = dotted.split('.')
+        cur = (d.get(blk) or {}).get(key)
+        if not isinstance(cur, (int, float)) or cur <= 0: continue
+        prev = _prev_value(f, dotted)
+        if not isinstance(prev, (int, float)) or prev <= 0: continue
+        # Halving or doubling in one sync. Real backing moves in fractions of a
+        # percent per hour; this size of step is a broken read, not an event.
+        ratio = cur / prev
+        if ratio < 0.5 or ratio > 2.0:
+            fails.append(f'{slug}: {dotted} moved {prev:.4g} -> {cur:.4g} in one sync '
+                         f'({ratio:.3g}x). A backing ratio does not step that far in an '
+                         f'hour — suspect a collapsed denominator or a failed read, not a '
+                         f'solvency event')
+        break  # only the block that actually carries the rated value
+
 print('CORRECTNESS CHECKS (this suite cannot judge legibility)\n')
 for w in warns: print('  WARN  ' + w)
 for f_ in fails: print('  FAIL  ' + f_)
