@@ -3,14 +3,14 @@
   "asset": "USDm",
   "asset_slug": "usdm",
   "chain": "monad",
-  "timestamp": "2026-08-28T02:50:22Z",
+  "timestamp": "2026-08-28T03:49:17Z",
   "summary": {
-    "total_supply": 16586484.0,
+    "total_supply": 16536869.81,
     "supply_unit": "USDm",
-    "total_backing": 20065535.99,
-    "collateral_ratio": 1.3017,
+    "total_backing": 19886900.2,
+    "collateral_ratio": 1.3023,
     "collateral_ratio_scale": "ratio",
-    "surplus_deficit": 4651243.15,
+    "surplus_deficit": 4615985.66,
     "nav": 1.0,
     "paused": null,
     "collateral_ratio_basis": "System-wide: total reserve / ALL Mento stablecoin debt. NOT USDm's own coverage. See backing.collateral_ratio for the rated figure and backing.alternatives for the other denominators."
@@ -18,11 +18,11 @@
   "risk_flags": [
     {
       "severity": "medium",
-      "message": "Stable-collateral coverage of all Mento stablecoin debt fell below 1.0x (now 0.994x, on-chain-corrected) \u2014 Reserve excluding CELO+stETH no longer fully covers user-circulating debt."
+      "message": "Stable-collateral coverage of all Mento stablecoin debt fell below 1.0x (now 0.991x, on-chain-corrected) \u2014 Reserve excluding CELO+stETH no longer fully covers user-circulating debt."
     },
     {
       "severity": "high",
-      "message": "Monad USDm on-chain Reserve coverage fell below 75% (now 61.2%)."
+      "message": "Monad USDm on-chain Reserve coverage fell below 75% (now 60.6%)."
     },
     {
       "severity": "info",
@@ -34,12 +34,12 @@
     }
   ],
   "peg": {
-    "market_price": 0.9955499999999999,
+    "market_price": 1.00342,
     "nav": 1.0,
-    "premium_discount_pct": -0.4450000000000065,
+    "premium_discount_pct": 0.34199999999999786,
     "source": "mento_getamountout",
-    "history_rows_with_mark": 24,
-    "history_note": "Peg marks are being persisted but only 24 of the required 48 rows carry one, so no history_field is declared yet \u2014 a near-empty series renders as a broken chart, not as an absent one."
+    "history_rows_with_mark": 25,
+    "history_note": "Peg marks are being persisted but only 25 of the required 48 rows carry one, so no history_field is declared yet \u2014 a near-empty series renders as a broken chart, not as an absent one."
   },
   "liquidity": {
     "total_tvl": null,
@@ -48,7 +48,7 @@
     "volume_24h": null,
     "exit_mark": {
       "source": "mento_getamountout",
-      "fair_value": 0.9955499999999999,
+      "fair_value": 1.00342,
       "fair_value_basis": "market",
       "quotes": {}
     },
@@ -79,25 +79,25 @@
     "pools_note": "Mento swap pools are a mint/redeem venue rather than secondary market depth; pool balances are reported under asset_specific."
   },
   "backing": {
-    "collateral_ratio": 99.38,
+    "collateral_ratio": 99.1,
     "collateral_ratio_scale": "percent",
     "collateral_ratio_basis": "Stable-only reserve / all Mento stablecoin debt. Stable-only excludes the volatile bucket, which is largely CELO \u2014 Mento's own ecosystem token, so it is collateral correlated with its issuer. The denominator is all Mento debt because the reserve backs every Mento stable jointly.",
-    "total_backing": 15318470.57,
-    "total_backing_gross": 20065535.99,
-    "surplus_deficit": -95822.27,
+    "total_backing": 15133035.85,
+    "total_backing_gross": 19886900.2,
+    "surplus_deficit": -137878.69,
     "surplus_deficit_basis": "Stable-only reserve minus all Mento stablecoin debt \u2014 the SAME basis as collateral_ratio, so B/(B - surplus_deficit) recovers it. \u26a0\ufe0f NOT the gross figure, which is a +$3.4M SURPLUS against this deficit because it counts the volatile bucket; that one is in alternatives.gross_surplus_deficit_usd.",
     "alternatives": {
-      "gross_over_mento_debt_pct": 130.17,
-      "gross_over_usdm_supply_pct": 120.98,
-      "stable_only_over_mento_supply_pct": 77.26,
-      "gross_surplus_deficit_usd": 4651243.15,
+      "gross_over_mento_debt_pct": 130.23,
+      "gross_over_usdm_supply_pct": 120.26,
+      "stable_only_over_mento_supply_pct": 76.8,
+      "gross_surplus_deficit_usd": 4615985.66,
       "note": "Published so the rated figure is auditable against the ones not chosen. \u26a0\ufe0f reserve_to_supply_ratio* denominators are TOTAL MENTO stablecoin supply, not USDm's \u2014 the field names do not say so."
     },
     "volatile_bucket": {
-      "usd": 4747065.42,
-      "pct_of_reserve": 23.66,
+      "usd": 4753864.35,
+      "pct_of_reserve": 23.9,
       "composition": "largely CELO (Mento's own ecosystem token)",
-      "drawdown_to_par_pct": 97.98,
+      "drawdown_to_par_pct": 97.1,
       "drawdown_to_par_basis": "1 - (mento_debt - stable_only_reserve) / volatile_bucket: the haircut on the volatile bucket at which stable-only coverage reaches 100%. \u26a0\ufe0f Independent of which mark is headlined, which is what makes it the informative figure rather than either ratio.",
       "note": "Excluded from the rated ratio. Correlated with the issuer, so it is the part of the reserve least likely to be there in the scenario the backing score exists to warn about."
     }
@@ -130,8 +130,8 @@
       },
       {
         "name": "Volatile bucket (largely CELO)",
-        "metric": "23.7% of total reserve",
-        "value": 4747065.42,
+        "metric": "23.9% of total reserve",
+        "value": 4753864.35,
         "source": "mento_api",
         "link": null,
         "link_type": "none",
@@ -147,14 +147,14 @@
   "asset_specific": {
     "type": "fiat-stable-reserve-backed",
     "monad_state": {
-      "usdm_supply_total": 2097881.69,
-      "usdm_supply_in_rls_pools": 1058034.46,
-      "usdm_supply_in_ols_pools": 634746.83,
-      "usdm_supply_retail_or_other": 405100.4,
+      "usdm_supply_total": 2119941.11,
+      "usdm_supply_in_rls_pools": 1086864.34,
+      "usdm_supply_in_ols_pools": 634746.75,
+      "usdm_supply_retail_or_other": 398330.02,
       "reserve_v2_usd_value": 1284077.41,
-      "reserve_v2_coverage_ratio": 0.6121,
-      "reserve_per_api_usd": 1396032.97,
-      "api_vs_rpc_drift_pct": 0.0802,
+      "reserve_v2_coverage_ratio": 0.6057,
+      "reserve_per_api_usd": 1395853.44,
+      "api_vs_rpc_drift_pct": 0.0801,
       "reserve_v2_breakdown": {
         "USDC": 251342.267885,
         "AUSD": 780835.364372,
@@ -186,13 +186,13 @@
         "USDT0"
       ],
       "rls_pools_usdm": {
-        "USDC_USDM": 187744.87,
-        "AUSD_USDM": 851738.78,
+        "USDC_USDM": 182207.72,
+        "AUSD_USDM": 886105.81,
         "USDT0_USDM": 18550.81
       },
       "ols_pools_usdm": {
         "GBPM_USDM": 295852.78,
-        "EURM_USDM": 270255.35,
+        "EURM_USDM": 270255.27,
         "JPYM_USDM": 31017.54,
         "CHFM_USDM": 37621.16
       },
@@ -217,7 +217,7 @@
       "fx_synthetic_supplies": {
         "EURm": {
           "supply": 352596.63,
-          "in_pool": 349718.11,
+          "in_pool": 349718.01,
           "pct_in_pool": 99.18
         },
         "GBPm": {
@@ -254,35 +254,35 @@
       }
     },
     "ethereum_state": {
-      "reserve_on_chain_usd": 11618357.25,
-      "reserve_on_chain_stable_only_usd": 10988067.37,
-      "reserve_per_api_usd": 13020868.96,
-      "api_vs_on_chain_delta_usd": -1402511.71,
-      "api_vs_on_chain_delta_pct": -0.1207,
+      "reserve_on_chain_usd": 11620676.61,
+      "reserve_on_chain_stable_only_usd": 10989912.94,
+      "reserve_per_api_usd": 13000367.09,
+      "api_vs_on_chain_delta_usd": -1379690.48,
+      "api_vs_on_chain_delta_pct": -0.1187,
       "missing_from_api_symbols": [],
       "reserve_breakdown": {
         "USDC": {
-          "balance": 999.82371,
+          "balance": 0.325682,
           "price_usd": 1.0,
-          "usd_value": 999.82,
+          "usd_value": 0.33,
           "bucket": "usd_stable",
           "by_holder": {
             "v2_liquidity_reserve": 0.0,
             "reserve_safe_cold": 0.0,
             "ops_safe": 0.28429,
-            "rebalancer_bot": 999.53942
+            "rebalancer_bot": 0.041392
           }
         },
         "USDT": {
-          "balance": 1222800.022927,
+          "balance": 1222799.232188,
           "price_usd": 1.0,
-          "usd_value": 1222800.02,
+          "usd_value": 1222799.23,
           "bucket": "usd_stable",
           "by_holder": {
             "v2_liquidity_reserve": 0.0,
             "reserve_safe_cold": 1222798.962161,
             "ops_safe": 0.000116,
-            "rebalancer_bot": 1.06065
+            "rebalancer_bot": 0.269911
           }
         },
         "AUSD": {
@@ -299,8 +299,8 @@
         },
         "sUSDS": {
           "balance": 4234485.751044,
-          "price_usd": 1.107657,
-          "usd_value": 4690357.71,
+          "price_usd": 1.107661,
+          "usd_value": 4690375.92,
           "bucket": "usd_stable",
           "by_holder": {
             "v2_liquidity_reserve": 0.0,
@@ -310,21 +310,21 @@
           }
         },
         "EURC": {
-          "balance": 687817.080759,
+          "balance": 690242.573144,
           "price_usd": 1.1658,
-          "usd_value": 801857.15,
+          "usd_value": 804684.79,
           "bucket": "eur_stable",
           "by_holder": {
             "v2_liquidity_reserve": 0.0,
             "reserve_safe_cold": 683640.084633,
             "ops_safe": 0.0,
-            "rebalancer_bot": 4176.996126
+            "rebalancer_bot": 6602.488511
           }
         },
         "stETH": {
           "balance": 252.776205,
-          "price_usd": 2493.47,
-          "usd_value": 630289.88,
+          "price_usd": 2495.344313,
+          "usd_value": 630763.67,
           "bucket": "volatile",
           "by_holder": {
             "v2_liquidity_reserve": 0.0,
@@ -338,9 +338,9 @@
         "USDC": 1.0,
         "USDT": 1.0,
         "AUSD": 1.0,
-        "sUSDS": 1.107657,
+        "sUSDS": 1.107661,
         "EURC": 1.1658,
-        "stETH": 2493.47
+        "stETH": 2495.344313
       },
       "reserve_holders": {
         "v2_liquidity_reserve": "0x9380fA34Fd9e4Fd14c06305fd7B6199089eD4eb9",
@@ -350,48 +350,48 @@
       }
     },
     "celo_state": {
-      "usdm_supply": 14497198.98,
-      "reserve_debt": 10917543.83,
-      "reserve_held": 3509277.48,
+      "usdm_supply": 14417987.82,
+      "reserve_debt": 10857637.71,
+      "reserve_held": 3489972.44,
       "lost": 70377.67,
       "cdp_troves_active_count": null,
       "cdp_troves_collateral_usdm": null,
       "cdp_troves_debt_usd": null
     },
     "aggregate": {
-      "total_supply_usd": 16586484.0,
-      "total_reserve_usd": 20065535.99,
-      "total_stablecoin_supply_usd": 19827657.97,
-      "total_stablecoin_debt_usd": 15414292.84,
-      "reserve_to_supply_ratio": 1.2098,
-      "stablecoin_aggregate_ratio": 1.3017,
-      "total_reserve_usd_stable_bucket": 12951988.6,
-      "total_reserve_eur_stable_bucket": 2366481.97,
-      "total_reserve_volatile_bucket": 4747065.42,
+      "total_supply_usd": 16536869.81,
+      "total_reserve_usd": 19886900.2,
+      "total_stablecoin_supply_usd": 19704197.15,
+      "total_stablecoin_debt_usd": 15270914.54,
+      "reserve_to_supply_ratio": 1.2026,
+      "stablecoin_aggregate_ratio": 1.3023,
+      "total_reserve_usd_stable_bucket": 12811844.28,
+      "total_reserve_eur_stable_bucket": 2321191.57,
+      "total_reserve_volatile_bucket": 4753864.35,
       "total_reserve_other_bucket": 0.0,
-      "total_reserve_stable_only_usd": 15318470.57,
-      "stablecoin_aggregate_ratio_stable_only": 0.9938,
-      "reserve_to_supply_ratio_stable_only": 0.7726,
+      "total_reserve_stable_only_usd": 15133035.85,
+      "stablecoin_aggregate_ratio_stable_only": 0.991,
+      "reserve_to_supply_ratio_stable_only": 0.768,
       "custodian_breakdown": {
-        "hot_usd": 3744212.09,
-        "cold_usd": 11657215.47,
-        "ops_usd": 4664108.43
+        "hot_usd": 3613234.88,
+        "cold_usd": 11654356.58,
+        "ops_usd": 4619308.73
       },
-      "total_reserve_usd_corrected": 20065535.99,
-      "total_reserve_stable_only_corrected": 15318470.57,
-      "stablecoin_aggregate_ratio_corrected": 1.3017,
-      "reserve_to_supply_ratio_corrected": 1.2098,
-      "stablecoin_aggregate_ratio_stable_only_corrected": 0.9938,
-      "reserve_to_supply_ratio_stable_only_corrected": 0.7726,
-      "total_reserve_usd_stable_bucket_corrected": 12951988.6,
-      "total_reserve_eur_stable_bucket_corrected": 2366481.97,
-      "total_reserve_volatile_bucket_corrected": 4747065.42,
+      "total_reserve_usd_corrected": 19886900.2,
+      "total_reserve_stable_only_corrected": 15133035.85,
+      "stablecoin_aggregate_ratio_corrected": 1.3023,
+      "reserve_to_supply_ratio_corrected": 1.2026,
+      "stablecoin_aggregate_ratio_stable_only_corrected": 0.991,
+      "reserve_to_supply_ratio_stable_only_corrected": 0.768,
+      "total_reserve_usd_stable_bucket_corrected": 12811844.28,
+      "total_reserve_eur_stable_bucket_corrected": 2321191.57,
+      "total_reserve_volatile_bucket_corrected": 4753864.35,
       "total_reserve_other_bucket_corrected": 0.0,
-      "total_reserve_stable_only_usd_corrected": 15318470.57,
+      "total_reserve_stable_only_usd_corrected": 15133035.85,
       "custodian_breakdown_corrected": {
-        "hot_usd": 3744212.09,
-        "cold_usd": 11657902.47,
-        "ops_usd": 4664108.43
+        "hot_usd": 3613234.88,
+        "cold_usd": 11662952.33,
+        "ops_usd": 4619384.94
       }
     },
     "governance_state": {
@@ -431,6 +431,6 @@
     "issuer_score_source": "risk-feed@2026-08-28T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-08-28T01:45:02Z",
-    "issuer_score_age_hours": 1.09
+    "issuer_score_age_hours": 2.07
   }
 }
