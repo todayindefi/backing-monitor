@@ -292,6 +292,10 @@ async function renderAsset(slug) {
         if (data.summary && data.summary.collateral_ratio_alt && data.summary.collateral_ratio_alt.is_currency) {
             chartOpts.omit_alt = true;
         }
+        // The chart resolves CR scale exactly as the summary tile does; without
+        // the summary it cannot, and a raw-ratio feed plots 100x low.
+        chartOpts.cr_scale_summary = data.summary || null;
+        chartOpts.asset_slug = data.asset_slug || slug;
         CommonRenderer.renderCRChart(history, chartOpts);
 
         // Breakdown table + pie: skip for crvUSD (handled in asset-specific renderer)

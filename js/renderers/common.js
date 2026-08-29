@@ -489,7 +489,27 @@ const CommonRenderer = {
         if (titleEl) titleEl.textContent = title;
 
         // Min/max CR stats
-        var rawCRValues = historyData.entries.map(function(e) { return e.collateral_ratio; });
+        //
+        // ⚠️ The history series needs the SAME scale resolution as the headline
+        // tile. USDm publishes collateral_ratio as a raw ratio and declares
+        // `collateral_ratio_scale: "ratio"`; the tile honoured that and this
+        // chart did not, so the page showed 129.57% in the headline and plotted
+        // 1.2957 — a flat line at the bottom of a 0-140% axis, sitting inside
+        // the red Critical band, with "Min: 1.21%" in red above it.
+        //
+        // A double-collateralised reserve rendered as total loss of backing.
+        // Same failure the retired `if (cr < 2) cr *= 100` guard was written for,
+        // reached by a different route: the fix was applied to the summary path
+        // and the history path was never brought along.
+        //
+        // collateral_ratio_alt is deliberately NOT normalised here — usdm.js
+        // already converts it (stable_only_coverage_ratio * 100) before this
+        // runs, which is why the alt series was the only correct one on the chart.
+        var crScaleSummary = opts.cr_scale_summary || null;
+        var crScaleSlug = opts.asset_slug || null;
+        var rawCRValues = historyData.entries.map(function(e) {
+            return CommonRenderer.normalizeCollateralRatio(e.collateral_ratio, crScaleSlug, crScaleSummary);
+        });
         var rawAltCRValues = historyData.entries.map(function(e) { return e.collateral_ratio_alt; });
         var rawAltHasData = !opts.omit_alt && rawAltCRValues.some(function(v) {
             return v !== null && v !== undefined;

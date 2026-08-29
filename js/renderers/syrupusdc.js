@@ -1028,7 +1028,19 @@ var SyrupUSDCRenderer = {
         // documented Apr 3-20 Maple aggregation-transient dips that visually
         // dominated the 30d chart but aren't real undercollateralization.
         var allEntries = h.entries.slice().sort(function(a, b) { return a.timestamp - b.timestamp; });
-        var entries = allEntries.slice(-7);
+        // ⚠️ This was `slice(-7)` — the last 7 POINTS, labelled and charted as
+        // "7d". aum_history is daily, so the two nearly agree and syrupUSDC was
+        // unaffected. syrupUSDT was not: the 8th point back falls inside 7 days
+        // and is the lowest reading in the window, so the panel showed
+        // "7d Min: 116.47%" against a true 7-day minimum of 103.98% — 12.5pp
+        // understated, in the direction that makes coverage look safer.
+        //
+        // A count is not a window. Slice by date so the label and the data
+        // agree whatever cadence the producer sends.
+        var lastTs = allEntries[allEntries.length - 1].timestamp;
+        var windowStart = lastTs - 7 * 86400;
+        var entries = allEntries.filter(function(e) { return e.timestamp >= windowStart; });
+        if (entries.length < 2) entries = allEntries.slice(-7);
         var labels = entries.map(function(e) { return new Date(e.timestamp * 1000); });
         var crSeries = entries.map(function(e) { return e.collateral_ratio_pct; });
 
