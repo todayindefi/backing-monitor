@@ -557,9 +557,37 @@ const CommonRenderer = {
             }).map(function(reason) {
                 return reason + (suspectReasonCounts[reason] > 1 ? ' (' + suspectReasonCounts[reason] + ')' : '');
             }).join('; ');
-            statsEl.innerHTML = '<span>30d Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
-                '<span>30d Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
+            // ⚠️ These labels read "30d" for a long time while min/max were taken
+            // over the WHOLE file. That was accidentally true — every history
+            // export held ~29 days — until it wasn't: yzUSD ships 309 points
+            // over 317 days, so the page called a 7.63pp ten-month range a "30d
+            // range" when the real 30-day range is 3.88pp. USDS at 50 days had
+            // the same defect, smaller.
+            //
+            // ⚠️ It inverts the reading, it does not just widen it. A 2pp move
+            // against a claimed 7.63pp band looks like ordinary noise; against
+            // the true 3.88pp band it is half the range and worth looking at.
+            // The mislabel argues AGAINST investigating the thing it should
+            // argue for.
+            //
+            // So: state the window instead of asserting one. A range means
+            // nothing without the span it covers, and the span is right here in
+            // the data — there is no reason to hardcode a guess at it.
+            var spanLabel = '';
+            var tsAll = (historyData.entries || []).map(function(e) {
+                if (!e || !e.timestamp) return null;
+                return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z').getTime();
+            }).filter(function(t) { return t && !isNaN(t); });
+            if (tsAll.length > 1) {
+                var spanDays = Math.round((Math.max.apply(null, tsAll) - Math.min.apply(null, tsAll)) / 86400000);
+                spanLabel = crValues.length + ' obs over ' +
+                    (spanDays >= 60 ? Math.round(spanDays / 30) + ' months' : spanDays + ' days');
+            }
+
+            statsEl.innerHTML = '<span>Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
+                '<span>Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
                 '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>' +
+                (spanLabel ? '<span class="text-slate-400">' + spanLabel + '</span>' : '') +
                 (missingReadCount > 0 ? '<span class="text-slate-400">' + missingReadCount + ' observations unavailable (missing/incomplete reads)</span>' : '') +
                 (suspectReadCount > 0 ? '<span class="text-amber-600" title="' + escapeAttr(suspectReadCount + ' excluded: ' + suspectTooltip) + '">' + suspectReadCount + ' flagged observations excluded as incomplete reads ⓘ</span>' : '') +
                 (excludedCount > 0 ? '<span class="text-amber-600">' + excludedCount + ' implausible values excluded (&lt;' + sanityFloor + '%)</span>' : '');
