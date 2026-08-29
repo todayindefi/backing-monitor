@@ -102,6 +102,14 @@ cp /home/danger/PegTracker/data/hastra_prime_backing.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/hastra_prime_backing_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/hastra_prime_backing_last_attempt.json data/ 2>/dev/null
 
+# Yuzu (yzUSD / syzUSD): registered 2026-08-29. Both feeds carry the full 5-axis
+# schema, so the generic renderer serves them — no bespoke renderer, same path
+# usds/susds take. yzusd_backing_history.json exists; syzUSD has no history file
+# of its own, which is why there is no cp line for one.
+cp /home/danger/PegTracker/data/yzusd_backing.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/syzusd_backing.json data/ 2>/dev/null
+cp /home/danger/PegTracker/data/yzusd_backing_history.json data/ 2>/dev/null
+
 # Integrate any remote changes first (e.g. dashboard claude's commits) so our
 # data-only push fast-forwards. Without this, a non-fast-forward push is
 # rejected, the cron silently strands data commits, and dashboards go stale.
