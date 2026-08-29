@@ -465,13 +465,7 @@ var HastraPrimeRenderer = {
         html += HastraPrimeRenderer._axisHead(1, 'Peg', 'discount to wYLDS-denominated NAV');
         html += anc('hp-panel-peg', HastraPrimeRenderer._renderPeg(data, spec));
 
-        html += HastraPrimeRenderer._axisHead(2, 'Liquidity', 'secondary market vs admin-mediated redemption');
-        html += HastraPrimeRenderer._subHead('Secondary market');
-        html += anc('hp-panel-liquidity',  HastraPrimeRenderer._renderLiquidity(data, spec));
-        html += HastraPrimeRenderer._subHead('Redemption (admin-mediated)');
-        html += anc('hp-panel-redemption', HastraPrimeRenderer._renderRedemption(spec));
-
-        html += HastraPrimeRenderer._axisHead(3, 'Backing', 'headline · reconciliation · reserves · supply');
+        html += HastraPrimeRenderer._axisHead(2, 'Backing', 'headline · reconciliation · reserves · supply');
         html += CommonRenderer.backingBasisPanelHtml(data);
         html += anc('hp-panel-headline',   HastraPrimeRenderer._renderHeadline(data, spec, s));
         html += '<div id="hp-cr-chart-slot"></div>';
@@ -479,15 +473,27 @@ var HastraPrimeRenderer = {
         html += anc('hp-panel-reserves',   HastraPrimeRenderer._renderReserveMap(spec));
         html += anc('hp-panel-supply',     HastraPrimeRenderer._renderSupplyByChain(spec));
 
+        html += HastraPrimeRenderer._axisHead(3, 'Liquidity & Exit', 'secondary market vs admin-mediated redemption');
+        html += HastraPrimeRenderer._subHead('Secondary market');
+        html += anc('hp-panel-liquidity',  HastraPrimeRenderer._renderLiquidity(data, spec));
+        html += HastraPrimeRenderer._subHead('Redemption (admin-mediated)');
+        html += anc('hp-panel-redemption', HastraPrimeRenderer._renderRedemption(spec));
+
         html += HastraPrimeRenderer._axisHead(4, 'Dependencies', 'upstream credit · warehouse turnover · loan quality');
         html += HastraPrimeRenderer._renderUpstreamDependencies(data);
         html += anc('hp-panel-warehouse',  HastraPrimeRenderer._renderWarehouse(data, spec));
         html += anc('hp-panel-heloc-credit', HastraPrimeRenderer._renderHelocCredit(data, spec));
 
-        html += HastraPrimeRenderer._axisHead(5, 'Issuer', 'control surface · related-party structure');
+        // "control surface · related-party structure" was an Issuer subtitle over
+        // Contract & Admin content. Related-party structure is genuinely issuer,
+        // so it moves with the panel and axis 6 carries the editorial half.
+        html += HastraPrimeRenderer._axisHead(5, 'Contract & Admin', 'control surface · related-party structure');
         html += anc('hp-panel-control',    HastraPrimeRenderer._renderControlSurface(spec, data));
 
-        // Provenance remains outside the five axes at the bottom.
+        html += HastraPrimeRenderer._axisHead(6, 'Issuer', 'editorial \u2014 subjective axis');
+        html += CommonRenderer.issuerPanelHtml(data) + CommonRenderer._issuerContextHtml(data);
+
+        // Provenance remains outside the six axes at the bottom.
         html += anc('hp-panel-provenance', HastraPrimeRenderer._renderDataProvenance(data, spec));
 
         container.innerHTML = html;
@@ -520,7 +526,11 @@ var HastraPrimeRenderer = {
         });
 
         if (has5axis) {
-            ['section-peg', 'section-liquidity', 'section-backing', 'section-dependencies', 'section-issuer']
+            // ⚠️ 'section-contract' added with the six-axis split. Every one of these
+            // lists was written when there were five sections, and a new section
+            // leaks through a hardcoded list silently — it rendered a SECOND,
+            // empty Contract & Admin axis under the bespoke one on all five pages.
+            ['section-peg', 'section-liquidity', 'section-contract', 'section-backing', 'section-dependencies', 'section-issuer']
                 .forEach(function(id) {
                     var section = document.getElementById(id);
                     if (section) section.style.display = 'none';

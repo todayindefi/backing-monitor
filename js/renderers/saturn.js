@@ -278,10 +278,7 @@ var SaturnRenderer = {
         html += head(1, 'Peg', pegSub);
         html += SaturnRenderer._renderPegPanel(specific, s, slug);
 
-        html += head(2, 'Liquidity', 'exit depth, venue spread and slippage');
-        html += anc('panel-liquidity', SaturnRenderer._renderLiquidityPanel(specific, s, slug));
-
-        html += head(3, 'Backing', (slug === 'usdat')
+        html += head(2, 'Backing', (slug === 'usdat')
             ? 'composition and the drift watchdog'
             : 'reserve split and NAV trajectory');
         html += SaturnRenderer._renderSupplyScopeNote(s, data);
@@ -293,11 +290,21 @@ var SaturnRenderer = {
             html += anc('panel-nav',       SaturnRenderer._renderSusdatNavTrajectory(specific, s));
         }
 
+        html += head(3, 'Liquidity & Exit', 'exit depth, venue spread and slippage');
+        html += anc('panel-liquidity', SaturnRenderer._renderLiquidityPanel(specific, s, slug));
+
         html += head(4, 'Dependencies', 'what this depends on, and what depends on it');
         html += SaturnRenderer._renderDependenciesPanel(data);
 
-        html += head(5, 'Issuer', 'trust stack \u2014 admin topology and attestation');
+        // ⚠️ This head said "Issuer" while the panel under it is admin topology —
+        // roles, thresholds, timelocks, the shared-control finding. That is
+        // Contract & Admin. USDat is the case the split exists for: 4-of-6 behind
+        // 72h at token level, and a 3-of-6 with NO timelock owning the CCIP pools.
+        html += head(5, 'Contract & Admin', 'trust stack \u2014 admin topology and attestation');
         html += anc('panel-trust',     SaturnRenderer._renderTrustStack(specific, slug));
+
+        html += head(6, 'Issuer', 'editorial \u2014 subjective axis');
+        html += CommonRenderer.issuerPanelHtml(data) + CommonRenderer._issuerContextHtml(data);
         html += '<div id="saturn-family-panel"></div>';
 
         container.innerHTML = html;
@@ -331,7 +338,11 @@ var SaturnRenderer = {
         // (inside #section-backing) is already hidden — so we can hide section-backing
         // too, unlike Ethena which keeps its Coverage chart there.
         if (has5axis) {
-            ['section-peg', 'section-liquidity', 'section-backing', 'section-dependencies', 'section-issuer']
+            // ⚠️ 'section-contract' added with the six-axis split. Every one of these
+            // lists was written when there were five sections, and a new section
+            // leaks through a hardcoded list silently — it rendered a SECOND,
+            // empty Contract & Admin axis under the bespoke one on all five pages.
+            ['section-peg', 'section-liquidity', 'section-contract', 'section-backing', 'section-dependencies', 'section-issuer']
                 .forEach(function(id) { var s = document.getElementById(id); if (s) s.style.display = 'none'; });
             var bh = document.getElementById('axis-backing-head'); if (bh) bh.innerHTML = '';
         }

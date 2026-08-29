@@ -199,7 +199,11 @@ var SyrupUSDCRenderer = {
         // order. The relocation runs in render() AFTER the bespoke HTML is in the DOM;
         // here we just clear the (now-orphan) backing axis head.
         if (typeof CommonRenderer !== 'undefined' && CommonRenderer.hasAxisBlocks(data)) {
-            ['section-peg', 'section-liquidity', 'section-backing', 'section-dependencies', 'section-issuer']
+            // ⚠️ 'section-contract' added with the six-axis split. Every one of these
+            // lists was written when there were five sections, and a new section
+            // leaks through a hardcoded list silently — it rendered a SECOND,
+            // empty Contract & Admin axis under the bespoke one on all five pages.
+            ['section-peg', 'section-liquidity', 'section-contract', 'section-backing', 'section-dependencies', 'section-issuer']
                 .forEach(function(id) { var s = document.getElementById(id); if (s) s.style.display = 'none'; });
             // Clear the hidden common axis bodies — they contain duplicate-id nodes (notably a
             // #peg-chart canvas from renderAxisSections) that would shadow our bespoke §1 Peg
@@ -572,13 +576,7 @@ var SyrupUSDCRenderer = {
         html += this._renderPegPanel(data);
 
         // ---- §2 Liquidity ----
-        html += this._axisHead(2, 'Liquidity', 'exit paths · free buffer · when capital returns');
-        html += this._renderLiquidityAndPeg(specific, s, data.asset_slug);  // free liquidity / queue / DEX slippage (peg moved to §1)
-        html += this._renderLiquidityLayer(specific, data.asset_slug);      // pool-owned positions
-        html += this._renderRepaymentSchedule(specific);                    // future liquidity (when loans return capital)
-
-        // ---- §3 Backing ----
-        html += this._axisHead(3, 'Backing', 'reserves · collateral ratio · loan-book health');
+        html += this._axisHead(2, 'Backing', 'reserves · collateral ratio · loan-book health');
         html += CommonRenderer.backingBasisPanelHtml(data);
         // Relocation slot for the common #chart-panel (Pool Coverage CR chart).
         // The DOM node is physically moved into here after innerHTML so its
@@ -590,13 +588,27 @@ var SyrupUSDCRenderer = {
         html += this._renderYield(specific);
 
         // ---- §4 Dependencies ----
+        html += this._axisHead(3, 'Liquidity & Exit', 'exit paths · free buffer · when capital returns');
+        html += this._renderLiquidityAndPeg(specific, s, data.asset_slug);  // free liquidity / queue / DEX slippage (peg moved to §1)
+        html += this._renderLiquidityLayer(specific, data.asset_slug);      // pool-owned positions
+        html += this._renderRepaymentSchedule(specific);                    // future liquidity (when loans return capital)
+
+        // ---- §3 Backing ----
         html += this._axisHead(4, 'Dependencies', 'upstream credit — borrowers');
         html += this._renderBorrowerConcentration(specific);
 
         // ---- §5 Issuer ----
-        html += this._axisHead(5, 'Structural', 'governance · audits · multi-chain · family');
+        // ⚠️ syrupUSDC's producer-supplied label is "Structural", which maps to
+        // Contract & Admin rather than to Issuer — riskAnalyst confirmed
+        // structural_score is authored as contract security AND admin control
+        // (audit 6/10, admin 6/10, upgrade 6/10, timelock 5/10, collateral 1/10),
+        // so the feed descriptor calling it "collateral structure" is stale.
+        html += this._axisHead(5, 'Contract & Admin', 'governance · audits · multi-chain · family');
         html += this._renderTrustStack(specific);
         html += this._renderMultiChain(specific, data.asset_slug);
+
+        html += this._axisHead(6, 'Issuer', 'editorial \u2014 subjective axis');
+        html += CommonRenderer.issuerPanelHtml(data) + CommonRenderer._issuerContextHtml(data);
         // Reserved div for the cross-pool family panel — async-populated below
         // by _loadCrossPoolFamily once data/syrup_family.json resolves. Stays
         // empty (zero-height) when the file is missing so the page doesn't

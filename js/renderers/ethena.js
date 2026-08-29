@@ -304,7 +304,16 @@ var EthenaRenderer = {
         // its axis head. The backing breakdown/pie/risk-flags inside it are suppressed
         // separately below.
         if (has5axis) {
-            ['section-peg', 'section-liquidity', 'section-dependencies', 'section-issuer']
+            // ⚠️ 'section-contract' IS hidden here, and the reasoning went both ways
+            // before landing. ethena renders rich panels with NO axis numbers at
+            // all — it hides peg/liquidity/dependencies and replaces them
+            // unnumbered. Leaving the generic contract section visible put a lone
+            // "5 Contract & Admin" on a page with no 1, 2, 3, 4 or 6, which reads
+            // as a rendering failure rather than as a measured absence. The
+            // summary band still carries a Contract card saying "Not scored yet",
+            // so the axis is not silently dropped — it is stated where the rest of
+            // this page's axis information lives.
+            ['section-peg', 'section-liquidity', 'section-contract', 'section-dependencies', 'section-issuer']
                 .forEach(function(id) { var s = document.getElementById(id); if (s) s.style.display = 'none'; });
             var bh = document.getElementById('axis-backing-head'); if (bh) bh.innerHTML = '';
         }

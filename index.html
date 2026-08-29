@@ -64,9 +64,9 @@
                  clears it. Empty (and invisible) whenever the feed is fresh. -->
             <div id="staleness-banner"></div>
 
-            <!-- Risk summary band: 5 axis cards in 5-axis mode, legacy CR cards otherwise.
+            <!-- Risk summary band: 6 axis cards in axis mode, legacy CR cards otherwise.
                  ID retained so existing renderers (and common.renderSummaryCards) keep working. -->
-            <div id="summary-cards" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 mb-6"></div>
+            <div id="summary-cards" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6"></div>
 
             <!-- ============ Axis 1 · PEG ============ -->
             <!-- 5-axis sections only reveal when the asset carries Layer-1 blocks; legacy
@@ -77,14 +77,7 @@
                 <div id="peg-extra-panels"></div>
             </section>
 
-            <!-- ============ Axis 2 · LIQUIDITY ============ -->
-            <section id="section-liquidity" class="axis-section hidden">
-                <div class="axis-head" id="axis-liquidity-head"></div>
-                <div id="axis-liquidity-body"></div>
-                <div id="liquidity-extra-panels"></div>
-            </section>
-
-            <!-- ============ Axis 3 · BACKING ============ -->
+            <!-- ============ Axis 2 · BACKING ============ -->
             <!-- Always rendered. Holds the original backing DOM (chart-panel, breakdown-table,
                  risk-flags, pie-chart) by their original IDs so every existing renderer that
                  targets them keeps working. The head div is only filled in 5-axis mode. -->
@@ -137,6 +130,13 @@
                 <div id="backing-extra-panels"></div>
             </section>
 
+            <!-- ============ Axis 3 · LIQUIDITY & EXIT ============ -->
+            <section id="section-liquidity" class="axis-section hidden">
+                <div class="axis-head" id="axis-liquidity-head"></div>
+                <div id="axis-liquidity-body"></div>
+                <div id="liquidity-extra-panels"></div>
+            </section>
+
             <!-- ============ Axis 4 · DEPENDENCIES ============ -->
             <section id="section-dependencies" class="axis-section hidden">
                 <div class="axis-head" id="axis-dependencies-head"></div>
@@ -144,7 +144,18 @@
                 <div id="dependencies-extra-panels"></div>
             </section>
 
-            <!-- ============ Axis 5 · ISSUER ============ -->
+            <!-- ============ Axis 5 · CONTRACT & ADMIN ============ -->
+            <!-- MEASURED axis: quorum, timelock depth, upgrade authority, pause surface,
+                 deployed-vs-published bytecode. Deliberately separate from Issuer (axis 6),
+                 which is EDITORIAL — they fail independently, and one score spanning a
+                 checkable axis and a subjective one cannot be checked. -->
+            <section id="section-contract" class="axis-section hidden">
+                <div class="axis-head" id="axis-contract-head"></div>
+                <div id="axis-contract-body"></div>
+                <div id="contract-extra-panels"></div>
+            </section>
+
+            <!-- ============ Axis 6 · ISSUER ============ -->
             <section id="section-issuer" class="axis-section hidden">
                 <div class="axis-head" id="axis-issuer-head"></div>
                 <div id="axis-issuer-body"></div>
@@ -190,24 +201,24 @@
         }
     })();
     </script>
-    <script src="js/renderers/common.js?v=20260830g"></script>
+    <script src="js/renderers/common.js?v=20260830k"></script>
     <script src="js/renderers/ousd.js?v=20260824a"></script>
     <script src="js/renderers/frax.js?v=20260402"></script>
     <script src="js/renderers/crvusd.js?v=20260824a"></script>
     <script src="js/renderers/usg.js?v=20260827b"></script>
     <script src="js/renderers/usdd.js?v=20260824a"></script>
-    <script src="js/renderers/syrupusdc.js?v=20260829m"></script>
+    <script src="js/renderers/syrupusdc.js?v=20260830j"></script>
     <script src="js/renderers/apyx.js?v=20260829a"></script>
     <script src="js/renderers/strc.js?v=20260824c"></script>
     <script src="js/renderers/mstr.js?v=20260824a"></script>
     <script src="js/renderers/bmnr.js?v=20260826b"></script>
-    <script src="js/renderers/saturn.js?v=20260829k"></script>
+    <script src="js/renderers/saturn.js?v=20260830j"></script>
     <script src="js/renderers/usdm.js?v=20260827z"></script>
-    <script src="js/renderers/thusd.js?v=20260829m"></script>
-    <script src="js/renderers/ethena.js?v=20260829m"></script>
+    <script src="js/renderers/thusd.js?v=20260830j"></script>
+    <script src="js/renderers/ethena.js?v=20260830m"></script>
     <script src="js/renderers/cap.js?v=20260827z"></script>
-    <script src="js/renderers/usdai.js?v=20260829m"></script>
-    <script src="js/renderers/hastra-prime.js?v=20260829m"></script>
+    <script src="js/renderers/usdai.js?v=20260830j"></script>
+    <script src="js/renderers/hastra-prime.js?v=20260830j"></script>
     <script src="js/app.js?v=20260829s"></script>
 </body>
 </html>

@@ -349,12 +349,12 @@ var UsdaiRenderer = {
             html += UsdaiRenderer._renderPegChartPanel(data, slug);
             html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'peg'));
 
-            html += head(2, 'Liquidity', 'exit depth, slippage and route');
-            html += anc('panel-liquidity', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'liquidity'));
-
-            html += head(3, 'Backing', 'PYUSD reserve held by the USDai contract');
+            html += head(2, 'Backing', 'PYUSD reserve held by the USDai contract');
             html += CommonRenderer.backingBasisPanelHtml(data);
             html += anc('panel-coverage', UsdaiRenderer._renderUsdaiCoverage(specific, s));
+
+            html += head(3, 'Liquidity & Exit', 'exit depth, slippage and route');
+            html += anc('panel-liquidity', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'liquidity'));
 
             html += head(4, 'Dependencies', 'what this depends on, and what depends on it');
             html += UsdaiRenderer._renderDependenciesPanel(data);
@@ -369,21 +369,29 @@ var UsdaiRenderer = {
 
             html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'peg'));
 
-            html += head(2, 'Liquidity', 'secondary market and the async redemption queue');
+            html += head(2, 'Backing', 'asset decomposition \u2014 NAV vault, no collateral ratio');
+            html += CommonRenderer.backingBasisPanelHtml(data);
+            html += anc('panel-decomp', UsdaiRenderer._renderSusdaiDecomposition(specific, s));
+
+            html += head(3, 'Liquidity & Exit', 'secondary market and the async redemption queue');
             html += anc('panel-liquidity', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'liquidity'));
 
             // No collateral ratio here — sUSDai is a NAV vault and has none. The
             // backing axis carries the decomposition and the two residual pills.
-            html += head(3, 'Backing', 'asset decomposition \u2014 NAV vault, no collateral ratio');
-            html += CommonRenderer.backingBasisPanelHtml(data);
-            html += anc('panel-decomp', UsdaiRenderer._renderSusdaiDecomposition(specific, s));
-
             html += head(4, 'Dependencies', 'what this depends on, and what depends on it');
             html += UsdaiRenderer._renderDependenciesPanel(data);
         }
 
-        html += head(5, 'Issuer', 'authority by action, upgrade timelock and admin topology');
+        // ⚠️ "authority by action, upgrade timelock and admin topology" was never
+        // an Issuer subtitle — it is the Contract & Admin axis, and USDai is the
+        // asset that proved a single authority field cannot express it: 48h on
+        // upgrades while a 3-of-3 holding DEFAULT_ADMIN can grant mint authority
+        // in one transaction with no delay.
+        html += head(5, 'Contract & Admin', 'authority by action, upgrade timelock and admin topology');
         html += '<div id="usdai-gov-panel"></div>';      // governance (async, family)
+
+        html += head(6, 'Issuer', 'editorial \u2014 subjective axis');
+        html += CommonRenderer.issuerPanelHtml(data) + CommonRenderer._issuerContextHtml(data);
         html += '<div id="usdai-family-panel"></div>';   // family (async, below the axes)
 
         container.innerHTML = html;
@@ -425,7 +433,11 @@ var UsdaiRenderer = {
             // and bind the chart to a hidden 0x0 element. usdai.js currently names its
             // only canvas #usdai-nav-chart, so there is no live collision; clearing the
             // bodies keeps it that way if a §1 chart is ever added.
-            ['section-peg', 'section-liquidity', 'section-backing',
+            // ⚠️ 'section-contract' added with the six-axis split. Every one of these
+            // lists was written when there were five sections, and a new section
+            // leaks through a hardcoded list silently — it rendered a SECOND,
+            // empty Contract & Admin axis under the bespoke one on all five pages.
+            ['section-peg', 'section-liquidity', 'section-contract', 'section-backing',
              'section-dependencies', 'section-issuer'].forEach(function(id) {
                 var el = document.getElementById(id);
                 if (el) el.style.display = 'none';

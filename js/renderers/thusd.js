@@ -197,10 +197,16 @@ var ThusdRenderer = {
         // survives if it is legible as information: an unlabelled gap is not.
         // If the feed later gives §2 its own content, this splits back into 1 and
         // 2 and the numbering is already correct for it.
-        html += head('1\u20132', 'Peg &amp; DEX liquidity', 'weighted price vs $1, depth and venue split');
+        // ⚠️ The merged 1–2 head does not survive the six-axis order: peg is 1 and
+        // liquidity is now 3, with backing between them. Splitting the badge back
+        // apart would be wrong too — _renderDexPeg genuinely interleaves weighted
+        // price and depth in one metric row, which is why it was merged. So peg
+        // and liquidity keep ONE panel, announced under 1 with a 3 badge beside
+        // it, rather than a panel claiming to be an axis it shares.
+        html += head('1 + 3', 'Peg &amp; DEX liquidity', 'weighted price vs $1, depth and venue split');
         html += anc('thusd-peg',          ThusdRenderer._renderDexPeg(spec));
 
-        html += head(3, 'Backing', ThusdRenderer._backingHeadSub(data, s));
+        html += head(2, 'Backing', ThusdRenderer._backingHeadSub(data, s));
         html += ThusdRenderer._anchor('thusd-basis', CommonRenderer.backingBasisPanelHtml(data));
         html += anc('thusd-reserves',     ThusdRenderer._renderReserveComposition(spec, s));
         html += anc('thusd-coverage',     ThusdRenderer._renderCoverageHistoryPanel());
@@ -210,9 +216,12 @@ var ThusdRenderer = {
         html += anc('thusd-chains',       ThusdRenderer._renderConservationTable(spec));
         html += anc('thusd-legs',         ThusdRenderer._renderUpstreamLegs(data));
 
-        html += head(5, 'Issuer', 'admin chain and critical events');
+        html += head(5, 'Contract &amp; Admin', 'admin chain and critical events');
         html += anc('thusd-admin',        ThusdRenderer._renderAdminChain(spec));
         html += anc('thusd-events',       ThusdRenderer._renderCriticalEventsPanel(spec));
+
+        html += head(6, 'Issuer', 'editorial \u2014 subjective axis');
+        html += CommonRenderer.issuerPanelHtml(data) + CommonRenderer._issuerContextHtml(data);
 
         // Below the axes — methodology and the sthUSD yield trajectory are
         // context rather than an axis.
@@ -254,7 +263,11 @@ var ThusdRenderer = {
         // Every other tier-3 renderer (usdai, saturn, syrupusdc, hastra-prime)
         // already does this; thusd was the only one missing it.
         if (hasAxes) {
-            ['section-peg', 'section-liquidity', 'section-backing',
+            // ⚠️ 'section-contract' added with the six-axis split. Every one of these
+            // lists was written when there were five sections, and a new section
+            // leaks through a hardcoded list silently — it rendered a SECOND,
+            // empty Contract & Admin axis under the bespoke one on all five pages.
+            ['section-peg', 'section-liquidity', 'section-contract', 'section-backing',
              'section-dependencies', 'section-issuer'].forEach(function(id) {
                 var el = document.getElementById(id);
                 if (el) el.style.display = 'none';

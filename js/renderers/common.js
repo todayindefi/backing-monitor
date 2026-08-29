@@ -1278,12 +1278,6 @@ const CommonRenderer = {
                 chip: this._ratingChipHtml(this.pegRating(data, history))
             },
             {
-                label: 'Liquidity',
-                valueHtml: depthTxt,
-                sub: liqSub,
-                chip: this._ratingChipHtml(this.liquidityRating(data))
-            },
-            {
                 label: 'Backing',
                 valueHtml: this._backingValueHtml(data),
                 sub: this._backingSubText(data),
@@ -1291,10 +1285,25 @@ const CommonRenderer = {
                                            this.backingUnratedReason(data))
             },
             {
+                label: 'Liquidity & Exit',
+                valueHtml: depthTxt,
+                sub: liqSub,
+                chip: this._ratingChipHtml(this.liquidityRating(data))
+            },
+            {
                 label: 'Dependencies',
                 valueHtml: nUp + ' <span class="text-sm font-normal text-slate-400">up</span> · ' + depDownHtml,
                 sub: 'upstream / downstream',
                 chip: '<a href="#section-dependencies" class="axis-rating r-na">View links →</a>'
+            },
+            {
+                // ⚠️ Unrated by design, and the card says why rather than showing a
+                // bare dash. contract_score does not exist for any asset; see the
+                // axis-5 comment in renderAxisSections.
+                label: 'Contract',
+                valueHtml: '<span class="text-slate-400">—</span>',
+                sub: 'admin authority & delay',
+                chip: '<span class="axis-rating r-na" title="No contract_score exists for any asset in the risk feed. The material is rendered in the axis below; the score is not yet authored.">Not scored yet</span>'
             },
             {
                 label: this._escapeAttr(this._issuerAxisInfo(issuer).label),
@@ -1581,7 +1590,8 @@ const CommonRenderer = {
 
     // --- the four non-backing sections + backing head ---
     renderAxisSections(data, history) {
-        var ids = ['section-peg', 'section-liquidity', 'section-dependencies', 'section-issuer'];
+        var ids = ['section-peg', 'section-liquidity', 'section-dependencies',
+                   'section-contract', 'section-issuer'];
         if (!this.hasAxisBlocks(data)) {
             // Legacy asset: keep the 4 sections hidden and the backing head empty.
             ids.forEach(function(id) { var s = document.getElementById(id); if (s) s.classList.add('hidden'); });
@@ -1596,13 +1606,14 @@ const CommonRenderer = {
             this._ratingChipHtml(this.pegRating(data, history)));
         this._renderPegSection(data, history);
 
-        // 2 · Liquidity
-        this._renderAxisHead('liquidity', 2, 'Liquidity', 'exit depth & venue spread',
-            this._ratingChipHtml(this.liquidityRating(data)));
-        this._renderLiquiditySection(data);
-
-        // 3 · Backing (head only — panels are rendered by the existing common path)
-        this._renderAxisHead('backing', 3, 'Backing', 'reserves & collateral ratio',
+        // ⚠️ 2 is BACKING and 3 is LIQUIDITY — swapped from the original frame.
+        // The dashboard ran 1 Peg · 2 Liquidity · 3 Backing while the published
+        // reports ran 2 Backing · 3 Liquidity, so "axis 2" meant two different
+        // things depending which surface you were reading. Three of five
+        // positions disagreed while everyone argued about the label at 5.
+        //
+        // 2 · Backing (head only — panels are rendered by the existing common path)
+        this._renderAxisHead('backing', 2, 'Backing', 'reserves & collateral ratio',
             this._ratingChipHtml(this.backingRating(data)));
         // ⚠️ collateral_ratio_basis was rendered ONLY as a hover tooltip on a ⓘ
         // glyph beside the tile. For most assets that is a reasonable place for
@@ -1644,6 +1655,15 @@ const CommonRenderer = {
         // breakdown). Data-gated & additive: no-op for assets lacking the fields.
         this._renderBackingComposition(data);
 
+        // 3 · Liquidity & Exit. Renamed from "Liquidity": the axis covers BOTH
+        // exit paths — secondary venue depth AND primary redemption with the
+        // issuer — and they fail independently. The rating is still computed
+        // from depth alone, which is why the tile states its scope.
+        this._renderAxisHead('liquidity', 3, 'Liquidity & Exit',
+            'venue depth & primary redemption',
+            this._ratingChipHtml(this.liquidityRating(data)));
+        this._renderLiquiditySection(data);
+
         // 4 · Dependencies
         // ⚠️ An array's LENGTH is how many rows the producer sent, not how many
         // exist. A producer-side cap of 6 became the on-page claim "6 upstream"
@@ -1667,9 +1687,26 @@ const CommonRenderer = {
         this._renderAxisHead('dependencies', 4, 'Dependencies', upSub + ' \u00b7 ' + downSub, '');
         this._renderDependenciesSection(data);
 
-        // 5 · Editorial axis (issuer, structural, or a future per-asset label)
+        // 5 · Contract & Admin — MEASURED. Split from Issuer because they fail
+        // independently and the evidence is of different kinds. USDat is the
+        // live case: 4-of-6 behind a 72h delay at token level, while a 3-of-6
+        // with NO timelock owns the CCIP pools. One score over both hides that.
+        //
+        // ⚠️ It renders UNRATED for now, and the reason is stated on the page.
+        // contract_score does not exist for any asset — 0 of 146 in the risk
+        // feed. It exists only at PROTOCOL level, where it means smart-contract
+        // SECURITY (audit quality), which is a different measurement: a protocol
+        // scoring 9.0 on audits can still hold a bare EOA upgrade key, which is
+        // exactly what this axis is for. An unexplained blank is
+        // indistinguishable from an oversight, so it must never be silent.
+        this._renderAxisHead('contract', 5, 'Contract & Admin',
+            'admin authority, delay, upgrade & pause surface',
+            this._ratingChipHtml(null));
+        this._renderContractSection(data);
+
+        // 6 · Editorial axis (issuer, structural, or a future per-asset label)
         var issuerInfo = this._issuerAxisInfo(data.issuer || {});
-        this._renderAxisHead('issuer', 5, this._escapeAttr(issuerInfo.label), 'editorial — subjective axis', '');
+        this._renderAxisHead('issuer', 6, this._escapeAttr(issuerInfo.label), 'editorial — subjective axis', '');
         this._renderIssuerSection(data);
         return true;
     },
@@ -2481,6 +2518,14 @@ const CommonRenderer = {
     _renderIssuerSection(data) {
         var body = document.getElementById('axis-issuer-body');
         if (!body) return;
+        body.innerHTML = this.issuerPanelHtml(data) + this._issuerContextHtml(data);
+    },
+
+    // Extracted so the BESPOKE renderers can emit axis 6 too. They build their
+    // whole axis set into #asset-specific-panels and clear the generic bodies,
+    // so before this they simply had no axis 6 — their old "5 Issuer" head was
+    // sitting above admin-topology panels, which is Contract & Admin content.
+    issuerPanelHtml(data) {
         var issuer = data.issuer || {};
         var info = this._issuerAxisInfo(issuer);
         var badge = info.badge || (info.score != null ? info.label + ' ' + info.score + '/10' :
@@ -2534,13 +2579,32 @@ const CommonRenderer = {
               '</ul>'
             : '';
 
-        body.innerHTML = '<div class="panel">' +
+        return '<div class="panel">' +
             '<div class="panel-title">' + this._escapeAttr(info.label) + '</div>' +
             '<div class="flex flex-wrap items-center gap-2 mb-3">' + chips + '</div>' +
             factsHtml +
             '<p class="text-sm text-slate-500 mb-3">' + methodology + '</p>' +
             reportLink +
-        '</div>' + this._issuerContextHtml(data);
+        '</div>';
+    },
+
+    // ⚠️ Axis 5 · Contract & Admin. The panels below were rendered under Issuer
+    // until the six-axis split, which was a misfiling rather than an omission —
+    // 12 of 25 assets carried this material all along.
+    //
+    // It renders even with no score, because the content is the point and an
+    // unrated axis with a stated reason beats a rated one built on the wrong
+    // measurement. See the head comment in renderAxisSections.
+    _renderContractSection(data) {
+        var body = document.getElementById('axis-contract-body');
+        if (!body) return;
+        var html = this._contractPanelsHtml(data);
+        body.innerHTML = html ||
+            '<div class="panel"><div class="panel-title">Not assessed</div>' +
+            '<div class="text-sm text-slate-500" style="line-height:1.5;">' +
+            'No admin-control facts are published for this asset. ' +
+            '\u26a0\ufe0f Not assessed \u2014 this is an absence of data, not a finding that ' +
+            'control is unconstrained.</div></div>';
     },
 
     // ⚠️ The issuer axis read "4.0/10" and a line of boilerplate while the feed
@@ -2567,40 +2631,9 @@ const CommonRenderer = {
         return '<span class="axis-rating r-na" title="No report URL is published for this asset.">No report</span>';
     },
 
-    _issuerContextHtml(data) {
+    _contractPanelsHtml(data) {
         var sp = data.asset_specific || {};
         var out = '';
-
-        // 1. Corroboration — the strongest issuer-axis fact available: how much
-        // of what the issuer reports has been independently reproduced on-chain.
-        var corr = sp.corroboration;
-        if (corr && corr.checks) {
-            var rows = Object.keys(corr.checks).map(function(k) {
-                var c = corr.checks[k] || {};
-                var ok = c.agrees === true;
-                return '<tr>' +
-                    '<td class="font-medium">' + CommonRenderer._escapeAttr(k.replace(/_/g, ' ')) + '</td>' +
-                    '<td class="text-right font-mono text-xs">' + (c.feed != null ? c.feed : '—') + '</td>' +
-                    '<td class="text-right font-mono text-xs">' + (c.chain != null ? c.chain : '—') + '</td>' +
-                    '<td class="text-xs ' + (ok ? 'text-green-600' : 'text-red-600') + '">' +
-                        (ok ? 'agrees' : 'DISAGREES') + '</td>' +
-                '</tr>';
-            }).join('');
-            out += '<div class="panel">' +
-                '<div class="panel-title">Independent verification</div>' +
-                '<div class="data-table-scroll"><table class="data-table">' +
-                '<thead><tr><th>Check</th><th class="text-right">Issuer feed</th>' +
-                '<th class="text-right">On-chain</th><th>Result</th></tr></thead>' +
-                '<tbody>' + rows + '</tbody></table></div>' +
-                (corr.note ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
-                    this._escapeAttr(corr.note) + '</div>' : '') +
-                (sp.feed_url ? '<div class="text-xs text-slate-500 mt-2">' +
-                    '<span class="font-semibold">Issuer source:</span> ' +
-                    this._escapeAttr(sp.feed_url) +
-                    (sp.feed_as_of ? ' · as of ' + this.formatDate(sp.feed_as_of) : '') +
-                    '</div>' : '') +
-            '</div>';
-        }
 
         // 2. Governance — gated on the NORMALISED shape only. apxusd and
         // syrupusdc publish governance under entirely different keys and are
@@ -2693,6 +2726,48 @@ const CommonRenderer = {
                 '</tbody></table>' +
                 (ps.note ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
                     this._escapeAttr(ps.note) + '</div>' : '') +
+            '</div>';
+        }
+
+        return out;
+    },
+
+    // ⚠️ Stays with ISSUER (axis 6), not Contract & Admin. Corroboration is
+    // about whether the ISSUER'S OWN FIGURES survive an independent read, and
+    // the disclosed wallet set is a disclosure-quality fact. Neither is a
+    // statement about who can change the contract.
+    _issuerContextHtml(data) {
+        var sp = data.asset_specific || {};
+        var out = '';
+
+        // 1. Corroboration — the strongest issuer-axis fact available: how much
+        // of what the issuer reports has been independently reproduced on-chain.
+        var corr = sp.corroboration;
+        if (corr && corr.checks) {
+            var rows = Object.keys(corr.checks).map(function(k) {
+                var c = corr.checks[k] || {};
+                var ok = c.agrees === true;
+                return '<tr>' +
+                    '<td class="font-medium">' + CommonRenderer._escapeAttr(k.replace(/_/g, ' ')) + '</td>' +
+                    '<td class="text-right font-mono text-xs">' + (c.feed != null ? c.feed : '—') + '</td>' +
+                    '<td class="text-right font-mono text-xs">' + (c.chain != null ? c.chain : '—') + '</td>' +
+                    '<td class="text-xs ' + (ok ? 'text-green-600' : 'text-red-600') + '">' +
+                        (ok ? 'agrees' : 'DISAGREES') + '</td>' +
+                '</tr>';
+            }).join('');
+            out += '<div class="panel">' +
+                '<div class="panel-title">Independent verification</div>' +
+                '<div class="data-table-scroll"><table class="data-table">' +
+                '<thead><tr><th>Check</th><th class="text-right">Issuer feed</th>' +
+                '<th class="text-right">On-chain</th><th>Result</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody></table></div>' +
+                (corr.note ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
+                    this._escapeAttr(corr.note) + '</div>' : '') +
+                (sp.feed_url ? '<div class="text-xs text-slate-500 mt-2">' +
+                    '<span class="font-semibold">Issuer source:</span> ' +
+                    this._escapeAttr(sp.feed_url) +
+                    (sp.feed_as_of ? ' · as of ' + this.formatDate(sp.feed_as_of) : '') +
+                    '</div>' : '') +
             '</div>';
         }
 
