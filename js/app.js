@@ -307,6 +307,10 @@ async function renderAsset(slug) {
         // The chart resolves CR scale exactly as the summary tile does; without
         // the summary it cannot, and a raw-ratio feed plots 100x low.
         chartOpts.cr_scale_summary = data.summary || null;
+        // The producer's own window beats one derived from the file. See
+        // renderCRChart — a full-file range read as "30d" is the defect this
+        // block was added upstream to close.
+        chartOpts.history_window = (data.asset_specific && data.asset_specific.history_window) || null;
         chartOpts.asset_slug = data.asset_slug || slug;
         CommonRenderer.renderCRChart(history, chartOpts);
 

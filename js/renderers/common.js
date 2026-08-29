@@ -593,21 +593,55 @@ const CommonRenderer = {
             // So: state the window instead of asserting one. A range means
             // nothing without the span it covers, and the span is right here in
             // the data — there is no reason to hardcode a guess at it.
+            // ⚠️ PREFER THE PUBLISHED WINDOW. PegTracker now emits
+            // asset_specific.history_window carrying the window, the point count
+            // and the range computed over it — added precisely because the
+            // full-file range was being read as a 30-day one. Deriving my own
+            // span from the entries reproduces the original defect in a politer
+            // form: yzUSD's file spans 11 months, so I would show 7.63pp while
+            // the producer publishes 3.88pp over the last 30 days, and the wider
+            // band makes a real step look like noise.
+            //
+            // The published block wins whenever it is present; the derived span
+            // stays as the fallback for feeds that do not emit one.
+            var hw = opts.history_window || null;
             var spanLabel = '';
+            if (hw && hw.collateral_ratio_min != null && hw.collateral_ratio_max != null) {
+                minCR = hw.collateral_ratio_min;
+                maxCR = hw.collateral_ratio_max;
+                spanLabel = (hw.points != null ? hw.points + ' obs over ' : '') +
+                    (hw.window_days != null ? hw.window_days + ' days' : 'the published window');
+            }
             var tsAll = (historyData.entries || []).map(function(e) {
                 if (!e || !e.timestamp) return null;
                 return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z').getTime();
             }).filter(function(t) { return t && !isNaN(t); });
-            if (tsAll.length > 1) {
+            if (!spanLabel && tsAll.length > 1) {
                 var spanDays = Math.round((Math.max.apply(null, tsAll) - Math.min.apply(null, tsAll)) / 86400000);
                 spanLabel = crValues.length + ' obs over ' +
                     (spanDays >= 60 ? Math.round(spanDays / 30) + ' months' : spanDays + ' days');
+            }
+            // The durable form of the reserve-step flag. The per-run flag fires
+            // the hour a step happens and clears the next, while the LEVEL
+            // persists — so a reader meets an odd ratio with no flag attached.
+            // reserve_step_last_seen is what lets the page say the numerator
+            // moved recently rather than only that it moved this hour.
+            var stepNote = '';
+            if (hw && hw.reserve_step_count) {
+                stepNote = '<span class="text-amber-700" title="' +
+                    this._escapeAttr(hw.note || '') + '">' + hw.reserve_step_count +
+                    ' reserve step' + (hw.reserve_step_count === 1 ? '' : 's') +
+                    ' in window' +
+                    (hw.reserve_step_last_seen
+                        ? ' · last ' + this.formatDate(hw.reserve_step_last_seen) : '') +
+                    ' \u24d8</span>';
             }
 
             statsEl.innerHTML = '<span>Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
                 '<span>Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
                 '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>' +
                 (spanLabel ? '<span class="text-slate-400">' + spanLabel + '</span>' : '') +
+                stepNote +
                 (missingReadCount > 0 ? '<span class="text-slate-400">' + missingReadCount + ' observations unavailable (missing/incomplete reads)</span>' : '') +
                 (suspectReadCount > 0 ? '<span class="text-amber-600" title="' + escapeAttr(suspectReadCount + ' excluded: ' + suspectTooltip) + '">' + suspectReadCount + ' flagged observations excluded as incomplete reads ⓘ</span>' : '') +
                 (excludedCount > 0 ? '<span class="text-amber-600">' + excludedCount + ' implausible values excluded (&lt;' + sanityFloor + '%)</span>' : '');
@@ -1704,7 +1738,17 @@ const CommonRenderer = {
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Market price</div>' +
                     '<div class="text-lg font-bold font-mono">' + fmtP(mkt) + '</div></div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">NAV / theoretical</div>' +
-                    '<div class="text-lg font-bold font-mono">' + fmtP(nav) + '</div></div>' +
+                    '<div class="text-lg font-bold font-mono">' + fmtP(nav) + '</div>' +
+                    // ⚠️ syzUSD is rated Stress 1/5 on a −2.84% deviation measured
+                    // against "the on-chain ERC-4626 NAV (a redemption value, not
+                    // a peg)" — its own words, published in nav_basis and shown
+                    // nowhere. A discount to a redemption value on a yield-bearing
+                    // vault is not the same claim as a stablecoin off its peg, and
+                    // the tile said the second while the feed said the first.
+                    (peg.nav_basis
+                        ? '<div class="text-[11px] text-slate-400 mt-0.5" style="line-height:1.35;">vs ' +
+                          this._escapeAttr(peg.nav_basis) + '</div>' : '') +
+                '</div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Premium / discount</div>' +
                     '<div class="text-lg font-bold font-mono ' + pctCls + '">' + this.pegPctText(pct, 3) + '</div></div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
@@ -1725,10 +1769,21 @@ const CommonRenderer = {
             ? '<div class="chart-container"><canvas id="peg-chart"></canvas></div>'
             : '<div class="text-sm text-slate-400">Peg history not tracked for this asset.</div>';
 
+        // The producer's own reading of the deviation. For yzUSD: "24h volume is
+        // $24.74 — a deviation struck on this little turnover is weak evidence
+        // about fair value and strong evidence about exit cost." That is the
+        // interpretation of the number directly above it, and it was published
+        // and unrendered.
+        var pegNote = peg.note
+            ? '<div class="text-xs text-slate-500 mt-3" style="line-height:1.5;">' +
+              this._escapeAttr(peg.note) + '</div>'
+            : '';
+
         body.innerHTML =
             '<div class="panel">' +
                 '<div class="panel-title">Peg Performance</div>' +
                 metricRow +
+                pegNote +
                 chartBlock +
             '</div>';
 
@@ -1854,6 +1909,19 @@ const CommonRenderer = {
                     // under dispute — and that is the more dangerous direction,
                     // since it overstates how easily a holder can leave.
                     // Restore once the producer confirms it is measured.
+                    //
+                    // ⚠️ The UNMEASURED case is different and safe to show. "Primary
+                    // exit: Yuzu redemption → reserve stables" reads as an exit that
+                    // exists and works; yzUSD's own gated_note says "Redemption
+                    // reachability is not probed in v1. ⚠️ Unmeasured, not open."
+                    // Naming a venue while withholding that is the flattering
+                    // direction — it implies a route out that nothing has tested.
+                    //
+                    // Rendered ONLY when the exit is not asserted open, so the
+                    // disputed gated:false case stays withheld as above.
+                    ((pe.gated == null || pe.gated_basis === 'unmeasured') && pe.gated_note
+                        ? '<div class="text-xs text-amber-700 mt-1" style="line-height:1.45;">' +
+                          this._escapeAttr(pe.gated_note) + '</div>' : '') +
                 '</div>';
         }
         var poolsNote = liq.pools_note
@@ -1929,6 +1997,49 @@ const CommonRenderer = {
                 return '<td class="' + c.cls + '">' + c.get(p) + '</td>';
             }).join('') + '</tr>';
         }).join('');
+        // ⚠️ pools_note points at a number the page did not show: "Lending markets
+        // are listed under asset_specific.lending_exposure: they are the LARGER
+        // numbers." On syzUSD that is $1.83M of lending exposure against $554K of
+        // swap TVL — the pool table showed the smaller figure and the note sent
+        // the reader to a field with no rendering.
+        //
+        // by_chain is the structure behind it: swap, lending and issuer-vault TVL
+        // per chain from one enumeration. syzUSD's Plasma row is $71K of swap
+        // against $36.2M sitting in the issuer vault, which is the whole
+        // exit-capacity story and it was in the payload unread.
+        var byChain = Array.isArray(liq.by_chain) ? liq.by_chain : [];
+        var chainBlock = '';
+        if (byChain.length) {
+            var showLend = byChain.some(function(c) { return c.lending_tvl_usd; });
+            var showVault = byChain.some(function(c) { return c.issuer_vault_tvl_usd; });
+            chainBlock =
+                '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">TVL by chain</div>' +
+                '<div class="data-table-scroll"><table class="data-table">' +
+                '<thead><tr><th>Chain</th><th class="text-right">Swap</th>' +
+                (showLend ? '<th class="text-right">Lending</th>' : '') +
+                (showVault ? '<th class="text-right">Issuer vault</th>' : '') +
+                '<th>Local venue</th></tr></thead><tbody>' +
+                byChain.map(function(c) {
+                    return '<tr>' +
+                        '<td class="font-medium">' + CommonRenderer._escapeAttr(c.chain || '—') + '</td>' +
+                        '<td class="text-right font-mono">' + (c.swap_tvl_usd != null ? CommonRenderer.formatCurrency(c.swap_tvl_usd) : '—') + '</td>' +
+                        (showLend ? '<td class="text-right font-mono">' + (c.lending_tvl_usd != null ? CommonRenderer.formatCurrency(c.lending_tvl_usd) : '—') + '</td>' : '') +
+                        (showVault ? '<td class="text-right font-mono">' + (c.issuer_vault_tvl_usd != null ? CommonRenderer.formatCurrency(c.issuer_vault_tvl_usd) : '—') + '</td>' : '') +
+                        '<td class="text-xs ' + (c.no_local_swap_venue ? 'text-amber-700 font-semibold' : 'text-slate-500') + '">' +
+                            (c.no_local_swap_venue ? 'none — holders cannot exit locally'
+                                : (c.swap_venues != null ? c.swap_venues + ' venue' + (c.swap_venues === 1 ? '' : 's') : '—')) +
+                        '</td>' +
+                    '</tr>';
+                }).join('') +
+                '</tbody></table></div>' +
+                (liq.by_chain_note ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
+                    this._escapeAttr(liq.by_chain_note) + '</div>' : '') +
+                (liq.lending_exposure_usd
+                    ? '<div class="text-xs text-slate-600 mt-2"><span class="font-semibold">Lending exposure:</span> ' +
+                      this.formatCurrencyExact(liq.lending_exposure_usd) +
+                      ' — a liquidation-risk figure, not exit depth.</div>' : '');
+        }
+
         var poolBlock = pools.length
             ? '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">Pools</div>' +
               '<div class="data-table-scroll"><table class="data-table">' +
@@ -1992,7 +2103,7 @@ const CommonRenderer = {
 
         body.innerHTML = '<div class="panel">' +
             '<div class="panel-title">Liquidity &amp; Exit</div>' +
-            statRow + exitLine + ladderBlock + poolBlock + poolsNote +
+            statRow + exitLine + ladderBlock + poolBlock + poolsNote + chainBlock +
         '</div>';
     },
 
