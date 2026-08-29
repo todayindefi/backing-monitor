@@ -672,8 +672,33 @@ var SaturnRenderer = {
                 rowSum += e.balance;
             }
         });
+        // ⚠️ A sum check is only valid when both sides come from the SAME read.
+        //
+        // riskAnalyst measured this on yzUSD: an exposure breakdown and a live
+        // total appeared to differ by a fixed $1,065,012.24, and 18 hours later
+        // the gap had CHANGED SIGN to -$156,498.87 — the breakdown identical to
+        // the cent, the total moved. A fixed discrepancy cannot change sign; a
+        // stale numerator against a live denominator does exactly that.
+        //
+        // usdat's composition and backing_total_usd currently come from one read
+        // and tie to $0.00, so the check below is sound today. If the producer
+        // ever stamps the composition separately, the difference becomes drift
+        // rather than a defect and this would fire permanently on a correct page.
+        // Detect that rather than assume it stays true.
+        var compAsOf = specific.composition_as_of || specific.exposure_as_of;
+        var payloadAsOf = specific.as_of || null;
+        var mixedReads = !!(compAsOf && payloadAsOf && compAsOf !== payloadAsOf);
+
         var sumMismatch = '';
-        if (totalBacking != null && totalBacking > 0) {
+        if (mixedReads) {
+            sumMismatch =
+                '<div class="text-xs text-slate-500 mt-2">' +
+                    'Composition is stamped <span class="font-mono">' +
+                    SaturnRenderer._escHtml(String(compAsOf)) + '</span> against a live total \u2014 ' +
+                    'any difference is drift between two reads, not a missing asset, so the rows ' +
+                    'are not totalled against it here.' +
+                '</div>';
+        } else if (totalBacking != null && totalBacking > 0) {
             var gap = Math.abs(rowSum - totalBacking);
             if (gap / totalBacking > 0.005) {
                 sumMismatch =
