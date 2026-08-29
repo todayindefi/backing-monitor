@@ -1031,16 +1031,35 @@ const CommonRenderer = {
     //      an executable on-chain quote — so it carries an explicit (indexer) qualifier
     //      and its source/as-of in the tooltip rather than reading as a chain verification.
     // The upstream cadence is daily, so the as-of is context only: no staleness warning.
+    // ⚠️ Two spellings for one quantity. hastra-prime, thusd and usdai publish
+    // `volume_24h`; the Yuzu feeds publish `volume_24h_usd`. This read only the
+    // first, so the summary tile said "vol n/a" while the panel eight lines
+    // below rendered $24.74 from the other field — the SAME defect as the
+    // hardcoded literal, one layer up, and invisible because "n/a" is exactly
+    // what an unmeasured asset should show.
+    //
+    // Accepting both is a stopgap, not the resolution: a second accepted
+    // spelling entrenches the divergence. Raised with the producer to settle on
+    // one; when it lands, drop the fallback rather than leave two.
     _volumeSubHtml(liq) {
         var vol = liq ? liq.volume_24h : null;
+        if (vol == null && liq) vol = liq.volume_24h_usd;
         if (vol == null) return 'vol n/a';
         var src = this._indexerLabel(liq.volume_24h_source);
-        var tip = '24h volume ' + this.formatCurrencyExact(vol) + ' · ' +
+        var tip = '24h volume ' + (Math.abs(vol) < 1000
+                ? '$' + vol.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : this.formatCurrencyExact(vol)) + ' · ' +
             (src ? src + ' — indexer-derived, not an on-chain quote'
                  : 'indexer-derived, not an on-chain quote');
         if (liq.volume_24h_as_of) tip += ' · as of ' + this.formatDate(liq.volume_24h_as_of);
+        // ⚠️ formatCurrency floors to whole dollars below $1k, so yzUSD's $24.74
+        // renders "$25" here too — the same rounding that nearly cost the finding
+        // in the panel. Where the number is tiny, the exact figure IS the point.
+        var volTxt = Math.abs(vol) < 1000
+            ? '$' + vol.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : this.formatCurrency(vol);
         return '<span class="indexer-figure" title="' +
-            this._escapeAttr(tip) + '">vol ' + this.formatCurrency(vol) + ' (indexer)</span>';
+            this._escapeAttr(tip) + '">vol ' + volTxt + ' (indexer)</span>';
     },
 
     // --- summary band (replaces the legacy 5 CR cards in 5-axis mode) ---
