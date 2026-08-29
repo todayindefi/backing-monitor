@@ -207,13 +207,32 @@ var ApyxRenderer = {
         return num.toFixed(0) + ' shares';
     },
 
+    // ⚠️ The 18 here is an ASSUMPTION, and the feed does not let us check it.
+    //
+    // Every caller omits `decimals`, so all five scaling sites silently use 18.
+    // That is correct for apxUSD today — supply_eth_raw scales to ~312M and
+    // rate_limit_outbound_capacity_raw to a round 5,000,000, which only works at
+    // 18 — but none of the *_raw fields ship a sibling `decimals`, so nothing
+    // verifies it and nothing would notice if a value arrived from a 6-decimal
+    // token. A wrong scale produces a well-formed, plausible, wrong number.
+    //
+    // riskAnalyst hit this exact failure reading USDat on-chain: dividing by 1e18
+    // on a 6-decimal token returned "totalSupply 0.00" — a phantom total collapse
+    // on the asset where a real collapse was being investigated. They caught it
+    // because 0.00 was implausible, not because they checked decimals. An
+    // off-by-1e2 would simply have become the number.
+    //
+    // So: prefer a declared value, fall back explicitly, and make the fallback a
+    // named constant rather than a `||` nobody reads. The durable fix is the
+    // producer publishing decimals beside each *_raw field; raised there.
+    RAW_DECIMALS_ASSUMED: 18,
+
     _rawToTokens: function(raw, decimals) {
         if (raw == null) return null;
-        decimals = decimals || 18;
-        // Defensive: large integers may arrive as Number from JSON; we
-        // still divide as floats. Precision is more than enough for the
-        // dashboard's display rounding.
-        return Number(raw) / Math.pow(10, decimals);
+        var d = (typeof decimals === 'number') ? decimals : ApyxRenderer.RAW_DECIMALS_ASSUMED;
+        // Large integers may arrive as Number from JSON; we still divide as
+        // floats. Precision is more than enough for display rounding.
+        return Number(raw) / Math.pow(10, d);
     },
 
     _attestationFreshness: function(ageSeconds) {
