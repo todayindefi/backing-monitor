@@ -2406,6 +2406,92 @@ const CommonRenderer = {
             factsHtml +
             '<p class="text-sm text-slate-500 mb-3">' + methodology + '</p>' +
             reportLink +
-        '</div>';
+        '</div>' + this._issuerContextHtml(data);
+    },
+
+    // ⚠️ The issuer axis read "4.0/10" and a line of boilerplate while the feed
+    // carried the material a reader actually wants: whether the issuer's own
+    // figures were checked against the chain, where they came from, and who can
+    // move the money. It sat in asset_specific rather than the issuer block, so
+    // this section never looked at it.
+    //
+    // Everything below is data-gated and no-ops for assets that publish none of
+    // it. Nothing is inferred: where the producer says a thing is unknown, the
+    // page says unknown.
+    _issuerContextHtml(data) {
+        var sp = data.asset_specific || {};
+        var out = '';
+
+        // 1. Corroboration — the strongest issuer-axis fact available: how much
+        // of what the issuer reports has been independently reproduced on-chain.
+        var corr = sp.corroboration;
+        if (corr && corr.checks) {
+            var rows = Object.keys(corr.checks).map(function(k) {
+                var c = corr.checks[k] || {};
+                var ok = c.agrees === true;
+                return '<tr>' +
+                    '<td class="font-medium">' + CommonRenderer._escapeAttr(k.replace(/_/g, ' ')) + '</td>' +
+                    '<td class="text-right font-mono text-xs">' + (c.feed != null ? c.feed : '—') + '</td>' +
+                    '<td class="text-right font-mono text-xs">' + (c.chain != null ? c.chain : '—') + '</td>' +
+                    '<td class="text-xs ' + (ok ? 'text-green-600' : 'text-red-600') + '">' +
+                        (ok ? 'agrees' : 'DISAGREES') + '</td>' +
+                '</tr>';
+            }).join('');
+            out += '<div class="panel">' +
+                '<div class="panel-title">Independent verification</div>' +
+                '<div class="data-table-scroll"><table class="data-table">' +
+                '<thead><tr><th>Check</th><th class="text-right">Issuer feed</th>' +
+                '<th class="text-right">On-chain</th><th>Result</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody></table></div>' +
+                (corr.note ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
+                    this._escapeAttr(corr.note) + '</div>' : '') +
+                (sp.feed_url ? '<div class="text-xs text-slate-500 mt-2">' +
+                    '<span class="font-semibold">Issuer source:</span> ' +
+                    this._escapeAttr(sp.feed_url) +
+                    (sp.feed_as_of ? ' · as of ' + this.formatDate(sp.feed_as_of) : '') +
+                    '</div>' : '') +
+            '</div>';
+        }
+
+        // 2. Governance — gated on the NORMALISED shape only. apxusd and
+        // syrupusdc publish governance under entirely different keys and are
+        // served by their own renderers; matching on quorum_threshold keeps this
+        // from half-rendering someone else's schema.
+        var g = sp.governance;
+        if (g && g.quorum_threshold != null) {
+            // ⚠️ "4 of an unstated total" is the whole point. The producer
+            // publishes quorum_denominator: null deliberately, having asked the
+            // same question I did, so the page says 4-of-unknown rather than
+            // implying 4-of-5. A quorum without a denominator is not a posture.
+            var quorum = g.quorum_denominator != null
+                ? this._escapeAttr(g.quorum_threshold) + '-of-' + this._escapeAttr(g.quorum_denominator)
+                : this._escapeAttr(g.quorum_threshold) + '-of-<span class="text-amber-700">unknown</span>';
+            var unknowns = Array.isArray(g.unknowns) ? g.unknowns : [];
+            out += '<div class="panel">' +
+                '<div class="panel-title">Governance (issuer-disclosed)</div>' +
+                '<div class="text-sm text-slate-700 dark:text-slate-200">' +
+                    '<span class="font-semibold">Quorum:</span> ' + quorum +
+                    (g.default_action ? ' · <span class="font-semibold">Default action:</span> ' +
+                        this._escapeAttr(g.default_action) : '') +
+                    (g.policy_modified_at ? ' · <span class="font-semibold">Policy changed:</span> ' +
+                        this.formatDate(g.policy_modified_at) : '') +
+                '</div>' +
+                (Array.isArray(g.attestation_kinds) && g.attestation_kinds.length
+                    ? '<div class="text-xs text-slate-500 mt-2"><span class="font-semibold">Attestation kinds:</span> ' +
+                      g.attestation_kinds.map(function(k) { return CommonRenderer._escapeAttr(k); }).join(' · ') +
+                      '</div>' : '') +
+                (unknowns.length
+                    ? '<div class="text-xs mt-2" style="line-height:1.45;">' +
+                      '<span class="font-semibold text-amber-700">Not established:</span>' +
+                      '<ul class="list-disc ml-5 mt-1 space-y-1 text-slate-600">' +
+                        unknowns.map(function(u) {
+                            return '<li>' + CommonRenderer._escapeAttr(String(u)) + '</li>';
+                        }).join('') +
+                      '</ul></div>' : '') +
+                (g.note ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
+                    this._escapeAttr(g.note) + '</div>' : '') +
+            '</div>';
+        }
+        return out;
     }
 };
