@@ -237,6 +237,11 @@ async function renderAsset(slug) {
             }
         }
 
+        // Feed staleness — rendered for EVERY asset from here, not per-renderer.
+        // Placed before the panels so a reader meets it before any figure it
+        // qualifies. Silent when the feed is fresh.
+        CommonRenderer.renderStalenessBanner(data, slug);
+
         // Common sections.
         // 5-axis mode (asset carries the Layer-1 axis blocks): the summary band
         // shows the 5 axis cards. Legacy assets keep the old CR summary cards.

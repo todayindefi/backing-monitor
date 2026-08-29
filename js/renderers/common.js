@@ -344,6 +344,73 @@ const CommonRenderer = {
         '</div>';
     },
 
+    // ------ Feed staleness ------
+    //
+    // ⚠️ Built because NOTHING detected Saturn going 4.1h stale. usdat, susdat
+    // and saturn_family sat on a timed-out analyzer's previous output; the only
+    // time on those pages was a bare "Updated:" stamp with no judgement attached,
+    // and a human noticed it looked old. Seven renderers had a bespoke freshness
+    // surface and seven did not — saturn.js was in the second group.
+    //
+    // Deliberately ONE implementation in the common path rather than fourteen.
+    // Per-renderer is how thusd ended up the only tier-3 page missing its section
+    // suppression: a thing added n times gets added n-1 times.
+    //
+    // A timed-out analyzer leaves the PREVIOUS file in place, so a stale payload
+    // has correct schema, correct blocks and plausible numbers. It differs from a
+    // good one only in its timestamp — which is why this reads the timestamp and
+    // nothing else.
+    //
+    // Silent when fresh. A permanent "data is current" badge on 22 pages is the
+    // noise that teaches people to skip the one that matters.
+    //
+    // ⚠️ Thresholds mirror check_feeds.py deliberately. Two places to update; the
+    // alternative is a page and a checker that disagree about what stale means,
+    // which is worse than the duplication.
+    STALE_SLOW_ASSETS: { bmnr: 1, frax: 1 },   // own cadences, not hourly
+
+    renderStalenessBanner(data, slug) {
+        var el = document.getElementById('staleness-banner');
+        if (!el) return;
+        el.innerHTML = '';
+        // ⚠️ Three field names in use across the feeds: timestamp (most),
+        // as_of (bmnr, saturn), timestamp_utc (strc/mstr). Reading only the
+        // first two left strc and mstr silently unbannered — found by backdating
+        // every feed and loading all 23 pages, not by reading the code. A
+        // staleness banner that cannot see an asset's timestamp is exactly the
+        // failure it exists to catch, one level up.
+        var ts = data && (data.timestamp || data.as_of || data.timestamp_utc);
+        if (!ts) return;
+        var t = Date.parse(String(ts).endsWith('Z') || /[+-]\d\d:?\d\d$/.test(String(ts))
+            ? ts : ts + 'Z');
+        if (!isFinite(t)) return;
+        var hours = (Date.now() - t) / 3600000;
+
+        var slow = slug && this.STALE_SLOW_ASSETS[slug];
+        var warnAt = slow ? 12 : 3;
+        var failAt = slow ? 30 : 6;
+        if (hours <= warnAt) return;
+
+        var crit = hours > failAt;
+        var cls = crit
+            ? 'bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 text-red-800 dark:text-red-200'
+            : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200';
+        var age = hours < 48 ? hours.toFixed(1) + ' hours' : (hours / 24).toFixed(1) + ' days';
+
+        el.innerHTML =
+            '<div class="border rounded p-3 mb-4 text-sm ' + cls + '">' +
+                '<span class="font-semibold">' +
+                    (crit ? 'This data is stale.' : 'This data is older than expected.') +
+                '</span> Last updated <span class="font-mono">' + age + '</span> ago' +
+                (slow ? ' (this asset refreshes on a slower cadence).' : ', against an hourly refresh.') +
+                ' Every figure below is from that snapshot' +
+                (crit
+                    ? ' \u2014 an analyzer that fails leaves its previous output in place, so these ' +
+                      'numbers look normal and are simply old.'
+                    : '.') +
+            '</div>';
+    },
+
     // ------ Risk flags ------
     renderRiskFlags(data) {
         var container = document.getElementById('risk-flags');
