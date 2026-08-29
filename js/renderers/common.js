@@ -1843,16 +1843,61 @@ const CommonRenderer = {
         var labels = entries.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });
         var series = entries.map(function(e) { return e[field]; });
 
+        // ⚠️ THE REFERENCE LINE WAS TODAY'S NAV DRAWN FLAT ACROSS ALL HISTORY.
+        //
+        // Correct for a $1 par target. Wrong for an accruing share, where every
+        // historical point gets compared against a NAV that had not accrued
+        // yet — so the whole series sits under the line and reads as a
+        // persistent discount, with the error zero at the right edge and growing
+        // backwards. sUSDe's left edge read −1.09% on a day it was AT its NAV;
+        // the gap drawn was three months of yield.
+        //
+        // Three cases, resolved by what the data can actually support:
+        //   per-row theoretical  -> plot it as a real second line, no annotation
+        //   percent-scale field  -> the reference is ZERO, not a price
+        //   par target (nav = 1) -> the flat line is right, keep it
+        //   otherwise            -> draw NO reference and say why
+        //
+        // The last one matters: sUSDe is the asset that motivated this and it has
+        // NO per-row theoretical in 2,159 rows, so the fix that works for apyUSD
+        // cannot work for it. A wrong reference line is worse than none.
+        var theoSeries = entries.map(function(e) { return e.peg_theoretical_price; });
+        var theoCount = theoSeries.filter(function(v) { return v != null; }).length;
+        var theoDistinct = {};
+        theoSeries.forEach(function(v) { if (v != null) theoDistinct[v] = 1; });
+        var hasTheo = theoCount >= entries.length * 0.9 && Object.keys(theoDistinct).length > 1;
+
+        // The `_pct` suffix is the producer's own naming of the field, not a unit
+        // inferred from a value — but bound it anyway, so a mis-named price field
+        // cannot silently move the reference to zero.
+        var isPct = /_pct$/.test(field) && series.every(function(v) {
+            return typeof v === 'number' && Math.abs(v) <= 50;
+        });
+        // ⚠️ sUSDS plots `field: nav` — the SERIES IS the NAV curve, so a marker at
+        // today's value is a legitimate "you are here" on its own line, not a
+        // false reference. riskAnalyst named it explicitly so a sweep would not
+        // "fix" it into something worse, and the first cut of this did exactly
+        // that: stripped its marker and captioned it as unreferenced.
+        var isSelfNav = /^(nav|nav_per_share|peg_theoretical_price)$/.test(field);
+        var isPar = !isPct && !hasTheo && !isSelfNav && Math.abs(nav - 1) < 1e-9;
+        var noReference = !isPct && !hasTheo && !isPar && !isSelfNav;
+
         if (window._pegChart) window._pegChart.destroy();
         window._pegChart = new Chart(ctx, {
             type: 'line',
             data: { labels: labels, datasets: [{
-                label: 'Market price',
+                label: isPct ? 'Deviation' : (isSelfNav ? 'NAV' : 'Market price'),
                 data: series,
                 borderColor: '#6366f1',
                 backgroundColor: 'rgba(99, 102, 241, 0.08)',
                 fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2
-            }] },
+            }].concat(hasTheo ? [{
+                label: 'NAV / theoretical',
+                data: theoSeries,
+                borderColor: '#94a3b8',
+                borderDash: [4, 4],
+                fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.5
+            }] : []) },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: {
@@ -1862,18 +1907,51 @@ const CommonRenderer = {
                          callback: function(v) { return v.toFixed(3); } } }
                 },
                 plugins: {
-                    legend: { display: false },
-                    tooltip: { callbacks: { label: function(c) { return 'Price: ' + c.raw.toFixed(4); } } },
-                    annotation: { annotations: {
-                        par: { type: 'line', yMin: nav, yMax: nav, borderColor: '#94a3b8',
-                               borderWidth: 1, borderDash: [4, 4],
-                               label: { content: 'NAV ' + nav.toFixed(2), display: true, position: 'start',
-                                        font: { size: 9 }, color: '#64748b' } }
-                    } }
+                    legend: { display: hasTheo },
+                    tooltip: { callbacks: { label: function(c) {
+                        var v = c.raw;
+                        if (v == null) return '';
+                        return (c.dataset.label || '') + ': ' +
+                               (isPct ? v.toFixed(3) + '%' : v.toFixed(4));
+                    } } },
+                    annotation: { annotations: (isPct
+                        ? { par: { type: 'line', yMin: 0, yMax: 0, borderColor: '#94a3b8',
+                                   borderWidth: 1, borderDash: [4, 4],
+                                   label: { content: '0% \u2014 at NAV', display: true, position: 'start',
+                                            font: { size: 9 }, color: '#64748b' } } }
+                        : (isPar
+                            ? { par: { type: 'line', yMin: 1, yMax: 1, borderColor: '#94a3b8',
+                                       borderWidth: 1, borderDash: [4, 4],
+                                       label: { content: 'Par 1.00', display: true, position: 'start',
+                                                font: { size: 9 }, color: '#64748b' } } }
+                            : (isSelfNav
+                                ? { par: { type: 'line', yMin: nav, yMax: nav, borderColor: '#94a3b8',
+                                           borderWidth: 1, borderDash: [4, 4],
+                                           label: { content: 'Today ' + nav.toFixed(4), display: true,
+                                                    position: 'end', font: { size: 9 }, color: '#64748b' } } }
+                                : {}))) }
                 },
                 interaction: { intersect: false, mode: 'index' }
             }
         });
+
+        // When no reference can be drawn honestly, say so rather than leaving a
+        // bare series a reader will mentally compare against par.
+        var holder = ctx.parentNode;
+        if (holder) {
+            var prev = holder.parentNode && holder.parentNode.querySelector('.peg-chart-note');
+            if (prev) prev.remove();
+            if (noReference) {
+                var n = document.createElement('div');
+                n.className = 'peg-chart-note text-xs text-slate-500 mt-2';
+                n.style.lineHeight = '1.45';
+                n.textContent = 'No NAV reference drawn: this asset\'s NAV accrues (today ' +
+                    nav.toFixed(4) + ') and the history carries no per-row theoretical, so a flat ' +
+                    'line at today\'s value would read as a discount that never happened. ' +
+                    'Compare points to each other, not to a level.';
+                holder.parentNode.insertBefore(n, holder.nextSibling);
+            }
+        }
     },
 
     _renderLiquiditySection(data) {
