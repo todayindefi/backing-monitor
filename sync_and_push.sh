@@ -180,3 +180,26 @@ if ! git diff --cached --quiet; then
 else
     echo "$(date): No changes to push"
 fi
+
+# ⚠️ Run the conformance suite ON THE SYNC, because the sync is when feed SHAPE
+# changes. check_feeds.py has twelve checks, each proven by seeding a failure,
+# and until now it ran when I remembered to run it — which caught the cUSD
+# peg-history source vanishing only because that happened mid-task.
+#
+# security_analyst named the shape: "a guard nobody runs is not a guard." Their
+# join hard-errors correctly on a malformed observation file and stayed broken
+# for two days because nothing ran it, while three batches were filed in the
+# window reasoning from hand-assembled lists.
+#
+# ⚠️ It REPORTS, it does not block. The data is already committed and pushed
+# above by design: a shape regression must not withhold fresh figures, and a
+# suite that can stop publication is a suite someone eventually disables.
+if [ -f check_feeds.py ]; then
+    CHECK_OUT="$(python3 check_feeds.py 2>&1)"
+    echo "$CHECK_OUT" | tail -1
+    if echo "$CHECK_OUT" | grep -qE '^[1-9][0-9]* failures'; then
+        # Distinct marker so a scan of the log finds it without reading every run.
+        echo "$(date): FEED_CHECK_FAILURE" >&2
+        echo "$CHECK_OUT" | grep -E '^\s+FAIL' >&2
+    fi
+fi
