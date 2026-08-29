@@ -1315,6 +1315,26 @@ const CommonRenderer = {
         // 3 · Backing (head only — panels are rendered by the existing common path)
         this._renderAxisHead('backing', 3, 'Backing', 'reserves & collateral ratio',
             this._ratingChipHtml(this.backingRating(data)));
+        // ⚠️ collateral_ratio_basis was rendered ONLY as a hover tooltip on a ⓘ
+        // glyph beside the tile. For most assets that is a reasonable place for
+        // a definition. For syzUSD it is not: its basis says the headline
+        // 109.02% is "INHERITED from yzUSD" — the number belongs to a DIFFERENT
+        // ASSET — and a qualifier of that weight cannot live behind a hover,
+        // which does not exist at all on a touch device.
+        //
+        // So it also renders as text under the Backing head, where the reader
+        // meets it before the panels. Same string, same source block, no
+        // heuristics about which basis "matters" — 23 of 25 feeds publish one
+        // and every one of them is explaining a denominator a reader would
+        // otherwise assume.
+        var basisText = this._backingBasis(data);
+        var backingHead = document.getElementById('axis-backing-head');
+        if (basisText && backingHead) {
+            var bNote = document.createElement('div');
+            bNote.className = 'axis-basis-note';
+            bNote.textContent = 'Basis: ' + basisText;
+            backingHead.appendChild(bNote);
+        }
         // Optional composition sub-panel (USDC held-vs-denominated split + per-Star
         // breakdown). Data-gated & additive: no-op for assets lacking the fields.
         this._renderBackingComposition(data);
