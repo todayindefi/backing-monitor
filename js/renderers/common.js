@@ -344,6 +344,24 @@ const CommonRenderer = {
         '</div>';
     },
 
+    // ⚠️ report_url_status is published and was unread — both link sites keyed on
+    // report_url alone. PegTracker's convention: "published" is verified live,
+    // "unavailable" is known-dead, "unverified" means the producer could not
+    // check (transport failure, stale cache) and emits the link anyway.
+    //
+    // A renderer must not turn "could not verify" into a promise. yzUSD and
+    // syzUSD ship report_url with status "unverified" and both URLs 404 today —
+    // linking them would put two dead links on a public page, which is the same
+    // six-404 problem this repo hit last week from the other direction.
+    //
+    // Absent status still links, so feeds that never emit the field are
+    // unaffected. Every live asset today is "published" and unchanged.
+    _reportUrlUsable(issuer) {
+        if (!issuer || !issuer.report_url) return false;
+        var st = issuer.report_url_status;
+        return (st == null || st === 'published');
+    },
+
     // ------ Feed staleness ------
     //
     // ⚠️ Built because NOTHING detected Saturn going 4.1h stale. usdat, susdat
@@ -1037,7 +1055,7 @@ const CommonRenderer = {
                 label: this._escapeAttr(this._issuerAxisInfo(issuer).label),
                 valueHtml: this._issuerBadgeHtml(issuer),
                 sub: 'editorial · subjective',
-                chip: issuer.report_url
+                chip: this._reportUrlUsable(issuer)
                     ? '<a href="' + issuer.report_url + '" target="_blank" rel="noopener noreferrer" class="axis-rating r-na">Report →</a>'
                     : ''
             }
@@ -1816,11 +1834,14 @@ const CommonRenderer = {
                 : '') +
             (age != null ? '<span class="axis-rating r-na" title="Last attestation age">Attested ' + age + 'd ago</span>' : '');
 
-        var reportLink = issuer.report_url
+        var reportLink = this._reportUrlUsable(issuer)
             ? '<a href="' + issuer.report_url + '" target="_blank" rel="noopener noreferrer" ' +
                 'class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700">' +
                 'Read the full risk report →</a>'
-            : '<span class="text-sm text-slate-400">No report linked.</span>';
+            : (issuer.report_url
+                ? '<span class="text-sm text-slate-400">Report not linked \u2014 the producer marks it ' +
+                  this._escapeAttr(String(issuer.report_url_status)) + ' rather than published.</span>'
+                : '<span class="text-sm text-slate-400">No report linked.</span>');
 
         // ⚠️ issuer.facts is an EXISTING feed convention that nothing rendered.
         // usds has published four of them — "48h GSM timelock", "Pause Proxy is
