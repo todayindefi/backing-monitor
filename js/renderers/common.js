@@ -1212,8 +1212,25 @@ const CommonRenderer = {
         }
         var sd = (b.surplus_deficit != null)
             ? b.surplus_deficit : (data.summary && data.summary.surplus_deficit);
-        if (sd == null) return 'collateral ratio';
-        return (sd >= 0 ? 'surplus +' : 'deficit −') + this.formatCurrency(Math.abs(sd));
+        var base = (sd == null)
+            ? 'collateral ratio'
+            : (sd >= 0 ? 'surplus +' : 'deficit −') + this.formatCurrency(Math.abs(sd));
+        // ⚠️ USDat's tile read "100.00% · surplus +$0 · Healthy 4/5" while its
+        // own feed said the ratio is an ETHEREUM-ONLY statement and the BSC leg
+        // exposes no backing accessor, so that leg's backing is UNREAD, not
+        // absent. The word Ethereum appeared once on the page and BSC not at
+        // all. 100.00% Healthy is the most reassuring pair of figures a backing
+        // tile can show, and the one fact qualifying it was published and
+        // rendered nowhere.
+        //
+        // supply_scope is a machine-readable enum, not prose — render it, don't
+        // parse the note. The full note goes near the panels; this is the chip
+        // that stops the headline being read as a global claim.
+        var scope = data.summary && data.summary.supply_scope;
+        if (scope) {
+            base += ' \u00b7 ' + String(scope).replace(/_/g, '-') + ' scope';
+        }
+        return base;
     },
 
     _issuerAxisInfo(issuer) {

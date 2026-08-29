@@ -284,6 +284,7 @@ var SaturnRenderer = {
         html += head(3, 'Backing', (slug === 'usdat')
             ? 'composition and the drift watchdog'
             : 'reserve split and NAV trajectory');
+        html += SaturnRenderer._renderSupplyScopeNote(s);
         if (slug === 'usdat') {
             html += anc('panel-backing',   SaturnRenderer._renderUsdatBackingComposition(specific, s));
             html += anc('panel-drift',     SaturnRenderer._renderUsdatDriftProbe(specific));
@@ -1821,6 +1822,33 @@ var SaturnRenderer = {
     // ============================================================
     // Axis section divider — same shape/styling as syrupusdc.js, hastra-prime.js
     // and usdai.js so the in-stream headers match the band above.
+    // ⚠️ USDat's backing_ratio is exactly 1.000000 and the page rated it
+    // Healthy 4/5 with nothing saying what it is a ratio OF. The analyzer's own
+    // comment names the failure: "A ratio of exactly 1.0000 invites being read
+    // as 'fully backed, everywhere'. It is not measured to be that."
+    //
+    // Both notes were published in summary and rendered nowhere: supply_scope_note
+    // (the ratio is an Ethereum statement; BSC's backing is UNREAD, not absent)
+    // and global_supply_note (summing the chains would double-count, because
+    // Ethereum bridges by LockRelease so its totalSupply already contains the
+    // bridged portion).
+    //
+    // saturn.js clears axis-backing-head to build its own, so the generic basis
+    // line cannot reach this page — it needs placing here.
+    _renderSupplyScopeNote: function(s) {
+        s = s || {};
+        var scopeNote = s.supply_scope_note;
+        var globalNote = s.global_supply_note;
+        if (!scopeNote && !globalNote) return '';
+        return '<div class="panel">' +
+            '<div class="panel-title" style="margin-bottom:0.35rem;">What this ratio covers</div>' +
+            (scopeNote ? '<div class="text-xs text-slate-600" style="line-height:1.5;">' +
+                SaturnRenderer._escHtml(scopeNote) + '</div>' : '') +
+            (globalNote ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.5;">' +
+                SaturnRenderer._escHtml(globalNote) + '</div>' : '') +
+        '</div>';
+    },
+
     _axisHead: function(num, title, sub) {
         return '<div class="axis-head">' +
             '<span class="axis-num">' + num + '</span>' +
