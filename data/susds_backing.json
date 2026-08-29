@@ -3,33 +3,33 @@
   "asset": "sUSDS",
   "asset_slug": "susds",
   "chain": "ethereum",
-  "timestamp": "2026-08-29T15:48:01Z",
+  "timestamp": "2026-08-29T16:01:52Z",
   "summary": {
-    "total_supply": 4247020762.57,
+    "total_supply": 4247020795.61,
     "supply_unit": "shares",
-    "total_assets_usds": 4704928948.64,
-    "nav": 1.107818683183,
+    "total_assets_usds": 4704933258.76,
+    "nav": 1.107819689422,
     "price": 1.11,
     "paused": null
   },
   "risk_flags": [],
   "vault_status": null,
   "backing": {
-    "collateral_ratio": 99.999989,
+    "collateral_ratio": 99.999925,
     "collateral_ratio_basis": "USDS balanceOf(sUSDS) / sUSDS totalAssets(). Two independent reads: the numerator is a token balance, the denominator is derived from the chi accumulator. 100% means the vault holds what its shares can claim.",
-    "total_backing": 4704928453.16,
-    "surplus_deficit": -495.48,
+    "total_backing": 4704929728.46,
+    "surplus_deficit": -3530.3,
     "breakdown": [
       {
         "label": "USDS held by vault",
-        "value": 4704928453.16,
+        "value": 4704929728.46,
         "pct": 100
       }
     ],
     "integrity": {
-      "total_assets_reported": 4704928948.64,
-      "usds_held": 4704928453.16,
-      "divergence_pct": -1.1e-05,
+      "total_assets_reported": 4704933258.76,
+      "usds_held": 4704929728.46,
+      "divergence_pct": -7.5e-05,
       "status": "ok",
       "direction": "held_below_reported",
       "note": "Signed (held - totalAssets) / totalAssets. A small NEGATIVE value is the expected state: interest accrues via chi continuously but is drawn from the vow periodically, so reported assets run slightly ahead of the balance."
@@ -40,7 +40,7 @@
       {
         "name": "USDS",
         "metric": "70.5% of USDS supply",
-        "value": 4704928948.64,
+        "value": 4704933258.76,
         "source": "onchain",
         "link": "?asset=usds",
         "link_type": "internal",
@@ -104,25 +104,26 @@
       "cooldown_days": 0
     },
     "derived_score": null,
+    "derived_score_status": "not_computed",
     "pools": [],
     "note": "Primary exit is redemption: ERC-4626 redeem() into USDS, no cooldown or queue. The ladder below is the secondary DEX exit. \u26a0\ufe0f EXTENDING THIS LADDER WOULD NOT RAISE THE FLOOR: probing above the $1M top rung returns a CONSTANT 1078.15bps at $5M, $10M, $25M, $50M and $100M alike \u2014 identical to the hundredth of a basis point across a 20x range, which is a redemption rate being returned as a quote, not a fill. So the floor is where the venue stops answering, not where depth runs out, and the extra rungs would import a constant rather than locate a crossing. (USDS itself trips the size-responsiveness check outright \u2014 exactly 0.00bps to $50M \u2014 because it routes the Sky PSM, a fixed-rate swap bounded by pocket balance and not by slippage.) A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found."
   },
   "asset_specific": {
     "type": "susds",
     "vault_state": {
-      "total_supply_shares": 4247020762.56764,
-      "total_assets_usds": 4704928948.636509,
-      "nav_usds_per_share": 1.107818683183,
+      "total_supply_shares": 4247020795.605581,
+      "total_assets_usds": 4704933258.757879,
+      "nav_usds_per_share": 1.107819689422,
       "asset": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
       "ssr_raw": 1000000001096988989836188433,
-      "chi_raw": 1107818566517096867298278757,
-      "rho": 1788018371
+      "chi_raw": 1107818858180679950816909468,
+      "rho": 1788018611
     },
     "yield": {
       "headline_apy_pct": 3.52,
       "headline_source": "onchain_ssr",
-      "realized_apy_24h_pct": 3.5196,
-      "realized_apy_7d_pct": 3.52,
+      "realized_apy_24h_pct": 3.5195,
+      "realized_apy_7d_pct": 3.5199,
       "nav_history_ref": "susds_backing_history.json"
     },
     "peg": {
@@ -130,10 +131,10 @@
       "market_price_source": "coingecko:susds",
       "premium_discount_is_measured": true,
       "theoretical_price_assumes_usds_par": false,
-      "nav_usds_per_share": 1.107818683183,
+      "nav_usds_per_share": 1.107819689422,
       "usds_peg_price": 0.99992723,
-      "theoretical_price": 1.10773807,
-      "premium_discount_pct": 0.2042,
+      "theoretical_price": 1.10773907,
+      "premium_discount_pct": 0.2041,
       "source": "coingecko:susds + onchain_nav"
     },
     "history_ref": "susds_backing_history.json",
@@ -177,8 +178,8 @@
   },
   "peg": {
     "market_price": 1.11,
-    "nav": 1.10773807,
-    "premium_discount_pct": 0.2042,
+    "nav": 1.10773907,
+    "premium_discount_pct": 0.2041,
     "source": "coingecko:susds + onchain_nav",
     "history_ref": "susds_backing_history.json",
     "history_field": "nav"
@@ -191,6 +192,6 @@
     "issuer_score_source": "risk-feed@2026-08-29T09:27:19Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-08-29T09:27:19Z",
-    "issuer_score_age_hours": 6.35
+    "issuer_score_age_hours": 6.58
   }
 }
