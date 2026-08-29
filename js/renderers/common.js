@@ -309,6 +309,41 @@ const CommonRenderer = {
         });
     },
 
+    // ⚠️ An accounting divergence is not a solvency event, and the flag text
+    // cannot say so.
+    //
+    // USDat's critical flag reads "holds $80,461,171.08 but totalAssets() reports
+    // $0.00 (100.000000% of supply unaccounted by the contract)". To a holder,
+    // "100% unaccounted" reads as THE MONEY IS MISSING. It is not: backing and
+    // supply tie to the cent. What is absent is the contract's recognition of the
+    // assets, because the token holding all of them is not on its own allowlist.
+    //
+    // Both halves matter and neither substitutes. Quoting only the backing
+    // understates a real defect; quoting only "unaccounted" is a false solvency
+    // alarm. The flag is feed-emitted and is NOT reworded here — this adds the
+    // half the reader needs, from the producer's own structured fields
+    // (contract_total_assets_usd, backing_total_usd, supply_usd), not by parsing
+    // the message. Generic: any asset emitting these fields gets it.
+    _divergenceContextHtml(data) {
+        var s = data.summary || {};
+        var contractTA = s.contract_total_assets_usd;
+        var backing = s.backing_total_usd;
+        var supply = s.supply_usd;
+        if (contractTA == null || backing == null || supply == null) return '';
+        if (contractTA >= backing * 0.5) return '';          // no material divergence
+        if (!(backing > 0) || Math.abs(backing - supply) / supply > 0.005) return '';
+        return '<div class="text-xs text-slate-700 dark:text-slate-200 bg-slate-50 ' +
+            'dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-2 mt-2">' +
+            '<span class="font-semibold">What the divergence is, and is not.</span> The assets are ' +
+            'present: backing <span class="font-mono">' + this.formatCurrencyExact(backing) +
+            '</span> against supply <span class="font-mono">' + this.formatCurrencyExact(supply) +
+            '</span>, tying to the cent. What is missing is the <em>contract\u2019s recognition</em> ' +
+            'of them \u2014 <span class="font-mono">totalAssets()</span> reports ' +
+            this.formatCurrencyExact(contractTA) + '. That is a real defect, and anything dividing ' +
+            'by it degenerates rather than mispricing, but it is not absent backing.' +
+        '</div>';
+    },
+
     // ------ Risk flags ------
     renderRiskFlags(data) {
         var container = document.getElementById('risk-flags');
@@ -318,7 +353,7 @@ const CommonRenderer = {
         }
         container.innerHTML = data.risk_flags.map(function(f) {
             return '<div class="risk-flag risk-' + f.severity + '">' + f.message + '</div>';
-        }).join('');
+        }).join('') + this._divergenceContextHtml(data);
     },
 
     // ------ CR trend chart ------
