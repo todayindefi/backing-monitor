@@ -448,5 +448,23 @@ for f in sorted(glob.glob(os.path.join(DATA, '*_backing.json'))):
 print('CORRECTNESS CHECKS (this suite cannot judge legibility)\n')
 for w in warns: print('  WARN  ' + w)
 for f_ in fails: print('  FAIL  ' + f_)
+# ⚠️ VACUOUS PASS GUARD. With an empty or unparseable assets.json this suite
+# reported "0 failures, 0 warnings across 0 assets" and exited 0 — green, while
+# the dashboard would be serving nothing. Every check iterates the manifest, so
+# an empty manifest satisfies all of them by having nothing to violate.
+#
+# Found by testing my own tool after security_analyst found the same shape in
+# theirs: their validator parses its expected set out of schema.md, and blanking
+# that line made it report "declared: 0, in use: 0, no drift" — vacuously green
+# on the field their entire join is keyed on. A suite that cannot fail is worth
+# less than no suite, because it is trusted.
+#
+# Zero is never a correct asset count for this repo. A real removal takes the
+# count down by one, not to nothing.
+if not slugs:
+    fails.append('assets.json parsed to ZERO assets — every check below is '
+                 'vacuously satisfied. This is a broken manifest, not a clean run.')
+    print('  FAIL  ' + fails[-1])
+
 print(f'\n{len(fails)} failures, {len(warns)} warnings across {len(slugs)} assets.')
 sys.exit(1 if fails else 0)
