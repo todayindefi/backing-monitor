@@ -920,6 +920,33 @@ const CommonRenderer = {
         return this._rate(data.liquidity ? data.liquidity.total_2pct_depth : null, th, 'high');
     },
 
+    _depthQualifierHtml(liq) {
+        var st = liq.two_pct_depth_status;
+        var br = liq.two_pct_depth_bracket;
+        if (liq.total_2pct_depth == null) return '';
+        var tip = liq.two_pct_depth_basis || '';
+        function wrap(txt, cls) {
+            return '<div class="text-[11px] ' + (cls || 'text-slate-400') + '"' +
+                (tip ? ' title="' + CommonRenderer._escapeAttr(tip) + '"' : '') + '>' +
+                txt + (tip ? ' \u24d8' : '') + '</div>';
+        }
+        if (st === 'bracketed' && Array.isArray(br) && br.length === 2) {
+            return wrap('crossing between ' + this.formatCurrency(br[0]) +
+                        ' and ' + this.formatCurrency(br[1]), 'text-slate-500');
+        }
+        if (st === 'not_size_responsive' || liq.two_pct_depth_size_responsive === false) {
+            return wrap('quote does not vary with size \u2014 not a depth curve', 'text-amber-700');
+        }
+        if (st === 'quote_failed') {
+            return wrap('floor \u2014 the deeper rung returned a broken route', 'text-amber-700');
+        }
+        if (st === 'ladder_exhausted' || liq.total_2pct_depth_is_floor === true) {
+            return wrap('ladder exhausted \u2014 floor, not a measurement');
+        }
+        if (st) return wrap(String(st).replace(/_/g, ' '), 'text-slate-500');
+        return '';
+    },
+
     _depthContradictedByLadder(data) {
         var liq = data.liquidity || {};
         var dp = liq.total_2pct_depth;
@@ -1148,12 +1175,31 @@ const CommonRenderer = {
         // Liquidity metric: credit vaults (e.g. Maple Syrup) expose free-liquidity % (instant-exit
         // capacity, rest queues at NAV) rather than a DEX 2% depth — show whichever the asset emits.
         var liqIsFree = liq.free_liquidity_pct != null;
+        // ⚠️ The qualifier has to live on the TILE, not only in the panel.
+        // usde, usdat and usdai are served by bespoke renderers that replace the
+        // liquidity panel, so a floor/bracket note placed there never reaches
+        // them — and usde is the exact asset whose $5M turned out to be past its
+        // own crossing. The band is generic, so this is the one place every
+        // asset passes through.
+        var dStatus = liq.two_pct_depth_status;
+        var dFloor = liq.total_2pct_depth_is_floor === true ||
+                     dStatus === 'ladder_exhausted' || dStatus === 'quote_failed';
         var depthTxt = liqIsFree
             ? (liq.free_liquidity_pct.toFixed(1) + '% free')
-            : ((liq.total_2pct_depth != null) ? this.formatCurrency(liq.total_2pct_depth) : 'n/a');
+            : ((liq.total_2pct_depth != null)
+                ? (dFloor ? '\u2265' : '') + this.formatCurrency(liq.total_2pct_depth)
+                : 'n/a');
+        var dWord = '';
+        if (!liqIsFree && liq.total_2pct_depth != null) {
+            if (dStatus === 'bracketed') dWord = ' (bracketed)';
+            else if (dStatus === 'not_size_responsive' ||
+                     liq.two_pct_depth_size_responsive === false) dWord = ' (not size-responsive)';
+            else if (dStatus === 'quote_failed') dWord = ' (floor \u2014 route failed)';
+            else if (dFloor) dWord = ' (floor)';
+        }
         var liqSub = liqIsFree
             ? 'redemption · free at NAV, rest queues'
-            : '2% depth · ' + this._volumeSubHtml(liq);
+            : '2% depth' + dWord + ' · ' + this._volumeSubHtml(liq);
         // Say WHY it is unrated, or an honest blank reads as a missing feed.
         if (this._depthContradictedByLadder(data)) {
             liqSub = '<span class="text-amber-700">depth exceeds the 2% crossing in its own ladder</span>';
@@ -2230,9 +2276,21 @@ const CommonRenderer = {
                             ? (liq.total_2pct_depth_is_floor === true ? '\u2265' : '') +
                               this.formatCurrency(liq.total_2pct_depth)
                             : 'n/a') + '</div>' +
-                    (liq.total_2pct_depth != null && liq.total_2pct_depth_is_floor === true
-                        ? '<div class="text-[11px] text-slate-400" title="The quote ladder was exhausted before price moved 2%, so this is a lower bound on depth, not a measurement of it.">ladder exhausted \u2014 floor \u24d8</div>'
-                        : '') +
+                    // ⚠️ Four kinds of number wore the same label. The producer
+                    // now declares which: `bracketed` located the crossing
+                    // between two rungs, `ladder_exhausted` never reached it,
+                    // `quote_failed` hit a broken route, `not_size_responsive`
+                    // means the quote path ignores the size argument entirely
+                    // (USDS returns 0.00bps from $5M to $100M — a fixed-rate PSM
+                    // swap, so "clears $5M" is evidence about the call, not the
+                    // venue). Extending rungs there only extends the tautology.
+                    //
+                    // The distinction is the whole finding: usde published $5M
+                    // while quoting that same rung at −1490bps, because one
+                    // comparison read a signed cost as though it were a
+                    // magnitude. Rendering "≥" or a bracket is what stops a
+                    // bound being read as a measurement.
+                    this._depthQualifierHtml(liq) +
                     (liq.total_2pct_depth == null && liq.total_2pct_depth_note
                         ? '<div class="text-[11px] text-slate-400" title="' +
                           this._escapeAttr(liq.total_2pct_depth_note) + '">unmeasured, not zero \u24d8</div>' : '') +
