@@ -2087,7 +2087,20 @@ const CommonRenderer = {
         var statRow =
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">2% depth</div>' +
-                    '<div class="text-lg font-bold">' + (liq.total_2pct_depth != null ? this.formatCurrency(liq.total_2pct_depth) : 'n/a') + '</div>' +
+                    // ⚠️ total_2pct_depth_is_floor means the quote ladder was
+                    // EXHAUSTED before price moved 2% — the real depth is at
+                    // least this, not equal to it. sUSDS publishes it true and
+                    // nothing read it, so the page showed "$1.0M" where the
+                    // honest reading is "≥$1.0M". It understates, which makes
+                    // the liquidity rating harsher than the measurement warrants.
+                    '<div class="text-lg font-bold">' +
+                        (liq.total_2pct_depth != null
+                            ? (liq.total_2pct_depth_is_floor === true ? '\u2265' : '') +
+                              this.formatCurrency(liq.total_2pct_depth)
+                            : 'n/a') + '</div>' +
+                    (liq.total_2pct_depth != null && liq.total_2pct_depth_is_floor === true
+                        ? '<div class="text-[11px] text-slate-400" title="The quote ladder was exhausted before price moved 2%, so this is a lower bound on depth, not a measurement of it.">ladder exhausted \u2014 floor \u24d8</div>'
+                        : '') +
                     (liq.total_2pct_depth == null && liq.total_2pct_depth_note
                         ? '<div class="text-[11px] text-slate-400" title="' +
                           this._escapeAttr(liq.total_2pct_depth_note) + '">unmeasured, not zero \u24d8</div>' : '') +
