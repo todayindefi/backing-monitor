@@ -387,6 +387,29 @@ for f in sorted(glob.glob(os.path.join(DATA, '*_backing.json'))):
                          f'solvency event')
         break  # only the block that actually carries the rated value
 
+# 11. Every sync_and_push.sh source must exist.
+#
+#     ⚠️ The script is 72 lines of `cp <src> data/ 2>/dev/null` and never checks
+#     an exit code. cp DOES return 1 on a missing source — the failure is that
+#     nothing reads the answer, and 2>/dev/null hides the message. So a source
+#     that disappears, or a cp line added for a file the producer has not shipped
+#     yet, produces no error, no log line, and a script that exits 0. The
+#     dashboard then serves whatever was there before, indefinitely.
+#
+#     Putting this in the sync script would warn into an hourly log that exits
+#     successfully — the same place the cache-token warning went unread for six
+#     weeks. It belongs where someone runs it.
+try:
+    sync_src = open('sync_and_push.sh', encoding='utf-8').read()
+    srcs = re.findall(r'^cp\s+(/[^\s]+)\s', sync_src, re.M)
+    for src in sorted(set(srcs)):
+        if not os.path.exists(src):
+            fails.append(f'sync_and_push.sh copies {os.path.basename(src)} but the source '
+                         f'does not exist — cp fails silently and the dashboard keeps serving '
+                         f'the previous copy')
+except Exception:
+    pass
+
 print('CORRECTNESS CHECKS (this suite cannot judge legibility)\n')
 for w in warns: print('  WARN  ' + w)
 for f_ in fails: print('  FAIL  ' + f_)
