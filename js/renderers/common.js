@@ -929,6 +929,31 @@ const CommonRenderer = {
         return this._rate(data.liquidity ? data.liquidity.total_2pct_depth : null, th, 'high');
     },
 
+    _exitScopeHtml(liq) {
+        liq = liq || {};
+        var pe = liq.primary_exit;
+        if (!pe) {
+            // Not "unmeasured" — UNREPRESENTED. Nothing in the payload says a
+            // redemption leg exists, so the scope of the score is unknown rather
+            // than known-narrow. That is worse and must read worse.
+            return ' · <span class="text-amber-700" title="The score is venue depth only. The payload represents no redemption leg at all, so the scope of this rating is unknown rather than known-narrow.">exit leg undeclared</span>';
+        }
+        var basis = pe.gated_basis;
+        if (typeof basis === 'string' && basis.indexOf('measured') === 0) return '';
+        // ⚠️ A boolean gated with no basis is an ASSERTION, not an unprobed leg.
+        // susds publishes gated: false and no basis at all — calling that
+        // "unprobed" states the opposite of what the producer said. And an
+        // asserted-open exit with undeclared provenance is the flattering
+        // direction, which is why usdm's gated: false is still withheld pending
+        // the dispute with riskAnalyst over whether that path is allowlisted.
+        if (typeof pe.gated === 'boolean' && !basis) {
+            return ' · <span class="text-amber-700" title="The producer states a gate value but declares no basis for it, so how it was established is unknown. The score is venue depth only.">exit asserted, basis undeclared</span>';
+        }
+        return ' · <span class="text-slate-500" title="' +
+            this._escapeAttr(pe.gated_note || 'The producer declares the redemption leg unmeasured. The score is venue depth only.') +
+            '">exit unprobed (declared)</span>';
+    },
+
     _depthQualifierHtml(liq) {
         var st = liq.two_pct_depth_status;
         var br = liq.two_pct_depth_bracket;
@@ -1218,9 +1243,26 @@ const CommonRenderer = {
             else if (dStatus === 'quote_failed') dWord = ' (floor \u2014 route failed)';
             else if (dFloor) dWord = ' (floor)';
         }
+        // ⚠️ The liquidity score is one leg of two. The axis is "exit", and exit
+        // has a venue leg and a redemption leg — but the rating is computed from
+        // depth alone, so the number is narrower than the label.
+        //
+        // Refusing to rate would unrate 17 of 19 assets: only usdm and susds
+        // carry a measured gate. An honest page nobody can use is not better
+        // than a bounded number, so the scope is STATED rather than the rating
+        // withdrawn.
+        //
+        // ⚠️ And the three states must render differently, which is the whole
+        // point. If "redemption unprobed" looked the same on an asset that
+        // DECLARES gated_basis: "unmeasured" and on one that says nothing, then
+        // declaring a gap would cost the discloser exactly as much as hiding it
+        // — the incentive this is meant to fix, rebuilt inside the fix. Four
+        // assets scored with no exit leg represented at all while two declared
+        // theirs; the honest feeds must not read worse than the silent ones.
+        var exitScope = this._exitScopeHtml(liq);
         var liqSub = liqIsFree
             ? 'redemption · free at NAV, rest queues'
-            : '2% depth' + dWord + ' · ' + this._volumeSubHtml(liq);
+            : '2% depth' + dWord + ' · ' + this._volumeSubHtml(liq) + exitScope;
         // Say WHY it is unrated, or an honest blank reads as a missing feed.
         if (this._depthContradictedByLadder(data)) {
             liqSub = '<span class="text-amber-700">depth exceeds the 2% crossing in its own ladder</span>';
