@@ -284,7 +284,7 @@ var SaturnRenderer = {
         html += head(3, 'Backing', (slug === 'usdat')
             ? 'composition and the drift watchdog'
             : 'reserve split and NAV trajectory');
-        html += SaturnRenderer._renderSupplyScopeNote(s);
+        html += SaturnRenderer._renderSupplyScopeNote(s, data);
         if (slug === 'usdat') {
             html += anc('panel-backing',   SaturnRenderer._renderUsdatBackingComposition(specific, s));
             html += anc('panel-drift',     SaturnRenderer._renderUsdatDriftProbe(specific));
@@ -1835,17 +1835,31 @@ var SaturnRenderer = {
     //
     // saturn.js clears axis-backing-head to build its own, so the generic basis
     // line cannot reach this page — it needs placing here.
-    _renderSupplyScopeNote: function(s) {
+    _renderSupplyScopeNote: function(s, data) {
         s = s || {};
         var scopeNote = s.supply_scope_note;
         var globalNote = s.global_supply_note;
-        if (!scopeNote && !globalNote) return '';
+        // ⚠️ sUSDat's tile reads 100.82% with its basis available only on hover:
+        // "NAV per share vs $1-par issuance. ⚠️ ATTESTED, NOT MEASURED: 96.2% of
+        // the reserve is an OFF-CHAIN STRC claim." Attested-not-measured is the
+        // single most important thing about that number and it was behind a
+        // tooltip, which does not exist on a touch device.
+        var bk = (data && data.backing) || {};
+        var crBasis = bk.collateral_ratio_basis || null;
+        var sdBasis = (bk.surplus_deficit != null) ? (bk.surplus_deficit_basis || null) : null;
+        if (!scopeNote && !globalNote && !crBasis && !sdBasis) return '';
         return '<div class="panel">' +
             '<div class="panel-title" style="margin-bottom:0.35rem;">What this ratio covers</div>' +
             (scopeNote ? '<div class="text-xs text-slate-600" style="line-height:1.5;">' +
                 SaturnRenderer._escHtml(scopeNote) + '</div>' : '') +
             (globalNote ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.5;">' +
                 SaturnRenderer._escHtml(globalNote) + '</div>' : '') +
+            (crBasis ? '<div class="text-xs text-slate-600 mt-2" style="line-height:1.5;">' +
+                '<span class="font-semibold">Ratio basis:</span> ' +
+                SaturnRenderer._escHtml(crBasis) + '</div>' : '') +
+            (sdBasis ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.5;">' +
+                '<span class="font-semibold">Surplus basis:</span> ' +
+                SaturnRenderer._escHtml(sdBasis) + '</div>' : '') +
         '</div>';
     },
 

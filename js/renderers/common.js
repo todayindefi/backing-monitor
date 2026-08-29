@@ -1146,6 +1146,16 @@ const CommonRenderer = {
         return blk.collateral_ratio_basis || null;
     },
 
+    // Same block discipline as _backingBasis: the basis describes the value in
+    // ITS OWN block, so take it from wherever surplus_deficit itself came from.
+    _surplusBasis(data) {
+        var b = data.backing || {};
+        var sum = data.summary || {};
+        if (b.surplus_deficit != null) return b.surplus_deficit_basis || null;
+        if (sum.surplus_deficit != null) return sum.surplus_deficit_basis || null;
+        return b.surplus_deficit_basis || sum.surplus_deficit_basis || null;
+    },
+
     // Format a CR so rounding cannot move it across a rating cutoff.
     _crDisplay(cr, data) {
         var cuts = [];
@@ -1345,12 +1355,28 @@ const CommonRenderer = {
         // and every one of them is explaining a denominator a reader would
         // otherwise assume.
         var basisText = this._backingBasis(data);
+        // The tile prints "surplus +$X" beside the ratio, and for three feeds the
+        // surplus is NOT on the ratio's basis — apxUSD's is gross where the ratio
+        // is netted, frax's is against liabilities where supply gives a different
+        // sign, and USDS says outright "NOT total_backing - total_supply.
+        // Subtracting the published totals gives +$23.2M against this figure."
+        // A reader who tries to reconcile the two numbers cannot, and nothing on
+        // the page said why. Published by 11 feeds, rendered by none.
+        var sdBasis = this._surplusBasis(data);
         var backingHead = document.getElementById('axis-backing-head');
-        if (basisText && backingHead) {
-            var bNote = document.createElement('div');
-            bNote.className = 'axis-basis-note';
-            bNote.textContent = 'Basis: ' + basisText;
-            backingHead.appendChild(bNote);
+        if ((basisText || sdBasis) && backingHead) {
+            if (basisText) {
+                var bNote = document.createElement('div');
+                bNote.className = 'axis-basis-note';
+                bNote.textContent = 'Basis: ' + basisText;
+                backingHead.appendChild(bNote);
+            }
+            if (sdBasis) {
+                var sNote = document.createElement('div');
+                sNote.className = 'axis-basis-note';
+                sNote.textContent = 'Surplus basis: ' + sdBasis;
+                backingHead.appendChild(sNote);
+            }
         }
         // Optional composition sub-panel (USDC held-vs-denominated split + per-Star
         // breakdown). Data-gated & additive: no-op for assets lacking the fields.
