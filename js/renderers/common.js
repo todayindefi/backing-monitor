@@ -899,8 +899,37 @@ const CommonRenderer = {
     liquidityRating(data) {
         // Credit vaults emit an explicit 1-5 band_score (from free-liquidity %); prefer it.
         if (data.liquidity && data.liquidity.band_score != null) return data.liquidity.band_score;
+        // ⚠️ Refuse to rate a depth the feed's OWN LADDER contradicts.
+        //
+        // usde publishes total_2pct_depth = $5,000,000 and quotes that same rung
+        // at −1588 bps. 200bps is the threshold, so the 2% crossing is bracketed
+        // INSIDE its own ladder between $2M (−1.4bps) and $5M — and the published
+        // figure is the rung BEYOND it. That rated Healthy 5/5.
+        //
+        // This does not derive a depth; deriving one is the producer's job and
+        // guessing would be the mis-scaling this codebase keeps being bitten by.
+        // It withholds a rating the payload does not support, which is the same
+        // rule backingRating already applies to synthesised ratios: an unrated
+        // axis is honest, a rating computed from a contradicted number is not.
+        //
+        // Fires only when a quoted rung at or below the published depth costs
+        // worse than 2%. Verified against all 12 assets carrying both a depth and
+        // a ladder — usde is the only one, and the others stay rated.
+        if (this._depthContradictedByLadder(data)) return null;
         var th = this._axisThresholds(data).liquidity.depth_usd;
         return this._rate(data.liquidity ? data.liquidity.total_2pct_depth : null, th, 'high');
+    },
+
+    _depthContradictedByLadder(data) {
+        var liq = data.liquidity || {};
+        var dp = liq.total_2pct_depth;
+        var quotes = (liq.exit_mark || {}).quotes || {};
+        if (dp == null) return false;
+        return Object.keys(quotes).some(function(k) {
+            var size = Number(k);
+            var bps = quotes[k] && quotes[k].slippage_bps;
+            return !isNaN(size) && size <= dp && typeof bps === 'number' && bps < -200;
+        });
     },
 
     // Backing rating honours an asset's chart_bands override (e.g. USG PCR) when
@@ -1125,6 +1154,10 @@ const CommonRenderer = {
         var liqSub = liqIsFree
             ? 'redemption · free at NAV, rest queues'
             : '2% depth · ' + this._volumeSubHtml(liq);
+        // Say WHY it is unrated, or an honest blank reads as a missing feed.
+        if (this._depthContradictedByLadder(data)) {
+            liqSub = '<span class="text-amber-700">depth exceeds the 2% crossing in its own ladder</span>';
+        }
 
         var cards = [
             {
