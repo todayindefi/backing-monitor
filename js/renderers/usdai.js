@@ -353,6 +353,7 @@ var UsdaiRenderer = {
             html += anc('panel-liquidity', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'liquidity'));
 
             html += head(3, 'Backing', 'PYUSD reserve held by the USDai contract');
+            html += CommonRenderer.backingBasisPanelHtml(data);
             html += anc('panel-coverage', UsdaiRenderer._renderUsdaiCoverage(specific, s));
 
             html += head(4, 'Dependencies', 'what this depends on, and what depends on it');
@@ -374,6 +375,7 @@ var UsdaiRenderer = {
             // No collateral ratio here — sUSDai is a NAV vault and has none. The
             // backing axis carries the decomposition and the two residual pills.
             html += head(3, 'Backing', 'asset decomposition \u2014 NAV vault, no collateral ratio');
+            html += CommonRenderer.backingBasisPanelHtml(data);
             html += anc('panel-decomp', UsdaiRenderer._renderSusdaiDecomposition(specific, s));
 
             html += head(4, 'Dependencies', 'what this depends on, and what depends on it');

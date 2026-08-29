@@ -579,6 +579,7 @@ var SyrupUSDCRenderer = {
 
         // ---- §3 Backing ----
         html += this._axisHead(3, 'Backing', 'reserves · collateral ratio · loan-book health');
+        html += CommonRenderer.backingBasisPanelHtml(data);
         // Relocation slot for the common #chart-panel (Pool Coverage CR chart).
         // The DOM node is physically moved into here after innerHTML so its
         // canvas (#cr-chart) and chart logic keep working unchanged.

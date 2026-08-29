@@ -472,6 +472,7 @@ var HastraPrimeRenderer = {
         html += anc('hp-panel-redemption', HastraPrimeRenderer._renderRedemption(spec));
 
         html += HastraPrimeRenderer._axisHead(3, 'Backing', 'headline · reconciliation · reserves · supply');
+        html += CommonRenderer.backingBasisPanelHtml(data);
         html += anc('hp-panel-headline',   HastraPrimeRenderer._renderHeadline(data, spec, s));
         html += '<div id="hp-cr-chart-slot"></div>';
         html += anc('hp-panel-recon',      HastraPrimeRenderer._renderReconciliation(spec));

@@ -260,6 +260,12 @@ var EthenaRenderer = {
         var anc = EthenaRenderer._anchor;
         var html = '';
         html += anc('panel-headline', EthenaRenderer._renderHeadlineCard(data, slug));
+        // ⚠️ ethena clears axis-backing-head, so neither generic basis line can
+        // reach usde/susde. sUSDe's basis — "sUSDe is a wrapper over USDe, so its
+        // backing ratio is USDe's coverage including the reserve fund" — was
+        // hover-only beside a 102.64% Healthy 5/5 tile, which is exactly the
+        // wrapper-shows-its-underlying's-number case.
+        html += CommonRenderer.backingBasisPanelHtml(data);
         // Async-filled placeholders (all from ethena_family.json):
         html += '<div id="ethena-custody-panel"></div>';
         html += '<div id="ethena-defi-panel"></div>';

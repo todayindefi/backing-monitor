@@ -1143,7 +1143,61 @@ const CommonRenderer = {
     _backingBasis(data) {
         var fromBacking = data.backing && data.backing.collateral_ratio != null;
         var blk = fromBacking ? data.backing : (data.summary || {});
-        return blk.collateral_ratio_basis || null;
+        if (blk.collateral_ratio_basis) return blk.collateral_ratio_basis;
+        // ⚠️ A DELIBERATELY NULL ratio still has a basis, and it is the most
+        // load-bearing one on the page: thUSD's says "Deliberately null. Total
+        // backing is NOT OBSERVABLE", sUSDai's says "No collateral ratio is
+        // defined for this asset." Keying on the value being non-null dropped
+        // the explanation precisely where there is no number to speak for
+        // itself. A basis describing an absent value is still describing its
+        // own block.
+        var b = data.backing || {};
+        if (!fromBacking && b.collateral_ratio === null && b.collateral_ratio_basis) {
+            return b.collateral_ratio_basis;
+        }
+        return null;
+    },
+
+    // Shared basis panel for the BESPOKE renderers.
+    //
+    // ⚠️ Eight assets showed their ratio basis on hover only, because their
+    // renderers clear axis-backing-head to build their own and the generic basis
+    // line cannot reach them. The strings were doing real work behind that
+    // tooltip — sUSDe "a claim on USDe is worth what USDe is backed by", thUSD
+    // "total backing is NOT OBSERVABLE", syrup "three INDEPENDENT reads".
+    //
+    // Returns a panel so each renderer can place it inside its own §3 rather
+    // than having a line injected into a head it owns.
+    backingBasisPanelHtml(data) {
+        var b = (data && data.backing) || {};
+        var rows = [];
+        function add(label, text) {
+            if (!text) return;
+            rows.push('<div class="text-xs text-slate-600 mt-2" style="line-height:1.5;">' +
+                '<span class="font-semibold">' + label + ':</span> ' +
+                CommonRenderer._escapeAttr(text) + '</div>');
+        }
+        var basis = this._backingBasis(data);
+        add('Ratio basis', basis);
+        // collateral_ratio_note is a SECOND field, not a copy — thUSD publishes
+        // both and they differ. Skip it only when it restates the basis.
+        // ⚠️ Compare case- and punctuation-insensitively. thUSD's two fields open
+        // "Deliberately null. Total backing is NOT OBSERVABLE" and "...is not
+        // observable" — the same sentence in different case, which a literal
+        // comparison treats as two findings and prints twice.
+        var note = b.collateral_ratio_note;
+        function key(x) { return String(x).toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 60); }
+        if (note && basis && key(note) === key(basis)) note = null;
+        add('Ratio note', note);
+        add('Surplus basis', this._surplusBasis(data));
+        // ⚠️ "RESIDUAL... Ties by construction and is NOT evidence the off-chain
+        // backing exists" — a figure that looks measured and is not.
+        add('Off-chain backing', b.off_chain_backing_note);
+        if (!rows.length) return '';
+        return '<div class="panel">' +
+            '<div class="panel-title" style="margin-bottom:0.15rem;">What this number is</div>' +
+            rows.join('') +
+        '</div>';
     },
 
     // Same block discipline as _backingBasis: the basis describes the value in

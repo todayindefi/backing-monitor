@@ -314,7 +314,7 @@ async function renderAsset(slug) {
         // Reveals & fills the standard axis sections in 5-axis mode; a no-op that
         // keeps them hidden for legacy assets. Runs BEFORE the bespoke renderer so
         // that renderer can slot its panels into already-revealed axis sections.
-        CommonRenderer.renderAxisSections(data, history);
+        var hasAxes = CommonRenderer.renderAxisSections(data, history);
 
         // Asset-specific renderer
         var renderer = findAssetRenderer(data);
@@ -322,6 +322,23 @@ async function renderAsset(slug) {
             renderer.render(data);
         } else {
             document.getElementById('asset-specific-panels').innerHTML = '';
+        }
+
+        // ⚠️ A legacy (pre-5-axis) asset takes neither basis line, because both
+        // hang off axis heads it does not have — and having a bespoke renderer
+        // does not help, since those hang their own copy off the axis head too.
+        // frax and ousd are the two, and frax's surplus basis is not cosmetic:
+        // the surplus is against LIABILITIES, and against supply the same feed
+        // would show a +$4.1M surplus instead. Nothing on the page said which.
+        //
+        // Prepended AFTER the renderer runs, because a bespoke renderer assigns
+        // innerHTML and would overwrite anything placed before it.
+        if (!hasAxes) {
+            var legacyBasis = CommonRenderer.backingBasisPanelHtml(data);
+            var panelsEl = document.getElementById('asset-specific-panels');
+            if (legacyBasis && panelsEl) {
+                panelsEl.innerHTML = legacyBasis + panelsEl.innerHTML;
+            }
         }
 
     } catch (e) {

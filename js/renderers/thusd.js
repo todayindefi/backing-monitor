@@ -201,6 +201,7 @@ var ThusdRenderer = {
         html += anc('thusd-peg',          ThusdRenderer._renderDexPeg(spec));
 
         html += head(3, 'Backing', ThusdRenderer._backingHeadSub(data, s));
+        html += ThusdRenderer._anchor('thusd-basis', CommonRenderer.backingBasisPanelHtml(data));
         html += anc('thusd-reserves',     ThusdRenderer._renderReserveComposition(spec, s));
         html += anc('thusd-coverage',     ThusdRenderer._renderCoverageHistoryPanel());
         html += anc('thusd-flow',         ThusdRenderer._renderFlowPanel(spec));
