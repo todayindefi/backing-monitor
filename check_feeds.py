@@ -410,6 +410,41 @@ try:
 except Exception:
     pass
 
+# 12. Feed age. Nothing alerted when Saturn went 4.1h stale.
+#
+#     ⚠️ usdat, susdat and saturn_family sat 4.1h old because PegTracker's
+#     analyzer timed out on three consecutive runs. It was found because a HUMAN
+#     read the "Updated:" stamp in the page header and thought it looked old.
+#     saturn.js has no freshness surface at all, and neither did this suite.
+#
+#     A timed-out analyzer leaves the PREVIOUS file in place, so the stale copy
+#     passes every content check here — correct schema, correct blocks, plausible
+#     numbers. It differs from a good file only in its timestamp, which is the one
+#     thing nothing was reading.
+#
+#     Sync is hourly at :58, and the normal spread is ~1.0-1.3h with bmnr and frax
+#     legitimately slower on their own cadences. Warn past 3h, fail past 6h.
+SLOW_BY_DESIGN = {'bmnr', 'frax'}   # own cadences, not hourly
+for f in sorted(glob.glob(os.path.join(DATA, '*_backing.json'))):
+    slug = os.path.basename(f).replace('_backing.json', '')
+    d = load(f)
+    if not isinstance(d, dict): continue
+    ts = d.get('timestamp') or d.get('as_of')
+    if not ts: continue
+    try:
+        t = dt.datetime.fromisoformat(str(ts).replace('Z', '+00:00'))
+        if t.tzinfo is None: t = t.replace(tzinfo=dt.timezone.utc)
+        hours = (dt.datetime.now(dt.timezone.utc) - t).total_seconds() / 3600
+    except Exception:
+        continue
+    limit_warn, limit_fail = (12, 30) if slug in SLOW_BY_DESIGN else (3, 6)
+    if hours > limit_fail:
+        fails.append(f'{slug}: feed is {hours:.1f}h old (limit {limit_fail}h) — a timed-out '
+                     f'analyzer leaves the previous file in place, so this passes every other '
+                     f'check here and differs only in its timestamp')
+    elif hours > limit_warn:
+        warns.append(f'{slug}: feed is {hours:.1f}h old (expected ~1h)')
+
 print('CORRECTNESS CHECKS (this suite cannot judge legibility)\n')
 for w in warns: print('  WARN  ' + w)
 for f_ in fails: print('  FAIL  ' + f_)
