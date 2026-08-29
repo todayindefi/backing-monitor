@@ -916,6 +916,15 @@ const CommonRenderer = {
         // worse than 2%. Verified against all 12 assets carrying both a depth and
         // a ladder — usde is the only one, and the others stay rated.
         if (this._depthContradictedByLadder(data)) return null;
+        // ⚠️ And refuse to rate a figure the producer says bounds nothing. USDS
+        // publishes $50,000,000 with status not_size_responsive because every
+        // rung from $1M to $50M returned identical 0.00bps. Rating that Healthy
+        // 5/5 would make the one asset whose depth was NOT measured the deepest
+        // on the dashboard. Same rule as the ladder contradiction and as
+        // backingRating's refusal to rate a synthesised ratio.
+        var lq = data.liquidity || {};
+        if (lq.two_pct_depth_status === 'not_size_responsive' ||
+            lq.two_pct_depth_size_responsive === false) return null;
         var th = this._axisThresholds(data).liquidity.depth_usd;
         return this._rate(data.liquidity ? data.liquidity.total_2pct_depth : null, th, 'high');
     },
@@ -1182,8 +1191,21 @@ const CommonRenderer = {
         // own crossing. The band is generic, so this is the one place every
         // asset passes through.
         var dStatus = liq.two_pct_depth_status;
-        var dFloor = liq.total_2pct_depth_is_floor === true ||
-                     dStatus === 'ladder_exhausted' || dStatus === 'quote_failed';
+        // ⚠️ not_size_responsive must NOT render like a floor, even though the
+        // producer sets is_floor alongside it. A floor says "at least this much"
+        // and is a real bound. USDS's $50M says only that the call returns the
+        // same answer at any number — every rung from $1M to $50M came back
+        // identical 0.00bps, because it routes the Sky PSM, a fixed-rate swap
+        // bounded by pocket balance rather than slippage.
+        //
+        // Render them the same and the WORST-MEASURED asset on the page becomes
+        // the deepest: "≥$50.0M" would put USDS above crvUSD's genuinely
+        // bracketed $25M.
+        var dUnresponsive = dStatus === 'not_size_responsive' ||
+                            liq.two_pct_depth_size_responsive === false;
+        var dFloor = !dUnresponsive &&
+                     (liq.total_2pct_depth_is_floor === true ||
+                      dStatus === 'ladder_exhausted' || dStatus === 'quote_failed');
         var depthTxt = liqIsFree
             ? (liq.free_liquidity_pct.toFixed(1) + '% free')
             : ((liq.total_2pct_depth != null)
@@ -1191,9 +1213,8 @@ const CommonRenderer = {
                 : 'n/a');
         var dWord = '';
         if (!liqIsFree && liq.total_2pct_depth != null) {
-            if (dStatus === 'bracketed') dWord = ' (bracketed)';
-            else if (dStatus === 'not_size_responsive' ||
-                     liq.two_pct_depth_size_responsive === false) dWord = ' (not size-responsive)';
+            if (dUnresponsive) dWord = ' \u2014 quote does not vary with size';
+            else if (dStatus === 'bracketed') dWord = ' (bracketed)';
             else if (dStatus === 'quote_failed') dWord = ' (floor \u2014 route failed)';
             else if (dFloor) dWord = ' (floor)';
         }
@@ -1203,6 +1224,8 @@ const CommonRenderer = {
         // Say WHY it is unrated, or an honest blank reads as a missing feed.
         if (this._depthContradictedByLadder(data)) {
             liqSub = '<span class="text-amber-700">depth exceeds the 2% crossing in its own ladder</span>';
+        } else if (dUnresponsive) {
+            liqSub = '<span class="text-amber-700">quote returns the same answer at every size</span>';
         }
 
         var cards = [
