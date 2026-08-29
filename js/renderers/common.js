@@ -1258,9 +1258,20 @@ const CommonRenderer = {
                 label: this._escapeAttr(this._issuerAxisInfo(issuer).label),
                 valueHtml: this._issuerBadgeHtml(issuer),
                 sub: 'editorial · subjective',
+                // ⚠️ This slot was EMPTY whenever the report was not linkable,
+                // and it is the only card in the band that can be. Four cards
+                // carry a chip and the fifth carries nothing, which reads as a
+                // failed render rather than as an absent report — the same
+                // "correct-looking blank" that has cost the most today.
+                //
+                // The producer already says why: report_url_status is
+                // "unavailable" when a report exists but is not published yet
+                // (yzUSD/syzUSD are staged on tidresearch and 404), and
+                // "unverified" when it could not be checked. Say which, rather
+                // than leaving a gap the reader has to interpret.
                 chip: this._reportUrlUsable(issuer)
                     ? '<a href="' + issuer.report_url + '" target="_blank" rel="noopener noreferrer" class="axis-rating r-na">Report →</a>'
-                    : ''
+                    : this._reportChipHtml(issuer)
             }
         ];
 
@@ -2499,6 +2510,21 @@ const CommonRenderer = {
     // Everything below is data-gated and no-ops for assets that publish none of
     // it. Nothing is inferred: where the producer says a thing is unknown, the
     // page says unknown.
+    _reportChipHtml(issuer) {
+        issuer = issuer || {};
+        var st = issuer.report_url_status;
+        if (st === 'unavailable') {
+            return '<span class="axis-rating r-na" title="A report exists but the publisher has not released it yet, so there is nothing to link.">Report not published</span>';
+        }
+        if (st === 'unverified') {
+            return '<span class="axis-rating r-na" title="The producer could not verify the report URL resolves, so it is deliberately not linked.">Report unverified</span>';
+        }
+        if (st) {
+            return '<span class="axis-rating r-na">Report ' + this._escapeAttr(String(st).replace(/_/g, ' ')) + '</span>';
+        }
+        return '<span class="axis-rating r-na" title="No report URL is published for this asset.">No report</span>';
+    },
+
     _issuerContextHtml(data) {
         var sp = data.asset_specific || {};
         var out = '';
