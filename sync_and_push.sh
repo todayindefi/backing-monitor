@@ -57,7 +57,6 @@ cp /home/danger/PegTracker/data/saturn_family.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/apxusd_peg_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/apyusd_peg_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/crvusd_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/cusd_peg_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/ousd_peg_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/susdai_peg_history.json data/ 2>/dev/null
 cp /home/danger/PegTracker/data/susdat_peg_history.json data/ 2>/dev/null

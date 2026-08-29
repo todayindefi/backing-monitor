@@ -1753,10 +1753,30 @@ const CommonRenderer = {
         var up = Array.isArray(dep.upstream) ? dep.upstream : [];
         var down = Array.isArray(dep.downstream) ? dep.downstream : [];
 
+        // A dependency's `note` is where the producer puts the thing that makes
+        // the row mean something other than what it looks like: a ticker
+        // collision (USG's reUSD is Resupply's, not Re Protocol's), a 100%
+        // concentration (sUSDS), a circularity. Every one of those was
+        // published and dropped on the floor here — the card rendered name and
+        // metric only. `circular` gets its own marker so it survives even when
+        // no prose accompanies it.
+        //
+        // `label` is accepted as a name fallback because not every feed spells
+        // the field `name`; a dependency with no renderable name showed as an
+        // em-dash, which is indistinguishable from an unnamed dependency.
         function card(d) {
+            var note = d.note
+                ? '<div class="dep-card-note' +
+                      (d.circular === true ? ' dep-card-note-warn' : '') + '">' +
+                      d.note + '</div>'
+                : '';
+            var circChip = (d.circular === true && !d.note)
+                ? '<div class="dep-card-note dep-card-note-warn">⚠️ Circular: this dependency\'s own backing includes the asset above.</div>'
+                : '';
             var inner =
-                '<div class="dep-card-name">' + (d.name || '—') + '</div>' +
-                (d.metric ? '<div class="dep-card-metric">' + d.metric + '</div>' : '');
+                '<div class="dep-card-name">' + (d.name || d.label || '—') + '</div>' +
+                (d.metric ? '<div class="dep-card-metric">' + d.metric + '</div>' : '') +
+                note + circChip;
             if (d.link && d.link_type === 'internal') {
                 // An internal link is only a link if the target is registered.
                 // Feeds name dependencies this dashboard may not serve, and an
@@ -1783,6 +1803,15 @@ const CommonRenderer = {
         var upBlock = up.length
             ? '<div class="dep-grid">' + up.map(card).join('') + '</div>'
             : '<div class="text-sm text-slate-400">No upstream dependencies tracked.</div>';
+
+        // The block-level note describes the LIST — what it contains and how it
+        // is ordered (USG: "ALL active markets, thinnest headroom first"; USDm:
+        // why the volatile bucket sits apart). Without it the grid is a set of
+        // rows with no stated basis, which is the same defect as an undeclared
+        // denominator. Sits under the grid it describes, not above it.
+        if (dep.note) {
+            upBlock += '<div class="dep-block-note">' + dep.note + '</div>';
+        }
 
         // Downstream is a reserved stub until a consumer analyzer exists. An
         // absent/false `downstream_tracked` flag means "not tracked" (NOT "0") —

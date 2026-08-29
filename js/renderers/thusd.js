@@ -207,6 +207,7 @@ var ThusdRenderer = {
 
         html += head(4, 'Dependencies', 'cross-chain conservation and the thBILL leg');
         html += anc('thusd-chains',       ThusdRenderer._renderConservationTable(spec));
+        html += anc('thusd-legs',         ThusdRenderer._renderUpstreamLegs(data));
 
         html += head(5, 'Issuer', 'admin chain and critical events');
         html += anc('thusd-admin',        ThusdRenderer._renderAdminChain(spec));
@@ -833,6 +834,63 @@ var ThusdRenderer = {
                 '<tbody>' + trs + '</tbody>' +
             '</table>' +
         '</div>';
+    },
+
+    // ============================================================
+    // §6b Upstream legs
+    //
+    // This head has said "cross-chain conservation and the thBILL leg" since it
+    // was written, and only the conservation half was ever rendered. thusd
+    // suppresses the generic dependencies body, so `dependencies.upstream` —
+    // and with it the producer's ⚠️ CIRCULAR note on thBILL — had nowhere to
+    // land and appeared nowhere on the page.
+    //
+    // The circularity is the point: thUSD's observable coverage is denominated
+    // in thBILL, whose own backing includes thUSD. A coverage ratio measured in
+    // an asset that is not independent of the thing it backs is not the same
+    // claim as a coverage ratio in cash, and the page showed the number without
+    // the qualifier.
+    // ============================================================
+    _renderUpstreamLegs: function(data) {
+        var dep = (data && data.dependencies) || {};
+        var up = Array.isArray(dep.upstream) ? dep.upstream : [];
+        if (!up.length) return '';
+
+        var rows = up.map(function(u) {
+            var name = u.name || u.label || '-';
+            var circ = u.circular === true
+                ? ' <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">circular</span>'
+                : '';
+            var metric = u.metric ? ThusdRenderer._esc(u.metric) : '';
+            var note = u.note
+                ? '<div class="text-xs mt-1 ' + (u.circular === true ? 'text-amber-700 font-medium' : 'text-slate-500') + '">' +
+                      ThusdRenderer._esc(u.note) + '</div>'
+                : '';
+            return '<tr>' +
+                '<td class="align-top">' + ThusdRenderer._esc(name) + circ + '</td>' +
+                '<td class="align-top text-xs text-slate-600">' + metric + note + '</td>' +
+            '</tr>';
+        }).join('');
+
+        var blockNote = dep.note
+            ? '<div class="text-xs text-slate-500 mt-3">' + ThusdRenderer._esc(dep.note) + '</div>'
+            : '';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Upstream Legs</div>' +
+            '<div class="text-xs text-slate-500 mb-3">' +
+                'What thUSD\'s reserve depends on, as published by the analyzer.' +
+            '</div>' +
+            '<table class="data-table">' +
+                '<thead><tr><th>Leg</th><th>Basis / note</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody>' +
+            '</table>' + blockNote +
+        '</div>';
+    },
+
+    _esc: function(v) {
+        return String(v == null ? '' : v)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     },
 
     // ============================================================
