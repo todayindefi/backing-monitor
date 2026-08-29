@@ -1869,6 +1869,91 @@ const CommonRenderer = {
                         ? ' \u00b7 worst pool ' + liq.worst_pool_usg_share_pct.toFixed(1) + '% skewed' : '') +
                 '</div></div>';
 
+        // ⚠️ The pool table read {venue, pair, depth_usd, balance_ratio} and the
+        // yzUSD/syzUSD feeds publish {name, project, chain, tvl_usd}, so every
+        // row rendered "— Monad — —". Two of those columns are not a rename:
+        // depth and balance ratio have no source in these feeds and shouldn't be
+        // faked from TVL — TVL is not depth.
+        //
+        // So the columns follow the data instead of asserting a fixed schema. A
+        // column appears when at least one pool supplies it; a feed that gains
+        // depth later gains the column with no change here, and a feed without
+        // it shows a narrower table rather than a wall of dashes.
+        var pools = liq.pools || [];
+        function anyPool(key) {
+            return pools.some(function(p) { return p && p[key] != null; });
+        }
+        var cols = [];
+        cols.push({ th: 'Venue', cls: '', get: function(p) {
+            var nm = p.venue || p.project || p.name || '—';
+            return '<span class="font-medium">' + nm + '</span>' +
+                   (p.pair ? '<span class="text-xs text-slate-400 ml-1">' + p.pair + '</span>' : '');
+        }});
+        if (anyPool('chain')) cols.push({ th: 'Chain', cls: 'text-xs text-slate-400',
+            get: function(p) { return p.chain || ''; }});
+        if (anyPool('tvl_usd')) cols.push({ th: 'TVL (USD)', cls: 'text-right font-mono',
+            get: function(p) { return p.tvl_usd != null ? CommonRenderer.formatCurrencyExact(p.tvl_usd) : '—'; }});
+        if (anyPool('depth_usd')) cols.push({ th: 'Depth (USD)', cls: 'text-right font-mono',
+            get: function(p) { return p.depth_usd != null ? CommonRenderer.formatCurrencyExact(p.depth_usd) : '—'; }});
+        if (anyPool('volume_24h')) cols.push({ th: '24h Vol', cls: 'text-right font-mono',
+            get: function(p) {
+                if (p.volume_24h == null) return '—';
+                return Math.abs(p.volume_24h) < 1000
+                    ? '$' + p.volume_24h.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : CommonRenderer.formatCurrencyExact(p.volume_24h);
+            }});
+        if (anyPool('balance_ratio')) cols.push({ th: 'Balance', cls: 'text-right font-mono',
+            get: function(p) { return (p.balance_ratio * 100).toFixed(1) + '%'; }});
+
+        var poolRows = pools.map(function(p) {
+            return '<tr>' + cols.map(function(c) {
+                return '<td class="' + c.cls + '">' + c.get(p) + '</td>';
+            }).join('') + '</tr>';
+        }).join('');
+        var poolBlock = pools.length
+            ? '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">Pools</div>' +
+              '<div class="data-table-scroll"><table class="data-table">' +
+                  '<thead><tr>' + cols.map(function(c) {
+                      return '<th' + (/text-right/.test(c.cls) ? ' class="text-right"' : '') + '>' + c.th + '</th>';
+                  }).join('') + '</tr></thead>' +
+                  '<tbody>' + poolRows + '</tbody></table></div>'
+            : '';
+
+        // ⚠️ "24h volume: n/a — not tracked" was a HARDCODED literal that read no
+        // field, sitting in a panel whose own object carries volume_24h_usd. It
+        // was true when written and silently stopped being true.
+        //
+        // For yzUSD this is the most informative liquidity fact on the page:
+        // $24.74 of 24h volume against $852K of pool TVL says more than any
+        // rating. It is also the reason no executable ladder was built — the
+        // volume figure IS the finding, and it could not reach the page.
+        //
+        // "not tracked" was additionally false for hastra-prime, usdat and
+        // susdat, which publish per-pool volume_24h with a source and an as-of.
+        // ⚠️ formatCurrencyExact rounds to whole dollars, which renders yzUSD's
+        // $24.74 as "$25" — and the exactness IS the finding here. A tiny volume
+        // is the signal; rounding it away turns a striking number into a dull
+        // one. Cents below $1,000, whole dollars above.
+        function volFmt(v) {
+            return Math.abs(v) < 1000
+                ? '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : CommonRenderer.formatCurrencyExact(v);
+        }
+        var vol = liq.volume_24h_usd;
+        var volCard;
+        if (vol != null) {
+            volCard = '<div><div class="text-xs text-slate-400 font-medium uppercase">24h volume</div>' +
+                '<div class="text-lg font-bold">' + volFmt(vol) + '</div></div>';
+        } else if (anyPool('volume_24h')) {
+            volCard = '<div><div class="text-xs text-slate-400 font-medium uppercase">24h volume</div>' +
+                '<div class="text-lg font-bold text-slate-400">per pool</div>' +
+                '<div class="text-[11px] text-slate-400">see table</div></div>';
+        } else {
+            volCard = '<div><div class="text-xs text-slate-400 font-medium uppercase">24h volume</div>' +
+                '<div class="text-lg font-bold text-slate-400">n/a</div>' +
+                '<div class="text-[11px] text-slate-400">not published</div></div>';
+        }
+
         var statRow =
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">2% depth</div>' +
@@ -1882,28 +1967,9 @@ const CommonRenderer = {
                     '<div class="text-lg font-bold">' + (eff != null ? this.formatCurrency(eff) : 'n/a') + '</div></div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Pool TVL</div>' +
                     '<div class="text-lg font-bold">' + (liq.total_tvl != null ? this.formatCurrency(liq.total_tvl) : 'n/a') + '</div></div>' +
-                '<div><div class="text-xs text-slate-400 font-medium uppercase">24h volume</div>' +
-                    '<div class="text-lg font-bold text-slate-400">n/a</div>' +
-                    '<div class="text-[11px] text-slate-400">not tracked</div></div>' +
+                volCard +
             '</div>';
 
-        // Pool table (depth_usd; As-built #2 — no per-pool 2% depth / volume).
-        var pools = liq.pools || [];
-        var poolRows = pools.map(function(p) {
-            var ratio = p.balance_ratio != null ? (p.balance_ratio * 100).toFixed(1) + '%' : '—';
-            return '<tr>' +
-                '<td class="font-medium">' + (p.venue || '—') + '<span class="text-xs text-slate-400 ml-1">' + (p.pair || '') + '</span></td>' +
-                '<td class="text-xs text-slate-400">' + (p.chain || '') + '</td>' +
-                '<td class="text-right font-mono">' + (p.depth_usd != null ? CommonRenderer.formatCurrencyExact(p.depth_usd) : '—') + '</td>' +
-                '<td class="text-right font-mono">' + ratio + '</td>' +
-            '</tr>';
-        }).join('');
-        var poolBlock = pools.length
-            ? '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">Pools</div>' +
-              '<div class="data-table-scroll"><table class="data-table">' +
-                  '<thead><tr><th>Venue</th><th>Chain</th><th class="text-right">Depth (USD)</th><th class="text-right">Balance</th></tr></thead>' +
-                  '<tbody>' + poolRows + '</tbody></table></div>'
-            : '';
 
         body.innerHTML = '<div class="panel">' +
             '<div class="panel-title">Liquidity &amp; Exit</div>' +

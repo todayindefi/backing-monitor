@@ -9,8 +9,20 @@ var REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 // Bumps once per hour so per-page-load fetches still hit the CDN edge most
 // of the time (data syncs at xx:45 hourly), but a stale-by-hour upper bound
 // is enforced.
+// ⚠️ The bucket is OFFSET past the sync, and that offset is the whole point.
+//
+// This cache-busted on a plain hour boundary while sync_and_push.sh commits at
+// :08, so a page first loaded between :00 and :08 pinned the PRE-SYNC copy for
+// the rest of the hour — up to 52 minutes of stale data with a stale "Updated:"
+// stamp to match. Two assets checked in the same visit disagreed for exactly
+// this reason, and it reads as a failed sync rather than a caching artefact.
+//
+// Shifting the boundary to :10 puts every load in a bucket whose data has
+// already landed. Keep SYNC_OFFSET_MIN ahead of the cron minute in
+// sync_and_push.sh if that ever moves.
+var SYNC_OFFSET_MIN = 10;
 function dataUrl(path) {
-    var hour = Math.floor(Date.now() / 3600000);
+    var hour = Math.floor((Date.now() - SYNC_OFFSET_MIN * 60000) / 3600000);
     var sep = path.indexOf('?') >= 0 ? '&' : '?';
     return path + sep + 'v=' + hour;
 }
