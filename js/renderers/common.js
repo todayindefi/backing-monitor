@@ -1736,7 +1736,28 @@ const CommonRenderer = {
         var metricRow =
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Market price</div>' +
-                    '<div class="text-lg font-bold font-mono">' + fmtP(mkt) + '</div></div>' +
+                    '<div class="text-lg font-bold font-mono">' + fmtP(mkt) + '</div>' +
+                    // ⚠️ A peg mark with no timestamp cannot be told from a stale
+                    // one, and syzUSD proved the cost: a 30.2-hour-old CoinGecko
+                    // price divided by a live accruing NAV rendered −2.84% and
+                    // rated the axis Stress 1/5, against a true −0.25%. The
+                    // producer now publishes market_price_as_of / _age_hours /
+                    // _source, so the age travels WITH the number instead of
+                    // being a thing a reader has to assume.
+                    (peg.market_price_age_hours != null || peg.market_price_source
+                        ? '<div class="text-[11px] mt-0.5 ' +
+                          (peg.market_price_age_hours != null && peg.market_price_age_hours > 6
+                              ? 'text-amber-700 font-semibold' : 'text-slate-400') + '"' +
+                          (peg.market_price_as_of ? ' title="as of ' + this._escapeAttr(peg.market_price_as_of) + '"' : '') +
+                          '>' +
+                          (peg.market_price_source ? this._escapeAttr(String(peg.market_price_source).replace(/^peg_tracker:/, '')) : 'source not named') +
+                          (peg.market_price_age_hours != null
+                              ? ' · ' + (peg.market_price_age_hours < 1
+                                  ? Math.round(peg.market_price_age_hours * 60) + 'm old'
+                                  : peg.market_price_age_hours.toFixed(1) + 'h old')
+                              : '') +
+                          '</div>' : '') +
+                '</div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">NAV / theoretical</div>' +
                     '<div class="text-lg font-bold font-mono">' + fmtP(nav) + '</div>' +
                     // ⚠️ syzUSD is rated Stress 1/5 on a −2.84% deviation measured
