@@ -2599,6 +2599,87 @@ const CommonRenderer = {
                     this._escapeAttr(g.note) + '</div>' : '') +
             '</div>';
         }
+
+        // 3. Control surface — who can change the contract, and what was checked
+        // rather than assumed. sUSDS publishes this in full and nothing read it:
+        // the pause surface it does NOT have (five selectors tried, all revert),
+        // that it IS upgradeable, the authority holding that power, and whether
+        // the deployed implementation matches the published one.
+        //
+        // ⚠️ "No pause function" is only reassuring if someone looked. The
+        // producer's note makes the distinction the page has to keep: summary
+        // .paused is null "because there is nothing to read — not because a read
+        // failed", and the equivalent risk on that asset is an upgrade.
+        var ctl = sp.control;
+        if (ctl && (ctl.authority || ctl.pause_surface || ctl.upgradeable != null)) {
+            var auth = ctl.authority || {};
+            var ps = ctl.pause_surface || {};
+            var rows = [];
+            if (auth.name || auth.address) {
+                rows.push(['Authority',
+                    this._escapeAttr(auth.name || '—') +
+                    (auth.address ? ' <span class="font-mono text-xs">' +
+                        this._escapeAttr(auth.address) + '</span>' : '')]);
+            }
+            if (ctl.upgradeable != null) {
+                rows.push(['Upgradeable', ctl.upgradeable
+                    ? '<span class="text-amber-700 font-semibold">yes</span>' +
+                      (ctl.proxy_admin_slot ? ' <span class="text-xs text-slate-500">· ' +
+                        this._escapeAttr(ctl.proxy_admin_slot) + '</span>' : '')
+                    : 'no']);
+            }
+            if (ctl.impl_matches_published != null) {
+                rows.push(['Deployed implementation', ctl.impl_matches_published
+                    ? '<span class="text-green-600">matches published</span>'
+                    : '<span class="text-red-600 font-semibold">DOES NOT match published</span>']);
+            }
+            if (ps.exists != null) {
+                rows.push(['Pause surface', ps.exists
+                    ? '<span class="text-amber-700">present</span>'
+                    : 'none' + (Array.isArray(ps.checked) && ps.checked.length
+                        ? ' <span class="text-xs text-slate-500">(' + ps.checked.length +
+                          ' selectors checked: ' +
+                          ps.checked.map(function(c) { return CommonRenderer._escapeAttr(c); }).join(', ') +
+                          ')</span>' : '')]);
+            }
+            out += '<div class="panel">' +
+                '<div class="panel-title">Control surface</div>' +
+                '<table class="data-table"><tbody>' +
+                rows.map(function(r) {
+                    return '<tr><td class="font-medium" style="width:32%">' + r[0] + '</td><td>' + r[1] + '</td></tr>';
+                }).join('') +
+                '</tbody></table>' +
+                (ps.note ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
+                    this._escapeAttr(ps.note) + '</div>' : '') +
+            '</div>';
+        }
+
+        // 4. Issuer-disclosed wallets. A count and the addresses, nothing more —
+        // the disclosure is the fact, and whether the balances are in the
+        // backing figure is a different question the feed answers elsewhere.
+        var wal = sp.wallets;
+        if (wal && typeof wal === 'object') {
+            var groups = Object.keys(wal).filter(function(k) { return Array.isArray(wal[k]) && wal[k].length; });
+            if (groups.length) {
+                out += '<div class="panel">' +
+                    '<div class="panel-title">Issuer-disclosed wallets</div>' +
+                    groups.map(function(gname) {
+                        var list = wal[gname];
+                        return '<div class="mb-2">' +
+                            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200">' +
+                                CommonRenderer._escapeAttr(gname) + ' \u00b7 ' + list.length + '</div>' +
+                            '<div class="text-xs font-mono text-slate-500" style="line-height:1.6; word-break:break-all;">' +
+                                list.map(function(w) {
+                                    return CommonRenderer._escapeAttr(w.wallet || w.address || '—');
+                                }).join(' \u00b7 ') +
+                            '</div>' +
+                        '</div>';
+                    }).join('') +
+                    (sp.wallets_note ? '<div class="text-xs text-slate-500 mt-1" style="line-height:1.45;">' +
+                        this._escapeAttr(sp.wallets_note) + '</div>' : '') +
+                '</div>';
+            }
+        }
         return out;
     }
 };
