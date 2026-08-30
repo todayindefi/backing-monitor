@@ -3,20 +3,20 @@
   "asset": "USDS",
   "asset_slug": "usds",
   "chain": "ethereum",
-  "timestamp": "2026-08-30T06:48:22Z",
+  "timestamp": "2026-08-30T07:47:58Z",
   "report_url": "https://tidresearch.com/reports/usds",
   "summary": {
-    "total_supply": 11268101604.62,
+    "total_supply": 11267201818.57,
     "supply_unit": "USD",
-    "usds_supply": 6685988203.84,
-    "dai_supply": 4582113400.78,
-    "total_backing": 11299097614.96,
+    "usds_supply": 6684792364.53,
+    "dai_supply": 4582409454.04,
+    "total_backing": 11297743349.95,
     "collateral_ratio": 99.44,
-    "surplus_deficit": -63094010.61,
+    "surplus_deficit": -63120132.42,
     "nav": 1.0,
     "price": 0.99992723,
     "usdc_raw_pct": 34.93,
-    "usdc_denominated_pct": 28.83,
+    "usdc_denominated_pct": 28.84,
     "lookthrough_available": true
   },
   "risk_flags": [
@@ -29,25 +29,25 @@
   "backing_breakdown": [
     {
       "label": "Stablecoins",
-      "value": 4826003086.34,
-      "pct": 48.69,
+      "value": 4827944205.64,
+      "pct": 48.7,
       "tags": []
     },
     {
       "label": "Onchain Crypto Lending",
-      "value": 1990187716.55,
-      "pct": 20.08,
+      "value": 1989988667.01,
+      "pct": 20.07,
       "tags": []
     },
     {
       "label": "Short Duration Treasury Bills",
       "value": 1525941908.37,
-      "pct": 15.4,
+      "pct": 15.39,
       "tags": []
     },
     {
       "label": "OTC Crypto Lending",
-      "value": 951707627.66,
+      "value": 951709872.71,
       "pct": 9.6,
       "tags": []
     },
@@ -71,7 +71,7 @@
     },
     {
       "label": "Basis Trade",
-      "value": 20316253.69,
+      "value": 20316401.65,
       "pct": 0.2,
       "tags": []
     }
@@ -89,37 +89,37 @@
       }
     },
     "onchain": {
-      "usds_supply": 6685988203.84,
-      "dai_supply": 4582113400.78,
-      "vat_debt": 12094295336.54,
-      "pocket_usdc": 3935556475.86,
+      "usds_supply": 6684792364.53,
+      "dai_supply": 4582409454.04,
+      "vat_debt": 12093362192.35,
+      "pocket_usdc": 3935135355.05,
       "psm_ilk_debt": 4730754197.44,
-      "pre_mint_buffer": 795197721.58,
+      "pre_mint_buffer": 795618842.39,
       "allocator_debt": {
-        "spark": 2942457774.18,
+        "spark": 2941498508.16,
         "grove": 2688118765.89,
         "obex": 402531740.0
       },
       "crypto_cdp_debt": 546600050.47,
       "rwa_debt": 80987607.05,
-      "surplus_buffer": -63094010.61
+      "surplus_buffer": -63120132.42
     },
     "blockanalitica": {
       "available": true,
       "basis": "backed",
       "per_star_backed": {
-        "spark": 2232653409.53,
-        "obex": 403799792.87,
-        "osero": 5582296.48,
-        "grove": 2706296462.0,
-        "sky": 4563022928.26
+        "spark": 2233046447.69,
+        "obex": 403802037.92,
+        "osero": 5582272.1,
+        "grove": 2706298609.53,
+        "sky": 4564369984.66
       },
       "per_star_backed_total": {
-        "spark": 4825784424.05,
-        "obex": 728673281.68,
-        "osero": 17942967.03,
-        "grove": 3364623963.71,
-        "sky": 6794804553.54
+        "spark": 4829192232.37,
+        "obex": 728254223.33,
+        "osero": 17958670.91,
+        "grove": 3363990068.21,
+        "sky": 6801179643.1
       }
     },
     "history_ref": "usds_backing_history.json"
@@ -138,7 +138,7 @@
     }
   },
   "liquidity": {
-    "as_of": "2026-08-30T04:33:00Z",
+    "as_of": "2026-08-30T07:31:34Z",
     "total_tvl": null,
     "total_2pct_depth": 50000000.0,
     "total_2pct_depth_is_floor": true,
@@ -178,7 +178,7 @@
     "backstops": [
       {
         "label": "USDC PSM pocket",
-        "value": 3935556475.86,
+        "value": 3935135355.05,
         "note": "1:1 USDC redemption via LITE-PSM (tin=tout=0)"
       },
       {
@@ -193,24 +193,24 @@
     "collateral_ratio_scale": "percent",
     "collateral_ratio_basis": "Par plus surplus buffer: 100 + (surplus_buffer / total_supply x 100). \u26a0\ufe0f NOT total_backing / total_supply \u2014 that quotient is ~100.11% and carries the OPPOSITE SIGN, because surplus_deficit here is Sky's vow surplus buffer (vat.dai(vow) - vat.sin(vow)), not backing minus supply. Every USDS is minted 1:1 against a debt position, so raw par coverage is ~100% by construction and the real signal is the buffer. Reads below 100 on a vow deficit even while assets exceed liabilities. Not comparable to a backing-over-supply ratio.",
     "surplus_deficit_basis": "Sky's vow surplus buffer, NOT total_backing - total_supply. Subtracting the published totals gives +$23.2M against this field's -$61.6M; they measure different things, so B/(B - surplus_deficit) does not recover collateral_ratio.",
-    "collateral_ratio_note": "Par coverage INCLUDING the system surplus/deficit \u2014 NOT the old tautological flat 100%. Every USDS/DAI is minted 1:1 against a debt position, so raw par coverage is ~100% by construction; the real backing-health signal is the surplus buffer (vat.dai(vow)-vat.sin(vow)). CR = 100% + net surplus/deficit as %% of supply (currently -0.56%% -> 99.44%%). >100 = equity cushion above par; <100 = vow deficit. Pre-mint buffer ($795M idle DAI) excluded.",
-    "total_backing": 11299097614.96,
-    "total_supply": 11268101604.62,
-    "surplus_buffer_usd": -63094010.61,
-    "surplus_buffer_pct": -0.5599,
-    "surplus_deficit": -63094010.61,
+    "collateral_ratio_note": "Par coverage INCLUDING the system surplus/deficit \u2014 NOT the old tautological flat 100%. Every USDS/DAI is minted 1:1 against a debt position, so raw par coverage is ~100% by construction; the real backing-health signal is the surplus buffer (vat.dai(vow)-vat.sin(vow)). CR = 100% + net surplus/deficit as %% of supply (currently -0.56%% -> 99.44%%). >100 = equity cushion above par; <100 = vow deficit. Pre-mint buffer ($796M idle DAI) excluded.",
+    "total_backing": 11297743349.95,
+    "total_supply": 11267201818.57,
+    "surplus_buffer_usd": -63120132.42,
+    "surplus_buffer_pct": -0.5602,
+    "surplus_deficit": -63120132.42,
     "surplus_note": "vat.dai(vow) - vat.sin(vow): system surplus buffer (equity cushion). surplus_buffer_pct = buffer / total_supply; CR = 100 + this.",
     "lookthrough_available": true,
     "usdc_raw_held": {
-      "value": 3935556475.86,
+      "value": 3935135355.05,
       "pct": 34.93,
       "source": "onchain",
       "trust": "trustless",
       "note": "PSM pocket balanceOf (actual USDC held). NOT the $4.73B LITE-PSM ilk debt."
     },
     "usdc_denominated": {
-      "value": 3248343407.36,
-      "pct": 28.83,
+      "value": 3249081957.32,
+      "pct": 28.84,
       "source": "blockanalitica",
       "trust": "attested",
       "note": "USDC-settled instruments (T-bills / CLO / OTC lending) \u2014 denominated, not held. 0 when look-through unavailable."
@@ -219,7 +219,7 @@
       {
         "star": "sky",
         "label": "Sky core (PSM + crypto CDP + RWA)",
-        "size_usd": 4582145632.23,
+        "size_usd": 4581724511.42,
         "size_pct": 40.66,
         "size_source": "onchain",
         "allocator_vault": null,
@@ -246,7 +246,7 @@
       {
         "star": "spark",
         "label": "Spark",
-        "size_usd": 2942457774.18,
+        "size_usd": 2941498508.16,
         "size_pct": 26.11,
         "size_source": "onchain",
         "allocator_vault": "0x691a6c29e9e96dd897718305427Ad5D534db16BA",
@@ -261,7 +261,7 @@
           },
           {
             "category": "OTC Crypto Lending",
-            "pct": 9.41
+            "pct": 9.4
           },
           {
             "category": "Basis Trade",
@@ -296,11 +296,11 @@
           },
           {
             "category": "Onchain Crypto Lending",
-            "pct": 9.38
+            "pct": 9.37
           },
           {
             "category": "Stablecoins",
-            "pct": 2.67
+            "pct": 2.68
           },
           {
             "category": "Private Credit",
@@ -336,22 +336,22 @@
     "category_breakdown": [
       {
         "label": "Stablecoins",
-        "value": 4826003086.34,
-        "pct": 48.69
+        "value": 4827944205.64,
+        "pct": 48.7
       },
       {
         "label": "Onchain Crypto Lending",
-        "value": 1990187716.55,
-        "pct": 20.08
+        "value": 1989988667.01,
+        "pct": 20.07
       },
       {
         "label": "Short Duration Treasury Bills",
         "value": 1525941908.37,
-        "pct": 15.4
+        "pct": 15.39
       },
       {
         "label": "OTC Crypto Lending",
-        "value": 951707627.66,
+        "value": 951709872.71,
         "pct": 9.6
       },
       {
@@ -371,7 +371,7 @@
       },
       {
         "label": "Basis Trade",
-        "value": 20316253.69,
+        "value": 20316401.65,
         "pct": 0.2
       }
     ],
@@ -379,7 +379,7 @@
       "ETH-A": 168342379.47,
       "ETH-B": 5766931.24,
       "ETH-C": 189618405.66,
-      "ALLOCATOR-SPARK-A": 2942457774.18,
+      "ALLOCATOR-SPARK-A": 2941498508.16,
       "RWA002-A": 27112351.76,
       "WBTC-C": 1152952.13,
       "LSEV2-SKY-A": 158112137.96,
@@ -395,37 +395,37 @@
       "ALLOCATOR-GROVE-A": 10000000.0
     },
     "reconciliation": {
-      "vat_debt": 12094295336.54,
-      "sum_ilk_debt": 11410451633.87,
+      "vat_debt": 12093362192.35,
+      "sum_ilk_debt": 11409492367.86,
       "ilk_coverage_pct": 94.35,
-      "ba_sum_backed": 9911354889.14,
+      "ba_sum_backed": 9913099351.9,
       "note": "Per-ilk sum vs vat.debt; residual = surplus/interest, not missing collateral. BA sum(backed) runs below vat.debt (pre-mint buffer + un-itemized residual) by design.",
       "star_drift": [
         {
           "star": "sky",
-          "onchain_size_usd": 4582145632.23,
-          "ba_backed_usd": 4563022928.26,
+          "onchain_size_usd": 4581724511.42,
+          "ba_backed_usd": 4564369984.66,
           "drift_pct": -0.4,
           "status": "ok"
         },
         {
           "star": "spark",
-          "onchain_size_usd": 2942457774.18,
-          "ba_backed_usd": 2232653409.53,
+          "onchain_size_usd": 2941498508.16,
+          "ba_backed_usd": 2233046447.69,
           "drift_pct": -24.1,
           "status": "ok"
         },
         {
           "star": "grove",
           "onchain_size_usd": 2688118765.89,
-          "ba_backed_usd": 2706296462.0,
+          "ba_backed_usd": 2706298609.53,
           "drift_pct": 0.7,
           "status": "ok"
         },
         {
           "star": "obex",
           "onchain_size_usd": 402531740.0,
-          "ba_backed_usd": 403799792.87,
+          "ba_backed_usd": 403802037.92,
           "drift_pct": 0.3,
           "status": "ok"
         }
@@ -441,7 +441,7 @@
       {
         "name": "USDC (raw PSM reserve)",
         "metric": "34.9% of supply",
-        "value": 3935556475.86,
+        "value": 3935135355.05,
         "source": "onchain",
         "link": null,
         "link_type": "none"
@@ -457,7 +457,7 @@
       {
         "name": "BTC (OTC crypto lending)",
         "metric": "7.5% of supply",
-        "value": 843901659.29,
+        "value": 843903404.52,
         "source": "blockanalitica",
         "link": null,
         "link_type": "none"
@@ -473,7 +473,7 @@
       {
         "name": "cbBTC (crypto lending)",
         "metric": "5.1% of supply",
-        "value": 573119824.85,
+        "value": 573251004.59,
         "source": "blockanalitica",
         "link": null,
         "link_type": "none"
@@ -481,7 +481,7 @@
       {
         "name": "wstETH (crypto lending)",
         "metric": "4.3% of supply",
-        "value": 481998899.0,
+        "value": 481862361.09,
         "source": "blockanalitica",
         "link": null,
         "link_type": "none"
@@ -497,7 +497,7 @@
       {
         "name": "PayPal USD (PYUSD)",
         "metric": "3.4% of supply",
-        "value": 387576404.42,
+        "value": 387576398.16,
         "source": "blockanalitica",
         "link": null,
         "link_type": "none"
@@ -505,7 +505,7 @@
       {
         "name": "ETH (crypto lending)",
         "metric": "3.4% of supply",
-        "value": 384938289.14,
+        "value": 384938407.07,
         "source": "blockanalitica",
         "link": null,
         "link_type": "none"
@@ -513,7 +513,7 @@
       {
         "name": "RLUSD",
         "metric": "2.2% of supply",
-        "value": 244591224.81,
+        "value": 244589969.86,
         "source": "blockanalitica",
         "link": null,
         "link_type": "none"
@@ -521,7 +521,7 @@
       {
         "name": "WETH (crypto lending)",
         "metric": "2.1% of supply",
-        "value": 237194176.09,
+        "value": 237114057.59,
         "source": "blockanalitica",
         "link": null,
         "link_type": "none"
@@ -529,7 +529,7 @@
       {
         "name": "Other collateral",
         "metric": "4.2% of supply",
-        "value": 474198448.02,
+        "value": 473996356.24,
         "source": "blockanalitica",
         "link": null,
         "link_type": "none"
@@ -539,7 +539,7 @@
       {
         "name": "sUSDS (Sky Savings)",
         "metric": "$4.71B assets",
-        "value": 4708219410.12,
+        "value": 4707168267.8,
         "link": "?asset=susds",
         "link_type": "internal",
         "apy_pct": 3.52
@@ -556,7 +556,7 @@
     "issuer_score_source": "risk-feed@2026-08-29T09:27:19Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-08-29T09:27:19Z",
-    "issuer_score_age_hours": 21.35,
+    "issuer_score_age_hours": 22.34,
     "attestation_age_days": null,
     "facts": [
       "48h GSM (Governance Security Module) timelock on parameter changes",
