@@ -1679,6 +1679,23 @@ const CommonRenderer = {
         container.style.display = '';
     },
 
+    // ⚠️ DO NOT DROP THIS FIELD TO MAKE THE BACKING AXIS LOOK FRESHER. Read this
+    // before any freshness sweep touches it.
+    //
+    // The axis clock takes the OLDEST declared input, so attachment_point_as_of
+    // drags axis 2 to "6d old" while the reserve figures beside it are minutes
+    // old. That reading is CORRECT — an axis is only as fresh as its stalest
+    // component — but it creates a perverse incentive that riskAnalyst named:
+    // supplying a valuable older fact makes the axis look WORSE, and the
+    // cheapest way to turn the clock green is to delete the attachment point.
+    //
+    // ⚠️ That would remove the single most important thing on this axis in order
+    // to improve a number describing it, and it would look like tidying. An
+    // output must not be allowed to remove its own input. The right fixes are a
+    // per-field freshness display, or re-measuring more often — the producer has
+    // taken the second (11.0% -> 9.7% -> 9.66% over twelve days; it is not
+    // static). Neither is "publish less."
+    //
     // Data-gated: no-op for the 25 assets that publish no attachment point.
     _renderAttachmentPoint(data) {
         var b = data.backing || {};
@@ -2003,6 +2020,11 @@ const CommonRenderer = {
         // than with a block-level `as_of`. I have asked for one spelling; until
         // it lands, accepting the existing names beats rendering "undeclared"
         // over clocks that are plainly there.
+        // ⚠️ The oldest-wins rule means a SUPPLEMENTAL field can set the whole
+        // axis's age — see _renderAttachmentPoint for why that must not be
+        // "fixed" by dropping the supplement. The stamp's field is named in the
+        // tooltip precisely so a reader can tell a stale AXIS from one stale
+        // input beside fresh ones.
         var stamp = null, oldest = -1, stampKey = null;
         function consider(v, key) {
             if (typeof v !== 'string') return;
