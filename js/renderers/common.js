@@ -1743,6 +1743,120 @@ const CommonRenderer = {
     // taken the second (11.0% -> 9.7% -> 9.66% over twelve days; it is not
     // static). Neither is "publish less."
     //
+    // ⚠️ SUPPLY IS SCOPED AND THE SCOPE IS CONTESTED. This is the ETHEREUM
+    // supply. The feed's own header says "Ethereum primary; also Arbitrum, Base,
+    // Avalanche", while security_analyst measured code size 0 at the same address
+    // on all three — bounded to the same-address case, since a deployment at a
+    // different address was never searched. So neither "one chain" nor "four
+    // chains" is established, and this label says what was MEASURED (Ethereum)
+    // rather than resolving a question nobody has answered.
+    //
+    // ⚠️ Claim value is supply x issuer-set NAV. It is what holders are TOLD they
+    // hold, not what is held for them — and on this asset the NAV in that product
+    // is issuer-written (see the NAV write path on axis 1). Labelled as claim,
+    // never as backing.
+    _renderClaimSize(data) {
+        var b = (data && data.backing) || {};
+        var head = document.getElementById('axis-backing-head');
+        if (!head) return;
+        var supply = typeof b.ethereum_supply === 'number' ? b.ethereum_supply : null;
+        var claim = typeof b.nav_claim_value === 'number' ? b.nav_claim_value : null;
+        if (supply == null && claim == null) return;
+
+        var parts = [];
+        if (supply != null) {
+            parts.push('<span class="cs-item"><span class="cs-key">Supply</span>' +
+                '<span class="cs-val">' + (supply / 1e6).toFixed(1) + 'M</span>' +
+                '<span class="cs-scope">Ethereum \u2014 the only chain measured</span></span>');
+        }
+        if (claim != null) {
+            parts.push('<span class="cs-item"><span class="cs-key">Claim value</span>' +
+                '<span class="cs-val">$' + (claim / 1e6).toFixed(1) + 'M</span>' +
+                '<span class="cs-scope">supply \u00d7 issuer-set NAV \u2014 not backing</span></span>');
+        }
+        var el = document.createElement('div');
+        el.className = 'claim-size';
+        el.innerHTML = parts.join('') +
+            (b.nav_claim_value_basis
+                ? '<div class="cs-basis">' + this._escapeAttr(b.nav_claim_value_basis) + '</div>' : '') +
+            (b.total_backing_basis
+                ? '<div class="cs-basis"><span class="cs-key">No total backing:</span> ' +
+                  this._escapeAttr(b.total_backing_basis) + '</div>' : '');
+        head.appendChild(el);
+    },
+
+    // ⚠️ THE HAZARD IS A DIVISION THE READER PERFORMS, NOT A FIGURE WE OMIT.
+    // This page already shows nav_claim_value ($220.8M for reUSD). Put a reserves
+    // total beside it and a reader divides the two and reads a coverage ratio —
+    // but the numerator is PROTOCOL-WIDE (reUSD *and* reUSDe) while the
+    // denominator is reUSD alone. Two different scopes, so the quotient means
+    // nothing, and it means nothing in the alarming direction.
+    //
+    // The producer says this outright — scope: "not attributable to reUSD alone",
+    // integrity.note: "it is not used to claim reUSD coverage" — so the warning
+    // is the feed's own position, rendered rather than left in the payload. The
+    // scope line is the SUBTITLE of the figure, not a footnote under the table:
+    // a qualifier that arrives after the number has been read is too late.
+    //
+    // ⚠️ It is also why no ratio is computed here even though both operands are
+    // on the page. The dashboard declining to divide is the whole point.
+    _renderIssuerReportedReserves(data) {
+        var b = (data && data.backing) || {};
+        var pt = b.protocol_reserves_passthrough;
+        if (!pt || typeof pt !== 'object' || typeof pt.total_usd !== 'number') return;
+        var head = document.getElementById('axis-backing-head');
+        if (!head) return;
+
+        var rows = Array.isArray(pt.breakdown) ? pt.breakdown : [];
+        var self = this;
+        var body = rows.map(function(r) {
+            var pct = typeof r.pct === 'number' ? r.pct : null;
+            // ⚠️ Flag the concentration rather than leaving it as one row among
+            // six. sUSDe at 93.87% is not a line item, it is the asset's largest
+            // single dependency, and a reader scanning a table does not rank it.
+            var dominant = pct != null && pct >= 50;
+            return '<tr' + (dominant ? ' class="irr-dominant"' : '') + '>' +
+                '<td>' + self._escapeAttr(r.name || '—') + (dominant ? ' \u26a0\ufe0f' : '') + '</td>' +
+                '<td class="irr-num">' + (typeof r.value_usd === 'number'
+                    ? '$' + Math.round(r.value_usd).toLocaleString('en-US') : '—') + '</td>' +
+                '<td class="irr-num">' + (pct != null ? pct.toFixed(2) + '%' : '—') + '</td>' +
+                '<td class="irr-num">' + (r.chains != null ? r.chains : '—') + '</td>' +
+            '</tr>';
+        }).join('');
+
+        var el = document.createElement('div');
+        el.className = 'issuer-reserves';
+        el.innerHTML =
+            '<div class="irr-head">Issuer-reported reserves \u2014 protocol-wide</div>' +
+            '<div class="irr-total">$' + (pt.total_usd / 1e6).toFixed(1) + 'M</div>' +
+            '<div class="irr-scope">\u26a0\ufe0f ' +
+                this._escapeAttr(pt.scope || 'Scope not declared by the producer.') +
+                ' <strong>This is not a coverage figure.</strong> Dividing it by reUSD\u2019s supply ' +
+                'or claim value compares a two-asset numerator with a one-asset denominator, so the ' +
+                'result is meaningless \u2014 and misleadingly low.' +
+            '</div>' +
+            (rows.length
+                ? '<div class="irr-tablewrap"><table class="irr-table">' +
+                  '<thead><tr><th>Asset</th><th class="irr-num">Value</th>' +
+                  '<th class="irr-num">Share</th><th class="irr-num">Chains</th></tr></thead>' +
+                  '<tbody>' + body + '</tbody></table></div>'
+                : '') +
+            '<div class="irr-note">' +
+                (pt.source ? 'Source: ' + this._escapeAttr(String(pt.source)) + '. ' : '') +
+                (pt.retrieved_at
+                    ? '\u26a0\ufe0f Retrieved ' + this._escapeAttr(pt.retrieved_at) +
+                      ' \u2014 that is when the page was FETCHED, not when the issuer computed these ' +
+                      'figures. No source timestamp is published, so their true age is unknown.'
+                    : '') +
+            '</div>' +
+            (b.integrity && b.integrity.note
+                ? '<div class="irr-note"><span class="irr-key">Integrity' +
+                  (b.integrity.status ? ' (' + this._escapeAttr(String(b.integrity.status)) + ')' : '') +
+                  ':</span> ' + this._escapeAttr(b.integrity.note) + '</div>'
+                : '');
+        head.appendChild(el);
+    },
+
     // Data-gated: no-op for the 25 assets that publish no attachment point.
     _renderAttachmentPoint(data) {
         var b = data.backing || {};
@@ -2212,6 +2326,16 @@ const CommonRenderer = {
         // while the cushion erodes underneath it. The level alone would let a
         // reader draw exactly the wrong conclusion from the rest of the page.
         this._renderAttachmentPoint(data);
+
+        // ⚠️ Issuer-reported reserves. Rendered because $136.9M sat in the payload
+        // invisible while the axis read "Not rated" — but rendered CAREFULLY,
+        // because the danger here is not omission, it is arithmetic the reader
+        // does unprompted. See _renderIssuerReportedReserves.
+        // ⚠️ HOW BIG IS IT. Both figures were published and rendered nowhere, so
+        // the backing axis showed a "Not rated" chip, a basis note and no size
+        // at all. Supply is the one number every other question scales against.
+        this._renderClaimSize(data);
+        this._renderIssuerReportedReserves(data);
 
         // Optional composition sub-panel (USDC held-vs-denominated split + per-Star
         // breakdown). Data-gated & additive: no-op for assets lacking the fields.
