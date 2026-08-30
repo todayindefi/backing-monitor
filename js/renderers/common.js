@@ -2536,7 +2536,7 @@ const CommonRenderer = {
                 ? '<div class="dep-card-note dep-card-note-warn">⚠️ Circular: this dependency\'s own backing includes the asset above.</div>'
                 : '';
             var inner =
-                '<div class="dep-card-name">' + (d.name || d.label || '—') + '</div>' +
+                '<div class="dep-card-name">' + (d.name || '—') + '</div>' +
                 (d.metric ? '<div class="dep-card-metric">' + d.metric + '</div>' : '') +
                 note + circChip;
             if (d.link && d.link_type === 'internal') {

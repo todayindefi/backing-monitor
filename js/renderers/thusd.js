@@ -871,7 +871,7 @@ var ThusdRenderer = {
         if (!up.length) return '';
 
         var rows = up.map(function(u) {
-            var name = u.name || u.label || '-';
+            var name = u.name || '-';   // `label` fallback dropped — producers aligned on `name`
             var circ = u.circular === true
                 ? ' <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">circular</span>'
                 : '';
