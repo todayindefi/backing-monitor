@@ -1921,8 +1921,18 @@ const CommonRenderer = {
         if (b.attachment_point_as_of) {
             // Its own clock: the attachment point is measured on a different
             // cadence from the reserve figures beside it, and is usually older.
-            bits.push('<div class="ap-note ap-note-asof">Measured ' +
-                      this._escapeAttr(b.attachment_point_as_of) + '</div>');
+            // ⚠️ "As of", NOT "Measured" — the difference is the whole claim.
+            // tidr's report marks this figure INDICATIVE because it divides a
+            // June 2026 junior-capital figure by a 2026-08-23 on-chain senior
+            // read: a two-month-old numerator over a current denominator. The
+            // producer's field is named `attachment_point_as_of` and says
+            // nothing about measurement; "Measured" was the renderer asserting
+            // a vintage the data does not claim.
+            bits.push('<div class="ap-note ap-note-asof">As of ' +
+                      this._escapeAttr(b.attachment_point_as_of) +
+                      (b.attachment_point_vintage_note
+                          ? ' \u00b7 ' + this._escapeAttr(b.attachment_point_vintage_note)
+                          : '') + '</div>');
         }
         el.innerHTML = bits.join('');
         head.appendChild(el);

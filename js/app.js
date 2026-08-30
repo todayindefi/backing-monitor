@@ -264,6 +264,28 @@ async function renderAsset(slug) {
         // reads the merged block rather than the pre-merge one — otherwise a
         // renderer and the common frame would disagree about the same axis.
         CommonRenderer.mergeAxisOverlays(data, overlays, sourceSlug);
+
+        // The issuer panel's "Read the full risk report" reads issuer.report_url.
+        // On reUSD no producer supplies one — PegTracker's issuer block was
+        // removed (it published the report's OVERALL score as the issuer axis)
+        // and riskAnalyst's issuer/1 overlay carries the score, not the link.
+        // assets.json is this dashboard's own registry and is authoritative for
+        // where a report lives, so it fills the gap rather than the panel
+        // reading "No report linked" beside a working header link.
+        //
+        // ⚠️ Only when the producer supplies nothing. A producer that publishes
+        // report_url AND a report_url_status has said something deliberate about
+        // reachability — usually that a report exists but is NOT published — and
+        // overwriting that with a registry URL would turn a considered "not
+        // linked" into a live link to a page that may 404.
+        if (assetMeta && assetMeta.report_url) {
+            data.issuer = data.issuer || {};
+            if (!data.issuer.report_url) {
+                data.issuer.report_url = assetMeta.report_url;
+                data.issuer.report_url_status = data.issuer.report_url_status || 'published';
+                data.issuer.report_url_source = 'assets.json registry';
+            }
+        }
         var history = null;
         if (histResp && histResp.ok) {
             history = await histResp.json();
