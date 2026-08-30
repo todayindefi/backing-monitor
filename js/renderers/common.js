@@ -3475,9 +3475,36 @@ const CommonRenderer = {
               '</ul>'
             : '';
 
+        // ⚠️ `issuer.summary` — prose, and AUTHORED BY THE PRODUCER, never here.
+        // The axis is editorial: it says who the issuer is, which regulator, what
+        // the legal instrument actually is. Every one of those is an assertion
+        // about a real company, so the same rule as `facts` applies and applies
+        // harder to a paragraph than to a bullet — this repo has already shipped
+        // an invented "Cayman-SPV / daily attestation" line that contradicted its
+        // own panels, and a renderer that composes issuer prose from fields is
+        // that failure with extra steps.
+        //
+        // `summary_source` is rendered with it. A summary of a PUBLISHED report
+        // and a summary of an INTERNAL one are different objects: the first can
+        // be followed by a reader, the second cannot, and on this asset the two
+        // are demonstrably not in sync — the internal §III carries a four-entity
+        // map, the Note structure and the BVI regulator that the published report
+        // does not mention at all.
+        var summary = typeof issuer.summary === 'string' ? issuer.summary.trim() : '';
+        var summaryHtml = summary
+            ? '<div class="issuer-summary">' + this._escapeAttr(summary) +
+              (issuer.summary_source
+                  ? '<div class="issuer-summary-src">Source: ' +
+                    this._escapeAttr(String(issuer.summary_source)) + '</div>'
+                  : '<div class="issuer-summary-src issuer-summary-src-none">\u26a0\ufe0f No source ' +
+                    'declared for this summary.</div>') +
+              '</div>'
+            : '';
+
         return '<div class="panel">' +
             '<div class="panel-title">' + this._escapeAttr(info.label) + '</div>' +
             '<div class="flex flex-wrap items-center gap-2 mb-3">' + chips + '</div>' +
+            summaryHtml +
             factsHtml +
             '<p class="text-sm text-slate-500 mb-3">' + methodology + '</p>' +
             reportLink +
