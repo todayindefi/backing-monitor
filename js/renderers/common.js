@@ -2589,6 +2589,41 @@ const CommonRenderer = {
         // collateral and its borrowed asset can both appear — is their inference
         // and belongs in the producer's note, not asserted by a renderer.
         // Prefers the producer's own `pct_sums_to` / `is_partition` once emitted.
+        // ⚠️ SAME-COUNTERPARTY LEGS READ AS INDEPENDENT EXPOSURES. yzUSD lists 16
+        // upstream legs that resolve to 10 counterparties. Ethena has a
+        // CONCENTRATION flag pointing at it; MAPLE DOES NOT — 20.67% split across
+        // three separate rows with no flag, no adjacency, and no reason for a
+        // reader to add them. riskAnalyst's case, and it is stronger than the
+        // Ethena one I led with.
+        //
+        // ⚠️ Deliberately narrow about what this claims. It groups on the
+        // PRODUCER'S OWN NAME PREFIX — "[Maple]_syrupUSDT_Loop" — and says so.
+        // It does NOT assert that two legs are the same counterparty from any
+        // knowledge of the world, and it does NOT sum their shares, because the
+        // legs do not partition (108.53%) and a summed share would be a number I
+        // invented. The producer's `by_protocol` is the right home for the
+        // arithmetic; this makes the repetition visible until it exists.
+        //
+        // Fires only where the convention is actually used: 15 of 16 legs on
+        // yzUSD, zero on every other asset.
+        var prefixCount = {};
+        up.forEach(function(x) {
+            var m = /^\[([^\]]+)\]/.exec(x && x.name || '');
+            if (m) prefixCount[m[1]] = (prefixCount[m[1]] || 0) + 1;
+        });
+        var shared = Object.keys(prefixCount).filter(function(k) { return prefixCount[k] > 1; });
+        if (shared.length) {
+            upBlock += '<div class="dep-block-note"><span class="text-amber-700">' +
+                'Several legs share a counterparty prefix:</span> ' +
+                shared.sort(function(a, b) { return prefixCount[b] - prefixCount[a]; })
+                      .map(function(k) { return CommonRenderer._escapeAttr(k) + ' \u00d7' + prefixCount[k]; })
+                      .join(' \u00b7 ') +
+                '. Grouped on the producer\'s own name prefix, not on an independent ' +
+                'counterparty check \u2014 and their shares are NOT summed here, because the ' +
+                'legs do not partition. ' + up.length + ' rows are not ' + up.length +
+                ' independent exposures.</div>';
+        }
+
         var pctSum = dep.pct_sums_to;
         if (pctSum == null && up.length > 1) {
             var acc = 0, seen = 0;
