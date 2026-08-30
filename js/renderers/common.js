@@ -1578,14 +1578,78 @@ const CommonRenderer = {
     },
 
     // --- section heads ---
-    _renderAxisHead(name, num, title, sub, ratingHtml) {
+    _renderAxisHead(name, num, title, sub, ratingHtml, block) {
         var el = document.getElementById('axis-' + name + '-head');
         if (!el) return;
         el.innerHTML =
             '<span class="axis-num">' + num + '</span>' +
             '<span class="axis-title">' + title + '</span>' +
             (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
-            (ratingHtml || '');
+            (ratingHtml || '') +
+            this._axisClockHtml(block);
+    },
+
+    // ⚠️ ONE PAGE STAMP OVER SIX CLOCKS. The header reads "Updated: 0.4h ago"
+    // from the file's top-level timestamp while, on yzUSD right now:
+    //
+    //   peg.market_price_as_of        23.9h
+    //   liquidity.venues_as_of         5.4h
+    //   issuer.issuer_score_...       17.8h
+    //   asset_specific.exposure_as_of 41.8h
+    //
+    // pegtracker-f9 found this by taking my own argument against an assembler
+    // and applying it INSIDE a single producer's file — six cadences, one stamp,
+    // and a block with no clock silently inherits one that is honest about the
+    // file and wrong about the block. No assembler required.
+    //
+    // So each axis states its own age. ⚠️ It is NOT an alarm: 17.8h is correct
+    // for an editorial score and 41.8h is the issuer's own exposure cadence.
+    // The defect was never that the data is old, it is that the page implied it
+    // was 0.4h old. Amber only past 24h, and only to draw the eye.
+    _axisClockHtml(block) {
+        if (!block || typeof block !== 'object') return '';
+        // ⚠️ Take the OLDEST declared input, not the first one found. An axis is
+        // only as fresh as its stalest component: yzUSD's liquidity block carries
+        // exit_mark.as_of at 1.7h AND venues_as_of at 5.4h, and quoting the 1.7h
+        // would be the same flattery as the file stamp, one level down.
+        //
+        // Scans one level deep plus exit_mark, because the producers name these
+        // per-field (market_price_as_of, venues_as_of, volume_24h_as_of) rather
+        // than with a block-level `as_of`. I have asked for one spelling; until
+        // it lands, accepting the existing names beats rendering "undeclared"
+        // over clocks that are plainly there.
+        var stamp = null, oldest = -1, stampKey = null;
+        function consider(v, key) {
+            if (typeof v !== 'string') return;
+            var t = new Date(v.endsWith('Z') || v.indexOf('+') > 0 ? v : v + 'Z');
+            if (isNaN(t)) return;
+            var age = Date.now() - t.getTime();
+            if (age > oldest) { oldest = age; stamp = v; stampKey = key; }
+        }
+        var RX = /(as_of|generated_at|observed_at)$/;
+        Object.keys(block).forEach(function(k) {
+            if (RX.test(k)) consider(block[k], k);
+            var v = block[k];
+            if (v && typeof v === 'object' && !Array.isArray(v)) {
+                Object.keys(v).forEach(function(k2) { if (RX.test(k2)) consider(v[k2], k + '.' + k2); });
+            }
+        });
+        if (!stamp) {
+            // A block with no clock is UNDECLARED, not fresh. Saying nothing
+            // would let it inherit the header stamp by implication — the exact
+            // thing this fixes — and would penalise the producers who do declare.
+            return '<span class="axis-clock axis-clock-none" title="This block declares no as_of, so its age is unknown. It is NOT necessarily as fresh as the page header.">cadence undeclared</span>';
+        }
+        var t = new Date(stamp.endsWith('Z') || stamp.indexOf('+') > 0 ? stamp : stamp + 'Z');
+        if (isNaN(t)) return '';
+        var h = (Date.now() - t.getTime()) / 3600000;
+        var txt = h < 1 ? Math.max(0, Math.round(h * 60)) + 'm' :
+                  h < 48 ? h.toFixed(1) + 'h' : Math.round(h / 24) + 'd';
+        return '<span class="axis-clock' + (h > 24 ? ' axis-clock-old' : '') +
+            '" title="Oldest declared input on this axis: ' + this._escapeAttr(stampKey || 'as_of') +
+            ' = ' + this._escapeAttr(stamp) +
+            '. \u26a0\ufe0f The field is NAMED because the oldest stamp is not always an input \u2014 syzUSD retains coingecko_price_as_of for a mark it REJECTED, and that diagnostic is older than the price actually published. The page header shows when the FILE was assembled, which is not the same thing as any of these.">' +
+            txt + ' old</span>';
     },
 
     // --- the four non-backing sections + backing head ---
@@ -1603,7 +1667,7 @@ const CommonRenderer = {
         // 1 · Peg
         this._renderAxisHead('peg', 1, 'Peg',
             (data.peg.source ? 'market vs NAV · ' + data.peg.source : 'market vs NAV'),
-            this._ratingChipHtml(this.pegRating(data, history)));
+            this._ratingChipHtml(this.pegRating(data, history)), data.peg);
         this._renderPegSection(data, history);
 
         // ⚠️ 2 is BACKING and 3 is LIQUIDITY — swapped from the original frame.
@@ -1614,7 +1678,7 @@ const CommonRenderer = {
         //
         // 2 · Backing (head only — panels are rendered by the existing common path)
         this._renderAxisHead('backing', 2, 'Backing', 'reserves & collateral ratio',
-            this._ratingChipHtml(this.backingRating(data)));
+            this._ratingChipHtml(this.backingRating(data)), data.backing);
         // ⚠️ collateral_ratio_basis was rendered ONLY as a hover tooltip on a ⓘ
         // glyph beside the tile. For most assets that is a reasonable place for
         // a definition. For syzUSD it is not: its basis says the headline
@@ -1661,7 +1725,7 @@ const CommonRenderer = {
         // from depth alone, which is why the tile states its scope.
         this._renderAxisHead('liquidity', 3, 'Liquidity & Exit',
             'venue depth & primary redemption',
-            this._ratingChipHtml(this.liquidityRating(data)));
+            this._ratingChipHtml(this.liquidityRating(data)), data.liquidity);
         this._renderLiquiditySection(data);
 
         // 4 · Dependencies
@@ -1684,7 +1748,7 @@ const CommonRenderer = {
         var downSub = (dep.downstream_tracked === true)
             ? (Array.isArray(dep.downstream) ? dep.downstream.length : 0) + ' downstream'
             : 'downstream not tracked';
-        this._renderAxisHead('dependencies', 4, 'Dependencies', upSub + ' \u00b7 ' + downSub, '');
+        this._renderAxisHead('dependencies', 4, 'Dependencies', upSub + ' \u00b7 ' + downSub, '', data.dependencies);
         this._renderDependenciesSection(data);
 
         // 5 · Contract & Admin — MEASURED. Split from Issuer because they fail
@@ -1701,12 +1765,14 @@ const CommonRenderer = {
         // indistinguishable from an oversight, so it must never be silent.
         this._renderAxisHead('contract', 5, 'Contract & Admin',
             'admin authority, delay, upgrade & pause surface',
-            this._ratingChipHtml(null));
+            this._ratingChipHtml(null), (data.asset_specific || {}).control || (data.asset_specific || {}).governance);
         this._renderContractSection(data);
 
         // 6 · Editorial axis (issuer, structural, or a future per-asset label)
         var issuerInfo = this._issuerAxisInfo(data.issuer || {});
-        this._renderAxisHead('issuer', 6, this._escapeAttr(issuerInfo.label), 'editorial — subjective axis', '');
+        this._renderAxisHead('issuer', 6, this._escapeAttr(issuerInfo.label), 'editorial — subjective axis', '',
+            { as_of: (data.issuer || {}).issuer_score_generated_at ||
+                     (data.issuer || {}).structural_score_generated_at });
         this._renderIssuerSection(data);
         return true;
     },
