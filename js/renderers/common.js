@@ -38,6 +38,17 @@ const CommonRenderer = {
     // The cost is that a stale overlay can downgrade a fresh page, so the age
     // is always shown and the origin always named.
     AXIS_OVERLAYS: {
+        // ⚠️ AXIS 2 IS `_backing_overlay`, NOT `_backing`, AND THE REASON IS A
+        // NAME COLLISION RATHER THAN A DISTINCTION. {slug}_backing.json is
+        // already the whole-file feed every asset loads, so axis 2 is the one
+        // axis whose per-axis name was taken before the convention existed.
+        // riskAnalyst proposed the suffix rather than inventing a namespace, and
+        // it is honoured here — but a DIRECTORY namespace (axes/{slug}_backing.json)
+        // is the better general fix, because this collision recurs the moment two
+        // producers both emit the same block type. Deferred deliberately: it
+        // changes the sync's copy shape and every fetch path, so it is a
+        // coordinated rename done once, not mid-flight.
+        backing:      '_backing_overlay',
         liquidity:    '_liquidity',
         dependencies: '_dependencies',
         contract:     '_contract',
@@ -76,10 +87,39 @@ const CommonRenderer = {
     // ignores it — which is exactly what happened: liquidity/1 has existed since
     // 12:03 and reached nothing, because its commit message asserted the sync
     // already carried it and nobody ran the copy.
+    // ⚠️ A SCHEMA IS ADOPTED WITH A MODE, NOT JUST A YES. The first cut had one
+    // rule — declared schema means the producer owns the axis, replace wholesale
+    // — and the second real overlay broke it. riskAnalyst's backing-overlay/1
+    // carries ONLY what this dashboard cannot compute (a report-derived
+    // attachment point). Replacing the backing block with it would discard the
+    // collateral ratio the dashboard measures for itself. Two legitimate kinds:
+    //
+    //   replace  the axis's canonical OWNER supplies the whole axis. Nothing of
+    //            the embedded block survives, so no field is a survivor of a
+    //            different source. (DexTracker's liquidity/1, when adopted.)
+    //   merge    a SUPPLEMENT: fields the dashboard cannot derive, added beside
+    //            the ones it computes. Per-field, each keeping its origin.
+    //
+    // `payload` is likewise per schema and this is NOT the both-spellings trap:
+    // an envelope vs a flat block is what a schema_version EXISTS to pin down.
+    // Accepting two spellings of one FIELD entrenches divergence; accepting two
+    // versioned schemas, each with a declared shape, is the versioning working.
+    //
+    //   envelope  { schema_version, asset, as_of, <axis>: { ...block } }
+    //   flat      { schema_version, asset_slug, as_of, ...block }
+    //
+    // ⚠️ ENVELOPE IS THE PREFERRED SHAPE FOR ANY NEW SCHEMA. It needs no
+    // reserved-key stripping, so a producer can never lose a data field to a
+    // meta name collision. `flat` is honoured because liquidity/1 shipped that
+    // way, not because it is equally good.
     ADOPTED_OVERLAY_SCHEMAS: {
-        // liquidity: ['liquidity/1'] -- NOT YET. Adopting it means teaching the
-        // liquidity section to read depth{} / enumeration{} / venues[] and the
-        // depth-status vocabulary. Until then the refusal is visible on the page.
+        issuer:       { 'issuer/1':          { mode: 'merge', payload: 'envelope', identity: 'asset' } },
+        backing:      { 'backing-overlay/1': { mode: 'merge', payload: 'envelope', identity: 'asset' } },
+        dependencies: { 'dependencies/1':    { mode: 'merge', payload: 'envelope', identity: 'asset' } }
+        // liquidity: { 'liquidity/1': { mode: 'replace', payload: 'flat', identity: 'asset_slug' } }
+        // ⚠️ NOT YET. Adopting it means teaching the liquidity section to read
+        // depth{} / enumeration{} / venues[] and the depth-status vocabulary.
+        // Until then the refusal is stated on the page rather than hidden.
     },
 
     // Set by mergeAxisOverlays, read by _renderAxisHead. Mutable static, same
@@ -90,17 +130,26 @@ const CommonRenderer = {
     // `overlays` is [{axis, file, json}] — nulls (404s) already filtered by the
     // caller. A missing overlay is the NORMAL case today: no producer emits one
     // yet, so this must be a no-op on all 25 live assets.
-    mergeAxisOverlays(data, overlays) {
+    mergeAxisOverlays(data, overlays, sourceSlug) {
         this.AXIS_PROVENANCE = {};
         if (!data || !Array.isArray(overlays)) return data;
         var self = this;
         var has = function(o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
 
-        // The slug the page is actually rendering. An overlay that names a
-        // DIFFERENT asset is refused rather than merged: a mis-copied file would
-        // otherwise paint one asset's liquidity onto another's page silently,
-        // and every field would carry a chip vouching for it.
-        var expected = (typeof data.asset_slug === 'string' && data.asset_slug) || null;
+        // The identities this page will answer to. An overlay naming a DIFFERENT
+        // asset is refused rather than merged: a mis-copied file would otherwise
+        // paint one asset's data onto another's page silently, with a chip
+        // vouching for it.
+        //
+        // ⚠️ TWO SPELLINGS OF THE SLUG ARE IN PLAY AND BOTH ARE LEGITIMATE. The
+        // dashboard's URL slug is dashed (reusd-re); the data filename and every
+        // producer's identity field are underscored (reusd_re), because the sync
+        // derives filenames as slug.replace('-','_'). Accepting the feed's own
+        // asset_slug AND the resolved source slug is not laxity — they are the
+        // same identity in the two spellings the pipeline already uses.
+        var expected = [];
+        if (typeof data.asset_slug === 'string' && data.asset_slug) expected.push(data.asset_slug);
+        if (typeof sourceSlug === 'string' && sourceSlug) expected.push(sourceSlug);
 
         overlays.forEach(function(o) {
             if (!o || !o.json || typeof o.json !== 'object' || Array.isArray(o.json)) return;
@@ -117,30 +166,75 @@ const CommonRenderer = {
                 };
             }
 
-            if (expected && typeof ov.asset_slug === 'string' && ov.asset_slug !== expected) {
-                refuse('asset_slug mismatch',
-                       'The overlay names ' + ov.asset_slug + '; this page is ' + expected + '.');
+            var schema = typeof ov.schema_version === 'string' ? ov.schema_version : null;
+            var spec = schema ? ((self.ADOPTED_OVERLAY_SCHEMAS || {})[axis] || {})[schema] : null;
+
+            // Identity, checked under whichever key this schema declares. An
+            // UNADOPTED schema is refused on the schema before identity is even
+            // consulted — its identity field is by definition unknown to us.
+            var idKey = spec ? spec.identity : 'asset_slug';
+            var claimed = typeof ov[idKey] === 'string' ? ov[idKey] : null;
+            if (claimed && expected.length && expected.indexOf(claimed) === -1) {
+                refuse('asset mismatch',
+                       'The overlay names ' + claimed + '; this page is ' + expected.join(' / ') + '.');
                 return;
             }
 
-            var schema = typeof ov.schema_version === 'string' ? ov.schema_version : null;
             if (schema) {
-                var adopted = (self.ADOPTED_OVERLAY_SCHEMAS || {})[axis] || [];
-                if (adopted.indexOf(schema) === -1) {
-                    refuse('schema not adopted', schema);
+                if (!spec) { refuse('schema not adopted', schema); return; }
+
+                // Envelope schemas nest the block under the axis name; flat ones
+                // put it at top level beside the meta keys.
+                var payload = base, isEnvelope = spec.payload === 'envelope';
+                if (isEnvelope) {
+                    payload = ov[axis];
+                    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                        refuse('envelope missing its block',
+                               'schema ' + schema + ' declares an envelope, so the block belongs under "' +
+                               axis + '" — that key is absent or not an object.');
+                        return;
+                    }
+                } else {
+                    payload = {};
+                    Object.keys(ov).forEach(function(k) {
+                        if (k === 'producer' || k === 'schema_version' || k === 'asset_slug' || k === 'asset') return;
+                        payload[k] = ov[k];
+                    });
+                }
+
+                // ⚠️ The envelope's own `as_of` becomes the block's clock only
+                // when the block declares none. That is NOT the re-stamping the
+                // no-assembler rule forbids: it is one producer's own clock for
+                // its own block, one level up — not a merged file's timestamp
+                // laid over six producers. And it never overwrites a stamp the
+                // block already declared, so a block that dates itself wins.
+                var pay = {};
+                Object.keys(payload).forEach(function(k) { pay[k] = payload[k]; });
+                if (!has(pay, 'as_of') && typeof ov.as_of === 'string') pay.as_of = ov.as_of;
+
+                if (spec.mode === 'replace') {
+                    var droppedKeys = Object.keys(base);
+                    data[axis] = pay;
+                    self.AXIS_PROVENANCE[axis] = {
+                        file: o.file, producer: srcName, schema: schema, replaced: true,
+                        overridden: [], added: Object.keys(pay), kept: [], dropped: droppedKeys,
+                        overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
+                    };
                     return;
                 }
-                // Adopted: the producer OWNS the axis. Replace, do not blend.
-                var replacedKeys = Object.keys(base);
-                var block = {};
-                Object.keys(ov).forEach(function(k) {
-                    if (k === 'producer' || k === 'schema_version' || k === 'asset_slug') return;
-                    block[k] = ov[k];
+
+                // mode 'merge': a SUPPLEMENT. Per field, base retained.
+                var m = {}, ovr = [], add = [], kpt = [];
+                Object.keys(base).forEach(function(k) { m[k] = base[k]; });
+                Object.keys(pay).forEach(function(k) {
+                    (has(base, k) ? ovr : add).push(k);
+                    m[k] = pay[k];
                 });
-                data[axis] = block;
+                Object.keys(base).forEach(function(k) { if (!has(pay, k)) kpt.push(k); });
+                data[axis] = m;
                 self.AXIS_PROVENANCE[axis] = {
-                    file: o.file, producer: srcName, schema: schema, replaced: true,
-                    overridden: [], added: Object.keys(block), kept: [], dropped: replacedKeys,
+                    file: o.file, producer: srcName, schema: schema,
+                    overridden: ovr, added: add, kept: kpt,
                     overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
                 };
                 return;
@@ -202,7 +296,12 @@ const CommonRenderer = {
                 : 'Refused: ' + p.refused + '. ' + (p.refused_detail || '');
             return '<span class="axis-src axis-src-refused" title="' + this._escapeAttr(
                 'An overlay for this axis EXISTS and is NOT being used.\n' +
-                'File: ' + (p.file || '?') + (src ? ' (producer: ' + src + ')' : '') + '.\n' + why +
+                'File: ' + (p.file || '?') +
+                // Only claim a producer when one was DECLARED. src falls back to
+                // the filename for chip text, and "producer: reusd_re_issuer.json"
+                // would attribute a file to itself.
+                (p.producer ? ' (producer: ' + p.producer + ')' : ' (producer undeclared)') +
+                '.\n' + why +
                 '\nThe figures shown come from the asset feed, not from ' + src + '.'
             ) + '">\u26a0\ufe0f ' + this._escapeAttr(src) + ' overlay not used</span>';
         }
@@ -1580,6 +1679,48 @@ const CommonRenderer = {
         container.style.display = '';
     },
 
+    // Data-gated: no-op for the 25 assets that publish no attachment point.
+    _renderAttachmentPoint(data) {
+        var b = data.backing || {};
+        var pct = b.attachment_point_pct;
+        if (typeof pct !== 'number' || !isFinite(pct)) return;
+        var head = document.getElementById('axis-backing-head');
+        if (!head) return;
+
+        var norm = typeof b.attachment_point_norm_pct === 'number' ? b.attachment_point_norm_pct : null;
+        // ⚠️ Trust the producer's own verdict over re-deriving it from the two
+        // numbers. `below_norm` is the analyst's call; a renderer recomputing
+        // pct < norm would silently disagree the first time a norm is expressed
+        // as a band or the comparison is not a bare less-than.
+        var below = b.attachment_point_below_norm === true;
+
+        var el = document.createElement('div');
+        el.className = 'attachment-point' + (below ? ' attachment-point-warn' : '');
+        var bits = [];
+        bits.push('<span class="ap-label">First-loss attachment point</span>' +
+                  '<span class="ap-value">' + pct.toFixed(2) + '%</span>' +
+                  (norm != null
+                      ? '<span class="ap-norm">' + (below ? '\u26a0\ufe0f below' : 'vs') +
+                        ' the ' + norm + '% norm</span>'
+                      : ''));
+        if (b.attachment_point_basis) {
+            bits.push('<div class="ap-note"><span class="ap-note-key">Basis:</span> ' +
+                      this._escapeAttr(b.attachment_point_basis) + '</div>');
+        }
+        if (b.attachment_point_direction_note) {
+            bits.push('<div class="ap-note ap-note-direction">' +
+                      this._escapeAttr(b.attachment_point_direction_note) + '</div>');
+        }
+        if (b.attachment_point_as_of) {
+            // Its own clock: the attachment point is measured on a different
+            // cadence from the reserve figures beside it, and is usually older.
+            bits.push('<div class="ap-note ap-note-asof">Measured ' +
+                      this._escapeAttr(b.attachment_point_as_of) + '</div>');
+        }
+        el.innerHTML = bits.join('');
+        head.appendChild(el);
+    },
+
     _pegTrendArrow(data, history) {
         // Compare current |deviation| to the 7-day average; ▲ = widening (worse),
         // ▼ = tightening (better). Muted when no history.
@@ -1959,6 +2100,20 @@ const CommonRenderer = {
                 backingHead.appendChild(sNote);
             }
         }
+        // ⚠️ THE FIRST-LOSS ATTACHMENT POINT, WHICH A COLLATERAL RATIO CANNOT SAY.
+        // For a tranched asset the question is not "is there enough collateral"
+        // but "how much loss lands on somebody else first". The dashboard cannot
+        // compute it — it comes from the report — so it arrives as a backing
+        // overlay and would otherwise sit in the payload unrendered, which is
+        // this repo's most-repeated defect.
+        //
+        // ⚠️ IT MUST RENDER THE DIRECTION, NOT ONLY THE LEVEL. reUSD's cushion
+        // thinned because the DENOMINATOR ROSE — senior deposits grew, no loss
+        // occurred. So a supply chart beside this reads as demand and health
+        // while the cushion erodes underneath it. The level alone would let a
+        // reader draw exactly the wrong conclusion from the rest of the page.
+        this._renderAttachmentPoint(data);
+
         // Optional composition sub-panel (USDC held-vs-denominated split + per-Star
         // breakdown). Data-gated & additive: no-op for assets lacking the fields.
         this._renderBackingComposition(data);

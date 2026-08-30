@@ -263,7 +263,7 @@ async function renderAsset(slug) {
         // field keeping its origin. Runs before preRender so a bespoke renderer
         // reads the merged block rather than the pre-merge one — otherwise a
         // renderer and the common frame would disagree about the same axis.
-        CommonRenderer.mergeAxisOverlays(data, overlays);
+        CommonRenderer.mergeAxisOverlays(data, overlays, sourceSlug);
         var history = null;
         if (histResp && histResp.ok) {
             history = await histResp.json();

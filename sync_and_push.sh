@@ -33,7 +33,7 @@ fi
 SUFFIXES="_backing _backing_history _peg_history _critical_events _flow \
           _nav_history _coverage_history _reserve_known_destinations _family \
           _treasury _treasury_history _backing_last_attempt \
-          _liquidity _contract _dependencies"
+          _liquidity _contract _dependencies _issuer _backing_overlay"
 
 SLUGS=$(python3 -c "import json;print(' '.join(a['slug'].replace('-','_') for a in json.load(open('data/assets.json'))))")
 
@@ -55,7 +55,8 @@ SLUGS=$(python3 -c "import json;print(' '.join(a['slug'].replace('-','_') for a 
 # rather than resolved silently — two producers claiming one block is a pipeline
 # question, not something a cp should decide at 3am.
 SOURCE_ROOTS="/home/danger/PegTracker/data \
-              /home/danger/DexTracker/data/liquidity"
+              /home/danger/DexTracker/data/liquidity \
+              /home/danger/riskAnalyst/data/axes"
 
 for slug in $SLUGS; do
     for suf in $SUFFIXES; do
