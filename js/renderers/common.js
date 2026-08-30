@@ -2002,19 +2002,38 @@ const CommonRenderer = {
                     // producer now publishes market_price_as_of / _age_hours /
                     // _source, so the age travels WITH the number instead of
                     // being a thing a reader has to assume.
-                    (peg.market_price_age_hours != null || peg.market_price_source
-                        ? '<div class="text-[11px] mt-0.5 ' +
-                          (peg.market_price_age_hours != null && peg.market_price_age_hours > 6
-                              ? 'text-amber-700 font-semibold' : 'text-slate-400') + '"' +
-                          (peg.market_price_as_of ? ' title="as of ' + this._escapeAttr(peg.market_price_as_of) + '"' : '') +
-                          '>' +
-                          (peg.market_price_source ? this._escapeAttr(String(peg.market_price_source).replace(/^peg_tracker:/, '')) : 'source not named') +
-                          (peg.market_price_age_hours != null
-                              ? ' · ' + (peg.market_price_age_hours < 1
-                                  ? Math.round(peg.market_price_age_hours * 60) + 'm old'
-                                  : peg.market_price_age_hours.toFixed(1) + 'h old')
-                              : '') +
-                          '</div>' : '') +
+                    // ⚠️ AGE IS COMPUTED FROM `market_price_as_of`, NOT read from a
+                    // published `market_price_age_hours`. A stored age is stale by
+                    // construction — this fleet already published
+                    // `price_age_hours: 0.012` identically across four unrelated
+                    // assets, because it was the age of the RUN rather than of the
+                    // mark, which made a downstream freshness guard unable to fire.
+                    //
+                    // pegtracker-f9 kept the stored field alive behind a named
+                    // exemption solely because this line read it. This removes the
+                    // reason, so the field can go.
+                    (function () {
+                        var srcTxt = peg.market_price_source
+                            ? CommonRenderer._escapeAttr(String(peg.market_price_source).replace(/^peg_tracker:/, ''))
+                            : (peg.market_price_as_of ? 'source not named' : null);
+                        var h = null;
+                        if (peg.market_price_as_of) {
+                            var t = new Date(peg.market_price_as_of.endsWith('Z') ||
+                                             peg.market_price_as_of.indexOf('+') > 0
+                                             ? peg.market_price_as_of : peg.market_price_as_of + 'Z');
+                            if (!isNaN(t)) h = (Date.now() - t.getTime()) / 3600000;
+                        }
+                        if (srcTxt == null && h == null) return '';
+                        var ageTxt = h == null ? '' :
+                            ' · ' + (h < 1 ? Math.max(0, Math.round(h * 60)) + 'm old'
+                                           : h.toFixed(1) + 'h old');
+                        return '<div class="text-[11px] mt-0.5 ' +
+                            (h != null && h > 6 ? 'text-amber-700 font-semibold' : 'text-slate-400') + '"' +
+                            (peg.market_price_as_of
+                                ? ' title="as of ' + CommonRenderer._escapeAttr(peg.market_price_as_of) + '"'
+                                : ' title="No market_price_as_of is published, so the age of this mark is unknown."') +
+                            '>' + (srcTxt || 'source not named') + ageTxt + '</div>';
+                    })() +
                 '</div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">NAV / theoretical</div>' +
                     '<div class="text-lg font-bold font-mono">' + fmtP(nav) + '</div>' +
@@ -2554,6 +2573,34 @@ const CommonRenderer = {
         // denominator. Sits under the grid it describes, not above it.
         if (dep.note) {
             upBlock += '<div class="dep-block-note">' + dep.note + '</div>';
+        }
+
+        // ⚠️ THE LEGS DO NOT PARTITION. yzUSD's 16 upstream shares sum to 108.53%,
+        // and nothing on the page said so — a reader adding the rows gets 108%
+        // and either distrusts the page or, worse, does not add them.
+        //
+        // riskAnalyst found this while reproducing my protocol-grouping finding,
+        // and it is the same rule I had just given them one axis over: publish
+        // the set, not the derived number. `distinct_protocol_count` alone would
+        // have hidden it completely — the count is right, the shares are right,
+        // and the SUM is the thing that says what they mean.
+        //
+        // ⚠️ States the arithmetic only. The CAUSE — that a levered leg's
+        // collateral and its borrowed asset can both appear — is their inference
+        // and belongs in the producer's note, not asserted by a renderer.
+        // Prefers the producer's own `pct_sums_to` / `is_partition` once emitted.
+        var pctSum = dep.pct_sums_to;
+        if (pctSum == null && up.length > 1) {
+            var acc = 0, seen = 0;
+            up.forEach(function(x) { if (typeof x.pct === 'number') { acc += x.pct; seen++; } });
+            if (seen === up.length) pctSum = acc;
+        }
+        if (up.length > 1 && typeof pctSum === 'number' &&
+            (dep.is_partition === false || pctSum > 101 || pctSum < 99)) {
+            upBlock += '<div class="dep-block-note"><span class="text-amber-700">' +
+                'These shares do not partition:</span> they sum to ' + pctSum.toFixed(1) +
+                '%, not 100%. Legs are not mutually exclusive, so they cannot be read as ' +
+                'slices of the backing and must not be added.</div>';
         }
 
         // Downstream is a reserved stub until a consumer analyzer exists. An
