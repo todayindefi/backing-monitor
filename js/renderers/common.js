@@ -1785,6 +1785,36 @@ const CommonRenderer = {
         head.appendChild(el);
     },
 
+    // Data-gated: silent for every asset that publishes no write path.
+    _navWritePathHtml(data) {
+        var b = (data && data.backing) || {};
+        var path = typeof b.nav_write_path === 'string' ? b.nav_write_path.trim() : '';
+        if (!path) return '';
+        var basis = typeof b.nav_write_path_basis === 'string' ? b.nav_write_path_basis.trim() : '';
+
+        // ⚠️ RENDER THE LIMIT, NOT ONLY THE CLAIM — the producer asked for this
+        // explicitly and was right to. Their evidence is selector presence in
+        // bytecode, which does NOT distinguish a contract that IMPLEMENTS a
+        // function from one that CALLS it, and no disassembly was done. The
+        // claim as written is stronger than the evidence supports, and a finding
+        // this serious is exactly the one that must carry its own uncertainty:
+        // a reader who later discovers the limit unaided discounts everything
+        // else on the page too.
+        //
+        // The limit is NOT hidden in a tooltip. It is the same size and in the
+        // same block as the claim, because a caveat a touch device cannot reach
+        // is a caveat that does not exist.
+        return '<div class="nav-write-path">' +
+            '<div class="nwp-head">\u26a0\ufe0f NAV write path</div>' +
+            '<div class="nwp-claim">' + this._escapeAttr(path) + '</div>' +
+            (basis
+                ? '<div class="nwp-basis"><span class="nwp-basis-key">Basis &amp; limit:</span> ' +
+                  this._escapeAttr(basis) + '</div>'
+                : '<div class="nwp-basis nwp-basis-none">\u26a0\ufe0f No basis published for this ' +
+                  'claim \u2014 it is asserted here without stated evidence or limits.</div>') +
+            '</div>';
+    },
+
     _pegTrendArrow(data, history) {
         // Compare current |deviation| to the 7-day average; ▲ = widening (worse),
         // ▼ = tightening (better). Muted when no history.
@@ -2514,12 +2544,28 @@ const CommonRenderer = {
                     (peg.nav_basis
                         ? '<div class="text-[11px] text-slate-400 mt-0.5" style="line-height:1.35;">vs ' +
                           this._escapeAttr(peg.nav_basis) + '</div>' : '') +
+                    // ⚠️ WHO WRITES THE NAV, RENDERED BESIDE THE NAV. A
+                    // discount-to-NAV is only as trustworthy as the number in the
+                    // denominator, and on an issuer-written NAV that denominator
+                    // is a claim rather than a measurement. This must sit next to
+                    // the figure it qualifies — behind a tooltip or one section
+                    // down, it qualifies nothing.
+                    //
+                    // ⚠️ CROSS-BLOCK READ, DELIBERATE. The field lives in the
+                    // BACKING overlay because its evidence is a contract audit,
+                    // but the number it describes is on the PEG tile. Rendering
+                    // it where its producer files it would put the warning on a
+                    // panel that does not show the NAV.
                 '</div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Premium / discount</div>' +
                     '<div class="text-lg font-bold font-mono ' + pctCls + '">' + this.pegPctText(pct, 3) + '</div></div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
                     '<div class="text-lg font-bold ' + pctCls + '">' + this.pegStatusLabel(st) + '</div></div>' +
-            '</div>';
+            '</div>' +
+            // Below the stat row, not inside the NAV cell: in the cell it renders
+            // as a ~20-character column and a warning nobody finishes reading is
+            // not a warning. Still directly beneath the figure it qualifies.
+            this._navWritePathHtml(data);
 
         // peg.history_ref may name a file OTHER than the backing history that was
         // passed in — the per-asset {slug}_peg_history.json exports do exactly
