@@ -122,6 +122,27 @@ const CommonRenderer = {
         // Until then the refusal is stated on the page rather than hidden.
     },
 
+    // ⚠️ A KEPT FIELD THAT RENDERS AN OVERRIDDEN ONE IS STALE, AND IT WINS BY
+    // DEFAULT. Found on the first real reUSD render: PegTracker published the
+    // report's OVERALL score as the issuer badge ("Overall 6.0/10"), riskAnalyst's
+    // overlay overrode issuer_score to its authored 5.5 — and the page showed
+    // axis 6 TITLED "Overall" reading 6.0/10, because _issuerAxisInfo derives
+    // both the label and the value from `badge` when one is present. The merge
+    // was correct field-by-field and the result was wrong twice over: wrong axis
+    // name, wrong number.
+    //
+    // Per-field merge cannot see this on its own — `badge` and `issuer_score` are
+    // different keys, so nothing marks one as describing the other. It has to be
+    // declared. If the underlying value is overridden and its rendering is not,
+    // the rendering is dropped so the renderer rebuilds it from the live value.
+    //
+    // ⚠️ Keep this list SHORT and only for fields that are literally a rendering
+    // of another. It is not a general "recompute what looks derived" rule — that
+    // would start discarding producer-authored text on suspicion.
+    DERIVED_FIELDS: {
+        issuer: { badge: ['issuer_score', 'structural_score'] }
+    },
+
     // Set by mergeAxisOverlays, read by _renderAxisHead. Mutable static, same
     // idiom as KNOWN_ASSET_SLUGS. Reset on every merge so an SPA navigation
     // cannot carry the previous asset's provenance onto this one.
@@ -231,10 +252,11 @@ const CommonRenderer = {
                     m[k] = pay[k];
                 });
                 Object.keys(base).forEach(function(k) { if (!has(pay, k)) kpt.push(k); });
+                var stale = self._dropStaleDerived(axis, m, ovr, kpt);
                 data[axis] = m;
                 self.AXIS_PROVENANCE[axis] = {
                     file: o.file, producer: srcName, schema: schema,
-                    overridden: ovr, added: add, kept: kpt,
+                    overridden: ovr, added: add, kept: kpt, stale_dropped: stale,
                     overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
                 };
                 return;
@@ -257,10 +279,12 @@ const CommonRenderer = {
             });
             Object.keys(base).forEach(function(k) { if (!has(ov, k)) kept.push(k); });
 
+            var staleP = self._dropStaleDerived(axis, merged, overridden, kept);
             data[axis] = merged;
             self.AXIS_PROVENANCE[axis] = {
                 file: o.file,
                 producer: srcName,
+                stale_dropped: staleP,
                 overridden: overridden,
                 added: added,
                 kept: kept,
@@ -268,6 +292,24 @@ const CommonRenderer = {
             };
         });
         return data;
+    },
+
+    // Drop kept-but-stale renderings; mutates `block` and `kept`, returns what went.
+    _dropStaleDerived(axis, block, overridden, kept) {
+        var map = (this.DERIVED_FIELDS || {})[axis];
+        if (!map) return [];
+        var gone = [];
+        Object.keys(map).forEach(function(field) {
+            if (kept.indexOf(field) === -1) return;          // producer supplied it, or absent
+            var sources = map[field] || [];
+            var overriddenSource = sources.some(function(sc) { return overridden.indexOf(sc) !== -1; });
+            if (!overriddenSource) return;
+            delete block[field];
+            var at = kept.indexOf(field);
+            if (at !== -1) kept.splice(at, 1);
+            gone.push(field);
+        });
+        return gone;
     },
 
     // The origin chip. Rendered ONLY when an overlay contributed — silence means
@@ -341,7 +383,12 @@ const CommonRenderer = {
                 : '\u26a0\ufe0f The overlay declares NO as_of, so its own age is unknown — the ' +
                   'clock beside this can only report the stamps the asset feed declared.') +
             (mixed ? '\n\u26a0\ufe0f MIXED: two producers, two clocks. The age shown is the oldest ' +
-                     'of them, which is not necessarily this source\u2019s.' : '');
+                     'of them, which is not necessarily this source\u2019s.' : '') +
+            ((p.stale_dropped && p.stale_dropped.length)
+                ? '\n\u26a0\ufe0f Dropped as stale: ' + p.stale_dropped.sort().join(', ') +
+                  ' \u2014 the asset feed\u2019s rendering of a value this overlay overrode. Kept, it ' +
+                  'would have displayed the OLD number under the OLD label.'
+                : '');
         if (disjoint) {
             tip += '\n\u26a0\ufe0f NO FIELD IN COMMON with the asset feed: this overlay overrode ' +
                    'NOTHING. Every figure rendered on this axis is still the feed\u2019s. Either the ' +
