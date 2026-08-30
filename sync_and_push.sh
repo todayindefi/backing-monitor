@@ -15,102 +15,41 @@ if [ "$BRANCH" != "main" ]; then
 fi
 
 # Sync backing data from PegTracker
-cp /home/danger/PegTracker/data/ousd_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/ousd_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/frax_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/frax_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/crvusd_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/crvusd_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usg_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usg_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usdd_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usdd_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/thusd_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/thusd_critical_events.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/thusd_flow.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/thusd_nav_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/thusd_coverage_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/thusd_reserve_known_destinations.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/syrupusdc_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/syrupusdc_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/syrupusdt_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/syrupusdt_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/syrup_family.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/apxusd_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/apxusd_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/apyusd_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/apyusd_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/apyx_family.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/strc_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/strc_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/strategy_events.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usdat_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usdat_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/susdat_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/susdat_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/saturn_family.json data/ 2>/dev/null
+# ============================================================================
+# ⚠️ WAS 76 HAND-TYPED cp LINES. A new analyzer output silently never reached the
+# dashboard until someone appended a line — the symptom is always "the data is in
+# PegTracker and nothing is on the page." It blocked Ethena until 4975b236, and
+# cUSD's peg history broke today when its source was retired upstream and the
+# line stayed behind.
+#
+# ⚠️ A bare glob is the WRONG fix: PegTracker's data dir holds 39 files matching
+# registered slugs that must NOT be published — `_last_good` snapshots and
+# `_oft_audit` diagnostics. So this enumerates BLOCK TYPES (short, stable, and
+# the thing a new producer actually adds) crossed with REGISTERED SLUGS (read
+# from assets.json, so registering an asset wires its whole file set at once).
+#
+# Adding an axis producer is now one word in SUFFIXES, not N lines.
+# ============================================================================
+SUFFIXES="_backing _backing_history _peg_history _critical_events _flow \
+          _nav_history _coverage_history _reserve_known_destinations _family \
+          _treasury _treasury_history _backing_last_attempt \
+          _liquidity _contract _dependencies"
 
-# Per-asset peg history exports (peg_history_export.py). These back peg.history_ref.
-# Only the slugs this dashboard serves are copied — the allowlist is deliberate,
-# not a glob. thbill's export is a bare list rather than the {points,entries,...}
-# envelope and no asset here consumes it, so it is left out.
-cp /home/danger/PegTracker/data/apxusd_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/apyusd_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/crvusd_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/ousd_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/susdai_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/susdat_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/susde_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/syrupusdc_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/syrupusdt_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usdai_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usdat_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usde_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usds_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usdm_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usdm_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usde_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usde_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/susde_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/susde_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/ethena_family.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usdai_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usdai_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/susdai_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/susdai_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usdai_family.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usds_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/usds_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/susds_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/susds_backing_history.json data/ 2>/dev/null
-# BMNR: PegTracker emits *_treasury.json; dashboard app.js convention is *_backing.json
-cp /home/danger/PegTracker/data/bmnr_treasury.json data/bmnr_backing.json 2>/dev/null
-cp /home/danger/PegTracker/data/bmnr_treasury_history.json data/bmnr_backing_history.json 2>/dev/null
-# Cap (cUSD): common per-asset schema in cusd_backing.json (drives common summary/
-# risk/coverage-chart) + rich shared cap_family.json (peg quotes, operator book,
-# restaker coverage) consumed by js/renderers/cap.js — mirrors the ethena split.
-cp /home/danger/PegTracker/data/cusd_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/cusd_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/cap_family.json data/ 2>/dev/null
-# Hastra PRIME / wYLDS: independent multi-source reserve monitor. The dashboard
-# snapshot is only ever overwritten by a run where EVERY leg (Provenance
-# balances + Solana + Ethereum supply) succeeded, so on failure it freezes at
-# last-good rather than publishing a ratio with a hole in it. The last_attempt
-# slot carries the failed run — hastra-prime.js reads it purely to name the
-# failing leg in the staleness badge, so its absence is harmless.
-cp /home/danger/PegTracker/data/hastra_prime_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/hastra_prime_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/hastra_prime_backing_last_attempt.json data/ 2>/dev/null
+SLUGS=$(python3 -c "import json;print(' '.join(a['slug'].replace('-','_') for a in json.load(open('data/assets.json'))))")
 
-# Yuzu (yzUSD / syzUSD): registered 2026-08-29. Both feeds carry the full 5-axis
-# schema, so the generic renderer serves them — no bespoke renderer, same path
-# usds/susds take. yzusd_backing_history.json exists; syzUSD has no history file
-# of its own, which is why there is no cp line for one.
-cp /home/danger/PegTracker/data/yzusd_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/syzusd_backing.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/yzusd_backing_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/yzusd_peg_history.json data/ 2>/dev/null
-cp /home/danger/PegTracker/data/syzusd_peg_history.json data/ 2>/dev/null
+for slug in $SLUGS; do
+    for suf in $SUFFIXES; do
+        src="/home/danger/PegTracker/data/${slug}${suf}.json"
+        [ -f "$src" ] && cp "$src" data/
+    done
+done
+
+# Files whose names are not <registered-slug><suffix> — family rollups shared by
+# several assets, and the Strategy event log. These stay explicit because there
+# is no slug to derive them from.
+for f in apyx_family.json cap_family.json ethena_family.json frax_backing.json frax_backing_history.json saturn_family.json strategy_events.json syrup_family.json; do
+    [ -f "/home/danger/PegTracker/data/$f" ] && cp "/home/danger/PegTracker/data/$f" data/
+done
 
 # Integrate any remote changes first (e.g. dashboard claude's commits) so our
 # data-only push fast-forwards. Without this, a non-fast-forward push is
