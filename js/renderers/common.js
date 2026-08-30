@@ -1725,8 +1725,8 @@ const CommonRenderer = {
                 // bare dash. contract_score does not exist for any asset; see the
                 // axis-5 comment in renderAxisSections.
                 label: 'Contract',
-                valueHtml: '<span class="text-slate-400">—</span>',
-                sub: 'admin authority & delay',
+                valueHtml: this._contractValueHtml(data),
+                sub: this._contractSubText(data),
                 chip: '<span class="axis-rating r-na" title="No contract_score exists for any asset in the risk feed. The material is rendered in the axis below; the score is not yet authored.">Not scored yet</span>'
             },
             {
@@ -2081,6 +2081,45 @@ const CommonRenderer = {
         return this.formatPercent(cr, 6);
     },
 
+    // ⚠️ The tile printed "—" while the axis below carried a hand-walked
+    // authority topology whose finding is a SPLIT: 48h on the code, nothing
+    // established on the supply. A dash over that reads as "not assessed", which
+    // is precisely the reading the axis panel spends a paragraph refusing.
+    //
+    // Derived from the layer rows, never authored, so it follows the walk. If a
+    // producer ever publishes a contract SCORE this stays as the factual value
+    // beside it — the two answer different questions.
+    _contractValueHtml(data) {
+        var c = data.contract;
+        var layers = (c && Array.isArray(c.layers)) ? c.layers : [];
+        if (!layers.length) return '<span class="text-slate-400">—</span>';
+        var delayed = null, open = null;
+        layers.forEach(function(l) {
+            var tl = String(l.timelock == null ? '' : l.timelock);
+            if (tl && tl !== 'none' && tl !== 'unresolved') { if (!delayed) delayed = tl; }
+            else if (!open) open = tl === 'unresolved' ? 'not measured' : 'none';
+        });
+        if (delayed && open) {
+            return '<span class="text-slate-700 dark:text-slate-200">' + this._escapeAttr(delayed) + '</span>' +
+                '<span class="text-slate-400 text-base font-normal"> / </span>' +
+                '<span class="text-amber-700">' + this._escapeAttr(open) + '</span>';
+        }
+        if (delayed) return '<span class="text-slate-700 dark:text-slate-200">' + this._escapeAttr(delayed) + '</span>';
+        return '<span class="text-amber-700">' + this._escapeAttr(open || 'none') + '</span>';
+    },
+
+    _contractSubText(data) {
+        var c = data.contract;
+        var layers = (c && Array.isArray(c.layers)) ? c.layers : [];
+        if (!layers.length) return 'admin authority & delay';
+        var names = layers.map(function(l) {
+            return String(l.authority_layer || '?').replace(/-/g, ' ');
+        });
+        // Names the two authorities in the same order as the value, so "48h /
+        // not measured" cannot be read as one number with an error beside it.
+        return names.join(' / ') + (c.method ? ' \u00b7 ' + c.method : '');
+    },
+
     _backingValueHtml(data) {
         var cr = (data.backing && data.backing.collateral_ratio != null)
             ? data.backing.collateral_ratio : (data.summary && data.summary.collateral_ratio);
@@ -2097,6 +2136,29 @@ const CommonRenderer = {
                     (covBasis ? ' title="' + this._escapeAttr(covBasis) + '"' : '') + '>' +
                     this.formatPercent(cov, 2) + '</span>' +
                     '<span class="text-slate-400 text-xs"> on-chain</span>';
+            }
+            // ⚠️ STILL NOTHING? Fall through to the FIRST-LOSS ATTACHMENT POINT
+            // before printing a dash. Same principle as the coverage fallback
+            // above — show what IS known — and it matters more here: reUSD has
+            // no derivable collateral ratio (the issuer publishes combined
+            // reUSD + reUSDe reserves with no asset-attributed denominator), so
+            // the tile printed "—" over an axis whose headline is a cushion
+            // measured BELOW the norm its own report invokes. The top row is
+            // what a reader scans; a dash there reads as "nothing measured".
+            //
+            // ⚠️ Labelled, never presented as a coverage ratio. It answers a
+            // different question — how much loss lands on someone else first —
+            // and the sub text switches with it so the two cannot be confused.
+            var ap = data.backing && data.backing.attachment_point_pct;
+            if (typeof ap === 'number') {
+                var below = data.backing.attachment_point_below_norm === true;
+                var apTitle = [data.backing.attachment_point_basis,
+                               data.backing.attachment_point_vintage_note]
+                    .filter(Boolean).join(' \u2014 ');
+                return '<span class="' + (below ? 'text-amber-700' : 'text-slate-700') + '"' +
+                    (apTitle ? ' title="' + this._escapeAttr(apTitle) + '"' : '') + '>' +
+                    this.formatPercent(ap, 2) + '</span>' +
+                    (below ? '<span class="text-amber-700 text-xs"> \u26a0\ufe0f</span>' : '');
             }
             return '—';
         }
@@ -2127,6 +2189,17 @@ const CommonRenderer = {
         // backing ratio at all: there, nothing is known and a dash is honest.
         if (b.collateral_ratio == null && b.on_chain_coverage_display_pct != null) {
             return 'on-chain only \u2014 total backing unobservable';
+        }
+        // ⚠️ THE LABEL MUST MOVE WITH THE VALUE. When the tile falls through to
+        // the attachment point, "collateral ratio" underneath it is a mislabel of
+        // exactly the kind this file keeps fixing elsewhere — a number rendered
+        // under the name of a different quantity. 9.66% is not coverage; it is
+        // how much loss lands on someone else before this tranche is touched.
+        if (b.collateral_ratio == null && typeof b.attachment_point_pct === 'number') {
+            return 'first-loss attachment' +
+                (b.attachment_point_norm_pct != null
+                    ? ' \u00b7 ' + b.attachment_point_norm_pct + '% norm' : '') +
+                ' \u2014 no collateral ratio derivable';
         }
         var sd = (b.surplus_deficit != null)
             ? b.surplus_deficit : (data.summary && data.summary.surplus_deficit);
