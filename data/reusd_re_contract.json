@@ -1,0 +1,102 @@
+{
+  "schema_version": "contract/1",
+  "asset": "reusd_re",
+  "producer": "security_analyst",
+  "as_of": "2026-08-30",
+  "generated_at": "2026-08-30T16:43:39Z",
+  "contract": {
+    "headline": "A 48h timelock covers contract-upgrade (DEFAULT_ADMIN_ROLE, UPGRADER_ROLE). asset-permission (MINTER_ROLE) has NO established delay — timelock: unresolved. The delay protects the code and not the supply.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "method_note": "Replaced a v1.7 generator row that read topology: unknown, m: 4, timelock: unresolved. security_analyst's generator is iced; on their own coverage audit only 36.5% of generated rows were trustworthy.",
+    "observed_at": "2026-08-30",
+    "source_file": "security_analyst/topology/assets/reusd-re.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "topology": "timelocked",
+        "keys": [
+          "DEFAULT_ADMIN_ROLE",
+          "UPGRADER_ROLE"
+        ],
+        "timelock": "48h",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "via": "DEFAULT_ADMIN_ROLE",
+            "terminal": "timelock",
+            "timelock": "48h",
+            "reach": "full",
+            "terminal_address": "0x69ddea332723cf5407151aaf68b9b076557fca93"
+          },
+          {
+            "holder": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "via": "UPGRADER_ROLE",
+            "terminal": "timelock",
+            "timelock": "48h",
+            "reach": "full",
+            "terminal_address": "0x69ddea332723cf5407151aaf68b9b076557fca93"
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "topology": "unresolved",
+        "keys": [
+          "MINTER_ROLE"
+        ],
+        "timelock": "unresolved",
+        "reach": "full"
+      }
+    ],
+    "unresolved": [
+      "ethereum asset-permission: MINTER_ROLE holders NOT established by this repo. riskAnalyst assets/reusd-re.md walked three undelayed paths (an ERC1967Proxy/InsuranceCapitalLayer, an InstantRedemption whose authority slot leads to an OZ AccessManager, and a BurnWithFromMintTokenPool whose owner() is the 3-of-5 Safe) and reports all three terminating at Safe 0x8eec1061…fbad with getTargetAdminDelay 0. THAT IS THEIR WALK, NOT OURS — the addresses are truncated in their file so a direct hasRole check had no candidates, and a RoleGranted/RoleRevoked enumeration over the last 400,000 blocks TIMED OUT on three public endpoints. Unresolved, not zero.",
+      "ethereum contract-upgrade: PROPOSER/CANCELLER role holders on timelock 0x69ddea33…fca93 not enumerated here. Safe 0x8eec1061…fbad is 3-of-5 (measured) and is reported by riskAnalyst as sole PROPOSER, with an independent CANCELLER EOA at nonce 0; neither role assignment was read from the timelock by this repo.",
+      "arbitrum/base/avalanche: same-address absence confirmed (code size 0). A deployment at a different address was NOT searched for.",
+      "forceNAVUpdate path: 0xe888df3218e070fae8d90d2ba6fcac5520217484 (632B, nonce 1) carries both setSharePrice and forceNAVUpdate selectors and answers no standard interface. Whether it IMPLEMENTS or CALLS them needs disassembly, which was not done. It is also not expressible in this schema — see the `parameter` open item in registry/incidents.md."
+    ],
+    "walk_notes": [
+      "✅ HAND-WALKED 2026-08-30, NOT GENERATOR OUTPUT. This file deliberately does NOT",
+      "carry the TRUST WARNING banner the generator files carry — it replaces a v1.7",
+      "generator file that held ONE layer, `topology: unknown`, `m: 4` and",
+      "`timelock: unresolved`, which was materially worse than what riskAnalyst's",
+      "assets/reusd-re.md was already citing FROM it.",
+      "",
+      "⚠️ THE OLD FILE'S SINGLE LAYER CONFLATED TWO AUTHORITIES, and riskAnalyst named",
+      "it first: \"LAYER LABEL FITS ONLY PART OF WHAT IS FILED HERE — MINTER_ROLE is not",
+      "a contract-upgrade authority.\" Correct. Mint lives in `asset-permission` (USDai",
+      "is the worked case, keys [BRIDGE_ADMIN_ROLE, DEFAULT_ADMIN_ROLE]). Split here so",
+      "\"2 days on the code\" and \"no delay on the supply\" are two rows rather than one",
+      "row hiding the second inside the first.",
+      "",
+      "VERIFICATION TRAIL (this repo, ethereum, 2026-08-30, ethereum-rpc.publicnode.com):",
+      "token 0x5086bf35…0c72  name() \"Re Protocol Deposit Token\"  supply 201,084,062.66",
+      "EIP-1967 impl 0xb5276c43…21d4 (6,498B); beacon slot 0x0; ADMIN SLOT 0x0",
+      "upgradeToAndCall(address,bytes) PRESENT / upgradeTo(address) ABSENT  -> OZ v5 UUPS",
+      "owner() transferOwnership() admin() proxiableUUID() ALL REVERT       -> not Ownable",
+      "grantRole(bytes32,address) PRESENT                                   -> AccessControl",
+      "hasRole(DEFAULT_ADMIN_ROLE, timelock 0x69ddea33…fca93) = TRUE",
+      "hasRole(UPGRADER_ROLE,      timelock 0x69ddea33…fca93) = TRUE",
+      "hasRole(DEFAULT_ADMIN/UPGRADER/MINTER, Safe 0x8eec1061…fbad) = FALSE  <- flows via the timelock, not direct",
+      "timelock.getMinDelay() = 172800 (2d); MINIMUM_DELAY() and MIN_DELAY() BOTH REVERT",
+      "Safe 0x8eec1061…fbad getThreshold()=3 getOwners()=5",
+      "control: hasRole(MINTER_ROLE, 0x…dEaD) = FALSE",
+      "",
+      "⚠️ CHAIN COVERAGE IS ETHEREUM-ONLY, AND THAT IS A BOUNDED CLAIM. The token",
+      "address has code size 0 on arbitrum, base and avalanche. PegTracker's backing",
+      "snapshot describes the asset as \"Ethereum primary; also Arbitrum, Base,",
+      "Avalanche\", so a deployment at a DIFFERENT address on those chains is NOT",
+      "excluded — it was not searched for. Same-address absence only.",
+      "",
+      "⚠️ THE UPGRADE DELAY HAS NO FLOOR. getMinDelay() is 172800 but no MINIMUM_DELAY",
+      "constant exists, so the delay is reducible by whoever can schedule against the",
+      "timelock's own admin. Reading delay_current alone overstates the protection —",
+      "the same shape audits/held-layer-delay-canceller.yaml found on every timelock",
+      "row it examined."
+    ]
+  }
+}

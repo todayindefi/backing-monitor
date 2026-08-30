@@ -115,7 +115,13 @@ const CommonRenderer = {
     ADOPTED_OVERLAY_SCHEMAS: {
         issuer:       { 'issuer/1':          { mode: 'merge', payload: 'envelope', identity: 'asset' } },
         backing:      { 'backing-overlay/1': { mode: 'merge', payload: 'envelope', identity: 'asset' } },
-        dependencies: { 'dependencies/1':    { mode: 'merge', payload: 'envelope', identity: 'asset' } }
+        dependencies: { 'dependencies/1':    { mode: 'merge', payload: 'envelope', identity: 'asset' } },
+        // ⚠️ REPLACE, not merge: security_analyst owns axis 5 outright and the
+        // base feed publishes no contract block at all, so nothing is discarded.
+        // The mode still matters — it guarantees no field on this axis is a
+        // survivor of a different source, which for an authority walk is the
+        // difference between evidence and a composite nobody measured.
+        contract:     { 'contract/1':        { mode: 'replace', payload: 'envelope', identity: 'asset' } }
         // liquidity: { 'liquidity/1': { mode: 'replace', payload: 'flat', identity: 'asset_slug' } }
         // ⚠️ NOT YET. Adopting it means teaching the liquidity section to read
         // depth{} / enumeration{} / venues[] and the depth-status vocabulary.
@@ -3521,9 +3527,89 @@ const CommonRenderer = {
         return '<span class="axis-rating r-na" title="No report URL is published for this asset.">No report</span>';
     },
 
+    // Axis 5 from a topology walk (contract/1). Data-gated: every asset without
+    // one keeps the existing asset_specific.governance / .control panels, and
+    // assets with neither keep the "Not assessed" state, which is correct and
+    // is not a gap to paper over.
+    _topologyWalkHtml(data) {
+        var c = data.contract;
+        if (!c || typeof c !== 'object' || !c.headline) return '';
+        var self = this;
+        var esc = function(x) { return self._escapeAttr(String(x)); };
+
+        var layers = Array.isArray(c.layers) ? c.layers : [];
+        var layerRows = layers.map(function(l) {
+            var tl = String(l.timelock == null ? '' : l.timelock);
+            // ⚠️ "unresolved" is NOT "none" and must not render as a clean cell.
+            // Their coverage audit exists because `timelock: unresolved` was read
+            // as "no timelock" — it means NOT MEASURED. An unmeasured field shown
+            // as an empty cell converts an unknown into an implied clean bill.
+            var undelayed = !tl || tl === 'none';
+            var unknown = tl === 'unresolved';
+            return '<tr>' +
+                '<td>' + esc(l.authority_layer || '—') + '</td>' +
+                '<td>' + ((l.keys || []).map(esc).join(', ') || '—') + '</td>' +
+                '<td class="' + (unknown ? 'tw-unknown' : (undelayed ? 'tw-bad' : 'tw-ok')) + '">' +
+                    (unknown ? '\u26a0\ufe0f not measured' : (undelayed ? '\u26a0\ufe0f none' : esc(tl))) +
+                '</td>' +
+                '<td>' + esc(l.topology || '—') + '</td>' +
+                '<td>' + esc(l.reach || '—') + '</td>' +
+            '</tr>';
+        }).join('');
+
+        var unresolved = Array.isArray(c.unresolved) ? c.unresolved : [];
+
+        // The producer marks its own load-bearing paragraphs with a warning
+        // glyph. Grouping by THEIR marker rather than my judgement: a paragraph
+        // starts at a marked line and runs to the next blank. Everything is also
+        // kept verbatim below, so this selects emphasis, never content.
+        var notes = Array.isArray(c.walk_notes) ? c.walk_notes : [], flagged = [], cur = null;
+        notes.forEach(function(line) {
+            if (/^\u26a0/.test(line)) { if (cur) flagged.push(cur); cur = line; }
+            else if (cur) { if (!line.trim()) { flagged.push(cur); cur = null; } else { cur += ' ' + line.trim(); } }
+        });
+        if (cur) flagged.push(cur);
+
+        return '<div class="panel topology-walk">' +
+            '<div class="panel-title">Authority walk \u2014 ' + esc(c.method || 'unknown method') + '</div>' +
+            '<div class="tw-headline">' + esc(c.headline) + '</div>' +
+            (c.headline_basis ? '<div class="tw-sub">' + esc(c.headline_basis) + '</div>' : '') +
+            '<div class="tw-sub">Walked ' + esc(c.observed_at || '?') +
+                (c.source_file ? ' \u00b7 ' + esc(c.source_file) : '') +
+                (c.method_note ? ' \u00b7 ' + esc(c.method_note) : '') + '</div>' +
+            (layerRows
+                ? '<div class="tw-tablewrap"><table class="tw-table"><thead><tr>' +
+                  '<th>Authority</th><th>Keys</th><th>Delay</th><th>Topology</th><th>Reach</th>' +
+                  '</tr></thead><tbody>' + layerRows + '</tbody></table></div>'
+                : '') +
+            (flagged.length
+                ? '<div class="tw-flagged">' + flagged.map(function(f) {
+                      return '<div class="tw-flag">' + esc(f) + '</div>'; }).join('') + '</div>'
+                : '') +
+            // ⚠️ NOT ESTABLISHED is rendered as prominently as what WAS, and
+            // verbatim. These entries carry their own attribution — the
+            // MINTER_ROLE finding is riskAnalyst\u2019s walk, not this
+            // producer\u2019s, and summarising it here would strip the credit and
+            // launder one repo\u2019s evidence as another\u2019s.
+            (unresolved.length
+                ? '<div class="tw-unresolved"><div class="tw-unresolved-head">\u26a0\ufe0f Not established ' +
+                  '\u2014 ' + unresolved.length + ' item' + (unresolved.length === 1 ? '' : 's') +
+                  ', verbatim from the walk</div><ul>' +
+                  unresolved.map(function(u) { return '<li>' + esc(u) + '</li>'; }).join('') +
+                  '</ul><div class="tw-sub">Absence of a measurement is not a finding that the ' +
+                  'authority is unconstrained \u2014 nor that it is constrained.</div></div>'
+                : '') +
+            (notes.length
+                ? '<details class="tw-details"><summary>Verification trail &amp; walk notes (verbatim, ' +
+                  notes.length + ' lines)</summary><pre class="tw-pre">' +
+                  esc(notes.join('\n')) + '</pre></details>'
+                : '') +
+        '</div>';
+    },
+
     _contractPanelsHtml(data) {
         var sp = data.asset_specific || {};
-        var out = '';
+        var out = this._topologyWalkHtml(data);
 
         // 2. Governance — gated on the NORMALISED shape only. apxusd and
         // syrupusdc publish governance under entirely different keys and are

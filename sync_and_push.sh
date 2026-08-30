@@ -73,6 +73,27 @@ for slug in $SLUGS; do
     done
 done
 
+# ⚠️ AXIS 5 IS GENERATED, NOT COPIED. security_analyst's README invariant 1 is
+# "no stored copies of derivable state — read fresh, cache nothing", written
+# after a hand-maintained position table overstated exposure ~11x for eleven days
+# because its largest row was an EXITED position. Their topology YAML is subject
+# to the same rule, so this regenerates the axis-5 payload from their file on
+# every sync instead of them committing a JSON that can drift from the walk.
+#
+# ⚠️ The emitted `as_of` is the WALK's observed_at, never this run's clock — a
+# three-week-old walk must not render as fresh because the sync ran. Their own
+# header states it: a laundered date is worse than a stale one.
+#
+# ⚠️ It emits NOTHING and does not fail the sync if their file is missing. A
+# missing walk must leave axis 5 reading "Not assessed", which is honest; the
+# failure mode to avoid is serving a stale copy of a walk that has been retracted.
+if [ -f tools/emit_axis5.py ]; then
+    for slug in reusd_re; do
+        python3 tools/emit_axis5.py "$slug" --out data/ 2>&1 || \
+            echo "$(date): axis5 emit skipped for $slug (source walk unavailable)" >&2
+    done
+fi
+
 # Files whose names are not <registered-slug><suffix> — family rollups shared by
 # several assets, and the Strategy event log. These stay explicit because there
 # is no slug to derive them from.
