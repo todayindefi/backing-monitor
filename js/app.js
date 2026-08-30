@@ -105,6 +105,17 @@ async function renderIndex() {
         var resp = await fetch(dataUrl('data/assets.json'));
         var assets = await resp.json();
 
+        // ⚠️ STAGED ASSETS ARE OMITTED FROM THE INDEX, NOT FROM THE SITE.
+        // An asset marked `staged: true` renders at ?asset=<slug> so it can be
+        // built and reviewed, and does NOT appear in the grid, so nothing links
+        // to a page that is not finished. Mirrors tidresearch's
+        // `production: false`, which is the convention the reports already use.
+        //
+        // ⚠️ The page itself carries a STAGED banner — see renderAsset. A page
+        // that is incomplete and LOOKS finished is the failure this whole
+        // dashboard keeps re-learning, and an unlinked URL is still a URL.
+        assets = assets.filter(function(a) { return a && a.staged !== true; });
+
         // Try to fetch latest data for each asset to show CR on cards.
         // `data_source` lets a sibling view (e.g. mstr) reuse another
         // asset's backing JSON instead of needing its own file.
@@ -252,6 +263,25 @@ async function renderAsset(slug) {
         // Feed staleness — rendered for EVERY asset from here, not per-renderer.
         // Placed before the panels so a reader meets it before any figure it
         // qualifies. Silent when the feed is fresh.
+        // ⚠️ A staged page must SAY it is staged. Omitting it from the index
+        // stops anything linking to it; it does not stop the URL working, and a
+        // half-built page that looks finished is the failure mode this dashboard
+        // keeps re-learning. The banner is the page's own declaration.
+        (function () {
+            var el = document.getElementById('staged-banner');
+            if (!el) return;
+            el.innerHTML = '';
+            if (!assetMeta || assetMeta.staged !== true) return;
+            el.innerHTML =
+                '<div class="panel" style="border-left:4px solid #b45309;">' +
+                    '<div class="text-sm" style="line-height:1.5;">' +
+                    '<span class="font-semibold text-amber-700">\u26a0\ufe0f STAGED \u2014 not finished, not linked.</span> ' +
+                    'This page is under construction and is deliberately absent from the asset index. ' +
+                    'Axes may be incomplete, unrated, or wrong. ' +
+                    'Do not cite figures from it until it is published.' +
+                    '</div></div>';
+        })();
+
         CommonRenderer.renderStalenessBanner(data, slug);
 
         // Common sections.
