@@ -3257,7 +3257,18 @@ const CommonRenderer = {
         // redemption payout asset", the largest single dependency on the asset.
         var prov = (CommonRenderer.AXIS_PROVENANCE || {}).dependencies || {};
         var repl = (prov.replaced_arrays || []).filter(function(r) { return r.field === 'upstream'; })[0];
-        if (repl && repl.dropped_names && repl.dropped_names.length) {
+        // ⚠️ ON-PAGE ONLY ON A NET LOSS OF ROWS. riskAnalyst rebuilt their list to
+        // CARRY the measurements rather than replace them — 3 entries in, 3 out,
+        // each now holding the metric the feed's version had. The warning had
+        // done its job and kept firing, and a notice that stays lit after the
+        // thing it warns about is fixed is one readers learn to skip.
+        //
+        // ⚠️ The limit, stated rather than hidden: an equal-count swap CAN still
+        // drop a dependency and add an unrelated one, and this test would not
+        // catch it. That is why provenance keeps the dropped names either way and
+        // the chip tooltip still reports them — only the page-level banner is
+        // gated, on the case where a reader would be misled about COMPLETENESS.
+        if (repl && repl.dropped_names && repl.dropped_names.length && repl.to < repl.from) {
             upBlock += '<div class="dep-replaced">\u26a0\ufe0f These ' + repl.to +
                 ' entries come from <strong>' + this._escapeAttr(prov.producer || 'an overlay') +
                 '</strong>, which owns this axis. They REPLACED ' + repl.from +
