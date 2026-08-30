@@ -34,12 +34,32 @@ assets = load(os.path.join(DATA, 'assets.json')) or []
 if isinstance(assets, dict): assets = assets.get('assets', [])
 slugs = {a.get('slug') for a in assets}
 sources = {a.get('slug'): (a.get('data_source') or a.get('slug')) for a in assets}
+staged = {a.get('slug') for a in assets if a.get('staged') is True}
 
 for slug in sorted(slugs):
     src = sources[slug]
-    d = load(os.path.join(DATA, f'{src}_backing.json'))
+    path = os.path.join(DATA, f'{src}_backing.json')
+    d = load(path)
     if d is None:
-        fails.append(f'{slug}: data/{src}_backing.json missing or unparseable')
+        # A STAGED asset with no feed yet is a declared state, not a defect.
+        # Registration is what wires transport — sync_and_push.sh derives its
+        # copy list from assets.json — so the slug must be registered BEFORE
+        # the producer's file can ever land, which means there is necessarily
+        # a window where the entry exists and the feed does not.
+        #
+        # ⚠️ FAILing that window would put a FEED_CHECK_FAILURE marker in every
+        # hourly cron run for a file we deliberately have not built. A marker
+        # that is always lit is a marker nobody reads, and this suite's whole
+        # value is that its failures mean something.
+        #
+        # ⚠️ Scoped to MISSING, not to unparseable: a staged asset whose feed
+        # exists and is broken is a real defect and still FAILs. Staging
+        # suppresses the expected absence, never a malformed file.
+        if slug in staged and not os.path.exists(path):
+            warns.append(f'{slug}: STAGED, awaiting producer feed ({src}_backing.json) '
+                         f'— expected, page renders its staged banner')
+        else:
+            fails.append(f'{slug}: data/{src}_backing.json missing or unparseable')
         continue
 
     present = [k for k in AXES if isinstance(d.get(k), dict)]

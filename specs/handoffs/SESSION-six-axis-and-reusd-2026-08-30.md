@@ -148,9 +148,40 @@ two pages showing the same issuer score is correct, not duplication.
    `exchangeRate()` all revert) and comes from `api.re.xyz`.
 2. **An issuer API IS acceptable as an axis-1 source**, on two conditions: it carries a checkable
    `market_price_as_of`, and `market_price_source` distinguishes it from an on-chain read.
-3. **The $77M vs $20M tranche-capacity contradiction: publish both, pick neither**, per PegTracker's
-   `market_price_cross_check` precedent. ⚠️ **Axis 2 goes unrated while a denominator is contested by
-   3.85×** — that is not a measurement.
+3. ⚠️ **CORRECTED 2026-08-30 by riskAnalyst, and verified against their report before this rewrite.
+   I had written: "the $77M vs $20M tranche-capacity contradiction: publish both, pick neither —
+   axis 2 goes unrated while a denominator is contested by 3.85×." THAT WAS WRONG, and how it was
+   wrong is the useful part: it is not one quantity with two snapshots, it is TWO QUANTITIES.**
+   `riskAnalyst/assets/reusd-re.md` §I ("Tranche Capacity — ANSWERED", resolved 2026-08-13) settles
+   it — **~$77M is Re's total balance-sheet capital depth; only ~$20M of it is contractually
+   subordinated ahead of reUSDe in the attachment schedule.** Two tests carry it: the `/tvl` residual
+   has never been near $20M (min $55.1M across 326 days), and no date in the published history pairs
+   $20M of Re capital with $15M of reUSDe — while the combined-ratio bands (105–110% of a $358M book
+   ≈ $17.9M) reconstruct the $20M exactly. **Use the $20M case: loss absorption is governed by what
+   the treaties subordinate, not by what the balance sheet holds.**
+
+   **So axis 2 is RATEABLE — riskAnalyst scores it 5.5 on both assets** (good collateral: USDC, USDe,
+   sUSDe, T-Bills; held down by the attachment point and the admin-written NAV). ⚠️ **My instruction
+   as written would have HIDDEN THE ACTUAL FINDING:** the senior's first-loss attachment point
+   measured **9.66% on 2026-08-24 — below the 10% institutional norm the report itself invokes.**
+   Unrating an axis over a contradiction that does not exist renders the adverse number nowhere.
+
+   ⚠️ **The mechanism decides how the tile must read: the attachment point thinned because the
+   DENOMINATOR ROSE, not because the junior layer shrank.** No loss occurred — senior deposits grew.
+   **Growth reads as demand and health, which is exactly why an eroding cushion passes unnoticed.**
+   A supply series here will look like strength while the cushion thins beneath it, so the tile must
+   name the attachment point rather than only the collateral.
+
+   ⚠️ **Generalisable, which is why it is written out: "the sources disagree, so publish both and
+   rate neither" is a SAFE-LOOKING default that is not always safe.** Here the disagreement was
+   definitional, one side was already resolved in our own report, and declining to rate would have
+   suppressed a below-norm figure. **Check whether a contradiction is still open before building a
+   design decision on top of it.**
+
+   ⚠️ **Residual, reported back to riskAnalyst:** the report's own **Summary** bullet still reads
+   *"Sizing decisions should be bracketed across both, not taken from either alone"* — the 2026-08-12
+   position, which §I superseded on 08-13. **My wrong instruction generalised from that surviving
+   bullet, not from thin air.** A superseded summary outlives the section that corrected it.
 
 ⚠️ **CORRECTION I got wrong, do not repeat it:** I assumed reUSDe's market price came from the issuer
 API, making the deviation definitional (the apyUSD "100.0% by construction" precedent) and the axis

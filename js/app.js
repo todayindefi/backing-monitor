@@ -222,7 +222,20 @@ async function renderAsset(slug) {
             fetch(dataUrl('data/' + sourceSlug + '_backing_history.json')).catch(function() { return null; })
         ]);
 
-        if (!dataResp.ok) throw new Error('Asset data not found (HTTP ' + dataResp.status + ')');
+        if (!dataResp.ok) {
+            // ⚠️ A REGISTERED-BUT-UNFED slug is a DECLARED state, not a broken page.
+            // Registration is what wires transport — sync_and_push.sh derives its
+            // copy list from assets.json — so a staged asset NECESSARILY passes
+            // through a window where the entry exists and the producer's file does
+            // not. Over that window the generic "Failed to load data" reads as a
+            // defect in the dashboard rather than as work in progress, and tells a
+            // reader nothing about what is missing or that it is expected.
+            if (assetMeta && assetMeta.staged === true && dataResp.status === 404) {
+                showStagedPending(slug, sourceSlug);
+                return;
+            }
+            throw new Error('Asset data not found (HTTP ' + dataResp.status + ')');
+        }
         var data = await dataResp.json();
         // Tag the URL slug so findAssetRenderer can route to the sibling
         // view's renderer instead of falling through to the source asset's.
@@ -396,7 +409,34 @@ function showError(msg) {
     document.getElementById('index-view').classList.add('hidden');
     document.getElementById('asset-view').classList.add('hidden');
     document.getElementById('error-view').classList.remove('hidden');
+    // Reset the heading: showStagedPending() repaints it, and this is an SPA —
+    // a real load failure after visiting a staged URL must not inherit the
+    // amber "STAGED" wording.
+    var head = document.getElementById('error-heading');
+    if (head) {
+        head.textContent = 'Failed to load data';
+        head.className = 'text-slate-400 text-lg mb-2';
+    }
     document.getElementById('error-message').textContent = msg;
+}
+
+// A staged asset whose producer feed has not landed yet. Says which file is
+// missing, because "not found" without a filename is indistinguishable from a
+// typo'd slug — and a typo'd slug is what an UNREGISTERED name must look like.
+function showStagedPending(slug, sourceSlug) {
+    document.getElementById('index-view').classList.add('hidden');
+    document.getElementById('asset-view').classList.add('hidden');
+    document.getElementById('error-view').classList.remove('hidden');
+    var head = document.getElementById('error-heading');
+    if (head) {
+        head.textContent = '⚠️ STAGED — not finished, not linked';
+        head.className = 'text-amber-700 text-lg mb-2 font-semibold';
+    }
+    document.getElementById('error-message').textContent =
+        slug + ' is registered so its producer feed can reach the dashboard, but ' +
+        'data/' + sourceSlug + '_backing.json has not been published yet. ' +
+        'This page is deliberately absent from the asset index and carries no figures. ' +
+        'Do not cite this URL.';
 }
 
 // ========================================
