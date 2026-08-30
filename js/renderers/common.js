@@ -2596,6 +2596,22 @@ const CommonRenderer = {
         // reader to add them. riskAnalyst's case, and it is stronger than the
         // Ethena one I led with.
         //
+        // ⚠️ AND IT UNDERSTATES. riskAnalyst found the limit: the prefix names the
+        // ISSUER OF THE UNDERLYING, not every counterparty in the leg.
+        // "[Agora]_PT_AUSD_Loop" (4.93%) and "[Sky]_PT_sUSDS_Loop" (1.32%) are
+        // both principal-token positions — 6.25% attributed entirely to Agora and
+        // Sky, while the protocol whose contract, oracle and maturity mechanics
+        // sit between yzUSD and those underlyings has NO ROW AT ALL. At 6.25% it
+        // would rank sixth of eleven, above Superstate and PayPal.
+        //
+        // ⚠️ NOT fixed by parsing "PT_" — that is the world-knowledge assertion
+        // this caption exists to avoid, and riskAnalyst explicitly asked that it
+        // not be. Verified there is nothing better to group on: a leg carries
+        // name, value, metric, pct, source, link — no protocol field, no address.
+        // It belongs in the producer's `by_protocol`, WHERE A LEG CAN CARRY MORE
+        // THAN ONE COUNTERPARTY — which means by_protocol is not a partition of
+        // legs either, and that is worth knowing before it is designed.
+        //
         // ⚠️ Deliberately narrow about what this claims. It groups on the
         // PRODUCER'S OWN NAME PREFIX — "[Maple]_syrupUSDT_Loop" — and says so.
         // It does NOT assert that two legs are the same counterparty from any
@@ -2614,14 +2630,18 @@ const CommonRenderer = {
         var shared = Object.keys(prefixCount).filter(function(k) { return prefixCount[k] > 1; });
         if (shared.length) {
             upBlock += '<div class="dep-block-note"><span class="text-amber-700">' +
-                'Several legs share a counterparty prefix:</span> ' +
+                'Several legs share a name prefix:</span> ' +
                 shared.sort(function(a, b) { return prefixCount[b] - prefixCount[a]; })
                       .map(function(k) { return CommonRenderer._escapeAttr(k) + ' \u00d7' + prefixCount[k]; })
                       .join(' \u00b7 ') +
                 '. Grouped on the producer\'s own name prefix, not on an independent ' +
                 'counterparty check \u2014 and their shares are NOT summed here, because the ' +
                 'legs do not partition. ' + up.length + ' rows are not ' + up.length +
-                ' independent exposures.</div>';
+                ' independent exposures. \u26a0\ufe0f A prefix names the ISSUER OF THE ' +
+                'UNDERLYING, which is not every counterparty in the leg: a wrapped or ' +
+                'principal-token position also depends on the contracts that wrap it, and ' +
+                'the name does not record them. So this understates sharing as well as ' +
+                'showing it.</div>';
         }
 
         var pctSum = dep.pct_sums_to;
