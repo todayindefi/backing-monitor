@@ -3422,9 +3422,18 @@ const CommonRenderer = {
             ? '<a href="' + issuer.report_url + '" target="_blank" rel="noopener noreferrer" ' +
                 'class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700">' +
                 'Read the full risk report →</a>'
-            : (issuer.report_url
+            // ⚠️ Three states, not two. "No report linked" was being shown for a
+            // report that EXISTS and is deliberately withheld, which reads as
+            // "nobody has written one". A status without a URL is the withheld
+            // case: production 404s while the report is unpublished, and the
+            // staging host cannot be linked because it renders the whole
+            // unpublished corpus to anyone who follows the link.
+            : (issuer.report_url || issuer.report_url_status
                 ? '<span class="text-sm text-slate-400">Report not linked \u2014 the producer marks it ' +
-                  this._escapeAttr(String(issuer.report_url_status)) + ' rather than published.</span>'
+                  this._escapeAttr(String(issuer.report_url_status)) + ' rather than published.' +
+                  (!issuer.report_url
+                      ? ' A report exists; it is withheld until it is published, so there is no ' +
+                        'safe URL to link.' : '') + '</span>'
                 : '<span class="text-sm text-slate-400">No report linked.</span>');
 
         // ⚠️ issuer.facts is an EXISTING feed convention that nothing rendered.

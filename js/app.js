@@ -278,12 +278,21 @@ async function renderAsset(slug) {
         // reachability — usually that a report exists but is NOT published — and
         // overwriting that with a registry URL would turn a considered "not
         // linked" into a live link to a page that may 404.
-        if (assetMeta && assetMeta.report_url) {
+        if (assetMeta && (assetMeta.report_url || assetMeta.report_status)) {
             data.issuer = data.issuer || {};
-            if (!data.issuer.report_url) {
+            if (assetMeta.report_url && !data.issuer.report_url) {
                 data.issuer.report_url = assetMeta.report_url;
                 data.issuer.report_url_status = data.issuer.report_url_status || 'published';
                 data.issuer.report_url_source = 'assets.json registry';
+            }
+            // ⚠️ "A report exists but is not published" is NOT the same state as
+            // "no report exists", and the page said the second. Carrying the
+            // status WITHOUT a URL is deliberate: there is nothing safe to link
+            // (production 404s, and the staging host renders the entire
+            // unpublished corpus), but the reader should still be told the
+            // difference between an absent report and a withheld one.
+            if (!data.issuer.report_url && assetMeta.report_status) {
+                data.issuer.report_url_status = assetMeta.report_status;
             }
         }
         var history = null;
