@@ -37,10 +37,38 @@ SUFFIXES="_backing _backing_history _peg_history _critical_events _flow \
 
 SLUGS=$(python3 -c "import json;print(' '.join(a['slug'].replace('-','_') for a in json.load(open('data/assets.json'))))")
 
+# ⚠️ ONE SOURCE ROOT WAS THE OTHER HALF OF THE SAME BUG. Declaring `_liquidity`,
+# `_contract` and `_dependencies` in SUFFIXES made the sync READY for a new axis
+# producer only in the sense that the NAME was expected — the loop still looked
+# in PegTracker's data dir and nowhere else, while every other producer writes in
+# its own repo. So "a new producer's file copies with no change here" was true of
+# the suffix and false of the path.
+#
+# It bit immediately and silently: DexTracker shipped data/liquidity/syzusd_liquidity.json
+# at 12:03 with a commit message asserting "backinmonitor's sync already lists
+# {slug}_liquidity.json as a block type, so this copies without a change there."
+# It does not. Wrong repo, and a subdirectory besides. The file reached nothing
+# for hours and the assertion was never run. ⚠️ A claim about another repo's
+# behaviour is the least-verified line in any commit message.
+#
+# Roots are searched in order and a later one WINS, so a collision is reported
+# rather than resolved silently — two producers claiming one block is a pipeline
+# question, not something a cp should decide at 3am.
+SOURCE_ROOTS="/home/danger/PegTracker/data \
+              /home/danger/DexTracker/data/liquidity"
+
 for slug in $SLUGS; do
     for suf in $SUFFIXES; do
-        src="/home/danger/PegTracker/data/${slug}${suf}.json"
-        [ -f "$src" ] && cp "$src" data/
+        found=""
+        for root in $SOURCE_ROOTS; do
+            src="$root/${slug}${suf}.json"
+            [ -f "$src" ] || continue
+            if [ -n "$found" ]; then
+                echo "$(date): SYNC_COLLISION ${slug}${suf}.json in both $found and $root — using $root" >&2
+            fi
+            cp "$src" data/
+            found="$root"
+        done
     done
 done
 

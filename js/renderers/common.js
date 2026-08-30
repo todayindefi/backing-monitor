@@ -13,6 +13,249 @@ var RISK_AXIS_THRESHOLDS = {
 
 const CommonRenderer = {
 
+    // ------ Per-axis overlay merge ------
+    //
+    // The six-axis pipeline is ONE PRODUCER PER AXIS, each publishing
+    // {slug}_<axis>.json in its own repo, the sync copying per block, NO
+    // ASSEMBLER. The no-assembler rule exists because an assembler RE-STAMPS:
+    // one file timestamp laid over six clocks reports "fresh" above a two-day-old
+    // block. So the merge happens HERE, at render time, per field, and every
+    // field keeps its own origin.
+    //
+    // ⚠️ AXIS 2 CANNOT HAVE AN OVERLAY AND THIS IS A NAME COLLISION, NOT A
+    // POLICY. Axis 2 is `backing`, so its overlay would be {slug}_backing.json —
+    // which is already the whole-file feed every asset loads. The convention
+    // {slug}_<axis>.json silently has one axis whose name is taken. Axis 2 stays
+    // inside the base file (PegTracker owns it, per the ownership table), and a
+    // second producer with axis-2 CONTENT — riskAnalyst's attachment point for
+    // reUSD is exactly this — has nowhere to put it under the current spelling.
+    // Resolve at the spec, not by inventing a name here.
+    //
+    // ⚠️ PREFERENCE IS BY OWNERSHIP, NOT BY FRESHNESS. DexTracker is canonical
+    // for axis 3 even when its file is older than the embedded block, because
+    // the alternative — preferring whichever number is newer — makes the page's
+    // source depend on cron timing and silently alternate between two bases.
+    // The cost is that a stale overlay can downgrade a fresh page, so the age
+    // is always shown and the origin always named.
+    AXIS_OVERLAYS: {
+        liquidity:    '_liquidity',
+        dependencies: '_dependencies',
+        contract:     '_contract',
+        issuer:       '_issuer'
+    },
+
+    // ⚠️ PER-FIELD MERGE IS ONLY SAFE WHEN BOTH PRODUCERS SHARE A VOCABULARY,
+    // and the first real overlay proved they do not. DexTracker's liquidity/1
+    // and PegTracker's embedded liquidity block name almost nothing in common:
+    //
+    //   PegTracker   total_2pct_depth, two_pct_depth_status, pools, exit_mark
+    //   liquidity/1  depth{status,depth_usd,basis}, enumeration, venues[], swap_tvl_usd
+    //
+    // Merged per field, EVERY PegTracker field survives untouched because the new
+    // producer never names it — so the page would keep rendering
+    // total_2pct_depth while liquidity/1 says `depth.status: "unmeasured",
+    // basis: "Depth withheld: the anchor is missing"`. ⚠️ That is worse than
+    // showing nothing: it prints a number the axis's own canonical producer
+    // declined to publish, over a chip claiming the canonical producer as the
+    // source.
+    //
+    // So the rule is declared by the overlay itself:
+    //
+    //   schema_version PRESENT  -> the producer is claiming a NEW vocabulary.
+    //                              It must be adopted here before use. Adopted
+    //                              means the axis is REPLACED wholesale — one
+    //                              producer owns the axis, which is the pipeline
+    //                              rule; blending two producers inside one block
+    //                              is an assembler at field scale.
+    //   schema_version ABSENT   -> the producer is claiming the EXISTING
+    //                              vocabulary, so per-field merge is what it
+    //                              asked for and what it gets.
+    //
+    // An unknown schema is REFUSED and SAID SO on the page. Refusing silently
+    // would leave a producer emitting a file for hours into a dashboard that
+    // ignores it — which is exactly what happened: liquidity/1 has existed since
+    // 12:03 and reached nothing, because its commit message asserted the sync
+    // already carried it and nobody ran the copy.
+    ADOPTED_OVERLAY_SCHEMAS: {
+        // liquidity: ['liquidity/1'] -- NOT YET. Adopting it means teaching the
+        // liquidity section to read depth{} / enumeration{} / venues[] and the
+        // depth-status vocabulary. Until then the refusal is visible on the page.
+    },
+
+    // Set by mergeAxisOverlays, read by _renderAxisHead. Mutable static, same
+    // idiom as KNOWN_ASSET_SLUGS. Reset on every merge so an SPA navigation
+    // cannot carry the previous asset's provenance onto this one.
+    AXIS_PROVENANCE: {},
+
+    // `overlays` is [{axis, file, json}] — nulls (404s) already filtered by the
+    // caller. A missing overlay is the NORMAL case today: no producer emits one
+    // yet, so this must be a no-op on all 25 live assets.
+    mergeAxisOverlays(data, overlays) {
+        this.AXIS_PROVENANCE = {};
+        if (!data || !Array.isArray(overlays)) return data;
+        var self = this;
+        var has = function(o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
+
+        // The slug the page is actually rendering. An overlay that names a
+        // DIFFERENT asset is refused rather than merged: a mis-copied file would
+        // otherwise paint one asset's liquidity onto another's page silently,
+        // and every field would carry a chip vouching for it.
+        var expected = (typeof data.asset_slug === 'string' && data.asset_slug) || null;
+
+        overlays.forEach(function(o) {
+            if (!o || !o.json || typeof o.json !== 'object' || Array.isArray(o.json)) return;
+            var axis = o.axis, ov = o.json;
+            var base = (data[axis] && typeof data[axis] === 'object' && !Array.isArray(data[axis]))
+                ? data[axis] : {};
+            var srcName = typeof ov.producer === 'string' ? ov.producer : null;
+
+            function refuse(reason, detail) {
+                self.AXIS_PROVENANCE[axis] = {
+                    file: o.file, producer: srcName, refused: reason, refused_detail: detail || null,
+                    overridden: [], added: [], kept: Object.keys(base),
+                    overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
+                };
+            }
+
+            if (expected && typeof ov.asset_slug === 'string' && ov.asset_slug !== expected) {
+                refuse('asset_slug mismatch',
+                       'The overlay names ' + ov.asset_slug + '; this page is ' + expected + '.');
+                return;
+            }
+
+            var schema = typeof ov.schema_version === 'string' ? ov.schema_version : null;
+            if (schema) {
+                var adopted = (self.ADOPTED_OVERLAY_SCHEMAS || {})[axis] || [];
+                if (adopted.indexOf(schema) === -1) {
+                    refuse('schema not adopted', schema);
+                    return;
+                }
+                // Adopted: the producer OWNS the axis. Replace, do not blend.
+                var replacedKeys = Object.keys(base);
+                var block = {};
+                Object.keys(ov).forEach(function(k) {
+                    if (k === 'producer' || k === 'schema_version' || k === 'asset_slug') return;
+                    block[k] = ov[k];
+                });
+                data[axis] = block;
+                self.AXIS_PROVENANCE[axis] = {
+                    file: o.file, producer: srcName, schema: schema, replaced: true,
+                    overridden: [], added: Object.keys(block), kept: [], dropped: replacedKeys,
+                    overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
+                };
+                return;
+            }
+
+            // The overlay file's top-level object IS the block. `producer` is the
+            // one reserved meta key — it names the emitting repo and must not
+            // land in the block as a data field.
+            //
+            // ⚠️ ONE SPELLING ONLY. Not `producer` OR `source` OR `emitted_by`:
+            // a consumer that accepts several spellings entrenches the
+            // divergence it is papering over, which is why the `name`/`label`
+            // fallback on dependency entries was dropped rather than kept.
+            var merged = {}, overridden = [], added = [], kept = [];
+            Object.keys(base).forEach(function(k) { merged[k] = base[k]; });
+            Object.keys(ov).forEach(function(k) {
+                if (k === 'producer' || k === 'asset_slug') return;
+                (has(base, k) ? overridden : added).push(k);
+                merged[k] = ov[k];
+            });
+            Object.keys(base).forEach(function(k) { if (!has(ov, k)) kept.push(k); });
+
+            data[axis] = merged;
+            self.AXIS_PROVENANCE[axis] = {
+                file: o.file,
+                producer: srcName,
+                overridden: overridden,
+                added: added,
+                kept: kept,
+                overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
+            };
+        });
+        return data;
+    },
+
+    // The origin chip. Rendered ONLY when an overlay contributed — silence means
+    // the block came whole from the feed named in the page header, which is
+    // already stated there. Naming a source on all six axes on all 25 assets to
+    // say "same as the header" is noise that trains the eye to skip the chip,
+    // and the chip's whole job is to be read on the day it says something else.
+    _axisSourceHtml(axis) {
+        var p = this.AXIS_PROVENANCE && this.AXIS_PROVENANCE[axis];
+        if (!p) return '';
+        var n = p.overridden.length + p.added.length;
+        var src = p.producer || (p.file || '').split('/').pop() || 'overlay';
+
+        // ⚠️ A REFUSED OVERLAY MUST BE LOUDER THAN AN ACCEPTED ONE. The page is
+        // rendering the embedded block while a file from the axis's own producer
+        // sits unread beside it — the reader is looking at the SECOND-choice
+        // source and has no way to know. Silence here reproduces the exact
+        // failure this chip exists to end.
+        if (p.refused) {
+            var why = p.refused === 'schema not adopted'
+                ? 'It declares schema_version "' + (p.refused_detail || '?') + '", which this ' +
+                  'dashboard does not yet read. Adopting a schema means teaching the section its ' +
+                  'field names — until then the embedded block is rendered unchanged, because ' +
+                  'merging an unknown vocabulary field-by-field silently keeps the OLD producer\u2019s ' +
+                  'numbers wherever the new one renamed something.'
+                : 'Refused: ' + p.refused + '. ' + (p.refused_detail || '');
+            return '<span class="axis-src axis-src-refused" title="' + this._escapeAttr(
+                'An overlay for this axis EXISTS and is NOT being used.\n' +
+                'File: ' + (p.file || '?') + (src ? ' (producer: ' + src + ')' : '') + '.\n' + why +
+                '\nThe figures shown come from the asset feed, not from ' + src + '.'
+            ) + '">\u26a0\ufe0f ' + this._escapeAttr(src) + ' overlay not used</span>';
+        }
+
+        if (p.replaced) {
+            return '<span class="axis-src" title="' + this._escapeAttr(
+                'This axis is served WHOLLY by ' + src + ' (' + (p.file || '?') + '), schema ' +
+                (p.schema || '?') + '. One producer owns the axis: the embedded block was ' +
+                'REPLACED, not blended, so no field here is a survivor of a different source.\n' +
+                'Dropped from the asset feed: ' +
+                ((p.dropped && p.dropped.length) ? p.dropped.sort().join(', ') : 'nothing') + '.\n' +
+                (p.overlay_as_of ? 'as_of ' + p.overlay_as_of : '\u26a0\ufe0f declares no as_of')
+            ) + '">' + this._escapeAttr(src) + ' \u00b7 whole axis</span>';
+        }
+        // ⚠️ MIXED is the case worth naming. A block assembled from two producers
+        // has two clocks, and the axis clock beside this shows only the OLDEST —
+        // honest about staleness, silent about the split. Without this the page
+        // would imply one source for a block that has two.
+        var mixed = p.kept.length > 0 && n > 0;
+        // ⚠️ THE QUIET FAILURE. An overlay that shares NO field name with the
+        // embedded block overrides NOTHING: every figure on the page is still
+        // the feed's, and the overlay's own numbers are inert. It looks like a
+        // successful merge — "6 fields" — and is a vocabulary mismatch wearing
+        // a merge's clothes. Caught live: riskAnalyst publishes `score` where
+        // the renderer reads `issuer_score`, so a 5.5 authored by the axis owner
+        // sat beside a 5.5 relayed through PegTracker and nothing indicated
+        // which one the page was showing. Only an overlay declaring a
+        // schema_version gets caught by the adoption gate; this one declares
+        // none, so it needs its own signal.
+        var disjoint = p.overridden.length === 0 && p.added.length > 0 && p.kept.length > 0;
+        var tip = 'Axis merged per field, no assembler.\n' +
+            'From ' + src + ' (' + (p.file || '?') + '): ' +
+            (n ? p.overridden.concat(p.added).sort().join(', ') : 'nothing') + '.\n' +
+            'From the asset feed: ' + (p.kept.length ? p.kept.sort().join(', ') : 'nothing') + '.\n' +
+            (p.overlay_as_of
+                ? 'Overlay declares as_of ' + p.overlay_as_of + '.'
+                : '\u26a0\ufe0f The overlay declares NO as_of, so its own age is unknown — the ' +
+                  'clock beside this can only report the stamps the asset feed declared.') +
+            (mixed ? '\n\u26a0\ufe0f MIXED: two producers, two clocks. The age shown is the oldest ' +
+                     'of them, which is not necessarily this source\u2019s.' : '');
+        if (disjoint) {
+            tip += '\n\u26a0\ufe0f NO FIELD IN COMMON with the asset feed: this overlay overrode ' +
+                   'NOTHING. Every figure rendered on this axis is still the feed\u2019s. Either the ' +
+                   'two producers spell the same quantity differently, or this overlay is additive ' +
+                   'by design \u2014 the page cannot tell which, and it must not assume the second.';
+        }
+        return '<span class="axis-src' + (disjoint ? ' axis-src-refused' : (mixed ? ' axis-src-mixed' : '')) +
+            '" title="' + this._escapeAttr(tip) + '">' +
+            (disjoint ? '\u26a0\ufe0f ' + this._escapeAttr(src) + ' \u00b7 no field in common'
+                      : (mixed ? 'mixed \u00b7 ' : '') + this._escapeAttr(src) +
+                        (n ? ' \u00b7 ' + n + (n === 1 ? ' field' : ' fields') : '')) + '</span>';
+    },
+
     // ------ Collateral-ratio scale resolution ------
     //
     // Feeds disagree on units: USDm publishes collateral_ratio as a RAW ratio
@@ -1586,7 +1829,8 @@ const CommonRenderer = {
             '<span class="axis-title">' + title + '</span>' +
             (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
             (ratingHtml || '') +
-            this._axisClockHtml(block);
+            this._axisClockHtml(block) +
+            this._axisSourceHtml(name);
     },
 
     // ⚠️ ONE PAGE STAMP OVER SIX CLOCKS. The header reads "Updated: 0.4h ago"

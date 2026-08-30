@@ -217,10 +217,29 @@ async function renderAsset(slug) {
         }
         var sourceSlug = (assetMeta && assetMeta.data_source) ? assetMeta.data_source : slug;
 
-        var [dataResp, histResp] = await Promise.all([
+        // Per-axis overlay files, fetched ALONGSIDE the base rather than after
+        // it: a serial fetch would add a round trip per axis to every page load
+        // for files that mostly 404 today. A 404 is the normal case — no
+        // producer emits one yet — so each resolves to null and the merge is a
+        // no-op. ⚠️ Failures are swallowed deliberately: an overlay that does
+        // not load must never take the page down with it, because the base feed
+        // still renders a complete, if less current, axis.
+        var overlaySuffixes = (typeof CommonRenderer !== 'undefined' && CommonRenderer.AXIS_OVERLAYS) || {};
+        var overlayAxes = Object.keys(overlaySuffixes);
+        var overlayFetches = overlayAxes.map(function(axis) {
+            var file = 'data/' + sourceSlug + overlaySuffixes[axis] + '.json';
+            return fetch(dataUrl(file))
+                .then(function(r) { return r && r.ok ? r.json() : null; })
+                .then(function(j) { return j ? { axis: axis, file: file, json: j } : null; })
+                .catch(function() { return null; });
+        });
+
+        var fetched = await Promise.all([
             fetch(dataUrl('data/' + sourceSlug + '_backing.json')),
             fetch(dataUrl('data/' + sourceSlug + '_backing_history.json')).catch(function() { return null; })
-        ]);
+        ].concat(overlayFetches));
+        var dataResp = fetched[0], histResp = fetched[1];
+        var overlays = fetched.slice(2).filter(Boolean);
 
         if (!dataResp.ok) {
             // ⚠️ A REGISTERED-BUT-UNFED slug is a DECLARED state, not a broken page.
@@ -240,6 +259,11 @@ async function renderAsset(slug) {
         // Tag the URL slug so findAssetRenderer can route to the sibling
         // view's renderer instead of falling through to the source asset's.
         data.view_slug = slug;
+        // Merge per-axis overlays over the embedded blocks, per FIELD, each
+        // field keeping its origin. Runs before preRender so a bespoke renderer
+        // reads the merged block rather than the pre-merge one — otherwise a
+        // renderer and the common frame would disagree about the same axis.
+        CommonRenderer.mergeAxisOverlays(data, overlays);
         var history = null;
         if (histResp && histResp.ok) {
             history = await histResp.json();
