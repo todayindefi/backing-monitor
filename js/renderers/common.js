@@ -253,10 +253,12 @@ const CommonRenderer = {
                 });
                 Object.keys(base).forEach(function(k) { if (!has(pay, k)) kpt.push(k); });
                 var stale = self._dropStaleDerived(axis, m, ovr, kpt);
+                var replacedArrays = self._recordArrayReplacements(base, pay, ovr);
                 data[axis] = m;
                 self.AXIS_PROVENANCE[axis] = {
                     file: o.file, producer: srcName, schema: schema,
                     overridden: ovr, added: add, kept: kpt, stale_dropped: stale,
+                    replaced_arrays: replacedArrays,
                     overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
                 };
                 return;
@@ -280,11 +282,13 @@ const CommonRenderer = {
             Object.keys(base).forEach(function(k) { if (!has(ov, k)) kept.push(k); });
 
             var staleP = self._dropStaleDerived(axis, merged, overridden, kept);
+            var replacedP = self._recordArrayReplacements(base, ov, overridden);
             data[axis] = merged;
             self.AXIS_PROVENANCE[axis] = {
                 file: o.file,
                 producer: srcName,
                 stale_dropped: staleP,
+                replaced_arrays: replacedP,
                 overridden: overridden,
                 added: added,
                 kept: kept,
@@ -292,6 +296,31 @@ const CommonRenderer = {
             };
         });
         return data;
+    },
+
+    // ⚠️ OVERRIDING AN ARRAY REPLACES THE WHOLE LIST, AND THAT IS NOT THE SAME
+    // EVENT AS OVERRIDING A SCALAR. On reUSD, riskAnalyst's 2-entry editorial
+    // `upstream` replaced PegTracker's 3-entry measured one, and the measured
+    // "Ethena sUSDe — 93.87% of reserves and Ethereum redemption payout asset"
+    // disappeared from the axis where a reader would look for it. Nothing on the
+    // page said a list had been swapped: the chip reported "3 fields" either way.
+    //
+    // Per-field merge cannot union two lists safely — the same dependency is
+    // named differently by each producer ("Ethena sUSDe" vs "sUSDe collateral
+    // layer"), so a union produces duplicates and a name-match produces false
+    // merges. So the list IS replaced, per axis ownership, and what was dropped
+    // is recorded and shown instead of being guessed at.
+    _recordArrayReplacements(base, pay, overridden) {
+        var out = [];
+        overridden.forEach(function(k) {
+            var b = base[k], o = pay[k];
+            if (!Array.isArray(b) || !b.length || !Array.isArray(o)) return;
+            var names = b.map(function(e) {
+                return e && typeof e === 'object' ? (e.name || e.label || null) : null;
+            }).filter(Boolean);
+            out.push({ field: k, from: b.length, to: o.length, dropped_names: names });
+        });
+        return out;
     },
 
     // Drop kept-but-stale renderings; mutates `block` and `kept`, returns what went.
@@ -3176,6 +3205,12 @@ const CommonRenderer = {
             var inner =
                 '<div class="dep-card-name">' + (d.name || '—') + '</div>' +
                 (d.metric ? '<div class="dep-card-metric">' + d.metric + '</div>' : '') +
+                // `source` says where the row's claim comes from — "onchain
+                // issuer-set value" and "issuer disclosures" are very different
+                // warrants for the same-looking row, and it was published and
+                // dropped here exactly like `note` was.
+                (d.source ? '<div class="dep-card-source">' +
+                    CommonRenderer._escapeAttr(String(d.source)) + '</div>' : '') +
                 note + circChip;
             if (d.link && d.link_type === 'internal') {
                 // An internal link is only a link if the target is registered.
@@ -3203,6 +3238,25 @@ const CommonRenderer = {
         var upBlock = up.length
             ? '<div class="dep-grid">' + up.map(card).join('') + '</div>'
             : '<div class="text-sm text-slate-400">No upstream dependencies tracked.</div>';
+
+        // ⚠️ SAY WHAT THE OVERLAY REPLACED, AND NAME IT. An axis owner supplying
+        // its own dependency list is correct — but a reader cannot tell a list
+        // that is short because the asset has two dependencies from one that is
+        // short because a longer measured list was swapped out. On reUSD the
+        // dropped list contained "Ethena sUSDe — 93.87% of reserves and Ethereum
+        // redemption payout asset", the largest single dependency on the asset.
+        var prov = (CommonRenderer.AXIS_PROVENANCE || {}).dependencies || {};
+        var repl = (prov.replaced_arrays || []).filter(function(r) { return r.field === 'upstream'; })[0];
+        if (repl && repl.dropped_names && repl.dropped_names.length) {
+            upBlock += '<div class="dep-replaced">\u26a0\ufe0f These ' + repl.to +
+                ' entries come from <strong>' + this._escapeAttr(prov.producer || 'an overlay') +
+                '</strong>, which owns this axis. They REPLACED ' + repl.from +
+                ' entries published by the asset feed \u2014 ' +
+                this._escapeAttr(repl.dropped_names.join('; ')) +
+                ' \u2014 rather than being added to them. The two producers name the same ' +
+                'dependencies differently, so the lists cannot be safely merged; what was dropped ' +
+                'is named here instead of being silently absent.</div>';
+        }
 
         // The block-level note describes the LIST — what it contains and how it
         // is ordered (USG: "ALL active markets, thinnest headroom first"; USDm:
