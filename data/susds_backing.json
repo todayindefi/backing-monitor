@@ -3,33 +3,33 @@
   "asset": "sUSDS",
   "asset_slug": "susds",
   "chain": "ethereum",
-  "timestamp": "2026-08-30T12:47:45Z",
+  "timestamp": "2026-08-30T13:49:23Z",
   "summary": {
-    "total_supply": 4247242005.04,
+    "total_supply": 4246675320.73,
     "supply_unit": "shares",
-    "total_assets_usds": 4705564210.64,
-    "nav": 1.107910546434,
+    "total_assets_usds": 4704955451.18,
+    "nav": 1.107915038435,
     "price": 1.11,
     "paused": null
   },
   "risk_flags": [],
   "vault_status": null,
   "backing": {
-    "collateral_ratio": 99.99998,
+    "collateral_ratio": 99.999957,
     "collateral_ratio_basis": "USDS balanceOf(sUSDS) / sUSDS totalAssets(). Two independent reads: the numerator is a token balance, the denominator is derived from the chi accumulator. 100% means the vault holds what its shares can claim.",
-    "total_backing": 4705563281.49,
-    "surplus_deficit": -929.15,
+    "total_backing": 4704953407.31,
+    "surplus_deficit": -2043.87,
     "breakdown": [
       {
         "label": "USDS held by vault",
-        "value": 4705563281.49,
+        "value": 4704953407.31,
         "pct": 100
       }
     ],
     "integrity": {
-      "total_assets_reported": 4705564210.64,
-      "usds_held": 4705563281.49,
-      "divergence_pct": -2e-05,
+      "total_assets_reported": 4704955451.18,
+      "usds_held": 4704953407.31,
+      "divergence_pct": -4.3e-05,
       "status": "ok",
       "direction": "held_below_reported",
       "note": "Signed (held - totalAssets) / totalAssets. A small NEGATIVE value is the expected state: interest accrues via chi continuously but is drawn from the vow periodically, so reported assets run slightly ahead of the balance."
@@ -40,7 +40,7 @@
       {
         "name": "USDS",
         "metric": "70.5% of USDS supply",
-        "value": 4705564210.64,
+        "value": 4704955451.18,
         "source": "onchain",
         "link": "?asset=usds",
         "link_type": "internal",
@@ -52,49 +52,48 @@
     "downstream_note": "sUSDS is widely used as lending collateral (Spark, Morpho, Aave). Those positions are not enumerated here."
   },
   "liquidity": {
-    "as_of": "2026-08-30T10:35:16Z",
+    "as_of": "2026-08-30T13:33:59Z",
     "total_tvl": null,
     "total_2pct_depth": 1000000.0,
     "total_2pct_depth_is_floor": true,
-    "two_pct_depth_status": "not_size_responsive",
-    "two_pct_depth_size_responsive": false,
-    "two_pct_depth_unresponsive_note": "\u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 returned the identical 0.00bps. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure.",
-    "two_pct_depth_basis": "\u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 returned the identical 0.00bps. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure. A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found.",
+    "two_pct_depth_status": "ladder_exhausted",
+    "two_pct_depth_size_responsive": true,
+    "two_pct_depth_unresponsive_note": null,
+    "two_pct_depth_basis": "A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found.",
     "volume_24h": null,
     "exit_mark": {
       "source": "kyberswap",
       "sell_into": "USDC",
       "fair_value": 1.11,
       "fair_value_basis": "market",
-      "quoted_at": "2026-08-30T10:35:16Z",
+      "quoted_at": "2026-08-30T13:33:59Z",
       "quotes": {
         "1000": {
-          "output_usd": 998.11,
+          "output_usd": 998.13,
           "slippage_bps": 0.0
         },
         "10000": {
-          "output_usd": 9981.09,
-          "slippage_bps": 0.0
+          "output_usd": 9981.21,
+          "slippage_bps": -0.1
         },
         "50000": {
-          "output_usd": 49905.44,
-          "slippage_bps": 0.0
+          "error": "http_530"
         },
         "100000": {
-          "output_usd": 99810.89,
-          "slippage_bps": 0.0
+          "output_usd": 99812.06,
+          "slippage_bps": -0.1
         },
         "250000": {
-          "output_usd": 249527.23,
-          "slippage_bps": 0.0
+          "output_usd": 249530.16,
+          "slippage_bps": -0.1
         },
         "500000": {
-          "output_usd": 499054.46,
-          "slippage_bps": 0.0
+          "output_usd": 499060.34,
+          "slippage_bps": -0.1
         },
         "1000000": {
-          "output_usd": 998108.92,
-          "slippage_bps": 0.0
+          "output_usd": 998120.67,
+          "slippage_bps": -0.1
         }
       }
     },
@@ -103,7 +102,7 @@
       "into": "USDS",
       "gated": false,
       "gated_basis": "measured:erc4626_redeem_simulated",
-      "as_of": "2026-08-30T12:47:45Z",
+      "as_of": "2026-08-30T13:49:23Z",
       "probe": {
         "control_address": "0x000000000000000000000000000000000000dEaD",
         "vault": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
@@ -112,7 +111,7 @@
         "asset": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
         "positive_control_ok": true,
         "asset_matches_expected": true,
-        "preview_redeem_1e18": 1.1079105464341559,
+        "preview_redeem_1e18": 1.1079150384347802,
         "control_balance": 14310433231652978,
         "control_max_redeem": 14310433231652978,
         "max_redeem_uncapped": true,
@@ -131,24 +130,24 @@
     "derived_score": null,
     "derived_score_status": "not_computed",
     "pools": [],
-    "note": "Primary exit is redemption: ERC-4626 redeem() into USDS, no cooldown or queue. The ladder below is the secondary DEX exit. \u26a0\ufe0f EXTENDING THIS LADDER WOULD NOT RAISE THE FLOOR: probing above the $1M top rung returns a CONSTANT 1078.15bps at $5M, $10M, $25M, $50M and $100M alike \u2014 identical to the hundredth of a basis point across a 20x range, which is a redemption rate being returned as a quote, not a fill. So the floor is where the venue stops answering, not where depth runs out, and the extra rungs would import a constant rather than locate a crossing. (USDS itself trips the size-responsiveness check outright \u2014 exactly 0.00bps to $50M \u2014 because it routes the Sky PSM, a fixed-rate swap bounded by pocket balance and not by slippage.) \u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 returned the identical 0.00bps. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure. A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found."
+    "note": "Primary exit is redemption: ERC-4626 redeem() into USDS, no cooldown or queue. The ladder below is the secondary DEX exit. \u26a0\ufe0f EXTENDING THIS LADDER WOULD NOT RAISE THE FLOOR: probing above the $1M top rung returns a CONSTANT 1078.15bps at $5M, $10M, $25M, $50M and $100M alike \u2014 identical to the hundredth of a basis point across a 20x range, which is a redemption rate being returned as a quote, not a fill. So the floor is where the venue stops answering, not where depth runs out, and the extra rungs would import a constant rather than locate a crossing. (USDS itself trips the size-responsiveness check outright \u2014 exactly 0.00bps to $50M \u2014 because it routes the Sky PSM, a fixed-rate swap bounded by pocket balance and not by slippage.) A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found."
   },
   "asset_specific": {
     "type": "susds",
     "vault_state": {
-      "total_supply_shares": 4247242005.041856,
-      "total_assets_usds": 4705564210.644022,
-      "nav_usds_per_share": 1.107910546434,
+      "total_supply_shares": 4246675320.726615,
+      "total_assets_usds": 4704955451.18286,
+      "nav_usds_per_share": 1.107915038435,
       "asset": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
       "ssr_raw": 1000000001096988989836188433,
-      "chi_raw": 1107910327668356702002663295,
-      "rho": 1788093875
+      "chi_raw": 1107914557148127941799672875,
+      "rho": 1788097355
     },
     "yield": {
       "headline_apy_pct": 3.52,
       "headline_source": "onchain_ssr",
-      "realized_apy_24h_pct": 3.5204,
-      "realized_apy_7d_pct": 3.5201,
+      "realized_apy_24h_pct": 3.5202,
+      "realized_apy_7d_pct": 3.52,
       "nav_history_ref": "susds_backing_history.json"
     },
     "peg": {
@@ -156,10 +155,10 @@
       "market_price_source": "coingecko:susds",
       "premium_discount_is_measured": true,
       "theoretical_price_assumes_usds_par": false,
-      "nav_usds_per_share": 1.107910546434,
+      "nav_usds_per_share": 1.107915038435,
       "usds_peg_price": 0.99994817,
-      "theoretical_price": 1.10785312,
-      "premium_discount_pct": 0.1938,
+      "theoretical_price": 1.10785762,
+      "premium_discount_pct": 0.1934,
       "source": "coingecko:susds + onchain_nav"
     },
     "history_ref": "susds_backing_history.json",
@@ -203,8 +202,8 @@
   },
   "peg": {
     "market_price": 1.11,
-    "nav": 1.10785312,
-    "premium_discount_pct": 0.1938,
+    "nav": 1.10785762,
+    "premium_discount_pct": 0.1934,
     "source": "coingecko:susds + onchain_nav",
     "history_ref": "susds_backing_history.json",
     "history_field": "nav"
@@ -217,6 +216,6 @@
     "issuer_score_source": "risk-feed@2026-08-29T09:27:19Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-08-29T09:27:19Z",
-    "issuer_score_age_hours": 27.34
+    "issuer_score_age_hours": 28.37
   }
 }

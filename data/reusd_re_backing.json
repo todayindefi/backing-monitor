@@ -1,0 +1,241 @@
+{
+  "schema_version": 2,
+  "asset": "reUSD (Re Protocol)",
+  "asset_slug": "reusd-re",
+  "chain": "Ethereum primary; also Arbitrum, Base, Avalanche",
+  "timestamp": "2026-08-30T14:03:11Z",
+  "summary": {
+    "total_supply": 201121135.42932653,
+    "total_supply_scope": "Ethereum only",
+    "nav_claim_value": 220781332.75,
+    "total_backing": null,
+    "collateral_ratio": null,
+    "premium_discount_pct": -0.0686,
+    "two_pct_depth": 100000.0,
+    "two_pct_depth_is_floor": true
+  },
+  "risk_flags": [
+    {
+      "severity": "warning",
+      "message": "NAV is an on-chain read of an issuer-set value written to SharePriceCalculator; it is not an ERC-4626 conversion or reserve-derived NAV."
+    },
+    {
+      "severity": "warning",
+      "message": "Primary redemption is unavailable to U.S. persons; their only exit is the secondary market."
+    },
+    {
+      "severity": "warning",
+      "message": "Ethereum primary redemption pays sUSDe, not USDC; a clean-dollar exit requires an additional Ethena cooldown or DEX swap."
+    },
+    {
+      "severity": "warning",
+      "message": "Report-derived attachment point is 9.66%, below the 10% institutional norm; it thinned because senior supply grew, not because the junior layer shrank."
+    }
+  ],
+  "peg": {
+    "as_of": "2026-08-30T14:01:50Z",
+    "nav": 1.0977530147810802,
+    "nav_source": "ethereum:getSharePrice() on SharePriceCalculator 0xd1D104a7515989ac82F1AFDa15a23650411b05B8 at block 25868560",
+    "nav_basis": "admin-written on SharePriceCalculator; on-chain read of an issuer-set value delivered through the NAV oracle write path, not a vault conversion",
+    "nav_as_of": "2026-08-30T14:03:11Z",
+    "nav_block_number": 25868560,
+    "market_price": 1.097,
+    "market_price_source": "CoinGecko API external aggregate mid for re-protocol-reusd; off-chain market-data API, not an on-chain read and not the issuer API",
+    "market_price_as_of": "2026-08-30T14:01:50Z",
+    "premium_discount_pct": -0.0686,
+    "premium_discount_basis": "signed (external market mid - on-chain issuer-set NAV) / NAV * 100",
+    "source": "coingecko_external_mid + onchain_share_price_calculator",
+    "history_ref": "peg_tracker_latest_usd.json",
+    "history_field": "peg_deviation"
+  },
+  "liquidity": {
+    "as_of": "2026-08-30T13:31:51Z",
+    "total_tvl": 28628078.48,
+    "total_tvl_basis": "GeckoTerminal pool reserves collected 2026-08-30T14:03Z for the four active reported Ethereum venues plus the zero-volume sUSG/reUSD pool; pool TVL is not executable depth",
+    "total_2pct_depth": 100000.0,
+    "total_2pct_depth_is_floor": true,
+    "two_pct_depth_status": "ladder_exhausted",
+    "two_pct_depth_size_responsive": true,
+    "two_pct_depth_unresponsive_note": null,
+    "two_pct_depth_basis": "MARGINAL impact against the external CoinGecko mid. The deepest configured rung ($100,000) cleared at -2.4bps, so the 200bps crossing lies beyond the measured ladder. This is a floor, not a measured limit.",
+    "volume_24h": 1806856.56,
+    "volume_24h_scope": "GeckoTerminal Ethereum pools listed in pools[]",
+    "external_mid": 1.097,
+    "external_mid_source": "CoinGecko API external aggregate mid for re-protocol-reusd",
+    "external_mid_as_of": "2026-08-30T14:01:50Z",
+    "exit_mark": {
+      "source": "kyberswap",
+      "chain": "ethereum",
+      "sell_into": "USDC",
+      "quoted_at": "2026-08-30T13:31:51Z",
+      "fair_value": 1.0971561911683303,
+      "fair_value_basis": "external CoinGecko market mark captured by peg tracker",
+      "quotes": {
+        "1000": {
+          "output_usd": 999.93,
+          "slippage_bps": 0.0
+        },
+        "10000": {
+          "output_usd": 9998.52,
+          "slippage_bps": -0.7
+        },
+        "50000": {
+          "output_usd": 49986.34,
+          "slippage_bps": -2.0
+        },
+        "100000": {
+          "output_usd": 99969.1,
+          "slippage_bps": -2.4
+        }
+      }
+    },
+    "primary_exit": {
+      "venue": "Re Protocol redemption",
+      "at_nav": true,
+      "gated": true,
+      "eligibility": "Non-U.S. persons who pass protocol KYC/KYB only; U.S. persons cannot use primary redemption",
+      "ethereum_payout_asset": "sUSDe",
+      "avalanche_payout_asset": "USDC",
+      "capacity": "Tiered: instant buffer subject to capacity and daily/per-wallet limits; quarterly queue after buffer exhaustion",
+      "note": "For U.S. holders the only exit is secondary. On Ethereum, even an eligible primary redeemer receives sUSDe rather than clean dollars."
+    },
+    "derived_score": 5.0,
+    "derived_score_status": "risk_feed_passthrough",
+    "pools": [
+      {
+        "name": "Fluid reUSD/USDT",
+        "pool_type": "fluid",
+        "address": "0xb96cee75211700bc148b95b1c907d726791f4457",
+        "tvl_usd": 24910785.93,
+        "volume_24h_usd": 1474319.65
+      },
+      {
+        "name": "Curve reUSD/sUSDe",
+        "pool_type": "curve_stableswap",
+        "address": "0x5c2ab69eb2bf12a2f4572d178687bd4660512972",
+        "tvl_usd": 2314015.7,
+        "volume_24h_usd": 320788.52
+      },
+      {
+        "name": "Curve reUSD/USDC",
+        "pool_type": "curve_stableswap_cross_decimal",
+        "address": "0xf74c91b36c26543a0aa820bef407a577e5498bf0",
+        "tvl_usd": 452559.01,
+        "volume_24h_usd": 10747.34,
+        "note": "Not used as the market-price source; the repository curve_pool strategy has a known cross-decimal scaling bug for 18-decimal reUSD versus 6-decimal USDC."
+      },
+      {
+        "name": "Blackhole V2 reUSD/USDC",
+        "pool_type": "blackhole_v2",
+        "address": "0xe07d7652a92ec25eb44fa1f487431793da831a68d85144b06c5fc5f05a5398b3",
+        "tvl_usd": 5479.77,
+        "volume_24h_usd": 1001.04,
+        "status": "stale_or_dust"
+      }
+    ],
+    "note": "No CEX listing. Depth is marginal price impact against an external mid. No balance_ratio is published, so the twocrypto exchange-rate/imbalance ambiguity is not introduced."
+  },
+  "backing": {
+    "as_of": "2026-08-30T14:03:11Z",
+    "as_of_basis": "on-chain block time for supply/NAV; issuer reserve composition was retrieved at the same collection run and its upstream page exposes no component timestamp",
+    "collateral_ratio": null,
+    "collateral_ratio_basis": "Not established. The on-chain share price and token supply measure issuer-valued claims, not reserve coverage; Re's reserve dashboard combines reUSD and reUSDe and does not expose an asset-attributed denominator suitable for a reUSD collateral ratio.",
+    "total_backing": null,
+    "total_backing_basis": "Not published because no independently attributable reUSD-only reserve total was established.",
+    "nav_claim_value": 220781332.75,
+    "nav_claim_value_basis": "Ethereum reUSD totalSupply() multiplied by SharePriceCalculator.getSharePrice(); this is claim value, not backing.",
+    "ethereum_supply": 201121135.42932653,
+    "ethereum_supply_source": "reUSD totalSupply() at Ethereum block 25868560",
+    "protocol_reserves_passthrough": {
+      "scope": "issuer-reported combined reUSD + reUSDe reserves; not attributable to reUSD alone",
+      "source": "https://app.re.xyz/metrics",
+      "retrieved_at": "2026-08-30T14:03:11Z",
+      "total_usd": 136933914.74,
+      "breakdown": [
+        {
+          "name": "sUSDe",
+          "value_usd": 128547187.97,
+          "pct": 93.87,
+          "chains": 3
+        },
+        {
+          "name": "USDC",
+          "value_usd": 5738171.41,
+          "pct": 4.19,
+          "chains": 4
+        },
+        {
+          "name": "reUSD/sUSDe LP",
+          "value_usd": 1435955.16,
+          "pct": 1.04,
+          "chains": 1
+        },
+        {
+          "name": "USDT",
+          "value_usd": 1029519.78,
+          "pct": 0.75,
+          "chains": 2
+        },
+        {
+          "name": "USDe",
+          "value_usd": 181854.47,
+          "pct": 0.13,
+          "chains": 1
+        },
+        {
+          "name": "Other unlisted redemption holdings",
+          "value_usd": 1225.96,
+          "pct": 0.0
+        }
+      ]
+    },
+    "breakdown": [],
+    "attachment_point_pct": 9.66,
+    "attachment_point_as_of": "2026-08-24",
+    "attachment_point_basis": "$20.0M loss-waterfall junior layer divided by the then-current senior denominator; this is the treaty-subordinated waterfall layer, NOT the approximately $77M product-page balance-sheet capital figure. They are different quantities, not competing snapshots.",
+    "attachment_point_direction": "thinned because the denominator rose, not because the junior layer shrank",
+    "attachment_point_source": "riskAnalyst report passthrough",
+    "attachment_point_status": "report_derived_not_onchain",
+    "integrity": {
+      "status": "partial",
+      "note": "Supply and issuer-set NAV are measured on-chain. Reserve composition is issuer-reported, protocol-wide, and lacks a source data timestamp; it is not used to claim reUSD coverage."
+    }
+  },
+  "dependencies": {
+    "as_of": "2026-08-30T14:03:11Z",
+    "upstream": [
+      {
+        "name": "Re Protocol SharePriceCalculator / NAV oracle write path",
+        "metric": "NAV",
+        "value": 1.0977530147810802,
+        "source": "onchain issuer-set value",
+        "note": "The value is stored on-chain but computed/written through an issuer-controlled oracle path; it is not reserve-derived."
+      },
+      {
+        "name": "Ethena sUSDe",
+        "metric": "93.87% of issuer-reported combined protocol reserves and Ethereum redemption payout asset",
+        "source": "issuer dashboard",
+        "note": "The reserve percentage is combined reUSD + reUSDe and must not be read as a reUSD-only allocation."
+      },
+      {
+        "name": "Off-chain reinsurance trusts and counterparties",
+        "metric": "senior-tranche asset exposure",
+        "source": "issuer disclosures",
+        "note": "Not independently measurable from Ethereum state."
+      }
+    ],
+    "downstream": [],
+    "downstream_tracked": false
+  },
+  "issuer": {
+    "as_of": "2026-08-27T00:00:00Z",
+    "report_url": "https://tidresearch.com/reports/reusd-re/",
+    "report_url_status": "published",
+    "badge": "Overall 6.0/10",
+    "issuer_score": 6.0,
+    "issuer_score_source": "risk-feed last_verified 2026-08-27",
+    "issuer_score_status": "ok",
+    "issuer_score_generated_at": "2026-08-27T00:00:00Z",
+    "attestation_age_days": null
+  }
+}
