@@ -541,3 +541,14 @@ details[open] > .tw-code-toggle::before { content: '▾ '; }
 .tw-code-list li { font-size: 0.7rem; color: #475569; line-height: 1.5; margin-bottom: 0.3rem; }
 body.dark .tw-code-toggle { color: #60a5fa; }
 body.dark .tw-code-list li { color: #cbd5e1; }
+
+/* Backing row: when the 2-column breakdown panel is absent (no breakdown data),
+   the sidebar takes the whole row and the flags lay out in columns rather than
+   one short sentence stretched across a 1440px viewport. */
+@media (min-width: 1024px) {
+  .backing-sidebar-full { grid-column: 1 / -1; }
+  .risk-flags-columns { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; }
+}
+@media (min-width: 1400px) {
+  .risk-flags-columns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

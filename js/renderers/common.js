@@ -721,12 +721,50 @@ const CommonRenderer = {
         }
     },
 
+    // ⚠️ THE ROW DOES NOT COLLAPSE ON ITS OWN. The backing row is a 3-column
+    // grid: "Backing Breakdown" spans 2 and the Risk Flags / Allocation sidebar
+    // takes 1. Both wide panels hide themselves when an asset publishes no
+    // breakdown — and the sidebar then sits alone in column 1 with two thirds of
+    // a 1440px row empty beside it, which looks like a broken layout rather than
+    // an asset with less to show.
+    //
+    // So when the wide panel is gone the sidebar spans the full row, and the
+    // flags inside lay out in columns rather than stretching one short sentence
+    // across the viewport.
+    reflowBackingGrid() {
+        var grid = document.querySelector('#section-backing .grid');
+        if (!grid) return;
+        var wide = grid.querySelector('.lg\\:col-span-2');
+        var sidebar = null;
+        Array.prototype.forEach.call(grid.children, function(c) {
+            if (c !== wide && !c.classList.contains('lg:col-span-2')) sidebar = c;
+        });
+        if (!sidebar) return;
+        var wideHidden = !wide || getComputedStyle(wide).display === 'none';
+        sidebar.classList.toggle('backing-sidebar-full', wideHidden);
+        var flags = document.getElementById('risk-flags');
+        if (flags) flags.classList.toggle('risk-flags-columns', wideHidden);
+    },
+
     // ------ Pie chart ------
     renderPieChart(data) {
         var ctx = document.getElementById('pie-chart');
         if (!ctx) return;
 
         var items = CommonRenderer._backingBreakdown(data).filter(function(i) { return i.pct > 0.5; });
+        // ⚠️ An empty doughnut is a large blank card with a title, which reads as
+        // a failed render rather than as "this asset publishes no breakdown".
+        // renderBreakdownTable already hides ITS panel on the same condition;
+        // this one never did, so reUSD showed a titled ~200px void. Five assets
+        // publish no breakdown (bmnr, mstr, strc, usdm and now reusd-re), so this
+        // was visible on all of them.
+        var pieShell = ctx.closest ? ctx.closest('.panel') : null;
+        if (pieShell) pieShell.style.display = items.length ? '' : 'none';
+        if (!items.length) {
+            if (window._pieChart) { window._pieChart.destroy(); window._pieChart = null; }
+            CommonRenderer.reflowBackingGrid();
+            return;
+        }
         var palette = ['#6366f1', '#3b82f6', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16'];
         var colorIdx = 0;
         var colors = items.map(function(i) {
@@ -1452,11 +1490,42 @@ const CommonRenderer = {
 
     // Backing rating honours an asset's chart_bands override (e.g. USG PCR) when
     // present, otherwise the generic CR cutoffs.
+    // ⚠️ AN AUTHORED FALLBACK THAT FIRES ONLY ON A DECLARED IMPOSSIBILITY.
+    //
+    // riskAnalyst withheld their backing_score on the correct general rule that a
+    // judgement must not displace a measurement. On reUSD there is no measurement
+    // and cannot be one — Re publishes combined reUSD + reUSDe reserves with no
+    // asset-attributed denominator — so the rule was leaving the axis blank while
+    // the judgement sat in the report unread.
+    //
+    // ⚠️ THE GATE IS THE PRODUCER'S DECLARATION, NOT THE FIELD'S ABSENCE, and
+    // that distinction is riskAnalyst's, not mine — I proposed the weaker
+    // "if no computed ratio". A bare null means at least three different things:
+    //
+    //   declared underivable  the producer said so, with a basis   -> safe
+    //   not yet computed      a new asset, a pending pass          -> unsafe
+    //   failed to load        a fetch error, a feed outage         -> DANGEROUS
+    //
+    // Falling back on the third promotes an authored score over a measurement
+    // that EXISTS but did not load, and it would look identical on the page to
+    // the legitimate case. So this requires collateral_ratio_basis — a sentence
+    // the producer wrote saying no ratio is establishable. A null cannot carry
+    // that; only a declaration can.
+    _authoredBackingRating(data) {
+        var b = data.backing || {};
+        if (typeof b.backing_score !== 'number') return null;
+        if (b.backing_score_applies_when !== 'collateral_ratio_declared_underivable') return null;
+        // The declaration itself. Without it, stay unrated.
+        if (!b.collateral_ratio_basis) return null;
+        // Scores are /10; the axis bands are 1-5.
+        return Math.max(1, Math.min(5, Math.round(b.backing_score / 2)));
+    },
+
     backingRating(data) {
         var sum = data.summary || {};
         var fromBacking = data.backing && data.backing.collateral_ratio != null;
         var cr = fromBacking ? data.backing.collateral_ratio : sum.collateral_ratio;
-        if (cr == null) return null;
+        if (cr == null) return this._authoredBackingRating(data);
 
         // ⚠️ Never rate a manufactured value. Renderers synthesise a placeholder
         // collateral_ratio in preRender so the legacy card has something to
@@ -1738,8 +1807,21 @@ const CommonRenderer = {
                 label: 'Backing',
                 valueHtml: this._backingValueHtml(data),
                 sub: this._backingSubText(data),
-                chip: this._ratingChipHtml(this.backingRating(data),
-                                           this.backingUnratedReason(data))
+                chip: (function(self) {
+                    var b = data.backing || {};
+                    var authored = b.collateral_ratio == null &&
+                        typeof b.backing_score === 'number' &&
+                        b.backing_score_applies_when === 'collateral_ratio_declared_underivable' &&
+                        b.collateral_ratio_basis;
+                    // ⚠️ Say it is authored. A fallback rendered identically to a
+                    // computed band would let a judgement pass as a measurement,
+                    // which is the very thing the producer's rule guards against.
+                    return authored
+                        ? '<span class="axis-rating r-warn" title="' + self._escapeAttr(
+                              String(b.backing_score_basis || '')) + '">Authored ' +
+                          b.backing_score + '/10</span>'
+                        : self._ratingChipHtml(self.backingRating(data), self.backingUnratedReason(data));
+                })(this)
             },
             {
                 label: 'Liquidity & Exit',
@@ -2430,8 +2512,22 @@ const CommonRenderer = {
         // positions disagreed while everyone argued about the label at 5.
         //
         // 2 · Backing (head only — panels are rendered by the existing common path)
+        // ⚠️ The head must label an authored score too. Fixing only the tile left
+        // the axis head reading "Watch · 3/5" — a fallback rendered exactly like a
+        // computed band, which is precisely the confusion the producer's gate
+        // exists to prevent, reintroduced one element away from where it was
+        // fixed.
+        var bAuth = (data.backing || {});
+        var backingAuthored = bAuth.collateral_ratio == null &&
+            typeof bAuth.backing_score === 'number' &&
+            bAuth.backing_score_applies_when === 'collateral_ratio_declared_underivable' &&
+            bAuth.collateral_ratio_basis;
         this._renderAxisHead('backing', 2, 'Backing', 'reserves & collateral ratio',
-            this._ratingChipHtml(this.backingRating(data)), data.backing);
+            (backingAuthored
+                ? '<span class="axis-rating r-warn" title="' +
+                  this._escapeAttr(String(bAuth.backing_score_basis || '')) +
+                  '">Authored ' + bAuth.backing_score + '/10</span>'
+                : this._ratingChipHtml(this.backingRating(data))), data.backing);
         // ⚠️ collateral_ratio_basis was rendered ONLY as a hover tooltip on a ⓘ
         // glyph beside the tile. For most assets that is a reasonable place for
         // a definition. For syzUSD it is not: its basis says the headline

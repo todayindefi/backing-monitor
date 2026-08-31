@@ -426,11 +426,16 @@ async function renderAsset(slug) {
         if (assetType !== 'crvusd') {
             CommonRenderer.renderBreakdownTable(data);
             CommonRenderer.renderPieChart(data);
+            // Both panels above hide themselves when an asset publishes no
+            // breakdown; this collapses the row so the sidebar does not sit in a
+            // third of an otherwise empty grid.
+            CommonRenderer.reflowBackingGrid();
         } else {
             document.querySelector('#breakdown-table tbody').innerHTML = '';
             document.getElementById('pie-chart').parentElement.parentElement.style.display = 'none';
             // Also hide the empty breakdown panel
             document.getElementById('breakdown-table').closest('.panel').style.display = 'none';
+            CommonRenderer.reflowBackingGrid();
         }
 
         // 5-axis sections (peg / liquidity / dependencies / issuer + backing head).
