@@ -9,7 +9,7 @@
         "name": "Re reinsurance book",
         "metric": "senior-tranche asset exposure",
         "source": "issuer disclosures",
-        "note": "The product itself; concentration here is the design, not a defect. \u26a0\ufe0f Off-chain reinsurance trusts and counterparties are NOT independently measurable from Ethereum state."
+        "note": "The product itself; concentration here is the design, not a defect. ⚠️ Off-chain reinsurance trusts and counterparties are NOT independently measurable from Ethereum state."
       },
       {
         "name": "Ethena sUSDe (collateral layer)",
@@ -17,16 +17,10 @@
         "link_type": "internal",
         "metric": "93.87% of issuer-reported COMBINED protocol reserves, and the Ethereum redemption payout asset",
         "source": "issuer dashboard (via PegTracker)",
-        "note": "\u26a0\ufe0f The percentage is COMBINED reUSD + reUSDe and must NOT be read as a reUSD-only allocation. Imports Ethena risk into a reinsurance product \u2014 a dependency a reader would not expect from the category."
-      },
-      {
-        "name": "NAV oracle write path (SharePriceCalculator)",
-        "metric": "the mark holders are valued against",
-        "source": "onchain, issuer-set",
-        "note": "\u26a0\ufe0f Value is stored on-chain but WRITTEN through an issuer-controlled path; it is not reserve-derived. The writer is an undocumented 632-byte contract (0xe888DF32) that ALSO holds forceNAVUpdate, the bypass skipping the \u00b110% deviation guard. LIMIT: selector presence does not distinguish implements-from-calls; no disassembly."
+        "note": "⚠️ The percentage is COMBINED reUSD + reUSDe and must NOT be read as a reUSD-only allocation. Imports Ethena risk into a reinsurance product — a dependency a reader would not expect from the category."
       }
     ],
     "downstream_tracked": false,
-    "upstream_basis": "riskAnalyst-authored, CARRYING PegTracker's measured entries rather than replacing them \u2014 a per-field array swap would otherwise drop the sUSDe measurement off the axis a reader checks for dependencies."
+    "note": "⚠️ DELIBERATE REDUCTION, not a loss. Two entries by design. The NAV oracle write path was carried here and has been removed: it is the issuer's OWN CONTROL SURFACE, not an external counterparty whose failure propagates in, and mixing the two kinds makes 'dependency' ambiguous on the axis a reader reaches looking for counterparties. It is rendered on AXIS 1, beside the NAV the discount is measured against, and on AXIS 5, in the authority walk beside the undelayed mint path. These entries are riskAnalyst-authored and CARRY PegTracker's measured figures rather than replacing them — a per-field array swap would otherwise drop the sUSDe measurement off the axis a reader checks for dependencies."
   }
 }
