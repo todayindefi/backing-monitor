@@ -51,7 +51,16 @@ const CommonRenderer = {
         backing:      '_backing_overlay',
         liquidity:    '_liquidity',
         dependencies: '_dependencies',
-        contract:     '_contract',
+        // ⚠️ TWO PRODUCERS, TWO HALVES OF ONE AXIS — applied in this order.
+        // security_analyst's hand-walk supplies the AUTHORITY half and replaces
+        // the axis; riskAnalyst's overlay merges the CODE half plus the score on
+        // top. This is not the "two producers on one axis" the pipeline forbids:
+        // that rule exists because a split axis needs something to COMPUTE a
+        // merge, and here there is nothing to compute — the halves do not
+        // overlap and riskAnalyst's file says so in `authority_note` rather than
+        // restating the walk. The seam is declared by the producers, not
+        // inferred here.
+        contract:     ['_contract', '_contract_overlay'],
         issuer:       '_issuer'
     },
 
@@ -121,7 +130,12 @@ const CommonRenderer = {
         // The mode still matters — it guarantees no field on this axis is a
         // survivor of a different source, which for an authority walk is the
         // difference between evidence and a composite nobody measured.
-        contract:     { 'contract/1':        { mode: 'replace', payload: 'envelope', identity: 'asset' } }
+        contract:     {
+            'contract/1':         { mode: 'replace', payload: 'envelope', identity: 'asset' },
+            // Merges ON TOP of the walk: adds the code half and the score,
+            // overrides nothing the walk established.
+            'contract-overlay/1': { mode: 'merge',   payload: 'envelope', identity: 'asset' }
+        }
         // liquidity: { 'liquidity/1': { mode: 'replace', payload: 'flat', identity: 'asset_slug' } }
         // ⚠️ NOT YET. Adopting it means teaching the liquidity section to read
         // depth{} / enumeration{} / venues[] and the depth-status vocabulary.
@@ -185,8 +199,15 @@ const CommonRenderer = {
                 ? data[axis] : {};
             var srcName = typeof ov.producer === 'string' ? ov.producer : null;
 
+            // Contributions accumulate: an axis served by two producers must name
+            // both, not just whichever file was fetched last.
+            function priorContributors() {
+                var e = self.AXIS_PROVENANCE[axis];
+                return (e && e.contributors) ? e.contributors.slice() : [];
+            }
             function refuse(reason, detail) {
                 self.AXIS_PROVENANCE[axis] = {
+                    contributors: priorContributors(),
                     file: o.file, producer: srcName, refused: reason, refused_detail: detail || null,
                     overridden: [], added: [], kept: Object.keys(base),
                     overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
@@ -243,6 +264,8 @@ const CommonRenderer = {
                     var droppedKeys = Object.keys(base);
                     data[axis] = pay;
                     self.AXIS_PROVENANCE[axis] = {
+                        contributors: priorContributors().concat([
+                            { producer: srcName, file: o.file, schema: schema, half: 'replace' }]),
                         file: o.file, producer: srcName, schema: schema, replaced: true,
                         overridden: [], added: Object.keys(pay), kept: [], dropped: droppedKeys,
                         overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
@@ -262,6 +285,8 @@ const CommonRenderer = {
                 var replacedArrays = self._recordArrayReplacements(base, pay, ovr);
                 data[axis] = m;
                 self.AXIS_PROVENANCE[axis] = {
+                    contributors: priorContributors().concat([
+                        { producer: srcName, file: o.file, schema: schema, half: 'merge' }]),
                     file: o.file, producer: srcName, schema: schema,
                     overridden: ovr, added: add, kept: kpt, stale_dropped: stale,
                     replaced_arrays: replacedArrays,
@@ -356,7 +381,15 @@ const CommonRenderer = {
         var p = this.AXIS_PROVENANCE && this.AXIS_PROVENANCE[axis];
         if (!p) return '';
         var n = p.overridden.length + p.added.length;
-        var src = p.producer || (p.file || '').split('/').pop() || 'overlay';
+        // ⚠️ Name EVERY contributor, not the last file fetched. Axis 5 is served
+        // by two producers on two declared halves, and crediting only riskanalyst
+        // would attribute security_analyst's hand-walk to them — the same
+        // laundering the verbatim `unmeasured[]` rendering exists to prevent.
+        var contribs = (p.contributors || []).map(function(c) { return c.producer; })
+            .filter(function(v, i, a) { return v && a.indexOf(v) === i; });
+        var src = contribs.length > 1
+            ? contribs.join(' + ')
+            : (p.producer || (p.file || '').split('/').pop() || 'overlay');
 
         // ⚠️ A REFUSED OVERLAY MUST BE LOUDER THAN AN ACCEPTED ONE. The page is
         // rendering the embedded block while a file from the axis's own producer
@@ -1727,7 +1760,11 @@ const CommonRenderer = {
                 label: 'Contract',
                 valueHtml: this._contractValueHtml(data),
                 sub: this._contractSubText(data),
-                chip: '<span class="axis-rating r-na" title="No contract_score exists for any asset in the risk feed. The material is rendered in the axis below; the score is not yet authored.">Not scored yet</span>'
+                chip: (typeof (data.contract || {}).structural_score === 'number'
+                    ? '<span class="axis-rating r-warn" title="' + this._escapeAttr(
+                          String((data.contract || {}).structural_score_basis || '')) + '">Structural ' +
+                      data.contract.structural_score + '/10</span>'
+                    : '<span class="axis-rating r-na" title="No contract_score exists for any asset in the risk feed. The material is rendered in the axis below; the score is not yet authored.">Not scored yet</span>')
             },
             {
                 label: this._escapeAttr(this._issuerAxisInfo(issuer).label),
@@ -2503,9 +2540,19 @@ const CommonRenderer = {
         // scoring 9.0 on audits can still hold a bare EOA upgrade key, which is
         // exactly what this axis is for. An unexplained blank is
         // indistinguishable from an oversight, so it must never be silent.
+        // ⚠️ The score is the AUTHORITY half's, not the code half's, and the
+        // producer's basis says so outright: "audits do not offset an authority
+        // path. The number is set by the authority half." Rendering it without
+        // that basis would be the halo this axis exists to catch.
+        var cScore = (data.contract || {}).structural_score;
         this._renderAxisHead('contract', 5, 'Contract & Admin',
             'admin authority, delay, upgrade & pause surface',
-            this._ratingChipHtml(null), (data.asset_specific || {}).control || (data.asset_specific || {}).governance);
+            (typeof cScore === 'number'
+                ? '<span class="axis-rating r-warn" title="' + this._escapeAttr(
+                      String((data.contract || {}).structural_score_basis || '')) + '">Structural ' +
+                  cScore + '/10</span>'
+                : this._ratingChipHtml(null)),
+            data.contract || (data.asset_specific || {}).control || (data.asset_specific || {}).governance);
         this._renderContractSection(data);
 
         // 6 · Editorial axis (issuer, structural, or a future per-asset label)
@@ -3813,6 +3860,25 @@ const CommonRenderer = {
                   }).join('') +
                   '</ul><div class="tw-sub">Absence of a measurement is not a finding that the ' +
                   'authority is unconstrained \u2014 nor that it is constrained.</div></details>'
+                : '') +
+            // ⚠️ THE CODE HALF, AND THE SEAM BETWEEN THE TWO PRODUCERS DECLARED.
+            // riskAnalyst supplies audits and the score; security_analyst supplies
+            // the authority walk above. Their `authority_note` states that they do
+            // NOT restate the walk — rendered, so a reader can see the axis is
+            // split by design rather than wondering which producer is missing.
+            (Array.isArray(c.code_facts) && c.code_facts.length
+                ? '<details class="tw-code"><summary class="tw-code-toggle">Code &amp; audits \u2014 ' +
+                  c.code_facts.length + ' points</summary><ul class="tw-code-list">' +
+                  c.code_facts.map(function(f) { return '<li>' + esc(f) + '</li>'; }).join('') +
+                  '</ul>' + (c.authority_note ? '<div class="tw-sub">' + esc(c.authority_note) + '</div>' : '') +
+                  '</details>'
+                : '') +
+            // ⚠️ One fact answering two questions, on both axes, sources named.
+            // Duplication with the seam declared is right; duplication in silence
+            // is what this avoids.
+            (Array.isArray(c.cross_axis) && c.cross_axis.length
+                ? c.cross_axis.map(function(x) {
+                      return '<div class="tw-flag">' + esc(x) + '</div>'; }).join('')
                 : '') +
             (notes.length
                 ? '<details class="tw-details"><summary>Verification trail &amp; walk notes (verbatim, ' +

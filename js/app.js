@@ -225,13 +225,22 @@ async function renderAsset(slug) {
         // not load must never take the page down with it, because the base feed
         // still renders a complete, if less current, axis.
         var overlaySuffixes = (typeof CommonRenderer !== 'undefined' && CommonRenderer.AXIS_OVERLAYS) || {};
-        var overlayAxes = Object.keys(overlaySuffixes);
-        var overlayFetches = overlayAxes.map(function(axis) {
-            var file = 'data/' + sourceSlug + overlaySuffixes[axis] + '.json';
-            return fetch(dataUrl(file))
-                .then(function(r) { return r && r.ok ? r.json() : null; })
-                .then(function(j) { return j ? { axis: axis, file: file, json: j } : null; })
-                .catch(function() { return null; });
+        // An axis may declare SEVERAL files, applied in declaration order — axis
+        // 5 is served by security_analyst's walk and riskAnalyst's code-half
+        // overlay. Order is the contract: the replace runs before the merge, so
+        // the merge lands on the walk rather than being wiped by it.
+        var overlayFetches = [];
+        Object.keys(overlaySuffixes).forEach(function(axis) {
+            var sufs = overlaySuffixes[axis];
+            if (!Array.isArray(sufs)) sufs = [sufs];
+            sufs.forEach(function(suf) {
+                var file = 'data/' + sourceSlug + suf + '.json';
+                overlayFetches.push(
+                    fetch(dataUrl(file))
+                        .then(function(r) { return r && r.ok ? r.json() : null; })
+                        .then(function(j) { return j ? { axis: axis, file: file, json: j } : null; })
+                        .catch(function() { return null; }));
+            });
         });
 
         var fetched = await Promise.all([
