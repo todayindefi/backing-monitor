@@ -3681,16 +3681,30 @@ const CommonRenderer = {
 
         var unresolved = Array.isArray(c.unresolved) ? c.unresolved : [];
 
-        // The producer marks its own load-bearing paragraphs with a warning
-        // glyph. Grouping by THEIR marker rather than my judgement: a paragraph
-        // starts at a marked line and runs to the next blank. Everything is also
-        // kept verbatim below, so this selects emphasis, never content.
-        var notes = Array.isArray(c.walk_notes) ? c.walk_notes : [], flagged = [], cur = null;
-        notes.forEach(function(line) {
-            if (/^\u26a0/.test(line)) { if (cur) flagged.push(cur); cur = line; }
-            else if (cur) { if (!line.trim()) { flagged.push(cur); cur = null; } else { cur += ' ' + line.trim(); } }
-        });
-        if (cur) flagged.push(cur);
+        // ⚠️ THE MARKER RULE BACKFIRED AND THE FAILURE WAS MINE. I promoted every
+        // ⚠️-marked paragraph in the producer's header to page copy, then told
+        // them those paragraphs were now page copy — so they correctly added
+        // ⚠️-marked notes FOR FUTURE EDITORS of their file ("THIS FILE HAS A LIVE
+        // PUBLIC CONSUMER", "SLUG_TO_FILE needs one line added"), and repo
+        // maintenance instructions started rendering to readers of a risk
+        // dashboard. Five flagged paragraphs, two of them findings.
+        //
+        // A source comment serves two audiences and the glyph does not
+        // distinguish them. Emphasis inside a repo file is not the same signal as
+        // importance to an outside reader, and no renderer-side heuristic can
+        // separate them without guessing at meaning.
+        //
+        // So header prose renders in the verbatim trail below and NOT as page
+        // copy. ⚠️ That temporarily moves one real finding — the 48h delay has NO
+        // FLOOR, since MINIMUM_DELAY/MIN_DELAY both revert — one click away. It
+        // belongs in a STRUCTURED field the producer publishes deliberately for
+        // this surface, which is what has been asked for; a comment that happens
+        // to carry a glyph is not that.
+        var notes = Array.isArray(c.walk_notes) ? c.walk_notes : [];
+        var findings = Array.isArray(c.findings) ? c.findings : [];
+        var flagged = findings.map(function(f) {
+            return typeof f === 'string' ? f : (f && f.text) ? f.text : '';
+        }).filter(Boolean);
 
         return '<div class="panel topology-walk">' +
             '<div class="panel-title">Authority walk \u2014 ' + esc(c.method || 'unknown method') + '</div>' +
@@ -3717,7 +3731,18 @@ const CommonRenderer = {
                 ? '<div class="tw-unresolved"><div class="tw-unresolved-head">\u26a0\ufe0f Not established ' +
                   '\u2014 ' + unresolved.length + ' item' + (unresolved.length === 1 ? '' : 's') +
                   ', verbatim from the walk</div><ul>' +
-                  unresolved.map(function(u) { return '<li>' + esc(u) + '</li>'; }).join('') +
+                  unresolved.map(function(u) {
+                      // First sentence as the visible label, remainder behind an
+                      // expander. Mechanical — split on the first sentence end —
+                      // so the renderer never chooses WHICH part of a producer's
+                      // caveat a reader sees. These run to 648 characters each
+                      // and four of them stacked is a wall nobody finishes.
+                      var m = /^([^.]*\.)\s+([\s\S]+)$/.exec(u);
+                      if (!m) return '<li>' + esc(u) + '</li>';
+                      return '<li>' + esc(m[1]) +
+                          ' <details class="tw-more"><summary>why</summary>' +
+                          esc(m[2]) + '</details></li>';
+                  }).join('') +
                   '</ul><div class="tw-sub">Absence of a measurement is not a finding that the ' +
                   'authority is unconstrained \u2014 nor that it is constrained.</div></div>'
                 : '') +
