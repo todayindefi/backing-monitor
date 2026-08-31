@@ -3519,11 +3519,14 @@ const CommonRenderer = {
             // staging host cannot be linked because it renders the whole
             // unpublished corpus to anyone who follows the link.
             : (issuer.report_url || issuer.report_url_status
-                ? '<span class="text-sm text-slate-400">Report not linked \u2014 the producer marks it ' +
-                  this._escapeAttr(String(issuer.report_url_status)) + ' rather than published.' +
-                  (!issuer.report_url
-                      ? ' A report exists; it is withheld until it is published, so there is no ' +
-                        'safe URL to link.' : '') + '</span>'
+                ? '<span class="text-sm text-slate-400" title="' + this._escapeAttr(
+                      'The producer marks this report "' + String(issuer.report_url_status) +
+                      '" rather than published.' +
+                      (!issuer.report_url
+                          ? ' A report exists; it is withheld until publication, so there is no safe ' +
+                            'URL to link \u2014 the production URL 404s and the staging host renders ' +
+                            'the whole unpublished corpus.' : '')) +
+                  '">Report not yet published \u24d8</span>'
                 : '<span class="text-sm text-slate-400">No report linked.</span>');
 
         // ⚠️ issuer.facts is an EXISTING feed convention that nothing rendered.
@@ -3540,13 +3543,23 @@ const CommonRenderer = {
         // A renderer that names a custodian or a legal status is a constant that
         // nothing recomputes.
         var facts = (issuer.facts && Array.isArray(issuer.facts)) ? issuer.facts : [];
-        var factsHtml = facts.length
-            ? '<ul class="text-sm text-slate-600 dark:text-slate-300 list-disc ml-5 mb-3 space-y-1">' +
+        // ⚠️ Collapsed past a handful. Ten bullets under a paragraph is the same
+        // wall axis 5 had, and the reader who needs the detail is one click from
+        // it while the reader scanning six axes is not made to wade through it.
+        // Few enough entries stay open — usds publishes four, thusd five, and
+        // collapsing those buys nothing.
+        var factsList = facts.length
+            ? '<ul class="text-sm text-slate-600 dark:text-slate-300 list-disc ml-5 space-y-1">' +
                 facts.map(function (f) {
                     return '<li>' + CommonRenderer._escapeAttr(String(f)) + '</li>';
                 }).join('') +
               '</ul>'
             : '';
+        var factsHtml = !facts.length ? ''
+            : facts.length <= 5
+                ? '<div class="mb-3">' + factsList + '</div>'
+                : '<details class="issuer-facts"><summary class="issuer-facts-toggle">' +
+                  facts.length + ' assessment points</summary>' + factsList + '</details>';
 
         // ⚠️ `issuer.summary` — prose, and AUTHORED BY THE PRODUCER, never here.
         // The axis is editorial: it says who the issuer is, which regulator, what
@@ -3579,6 +3592,14 @@ const CommonRenderer = {
         //
         // With no facts to fall back on, the prose stays open: collapsing the only
         // content on the axis would leave a panel that says nothing.
+        // ⚠️ The visible lead is the producer's OWN FIRST SENTENCE, taken
+        // mechanically — never a sentence composed here. On this asset it is
+        // "The issuer is FOUR entities, not one.", which is exactly the finding;
+        // but the rule is mechanical precisely so the renderer is not choosing
+        // which claim about a real company leads the card.
+        var leadMatch = summary ? /^([\s\S]*?\.)\s+([\s\S]+)$/.exec(summary) : null;
+        var lead = leadMatch ? leadMatch[1] : summary;
+        var rest = leadMatch ? leadMatch[2] : '';
         var collapseSummary = summary && facts.length >= 3;
         var srcHtml = summary
             ? (issuer.summary_source
@@ -3588,11 +3609,12 @@ const CommonRenderer = {
                     'declared for this summary.</div>')
             : '';
         var summaryHtml = !summary ? ''
-            : collapseSummary
-                ? '<details class="issuer-summary-details"><summary class="issuer-summary-toggle">' +
+            : collapseSummary && rest
+                ? '<div class="issuer-lead">' + this._escapeAttr(lead) + '</div>' +
+                  '<details class="issuer-summary-details"><summary class="issuer-summary-toggle">' +
                   'Full issuer assessment' +
                   (issuer.entity ? ' \u2014 ' + this._escapeAttr(String(issuer.entity)) : '') +
-                  '</summary><div class="issuer-summary">' + this._escapeAttr(summary) +
+                  '</summary><div class="issuer-summary">' + this._escapeAttr(rest) +
                   srcHtml + '</div></details>'
                 : '<div class="issuer-summary">' + this._escapeAttr(summary) + srcHtml + '</div>';
 
@@ -3601,7 +3623,13 @@ const CommonRenderer = {
             '<div class="flex flex-wrap items-center gap-2 mb-3">' + chips + '</div>' +
             summaryHtml +
             factsHtml +
-            '<p class="text-sm text-slate-500 mb-3">' + methodology + '</p>' +
+            // ⚠️ The methodology sentence is identical on every asset and says
+            // the axis is editorial — true, unchanging, and the longest visible
+            // line on the card once the content collapsed. It belongs on hover,
+            // not above the fold, and the "editorial — subjective axis" label in
+            // the axis head already carries the same claim in three words.
+            '<div class="issuer-meta" title="' + this._escapeAttr(methodology.replace(/<[^>]+>/g, '')) +
+                '">Editorial axis \u2014 how this is rated \u24d8</div>' +
             reportLink +
         '</div>';
     },
