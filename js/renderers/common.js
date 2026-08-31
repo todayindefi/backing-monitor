@@ -3671,8 +3671,26 @@ const CommonRenderer = {
             return '<tr>' +
                 '<td>' + esc(l.authority_layer || '—') + '</td>' +
                 '<td>' + ((l.keys || []).map(esc).join(', ') || '—') + '</td>' +
+                // ⚠️ A CONFIGURED DELAY IS NOT AN ENFORCED ONE, and the column now
+                // says so in two words instead of a paragraph. `timelock: 48h`
+                // only ever meant a delay is SET; `timelock_floor: none` means
+                // MINIMUM_DELAY()/MIN_DELAY() were called and reverted, so the
+                // delay is reducible by whoever can schedule against the
+                // timelock's own admin. security_analyst shipped the field rather
+                // than the prose I asked for, and they were right: it is a chain
+                // read with a positive control, not a judgement, so it joins for
+                // every consumer instead of rendering for one.
+                //
+                // ⚠️ ABSENT IS NOT `none`. A missing floor field means NOT
+                // MEASURED and renders nothing — inventing "no floor" from
+                // silence would be the same error as reading `timelock:
+                // unresolved` as "no timelock".
                 '<td class="' + (unknown ? 'tw-unknown' : (undelayed ? 'tw-bad' : 'tw-ok')) + '">' +
                     (unknown ? '\u26a0\ufe0f not measured' : (undelayed ? '\u26a0\ufe0f none' : esc(tl))) +
+                    (l.timelock_floor === 'none'
+                        ? '<span class="tw-nofloor" title="MINIMUM_DELAY() and MIN_DELAY() both revert, so no floor is enforced: the delay is reducible by whoever can schedule against the timelock\u2019s own admin. A configured delay is not an enforced one.">' +
+                          ' \u00b7 no floor</span>'
+                        : (l.timelock_floor ? '<span class="tw-sub"> \u00b7 floor ' + esc(l.timelock_floor) + '</span>' : '')) +
                 '</td>' +
                 '<td>' + esc(l.topology || '—') + '</td>' +
                 '<td>' + esc(l.reach || '—') + '</td>' +
@@ -3708,11 +3726,21 @@ const CommonRenderer = {
 
         return '<div class="panel topology-walk">' +
             '<div class="panel-title">Authority walk \u2014 ' + esc(c.method || 'unknown method') + '</div>' +
-            '<div class="tw-headline">' + esc(c.headline) + '</div>' +
-            (c.headline_basis ? '<div class="tw-sub">' + esc(c.headline_basis) + '</div>' : '') +
+            // ⚠️ Provenance goes in tooltips, not in the reading line. Three
+            // meta sentences above the table — how the headline was derived, what
+            // file it came from, what generator row it replaced, and their
+            // coverage-audit percentage — were longer than the finding itself.
+            // All of it is true, none of it is what the axis is for, and it is
+            // still one hover (and one click, in the trail) away.
+            '<div class="tw-headline"' +
+                (c.headline_basis ? ' title="' + esc(c.headline_basis) + '"' : '') + '>' +
+                esc(c.headline) + '</div>' +
             '<div class="tw-sub">Walked ' + esc(c.observed_at || '?') +
-                (c.source_file ? ' \u00b7 ' + esc(c.source_file) : '') +
-                (c.method_note ? ' \u00b7 ' + esc(c.method_note) : '') + '</div>' +
+                (c.source_file || c.method_note
+                    ? ' <span class="tw-meta" title="' +
+                      esc([c.source_file, c.method_note].filter(Boolean).join(' \u2014 ')) +
+                      '">\u24d8</span>'
+                    : '') + '</div>' +
             (layerRows
                 ? '<div class="tw-tablewrap"><table class="tw-table"><thead><tr>' +
                   '<th>Authority</th><th>Keys</th><th>Delay</th><th>Topology</th><th>Reach</th>' +
@@ -3727,10 +3755,22 @@ const CommonRenderer = {
             // MINTER_ROLE finding is riskAnalyst\u2019s walk, not this
             // producer\u2019s, and summarising it here would strip the credit and
             // launder one repo\u2019s evidence as another\u2019s.
+            // ⚠️ COLLAPSED, BUT THE SCOPES STAY VISIBLE. "Not established" must
+            // remain as prominent as what WAS established — that is the whole
+            // argument for publishing it — but prominence is the reader knowing
+            // THAT four things are unmeasured and WHICH, not 1,400 characters of
+            // justification stacked above the fold. The scopes are taken
+            // mechanically from the text before each first colon.
             (unresolved.length
-                ? '<div class="tw-unresolved"><div class="tw-unresolved-head">\u26a0\ufe0f Not established ' +
-                  '\u2014 ' + unresolved.length + ' item' + (unresolved.length === 1 ? '' : 's') +
-                  ', verbatim from the walk</div><ul>' +
+                // ⚠️ The attribute must be OMITTED, not set empty: <details open="">
+                // is OPEN. Few enough items stay expanded; a long list collapses.
+                ? '<details class="tw-unresolved"' + (unresolved.length <= 2 ? ' open' : '') + '>' +
+                  '<summary class="tw-unresolved-head">\u26a0\ufe0f Not established \u2014 ' +
+                  unresolved.length + ' item' + (unresolved.length === 1 ? '' : 's') + ': ' +
+                  esc(unresolved.map(function(u) {
+                      var i = u.indexOf(':');
+                      return i > 0 && i < 60 ? u.slice(0, i) : u.split(/\.\s/)[0].slice(0, 40);
+                  }).join(' \u00b7 ')) + '</summary><ul>' +
                   unresolved.map(function(u) {
                       // First sentence as the visible label, remainder behind an
                       // expander. Mechanical — split on the first sentence end —
@@ -3744,7 +3784,7 @@ const CommonRenderer = {
                           esc(m[2]) + '</details></li>';
                   }).join('') +
                   '</ul><div class="tw-sub">Absence of a measurement is not a finding that the ' +
-                  'authority is unconstrained \u2014 nor that it is constrained.</div></div>'
+                  'authority is unconstrained \u2014 nor that it is constrained.</div></details>'
                 : '') +
             (notes.length
                 ? '<details class="tw-details"><summary>Verification trail &amp; walk notes (verbatim, ' +
