@@ -3564,15 +3564,37 @@ const CommonRenderer = {
         // map, the Note structure and the BVI regulator that the published report
         // does not mention at all.
         var summary = typeof issuer.summary === 'string' ? issuer.summary.trim() : '';
-        var summaryHtml = summary
-            ? '<div class="issuer-summary">' + this._escapeAttr(summary) +
-              (issuer.summary_source
+        // ⚠️ COLLAPSED WHEN THERE ARE BULLETS TO SCAN, and the choice of what to
+        // collapse is deliberate. The prose and `facts[]` cover the same ground —
+        // the bullets are the producer's own scannable form of it — so a reader
+        // meeting an unbroken 1,100-character block above ten bullets reads the
+        // same material twice, badly, and most will read neither.
+        //
+        // ⚠️ COLLAPSED, NOT TRUNCATED. Cutting to the first N sentences would mean
+        // this renderer choosing WHICH of the producer's warnings a reader sees,
+        // and on this asset the second ⚠️ (no direct claim on the §114 trust
+        // assets) is the one most likely to surprise someone — a length-based cut
+        // would have hidden exactly it. Nothing is dropped; it is one click away
+        // and the click is labelled with what it opens.
+        //
+        // With no facts to fall back on, the prose stays open: collapsing the only
+        // content on the axis would leave a panel that says nothing.
+        var collapseSummary = summary && facts.length >= 3;
+        var srcHtml = summary
+            ? (issuer.summary_source
                   ? '<div class="issuer-summary-src">Source: ' +
                     this._escapeAttr(String(issuer.summary_source)) + '</div>'
                   : '<div class="issuer-summary-src issuer-summary-src-none">\u26a0\ufe0f No source ' +
-                    'declared for this summary.</div>') +
-              '</div>'
+                    'declared for this summary.</div>')
             : '';
+        var summaryHtml = !summary ? ''
+            : collapseSummary
+                ? '<details class="issuer-summary-details"><summary class="issuer-summary-toggle">' +
+                  'Full issuer assessment' +
+                  (issuer.entity ? ' \u2014 ' + this._escapeAttr(String(issuer.entity)) : '') +
+                  '</summary><div class="issuer-summary">' + this._escapeAttr(summary) +
+                  srcHtml + '</div></details>'
+                : '<div class="issuer-summary">' + this._escapeAttr(summary) + srcHtml + '</div>';
 
         return '<div class="panel">' +
             '<div class="panel-title">' + this._escapeAttr(info.label) + '</div>' +
