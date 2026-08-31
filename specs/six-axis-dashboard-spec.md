@@ -132,6 +132,23 @@ Breakdown" AND a bespoke "Backing"; susdat shows "Price vs NAV" in two separate 
 **Rule for bespoke renderers:** append into `#section-<axis>` (or the axis's extra-panels slot),
 never into the page root. If a panel does not belong to exactly one axis, it is two panels.
 
+### Migration policy — user decision 2026-08-31
+
+⚠️ **OPPORTUNISTIC, NOT A SWEEP. Migrate a page when its CONTENT is next refreshed** — when the
+asset's data goes out of date and someone is in the file anyway. Do not schedule a mass migration:
+these are the richest pages in the fleet, they are not broken, and a bulk rewrite risks the content
+for a structural gain.
+
+⚠️ **But do not let a refresh pass without migrating.** "Next time" is how this survived three
+producers and a frame change. If you are editing an asset's renderer for any reason, it leaves
+conforming.
+
+**Measured non-conforming (2026-08-31):** `syrupusdc`, `thusd` (appended below), `susdat` (mixed).
+**Measured conforming:** `apyusd`, `reusd-re`.
+⚠️ **The other 17 bespoke renderers are UNVERIFIED, not passing** — `apxusd, bmnr, crvusd, cusd,
+frax, hastra-prime, mstr, ousd, strc, susdai, susde, syrupusdt, usdai, usdat, usdd, usde, usg`.
+Check with the §9 panel-placement item before assuming any of them conforms.
+
 ---
 
 # 3. The top row
