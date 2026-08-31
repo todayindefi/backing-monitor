@@ -8,7 +8,7 @@ audience: whoever builds or reviews the next asset page
 
 # How to use this
 
-**Build a new asset against §4 (per-axis contract) and §8 (acceptance).** Everything else
+**Build a new asset against §4 (per-axis contract), §8 (what finished means) and §9 (acceptance).** Everything else
 explains why the rules are what they are — read it when a rule seems wrong, because most of
 them were paid for.
 
@@ -32,6 +32,71 @@ cites an asset, that asset is the evidence.
 until `liquidity/1` is adopted renderer-side.
 
 **One producer per axis** — except where two producers cover disjoint HALVES and say so; see §5.4.
+
+## 1.1 Who produces what, and how to reach them
+
+⚠️ **Routing is per counterparty and getting it wrong costs a round trip.** Codex-lane repos read
+a file; live sessions read a message. A message to a wrapped session is lost completely.
+
+```
+PRODUCER          REACH VIA        EMITS INTO                         WHAT
+PegTracker        codex handoff    ~/PegTracker/data/                 base feed, peg history
+DexTracker        codex handoff    ~/DexTracker/data/liquidity/  ⚠️   {slug}_liquidity.json
+security_analyst  codex handoff    ~/security_analyst/topology/  ⚠️   YAML — NOT json
+riskAnalyst       LIVE session     ~/riskAnalyst/data/axes/           axis overlays
+tidr              LIVE session     tidresearch report corpus          report + production flag
+```
+
+**Codex lane:** write `handoffs/inbox/<id>.md` (`status: ready`, `from: claude`, `to: codex`, an
+`output:` path) → `./agent-handoff codex --id <id>`. ⚠️ Never declare `handoffs/results/` as the
+deliverable — that belongs to the launcher. ⚠️ The rollout guard trips after roughly one dispatch;
+run `tools/codex-rotate.sh` first. ⚠️ Show the handoff file and the exact command to the user
+BEFORE dispatching.
+
+⚠️ **DexTracker writes to a SUBDIRECTORY and security_analyst does not write JSON at all.** Both
+broke the assumption that a producer drops a file next to PegTracker's. `sync_and_push.sh` searches
+`SOURCE_ROOTS`; a new root is a line there, and a file outside every root reaches nothing.
+
+### What each producer emits, per axis
+
+```
+axis 1  PegTracker        peg.{nav,nav_source,nav_basis,market_price,market_price_source,
+                          premium_discount_pct}, history_ref -> {slug}_peg_history.json
+axis 2  PegTracker        backing.{collateral_ratio + basis, supply + scope, breakdown}
+        riskAnalyst       backing-overlay/1 — what chain cannot show: first-loss attachment,
+                          NAV write path, and an AUTHORED score gated per §6.3
+axis 3  DexTracker        liquidity/1 — depth, enumeration, venues, primary_exit
+        PegTracker        the embedded liquidity block, until liquidity/1 is adopted
+axis 4  riskAnalyst       dependencies/1 — upstream[] with name/metric/source/note
+axis 5  security_analyst  topology YAML: layers, timelock, timelock_floor, unmeasured[]
+                          ⚠️ THEY DO NOT EMIT JSON. backing-monitor's tools/emit_axis5.py
+                          reads their YAML fresh each sync — a generator, never a stored copy,
+                          because a committed copy drifts from the walk.
+        riskAnalyst       contract-overlay/1 — the CODE half (audits, architecture) + the score
+axis 6  riskAnalyst       issuer/1 — score, entity, regulator, summary, facts[]
+        tidr              the published report the axis links to
+```
+
+### What each producer will refuse, and why it is right
+
+- ⚠️ **security_analyst will not publish prose findings or scores.** They emit OBSERVATIONS —
+  a chain read with a positive control. Judgement is riskAnalyst's. When a finding needs to reach
+  the page, ask for a structured FIELD (`timelock_floor`), not a paragraph: a field joins for every
+  consumer, a paragraph renders for one.
+- ⚠️ **riskAnalyst will not score an axis the dashboard computes.** An authored number silently
+  overriding a measured band is a category error. The exception is a DECLARED impossibility (§6.3).
+- ⚠️ **They will also not score an axis that is unrated fleet-wide** (axis 4), because one asset
+  scoring it redefines what every other page's blank means.
+- **PegTracker will not derive a figure the issuer does not attribute** — e.g. a collateral ratio
+  from combined multi-asset reserves. Do not ask twice; render the absence.
+
+### Whose gate blocks what
+
+```
+security_analyst walks     their user      reUSDe is unwalked and stays unwalked until they say
+report publication         tidr's owner    production: true; until then there is NO safe link
+promotion (reports+pages)  our user        the four artifacts promote as one set
+```
 
 ⚠️ **Axis 4 and axis 5 answer different questions and the distinction is load-bearing:**
 *whose failure reaches me from outside* vs *who can act on me from inside*. An issuer's own NAV
@@ -318,7 +383,88 @@ was overridden, so the axis showed "Overall 6.0/10" over an authored 5.5.
 
 ---
 
-# 8. Acceptance — before an asset is promoted
+# 8. What "finished" means
+
+⚠️ **§9 proves a page is COMPLETE. This section is whether it is any GOOD.** A page can pass every
+mechanical check and still tell a reader nothing — every axis populated, every field rendered, and
+no one any better informed.
+
+## 8.1 The four things every number carries
+
+**A figure alone is not content.** Finished means:
+
+```
+VALUE     the number
+BASIS     what it is measured against, in words a reader can check
+CLOCK     when it was observed — its own as_of, not the page's
+SCOPE     what it covers and what it excludes
+```
+
+⚠️ **Scope is the one most often missing and the most expensive.** "Supply 201.1M" is not finished;
+"201.1M — Ethereum, the only chain measured" is. "$136.9M reserves" is not finished; "combined
+reUSD + reUSDe, not attributable to reUSD alone" is. **A figure whose scope is unstated invites the
+reader to compute something wrong with it.**
+
+## 8.2 An adverse finding is not finished until it carries direction and limit
+
+- ⚠️ **DIRECTION.** "Attachment point 9.66%" is a number. *"…and it thinned because the
+  DENOMINATOR ROSE, not because the junior layer shrank"* is the finding — without it a reader
+  watching supply grow concludes the opposite of the truth.
+- ⚠️ **LIMIT.** *"Selector presence does not distinguish implements-from-calls; no disassembly was
+  done."* A serious claim rendered without its limit is stronger than the evidence supports, and a
+  reader who discovers the limit unaided discounts everything else on the page.
+- ⚠️ **VINTAGE where operands differ.** A ratio of a June numerator over an August denominator is
+  INDICATIVE, not measured, and must say so. "As of", never "Measured", unless it was.
+
+## 8.3 The reader tests
+
+Apply these to each axis before calling it done:
+
+1. **The so-what test.** Can a reader say what this axis means for them? "Healthy 5/5" over an
+   issuer-written NAV fails: it says the price tracks the mark, not that the mark is trustworthy.
+2. **The standalone test.** Is the page comprehensible without the report? The report may be
+   unpublished, gated, or superseded. ⚠️ An axis that is a score plus a link is not finished.
+3. **The wrong-computation test.** Take every pair of numbers on the page. Would dividing or
+   comparing any pair mislead? If so, say so where the numbers are — not in a footnote.
+4. **The blank test.** For every blank: does the page say WHY? "Not rated" alone fails.
+   "No collateral ratio is establishable — the issuer publishes combined reserves with no
+   per-asset denominator" passes.
+5. **The scan test.** Does the top row alone give an honest first impression? A blank tile over a
+   below-norm finding fails it.
+
+## 8.4 Finished vs merely present — real examples
+
+```
+NOT FINISHED                          FINISHED
+"Not rated"                           "Not rated — no collateral ratio is establishable,
+                                       because the issuer publishes combined reUSD+reUSDe
+                                       reserves with no per-asset denominator"
+"48h timelock"                        "48h · no floor" — MINIMUM_DELAY reverts, so it is
+                                       reducible by whoever schedules against the admin
+"2 upstream"                          two named legs with metric, source, and the caveat
+                                       that 93.87% is COMBINED, not reUSD-only
+"Issuer 5.5/10"                       "The issuer is FOUR entities, not one" + who bears
+                                       the underwriting risk + no claim on the trust assets
+"admin-written on SharePriceCalculator"  …via an undocumented 632-byte contract that ALSO
+                                       holds forceNAVUpdate, the deviation-guard bypass
+                                       — with the disassembly limit attached
+```
+
+## 8.5 ⚠️ What finished does NOT mean
+
+- **Not "every field rendered".** Some fields are diagnostics. Deliberately not rendering is a
+  decision; failing to notice is a defect. Know which you did.
+- **Not "no blanks".** A declared absence is finished content. An undeclared one is not.
+- **Not "a score on every axis".** Axes 4 and 5 are unrated by design, and inventing a number to
+  fill them is worse than the blank.
+- **Not "the most text".** The richest pages in the fleet were also the least legible; axis 5 lost
+  90% of its visible characters and gained the finding it had buried.
+- ⚠️ **Not "it looks right".** It looked right on every occasion in this repo's history when it was
+  wrong. Run the diff, render the page, check the clock.
+
+---
+
+# 9. Acceptance — before an asset is promoted
 
 ```
 [ ] check_feeds.py: 0 failures
