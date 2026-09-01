@@ -3,26 +3,34 @@
   "asset": "USDe",
   "asset_slug": "usde",
   "chain": "ethereum",
-  "timestamp": "2026-09-01T11:46:00Z",
+  "timestamp": "2026-09-01T12:48:00Z",
   "summary": {
-    "total_supply": 4122426518.61,
+    "total_supply": 4182755908.64,
     "supply_unit": "USD",
-    "total_backing": 4129352478.33,
-    "coverage_ratio": 1.00168,
-    "coverage_ratio_with_reserve_fund": 1.01674,
-    "reserve_fund_usd": 62083352.98,
+    "total_backing": 4133428448.74,
+    "coverage_ratio": 0.988207,
+    "coverage_ratio_with_reserve_fund": 1.00305,
+    "reserve_fund_usd": 62084014.41,
     "nav": 1.0,
-    "price": 0.9996106277657477,
+    "price": 0.9995710252328963,
     "paused": null
   },
-  "risk_flags": [],
+  "risk_flags": [
+    {
+      "id": "coverage_below_par",
+      "severity": "warning",
+      "message": "USDe coverage 98.82% \u2014 backing below par",
+      "value": 0.988207,
+      "scope": "usde_level"
+    }
+  ],
   "vault_status": null,
   "asset_specific": {
     "type": "usde",
     "peg": {
-      "market_price": 0.9996106277657477,
+      "market_price": 0.9995710252328963,
       "theoretical_price": 1.0,
-      "premium_discount_pct": -0.0389,
+      "premium_discount_pct": -0.0429,
       "source": "llamarisk"
     },
     "redemption_liquidity": {
@@ -33,9 +41,9 @@
     },
     "backing_source": {
       "llamarisk_fetch_status": "ok",
-      "total_backing_usd": 4129352478.33,
-      "unallocated_usd": 3489740534.0,
-      "cex_hedge_total_usd": 639611944.33
+      "total_backing_usd": 4133428448.74,
+      "unallocated_usd": 3493795005.0,
+      "cex_hedge_total_usd": 639633443.74
     },
     "attestation": {
       "month": "July 2026",
@@ -85,9 +93,9 @@
   },
   "report_url": "https://tidresearch.com/reports/usde",
   "peg": {
-    "market_price": 0.9996106277657477,
+    "market_price": 0.9995710252328963,
     "nav": 1.0,
-    "premium_discount_pct": -0.0389,
+    "premium_discount_pct": -0.0429,
     "source": "llamarisk",
     "history_ref": "usde_backing_history.json",
     "history_field": "market_price"
@@ -161,28 +169,28 @@
     "pools": []
   },
   "backing": {
-    "collateral_ratio": 101.674,
+    "collateral_ratio": 100.305,
     "collateral_ratio_scale": "percent",
     "collateral_ratio_basis": "Backing / supply INCLUDING the reserve fund (coverage_ratio_with_reserve_fund x 100). The conservative coverage excluding the reserve fund is in backing.secondary and sits lower; the two diverge precisely when the fund is absorbing something. \u26a0\ufe0f USDe is delta-neutral, not overcollateralised: par is the design target, so the generic [130,110,100,90] rates its intended state 'Watch'. Cutoffs are anchored on this analyzer's own COVERAGE_WARN (1.0) and COVERAGE_CRIT (0.98).",
-    "total_backing": 4129352478.33,
-    "surplus_deficit": 67987253.86,
+    "total_backing": 4133428448.74,
+    "surplus_deficit": 12568622.47,
     "surplus_deficit_basis": "Implied by the rated ratio: total_backing - total_backing/(collateral_ratio/100), i.e. the surplus INCLUDING the reserve fund. \u26a0\ufe0f NOT total_backing - total_supply, which excludes the fund and is published as surplus_deficit_ex_reserve_fund.",
-    "surplus_deficit_ex_reserve_fund": 6925959.72,
+    "surplus_deficit_ex_reserve_fund": -49327459.9,
     "breakdown": [
       {
         "label": "Liquid / unallocated",
-        "value": 3489740534.0,
-        "pct": 84.51
+        "value": 3493795005.0,
+        "pct": 84.53
       },
       {
         "label": "CEX delta-hedge collateral",
-        "value": 639611944.33,
-        "pct": 15.49
+        "value": 639633443.74,
+        "pct": 15.47
       }
     ],
     "secondary": {
       "label": "Conservative coverage (excl. reserve fund)",
-      "coverage_ratio": 100.168
+      "coverage_ratio": 98.8207
     }
   },
   "dependencies": {
@@ -190,14 +198,14 @@
       {
         "name": "Liquid / unallocated",
         "metric": "liquid cash",
-        "value": 3489740534.0,
+        "value": 3493795005.0,
         "link": null,
         "link_type": "none"
       },
       {
         "name": "CEX delta-hedge collateral",
         "metric": "perp hedge collateral",
-        "value": 639611944.33,
+        "value": 639633443.74,
         "link": null,
         "link_type": "none"
       },
@@ -220,7 +228,7 @@
     "issuer_score_source": "risk-feed@2026-09-01T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-09-01T01:45:02Z",
-    "issuer_score_age_hours": 10.02,
+    "issuer_score_age_hours": 11.05,
     "attestation_age_days": 39.5
   }
 }
