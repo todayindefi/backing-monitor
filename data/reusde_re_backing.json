@@ -1,0 +1,197 @@
+{
+  "schema_version": 2,
+  "asset": "reUSDe (Re Protocol)",
+  "asset_slug": "reusde-re",
+  "chain": "Ethereum",
+  "token_address": "0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a",
+  "timestamp": "2026-09-02T16:51:42Z",
+  "summary": {
+    "total_supply": 14233488.711398222,
+    "total_supply_scope": "Ethereum token totalSupply",
+    "nav_claim_value": 20085957.21,
+    "total_backing": null,
+    "collateral_ratio": null,
+    "premium_discount_pct": -0.0833,
+    "two_pct_depth": null,
+    "two_pct_depth_is_floor": false
+  },
+  "risk_flags": [
+    {
+      "severity": "warning",
+      "message": "reUSDe has no usable on-chain NAV accessor; NAV is an off-chain issuer API value with the API's own timestamp."
+    },
+    {
+      "severity": "warning",
+      "message": "Primary exit is a quarterly, regulator-approved capped window; the first window filled its announced pool and was rationed pro rata."
+    },
+    {
+      "severity": "warning",
+      "message": "reUSDe is Re Protocol's second-loss mezzanine tranche: Re equity absorbs first, reUSDe second, and reUSD last."
+    },
+    {
+      "severity": "warning",
+      "message": "The Curve secondary venue is a cross-currency twocrypto pool against sUSDe; dollar interpretation inherits sUSDe's USD price."
+    }
+  ],
+  "peg": {
+    "as_of": "2026-09-02T16:50:20Z",
+    "nav": 1.411175968002874,
+    "nav_source": "Re Protocol off-chain issuer API https://api.re.xyz/apy/get-apy data.reUSDe.currentNAV",
+    "nav_basis": "Off-chain issuer-published NAV. reUSDe exposes no usable on-chain nav(), getNAV(), totalAssets(), pricePerShare(), convertToAssets(), or exchangeRate() accessor; this is weaker than an issuer-set value that can at least be read on-chain.",
+    "nav_as_of": "2026-09-02T16:23:04.343Z",
+    "nav_retrieved_at": "2026-09-02T16:51:38Z",
+    "market_price": 1.41,
+    "market_price_source": "CoinGecko API external USD aggregate mid for re-protocol-reusde; off-chain market-data API, distinct from the off-chain issuer NAV API and not a contract read",
+    "market_price_as_of": "2026-09-02T16:50:20Z",
+    "market_price_retrieved_at": "2026-09-02T16:51:39Z",
+    "premium_discount_pct": -0.0833,
+    "premium_discount_basis": "signed (CoinGecko external market mid - off-chain issuer API NAV) / NAV * 100; no smoothing or clamping",
+    "source": "coingecko_external_mid + re_protocol_offchain_issuer_api",
+    "history_ref": "reusde_re_peg_history.json",
+    "history_field": "peg_market_price",
+    "history_basis_note": "Historical market prices are compared with issuer API theoretical NAV observations. No quarter-boundary NAV behavior is inferred or asserted."
+  },
+  "liquidity": {
+    "as_of": "2026-09-02T16:51:42Z",
+    "total_tvl": 561095.69,
+    "total_tvl_basis": "GeckoTerminal reserve_in_usd for the listed Curve twocrypto secondary venue; pool TVL is not executable depth and its USD conversion inherits sUSDe's USD price",
+    "total_2pct_depth": null,
+    "total_2pct_depth_is_floor": false,
+    "two_pct_depth_status": "not_measured",
+    "two_pct_depth_bracket": null,
+    "two_pct_depth_size_responsive": null,
+    "two_pct_depth_unresponsive_note": "No USD exit quote ladder is published because the venue directly prices reUSDe in sUSDe, not dollars.",
+    "two_pct_depth_basis": "Not measured; cross-currency pool TVL is not treated as dollar depth.",
+    "volume_24h": 20988.87,
+    "volume_24h_scope": "GeckoTerminal Curve REUSDE/sUSDe pool",
+    "external_mid": 1.41,
+    "external_mid_source": "CoinGecko API external aggregate mid for re-protocol-reusde",
+    "external_mid_as_of": "2026-09-02T16:50:20Z",
+    "primary_exit": {
+      "venue": "Re Protocol quarterly WindowRedemption",
+      "contract": "0xD2e077d945Ec77B45Fbe4622E01F4C79e4bA389A",
+      "at_nav": true,
+      "gated": true,
+      "gate": "Quarterly redemption window; eligibility and released surplus require regulatory approval",
+      "cadence": "quarterly",
+      "capacity_usd": 1500000,
+      "capacity_basis": "Announced first-window pool; fixed by released surplus under regulatory approval, not a demand-scaling floor",
+      "oversubscription_treatment": "pro rata",
+      "first_window": {
+        "request_period": "2026-07-09 to 2026-07-22",
+        "settlement_period": "2026-07-23 to 2026-08-05",
+        "claims": 72,
+        "tokens_redeemed": 1077727,
+        "settlement_nav": 1.3914210486459921,
+        "settled_value_usd": 1500075,
+        "result": "Filled to the announced ceiling within 0.005%; requests met or exceeded capacity and the window was rationed."
+      },
+      "capacity_pct_of_tranche": 7.9,
+      "full_exit_years_at_same_capacity": 3.2,
+      "note": "The primary exit is periodic and capped, not continuous liquidity."
+    },
+    "pools": [
+      {
+        "name": "Curve REUSDE/sUSDe",
+        "pool_type": "curve_twocrypto_cross_currency",
+        "address": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+        "tvl_usd": 561095.69,
+        "volume_24h_usd": 20988.87,
+        "price_denominator": "sUSDe",
+        "usd_basis": "GeckoTerminal USD conversion; the pool directly prices reUSDe in sUSDe, so its dollar mark and TVL inherit sUSDe's own USD price",
+        "balance_ratio_basis": "Not published: in Curve twocrypto the token split expresses the exchange rate and is not a stableswap imbalance measure."
+      }
+    ],
+    "note": "No balance_ratio is published. For this Curve twocrypto cross-currency pair, token split is an exchange-rate expression rather than a stableswap imbalance finding."
+  },
+  "backing": {
+    "as_of": "2026-09-02T16:51:35Z",
+    "as_of_basis": "Ethereum block time for supply; issuer reserve composition retrieved during this run and its page exposes no component timestamp",
+    "collateral_ratio": null,
+    "collateral_ratio_basis": "No tranche-specific collateral ratio is established. The reserve dashboard combines reUSD and reUSDe and does not expose an attributable reUSDe denominator.",
+    "total_backing": null,
+    "total_backing_basis": "Not published because no independently attributable reUSDe-only reserve total was established.",
+    "nav_claim_value": 20085957.21,
+    "nav_claim_value_basis": "Ethereum reUSDe totalSupply() multiplied by the off-chain issuer API NAV; this is issuer-marked claim value, not backing.",
+    "ethereum_supply": 14233488.711398222,
+    "ethereum_supply_source": "reUSDe totalSupply() at Ethereum block 25890919",
+    "protocol_reserves_passthrough": {
+      "scope": "issuer-reported combined reUSD + reUSDe reserves; not attributable to reUSDe alone",
+      "source": "https://app.re.xyz/metrics",
+      "retrieved_at": "2026-09-02T16:51:42Z",
+      "total_usd": 153928857.76,
+      "breakdown": [
+        {
+          "name": "sUSDe",
+          "value_usd": 152346255.23,
+          "pct": 98.97,
+          "chains": 3
+        },
+        {
+          "name": "reUSD/sUSDe LP",
+          "value_usd": 1438359.24,
+          "pct": 0.93,
+          "chains": 1
+        },
+        {
+          "name": "USDe",
+          "value_usd": 109844.65,
+          "pct": 0.07,
+          "chains": 1
+        },
+        {
+          "name": "USDC",
+          "value_usd": 26613.83,
+          "pct": 0.02,
+          "chains": 1
+        },
+        {
+          "name": "USDt",
+          "value_usd": 4871.01,
+          "pct": 0.0,
+          "chains": 1
+        },
+        {
+          "name": "Other",
+          "value_usd": 2913.79,
+          "pct": 0.0
+        }
+      ]
+    },
+    "breakdown": [],
+    "tranche_position": "second-loss mezzanine",
+    "loss_waterfall": "Re equity absorbs first loss; reUSDe mezzanine absorbs second; reUSD senior absorbs last",
+    "waterfall_junior_capital_usd": 20000000,
+    "waterfall_basis": "$20M is the loss-waterfall capital quantity. The separately disclosed approximately $77M balance-sheet capital is a different quantity and is not used in the waterfall.",
+    "integrity": {
+      "status": "partial",
+      "note": "Supply is measured on-chain. NAV and protocol-wide reserve composition are issuer-reported; reserve composition is not used to claim tranche-specific coverage. Subordination is described but not deducted from backing scoring."
+    }
+  },
+  "dependencies": {
+    "as_of": "2026-09-02T16:51:42Z",
+    "upstream": [
+      {
+        "name": "Re Protocol off-chain NAV API",
+        "metric": "NAV",
+        "value": 1.411175968002874,
+        "source": "issuer API",
+        "note": "No usable on-chain reUSDe NAV accessor exists."
+      },
+      {
+        "name": "Ethena sUSDe",
+        "metric": "98.97% of issuer-reported combined protocol reserves and the secondary-pool denominator",
+        "source": "issuer dashboard + Curve pool",
+        "note": "The reserve percentage is combined reUSD + reUSDe; the secondary USD mark also inherits sUSDe's price."
+      },
+      {
+        "name": "Off-chain reinsurance trusts and counterparties",
+        "metric": "shared reserve-book exposure",
+        "source": "issuer disclosures",
+        "note": "Not independently measurable from Ethereum state."
+      }
+    ],
+    "downstream": [],
+    "downstream_tracked": false
+  }
+}
