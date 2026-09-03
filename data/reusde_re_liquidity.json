@@ -9,8 +9,10 @@
   "depth_usd": 15461.12060546875,
   "is_floor": false,
   "threshold_bps": -200.0,
-  "slippage_convention": "marginal impact against an external mid; signed cost, with -200bps as the crossing threshold",
-  "basis": "The 2% crossing is bracketed by successful Curve get_dy calls. depth_usd is the largest tested USD input notional that cleared the threshold, not pool TVL. Marginal impact is execution-rate deterioration from the smallest successful rung; the dated external reUSDe USD mid converts each rung's input notional to reUSDe. The external mid is not produced by Curve.",
+  "slippage_convention": "marginal execution-rate deterioration from the smallest successful rung; signed cost, with -200bps as the crossing threshold. The external reUSDe USD mid sizes the input notional and is not the impact reference.",
+  "basis": "The 2% crossing is bracketed by successful Curve get_dy calls. depth_usd is the largest tested USD input notional that cleared the threshold, not pool TVL. Marginal impact is execution-rate deterioration from the smallest successful rung; the dated external reUSDe USD mid converts each rung's input notional to reUSDe but is not the impact reference. Because the pool output is denominated in sUSDe and no sUSDe USD mark is in scope, neither the smallest-rung baseline nor any rung's execution rate can be reconciled to a dollar price.",
+  "price_bias_bps": null,
+  "bias_measures": "not_reconcilable_without_susde_usd_mark",
   "denomination_scope": {
    "measured_leg": "reUSDe -> sUSDe",
    "input_notional": "USD, converted to reUSDe with the external mid",
@@ -26,7 +28,10 @@
    "fair_value_as_of": "2026-09-03T05:50:50Z",
    "fair_value_choice": "market_price",
    "fair_value_choice_mode": "inherited",
-   "market_price_cross_check": null,
+   "market_price_cross_check": {
+    "status": "not_reconcilable",
+    "reason": "The external anchor is a reUSDe USD mid while the Curve pool prices reUSDe in sUSDe. Computing a market-price bias requires an sUSDe USD mark, which is outside this measurement's scope."
+   },
    "self_referential": false
   },
   "quote": {
