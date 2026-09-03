@@ -351,6 +351,23 @@ interest are different signals and one glyph cannot carry both — selecting ⚠
 from a YAML header put "THIS FILE HAS A LIVE PUBLIC CONSUMER" and "SLUG_TO_FILE needs one line"
 onto a public risk page. Page copy comes from a field the producer publishes deliberately.
 
+## 6.2b ⚠️ A renderer must never assert a claim about an asset
+
+**Not the presence of a fact, and not its absence.** A hard-coded line like *"the authority half
+is NOT ESTABLISHED"* is a latent FALSE NEGATIVE for every future asset that arrives with the thing
+established — it cannot know when it stops being true. It shipped on reUSDe and was false within
+the hour: the authority half had been verified on-chain and recorded in the producer's own report.
+
+**Drive the lead off the producer's field.** Their note says what is and is not established, in
+their words, and it moves when their assessment moves. This is the same rule as never composing
+issuer prose; absence claims are simply the case where it is easiest to forget, because a blank
+feels like the neutral option.
+
+⚠️ **OVERSTATING RISK IS NOT THE SAFE DIRECTION.** riskAnalyst's framing, kept verbatim: *a page
+telling a holder that nobody has checked who controls their asset, when a 48h timelock was in fact
+verified, pushes them toward an exit over nothing.* **It fails in a direction that merely FEELS
+responsible.** "When unsure, say it is worse" is not conservatism, it is a different error.
+
 ## 6.3 Authored vs computed
 
 An authored score may fill a gap ONLY when the producer DECLARES the measurement impossible.
@@ -379,6 +396,14 @@ dropped a measured 93.87% dependency once).
 ---
 
 # 7. Traps
+
+⚠️ **THE SECTION THAT MATCHES YOUR QUESTION IS THE ONE MOST LIKELY TO BE STALE.** Reports file
+corrections as dated UPDATE BLOCKS while the original prose stays filed by TOPIC — so a topical
+search, which is every search anyone actually runs, systematically returns the superseded text
+first. **The correction is structurally unreachable by the query that needs it**, and being in the
+same file does not help: one grep hit feels like the file answered. This produced a wrong axis-5
+render within an hour of being written. **Read the update blocks, or grep for the date, not only
+the topic.**
 
 ⚠️ **A stale CDN 200 is not a liveness check.** A published-report link was wired on a measured
 `200` that was a Netlify edge cache; the origin was 404. Cache-bust, and read the `cache-status`.
