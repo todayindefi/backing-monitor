@@ -746,6 +746,38 @@ const CommonRenderer = {
         if (flags) flags.classList.toggle('risk-flags-columns', wideHidden);
     },
 
+    // ⚠️ WHEN DEPTH IS UNMEASURABLE, THE EXIT IS STILL KNOWN — show it rather
+    // than "n/a". reUSDe publishes no depth for an honest reason: its only venue
+    // prices it in sUSDe, not dollars, so a USD ladder would inherit a second
+    // asset's price. But its PRIMARY exit is measured precisely — a quarterly
+    // window capped at $1.5M, ~7.9% of the tranche, first window filled exactly
+    // to its ceiling. "n/a" over that is the blank-tile defect the spec forbids:
+    // a reader scanning the top row learns nothing about an exit we can describe
+    // better than most assets on the dashboard.
+    //
+    // ⚠️ Rendered as a RATE, never as a depth figure. $1.5M per quarter is not
+    // $1.5M of depth, and the sub-label says which. The axis rating still comes
+    // from depth alone and stays unrated here — this fills the VALUE slot, not
+    // the score.
+    _exitCapacityHtml(liq) {
+        var pe = liq && liq.primary_exit;
+        if (!pe || typeof pe !== 'object') return 'n/a';
+        var pct = typeof pe.capacity_pct_of_tranche === 'number' ? pe.capacity_pct_of_tranche : null;
+        var cad = pe.cadence ? String(pe.cadence) : null;
+        if (pct != null && cad) {
+            return '<span title="' + this._escapeAttr(
+                    [pe.gate, pe.capacity_basis, pe.note].filter(Boolean).join(' \u2014 ')) + '">' +
+                pct + '%<span class="text-slate-400 text-base font-normal">/' +
+                this._escapeAttr(cad.replace(/ly$/, '')) + '</span></span>';
+        }
+        if (typeof pe.capacity_usd === 'number') {
+            return this.formatCurrency(pe.capacity_usd) +
+                (cad ? '<span class="text-slate-400 text-base font-normal">/' +
+                       this._escapeAttr(cad.replace(/ly$/, '')) + '</span>' : '');
+        }
+        return 'n/a';
+    },
+
     // ------ Pie chart ------
     renderPieChart(data) {
         var ctx = document.getElementById('pie-chart');
@@ -1761,8 +1793,12 @@ const CommonRenderer = {
             ? (liq.free_liquidity_pct.toFixed(1) + '% free')
             : ((liq.total_2pct_depth != null)
                 ? (dFloor ? '\u2265' : '') + this.formatCurrency(liq.total_2pct_depth)
-                : 'n/a');
+                : this._exitCapacityHtml(liq));
         var dWord = '';
+        // ⚠️ The label moves with the value — same rule the backing tile needed.
+        // A capped periodic window shown under "2% depth" would read as depth.
+        var exitAsValue = !liqIsFree && liq.total_2pct_depth == null && liq.primary_exit &&
+            typeof liq.primary_exit.capacity_pct_of_tranche === 'number';
         if (!liqIsFree && liq.total_2pct_depth != null) {
             if (dUnresponsive) dWord = ' \u2014 quote does not vary with size';
             else if (dStatus === 'bracketed') dWord = ' (bracketed)';
@@ -1788,7 +1824,16 @@ const CommonRenderer = {
         var exitScope = this._exitScopeHtml(liq);
         var liqSub = liqIsFree
             ? 'redemption · free at NAV, rest queues'
-            : '2% depth' + dWord + ' · ' + this._volumeSubHtml(liq) + exitScope;
+            // ⚠️ REPLACE the "2% depth" prefix, never extend it. The first cut
+            // appended to it and produced "2% depth of tranche per quarter" — a
+            // periodic redemption cap described as venue depth, which is the exact
+            // mislabel the value fallback exists to prevent, reintroduced in the
+            // sub-line of the same tile.
+            : (exitAsValue
+                ? 'of tranche per ' +
+                  this._escapeAttr(String(liq.primary_exit.cadence || 'period').replace(/ly$/, '')) +
+                  ' — primary exit, capped · venue depth not measured'
+                : '2% depth' + dWord + ' · ' + this._volumeSubHtml(liq) + exitScope);
         // Say WHY it is unrated, or an honest blank reads as a missing feed.
         if (this._depthContradictedByLadder(data)) {
             liqSub = '<span class="text-amber-700">depth exceeds the 2% crossing in its own ladder</span>';
