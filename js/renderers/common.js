@@ -3871,13 +3871,29 @@ const CommonRenderer = {
         var esc = function(x) { return self._escapeAttr(String(x)); };
         var note = c.authority_note || c.no_walk_note ||
             'The authority half of this axis has not been walked.';
+        // ⚠️ THE HEADLINE IS THE PRODUCER'S SENTENCE, NEVER MINE. The first cut
+        // hardcoded "the authority half is NOT ESTABLISHED" — true when written,
+        // FALSE within the hour: riskAnalyst found reUSDe's DEFAULT_ADMIN_ROLE is
+        // held by the same 48h TimelockController, read on-chain 2026-08-12 and
+        // recorded in their own report. A renderer that asserts an absence is
+        // making a claim about an asset, and it cannot know when that claim stops
+        // being true. Their `authority_note` says what is and is not established,
+        // in their words, and it moves when their assessment moves.
         return '<div class="panel topology-walk">' +
-            '<div class="panel-title">Contract &amp; Admin \u2014 one half measured</div>' +
-            '<div class="tw-headline">\u26a0\ufe0f The authority half is NOT ESTABLISHED for this ' +
-                'asset. No admin-control walk has been performed.</div>' +
+            '<div class="panel-title">Contract &amp; Admin \u2014 no topology walk filed</div>' +
             '<div class="tw-flag">' + esc(note) + '</div>' +
             (c.no_structural_score_note
                 ? '<div class="tw-sub">' + esc(c.no_structural_score_note) + '</div>' : '') +
+            // ⚠️ Their explicit gaps, rendered as prominently as the score.
+            // The producer states the DIRECTION — every open question here can
+            // only push the score down — so a reader cannot mistake the gap for
+            // reassurance, which is the failure this axis keeps producing.
+            (Array.isArray(c.unmeasured) && c.unmeasured.length
+                ? '<div class="tw-unresolved"><div class="tw-unresolved-head">\u26a0\ufe0f Not ' +
+                  'measured \u2014 ' + c.unmeasured.length + '</div><ul>' +
+                  c.unmeasured.map(function(u) { return '<li>' + esc(u) + '</li>'; }).join('') +
+                  '</ul></div>'
+                : '') +
             '<details class="tw-code"><summary class="tw-code-toggle">Code &amp; audits \u2014 ' +
                 c.code_facts.length + ' points (the OTHER half)</summary>' +
                 '<ul class="tw-code-list">' +
