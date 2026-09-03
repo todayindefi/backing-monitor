@@ -2,7 +2,7 @@
   "schema_version": "backing-overlay/1",
   "producer": "riskanalyst",
   "asset": "reusd_re",
-  "as_of": "2026-08-30T00:00:00Z",
+  "as_of": "2026-09-03T00:00:00Z",
   "backing": {
     "attachment_point_pct": 9.66,
     "attachment_point_as_of": "2026-08-24T00:00:00Z",
@@ -10,19 +10,20 @@
     "attachment_point_norm_pct": 10.0,
     "attachment_point_below_norm": true,
     "attachment_point_direction_note": "THINNED BECAUSE THE DENOMINATOR ROSE, not because the junior layer shrank. No loss occurred; senior deposits grew. A supply series alone reads as strength while the cushion erodes.",
-    "nav_write_path": "admin-written on SharePriceCalculator via an UNDOCUMENTED 632-byte contract 0xe888DF32, which is BOTH the routine daily price writer AND holds forceNAVUpdate -- the bypass that skips the +/-10% deviation guard. It answers no standard interface and is absent from Re's published controller table.",
-    "collateral": [
-      "USDC",
-      "USDe",
+    "eligible_sleeve_assets": [
       "sUSDe",
+      "USDe",
+      "USDC",
       "T-Bills"
     ],
+    "eligible_sleeve_note": "⚠️ THIS IS A MANDATE, NOT A COMPOSITION. These are the assets the on-chain liquid sleeve is PERMITTED to hold. The MEASURED reserve is 98.97% sUSDe (see protocol_reserves_passthrough). T-Bills are an allowed rotation that HAS NOT OCCURRED. Reading the eligible set as the holding makes a single-asset book look diversified.",
+    "nav_write_path": "admin-written on SharePriceCalculator via an UNDOCUMENTED 632-byte contract 0xe888DF32, which is BOTH the routine daily price writer AND holds forceNAVUpdate -- the bypass that skips the +/-10% deviation guard. It answers no standard interface and is absent from Re's published controller table.",
     "nav_write_path_basis": "riskAnalyst assets/reusd-re.md joined with security_analyst audits/levered-oracle-price-sources-2026-08-27.md, re-measured 2026-08-30. LIMIT: selector presence does not distinguish implements-from-calls; no disassembly.",
     "attachment_point_vintage_note": "INDICATIVE, NOT MEASURED: a JUNE 2026 junior figure over a 2026-08-23 on-chain senior read. Numerator and denominator are ~2 months apart. ⚠️ This does NOT weaken the finding — the denominator is the operand that GREW, so the true current figure is more likely BELOW 9.66% than above it.",
     "backing_score": 5.5,
     "backing_score_source": "riskAnalyst:authored",
     "backing_score_generated_at": "2026-08-31T00:00:00Z",
-    "backing_score_basis": "⚠️ AUTHORED, NOT COMPUTED — a FALLBACK that yields to any derived collateral ratio. Used because PegTracker DECLARES no ratio is establishable for this asset: Re's reserve dashboard combines reUSD and reUSDe and exposes no asset-attributed denominator. Collateral quality is genuinely good (USDC, USDe, sUSDe, T-Bills behind a reinsurance book); held to 5.5 by the 9.66% attachment point sitting BELOW the 10% institutional norm, and by the NAV being admin-written on SharePriceCalculator so the reserve's own mark is issuer-controlled.",
+    "backing_score_basis": "⚠️ AUTHORED, NOT COMPUTED — a FALLBACK that yields to any derived collateral ratio. Used because PegTracker DECLARES no ratio is establishable for this asset: Re's reserve dashboard combines reUSD and reUSDe and exposes no asset-attributed denominator. ⚠️ The reserve is 98.97% sUSDe as measured — 'USDC, USDe, sUSDe, T-Bills' is the sleeve's ELIGIBLE SET, not its composition, and the T-Bill rotation has not occurred. So the collateral is good in QUALITY but is effectively ONE synthetic dollar carrying Ethena basis risk, not a diversified book; that concentration is priced on axis 4 (dependencies 5.0). Held to 5.5 by the 9.66% attachment point sitting BELOW the 10% institutional norm, and by the NAV being admin-written on SharePriceCalculator so the reserve's own mark is issuer-controlled.",
     "backing_score_applies_when": "collateral_ratio_declared_underivable",
     "backing_score_applies_when_note": "⚠️ MUST NOT fire on a merely-absent collateral_ratio. The producer declares this one underivable in collateral_ratio_basis. A bare null can also mean a failed fetch or a feed outage — and promoting an authored score over a measurement that exists but did not load is the failure where a failed read lands wherever the substitute sits. Require the DECLARATION, not the absence."
   }

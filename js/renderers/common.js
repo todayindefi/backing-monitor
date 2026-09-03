@@ -3865,13 +3865,55 @@ const CommonRenderer = {
         return '<span class="axis-rating r-na" title="No report URL is published for this asset.">No report</span>';
     },
 
+    // Code half with NO authority walk. Leads with what is not established.
+    _codeHalfOnlyHtml(c) {
+        var self = this;
+        var esc = function(x) { return self._escapeAttr(String(x)); };
+        var note = c.authority_note || c.no_walk_note ||
+            'The authority half of this axis has not been walked.';
+        return '<div class="panel topology-walk">' +
+            '<div class="panel-title">Contract &amp; Admin \u2014 one half measured</div>' +
+            '<div class="tw-headline">\u26a0\ufe0f The authority half is NOT ESTABLISHED for this ' +
+                'asset. No admin-control walk has been performed.</div>' +
+            '<div class="tw-flag">' + esc(note) + '</div>' +
+            (c.no_structural_score_note
+                ? '<div class="tw-sub">' + esc(c.no_structural_score_note) + '</div>' : '') +
+            '<details class="tw-code"><summary class="tw-code-toggle">Code &amp; audits \u2014 ' +
+                c.code_facts.length + ' points (the OTHER half)</summary>' +
+                '<ul class="tw-code-list">' +
+                c.code_facts.map(function(f) { return '<li>' + esc(f) + '</li>'; }).join('') +
+                '</ul><div class="tw-sub">\u26a0\ufe0f These describe the CODE. They say nothing ' +
+                'about who can act on it, which is the half above and is unmeasured.</div>' +
+            '</details>' +
+            (Array.isArray(c.cross_axis) && c.cross_axis.length
+                ? c.cross_axis.map(function(x) { return '<div class="tw-flag">' + esc(x) + '</div>'; }).join('')
+                : '') +
+        '</div>';
+    },
+
     // Axis 5 from a topology walk (contract/1). Data-gated: every asset without
     // one keeps the existing asset_specific.governance / .control panels, and
     // assets with neither keep the "Not assessed" state, which is correct and
     // is not a gap to paper over.
     _topologyWalkHtml(data) {
         var c = data.contract;
-        if (!c || typeof c !== 'object' || !c.headline) return '';
+        if (!c || typeof c !== 'object') return '';
+        // ⚠️ THE CODE HALF CAN EXIST WITHOUT THE AUTHORITY HALF, and gating the
+        // whole panel on `headline` (a walk-only field) made the page state a
+        // flat negative — "No admin-control facts are published" — while five
+        // published code facts sat loaded in memory. Both cannot be right.
+        //
+        // ⚠️ BUT THE ORDER IS THE WHOLE ANSWER. Audits shown alone under a
+        // heading that says "admin authority & delay" read as reassurance about
+        // the half nobody measured. So when there is no walk, the panel LEADS
+        // with the absence, in the producer's own words, and the code half is
+        // subordinate and collapsed beneath it. Strong audits under an
+        // unmeasured key is the halo this axis exists to catch — the same
+        // reasoning that keeps reUSD's 4.0 from being lifted by its audits.
+        var hasWalk = !!c.headline;
+        var hasCode = Array.isArray(c.code_facts) && c.code_facts.length;
+        if (!hasWalk && !hasCode) return '';
+        if (!hasWalk) return this._codeHalfOnlyHtml(c);
         var self = this;
         var esc = function(x) { return self._escapeAttr(String(x)); };
 

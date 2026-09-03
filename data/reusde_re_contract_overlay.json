@@ -1,0 +1,27 @@
+{
+  "schema_version": "contract-overlay/1",
+  "producer": "riskanalyst",
+  "asset": "reusde_re",
+  "as_of": "2026-09-03T00:00:00Z",
+  "contract": {
+    "structural_score": 4.0,
+    "structural_score_source": "riskAnalyst:authored",
+    "structural_score_generated_at": "2026-09-03T00:00:00Z",
+    "structural_score_basis": "Axis 5 = CONTRACT & ADMIN, both halves. ⚠️ RE-SCOPED from an old-rubric 'Structural 5.0' that also priced the mezzanine's tranche asymmetry — that belongs on axes 1 and 3, not here. LEVEL WITH reUSD's 4.0, deliberately: same 48h TimelockController on DEFAULT_ADMIN_ROLE, same shared implementation, same architecture of an admin-written mark. ⚠️ It is NOT scored ABOVE reUSD merely because reUSD's timelock-bypassing NAV writer has not been looked for here — an unmeasured item must not land as a generous score. Every open question on this asset can only push it DOWN from 4.0, and one SETTLED item already argues that way: there is no reUSDe-specific audit, where reUSD has three. ⚠️ The audits do not lift the score. They never did on the senior either: audits do not offset an authority path.",
+    "code_facts": [
+      "ERC1967 upgradeable proxy 0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a; AccessControl + UUPS (OpenZeppelin). [riskAnalyst assets/reusde-re.md §V]",
+      "SAME IMPLEMENTATION LOGIC as reUSD (0xb5276c43…b4a21D4) — shared codebase. Last implementation upgrade 2025-03-31, block 22167381. [riskAnalyst assets/reusde-re.md §V]",
+      "The shared implementation is covered by Sherlock (collaborative audit, Jul 2026), Certora (formal verification, Sep 2025) and Hacken ×3 — 0 Critical, 0 High. [published documents]",
+      "⚠️ NO reUSDe-SPECIFIC AUDIT EXISTS, and this is the one settled fact that scores WORSE than the senior. reUSD and reUSDe share implementation logic but differ materially in redemption mechanics and tranche accounting, so shared-code coverage does not reach the divergent reUSDe paths. [riskAnalyst assessment]",
+      "Plain ERC-20, not ERC-4626 — no on-chain previewRedeem/convertToAssets; NAV arrives via an off-chain feed. [riskAnalyst assets/reusde-re.md §V]"
+    ],
+    "authority_note": "⚠️ ESTABLISHED ON THIS PROXY, INDEPENDENTLY — not inherited from reUSD. DEFAULT_ADMIN_ROLE on 0xdDC0f880… is held by an OpenZeppelin TimelockController at 0x69dDEa33…FCA93 with minDelay 172,800s = 48h, read on-chain 2026-08-12. It happens to be the SAME controller that governs reUSD, but that is a measured result rather than an assumption: sharing an implementation establishes shared CODE and not shared AUTHORITY, because under AccessControl the role table lives in each PROXY's own storage. The answer had to be read from reUSDe's proxy, and it was. ⚠️ Verification is dated 2026-08-12 and role holders are mutable — this is a snapshot, not a standing guarantee.",
+    "unmeasured": [
+      "NAV write path: whether reUSDe's mark is written through the same undocumented 632-byte contract 0xe888DF32 that holds reUSD's forceNAVUpdate — the call that skips the ±10% deviation guard and sits OUTSIDE the 48h timelock. Plausible by shared implementation, NOT measured here. ⚠️ Resolving it can only hold the score at 4.0 or lower it; it cannot raise it.",
+      "Pause surface: no pause/freeze authority has been enumerated for this proxy."
+    ],
+    "cross_axis": [
+      "⚠️ The NAV write path is an authority question AND a peg question. reUSDe is priced off an off-chain actuarial tNAV with no usable on-chain accessor, so the mark holders are valued against is issuer-set and there is less on-chain state to check it against than on the senior. Re's own /price series carries a −1.55% down-step at the 2025-06-30/07-01 quarter boundary — the shape of an actuarial restatement, and direct evidence this mark does step down. Sources: riskAnalyst assets/reusde-re.md §IV and the 2026-08-12 update; PegTracker reusde_re_backing.json dependencies."
+    ]
+  }
+}
