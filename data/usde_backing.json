@@ -3,19 +3,26 @@
   "asset": "USDe",
   "asset_slug": "usde",
   "chain": "ethereum",
-  "timestamp": "2026-09-03T11:47:58Z",
+  "timestamp": "2026-09-03T12:48:14Z",
   "summary": {
-    "total_supply": 4245524816.13,
+    "total_supply": 4256857781.66,
     "supply_unit": "USD",
     "total_backing": 4248831572.8,
-    "coverage_ratio": 1.000779,
-    "coverage_ratio_with_reserve_fund": 1.015404,
-    "reserve_fund_usd": 62090921.23,
+    "coverage_ratio": 0.998115,
+    "coverage_ratio_with_reserve_fund": 1.0127,
+    "reserve_fund_usd": 62086646.4,
     "nav": 1.0,
-    "price": 0.9995241538449314,
+    "price": 0.9993789650763706,
     "paused": null
   },
   "risk_flags": [
+    {
+      "id": "coverage_below_par",
+      "severity": "warning",
+      "message": "USDe coverage 99.81% \u2014 backing below par",
+      "value": 0.998115,
+      "scope": "usde_level"
+    },
     {
       "id": "coinbase_wallet_drift",
       "severity": "warning",
@@ -27,9 +34,9 @@
   "asset_specific": {
     "type": "usde",
     "peg": {
-      "market_price": 0.9995241538449314,
+      "market_price": 0.9993789650763706,
       "theoretical_price": 1.0,
-      "premium_discount_pct": -0.0476,
+      "premium_discount_pct": -0.0621,
       "source": "llamarisk"
     },
     "redemption_liquidity": {
@@ -70,7 +77,7 @@
       "latest_url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
       "latest_lastmod": "2026-09-03T10:43:28.000Z",
       "discovery_status": "ok",
-      "latest_published_age_days": 0.0,
+      "latest_published_age_days": 0.1,
       "age_days": 41.5,
       "age_basis": "embedded_snapshot",
       "drift_status": "newer_available"
@@ -92,9 +99,9 @@
   },
   "report_url": "https://tidresearch.com/reports/usde",
   "peg": {
-    "market_price": 0.9995241538449314,
+    "market_price": 0.9993789650763706,
     "nav": 1.0,
-    "premium_discount_pct": -0.0476,
+    "premium_discount_pct": -0.0621,
     "source": "llamarisk",
     "history_ref": "usde_backing_history.json",
     "history_field": "market_price"
@@ -168,13 +175,13 @@
     "pools": []
   },
   "backing": {
-    "collateral_ratio": 101.5404,
+    "collateral_ratio": 101.27,
     "collateral_ratio_scale": "percent",
     "collateral_ratio_basis": "Backing / supply INCLUDING the reserve fund (coverage_ratio_with_reserve_fund x 100). The conservative coverage excluding the reserve fund is in backing.secondary and sits lower; the two diverge precisely when the fund is absorbing something. \u26a0\ufe0f USDe is delta-neutral, not overcollateralised: par is the design target, so the generic [130,110,100,90] rates its intended state 'Watch'. Cutoffs are anchored on this analyzer's own COVERAGE_WARN (1.0) and COVERAGE_CRIT (0.98).",
     "total_backing": 4248831572.8,
-    "surplus_deficit": 64456119.48,
+    "surplus_deficit": 53283461.02,
     "surplus_deficit_basis": "Implied by the rated ratio: total_backing - total_backing/(collateral_ratio/100), i.e. the surplus INCLUDING the reserve fund. \u26a0\ufe0f NOT total_backing - total_supply, which excludes the fund and is published as surplus_deficit_ex_reserve_fund.",
-    "surplus_deficit_ex_reserve_fund": 3306756.67,
+    "surplus_deficit_ex_reserve_fund": -8026208.86,
     "breakdown": [
       {
         "label": "Liquid / unallocated",
@@ -189,7 +196,7 @@
     ],
     "secondary": {
       "label": "Conservative coverage (excl. reserve fund)",
-      "coverage_ratio": 100.0779
+      "coverage_ratio": 99.8115
     }
   },
   "dependencies": {
@@ -227,7 +234,7 @@
     "issuer_score_source": "risk-feed@2026-09-03T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-09-03T01:45:02Z",
-    "issuer_score_age_hours": 10.05,
+    "issuer_score_age_hours": 11.05,
     "attestation_age_days": 41.5
   }
 }
