@@ -135,11 +135,13 @@ const CommonRenderer = {
             // Merges ON TOP of the walk: adds the code half and the score,
             // overrides nothing the walk established.
             'contract-overlay/1': { mode: 'merge',   payload: 'envelope', identity: 'asset' }
-        }
-        // liquidity: { 'liquidity/1': { mode: 'replace', payload: 'flat', identity: 'asset_slug' } }
-        // ⚠️ NOT YET. Adopting it means teaching the liquidity section to read
-        // depth{} / enumeration{} / venues[] and the depth-status vocabulary.
-        // Until then the refusal is stated on the page rather than hidden.
+        },
+        // ⚠️ ADOPTED 2026-09-03. DexTracker owns axis 3 and replaces it whole.
+        // Its payload carries `primary_exit` as well as `depth`, so replacing
+        // does NOT drop the redemption leg — checked before adopting, because a
+        // wholesale replace that loses the primary window would have made the
+        // axis worse while looking richer.
+        liquidity: { 'liquidity/1': { mode: 'replace', payload: 'flat', identity: 'asset_slug' } }
     },
 
     // ⚠️ A KEPT FIELD THAT RENDERS AN OVERRIDDEN ONE IS STALE, AND IT WINS BY
@@ -262,6 +264,7 @@ const CommonRenderer = {
 
                 if (spec.mode === 'replace') {
                     var droppedKeys = Object.keys(base);
+                    self._adaptSchema(axis, schema, pay);
                     data[axis] = pay;
                     self.AXIS_PROVENANCE[axis] = {
                         contributors: priorContributors().concat([
@@ -354,7 +357,32 @@ const CommonRenderer = {
         return out;
     },
 
-    // Drop kept-but-stale renderings; mutates `block` and `kept`, returns what went.
+    // ⚠️ A TRANSLATION, NOT A SECOND SOURCE OF TRUTH. liquidity/1 names the same
+    // quantities differently from the block this dashboard grew up reading, and
+    // rewriting every read site at once would be a large change with no way to
+    // verify it asset-by-asset. So the producer's fields stay authoritative and
+    // untouched, and the legacy names are ADDED beside them for the rating and
+    // tile paths.
+    //
+    // ⚠️ ONLY QUANTITIES THAT ARE GENUINELY THE SAME THING ARE MAPPED. Pool TVL
+    // is NOT mapped to depth under any circumstance: PegTracker withheld a depth
+    // figure for this very asset specifically to avoid that substitution, and
+    // $560K of pool TVL beside $15.5K of executable depth is exactly the pair a
+    // fallback would silently confuse.
+    _adaptSchema(axis, schema, block) {
+        if (axis !== 'liquidity' || schema !== 'liquidity/1') return;
+        var d = block.depth;
+        if (!d || typeof d !== 'object') return;
+        if (typeof d.depth_usd === 'number') block.total_2pct_depth = d.depth_usd;
+        if (typeof d.is_floor === 'boolean') block.total_2pct_depth_is_floor = d.is_floor;
+        if (d.status) block.two_pct_depth_status = d.status;
+        if (d.basis) block.two_pct_depth_basis = d.basis;
+        if (typeof block.total_tvl_usd === 'number' && block.total_tvl == null) {
+            block.total_tvl = block.total_tvl_usd;
+        }
+    },
+
+    // Drop kept-but-stale renderings;    // Drop kept-but-stale renderings; mutates `block` and `kept`, returns what went.
     _dropStaleDerived(axis, block, overridden, kept) {
         var map = (this.DERIVED_FIELDS || {})[axis];
         if (!map) return [];
@@ -744,6 +772,61 @@ const CommonRenderer = {
         sidebar.classList.toggle('backing-sidebar-full', wideHidden);
         var flags = document.getElementById('risk-flags');
         if (flags) flags.classList.toggle('risk-flags-columns', wideHidden);
+    },
+
+    // ⚠️ A DEPTH FIGURE THAT MEASURES ONE LEG OF A TWO-LEG EXIT IS NOT A DOLLAR
+    // FIGURE, and rendered bare it will be read as one. reUSDe's $15.5K is the
+    // reUSDe -> sUSDe leg on Curve; a dollar exit also pays sUSDe -> USD, which
+    // this ladder does not measure. So the number UNDERSTATES true exit cost —
+    // the producer declared that scope rather than quoting a dollar figure it had
+    // not measured, and declaring it is worthless if the consumer drops it.
+    //
+    // Also renders which leg BINDS the axis. The axis scores the worse of {venue
+    // depth, primary redemption}; saying which one that is turns a rating into a
+    // statement a reader can act on: here $15.5K of venue against $1.5M/quarter
+    // of primary, so the venue is the constraint.
+    _renderDepthScope(data) {
+        var l = data.liquidity || {};
+        var head = document.getElementById('axis-liquidity-head');
+        if (!head) return;
+        var ds = (l.depth && l.depth.denomination_scope) || l.denomination_scope;
+        var bind = l.axis_binding_constraint;
+        // ⚠️ A WITHHELD DEPTH MUST SAY WHY IT WAS WITHHELD. Adopting liquidity/1
+        // replaces the axis, and on syzUSD that swapped a $200K figure for
+        // "unmeasured" — correctly: DexTracker withheld it because the anchor
+        // "came from the router being measured", which is the syzUSD case where
+        // 194 of 201bps turned out to be basis rather than slippage. Showing the
+        // old number would show one known to be unsound. But a bare "n/a" reads
+        // as a broken feed, and the producer's reason is right there.
+        var withheld = l.depth && typeof l.depth === 'object' &&
+            l.depth.depth_usd == null && l.depth.basis;
+        if (!ds && !bind && !withheld) return;
+        var self = this, bits = [];
+        if (withheld) {
+            bits.push('<div class="ds-line ds-warn">\u26a0\ufe0f Depth not published \u2014 ' +
+                self._escapeAttr(String(l.depth.basis)) + '</div>');
+        }
+        if (ds && typeof ds === 'object') {
+            bits.push('<div class="ds-line"><span class="ds-key">Measured leg:</span> ' +
+                self._escapeAttr(String(ds.measured_leg || '?')) +
+                (ds.excluded_leg
+                    ? ' \u00b7 <span class="ds-warn">excludes ' +
+                      self._escapeAttr(String(ds.excluded_leg)) + '</span>' : '') + '</div>');
+            if (ds.exit_cost_scope) {
+                bits.push('<div class="ds-line ds-warn">\u26a0\ufe0f ' +
+                    self._escapeAttr(String(ds.exit_cost_scope)) + '</div>');
+            }
+        }
+        if (bind && typeof bind === 'object' && bind.basis) {
+            bits.push('<div class="ds-line"><span class="ds-key">Binding leg:</span> ' +
+                self._escapeAttr(String(bind.leg || '?').replace(/_/g, ' ')) + ' \u2014 ' +
+                self._escapeAttr(String(bind.basis)) + '</div>');
+        }
+        if (!bits.length) return;
+        var el = document.createElement('div');
+        el.className = 'depth-scope';
+        el.innerHTML = bits.join('');
+        head.appendChild(el);
     },
 
     // ⚠️ WHEN DEPTH IS UNMEASURABLE, THE EXIT IS STILL KNOWN — show it rather
@@ -2644,6 +2727,7 @@ const CommonRenderer = {
         this._renderAxisHead('liquidity', 3, 'Liquidity & Exit',
             'venue depth & primary redemption',
             this._ratingChipHtml(this.liquidityRating(data)), data.liquidity);
+        this._renderDepthScope(data);
         this._renderLiquiditySection(data);
 
         // 4 · Dependencies
