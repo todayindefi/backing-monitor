@@ -392,6 +392,26 @@ distinguishes stableswap from twocrypto — require `pool_type`, do not guess fr
 ⚠️ **A malformed timestamp does not warn — it silently stops counting.** `"2026-08-24"` without
 `T`/`Z` fails to parse and the axis reports a freshness it never established.
 
+⚠️ **DEFAULT API PRECISION CAN ROUND BELOW THE SIGNAL, AND IT WILL NOT TELL YOU.** CoinGecko's
+`/simple/price` truncates unless you pass `precision: full`. On reUSDe that returned `1.41`
+instead of `1.4136988` — a **0.26 percentage-point** error against a deviation measured in tenths
+of a percent, **which flipped the published sign from a discount to a premium.** Any asset whose
+axis-1 signal is smaller than the API's default precision is at risk; NAV-tracking shares are all
+in that class.
+
+⚠️ **INTERNAL ARITHMETIC CONSISTENCY IS NOT VERIFICATION.** The reUSDe worker re-derived its
+discount "exactly" and was right to — the arithmetic was correct **on a wrong input**. A figure is
+only verified against an INDEPENDENT producer of the same quantity: PegTracker's own tracker had
+`+0.1663%` for the same asset on the same NAV, ninety seconds apart. **If two systems in this
+estate compute the same number, diff them; if only one does, say so rather than calling it
+verified.**
+
+⚠️ **SCRAPED LABELS BREAK SILENTLY AND ASYMMETRICALLY.** Re renamed a reserve row `USDT` → `USDt`
+and killed the reUSD analyzer for a day, while the reUSDe analyzer — written later, against the
+new label — kept working. **Two analyzers parsing one page with two label lists is the defect; the
+rename is only the trigger.** One parser per source page, matched case-insensitively, and an
+unmatched row recorded rather than skipped.
+
 ⚠️ **A feed with no analyzer behind it freezes while looking live.** Every field present and
 internally consistent; only the timestamp moves. Check age separately from shape.
 
@@ -494,6 +514,8 @@ NOT FINISHED                          FINISHED
 [ ] Every score labelled computed or authored.
 [ ] Every axis clock derived from its own as_of.
 [ ] Producer-authored prose is producer-authored. No composed issuer claims.
+[ ] Every derived figure cross-checked against an INDEPENDENT producer of the
+    same quantity — not merely re-derived from its own inputs.
 [ ] Verified IN A BROWSER with a cache-bust — never curl. The SPA 200s any slug.
 [ ] Both light and dark render.
 ```
