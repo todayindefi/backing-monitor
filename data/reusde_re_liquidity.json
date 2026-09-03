@@ -1,0 +1,138 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "reusde_re",
+ "as_of": "2026-09-03T06:00:11Z",
+ "producer": "dextracker",
+ "note": "Axis 3 (Liquidity & Exit), single producer. The axis is the worse of executable venue depth and primary redemption. Pool TVL is context only and is never substituted for executable depth.",
+ "depth": {
+  "status": "bracketed",
+  "depth_usd": 15461.12060546875,
+  "is_floor": false,
+  "threshold_bps": -200.0,
+  "slippage_convention": "marginal impact against an external mid; signed cost, with -200bps as the crossing threshold",
+  "basis": "The 2% crossing is bracketed by successful Curve get_dy calls. depth_usd is the largest tested USD input notional that cleared the threshold, not pool TVL. Marginal impact is execution-rate deterioration from the smallest successful rung; the dated external reUSDe USD mid converts each rung's input notional to reUSDe. The external mid is not produced by Curve.",
+  "denomination_scope": {
+   "measured_leg": "reUSDe -> sUSDe",
+   "input_notional": "USD, converted to reUSDe with the external mid",
+   "output_denomination": "sUSDe tokens",
+   "excluded_leg": "sUSDe -> USD",
+   "exit_cost_scope": "Curve venue leg only; this understates complete dollar-exit cost by the unmeasured cost of selling or redeeming sUSDe",
+   "dependency_note": "The secondary venue, WindowRedemption payout asset, and 98.97% of issuer-reported combined protocol reserves all depend on sUSDe; these risks are correlated rather than independent."
+  },
+  "anchor": {
+   "fair_value": 1.4148291827566535,
+   "fair_value_basis": "market",
+   "fair_value_source": "peg_tracker:CoinGecko API external USD aggregate mid for re-protocol-reusde; off-chain market-data API, distinct from the off-chain issuer NAV API and not a contract read",
+   "fair_value_as_of": "2026-09-03T05:50:50Z",
+   "fair_value_choice": "market_price",
+   "fair_value_choice_mode": "inherited",
+   "market_price_cross_check": null,
+   "self_referential": false
+  },
+  "quote": {
+   "method": "eth_call Curve get_dy(int128,int128,uint256), falling through to get_dy(uint256,uint256,uint256)",
+   "chain": "ethereum",
+   "block": 25894848,
+   "block_as_of": "2026-09-03T06:00:11Z",
+   "pool": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+   "token_in": {
+    "symbol": "reUSDe",
+    "address": "0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a",
+    "index": 0,
+    "decimals": 18
+   },
+   "token_out": {
+    "symbol": "sUSDe",
+    "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+    "index": 1,
+    "decimals": 18
+   },
+   "baseline_size_usd": 100.0,
+   "baseline_exchange_rate_susde_per_reusde": 1.133005678191628,
+   "failed_size_note": "get_dy returned no value at $5M, $10M, and the $19M tranche probe. These are failed calls, not threshold-clearing rungs and not depth floors."
+  },
+  "bracket": {
+   "last_clearing_size_usd": 15461.12060546875,
+   "last_clearing_marginal_impact_bps": -199.99841225963544,
+   "first_crossing_size_usd": 15461.349487304688,
+   "first_crossing_marginal_impact_bps": -200.0008311461865,
+   "monotonic_in_bracket": true
+  },
+  "rungs": [
+   {"size_usd": 100.0, "status": "ok", "amount_in_reusde": 70.679910493, "amount_out_susde": 80.08073992254525, "exchange_rate_susde_per_reusde": 1.133005678191628, "slippage_bps": 0.0},
+   {"size_usd": 1000.0, "status": "ok", "amount_in_reusde": 706.799104929, "amount_out_susde": 799.6850066642803, "exchange_rate_susde_per_reusde": 1.1314176844415726, "slippage_bps": -14.015761620805867},
+   {"size_usd": 5000.0, "status": "ok", "amount_in_reusde": 3533.995524646, "amount_out_susde": 3974.9681172964933, "exchange_rate_susde_per_reusde": 1.1247801785756701, "slippage_bps": -72.59892668045941},
+   {"size_usd": 10000.0, "status": "ok", "amount_in_reusde": 7067.991049291, "amount_out_susde": 7897.67470720263, "exchange_rate_susde_per_reusde": 1.117386065166939, "slippage_bps": -137.85997127233495},
+   {"size_usd": 15000.0, "status": "ok", "amount_in_reusde": 10601.986573937, "amount_out_susde": 11777.761377544173, "exchange_rate_susde_per_reusde": 1.1109013669662466, "slippage_bps": -195.09444348647654},
+   {"size_usd": 15461.12060546875, "status": "ok", "amount_out_susde": 12133.754151394596, "exchange_rate_susde_per_reusde": 1.1103457445196803, "slippage_bps": -199.99841225963544},
+   {"size_usd": 15461.349487304688, "status": "ok", "amount_out_susde": 12133.93078092647, "exchange_rate_susde_per_reusde": 1.1103454704584605, "slippage_bps": -200.0008311461865},
+   {"size_usd": 20000.0, "status": "ok", "amount_out_susde": 15623.528752911368, "exchange_rate_susde_per_reusde": 1.1052312208628334, "slippage_bps": -245.13961283164076},
+   {"size_usd": 25000.0, "status": "ok", "amount_out_susde": 19442.042763216414, "exchange_rate_susde_per_reusde": 1.1002867789520554, "slippage_bps": -288.7796581195845},
+   {"size_usd": 50000.0, "status": "ok", "amount_out_susde": 38300.80637079232, "exchange_rate_susde_per_reusde": 1.0837819715301784, "slippage_bps": -434.4524269288286},
+   {"size_usd": 100000.0, "status": "ok", "amount_out_susde": 75718.09503572066, "exchange_rate_susde_per_reusde": 1.0712817051927928, "slippage_bps": -544.7807913668346},
+   {"size_usd": 250000.0, "status": "ok", "amount_out_susde": 179139.29029745812, "exchange_rate_susde_per_reusde": 1.0138059827646384, "slippage_bps": -1052.0661786730168},
+   {"size_usd": 500000.0, "status": "ok", "amount_out_susde": 243892.310022274, "exchange_rate_susde_per_reusde": 0.6901319153388926, "slippage_bps": -3908.839747031092},
+   {"size_usd": 1000000.0, "status": "ok", "amount_out_susde": 272896.7285011019, "exchange_rate_susde_per_reusde": 0.38610225536217835, "slippage_bps": -6592.230182125567},
+   {"size_usd": 2000000.0, "status": "ok", "amount_out_susde": 284849.473557828, "exchange_rate_susde_per_reusde": 0.2015066739412424, "slippage_bps": -8221.485754044375},
+   {"size_usd": 5000000.0, "status": "quote_failed"},
+   {"size_usd": 10000000.0, "status": "quote_failed"},
+   {"size_usd": 19000000.0, "status": "quote_failed"}
+  ]
+ },
+ "primary_exit": {
+  "venue": "Re Protocol quarterly WindowRedemption",
+  "contract": "0xD2e077d945Ec77B45Fbe4622E01F4C79e4bA389A",
+  "at_nav": true,
+  "gated": true,
+  "gate": "Quarterly redemption window; eligibility and released surplus require regulatory approval",
+  "cadence": "quarterly",
+  "capacity_usd": 1500000,
+  "capacity_basis": "Announced first-window pool; fixed by released surplus under regulatory approval, not a demand-scaling floor",
+  "oversubscription_treatment": "pro rata",
+  "first_window": {
+   "request_period": "2026-07-09 to 2026-07-22",
+   "settlement_period": "2026-07-23 to 2026-08-05",
+   "claims": 72,
+   "tokens_redeemed": 1077727,
+   "settlement_nav": 1.3914210486459921,
+   "settled_value_usd": 1500075,
+   "result": "Filled to the announced ceiling within 0.005%; requests met or exceeded capacity and the window was rationed."
+  },
+  "capacity_pct_of_tranche": 7.9,
+  "full_exit_years_at_same_capacity": 3.2,
+  "note": "The primary exit exists but is periodic, regulator-approved, and capped; reUSDe not implementing ERC-4626 does not mean there is no primary exit."
+ },
+ "enumeration": {
+  "source": "PegTracker reusde_re backing feed plus DexTracker live Curve query",
+  "as_of": "2026-09-03T06:00:11Z",
+  "venue_count": 1,
+  "chain_count_is_floor": true,
+  "chain_count_note": "One measured Ethereum secondary venue; this is not asserted to be a complete venue census."
+ },
+ "venues": [
+  {
+   "name": "Curve REUSDE/sUSDe",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve_twocrypto_cross_currency",
+   "pool_id": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+   "tvl_usd": 560339.6200564123,
+   "base_apy": 0.24,
+   "underlying_tokens": [
+    "0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a",
+    "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497"
+   ],
+   "price_denominator": "sUSDe",
+   "balance_ratio": null,
+   "balance_ratio_basis": "Not published: the token split in this cross-currency twocrypto pool expresses an exchange rate, not a stableswap imbalance or peg signal.",
+   "depth_role": "The executable ladder is canonical; TVL is context only."
+  }
+ ],
+ "total_tvl_usd": 560339.6200564123,
+ "swap_tvl_usd": 560339.6200564123,
+ "axis_binding_constraint": {
+  "leg": "secondary_venue_depth",
+  "basis": "The measured Curve-leg 2% depth is materially below the $1.5M quarterly primary-redemption capacity, so the secondary venue is the worse measured leg. Full dollar-exit cost remains understated because sUSDe -> USD is outside this ladder's scope."
+ }
+}
