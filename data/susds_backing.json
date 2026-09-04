@@ -3,33 +3,33 @@
   "asset": "sUSDS",
   "asset_slug": "susds",
   "chain": "ethereum",
-  "timestamp": "2026-09-04T10:48:04Z",
+  "timestamp": "2026-09-04T11:51:47Z",
   "summary": {
-    "total_supply": 4199661681.39,
+    "total_supply": 4199448722.96,
     "supply_unit": "shares",
-    "total_assets_usds": 4655026174.61,
-    "nav": 1.1084288516,
+    "total_assets_usds": 4654810108.6,
+    "nav": 1.108433610144,
     "price": 1.11,
     "paused": null
   },
   "risk_flags": [],
   "vault_status": null,
   "backing": {
-    "collateral_ratio": 99.999984,
+    "collateral_ratio": 99.999981,
     "collateral_ratio_basis": "USDS balanceOf(sUSDS) / sUSDS totalAssets(). Two independent reads: the numerator is a token balance, the denominator is derived from the chi accumulator. 100% means the vault holds what its shares can claim.",
-    "total_backing": 4655025422.85,
-    "surplus_deficit": -751.76,
+    "total_backing": 4654809231.59,
+    "surplus_deficit": -877.01,
     "breakdown": [
       {
         "label": "USDS held by vault",
-        "value": 4655025422.85,
+        "value": 4654809231.59,
         "pct": 100
       }
     ],
     "integrity": {
-      "total_assets_reported": 4655026174.61,
-      "usds_held": 4655025422.85,
-      "divergence_pct": -1.6e-05,
+      "total_assets_reported": 4654810108.6,
+      "usds_held": 4654809231.59,
+      "divergence_pct": -1.9e-05,
       "status": "ok",
       "direction": "held_below_reported",
       "note": "Signed (held - totalAssets) / totalAssets. A small NEGATIVE value is the expected state: interest accrues via chi continuously but is drawn from the vow periodically, so reported assets run slightly ahead of the balance."
@@ -40,7 +40,7 @@
       {
         "name": "USDS",
         "metric": "70.5% of USDS supply",
-        "value": 4655026174.61,
+        "value": 4654810108.6,
         "source": "onchain",
         "link": "?asset=usds",
         "link_type": "internal",
@@ -101,9 +101,9 @@
     "primary_exit": {
       "venue": "sUSDS ERC-4626 redeem()",
       "into": "USDS",
-      "gated": false,
-      "gated_basis": "measured:erc4626_redeem_simulated",
-      "as_of": "2026-09-04T10:48:04Z",
+      "gated": true,
+      "gated_basis": "measured:erc4626_redeem_reverted",
+      "as_of": "2026-09-04T11:51:47Z",
       "probe": {
         "control_address": "0x000000000000000000000000000000000000dEaD",
         "vault": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
@@ -112,12 +112,12 @@
         "asset": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
         "positive_control_ok": true,
         "asset_matches_expected": true,
-        "preview_redeem_1e18": 1.1084288665169126,
-        "control_balance": 14310433231652978,
+        "preview_redeem_1e18": null,
+        "control_balance": null,
         "control_max_redeem": 14310433231652978,
-        "max_redeem_uncapped": true,
-        "redeem_simulated": true,
-        "redeem_revert": null,
+        "max_redeem_uncapped": false,
+        "redeem_simulated": null,
+        "redeem_revert": "control holds no shares \u2014 nothing to simulate",
         "null_control_reverts": true,
         "rpcs_tried": [
           {
@@ -126,6 +126,8 @@
           }
         ]
       },
+      "gated_kind": "unclassified",
+      "gated_note": "\u26a0\ufe0f redeem() reverts for an arbitrary address, but WHY is not established: a permission gate and a time-lock both revert here. TO CLASSIFY: read the vault's cooldown interface \u2014 a cooldown that anyone may enter is a QUEUE, not a DOOR, and scoring it as a door overstates the constraint.",
       "cooldown_days": 0
     },
     "derived_score": null,
@@ -136,19 +138,19 @@
   "asset_specific": {
     "type": "susds",
     "vault_state": {
-      "total_supply_shares": 4199661681.387176,
-      "total_assets_usds": 4655026174.608006,
-      "nav_usds_per_share": 1.1084288516,
+      "total_supply_shares": 4199448722.956399,
+      "total_assets_usds": 4654810108.599531,
+      "nav_usds_per_share": 1.108433610144,
       "asset": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
       "ssr_raw": 1000000001121484774769253326,
-      "chi_raw": 1108428672595498481280058855,
-      "rho": 1788518723
+      "chi_raw": 1108433401304270869571802940,
+      "rho": 1788522527
     },
     "yield": {
       "headline_apy_pct": 3.6,
       "headline_source": "onchain_ssr",
-      "realized_apy_24h_pct": 3.5998,
-      "realized_apy_7d_pct": 3.5306,
+      "realized_apy_24h_pct": 3.6001,
+      "realized_apy_7d_pct": 3.5313,
       "nav_history_ref": "susds_backing_history.json"
     },
     "peg": {
@@ -156,10 +158,10 @@
       "market_price_source": "coingecko:susds",
       "premium_discount_is_measured": true,
       "theoretical_price_assumes_usds_par": false,
-      "nav_usds_per_share": 1.1084288516,
+      "nav_usds_per_share": 1.108433610144,
       "usds_peg_price": 0.99983972,
-      "theoretical_price": 1.10825119,
-      "premium_discount_pct": 0.1578,
+      "theoretical_price": 1.10825595,
+      "premium_discount_pct": 0.1574,
       "source": "coingecko:susds + onchain_nav"
     },
     "history_ref": "susds_backing_history.json",
@@ -203,8 +205,8 @@
   },
   "peg": {
     "market_price": 1.11,
-    "nav": 1.10825119,
-    "premium_discount_pct": 0.1578,
+    "nav": 1.10825595,
+    "premium_discount_pct": 0.1574,
     "source": "coingecko:susds + onchain_nav",
     "history_ref": "susds_backing_history.json",
     "history_field": "nav"
@@ -217,6 +219,6 @@
     "issuer_score_source": "risk-feed@2026-09-04T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-09-04T01:45:02Z",
-    "issuer_score_age_hours": 9.05
+    "issuer_score_age_hours": 10.12
   }
 }
