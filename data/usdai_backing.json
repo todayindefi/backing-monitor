@@ -3,13 +3,13 @@
   "asset": "USDai",
   "asset_slug": "usdai",
   "chain": "arbitrum",
-  "timestamp": "2026-09-05T17:46:31Z",
-  "as_of": "2026-09-05T17:46:31Z",
-  "block_number": 502076348,
+  "timestamp": "2026-09-05T18:45:51Z",
+  "as_of": "2026-09-05T18:45:51Z",
+  "block_number": 502090459,
   "summary": {
-    "supply_usd": 281847830.37,
+    "supply_usd": 282655445.72,
     "supply_by_chain": {
-      "arbitrum": 281043890.091879,
+      "arbitrum": 281851505.446161,
       "base": 140128.482748,
       "ethereum": 5660.145635,
       "plasma": 658151.645833
@@ -17,16 +17,16 @@
     "supply_scope": "all_declared_chains",
     "supply_chains_unread": [],
     "supply_complete": true,
-    "pyusd_reserve_usd": 282422678.18,
-    "coverage_ratio": 1.002039568,
+    "pyusd_reserve_usd": 282655446.63,
+    "coverage_ratio": 1.0000000032,
     "coverage_basis": "all_chain_supply",
     "coverage_qualifier": "measured",
-    "coverage_ratio_arbitrum_only": 1.004906,
-    "api_stablecoin_reserves_usd": 282422678.18,
+    "coverage_ratio_arbitrum_only": 1.002852,
+    "api_stablecoin_reserves_usd": 282655446.63,
     "api_divergence_pct": 0.0,
     "base_token": "0x46850aD61C2B7d64d08c9C754F45254596696984",
-    "peg_secondary_px": 1.000298,
-    "peg_deviation_pct": 0.0298,
+    "peg_secondary_px": 0.999696,
+    "peg_deviation_pct": -0.0304,
     "paused": false,
     "implementation": "0x0ab74Df531c0D8f1c46643E404B3d14723bbc212",
     "admin_slot": "0x2DDf39c731377adcfA7F2a056AC60a8a81aAdC3C"
@@ -34,7 +34,7 @@
   "risk_flags": [
     {
       "severity": "warning",
-      "message": "USDai PYUSD coverage thin: coverage_ratio=100.2040%"
+      "message": "USDai PYUSD coverage thin: coverage_ratio=100.0000%"
     }
   ],
   "asset_specific": {
@@ -43,21 +43,21 @@
       "reserve_token": "PYUSD",
       "reserve_token_address": "0x46850aD61C2B7d64d08c9C754F45254596696984",
       "reserve_held_by": "0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF",
-      "coverage_ratio": 1.002039568,
+      "coverage_ratio": 1.0000000032,
       "comment": "coverage = PYUSD.balanceOf(USDai) / sum(USDai.totalSupply()) across all four deployments; the reserve is global, so the denominator is too. See summary.supply_by_chain."
     },
     "secondary": {
       "source": "geckoterminal",
-      "price_usd": 1.000298,
-      "deviation_pct": 0.0298,
+      "price_usd": 0.999696,
+      "deviation_pct": -0.0304,
       "top_pools_scope": "geckoterminal_usdai_usdc_pairs_only",
       "top_pools_is_total_depth": false,
       "top_pools": [
         {
           "address": "0xba9ed8ae94c70ef9aa2cd1045ed473aaa405c6c7",
           "name": "USDai / USDC",
-          "tvl_usd": 2019381.7,
-          "vol_24h_usd": 125687.56
+          "tvl_usd": 2002955.5,
+          "vol_24h_usd": 195979.15
         },
         {
           "address": "0x7ed679726c2ca365284ef264ac39ad549f968bd5bac2d13fd57de18ba29bd0cf",
@@ -76,51 +76,65 @@
     "slippage_tiers": {
       "usdai_to_usdc": {
         "1000": {
-          "output_token": 1000.340354,
-          "output_usd": 1000.34,
-          "slippage_bps": -3.4,
-          "gas_usd": "0.017668453192054637",
+          "output_token": 1000.296314,
+          "output_usd": 1000.3,
+          "slippage_bps": -2.96,
+          "gas_usd": "0.034803337204873525",
           "source": "kyberswap-aggregator",
           "chain": "arbitrum",
           "block_number": null,
-          "quoted_at": "2026-09-05T17:45:42Z",
+          "quoted_at": "2026-09-05T18:45:13Z",
           "route_venues": [
-            "uniswap-v4"
+            "erc4626",
+            "curve-stable-ng"
           ],
-          "route_includes_gated_venue": false,
-          "gated_legs": []
+          "route_includes_gated_venue": true,
+          "gated_legs": [
+            {
+              "venue": "sUSDai",
+              "reason": "ERC-7540 async redemption \u2014 the exit is a queue, not a swap. Entering it to leave USDai does not complete the exit.",
+              "pool": "0x0B2b2B2076d95dda7817e785989fE353fe955ef9",
+              "exchange": "erc4626"
+            }
+          ]
         },
         "10000": {
-          "output_token": 10002.428309,
-          "output_usd": 10002.43,
-          "slippage_bps": -2.43,
-          "gas_usd": "0.019585772078624455",
+          "output_token": 10002.727515,
+          "output_usd": 10002.73,
+          "slippage_bps": -2.73,
+          "gas_usd": "0.04272966035399632",
           "source": "kyberswap-aggregator",
           "chain": "arbitrum",
           "block_number": null,
-          "quoted_at": "2026-09-05T17:45:43Z",
+          "quoted_at": "2026-09-05T18:45:13Z",
           "route_venues": [
-            "uniswap-v4"
+            "curve-stable-ng",
+            "erc4626"
           ],
-          "route_includes_gated_venue": false,
-          "gated_legs": []
+          "route_includes_gated_venue": true,
+          "gated_legs": [
+            {
+              "venue": "sUSDai",
+              "reason": "ERC-7540 async redemption \u2014 the exit is a queue, not a swap. Entering it to leave USDai does not complete the exit.",
+              "pool": "0x0B2b2B2076d95dda7817e785989fE353fe955ef9",
+              "exchange": "erc4626"
+            }
+          ]
         },
         "100000": {
-          "output_token": 100005.97141,
-          "output_usd": 100005.97,
-          "slippage_bps": -0.6,
-          "gas_usd": "0.16663966602911692",
+          "output_token": 100014.043882,
+          "output_usd": 100014.04,
+          "slippage_bps": -1.4,
+          "gas_usd": "0.09077380967567562",
           "source": "kyberswap-aggregator",
           "chain": "arbitrum",
           "block_number": null,
-          "quoted_at": "2026-09-05T17:45:43Z",
+          "quoted_at": "2026-09-05T18:45:14Z",
           "route_venues": [
-            "uniswap-v4",
             "erc4626",
+            "uniswap-v4",
             "fluid-dex-t1",
-            "curve-stable-ng",
-            "axima-v2/fluid-dex-t1",
-            "axima-v2/uniswap-v4"
+            "curve-stable-ng"
           ],
           "route_includes_gated_venue": true,
           "gated_legs": [
@@ -133,21 +147,20 @@
           ]
         },
         "500000": {
-          "output_token": 499988.075043,
-          "output_usd": 499988.08,
-          "slippage_bps": 0.24,
-          "gas_usd": "0.22012249505633477",
+          "output_token": 500032.195759,
+          "output_usd": 500032.2,
+          "slippage_bps": -0.64,
+          "gas_usd": "0.1285666022982153",
           "source": "kyberswap-aggregator",
           "chain": "arbitrum",
           "block_number": null,
-          "quoted_at": "2026-09-05T17:45:44Z",
+          "quoted_at": "2026-09-05T18:45:15Z",
           "route_venues": [
-            "uniswap-v4",
             "erc4626",
             "fluid-dex-t1",
+            "uniswap-v4",
             "curve-stable-ng",
-            "axima-v2/fluid-dex-t1",
-            "camelot-v3"
+            "axima-v2/uniswap-v4"
           ],
           "route_includes_gated_venue": true,
           "gated_legs": [
@@ -183,81 +196,95 @@
     "issuer_score_source": "risk-feed@2026-09-04T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-09-04T01:45:02Z",
-    "issuer_score_age_hours": 40.02,
+    "issuer_score_age_hours": 41.01,
     "attestation_age_days": null
   },
   "peg": {
-    "market_price": 1.000298,
+    "market_price": 0.999696,
     "nav": 1.0,
-    "premium_discount_pct": 0.0298,
+    "premium_discount_pct": -0.0304,
     "premium_discount_basis": "par",
     "source": "geckoterminal",
     "history_ref": "usdai_backing_history.json",
     "history_field": "peg_deviation_pct"
   },
   "liquidity": {
-    "as_of": "2026-09-05T17:46:31Z",
-    "total_tvl": 2227822.83,
+    "as_of": "2026-09-05T18:45:51Z",
+    "total_tvl": 2211396.63,
     "total_2pct_depth": 500000.0,
     "total_2pct_depth_is_floor": true,
     "two_pct_depth_status": "ladder_exhausted",
     "two_pct_depth_size_responsive": true,
     "two_pct_depth_unresponsive_note": null,
     "two_pct_depth_basis": "A FLOOR, not a measurement. The deepest rung quoted ($500,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found.",
-    "total_2pct_depth_note": "\u26a0\ufe0f A FLOOR now, not a null and never TVL. The note here used to read 'no executable ladder is quoted for this asset' -- stale: a KyberSwap ladder IS quoted, clears $500K, and re-quoting live reaches $2M at -2.65bps. The GeckoTerminal-venue objection below is about POOL ENUMERATION and does not reach an aggregator quote, which routes through Fluid like anything else. \u26a0\ufe0f This field previously republished POOL TVL ($2,227,822.83) as depth \u2014 the same value to the cent under both keys \u2014 and the Liquidity axis was rated off it. TO ESTABLISH IT: a quote ladder on the venue USDai actually routes through, which is Fluid and not the GeckoTerminal pairs; that venue set is wrong for depth exactly as it is already documented to be for volume.",
+    "total_2pct_depth_note": "\u26a0\ufe0f A FLOOR now, not a null and never TVL. The note here used to read 'no executable ladder is quoted for this asset' -- stale: a KyberSwap ladder IS quoted, clears $500K, and re-quoting live reaches $2M at -2.65bps. The GeckoTerminal-venue objection below is about POOL ENUMERATION and does not reach an aggregator quote, which routes through Fluid like anything else. \u26a0\ufe0f This field previously republished POOL TVL ($2,211,396.63) as depth \u2014 the same value to the cent under both keys \u2014 and the Liquidity axis was rated off it. TO ESTABLISH IT: a quote ladder on the venue USDai actually routes through, which is Fluid and not the GeckoTerminal pairs; that venue set is wrong for depth exactly as it is already documented to be for volume.",
     "total_tvl_basis": "POOL TVL, NOT A MEASURED LADDER. Summed GeckoTerminal reserve of the USDai/USDC pairs, republished under the depth field because no executable ladder is quoted. \u26a0\ufe0f It OVERSTATES executable depth: a one-sided pool can hold this much and still cost hundreds of bps to exit at a fraction of it. TO ESTABLISH REAL DEPTH: a quote ladder on the venue USDai actually routes through \u2014 Fluid, not these pairs, so the venue set is wrong for depth as it is for volume.",
-    "volume_24h": 125687.56,
+    "volume_24h": 195979.15,
     "volume_24h_scope": "geckoterminal_usdai_usdc_pairs_only",
     "exit_mark": {
       "source": "kyberswap",
       "sell_into": "USDC",
       "quotes": {
         "1000": {
-          "output_token": 1000.340354,
-          "output_usd": 1000.34,
-          "slippage_bps": -3.4,
-          "gas_usd": "0.017668453192054637",
+          "output_token": 1000.296314,
+          "output_usd": 1000.3,
+          "slippage_bps": -2.96,
+          "gas_usd": "0.034803337204873525",
           "source": "kyberswap-aggregator",
           "chain": "arbitrum",
           "block_number": null,
-          "quoted_at": "2026-09-05T17:45:42Z",
+          "quoted_at": "2026-09-05T18:45:13Z",
           "route_venues": [
-            "uniswap-v4"
+            "erc4626",
+            "curve-stable-ng"
           ],
-          "route_includes_gated_venue": false,
-          "gated_legs": []
+          "route_includes_gated_venue": true,
+          "gated_legs": [
+            {
+              "venue": "sUSDai",
+              "reason": "ERC-7540 async redemption \u2014 the exit is a queue, not a swap. Entering it to leave USDai does not complete the exit.",
+              "pool": "0x0B2b2B2076d95dda7817e785989fE353fe955ef9",
+              "exchange": "erc4626"
+            }
+          ]
         },
         "10000": {
-          "output_token": 10002.428309,
-          "output_usd": 10002.43,
-          "slippage_bps": -2.43,
-          "gas_usd": "0.019585772078624455",
+          "output_token": 10002.727515,
+          "output_usd": 10002.73,
+          "slippage_bps": -2.73,
+          "gas_usd": "0.04272966035399632",
           "source": "kyberswap-aggregator",
           "chain": "arbitrum",
           "block_number": null,
-          "quoted_at": "2026-09-05T17:45:43Z",
+          "quoted_at": "2026-09-05T18:45:13Z",
           "route_venues": [
-            "uniswap-v4"
+            "curve-stable-ng",
+            "erc4626"
           ],
-          "route_includes_gated_venue": false,
-          "gated_legs": []
+          "route_includes_gated_venue": true,
+          "gated_legs": [
+            {
+              "venue": "sUSDai",
+              "reason": "ERC-7540 async redemption \u2014 the exit is a queue, not a swap. Entering it to leave USDai does not complete the exit.",
+              "pool": "0x0B2b2B2076d95dda7817e785989fE353fe955ef9",
+              "exchange": "erc4626"
+            }
+          ]
         },
         "100000": {
-          "output_token": 100005.97141,
-          "output_usd": 100005.97,
-          "slippage_bps": -0.6,
-          "gas_usd": "0.16663966602911692",
+          "output_token": 100014.043882,
+          "output_usd": 100014.04,
+          "slippage_bps": -1.4,
+          "gas_usd": "0.09077380967567562",
           "source": "kyberswap-aggregator",
           "chain": "arbitrum",
           "block_number": null,
-          "quoted_at": "2026-09-05T17:45:43Z",
+          "quoted_at": "2026-09-05T18:45:14Z",
           "route_venues": [
-            "uniswap-v4",
             "erc4626",
+            "uniswap-v4",
             "fluid-dex-t1",
-            "curve-stable-ng",
-            "axima-v2/fluid-dex-t1",
-            "axima-v2/uniswap-v4"
+            "curve-stable-ng"
           ],
           "route_includes_gated_venue": true,
           "gated_legs": [
@@ -270,21 +297,20 @@
           ]
         },
         "500000": {
-          "output_token": 499988.075043,
-          "output_usd": 499988.08,
-          "slippage_bps": 0.24,
-          "gas_usd": "0.22012249505633477",
+          "output_token": 500032.195759,
+          "output_usd": 500032.2,
+          "slippage_bps": -0.64,
+          "gas_usd": "0.1285666022982153",
           "source": "kyberswap-aggregator",
           "chain": "arbitrum",
           "block_number": null,
-          "quoted_at": "2026-09-05T17:45:44Z",
+          "quoted_at": "2026-09-05T18:45:15Z",
           "route_venues": [
-            "uniswap-v4",
             "erc4626",
             "fluid-dex-t1",
+            "uniswap-v4",
             "curve-stable-ng",
-            "axima-v2/fluid-dex-t1",
-            "camelot-v3"
+            "axima-v2/uniswap-v4"
           ],
           "route_includes_gated_venue": true,
           "gated_legs": [
@@ -300,17 +326,17 @@
     }
   },
   "backing": {
-    "collateral_ratio": 100.203957,
+    "collateral_ratio": 100.0,
     "collateral_ratio_basis": "PYUSD.balanceOf(USDai) / sum(USDai.totalSupply()) across arbitrum, base, ethereum and plasma. Two INDEPENDENT reads \u2014 a token balance against four separately-read supplies \u2014 so agreement is evidence, not construction. \u26a0\ufe0f Fully reserved 1:1 by design: 100% is the TARGET, not a floor being approached, and there is no cushion above par. Rate the drift below par, not the distance to 130. collateral_ratio_qualifier says whether every chain was read; a dropped chain can only shrink the denominator and OVERSTATE coverage.",
     "collateral_ratio_qualifier": "measured",
     "collateral_ratio_scale": "percent",
-    "total_backing": 282422678.18,
-    "surplus_deficit": 574847.81,
+    "total_backing": 282655446.63,
+    "surplus_deficit": 0.91,
     "surplus_deficit_basis": "PYUSD reserve minus USDai supply. Effectively ZERO \u2014 the mint is 1:1 against PYUSD, so any non-zero value is rounding, not a cushion. \u26a0\ufe0f The junior-capital question is MOOT BY ARITHMETIC rather than answered: a surplus of ~$0.01 has no room to contain anything, subordinated or otherwise. That is a measurement. Whether USD.AI's structure has a first-loss layer elsewhere is a separate question this feed does not measure and does not assert either way. The exposure here is coverage and mint authority, not surplus composition \u2014 see the governance flags.",
     "breakdown": [
       {
         "label": "PYUSD (Paxos)",
-        "value": 282422678.18,
+        "value": 282655446.63,
         "pct": 100.0,
         "tags": [],
         "detail": {
@@ -320,7 +346,7 @@
       }
     ],
     "supply_by_chain": {
-      "arbitrum": 281043890.091879,
+      "arbitrum": 281851505.446161,
       "base": 140128.482748,
       "ethereum": 5660.145635,
       "plasma": 658151.645833
