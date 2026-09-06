@@ -4024,6 +4024,40 @@ const CommonRenderer = {
         return '<span class="axis-rating r-na" title="No report URL is published for this asset.">No report</span>';
     },
 
+    // ⚠️ HOW FAR THE CHECK WENT, ON THE FACE — because the FINDING is on the
+    // face and a bound that renders one click down is not a bound.
+    //
+    // This block describes the MEASUREMENT, never the asset: who authored the
+    // walk, who reviewed it, and how many claims were re-measured. That is
+    // precisely why the producer could publish it where a prose findings[] was
+    // refused — "four claims re-measured" is an observation, "therefore this is
+    // safe" would be judgement and belongs to the editorial producer.
+    //
+    // ⚠️ IT EXISTS BECAUSE ONE OF THESE WALKS WAS PEER-AUTHORED AND PUBLISHED
+    // FOR A DAY while I reported all five were the producer's own — from a git
+    // check that had exactly one possible output, in a repo where every session
+    // commits under the same name. A reader deserves to see the provenance of a
+    // walk without taking my word that it was verified.
+    _reviewHtml(c) {
+        var r = c && c.review;
+        if (!r || typeof r !== 'object') return '';
+        var self = this;
+        var esc = function(x) { return self._escapeAttr(String(x)); };
+        var bits = [];
+        if (r.scope) bits.push(esc(String(r.scope)) + ' review');
+        if (r.claims_remeasured != null) bits.push(esc(r.claims_remeasured) + ' claims re-measured');
+        if (r.reviewed_by) bits.push('reviewed by ' + esc(r.reviewed_by));
+        if (r.reviewed_at) bits.push(esc(r.reviewed_at));
+        return '<div class="walk-review">' +
+            '<div class="wr-head">\u26a0\ufe0f ' + bits.join(' \u00b7 ') + '</div>' +
+            (r.authored_by
+                ? '<div class="wr-line"><span class="wr-key">Authored by:</span> ' +
+                  esc(r.authored_by) + ' \u2014 not by the reviewing repo</div>'
+                : '') +
+            (r.note ? '<div class="wr-line">' + esc(r.note) + '</div>' : '') +
+        '</div>';
+    },
+
     // ⚠️ SHARED AUTHORITY, RENDERED STRUCTURALLY AND WITHOUT A CONCLUSION.
     //
     // The producer publishes ADDRESSES ONLY and deliberately dropped the prose
@@ -4238,6 +4272,7 @@ const CommonRenderer = {
                 ? '<div class="tw-flagged">' + flagged.map(function(f) {
                       return '<div class="tw-flag">' + esc(f) + '</div>'; }).join('') + '</div>'
                 : '') +
+            this._reviewHtml(c) +
             this._sharedAuthorityHtml(c) +
             // ⚠️ NOT ESTABLISHED is rendered as prominently as what WAS, and
             // verbatim. These entries carry their own attribution — the

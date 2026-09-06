@@ -161,6 +161,17 @@ def emit(slug):
             # rows carry it structurally; the renderer must not supply the
             # sentence either.
             'authority_shared_with': doc.get('authority_shared_with') or [],
+            # ⚠️ `review` describes the MEASUREMENT, never the asset — who wrote
+            # the walk, who checked it, and how far the check went. That is why
+            # the producer could publish it where a prose `findings[]` was
+            # refused: "four claims re-measured" is an observation; "therefore
+            # this is safe" would be judgement and stays riskAnalyst's.
+            #
+            # ⚠️ It exists because ONE OF THESE WALKS WAS PEER-AUTHORED and
+            # published for a day while I reported, from a check that had exactly
+            # one possible output, that all five were the producer's own. The bound
+            # goes on the FACE for the same reason the finding does.
+            'review': doc.get('review') or None,
             'walk_notes': header_notes(path),
         },
     }
