@@ -1,0 +1,158 @@
+{
+  "schema_version": "contract/1",
+  "asset": "syzusd",
+  "producer": "security_analyst",
+  "as_of": "2026-08-30",
+  "generated_at": "2026-09-06T07:08:02Z",
+  "contract": {
+    "headline": "No timelock established on any measured authority layer.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-08-30",
+    "source_file": "security_analyst/topology/assets/syzusd.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "topology": "single-eoa",
+        "keys": [
+          "owner"
+        ],
+        "observed_at": "2026-08-30",
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "walked_by": "hand",
+        "paths": [
+          {
+            "holder": "0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae",
+            "via": "owner",
+            "terminal": "eoa",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "monad",
+        "topology": "single-eoa",
+        "keys": [
+          "owner"
+        ],
+        "observed_at": "2026-08-30",
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "walked_by": "hand",
+        "paths": [
+          {
+            "holder": "0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae",
+            "via": "owner",
+            "terminal": "eoa",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae"
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "plasma",
+        "topology": "nofm-multisig",
+        "n": 4,
+        "m": 5,
+        "keys": [
+          "owner",
+          "eip1967_admin"
+        ],
+        "observed_at": "2026-09-06",
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "walked_by": "hand",
+        "paths": [
+          {
+            "holder": "0xa2a9700407934e913c840556b3d29f19cf6f203d",
+            "via": "owner",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0xa2a9700407934e913c840556b3d29f19cf6f203d"
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "What 0x4ea00dc0…89ae DOES on plasma is NOT established. It has the highest nonce of the three chains there (84) while NOT holding the plasma upgrade path. Establishing its plasma role needs a transaction walk, which was not run. An unexplained high-activity key is a question, not a finding.",
+      "The ethereum/monad eip1967_admin terminals (0xd48ea6df…9a38 and 0xd32ab76a…7f5e, both recorded as timelocks by the retired generator file) were NOT re-walked in this pass. Their durations, floors and role holders are unmeasured — the old file's `timelock: unresolved` on those rows meant NOT MEASURED and that has not changed.",
+      "The 4-of-5 Safe owner set was NOT enumerated, so signer independence — and any overlap with the yzUSD/yzPP timelock role holders, which is the SAME Safe — is unestablished.",
+      "mint / pause / bridge authority NOT walked on any chain. Only contract-upgrade was resolved. Absent layers are unmeasured, not empty."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "yzusd",
+        "shares": [
+          {
+            "kind": "safe",
+            "address": "0xa2a9700407934e913c840556b3d29f19cf6f203d",
+            "n": 4,
+            "m": 5,
+            "roles": [
+              "plasma-contract-upgrade-owner"
+            ]
+          }
+        ]
+      },
+      {
+        "asset": "yzpp",
+        "shares": [
+          {
+            "kind": "safe",
+            "address": "0xa2a9700407934e913c840556b3d29f19cf6f203d",
+            "n": 4,
+            "m": 5,
+            "roles": [
+              "plasma-contract-upgrade-owner"
+            ]
+          }
+        ]
+      }
+    ],
+    "review": null,
+    "walk_notes": [
+      "✅ HAND-WALKED 2026-09-06 by security_analyst. REPLACES the generator v1.7 file",
+      "entirely — not appended to. The old file carried the ICED trust banner: `m` was",
+      "a key-slot count rather than a threshold, `timelock: unresolved` was",
+      "indistinguishable from \"no timelock\", and one row read {kind: safe, n: 3, m: 5}",
+      "unparseably. ⚠️ It ALSO meant backing-monitor refused to publish it as generator",
+      "output, so real measurements this repo took on 2026-08-30 were reaching no",
+      "consumer at all. That is the gap this replacement closes.",
+      "",
+      "⚠️⚠️ ONE BARE EOA IS THE UPGRADE AUTHORITY ON TWO OF THREE CHAINS, AND IT IS",
+      "BUSIEST ON THE THIRD WHERE IT IS NOT. 0x4ea00dc0…89ae has code size 0 on all",
+      "three — ethereum (nonce 28), monad (nonce 33) and plasma (nonce 84). It holds",
+      "`owner` on the ethereum and monad proxies. On PLASMA — the canonical chain — the",
+      "upgrade owner is instead a 4-of-5 Safe, yet the same key is more active there",
+      "than anywhere else. What it does on plasma is NOT established here; it is a",
+      "question for Yuzu, not a conclusion.",
+      "",
+      "⚠️ AND THE PLASMA SAFE IS SHARED WITH yzUSD AND yzPP. 0xa2a97004…203d is",
+      "syzUSD's plasma upgrade owner AND holds PROPOSER, CANCELLER and EXECUTOR on the",
+      "48-hour timelock governing both other Yuzu assets. One 4-of-5 stands behind all",
+      "three.",
+      "",
+      "VERIFICATION TRAIL (this repo, 2026-08-30 and re-read 2026-09-06):",
+      "0x4ea00dc0…89ae  code size 0 on ethereum / monad / plasma   MATCH",
+      "nonces 28 / 33 / 84                                       MATCH",
+      "plasma upgrade owner 0xa2a97004…203d",
+      "getThreshold() = 4   getOwners() = 5                      MATCH",
+      "⚠ the old generator file recorded that layer as `nofm-multisig` with NO",
+      "threshold — directionally right, unquantified. Now read.",
+      "",
+      "⚠️ NOT HELD. syzUSD appears in no wallet; watch-only. It is the registry's",
+      "canonical single-EOA-delegate example and is carried for that reason."
+    ]
+  }
+}

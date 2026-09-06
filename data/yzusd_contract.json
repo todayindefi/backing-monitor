@@ -1,0 +1,133 @@
+{
+  "schema_version": "contract/1",
+  "asset": "yzusd",
+  "producer": "security_analyst",
+  "as_of": "2026-09-06",
+  "generated_at": "2026-09-06T07:08:02Z",
+  "contract": {
+    "headline": "All measured authority sits behind a 48h timelock.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-06",
+    "source_file": "security_analyst/topology/assets/yzusd.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "plasma",
+        "topology": "timelocked",
+        "keys": [
+          "owner",
+          "eip1967_admin"
+        ],
+        "observed_at": "2026-09-06",
+        "timelock": "48h",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "walked_by": "hand",
+        "paths": [
+          {
+            "holder": "0x2130457539612ae9838e0314cda1a8abbdb7cfbc",
+            "via": "owner",
+            "terminal": "timelock",
+            "timelock": "48h",
+            "reach": "full",
+            "terminal_address": "0x2130457539612ae9838e0314cda1a8abbdb7cfbc"
+          },
+          {
+            "holder": "0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa",
+            "via": "eip1967_admin",
+            "terminal": "timelock",
+            "timelock": "48h",
+            "reach": "full",
+            "terminal_address": "0x2130457539612ae9838e0314cda1a8abbdb7cfbc"
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "plasma contract-upgrade: yzUSD implementation MISMATCH vs the requesting brief. Their 2026-08-30 hint gives 0x32d7d5bf…5cfe; the EIP-1967 slot reads 0x8e023928…8ea5 on 2026-09-06. Both are live contracts of different sizes, so it is an upgrade in the interval or an incorrect hint. Distinguishing them needs an Upgraded(address) log walk, NOT run. Unresolved, not wrong.",
+      "plasma: mint/pause authority NOT walked. Only the contract-upgrade path was resolved. asset-permission and pause layers are absent from this file because they were not measured, not because they were found empty.",
+      "The 4-of-5 Safe 0xa2a97004…203d owner set was NOT enumerated, so independence of its five signers from each other, or from the syzUSD path, is unestablished."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "yzpp",
+        "shares": [
+          {
+            "kind": "timelock",
+            "address": "0x2130457539612ae9838e0314cda1a8abbdb7cfbc",
+            "roles": [
+              "owner",
+              "proxy-admin-owner"
+            ],
+            "delay": "48h",
+            "floor": "none"
+          },
+          {
+            "kind": "safe",
+            "address": "0xa2a9700407934e913c840556b3d29f19cf6f203d",
+            "n": 4,
+            "m": 5,
+            "roles": [
+              "PROPOSER",
+              "CANCELLER",
+              "EXECUTOR"
+            ]
+          }
+        ]
+      },
+      {
+        "asset": "syzusd",
+        "shares": [
+          {
+            "kind": "safe",
+            "address": "0xa2a9700407934e913c840556b3d29f19cf6f203d",
+            "n": 4,
+            "m": 5,
+            "roles": [
+              "plasma-contract-upgrade-owner"
+            ]
+          }
+        ]
+      }
+    ],
+    "review": null,
+    "walk_notes": [
+      "✅ HAND-WALKED 2026-09-06 by security_analyst. NOT generator output.",
+      "Requested by riskAnalyst; walked here rather than dispatched, so no fourth",
+      "foreign write into this store. Every address in their brief was treated as a",
+      "CANDIDATE and re-read — one of them did not reproduce, see below.",
+      "",
+      "⚠️⚠️ THE FINDING IS SHARED AUTHORITY, AND IT SPANS ALL THREE YUZU ASSETS.",
+      "ONE TimelockController 0x21304575…7cfbc is the token `owner()` AND the owner",
+      "of the ProxyAdmin, on BOTH yzUSD and yzPP. 48h, and NO FLOOR —",
+      "MINIMUM_DELAY() and MIN_DELAY() both REVERT.",
+      "⚠️ AND THE DELAY HAS NO INDEPENDENT VETO. On that timelock, ONE 4-of-5 Safe",
+      "0xa2a97004…203d holds PROPOSER, CANCELLER *and* EXECUTOR — measured, with",
+      "0x…dEaD false on every role as control. The same four signatures that",
+      "schedule can cancel and execute. DEFAULT_ADMIN is the timelock itself.",
+      "⚠️ That SAME Safe is syzUSD's Plasma upgrade owner (4-of-5, re-measured).",
+      "So one 4-of-5 stands behind all three Yuzu assets on Plasma.",
+      "",
+      "VERIFICATION TRAIL (yzUSD, plasma, 2026-09-06, rpc.plasma.to):",
+      "symbol() yzUSD   supply 57,861,465.84   proxy code 793B",
+      "EIP-1967 impl  0x8e02392855a51d9d5d18d71a7cfc731f56c68ea5",
+      "EIP-1967 admin 0x6ccfd86ee6f0ceaa4946612a9faae257c064d2aa  (ProxyAdmin, 879B)",
+      "ProxyAdmin.owner()  -> 0x21304575…7cfbc                        MATCH",
+      "token owner()       -> 0x21304575…7cfbc                        MATCH",
+      "timelock getMinDelay() 172800 = 48h                            MATCH",
+      "MINIMUM_DELAY() / MIN_DELAY()  BOTH REVERT -> no floor         MATCH",
+      "hasRole(PROPOSER/CANCELLER/EXECUTOR, Safe 0xa2a97004) = TRUE/TRUE/TRUE",
+      "control: hasRole(*, 0x…dEaD) = FALSE on every role",
+      "",
+      "⚠️⚠️ ONE HINT DID NOT REPRODUCE, AND THIS IS WHY THEY ASKED. riskAnalyst's brief",
+      "gave yzUSD's implementation as 0x32d7d5bf…5cfe (read 2026-08-30). Measured here",
+      "2026-09-06 the EIP-1967 impl slot holds 0x8e023928…8ea5. BOTH ARE LIVE",
+      "CONTRACTS — 21,863B and 24,543B — so this is not a typo in their note. Either",
+      "the proxy was upgraded in the seven days between the reads, or the hint was",
+      "wrong. NOT SETTLED HERE: distinguishing them needs an Upgraded(address) log",
+      "walk, which was not run. Recorded in unmeasured[] rather than picking one."
+    ]
+  }
+}
