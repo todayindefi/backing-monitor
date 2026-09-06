@@ -433,6 +433,24 @@ repo, not by the session that owns it. **Both are addressed as "security_analyst
 agent's answer about what its repo wants is not that repo's position, and "security_analyst says"
 must distinguish which of the two answered.
 
+⚠️ **A DOWNSTREAM GATE IS THE WRONG FIX FOR AN UPSTREAM LEAK — DECIDED 2026-09-06, DO NOT
+RE-OPEN.** A `publication_status: staged|live` field was proposed for the axis-5 walks and
+REJECTED by the producer's user, whose reasoning is the keeper: **the automatic path is not
+broken; what breaks it is other sessions writing into that repo.** A publication flag would have
+been a manual step in front of every legitimate walk forever, plus a NEW failure mode where a
+forgotten flag makes a correct file read "Not assessed" — manufacturing exactly the
+absence-of-measurement / measurement-of-absence confusion this axis exists to prevent.
+
+**It was fixed at the source instead**: a provenance check over files the producer's repo never
+committed, a dispatcher that refuses uncommitted handoffs (being in git is the cheapest available
+proof of authorship), and an ordering rule that runs provenance BEFORE `git add`, since staging
+turns an untracked foreign file into a tracked one and hides it.
+
+⚠️ **The limitation below therefore STANDS and is deliberate, not an oversight.** Checking
+properties of a file is this repo's side of the boundary; controlling what enters the directory is
+the producer's. If a foreign walk is ever committed by them, it publishes — the difference is that
+they now see it first.
+
 ⚠️ **A GATE ON FILE PROPERTIES CANNOT ESTABLISH AUTHORSHIP.** This repo's axis-5 gate checks
 registration and `generator_version` — both properties of a file, neither a statement about who
 wrote it. A peer session with workspace-write into a producer's repo can create files there that
