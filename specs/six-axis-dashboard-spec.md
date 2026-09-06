@@ -474,8 +474,24 @@ same file does not help: one grep hit feels like the file answered. This produce
 render within an hour of being written. **Read the update blocks, or grep for the date, not only
 the topic.**
 
-⚠️ **A stale CDN 200 is not a liveness check.** A published-report link was wired on a measured
-`200` that was a Netlify edge cache; the origin was 404. Cache-bust, and read the `cache-status`.
+⚠️ **THE CHECK-AFTER-LAUNDERING FAMILY — a check whose subject can be NORMALISED INTO LEGITIMACY
+by the very step you are about to take.** security_analyst's generalisation, and it covers three
+separate incidents in this estate that each looked unrelated:
+
+```
+staging       git add turns an UNTRACKED foreign file into a TRACKED one, so a
+              provenance check run afterwards sees nothing wrong. Run it BEFORE.
+caching       a CDN turns a 404 origin into a 200 edge hit, so a liveness check
+              run through the cache cannot fail. Cache-bust and read cache-status.
+stored state  a re-check reading a STORED value instead of a live one: "not one
+              dollar left the vaults" was concluded from a totalAssets() frozen
+              two days before the event. The number could not move, so the check
+              could not fail.
+```
+
+⚠️ **The tell is that the check PASSES for a structural reason rather than an evidential one.**
+Before trusting any verification, ask what would have to be true for it to fail — and whether the
+path you measured through is capable of expressing that failure at all.
 
 ⚠️ **Never anchor a measurement to the thing being measured.** A router quoting against its own
 mid reads ~0bps however mispriced it is; 194 of 201bps on syzUSD were basis, not slippage.
