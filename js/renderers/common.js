@@ -2177,6 +2177,32 @@ const CommonRenderer = {
             bits.push('<div class="ap-note ap-note-direction">' +
                       this._escapeAttr(b.attachment_point_direction_note) + '</div>');
         }
+        // ⚠️ THE JUNIOR FIGURE IS NOT THIS RATIO'S DENOMINATOR, AND RENDERING IT
+        // BESIDE THE RATIO IS THE ONE PLACE THAT COULD GO WRONG.
+        //
+        // $73.0M is the BALANCE-SHEET junior — Re's "$77M" product-page quantity,
+        // computed as a /tvl residual. The attachment point divides by the $20.0M
+        // WATERFALL layer. Substitute one for the other and 7.94% becomes ~29%:
+        // the tile reads FOUR TIMES SAFER than it is. The producer wrote that trap
+        // into the field's own basis, so the label here names what the number is
+        // NOT, in the same breath as what it is.
+        //
+        // It earns its place because it is what makes the ratio checkable: the
+        // junior layer moved +0.4% in three weeks against +39.3% senior growth,
+        // so "the cushion thinned because the denominator rose" is measured here
+        // rather than assumed.
+        if (typeof b.junior_capital_usd === 'number') {
+            bits.push('<div class="ap-note ap-junior">' +
+                '<span class="ap-note-key">Junior capital:</span> $' +
+                (b.junior_capital_usd / 1e6).toFixed(1) + 'M balance-sheet ' +
+                '<span class="ap-junior-warn">\u2014 NOT the $20.0M waterfall layer this ratio ' +
+                'divides by</span>' +
+                (b.junior_capital_basis
+                    ? '<span class="ap-junior-basis" title="' +
+                      this._escapeAttr(String(b.junior_capital_basis)) + '"> \u24d8</span>'
+                    : '') +
+            '</div>');
+        }
         if (b.attachment_point_as_of) {
             // Its own clock: the attachment point is measured on a different
             // cadence from the reserve figures beside it, and is usually older.

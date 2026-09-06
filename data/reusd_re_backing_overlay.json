@@ -2,11 +2,11 @@
   "schema_version": "backing-overlay/1",
   "producer": "riskanalyst",
   "asset": "reusd_re",
-  "as_of": "2026-09-03T00:00:00Z",
+  "as_of": "2026-09-06T00:00:00Z",
   "backing": {
-    "attachment_point_pct": 9.66,
-    "attachment_point_as_of": "2026-08-24T00:00:00Z",
-    "attachment_point_basis": "$20.0M loss-waterfall junior layer. NOT the $77M product-page figure -- DIFFERENT QUANTITIES, not competing snapshots. Resolved 2026-08-13; use the smaller for the waterfall.",
+    "attachment_point_pct": 7.94,
+    "attachment_point_as_of": "2026-09-06T00:00:00Z",
+    "attachment_point_basis": "$20.0M loss-waterfall junior layer over a $251,805,229 senior (Re /tvl, 2026-09-06). NOT the ~$73M balance-sheet figure -- DIFFERENT QUANTITIES, not competing snapshots: loss absorption follows what the treaties subordinate, and the 105-110% band on a $358M premium book is ~$17.9M. SERIES CONTINUITY CHECK: the prior published 9.66% reproduces EXACTLY on this same basis at its own date ($20.0M / $207.0M = 9.662%, 2026-08-24), so 7.94% is the same quantity moved, not a differently-derived number wearing the same label.",
     "attachment_point_norm_pct": 10.0,
     "attachment_point_below_norm": true,
     "attachment_point_direction_note": "THINNED BECAUSE THE DENOMINATOR ROSE, not because the junior layer shrank. No loss occurred; senior deposits grew. A supply series alone reads as strength while the cushion erodes.",
@@ -19,12 +19,17 @@
     "eligible_sleeve_note": "⚠️ THIS IS A MANDATE, NOT A COMPOSITION. These are the assets the on-chain liquid sleeve is PERMITTED to hold. The MEASURED reserve is 98.97% sUSDe (see protocol_reserves_passthrough). T-Bills are an allowed rotation that HAS NOT OCCURRED. Reading the eligible set as the holding makes a single-asset book look diversified.",
     "nav_write_path": "admin-written on SharePriceCalculator via an UNDOCUMENTED 632-byte contract 0xe888DF32, which is BOTH the routine daily price writer AND holds forceNAVUpdate -- the bypass that skips the +/-10% deviation guard. It answers no standard interface and is absent from Re's published controller table.",
     "nav_write_path_basis": "riskAnalyst assets/reusd-re.md joined with security_analyst audits/levered-oracle-price-sources-2026-08-27.md, re-measured 2026-08-30. LIMIT: selector presence does not distinguish implements-from-calls; no disassembly.",
-    "attachment_point_vintage_note": "INDICATIVE, NOT MEASURED: a JUNE 2026 junior figure over a 2026-08-23 on-chain senior read. Numerator and denominator are ~2 months apart. ⚠️ This does NOT weaken the finding — the denominator is the operand that GREW, so the true current figure is more likely BELOW 9.66% than above it.",
-    "backing_score": 5.5,
+    "attachment_point_vintage_note": "RESOLVED 2026-09-06, AND IT RESOLVED ADVERSELY -- retained rather than deleted so the page does not silently lose that this figure was ever hedged. The prior note said INDICATIVE, NOT MEASURED: a June 2026 junior figure over an August on-chain senior read, ~2 months apart, and reasoned the true figure was 'more likely BELOW 9.66% than above it' because the denominator was the operand that grew. That reasoning REQUIRED the junior layer to be flat, which was an assumption. It is now a measurement: the residual junior proxy is +0.4% over three weeks against senior growth of +39.3%. The hedge was correct in direction and the figure moved the way it predicted.",
+    "backing_score": 5.0,
     "backing_score_source": "riskAnalyst:authored",
-    "backing_score_generated_at": "2026-08-31T00:00:00Z",
-    "backing_score_basis": "⚠️ AUTHORED, NOT COMPUTED — a FALLBACK that yields to any derived collateral ratio. Used because PegTracker DECLARES no ratio is establishable for this asset: Re's reserve dashboard combines reUSD and reUSDe and exposes no asset-attributed denominator. ⚠️ The reserve is 98.97% sUSDe as measured — 'USDC, USDe, sUSDe, T-Bills' is the sleeve's ELIGIBLE SET, not its composition, and the T-Bill rotation has not occurred. So the collateral is good in QUALITY but is effectively ONE synthetic dollar carrying Ethena basis risk, not a diversified book; that concentration is priced on axis 4 (dependencies 5.0). Held to 5.5 by the 9.66% attachment point sitting BELOW the 10% institutional norm, and by the NAV being admin-written on SharePriceCalculator so the reserve's own mark is issuer-controlled.",
+    "backing_score_generated_at": "2026-09-06T00:00:00Z",
+    "backing_score_basis": "AUTHORED, NOT COMPUTED -- a FALLBACK that yields to any derived collateral ratio; PegTracker declares no ratio establishable for this asset (Re publishes combined reUSD + reUSDe reserves with no asset-attributed denominator). CUT 5.5 -> 5.0 on 2026-09-06. The 5.5 rested on two reasons and the FIRST moved: it cited an attachment point of 9.66% as already below the 10% norm, and it is 7.94% today -- 21% thinner in 13 days, the fourth consecutive reading in the same direction, and now basis-independent. NOTHING IN THE REINSURANCE BOOK DETERIORATED: no claim event, combined ratio still 92%, no treaty ever above 99%, collateral quality unchanged. This is dilution by growth. The reserve is also 99.05% sUSDe as measured -- 'USDC, USDe, sUSDe, T-Bills' is the sleeve's ELIGIBLE SET, not its composition, and the T-Bill rotation has not occurred; that concentration is priced on axis 4 (dependencies 5.0), not here, so it is stated but not double-counted. Not lower than 5.0: the second reason behind the original 5.5 (issuer-written NAV on SharePriceCalculator) is unchanged, and the loss threshold still requires a ~115% combined ratio against a realised 92%.",
     "backing_score_applies_when": "collateral_ratio_declared_underivable",
-    "backing_score_applies_when_note": "⚠️ MUST NOT fire on a merely-absent collateral_ratio. The producer declares this one underivable in collateral_ratio_basis. A bare null can also mean a failed fetch or a feed outage — and promoting an authored score over a measurement that exists but did not load is the failure where a failed read lands wherever the substitute sits. Require the DECLARATION, not the absence."
+    "backing_score_applies_when_note": "⚠️ MUST NOT fire on a merely-absent collateral_ratio. The producer declares this one underivable in collateral_ratio_basis. A bare null can also mean a failed fetch or a feed outage — and promoting an authored score over a measurement that exists but did not load is the failure where a failed read lands wherever the substitute sits. Require the DECLARATION, not the absence.",
+    "attachment_point_basis_independent": true,
+    "attachment_point_basis_independent_note": "The decline holds on BOTH of Re's contradictory junior figures: 11.06% -> 7.94% on the $20M waterfall basis, and 40.36% -> 28.98% on the ~$73M balance-sheet basis. Every earlier instance of this finding was arguable on the grounds that the $77M-vs-$20M question was unresolved. This one is not, which is why it moved a score when three prior readings did not.",
+    "junior_capital_usd": 72967952,
+    "junior_capital_as_of": "2026-09-06T00:00:00Z",
+    "junior_capital_basis": "Residual non-tokenized capital, computed from Re /tvl as onchain_capital ($165,400,740) + offchain_capital ($179,524,465) - (reUSD $251,805,229 + reUSDe $20,152,024) = $72,967,952. This is the BALANCE-SHEET junior (~$73M / the '$77M' product-page figure), NOT the $20.0M waterfall layer the attachment ratio divides by -- the two are different quantities and must not be substituted for one another. Published so the tile is self-verifying: it is the numerator's sibling, measured from the same payload, and it is what establishes that the junior layer is FLAT (~$72.7M on 2026-08-13, +0.4%)."
   }
 }
