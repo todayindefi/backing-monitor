@@ -2191,6 +2191,16 @@ const CommonRenderer = {
         // junior layer moved +0.4% in three weeks against +39.3% senior growth,
         // so "the cushion thinned because the denominator rose" is measured here
         // rather than assumed.
+        // ⚠️ THE SERIES NOTE RENDERS BECAUSE ITS EXCLUSION IS THE POINT. It carries
+        // a clean three-point all-chain series with the 2026-08-24 reading
+        // deliberately LEFT OUT and the reason stated — that reading's $207.0M was
+        // an ETHEREUM-LEG denominator, not comparable to the all-chain points
+        // either side of it. A dropped point that says why it was dropped is
+        // evidence; one that vanishes is a gap nobody can audit.
+        if (b.attachment_point_series_note) {
+            bits.push('<div class="ap-note ap-series"><span class="ap-note-key">Series:</span> ' +
+                this._escapeAttr(String(b.attachment_point_series_note)) + '</div>');
+        }
         if (typeof b.junior_capital_usd === 'number') {
             bits.push('<div class="ap-note ap-junior">' +
                 '<span class="ap-note-key">Junior capital:</span> $' +

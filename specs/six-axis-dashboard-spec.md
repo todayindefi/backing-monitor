@@ -495,6 +495,24 @@ git author    ⚠️ MINE, AND THE WORST OF THE FOUR. I verified the authorship 
               fact peer-authored and had been on a public page for a day.
 ```
 
+⚠️ **A REPRODUCING QUOTIENT IS NOT A MATCHING BASIS.** A published 9.66% attachment point was
+confirmed as "the same quantity moved" because `$20.0M / $207.0M = 9.662%` reproduced exactly. It
+did reproduce — and the denominators were different definitions: `$207.0M` was an ETHEREUM-LEG
+measurement, `$251.8M` was all-chain `/tvl`. **The arithmetic agreeing is precisely what made it
+look verified.** ⚠️ And the error had a DIRECTION that a retraction would not lead you to guess: an
+Ethereum-only denominator OVERSTATES the ratio by 30–60bps and **the gap widens over time**, so the
+mixed series understated the decline rather than exaggerating it.
+
+**Checking that a number recomputes tells you the arithmetic is sound. It tells you nothing about
+whether the two inputs mean the same thing** — which is the same shape as validating on a case
+where two definitions happen to coincide. **Verify the DEFINITION of each operand, not just the
+result.**
+
+⚠️ **AND A DROPPED DATA POINT MUST SAY WHY IT WAS DROPPED.** The corrected series excludes the
+08-24 reading explicitly, with its reason, rather than silently omitting it. **A gap that explains
+itself is evidence; a gap that does not is unauditable** — and silently dropping the point would
+have hidden that a published figure had ever been wrong.
+
 ⚠️ **NEVER REPORT GIT AUTHORSHIP AS PROVENANCE IN A SINGLE-AUTHOR ENVIRONMENT.** It cannot
 distinguish and it retires the question, which is worse than not asking: an unanswered question
 gets asked again, a falsely answered one does not. **If you need to know whether a file is a
