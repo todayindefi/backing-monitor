@@ -2745,13 +2745,39 @@ var SyrupUSDCRenderer = {
 
         // Total row — share column locked to 100% (per-chain shares sum to it
         // by construction; reconciliation pct is shown separately below).
+        // ⚠️ A SUM OF OVERLAPPING LEGS IS NOT A TOTAL. syrupUSDT rendered
+        // "Total $526.3M" by adding Ethereum's $393.3M to Plasma's $133.0M — but
+        // Ethereum's totalSupply already CONTAINS the bridged shares, because its
+        // CCIP pool is LockRelease (measured: LockReleaseTokenPool 1.5.1 holding
+        // 168.18M syrupUSDT). The same shares were counted on both chains and the
+        // page overstated global supply by ~34%.
+        //
+        // ⚠️ Detected from arithmetic, NOT from asserting a mechanism: if the
+        // enumerated sum exceeds the vault's OWN share base, the legs cannot all
+        // be disjoint. usdat already models this correctly per chain and says so
+        // in global_supply_note — "Ethereum bridges by LockRelease ... summing
+        // chains would double-count" — so the fix belongs upstream as a published
+        // per-chain mechanism, and this flag is what stops a wrong total shipping
+        // meanwhile.
+        var vsTot = (specific && specific.vault_state && typeof specific.vault_state.total_assets === 'number')
+            ? specific.vault_state.total_assets : null;
+        var sumExceedsBase = (totalSupply != null && vsTot != null && totalSupply > vsTot * 1.01);
         var totalRow =
             '<tr class="font-bold border-t-2 border-slate-200">' +
-                '<td>Total</td>' +
-                '<td class="text-right font-mono">' + (totalSupply != null ? CommonRenderer.formatCurrency(totalSupply) : '-') + '</td>' +
+                '<td>Total' + (sumExceedsBase ? ' <span class="text-amber-700">(sum of legs)</span>' : '') + '</td>' +
+                '<td class="text-right font-mono' + (sumExceedsBase ? ' text-amber-700' : '') + '">' +
+                    (totalSupply != null ? CommonRenderer.formatCurrency(totalSupply) : '-') + '</td>' +
                 '<td class="text-right font-mono">100%</td>' +
                 '<td colspan="3"></td>' +
-            '</tr>';
+            '</tr>' +
+            (sumExceedsBase
+                ? '<tr><td colspan="6" class="text-xs text-amber-700" style="line-height:1.45;">' +
+                  '\u26a0\ufe0f This sum EXCEEDS the vault\u2019s own share base of ' +
+                  CommonRenderer.formatCurrency(vsTot) + ', so the legs are not all disjoint and ' +
+                  'this is not a global supply figure. A lock-release bridge leaves locked shares in ' +
+                  'the source chain\u2019s totalSupply and mints them again on the destination \u2014 ' +
+                  'the same shares counted twice.</td></tr>'
+                : '');
 
         var subheader;
         if (isUSDT) {
@@ -2936,9 +2962,11 @@ var SyrupUSDCRenderer = {
                 '<span class="text-amber-700 font-semibold">\u26a0\ufe0f CROSS-SCOPE \u2014 verdict ' +
                 'withheld.</span> <span class="text-slate-500">The numerator spans ' +
                 (chainCount != null ? chainCount : 'several') + ' chains; the denominator\u2019s share ' +
-                'base matches a single chain exactly. This ratio does not establish a surplus or a ' +
-                'shortfall, and the difference between those readings depends on whether bridging ' +
-                'burns or locks on the source chain \u2014 not yet measured.</span></div>';
+                'base matches a single chain exactly, so the legs may count the same shares twice. ' +
+                'This ratio does not establish a surplus or a shortfall. \u26a0\ufe0f A lock-release ' +
+                'bridge leaves the locked shares in the SOURCE chain\u2019s totalSupply while minting ' +
+                'them again on the destination; a burn-mint bridge does not. Until the producer ' +
+                'publishes the mechanism per chain, the sum is not a global supply.</span></div>';
         }
         if (chainCount != null && chainCount <= 1) {
             return '<div class="text-xs mt-3">' +
