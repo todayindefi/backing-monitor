@@ -2803,6 +2803,17 @@ const CommonRenderer = {
                 backingHead.appendChild(sNote);
             }
         }
+        // The authored-score rationale, reachable rather than hovered.
+        (function(self) {
+            var head = document.getElementById('axis-backing-head');
+            var basis = (data.backing || {}).backing_score_basis;
+            if (!head || !basis) return;
+            var el = document.createElement('div');
+            el.className = 'axis-basis-note';
+            el.innerHTML = self._scoreBasisHtml('Why this backing score', basis);
+            head.appendChild(el);
+        })(this);
+
         // ⚠️ THE FIRST-LOSS ATTACHMENT POINT, WHICH A COLLATERAL RATIO CANNOT SAY.
         // For a tranched asset the question is not "is there enough collateral"
         // but "how much loss lands on somebody else first". The dashboard cannot
@@ -2889,6 +2900,15 @@ const CommonRenderer = {
                   cScore + '/10</span>'
                 : this._ratingChipHtml(null)),
             data.contract || (data.asset_specific || {}).control || (data.asset_specific || {}).governance);
+        (function(self) {
+            var head = document.getElementById('axis-contract-head');
+            var basis = (data.contract || {}).structural_score_basis;
+            if (!head || !basis) return;
+            var el = document.createElement('div');
+            el.className = 'axis-basis-note';
+            el.innerHTML = self._scoreBasisHtml('Why this contract score', basis);
+            head.appendChild(el);
+        })(this);
         this._renderContractSection(data);
 
         // 6 · Editorial axis (issuer, structural, or a future per-asset label)
@@ -4058,6 +4078,30 @@ const CommonRenderer = {
             return '<span class="axis-rating r-na">Report ' + this._escapeAttr(String(st).replace(/_/g, ' ')) + '</span>';
         }
         return '<span class="axis-rating r-na" title="No report URL is published for this asset.">No report</span>';
+    },
+
+    // ⚠️ A RATIONALE THAT ONLY EXISTS IN A TOOLTIP IS UNPUBLISHED.
+    //
+    // I rendered backing_score_basis and structural_score_basis as title=""
+    // attributes. syrupUSDC's is 2,162 characters; reUSD's backing basis is
+    // 1,162. A hover tooltip is invisible on touch, invisible to anyone who does
+    // not hover, and browsers truncate long title text — so the argument for why
+    // a score is what it is was functionally not on the page.
+    //
+    // ⚠️ This is the same defect class as "published but unrendered", one step
+    // further in: the field IS read, and rendered somewhere nobody looks. An
+    // audit that greps renderer source counts it as DONE.
+    //
+    // A basis must render WHERE IT QUALIFIES THE NUMBER. Collapsed is fine —
+    // reachable by click, discoverable by an affordance — but a hover is not a
+    // place a 2,000-character argument can live.
+    _scoreBasisHtml(label, text) {
+        if (!text || typeof text !== 'string') return '';
+        var t = text.trim();
+        if (!t) return '';
+        return '<details class="score-basis"><summary class="score-basis-toggle">' +
+            this._escapeAttr(label) + '</summary>' +
+            '<div class="score-basis-body">' + this._escapeAttr(t) + '</div></details>';
     },
 
     // ⚠️ HOW FAR THE CHECK WENT, ON THE FACE — because the FINDING is on the
