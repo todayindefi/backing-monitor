@@ -79,24 +79,50 @@ def header_notes(path):
 
 
 def derive_headline(layers):
-    """Structural, so it follows the file. Never a stored sentence."""
-    delayed, undelayed = [], []
+    """Structural, so it follows the file. Never a stored sentence.
+
+    ⚠️ THREE BUCKETS, NOT TWO. This folded `unresolved` in with `none` and then
+    said "has NO established delay — timelock: unresolved", asserting an ADVERSE
+    finding about a layer nobody measured. It was masked only by FILE ORDER —
+    undelayed[0] happened to land on a genuine `none` row — so it was order luck,
+    not correctness, and both syrup pools carry `unresolved` on contract-upgrade.
+
+    `unresolved` is not `none` in EITHER direction: rendering it blank turns an
+    unknown into a clean bill, and rendering it as "no delay" turns an unknown
+    into an adverse finding. The dashboard's own §4 rule says exactly this and
+    the derivation had drifted from it.
+    """
+    delayed, undelayed, unmeasured = [], [], []
     for l in layers or []:
         tl = str(l.get('timelock', '')).strip()
         keys = ', '.join(l.get('keys') or []) or l.get('authority_layer', '?')
-        if tl and tl not in ('none', 'unresolved', 'None'):
-            delayed.append((tl, keys, l.get('authority_layer')))
+        row = (tl, keys, l.get('authority_layer'))
+        if tl.lower() == 'unresolved':
+            unmeasured.append(row)
+        elif tl and tl.lower() not in ('none', 'None'.lower()):
+            delayed.append(row)
         else:
             undelayed.append((tl or 'none', keys, l.get('authority_layer')))
+
+    # Named in its own clause — never merged into the delayed or undelayed claim.
+    tail = ''
+    if unmeasured:
+        names = ', '.join(f'{u[2]} ({u[1]})' for u in unmeasured)
+        tail = (f" ⚠️ {len(unmeasured)} layer{'s' if len(unmeasured) > 1 else ''} "
+                f"NOT MEASURED: {names} — an unknown delay, not an absent one.")
+
     if delayed and undelayed:
-        d = delayed[0]
-        u = undelayed[0]
+        d, u = delayed[0], undelayed[0]
         return (f"A {d[0]} timelock covers {d[2]} ({d[1]}). "
-                f"{u[2]} ({u[1]}) has NO established delay — timelock: {u[0]}. "
-                f"The delay protects the code and not the supply.")
-    if delayed:
-        return f"All measured authority sits behind a {delayed[0][0]} timelock."
-    return "No timelock established on any measured authority layer."
+                f"{u[2]} ({u[1]}) has NO established delay — timelock: none. "
+                f"The delay protects the code and not the supply." + tail)
+    if delayed and not undelayed:
+        return (f"All MEASURED authority sits behind a {delayed[0][0]} timelock." + tail)
+    if undelayed:
+        return ("No timelock established on any measured authority layer." + tail)
+    # Nothing measured at all — assert nothing in either direction.
+    return ("No authority layer on this asset has a measured delay."
+            + (tail or ' The rows present are unmeasured.'))
 
 
 def registered_slugs(repo_root):
