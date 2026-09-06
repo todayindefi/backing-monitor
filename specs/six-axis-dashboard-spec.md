@@ -210,6 +210,29 @@ a titled void) · attestations · concentration lens.
 
 **UNRATED** · see §6.3 for the authored-score fallback.
 
+### ⚠️ A fact may be STATED on one axis and PRICED on another
+
+This has now come up three times and the resolution is the same each time. A single fact often
+bears on several axes — concentration bears on backing AND dependencies; subordination bears on
+backing AND volatility AND redemption; an issuer-written NAV bears on peg AND contract.
+
+**Scoring it on every axis it touches is the double-count the frame exists to prevent. Omitting it
+from the axes that do not price it is worse — the reader looking at backing never learns the book
+is 99% one asset.**
+
+**So: state it wherever it is relevant, price it once, and SAY WHERE IT IS PRICED.**
+
+```
+✅ "the collateral is good in QUALITY but is effectively ONE synthetic dollar carrying
+    Ethena basis risk, not a diversified book; that concentration is priced on
+    axis 4 (dependencies 5.0)"
+❌ scoring the concentration on axis 2 as well          -> double-count
+❌ leaving it off axis 2 entirely                       -> a 99% book reads as diversified
+```
+
+⚠️ **The cross-reference is what makes it safe.** Without it a reader cannot tell an unpriced fact
+from an overlooked one, and a later editor cannot tell whether the score already accounts for it.
+
 ## Axis 3 — Liquidity & Exit
 
 **REQUIRED** · depth figure with its STATUS (`bracketed` / `ladder_exhausted` / `quote_failed` /
