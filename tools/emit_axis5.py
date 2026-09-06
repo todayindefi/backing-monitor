@@ -27,7 +27,31 @@ import json, os, sys, datetime as yamldt
 import yaml
 
 TOPOLOGY_DIR = '/home/danger/security_analyst/topology/assets'
-SLUG_TO_FILE = {'reusd_re': 'reusd-re.yaml'}
+
+# ⚠️ NO HAND-TYPED SLUG LIST. This was `{'reusd_re': 'reusd-re.yaml'}` and it
+# served exactly one asset while FIFTEEN registered assets had a walk on disk.
+# I warned security_analyst that a new file "lands and renders nothing" without a
+# line here, then left the list at one entry — the failure I predicted, in my own
+# file. The filename is derivable (underscored slug -> dashed basename); deriving
+# it removes the class.
+#
+# ⚠️ BUT THE LIST WAS DOING TWO JOBS AND ONLY ONE WAS ACCIDENTAL. It was also a
+# PUBLICATION GATE. Deriving the name without replacing the gate would
+# auto-publish anything dropped in that directory. So the gate is now two
+# explicit conditions, both structural and both read from the file itself:
+#
+#   1. The slug is REGISTERED in data/assets.json — the dashboard's own registry
+#      of what it shows, which is already the gate transport uses.
+#   2. The walk is HAND-WALKED, i.e. it declares no `generator_version`.
+#
+# ⚠️ CONDITION 2 IS NOT OPTIONAL AND IT EXCLUDES MOST OF THEM. Ten of the fifteen
+# registered walks are v1.7 GENERATOR output, and security_analyst's own banner
+# on those files says only 42 of 115 rows — 36.5% — are trustworthy, that
+# `timelock: unresolved` means NOT MEASURED rather than "no timelock", and that
+# `m` is a key-slot count rather than a threshold. Publishing those as axis-5
+# facts would render unmeasured authority as measured, which is worse than the
+# "Not assessed" they currently show. Their own trust statement is the gate.
+REQUIRE_HAND_WALK = True
 
 
 def header_notes(path):
@@ -75,14 +99,26 @@ def derive_headline(layers):
     return "No timelock established on any measured authority layer."
 
 
+def registered_slugs(repo_root):
+    """Underscored slugs from the dashboard's own registry."""
+    with open(os.path.join(repo_root, 'data/assets.json'), encoding='utf-8') as fh:
+        return [a['slug'].replace('-', '_') for a in json.load(fh)]
+
+
 def emit(slug):
-    fn = SLUG_TO_FILE.get(slug)
-    if not fn:
-        raise SystemExit(f'no topology file mapped for slug {slug!r}')
+    # underscored slug -> dashed yaml basename, the convention both repos use
+    fn = slug.replace('_', '-') + '.yaml'
     path = os.path.join(TOPOLOGY_DIR, fn)
     if not os.path.exists(path):
         raise SystemExit(f'MISSING: {path} — emit nothing rather than a stale copy')
     doc = yaml.safe_load(open(path, encoding='utf-8')) or {}
+
+    # ⚠️ Gate 2. Refuse generator output; see REQUIRE_HAND_WALK above.
+    if REQUIRE_HAND_WALK and doc.get('generator_version'):
+        raise SystemExit(
+            f'REFUSED: {fn} is generator v{doc["generator_version"]} output, not a hand-walk. '
+            f'Its own trust banner rates 36.5% of generated rows trustworthy and says '
+            f'`timelock: unresolved` means NOT MEASURED. Axis 5 stays "Not assessed".')
 
     observed = doc.get('observed_at')
     if not observed:
@@ -100,10 +136,13 @@ def emit(slug):
             'headline': derive_headline(layers),
             'headline_basis': 'Derived from the layer rows below, not authored here, '
                               'so it changes when the walk changes.',
+            # ⚠️ `method` is DERIVED, and the note that used to sit here was a fixed
+            # sentence about reUSD's file history ("replaced a v1.7 generator
+            # row..."). True of reUSD, FALSE of USG, which never had a generator
+            # row at all. A per-asset provenance claim hardcoded in a shared
+            # emitter ships one asset's history onto every other asset's page.
+            # The file's own header is already carried verbatim in walk_notes.
             'method': 'hand-walk',
-            'method_note': 'Replaced a v1.7 generator row that read topology: unknown, m: 4, '
-                           'timelock: unresolved. security_analyst\'s generator is iced; on their '
-                           'own coverage audit only 36.5% of generated rows were trustworthy.',
             'observed_at': str(observed),
             'source_file': f'security_analyst/topology/assets/{fn}',
             'layers': layers,

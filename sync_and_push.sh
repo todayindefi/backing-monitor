@@ -88,7 +88,17 @@ done
 # missing walk must leave axis 5 reading "Not assessed", which is honest; the
 # failure mode to avoid is serving a stale copy of a walk that has been retracted.
 if [ -f tools/emit_axis5.py ]; then
-    for slug in reusd_re; do
+    # ⚠️ WAS `for slug in reusd_re`. A hand-typed loop naming ONE asset, in a
+    # different language from the emitter's hand-typed dict — so fixing the
+    # Python alone changed nothing, because the visible error came from the
+    # Python and this loop never ran for anything else. Two hardcoded lists,
+    # one symptom.
+    #
+    # Now every registered slug is offered; the emitter refuses the ones that
+    # are not publishable (no walk on disk, or generator output rather than a
+    # hand-walk) and emits nothing for them, which leaves axis 5 at
+    # "Not assessed" exactly as before.
+    for slug in $SLUGS; do
         python3 tools/emit_axis5.py "$slug" --out data/ 2>&1 || \
             echo "$(date): axis5 emit skipped for $slug (source walk unavailable)" >&2
     done
