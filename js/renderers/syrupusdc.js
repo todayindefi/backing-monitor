@@ -2755,8 +2755,33 @@ var SyrupUSDCRenderer = {
 
         var subheader;
         if (isUSDT) {
-            subheader = 'syrupUSDT is currently Ethereum-only. CCIP+CCT cross-chain ' +
-                       'expansion is planned but not yet deployed.';
+            // ⚠️ WAS A HARDCODED DEPLOYMENT CLAIM: "syrupUSDT is currently
+            // Ethereum-only. CCIP+CCT cross-chain expansion is planned but not
+            // yet deployed." No producer said that — the renderer asserted it,
+            // and it is now contradicted on its own page: security_analyst's
+            // hand-walk carries plasma asset-permission and plasma bridge layers
+            // at a 3h timelock.
+            //
+            // ⚠️ THE TWO ARE NOT ACTUALLY IN CONFLICT, WHICH IS WHY THE CLAIM WAS
+            // WRONG RATHER THAN THE WALK. This block's own `data_source` is
+            // `phase_1_supply_only`: 100% ethereum_share_pct is a statement about
+            // where SUPPLY sits, not about where contracts EXIST. A chain can be
+            // deployed and hold nothing. The renderer converted a supply share
+            // into a deployment assertion.
+            //
+            // Same rule as axis 5's absence line: a renderer must not assert a
+            // claim about an asset, because it cannot know when the claim stops
+            // being true. Derived from the fields, scoped to what they measure.
+            var ethShare = (mc && typeof mc.ethereum_share_pct === 'number')
+                ? mc.ethereum_share_pct : null;
+            subheader = (ethShare != null
+                    ? CommonRenderer.formatPercent(ethShare, 1) + ' of syrupUSDT supply sits on Ethereum. '
+                    : '') +
+                'This is a SUPPLY view' +
+                (mc && mc.data_source ? ' (' + CommonRenderer._escapeAttr(String(mc.data_source)) + ')' : '') +
+                ' \u2014 it does not establish which chains the contracts are deployed on. ' +
+                '\u26a0\ufe0f A chain can carry deployed contracts and no supply; see the ' +
+                'Contract &amp; Admin walk for authority layers measured per chain.';
         } else {
             var nonStub = chains.filter(function(c) { return c.kind !== 'stub'; }).length;
             subheader = 'syrupUSDC is deployed natively on ' + nonStub + ' chains via Chainlink CCIP+CCT ' +

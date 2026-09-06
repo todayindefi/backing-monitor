@@ -1,0 +1,393 @@
+{
+  "schema_version": "contract/1",
+  "asset": "syrupusdt",
+  "producer": "security_analyst",
+  "as_of": "2026-09-06",
+  "generated_at": "2026-09-06T16:04:55Z",
+  "contract": {
+    "headline": "A 3d timelock covers governance (governor). asset-permission (poolPermissionManager) has NO established delay — timelock: none. The delay protects the code and not the supply. ⚠️ 2 layers NOT MEASURED: contract-upgrade (manager), pause (withdrawalManager) — an unknown delay, not an absent one.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-06",
+    "source_file": "security_analyst/topology/assets/syrupusdt.yaml",
+    "layers": [
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-09-06",
+        "walked_by": "hand",
+        "target_name": "syrupUSDT",
+        "terminal_name": "Proxy",
+        "topology": "nofm-multisig",
+        "m": 1,
+        "keys": [
+          "poolPermissionManager"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0xbe10adce8b6e3e02db384e7fada5395dd113d8b3",
+            "name": "NonTransparentProxy",
+            "name_verified": true,
+            "via": "poolPermissionManager",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0xd6d4bcde6c816f17889f1dd3000af0261b03a196",
+            "holder_kind": "safe",
+            "threshold": 4,
+            "owners": 7,
+            "delay_applies": false,
+            "slots_checked": [
+              "owner",
+              "admin",
+              "governance",
+              "authority",
+              "pendingOwner",
+              "eip1967_admin",
+              "eip1967_beacon",
+              "zos_admin"
+            ]
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-09-06",
+        "walked_by": "hand",
+        "target_name": "syrupUSDT",
+        "terminal_name": "Proxy",
+        "topology": "unknown",
+        "m": 1,
+        "keys": [
+          "manager"
+        ],
+        "timelock": "unresolved",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x93aa06f8a7bb4da3eb0dd5a5a38c01a7eb35501a",
+            "name": "poolDelegate",
+            "name_verified": true,
+            "via": "manager.upgrade / poolDelegate",
+            "terminal": "eoa",
+            "timelock": "7d",
+            "reach": "full",
+            "terminal_address": "0x93aa06f8a7bb4da3eb0dd5a5a38c01a7eb35501a",
+            "holder_kind": "eoa",
+            "threshold": 1,
+            "owners": 1,
+            "delay_applies": true,
+            "hand_walk": "poolDelegate 0x93aA06F8a7bB4da3Eb0DD5A5a38C01A7EB35501A (EOA; 7d scheduled-call gate); securityAdmin 0x6b1A78C1943b03086F7Ee53360f9b0672bD60818 (Safe 3-of-6; no scheduled-call gate); implementation 0xfE02Be1aD28EdFd8e3dD6F29C402B244C2A258B8",
+            "slots_checked": [
+              "owner",
+              "admin",
+              "governance",
+              "authority",
+              "pendingOwner",
+              "eip1967_admin",
+              "eip1967_beacon",
+              "zos_admin"
+            ]
+          },
+          {
+            "holder": "0x6b1a78c1943b03086f7ee53360f9b0672bd60818",
+            "name": "securityAdmin",
+            "name_verified": true,
+            "via": "manager.upgrade / securityAdmin",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x6b1a78c1943b03086f7ee53360f9b0672bd60818",
+            "holder_kind": "safe",
+            "threshold": 3,
+            "owners": 6,
+            "delay_applies": false
+          }
+        ]
+      },
+      {
+        "authority_layer": "governance",
+        "chain": "ethereum",
+        "observed_at": "2026-09-06",
+        "walked_by": "hand",
+        "target_name": "syrupUSDT",
+        "terminal_name": "Proxy",
+        "topology": "timelocked",
+        "m": 1,
+        "keys": [
+          "governor"
+        ],
+        "timelock": "3d",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b",
+            "name": "GovernorTimelock",
+            "name_verified": true,
+            "via": "governor",
+            "terminal": "timelock",
+            "timelock": "3d",
+            "reach": "full",
+            "terminal_address": "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b",
+            "holder_kind": "timelock",
+            "delay_applies": true,
+            "timelock_roles": {
+              "CANCELLER": [
+                "0x6b1a78c1943b03086f7ee53360f9b0672bd60818"
+              ],
+              "EXECUTOR": [
+                "0x6d9f3a385796a5407c06a5bf18e903916548993e",
+                "0xce1ce7c7f436dcc4e28bc8bf86115514d3dc34e8"
+              ],
+              "PROPOSER": [
+                "0xd6d4bcde6c816f17889f1dd3000af0261b03a196"
+              ],
+              "ROLE_ADMIN": [
+                "0xa04bddfb5bce1afc0a939749dc721ba762019b2a",
+                "0xd6d4bcde6c816f17889f1dd3000af0261b03a196"
+              ],
+              "admin_role_id": "0x2172861495e7b85edac73e3cd5fbb42dd675baadf627720e687bcfdaca025096",
+              "holders": {
+                "0x6b1a78c1943b03086f7ee53360f9b0672bd60818": {
+                  "kind": "safe",
+                  "n": 3,
+                  "m": 6,
+                  "granted_at_block": 23418541,
+                  "name": "GnosisSafeProxy",
+                  "name_verified": true
+                },
+                "0x6d9f3a385796a5407c06a5bf18e903916548993e": {
+                  "kind": "eoa",
+                  "granted_at_block": 23428054,
+                  "subsequent": true
+                },
+                "0xa04bddfb5bce1afc0a939749dc721ba762019b2a": {
+                  "kind": "eoa",
+                  "granted_at_block": 23428054,
+                  "subsequent": true
+                },
+                "0xce1ce7c7f436dcc4e28bc8bf86115514d3dc34e8": {
+                  "kind": "safe",
+                  "n": 3,
+                  "m": 5,
+                  "granted_at_block": 23418541,
+                  "name": "GnosisSafeProxy",
+                  "name_verified": true
+                },
+                "0xd6d4bcde6c816f17889f1dd3000af0261b03a196": {
+                  "kind": "safe",
+                  "n": 4,
+                  "m": 7,
+                  "granted_at_block": 23418541,
+                  "name": "GnosisSafeProxy",
+                  "name_verified": true
+                }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "observed_at": "2026-09-06",
+        "walked_by": "hand",
+        "target_name": "syrupUSDT",
+        "terminal_name": "Proxy",
+        "topology": "unknown",
+        "m": 1,
+        "keys": [
+          "withdrawalManager"
+        ],
+        "timelock": "unresolved",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x93aa06f8a7bb4da3eb0dd5a5a38c01a7eb35501a",
+            "name": "poolDelegate",
+            "name_verified": true,
+            "via": "withdrawalManager.upgrade / poolDelegate",
+            "terminal": "eoa",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x93aa06f8a7bb4da3eb0dd5a5a38c01a7eb35501a",
+            "holder_kind": "eoa",
+            "threshold": 1,
+            "owners": 1,
+            "delay_applies": false,
+            "hand_walk": "poolDelegate 0x93aA06F8a7bB4da3Eb0DD5A5a38C01A7EB35501A (EOA) and securityAdmin 0x6b1A78C1943b03086F7Ee53360f9b0672bD60818; upgrade has no scheduled-call check; processRedemptions is onlyRedeemer; setManualWithdrawal is poolDelegate or operationalAdmin",
+            "slots_checked": [
+              "owner",
+              "admin",
+              "governance",
+              "authority",
+              "pendingOwner",
+              "eip1967_admin",
+              "eip1967_beacon",
+              "zos_admin"
+            ]
+          },
+          {
+            "holder": "0x6b1a78c1943b03086f7ee53360f9b0672bd60818",
+            "name": "securityAdmin",
+            "name_verified": true,
+            "via": "withdrawalManager.upgrade / securityAdmin",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x6b1a78c1943b03086f7ee53360f9b0672bd60818",
+            "holder_kind": "safe",
+            "threshold": 3,
+            "owners": 6,
+            "delay_applies": false
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "plasma",
+        "observed_at": "2026-09-06",
+        "walked_by": "hand",
+        "target_name": "Syrup USDT",
+        "topology": "timelocked",
+        "keys": [
+          "DEFAULT_ADMIN_ROLE",
+          "BURNER_ROLE",
+          "MINTER_ROLE"
+        ],
+        "timelock": "3h",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b",
+            "name": "GovernorTimelock",
+            "name_verified": true,
+            "via": "DEFAULT_ADMIN_ROLE",
+            "terminal": "timelock",
+            "timelock": "3d",
+            "reach": "full",
+            "terminal_address": "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b",
+            "holder_kind": "timelock",
+            "delay_applies": true,
+            "timelock_roles": {
+              "state": "live-candidates-verified",
+              "verified_holders": [
+                "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b"
+              ],
+              "history": "incomplete"
+            }
+          },
+          {
+            "holder": "0x1d952d2f6ee86ef4940fa648aa7477c8ff175f09",
+            "name": "BurnMintTokenPool",
+            "name_verified": true,
+            "via": "BURNER_ROLE/MINTER_ROLE",
+            "terminal": "timelock",
+            "timelock": "3h",
+            "reach": "full",
+            "terminal_address": "0x3ec62564f66874f619640cbb7fd42a157f21a442",
+            "holder_kind": "timelock",
+            "delay_applies": true
+          }
+        ]
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "plasma",
+        "observed_at": "2026-09-06",
+        "walked_by": "hand",
+        "target_name": "BurnMintTokenPool",
+        "topology": "timelocked",
+        "keys": [
+          "owner"
+        ],
+        "timelock": "3h",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x3ec62564f66874f619640cbb7fd42a157f21a442",
+            "via": "owner",
+            "terminal": "timelock",
+            "timelock": "3h",
+            "reach": "full",
+            "terminal_address": "0x3ec62564f66874f619640cbb7fd42a157f21a442",
+            "holder_kind": "timelock",
+            "delay_applies": true,
+            "timelock_roles": {
+              "ADMIN": [
+                "0x3ec62564f66874f619640cbb7fd42a157f21a442"
+              ],
+              "BYPASSER": [
+                "0x0cff501cdb93e72221231ca5b6b1a3321a338b14"
+              ],
+              "CANCELLER": [
+                "0x0cff501cdb93e72221231ca5b6b1a3321a338b14",
+                "0x7244a2743ea8d04a0a83624597fff0a8c7e98a44",
+                "0xd9757aa52907798d1af2fda7a6c0cc733e5acf7e"
+              ],
+              "EXECUTOR": [
+                "0xb5f6f8abc4ef2398336fd7b3d9cb0247897c69e9"
+              ],
+              "PROPOSER": [
+                "0x7244a2743ea8d04a0a83624597fff0a8c7e98a44"
+              ],
+              "admin_role_id": "0xa49807205ce4d355092ef5a8a18f56e8913cf4a201fbe287825b095693c21775",
+              "holders": {
+                "0x0cff501cdb93e72221231ca5b6b1a3321a338b14": {
+                  "kind": "safe",
+                  "n": 8,
+                  "m": 69
+                },
+                "0x3ec62564f66874f619640cbb7fd42a157f21a442": {
+                  "kind": "timelock",
+                  "delay": "3h",
+                  "is_self": true
+                },
+                "0x7244a2743ea8d04a0a83624597fff0a8c7e98a44": {
+                  "kind": "safe",
+                  "n": 4,
+                  "m": 42
+                },
+                "0xb5f6f8abc4ef2398336fd7b3d9cb0247897c69e9": {
+                  "kind": "timelock",
+                  "delay": "3h"
+                },
+                "0xd9757aa52907798d1af2fda7a6c0cc733e5acf7e": {
+                  "kind": "safe",
+                  "n": 2,
+                  "m": 69
+                }
+              }
+            }
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "ethereum contract-upgrade: the layer summary remains unresolved because the poolDelegate 1-of-1 path is delayed 7d while the securityAdmin 3-of-6 path is undelayed; no single scalar expresses both paths.",
+      "ethereum pause/exit: upgrade callers were resolved, but the complete redeemer and operationalAdmin holder topology for processRedemptions and setManualWithdrawal was not enumerated.",
+      "plasma asset-permission: current DEFAULT_ADMIN_ROLE and MINTER_ROLE/BURNER_ROLE candidates were verified live, but complete RoleUpdated history was not established; the public RPC caps ranges at 10,000 blocks and timed out during the chunked scan."
+    ],
+    "authority_shared_with": [],
+    "review": null,
+    "walk_notes": [
+      "SyrupUSDT topology — hand-walked evidence. Judgment remains in riskAnalyst.",
+      "",
+      "contract-upgrade [ethereum]: 0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d(contract) -> 0x0cda32e08b48bfddbc7ee96b44b09cf286f9e21a(contract)  terminal=ambiguous-authority",
+      "manager: Proxy 0x0cda32e08b48bfddbc7ee96b44b09cf286f9e21a terminal=ambiguous-authority timelock=unresolved reach=full",
+      "governor: GovernorTimelock 0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b terminal=timelock timelock=3d reach=full",
+      "poolPermissionManager: NonTransparentProxy 0xbe10adce8b6e3e02db384e7fada5395dd113d8b3 terminal=safe timelock=none reach=full",
+      "withdrawalManager: Proxy 0x86ebdf902d800f2a82038290b6dbb2a5ee29eb8c terminal=ambiguous-authority timelock=unresolved reach=full",
+      "-> WORST-CASE across 4 paths: timelock=unresolved reach=full (different paths may win different dimensions — see paths[])"
+    ]
+  }
+}
