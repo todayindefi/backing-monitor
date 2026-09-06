@@ -1,0 +1,257 @@
+{
+  "schema_version": "contract/1",
+  "asset": "usg",
+  "producer": "security_analyst",
+  "as_of": "2026-09-06",
+  "generated_at": "2026-09-06T03:08:01Z",
+  "contract": {
+    "headline": "No timelock established on any measured authority layer.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-06",
+    "source_file": "security_analyst/topology/assets/usg.yaml",
+    "layers": [
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 5,
+        "keys": [
+          "owner",
+          "isMinter",
+          "isBurner",
+          "isIRProducer",
+          "isPegKeeper",
+          "marketCreator"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "mint_cap": false,
+        "reach": "full",
+        "impl_upgradeable": false,
+        "walked_by": "hand",
+        "observed_at": "2026-09-06",
+        "paths": [
+          {
+            "holder": "0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca",
+            "name": "SafeProxy",
+            "name_verified": true,
+            "via": "USG.owner -> setIsMinter/setIsPegKeeper/mintPegKeeper",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca",
+            "deployer_is_signer": false,
+            "contract_deployer": "0xe08c2512f87cf63fb7d2325edd08aec7920ac2f6",
+            "safe_creator_is_signer": true,
+            "safe_creator": "0x505FB4560914eA9c3af22b75ca55c3881472ae45",
+            "slots_checked": [
+              "owner",
+              "eip1967_impl",
+              "eip1967_admin",
+              "eip1967_beacon"
+            ]
+          },
+          {
+            "holder": "0x214C8A1023B30032a2Eded109146658C6D6F2781",
+            "name": "MarketCreator",
+            "name_verified": true,
+            "via": "controlTower marketCreator -> USG.initializeMarket",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca",
+            "deployer_is_signer": false,
+            "contract_deployer": "0xe08c2512f87cf63fb7d2325edd08aec7920ac2f6",
+            "safe_creator_is_signer": true,
+            "safe_creator": "0x505FB4560914eA9c3af22b75ca55c3881472ae45",
+            "slots_checked": [
+              "owner",
+              "eip1967_impl",
+              "eip1967_admin",
+              "eip1967_beacon"
+            ]
+          }
+        ]
+      },
+      {
+        "authority_layer": "oracle",
+        "chain": "ethereum",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 5,
+        "keys": [
+          "setMaxLTV",
+          "setLiquidationThreshold",
+          "setCollatOracle"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "walked_by": "hand",
+        "observed_at": "2026-09-06",
+        "paths": [
+          {
+            "holder": "0x7b1b38cad63B0715A0adFeEB75E46431b48E73B6",
+            "name": "StakeDaoVaultV2Market msETH/WETH",
+            "name_verified": true,
+            "via": "owner-gated live-market setters",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca",
+            "implementation": "0xBCE94d131b288590f1Ef1F62622865ba1fA514e4",
+            "holder_simulation": "setMaxLTV/setLiquidationThreshold/setCollatOracle succeeded",
+            "stranger_simulation": "all three reverted OnlyOwner for 0x000000000000000000000000000000000000dEaD",
+            "safe_creator_is_signer": true,
+            "safe_creator": "0x505FB4560914eA9c3af22b75ca55c3881472ae45",
+            "slots_checked": [
+              "owner",
+              "eip1167_impl"
+            ]
+          }
+        ]
+      },
+      {
+        "authority_layer": "governance",
+        "chain": "ethereum",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 5,
+        "keys": [
+          "admin",
+          "set_new_regulator",
+          "set_new_action_delay",
+          "regulator_risk_parameters"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "walked_by": "hand",
+        "observed_at": "2026-09-06",
+        "paths": [
+          {
+            "holder": "0xf89615f75c8161dc185c03020240905f6b66bad9",
+            "name": "PegKeeperV2 USDC",
+            "name_verified": true,
+            "via": "admin -> set_new_regulator/set_new_action_delay",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca",
+            "regulator": "0x887706612730B7A227f3bFFD8c9A6E6c3Cb3F19E",
+            "holder_simulation": "set_new_regulator(current regulator) succeeded",
+            "stranger_simulation": "set_new_regulator reverted for 0x000000000000000000000000000000000000dEaD",
+            "slots_checked": [
+              "admin",
+              "regulator",
+              "future_admin",
+              "new_admin_deadline",
+              "eip1967_impl",
+              "eip1967_admin",
+              "eip1967_beacon"
+            ]
+          },
+          {
+            "holder": "0x8a7f16508d1e8b48bdf36023f378cc04d9506d4e",
+            "name": "PegKeeperV2 frxUSD",
+            "name_verified": true,
+            "via": "admin -> set_new_regulator/set_new_action_delay",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca",
+            "regulator": "0x887706612730B7A227f3bFFD8c9A6E6c3Cb3F19E",
+            "holder_simulation": "set_new_regulator(current regulator) succeeded",
+            "stranger_simulation": "set_new_regulator reverted for 0x000000000000000000000000000000000000dEaD",
+            "slots_checked": [
+              "admin",
+              "regulator",
+              "future_admin",
+              "new_admin_deadline",
+              "eip1967_impl",
+              "eip1967_admin",
+              "eip1967_beacon"
+            ]
+          },
+          {
+            "holder": "0x887706612730B7A227f3bFFD8c9A6E6c3Cb3F19E",
+            "name": "PegKeeperRegulator",
+            "name_verified": true,
+            "via": "admin -> debt/oracle/keeper parameters",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x461B62CB3A7e9Df8f800aE058AE92F855F2c27Ca",
+            "holder_simulation": "set_debt_parameters(current alpha,beta) and set_admin(current admin) succeeded",
+            "stranger_simulation": "both calls reverted for 0x000000000000000000000000000000000000dEaD",
+            "slots_checked": [
+              "admin",
+              "emergency_admin",
+              "eip1967_impl",
+              "eip1967_admin",
+              "eip1967_beacon"
+            ]
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "Signer custody and organizational independence are not observable on-chain. The Safe threshold, owners, per-owner code, and transaction counts were measured; no custody claim is made.",
+      "The live-market mutation simulation used msETH/WETH clone 0x7b1b38ca…e73b6 and its verified shared MarketCore implementation. All 17 MarketCreator event-derived markets were not individually re-simulated, so an idiosyncratic deployed market override is not excluded.",
+      "No deployment search was performed outside Ethereum. Tangent's live protocol and the supplied asset scope identify Ethereum; a differently addressed deployment on another chain is not excluded by this walk."
+    ],
+    "walk_notes": [
+      "✅ HAND-WALKED 2026-09-06, NOT GENERATOR OUTPUT. Ethereum state was read at",
+      "block 25915396 through ethereum-rpc.publicnode.com. Every address supplied in",
+      "the handoff was treated as a candidate and re-read before inclusion.",
+      "",
+      "⚠️ THREE DISTINCT POWERS TERMINATE AT THE SAME 3-OF-5 SAFE WITH NO EXECUTION",
+      "DELAY: token/supply administration, live-market risk parameters, and PegKeeper",
+      "control. getThreshold()=3, getOwners() returned five addresses, nonce()=97,",
+      "and getModulesPaginated(0x1,10) returned no enabled modules.",
+      "",
+      "⚠️ THE LIVE-MARKET ORACLE PATH IS IMMEDIATE AND FULL-BOOK. On the live",
+      "msETH/WETH clone 0x7b1b38ca…e73b6, eth_call from the Safe succeeded for",
+      "setMaxLTV(71000), setLiquidationThreshold(77000), and",
+      "setCollatOracle(0x…dEaD); the same calls from 0x…dEaD reverted OnlyOwner.",
+      "The clone points immutably to verified StakeDaoVaultV2Market implementation",
+      "0xbce94d13…a514e4, whose shared MarketCore defines these setters. Thus the",
+      "Safe can repoint collatOracle on a live market in one undelayed transaction;",
+      "that oracle feeds virtual_price x MIN(coin price), moving every position's",
+      "health at once.",
+      "",
+      "⚠️ `timelock: none` IS MEASURED, NOT INHERITED FROM PROSE. The USG token,",
+      "MarketCreator, regulator, and live market expose direct Safe admin/owner paths;",
+      "holder simulations succeeded and stranger controls reverted. The PegKeepers'",
+      "three-day ADMIN_ACTIONS_DELAY applies only to replacing their admin. It does",
+      "not delay set_new_regulator, set_new_action_delay, or the regulator's risk",
+      "setters, all directly callable by the current Safe. cap() and maxSupply()",
+      "both revert and are recorded only as cap-getter measurements, never as delay",
+      "evidence.",
+      "",
+      "⚠️ THE TRUNCATED REGULATOR WAS NOT RECONSTRUCTED. regulator() on both",
+      "PegKeepers independently returned 0x887706612730B7A227f3bFFD8c9A6E6c3Cb3F19E;",
+      "its admin() returns the Safe and stablecoin() returns USG.",
+      "",
+      "Safe owners at the observation block:",
+      "0xf62ff09931e123b07b64a194e213f7fa8a101a6a nonce=0, code=0 bytes",
+      "0xd7ef914ecd9adb3dfb27a165bb66e75b4d45cc10 nonce=20, code=0 bytes",
+      "0x505fb4560914ea9c3af22b75ca55c3881472ae45 nonce=2476, code=0 bytes",
+      "0x7b79edd278742816d8c395bf9b564c62a6af98ac nonce=4, code=0 bytes",
+      "0xe253d64619f13f1c0bdcccfd6f2caa4cc4838836 nonce=154, code=23 bytes",
+      "The added nonce-0 signer still has zero transaction history. One owner now has",
+      "23-byte delegated-account code, so the old claim that all five are plain EOAs",
+      "is no longer literally true at this block.",
+      "",
+      "⚠️ DEPLOYER DISTINCTION. Creation transactions show the USG token and",
+      "MarketCreator were deployed by 0xe08c2512…c2f6, which is not a current Safe",
+      "owner. 0x505fb456…ae45 created the Safe through SafeProxyFactory and remains an",
+      "owner. The older prose collapsed \"contract deployer\" and \"Safe creator\" into",
+      "one signer claim; paths below retain both facts explicitly."
+    ]
+  }
+}

@@ -1,0 +1,137 @@
+{
+  "schema_version": "contract/1",
+  "asset": "usdai",
+  "producer": "security_analyst",
+  "as_of": "2026-08-26",
+  "generated_at": "2026-09-06T03:08:01Z",
+  "contract": {
+    "headline": "A 48h timelock covers contract-upgrade (proxyAdmin). asset-permission (BRIDGE_ADMIN_ROLE, DEFAULT_ADMIN_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-08-26",
+    "source_file": "security_analyst/topology/assets/usdai.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "plasma",
+        "target_name": "USDai",
+        "terminal_name": "TimelockController",
+        "topology": "timelocked",
+        "keys": [
+          "proxyAdmin"
+        ],
+        "timelock": "48h",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c",
+            "name": "ProxyAdmin",
+            "via": "eip1967_admin",
+            "terminal": "timelock",
+            "terminal_address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
+            "timelock": "48h",
+            "reach": "full",
+            "timelock_roles": {
+              "PROPOSER": [
+                "0x783b08aa21de056717173f72e04be0e91328a07b"
+              ],
+              "CANCELLER": [
+                "0x783b08aa21de056717173f72e04be0e91328a07b"
+              ],
+              "EXECUTOR": [
+                "0x783b08aa21de056717173f72e04be0e91328a07b",
+                "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+              ],
+              "DEFAULT_ADMIN": [
+                "0x0eea1ee08611ff4a4e83bfe3916712751995639b"
+              ]
+            },
+            "canceller_independent": false
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "plasma",
+        "target_name": "USDai",
+        "terminal_name": "OPS_SAFE",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 3,
+        "keys": [
+          "BRIDGE_ADMIN_ROLE",
+          "DEFAULT_ADMIN_ROLE"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "paths": [
+          {
+            "holder": "0xffa10065ce1d1c42fabc46e06b84ed8ffeb4bae5",
+            "name": "LayerZero OFT adapter",
+            "via": "BRIDGE_ADMIN_ROLE",
+            "terminal": "safe",
+            "terminal_address": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+            "timelock": "none",
+            "reach": "full",
+            "note": "mint(address,uint256) 0x40c10f19 is AccessControl-gated on BRIDGE_ADMIN_ROLE, held by this OFT adapter, owned by OPS_SAFE. setPeer on the adapter IS a mint — same finding already recorded on susde.\n"
+          },
+          {
+            "holder": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+            "name": "OPS_SAFE",
+            "via": "DEFAULT_ADMIN_ROLE",
+            "terminal": "safe",
+            "terminal_address": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+            "timelock": "none",
+            "reach": "full",
+            "note": "getRoleAdmin(BRIDGE_ADMIN_ROLE) == 0x00 == DEFAULT_ADMIN, which OPS_SAFE holds on all four chains. It can grant mint to any address in ONE transaction. Two independent routes to the same undelayed mint.\n"
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "arbitrum: OFT adapter address not identified (log range cap)",
+      "ethereum: OFT adapter address not identified (log range cap)",
+      "base: OFT adapter address not identified (log range cap)"
+    ],
+    "walk_notes": [
+      "✅ HAND-WALKED, NOT GENERATOR OUTPUT. This file deliberately does NOT carry the",
+      "TRUST WARNING banner the other 27 asset files carry — those were produced by",
+      "tools/topology.py (ICED 2026-08-24, 63.5% of its rows untrustworthy). Every row",
+      "below was read directly and the load-bearing claims were verified twice: walked",
+      "by riskAnalyst 2026-08-26, then re-resolved independently here from a different",
+      "starting point before filing.",
+      "",
+      "⚠️ NOT HELD. USDai appears in no wallet — checked across all per-wallet",
+      "asset_scores. This is a WATCH-ONLY observation, like hastra-prime. It carries",
+      "no severity weight until a position exists, and it stands the moment one does.",
+      "Per tools/held-flag.py: off-book suppresses weighting, never the row.",
+      "",
+      "VERIFICATION TRAIL (this repo, plasma, 2026-08-26):",
+      "keccak(\"BRIDGE_ADMIN_ROLE\") == 0x751b795d…f4bf                        MATCH",
+      "adapter 0xffa10065….owner() -> OPS_SAFE 0x5f0bc72f…5841f  3-of-3      MATCH",
+      "token EIP-1967 admin slot   -> ProxyAdmin 0x2ddf39c7…aadc3c           MATCH",
+      "ProxyAdmin.owner()          -> timelock 0x0eea1ee0…95639b  48h        MATCH",
+      "timelock RoleGranted @creation block 20,669,363, 0 failed chunks:",
+      "PROPOSER/CANCELLER/EXECUTOR -> GOV_SAFE 0x783b08aa…a07b",
+      "EXECUTOR                    -> OPS_SAFE",
+      "DEFAULT_ADMIN               -> itself (self-administered)",
+      "GOV_SAFE getOwners() == OPS_SAFE getOwners(), 3-of-3 both              CONFIRMED",
+      "",
+      "⚠️ THE FINDING IS THAT THE TWO-SAFE STRUCTURE SEPARATES NOTHING. A governance",
+      "Safe and an operations Safe reading as distinct controls are the same three",
+      "keys. Recorded because no single-Safe read reveals it — it is only visible when",
+      "both owner sets are compared, and nothing in the schema prompts that comparison.",
+      "",
+      "⚠️ THRESHOLD EQUALS OWNER COUNT (3-of-3), so the usual quorum caveat inverts:",
+      "every key is load-bearing, and losing one makes the timelock permanently",
+      "un-proposable. That is an availability risk, not a compromise-threshold one.",
+      "",
+      "⚠️ CODEHASH COMPARISON WOULD HAVE LIED. The token is at the same address on",
+      "arbitrum/ethereum/base/plasma (deterministic deploy) but is NOT the same",
+      "bytecode: base and plasma differ in exactly 32 bytes at offset 815–846 — the",
+      "IPFS hash inside the CBOR metadata trailer. Executable bytes 0–814 are",
+      "identical, both solc 0.8.29. STRIP THE CBOR TRAILER BEFORE COMPARING."
+    ]
+  }
+}

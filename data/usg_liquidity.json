@@ -1,0 +1,99 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "usg",
+ "as_of": "2026-09-06T02:48:11Z",
+ "producer": "dextracker",
+ "note": "Axis 3 (Liquidity & Exit), single producer. The axis is the worse of executable venue depth and primary redemption. Pool TVL and counter-side inventory are context only and are never substituted for executable depth.",
+ "depth": {
+  "status": "bracketed",
+  "depth_usd": 677124.0234375,
+  "is_floor": false,
+  "threshold_bps": -200.0,
+  "slippage_convention": "marginal execution-rate deterioration from the $100 aggregate venue-spot reference; signed cost, with -200bps as the crossing threshold. The dated external USG USD market mark sizes the input notional and is not the impact reference.",
+  "basis": "The 2% crossing is bracketed by successful Curve get_dy calls across both verified PegKeeper pools. Each aggregate rung splits USG between the pools in proportion to their live USG inventories, preserving their relative post-trade movement; stablecoin outputs are valued at $1. depth_usd is the largest tested USD input notional that cleared the threshold, not pool TVL or counter-side inventory.",
+  "price_bias_bps": -5.245134163391007,
+  "bias_measures": "the $100 aggregate venue execution rate versus the external USG/USD market mark used for notional sizing; excluded from marginal slippage",
+  "anchor": {
+   "fair_value": 0.993721,
+   "fair_value_basis": "market",
+   "fair_value_source": "PegTracker USG backing feed: Curve PegKeeper pool composite market price",
+   "fair_value_as_of": "2026-09-06T01:37:06Z",
+   "fair_value_choice": "market_price",
+   "fair_value_choice_mode": "inherited",
+   "self_referential": true,
+   "self_referential_note": "The mark comes from the same two-venue market, but it only converts USD rung sizes to USG. Marginal impact is measured against the independent $100 aggregate executable baseline, so the mark does not determine the crossing."
+  },
+  "quote": {
+   "method": "eth_call Curve get_dy(int128,int128,uint256), falling through to get_dy(uint256,uint256,uint256)",
+   "chain": "ethereum",
+   "block": 25915411,
+   "block_as_of": "2026-09-06T02:48:11Z",
+   "measured_leg": "USG -> USDC and USG -> frxUSD",
+   "aggregation": "USG input split between venues in proportion to live USG inventory; USDC and frxUSD outputs valued at $1",
+   "baseline_size_usd": 100.0,
+   "baseline_exchange_rate_usd_per_usg": 0.993199780003402
+  },
+  "bracket": {
+   "last_clearing_size_usd": 677124.0234375,
+   "last_clearing_marginal_impact_bps": -199.99425573284603,
+   "first_crossing_size_usd": 677139.2822265625,
+   "first_crossing_marginal_impact_bps": -200.01018638856837,
+   "monotonic_in_bracket": true
+  },
+  "rungs": [
+   {"size_usd": 100.0, "status": "ok", "amount_in_usg": 100.63186749600743, "amount_out_usd": 99.94754865836609, "exchange_rate_usd_per_usg": 0.993199780003402, "slippage_bps": 0.0},
+   {"size_usd": 1000.0, "status": "ok", "amount_in_usg": 1006.3186749600743, "amount_out_usd": 999.468156289623, "exchange_rate_usd_per_usg": 0.9931924957362805, "slippage_bps": -0.0733414089304496},
+   {"size_usd": 5000.0, "status": "ok", "amount_out_usd": 4997.177033349299, "exchange_rate_usd_per_usg": 0.9931599517513796, "slippage_bps": -0.40100947286014765},
+   {"size_usd": 10000.0, "status": "ok", "amount_out_usd": 9993.940778755, "exchange_rate_usd_per_usg": 0.9931188824605198, "slippage_bps": -0.8145143052884496},
+   {"size_usd": 25000.0, "status": "ok", "amount_out_usd": 24981.685216228543, "exchange_rate_usd_per_usg": 0.9929930085902338, "slippage_bps": -2.081871314626449},
+   {"size_usd": 50000.0, "status": "ok", "amount_out_usd": 49952.344098319925, "exchange_rate_usd_per_usg": 0.9927738665945315, "slippage_bps": -4.288295441114975},
+   {"size_usd": 100000.0, "status": "ok", "amount_out_usd": 99856.66163193819, "exchange_rate_usd_per_usg": 0.9922966165355125, "slippage_bps": -9.093472291007432},
+   {"size_usd": 200000.0, "status": "ok", "amount_out_usd": 199482.14871710862, "exchange_rate_usd_per_usg": 0.9911480015265695, "slippage_bps": -20.658265518600505},
+   {"size_usd": 300000.0, "status": "ok", "amount_out_usd": 298766.66598877555, "exchange_rate_usd_per_usg": 0.9896357003101067, "slippage_bps": -35.88482161447026},
+   {"size_usd": 400000.0, "status": "ok", "amount_out_usd": 397516.28787354636, "exchange_rate_usd_per_usg": 0.9875507077549709, "slippage_bps": -56.87750201084252},
+   {"size_usd": 500000.0, "status": "ok", "amount_out_usd": 495356.57566852355, "exchange_rate_usd_per_usg": 0.9844924634598017, "slippage_bps": -87.66933620918182},
+   {"size_usd": 677124.0234375, "status": "ok", "amount_out_usd": 663233.8743007428, "exchange_rate_usd_per_usg": 0.9733363549238213, "slippage_bps": -199.99425573284603},
+   {"size_usd": 677139.2822265625, "status": "ok", "amount_out_usd": 663247.7419179425, "exchange_rate_usd_per_usg": 0.9733347726914455, "slippage_bps": -200.01018638856837},
+   {"size_usd": 750000.0, "status": "ok", "amount_out_usd": 727061.8950465618, "exchange_rate_usd_per_usg": 0.9633288978767526, "slippage_bps": -300.7540147315291},
+   {"size_usd": 1000000.0, "status": "ok", "amount_out_usd": 859062.3289463017, "exchange_rate_usd_per_usg": 0.8536682765828478, "slippage_bps": -1404.868448723139}
+  ]
+ },
+ "primary_exit": {
+  "venue": null,
+  "at_nav": false,
+  "gated": true,
+  "gated_basis": "measured_protocol_design: USG is borrower-minted CDP debt; repaying debt releases the borrower's collateral, but the protocol exposes no holder redemption converting USG to reserve assets for an address that did not borrow",
+  "gate": "No primary redemption for ordinary USG holders; only borrowers can repay their own debt positions",
+  "cadence": null,
+  "capacity_usd": 0,
+  "capacity_basis": "No holder redemption facility. This zero is primary-redemption capacity, not secondary-market depth.",
+  "note": "A holder's primary exit is absent by design. The measured Curve pools are the executable exit represented by depth."
+ },
+ "enumeration": {
+  "source": "DexTracker live Ethereum contract reads; addresses supplied as hints and verified through coins(uint256)",
+  "as_of": "2026-09-06T02:48:11Z",
+  "venue_count": 2,
+  "chain_count_is_floor": true,
+  "chain_count_note": "Two verified Ethereum PegKeeper venues; this is not asserted to be a complete global venue census."
+ },
+ "venues": [
+  {
+   "name": "Curve USG/USDC PegKeeper pool", "project": "curve", "chain": "Ethereum", "kind": "swap", "pool_type": "curve_stableswap_pegkeeper", "pool_id": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+   "tvl_usd": 1710564.9829262854, "volume_24h_usd": null,
+   "underlying_tokens": ["0xA0b86991c6218b36c1d19d4a2e9eb0cE3606eB48", "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1"],
+   "balances": [{"symbol":"USDC","amount":391365.862475},{"symbol":"USG","amount":1327534.710901033}], "usg_share_pct_by_value": 77.1206667749339, "depth_role": "Included in the executable aggregate get_dy ladder; USDC inventory is the sell-side counter asset."
+  },
+  {
+   "name": "Curve USG/frxUSD PegKeeper pool", "project": "curve", "chain": "Ethereum", "kind": "swap", "pool_type": "curve_stableswap_pegkeeper", "pool_id": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+   "tvl_usd": 2086314.5841153408, "volume_24h_usd": null,
+   "underlying_tokens": ["0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29", "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1"],
+   "balances": [{"symbol":"frxUSD","amount":504646.8365593875},{"symbol":"USG","amount":1591661.7919475925}], "usg_share_pct_by_value": 75.81156550399265, "depth_role": "Included in the executable aggregate get_dy ladder; frxUSD inventory is the sell-side counter asset."
+  }
+ ],
+ "total_tvl_usd": 3796879.567041626,
+ "swap_tvl_usd": 3796879.567041626,
+ "axis_binding_constraint": {
+  "leg": "primary_exit_absent",
+  "basis": "Ordinary holders have no primary redemption. The $677,124 bracketed figure measures the secondary Curve exit only and does not create a holder claim on protocol collateral."
+ }
+}

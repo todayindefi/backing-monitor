@@ -3,12 +3,11 @@
   "asset": "reusd_re",
   "producer": "security_analyst",
   "as_of": "2026-08-30",
-  "generated_at": "2026-09-06T02:08:02Z",
+  "generated_at": "2026-09-06T03:08:02Z",
   "contract": {
-    "headline": "A 48h timelock covers contract-upgrade (DEFAULT_ADMIN_ROLE, UPGRADER_ROLE). asset-permission (MINTER_ROLE) has NO established delay — timelock: unresolved. The delay protects the code and not the supply.",
+    "headline": "A 48h timelock covers contract-upgrade (DEFAULT_ADMIN_ROLE, UPGRADER_ROLE). asset-permission (MINTER_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply.",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
     "method": "hand-walk",
-    "method_note": "Replaced a v1.7 generator row that read topology: unknown, m: 4, timelock: unresolved. security_analyst's generator is iced; on their own coverage audit only 36.5% of generated rows were trustworthy.",
     "observed_at": "2026-08-30",
     "source_file": "security_analyst/topology/assets/reusd-re.yaml",
     "layers": [
@@ -46,16 +45,44 @@
       {
         "authority_layer": "asset-permission",
         "chain": "ethereum",
-        "topology": "unresolved",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 5,
         "keys": [
           "MINTER_ROLE"
         ],
-        "timelock": "unresolved",
-        "reach": "full"
+        "timelock": "none",
+        "reach": "full",
+        "paths": [
+          {
+            "holder": "0x4691c475be804fa85f91c2d6d0adf03114de3093",
+            "via": "MINTER_ROLE",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x8eec10616802ef639ca55c98ac856553fadefbad"
+          },
+          {
+            "holder": "0xa31deebb3680a3007120e74bcbdf4df36f042a40",
+            "via": "MINTER_ROLE",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x8eec10616802ef639ca55c98ac856553fadefbad"
+          },
+          {
+            "holder": "0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465",
+            "via": "MINTER_ROLE",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x8eec10616802ef639ca55c98ac856553fadefbad"
+          }
+        ]
       }
     ],
     "unresolved": [
-      "ethereum asset-permission: MINTER_ROLE holders NOT established by this repo. riskAnalyst assets/reusd-re.md walked three undelayed paths (an ERC1967Proxy/InsuranceCapitalLayer, an InstantRedemption whose authority slot leads to an OZ AccessManager, and a BurnWithFromMintTokenPool whose owner() is the 3-of-5 Safe) and reports all three terminating at Safe 0x8eec1061…fbad with getTargetAdminDelay 0. THAT IS THEIR WALK, NOT OURS — the addresses are truncated in their file so a direct hasRole check had no candidates, and a RoleGranted/RoleRevoked enumeration over the last 400,000 blocks TIMED OUT on three public endpoints. Unresolved, not zero.",
+      "ethereum asset-permission: RESOLVED 2026-09-06 (audits/re-minter-enumeration-2026-09-06.md), no longer unmeasured. Retained note: the three minters were found by RoleGranted/RoleRevoked netting and EACH was then re-confirmed by a live hasRole call with 0x…dEaD as control, because a prior walk in this repo under-counted cancellers by trusting log netting alone.",
       "ethereum contract-upgrade: PROPOSER/CANCELLER role holders on timelock 0x69ddea33…fca93 not enumerated here. Safe 0x8eec1061…fbad is 3-of-5 (measured) and is reported by riskAnalyst as sole PROPOSER, with an independent CANCELLER EOA at nonce 0; neither role assignment was read from the timelock by this repo.",
       "arbitrum/base/avalanche: same-address absence confirmed (code size 0). A deployment at a different address was NOT searched for.",
       "forceNAVUpdate path: 0xe888df3218e070fae8d90d2ba6fcac5520217484 (632B, nonce 1) carries both setSharePrice and forceNAVUpdate selectors and answers no standard interface. Whether it IMPLEMENTS or CALLS them needs disassembly, which was not done. It is also not expressible in this schema — see the `parameter` open item in registry/incidents.md."

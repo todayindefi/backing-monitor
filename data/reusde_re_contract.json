@@ -1,0 +1,131 @@
+{
+  "schema_version": "contract/1",
+  "asset": "reusde_re",
+  "producer": "security_analyst",
+  "as_of": "2026-09-06",
+  "generated_at": "2026-09-06T03:08:02Z",
+  "contract": {
+    "headline": "A 48h timelock covers contract-upgrade (DEFAULT_ADMIN_ROLE, UPGRADER_ROLE). asset-permission (MINTER_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-06",
+    "source_file": "security_analyst/topology/assets/reusde-re.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "topology": "timelocked",
+        "keys": [
+          "DEFAULT_ADMIN_ROLE",
+          "UPGRADER_ROLE"
+        ],
+        "timelock": "48h",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "via": "DEFAULT_ADMIN_ROLE",
+            "terminal": "timelock",
+            "timelock": "48h",
+            "reach": "full",
+            "terminal_address": "0x69ddea332723cf5407151aaf68b9b076557fca93"
+          },
+          {
+            "holder": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "via": "UPGRADER_ROLE",
+            "terminal": "timelock",
+            "timelock": "48h",
+            "reach": "full",
+            "terminal_address": "0x69ddea332723cf5407151aaf68b9b076557fca93"
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 5,
+        "keys": [
+          "MINTER_ROLE"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "paths": [
+          {
+            "holder": "0xe1886be2ba8b2496c2044a77516f63a734193082",
+            "via": "MINTER_ROLE",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x8eec10616802ef639ca55c98ac856553fadefbad"
+          },
+          {
+            "holder": "0xd2e077d945ec77b45fbe4622e01f4c79e4ba389a",
+            "via": "MINTER_ROLE",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x8eec10616802ef639ca55c98ac856553fadefbad"
+          },
+          {
+            "holder": "0x37cad86f09741d17a4124eb0c8dca7e2272f33e1",
+            "via": "MINTER_ROLE",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "full",
+            "terminal_address": "0x8eec10616802ef639ca55c98ac856553fadefbad"
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "ethereum asset-permission: RESOLVED 2026-09-06 (audits/re-minter-enumeration-2026-09-06.md), no longer unmeasured. Retained note: the three minters were found by RoleGranted/RoleRevoked netting and EACH was then re-confirmed by a live hasRole call with 0x…dEaD as control, because a prior walk in this repo under-counted cancellers by trusting log netting alone.",
+      "ethereum contract-upgrade: PROPOSER/CANCELLER holders on timelock 0x69ddea33…fca93 not enumerated here. riskAnalyst reports Safe 0x8eec1061…fbad as sole PROPOSER with an independent CANCELLER EOA at nonce 0, for the SENIOR tranche; whether the junior shares that proposer set is NOT established.",
+      "arbitrum/base/avalanche: same-address absence confirmed (code size 0). A different-address deployment was NOT searched for.",
+      "Loss-absorption ordering (junior absorbs before senior) is taken from the issuer's own description and PegTracker's asset config. It was NOT verified from contract logic here."
+    ],
+    "walk_notes": [
+      "⚠️⚠️ THIS FILE WILL HAVE A LIVE PUBLIC CONSUMER once backing-monitor adds",
+      "`reusde_re -> reusde-re.yaml` to SLUG_TO_FILE. Until that line exists the file",
+      "lands and renders NOTHING — tell them, do not assume pickup. Once it does:",
+      "editing this file changes a published page within one sync, `observed_at` is the",
+      "axis clock, and their generator refuses to emit without it.",
+      "",
+      "✅ HAND-WALKED 2026-09-06, NOT GENERATOR OUTPUT. reUSDe had no file at all",
+      "before this; axis 5 rendered report-sourced.",
+      "",
+      "⚠️⚠️ THE FINDING IS CROSS-ASSET AND THIS SCHEMA IS PER-ASSET, SO IT LIVES HERE",
+      "IN PROSE: ONE TIMELOCK GOVERNS BOTH TRANCHES.",
+      "reUSDe is the JUNIOR tranche. It absorbs losses BEFORE reUSD — that",
+      "subordination is the entire protection reUSD holders have.",
+      "Measured 2026-09-06: timelock 0x69ddea33…fca93 holds DEFAULT_ADMIN_ROLE and",
+      "UPGRADER_ROLE on BOTH 0x5086bf…0c72 (senior) and 0xdDC0f880…cC5a (junior),",
+      "with 0x…dEaD false on every check as control.",
+      "Both proxies also point at the SAME implementation 0xb5276c43…21d4 (6,498B).",
+      "⚠️ So the senior/junior split is a DESIGN property, not an ENFORCED one: one",
+      "48-hour delay and one key set stand behind both sides of the subordination.",
+      "Whether that matters is riskAnalyst's call, not this file's.",
+      "",
+      "VERIFICATION TRAIL (this repo, ethereum, 2026-09-06, ethereum-rpc.publicnode.com):",
+      "name() \"Re Protocol reUSDe\"  symbol() reUSDe  decimals() 18",
+      "totalSupply() 14,256,315.99   (senior is 201,084,062.66 — junior is ~7%)",
+      "EIP-1967 impl 0xb5276c436f65913cd5332de745d04fedeb4a21d4 (6,498B)",
+      "EIP-1967 admin slot 0x0 ; beacon slot 0x0",
+      "upgradeToAndCall(address,bytes) PRESENT / upgradeTo(address) ABSENT -> OZ v5 UUPS",
+      "owner() transferOwnership() admin() proxiableUUID() ALL REVERT -> not Ownable",
+      "grantRole(bytes32,address) PRESENT -> AccessControl",
+      "hasRole(DEFAULT_ADMIN_ROLE, 0x69ddea33…fca93) TRUE",
+      "hasRole(UPGRADER_ROLE,      0x69ddea33…fca93) TRUE",
+      "hasRole(DEFAULT_ADMIN/UPGRADER/MINTER, Safe 0x8eec1061…fbad) FALSE  (flows via timelock)",
+      "timelock getMinDelay() 172800 ; MINIMUM_DELAY() and MIN_DELAY() BOTH REVERT",
+      "control: hasRole(*, 0x…dEaD) FALSE on every role tested",
+      "",
+      "⚠️ CHAIN COVERAGE IS A BOUNDED CLAIM. Code size 0 at this address on arbitrum,",
+      "base and avalanche. A deployment at a DIFFERENT address on those chains is NOT",
+      "excluded — it was not searched for. Same-address absence only."
+    ]
+  }
+}
