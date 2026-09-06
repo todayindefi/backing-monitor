@@ -2790,7 +2790,9 @@ var SyrupUSDCRenderer = {
                        'data (see Liquidity &amp; Peg panel above).';
         }
 
-        var recon = SyrupUSDCRenderer._reconciliationLine(mc.cross_chain_supply_reconciliation_pct);
+        var recon = SyrupUSDCRenderer._reconciliationLine(
+            mc.cross_chain_supply_reconciliation_pct,
+            Array.isArray(mc.chains) ? mc.chains.length : null);
 
         var emptyStateFooter = '';
         if (isUSDT) {
@@ -2885,12 +2887,32 @@ var SyrupUSDCRenderer = {
     // Reconciliation badge — color-coded against the analyzer's 98–102%
     // tolerance band. Outside that, the analyzer also fires a risk flag
     // (already surfaced in §Risk Flags), so this is a passive readout.
-    _reconciliationLine: function(pct) {
+    // ⚠️ A RECONCILIATION OVER ONE CHAIN IS A TAUTOLOGY, NOT A CHECK. syrupUSDT
+    // published 100.0% against a chain list containing exactly `['ethereum']` —
+    // it reconciled Ethereum against itself and rendered green, "per-chain
+    // supplies match canonical Pool total". It could not have reported a
+    // shortfall it never looked for. Roughly 235.7M of supply on Plasma, ~37% of
+    // the real total, sat outside a figure declaring itself fully reconciled.
+    //
+    // ⚠️ The guard is DERIVED from the chain count, not from knowing about
+    // Plasma: any asset whose enumeration covers a single chain gets the scope
+    // stated instead of a green pass. It fires for the next asset too, before
+    // anyone knows which chain is missing.
+    _reconciliationLine: function(pct, chainCount) {
         if (pct == null) return '';
+        if (chainCount != null && chainCount <= 1) {
+            return '<div class="text-xs mt-3">' +
+                '<span class="text-slate-500">Reconciliation: </span>' +
+                '<span class="text-amber-700 font-mono">' + CommonRenderer.formatPercent(pct, 1) + '</span> ' +
+                '<span class="text-amber-700 font-semibold">\u26a0\ufe0f over ONE enumerated chain ' +
+                '\u2014 this reconciles that chain against itself and cannot detect supply on a ' +
+                'chain that was not enumerated. Not a multi-chain reconciliation.</span></div>';
+        }
         var cls, label;
         if (pct >= 99 && pct <= 101) {
             cls = 'text-green-600';
-            label = '(per-chain supplies match canonical Pool total)';
+            label = '(per-chain supplies match canonical Pool total, across ' +
+                    (chainCount != null ? chainCount + ' enumerated chains' : 'the enumerated chains') + ')';
         } else if ((pct >= 98 && pct < 99) || (pct > 101 && pct <= 102)) {
             cls = 'text-amber-600';
             label = '(minor drift — possibly CCT bridge messages in flight)';
