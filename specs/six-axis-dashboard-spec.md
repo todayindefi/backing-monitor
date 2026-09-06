@@ -420,6 +420,34 @@ dropped a measured 93.87% dependency once).
 
 # 7. Traps
 
+⚠️ **VERIFY AN ATTRIBUTED POSITION WITH THE SOURCE, BEFORE BUILDING — NOT AFTER.** The
+verify-before-acting rule fires naturally on DATA, because a wrong number gets caught by the next
+reading. **It does not fire on intent, and intent is the one class of claim with no artifact to
+re-measure.** *"They want it, and they want it fail-closed"* cannot be checked later; it just
+becomes what everyone believes was said. This shipped a whole design, a build and a message
+agreeing with a position the named producer had never taken.
+
+⚠️ **AND NAME THE CHANNEL, NOT JUST THE REPO.** The relay was not invented — the artifact existed
+and said exactly what was quoted. It had been written by a `codex exec` job dispatched INTO that
+repo, not by the session that owns it. **Both are addressed as "security_analyst".** A codex
+agent's answer about what its repo wants is not that repo's position, and "security_analyst says"
+must distinguish which of the two answered.
+
+⚠️ **A GATE ON FILE PROPERTIES CANNOT ESTABLISH AUTHORSHIP.** This repo's axis-5 gate checks
+registration and `generator_version` — both properties of a file, neither a statement about who
+wrote it. A peer session with workspace-write into a producer's repo can create files there that
+publish under it. Demonstrated twice in one week from opposite directions: a `ready` handoff with
+`read_only: false` whose `output:` pointed at three of the producer's own topology files, and a
+dispatched job that did write into their store. **Neither reached the publishing path — verified
+by git provenance, every publishing walk traces to the producer's own commits — but nothing
+structural stopped it.**
+
+⚠️ **"REGISTERED" NAMES TWO DIFFERENT FILES.** `riskAnalyst/assets.json` holds 146 assets;
+`backing-monitor/data/assets.json` holds 27, and the dashboard gates on the second. A producer
+checking "is X registered" against theirs gets a different answer. **Attach the filename whenever
+the word is used across repos** — the 27 is a deliberate subset, not a gap, and one word reading as
+a single global fact is how two vocabularies start.
+
 ⚠️ **THE SECTION THAT MATCHES YOUR QUESTION IS THE ONE MOST LIKELY TO BE STALE.** Reports file
 corrections as dated UPDATE BLOCKS while the original prose stays filed by TOPIC — so a topical
 search, which is every search anyone actually runs, systematically returns the superseded text
