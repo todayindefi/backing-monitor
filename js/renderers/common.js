@@ -1968,7 +1968,13 @@ const CommonRenderer = {
                 // bare dash. contract_score does not exist for any asset; see the
                 // axis-5 comment in renderAxisSections.
                 label: 'Contract',
-                valueHtml: this._contractValueHtml(data),
+                // ⚠️ The per-layer detail moves into the tooltip rather than the
+                // face: the face carries ONE measurement, the tooltip carries
+                // what it is a minimum over — including that a delayed layer with
+                // timelock_floor: none is itself reducible, so even the non-zero
+                // delays are not guaranteed.
+                valueHtml: '<span title="' + this._escapeAttr(this._delayTooltip(data)) + '">' +
+                           this._contractValueHtml(data) + '</span>',
                 sub: this._contractSubText(data),
                 chip: (typeof (data.contract || {}).structural_score === 'number'
                     ? '<span class="axis-rating r-warn" title="' + this._escapeAttr(
@@ -2328,43 +2334,112 @@ const CommonRenderer = {
         return this.formatPercent(cr, 6);
     },
 
-    // ⚠️ The tile printed "—" while the axis below carried a hand-walked
-    // authority topology whose finding is a SPLIT: 48h on the code, nothing
-    // established on the supply. A dash over that reads as "not assessed", which
-    // is precisely the reading the axis panel spends a paragraph refusing.
+    // ⚠️ THE OLD TILE ZIPPED TWO VALUES AGAINST N NAMES AND BROKE AT N>2.
+    // It emitted the first delayed layer and the first open one — at most two
+    // tokens — while the caption named EVERY layer. USG rendered "none" over
+    // "asset permission / oracle / governance": one value, three names. The
+    // positional pairing only ever held for a 1-delayed/1-open asset, which was
+    // the only asset emitting when it was written.
     //
-    // Derived from the layer rows, never authored, so it follows the walk. If a
-    // producer ever publishes a contract SCORE this stays as the factual value
-    // beside it — the two answer different questions.
-    _contractValueHtml(data) {
+    // ⚠️ AND "48h / none" WAS AMBIGUOUS IN A WAY THAT MATTERED. It means
+    // "contract-upgrade 48h, asset-permission none", but it also reads as "48h
+    // delay, with no floor" — which is ALSO true of reUSD, since that layer's
+    // timelock_floor really is none. A string with two true readings, one of
+    // which is not what it says, caught riskAnalyst with the layer JSON open in
+    // front of them.
+    //
+    // So the value is a single MEASUREMENT with nothing to zip against: the
+    // shortest warning any admin path gives. Derived by min(), never authored.
+    //
+    // ⚠️ A `none` FIXES THE MINIMUM AT ZERO REGARDLESS OF UNKNOWNS — one
+    // undelayed path is enough, so unresolved layers cannot raise it. With no
+    // `none` but some unresolved, the min is only an UPPER BOUND and renders as
+    // "≤Nh"; with everything unresolved it is not established. An unmeasured
+    // layer must never round down to zero.
+    _delaySummary(data) {
         var c = data.contract;
         var layers = (c && Array.isArray(c.layers)) ? c.layers : [];
-        if (!layers.length) return '<span class="text-slate-400">—</span>';
-        var delayed = null, open = null;
-        layers.forEach(function(l) {
-            var tl = String(l.timelock == null ? '' : l.timelock);
-            if (tl && tl !== 'none' && tl !== 'unresolved') { if (!delayed) delayed = tl; }
-            else if (!open) open = tl === 'unresolved' ? 'not measured' : 'none';
-        });
-        if (delayed && open) {
-            return '<span class="text-slate-700 dark:text-slate-200">' + this._escapeAttr(delayed) + '</span>' +
-                '<span class="text-slate-400 text-base font-normal"> / </span>' +
-                '<span class="text-amber-700">' + this._escapeAttr(open) + '</span>';
+        if (!layers.length) return null;
+        function hours(v) {
+            var t = String(v == null ? '' : v).trim().toLowerCase();
+            var m = /^(\d+(?:\.\d+)?)\s*(h|hr|hrs|hour|hours|d|day|days|m|min|mins)$/.exec(t);
+            if (m) {
+                var n = parseFloat(m[1]);
+                if (/^d/.test(m[2])) return n * 24;
+                if (/^m/.test(m[2])) return n / 60;
+                return n;
+            }
+            if (/^\d+$/.test(t)) return parseInt(t, 10) / 3600;  // bare seconds
+            return null;
         }
-        if (delayed) return '<span class="text-slate-700 dark:text-slate-200">' + this._escapeAttr(delayed) + '</span>';
-        return '<span class="text-amber-700">' + this._escapeAttr(open || 'none') + '</span>';
+        var open = 0, unresolved = 0, delayed = [], floorless = 0;
+        layers.forEach(function(l) {
+            var tl = String(l.timelock == null ? '' : l.timelock).trim().toLowerCase();
+            if (tl === 'unresolved') { unresolved++; return; }
+            if (!tl || tl === 'none') { open++; return; }
+            var h = hours(tl);
+            if (h == null) { unresolved++; return; }
+            delayed.push(h);
+            if (l.timelock_floor === 'none') floorless++;
+        });
+        var min = delayed.length ? Math.min.apply(null, delayed) : null;
+        return {
+            total: layers.length, open: open, unresolved: unresolved,
+            delayed: delayed.length, floorless: floorless,
+            hours: open > 0 ? 0 : min,
+            definite: open > 0 || (unresolved === 0 && min != null),
+            established: open > 0 || min != null
+        };
     },
 
-    _contractSubText(data) {
-        var c = data.contract;
-        var layers = (c && Array.isArray(c.layers)) ? c.layers : [];
-        if (!layers.length) return 'admin authority & delay';
-        var names = layers.map(function(l) {
-            return String(l.authority_layer || '?').replace(/-/g, ' ');
+    _fmtHours(h) {
+        if (h === 0) return '0h';
+        if (h < 1) return Math.round(h * 60) + 'm';
+        if (h < 48) return (h % 1 ? h.toFixed(1) : h) + 'h';
+        return (h / 24 % 1 ? (h / 24).toFixed(1) : h / 24) + 'd';
+    },
+
+    _delayTooltip(data) {
+        var c = data.contract || {};
+        var layers = Array.isArray(c.layers) ? c.layers : [];
+        if (!layers.length) return 'No admin layers published.';
+        var lines = layers.map(function(l) {
+            var tl = String(l.timelock == null ? '' : l.timelock).trim() || 'none';
+            var isDelayed = tl.toLowerCase() !== 'unresolved' && tl.toLowerCase() !== 'none';
+            return '\u2022 ' + (l.authority_layer || '?') + ': ' +
+                (tl.toLowerCase() === 'unresolved' ? 'NOT MEASURED' : tl) +
+                // ⚠️ Only where there is a delay to reduce. `timelock_floor: none`
+                // on an already-undelayed layer says nothing, and printing it
+                // three times on USG made the tooltip look like three findings.
+                (isDelayed && l.timelock_floor === 'none' ? ' (no floor \u2014 reducible)' : '');
         });
-        // Names the two authorities in the same order as the value, so "48h /
-        // not measured" cannot be read as one number with an error beside it.
-        return names.join(' / ') + (c.method ? ' \u00b7 ' + c.method : '');
+        return 'Shortest warning any admin path gives, min() over the measured layers:\n' +
+            lines.join('\n') +
+            '\n\u26a0\ufe0f One undelayed path fixes the minimum at zero regardless of the others.';
+    },
+
+    _contractValueHtml(data) {
+        var d = this._delaySummary(data);
+        if (!d) return '<span class="text-slate-400">—</span>';
+        if (!d.established) return '<span class="text-amber-700">not established</span>';
+        var txt = (d.definite ? '' : '\u2264') + this._fmtHours(d.hours) + ' warning';
+        var cls = d.hours === 0 ? 'text-red-600' : 'text-slate-700 dark:text-slate-200';
+        return '<span class="' + cls + '">' + this._escapeAttr(txt) + '</span>';
+    },
+
+    // ⚠️ States the COUNT instead of implying a pairing, so it cannot misalign at
+    // any number of layers — and "N delayed" is what actually discriminates
+    // between assets, since every hand-walked asset in the book currently has at
+    // least one undelayed path and so shares the same 0h value.
+    _contractSubText(data) {
+        var d = this._delaySummary(data);
+        var c = data.contract || {};
+        if (!d) return 'admin authority & delay';
+        var parts = ['shortest of ' + d.total + ' admin path' + (d.total === 1 ? '' : 's')];
+        parts.push(d.delayed ? d.delayed + ' delayed' : 'none delayed');
+        if (d.unresolved) parts.push(d.unresolved + ' unmeasured');
+        if (c.method) parts.push(c.method);
+        return parts.join(' \u00b7 ');
     },
 
     _backingValueHtml(data) {
