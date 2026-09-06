@@ -3,7 +3,7 @@
   "asset": "reusde_re",
   "producer": "security_analyst",
   "as_of": "2026-09-06",
-  "generated_at": "2026-09-06T04:08:02Z",
+  "generated_at": "2026-09-06T04:21:33Z",
   "contract": {
     "headline": "A 48h timelock covers contract-upgrade (DEFAULT_ADMIN_ROLE, UPGRADER_ROLE). asset-permission (MINTER_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply.",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
@@ -19,6 +19,7 @@
           "DEFAULT_ADMIN_ROLE",
           "UPGRADER_ROLE"
         ],
+        "observed_at": "2026-09-06",
         "timelock": "48h",
         "timelock_floor": "none",
         "reach": "full",
@@ -51,6 +52,7 @@
         "keys": [
           "MINTER_ROLE"
         ],
+        "observed_at": "2026-09-06",
         "timelock": "none",
         "reach": "full",
         "paths": [
@@ -82,10 +84,42 @@
       }
     ],
     "unresolved": [
-      "ethereum asset-permission: RESOLVED 2026-09-06 (audits/re-minter-enumeration-2026-09-06.md), no longer unmeasured. Retained note: the three minters were found by RoleGranted/RoleRevoked netting and EACH was then re-confirmed by a live hasRole call with 0x…dEaD as control, because a prior walk in this repo under-counted cancellers by trusting log netting alone.",
       "ethereum contract-upgrade: PROPOSER/CANCELLER holders on timelock 0x69ddea33…fca93 not enumerated here. riskAnalyst reports Safe 0x8eec1061…fbad as sole PROPOSER with an independent CANCELLER EOA at nonce 0, for the SENIOR tranche; whether the junior shares that proposer set is NOT established.",
       "arbitrum/base/avalanche: same-address absence confirmed (code size 0). A different-address deployment was NOT searched for.",
       "Loss-absorption ordering (junior absorbs before senior) is taken from the issuer's own description and PegTracker's asset config. It was NOT verified from contract logic here."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "reusd-re",
+        "shares": [
+          {
+            "kind": "timelock",
+            "address": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "roles": [
+              "DEFAULT_ADMIN_ROLE",
+              "UPGRADER_ROLE"
+            ]
+          },
+          {
+            "kind": "implementation",
+            "address": "0xb5276c436f65913cd5332de745d04fedeb4a21d4"
+          },
+          {
+            "kind": "safe",
+            "address": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+            "n": 3,
+            "m": 5,
+            "roles": [
+              "MINTER_ROLE"
+            ]
+          },
+          {
+            "kind": "access-manager",
+            "address": "0x3f0da1c363e34802c6f12f9c27276dc0e6696fd8",
+            "admin_delay": 0
+          }
+        ]
+      }
     ],
     "walk_notes": [
       "⚠️⚠️ THIS FILE WILL HAVE A LIVE PUBLIC CONSUMER once backing-monitor adds",

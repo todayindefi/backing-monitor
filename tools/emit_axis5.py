@@ -146,9 +146,21 @@ def emit(slug):
             'observed_at': str(observed),
             'source_file': f'security_analyst/topology/assets/{fn}',
             'layers': layers,
-            # verbatim — carries its own attribution, including that MINTER_ROLE
-            # is riskAnalyst's walk and not security_analyst's
+            # verbatim — carries its own attribution
             'unresolved': doc.get('unmeasured') or [],
+            # ⚠️ CROSS-ASSET, CARRIED PER-ASSET. The fact — one timelock, one
+            # implementation and one 3-of-5 Safe behind BOTH Re tranches — cannot
+            # be stated by either page alone, but it needs no cross-asset
+            # renderer: each file names the other side, the same shape
+            # riskAnalyst used for issuer_score_shared_with.
+            #
+            # ⚠️ ADDRESSES ONLY, NO CONCLUSION. security_analyst deliberately
+            # dropped the prose note I drafted, on the same line they drew over
+            # `findings[]`: a sentence like "the subordination is not protected by
+            # separate control" is JUDGEMENT and belongs to riskAnalyst. The four
+            # rows carry it structurally; the renderer must not supply the
+            # sentence either.
+            'authority_shared_with': doc.get('authority_shared_with') or [],
             'walk_notes': header_notes(path),
         },
     }

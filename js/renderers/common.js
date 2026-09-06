@@ -4024,6 +4024,61 @@ const CommonRenderer = {
         return '<span class="axis-rating r-na" title="No report URL is published for this asset.">No report</span>';
     },
 
+    // ⚠️ SHARED AUTHORITY, RENDERED STRUCTURALLY AND WITHOUT A CONCLUSION.
+    //
+    // The producer publishes ADDRESSES ONLY and deliberately dropped the prose
+    // note I drafted: "the subordination is not protected by separate control"
+    // is a JUDGEMENT, and judgement is riskAnalyst's field, not
+    // security_analyst's store. ⚠️ That reasoning binds this renderer too — if I
+    // supply the sentence they refused to supply, I have moved the authoring one
+    // layer FURTHER from the evidence, which is worse than where it started.
+    //
+    // So this states what is shared and with whom, and lets the rows do the work:
+    // one timelock over both tokens, one implementation, one 3-of-5 Safe behind
+    // every minter, one AccessManager at admin delay zero.
+    //
+    // ⚠️ ON THE FACE, NOT IN THE COLLAPSED TRAIL, for a specific reason: two
+    // sibling pages each showing "48h timelock" invite a reader to count two
+    // independent controls where there is one. On a tranched product that is not
+    // a detail — the junior tranche exists to absorb losses first, and whether
+    // that ordering is separately controlled is the question a holder has.
+    _sharedAuthorityHtml(c) {
+        var list = (c && Array.isArray(c.authority_shared_with)) ? c.authority_shared_with : [];
+        if (!list.length) return '';
+        var self = this;
+        var esc = function(x) { return self._escapeAttr(String(x)); };
+        var short = function(a) {
+            var t = String(a || '');
+            return t.length > 14 ? t.slice(0, 8) + '\u2026' + t.slice(-4) : t;
+        };
+        return list.map(function(e) {
+            var other = String(e.asset || '');
+            var known = !Array.isArray(CommonRenderer.KNOWN_ASSET_SLUGS) ||
+                        CommonRenderer.KNOWN_ASSET_SLUGS.indexOf(other) !== -1;
+            var rows = (e.shares || []).map(function(sh) {
+                var bits = [];
+                if (sh.roles && sh.roles.length) bits.push(sh.roles.join(', '));
+                if (sh.n != null && sh.m != null) bits.push(sh.n + '-of-' + sh.m);
+                if (sh.admin_delay === 0) bits.push('admin delay 0');
+                else if (sh.admin_delay != null) bits.push('admin delay ' + sh.admin_delay);
+                return '<tr><td>' + esc(String(sh.kind || '?').replace(/-/g, ' ')) + '</td>' +
+                    '<td class="sa-addr" title="' + esc(sh.address || '') + '">' +
+                    esc(short(sh.address)) + '</td>' +
+                    '<td>' + esc(bits.join(' \u00b7 ')) + '</td></tr>';
+            }).join('');
+            return '<div class="shared-authority">' +
+                '<div class="sa-head">\u26a0\ufe0f Shares admin authority with ' +
+                    (known ? '<a href="?asset=' + esc(other) + '">' + esc(other) + '</a>' : esc(other)) +
+                '</div>' +
+                '<div class="sa-sub">The same addresses hold these roles over both assets \u2014 ' +
+                    'measured on each proxy separately, not inherited.</div>' +
+                '<div class="sa-tablewrap"><table class="sa-table"><thead><tr>' +
+                    '<th>Shared</th><th>Address</th><th>Holds</th></tr></thead><tbody>' +
+                    rows + '</tbody></table></div>' +
+            '</div>';
+        }).join('');
+    },
+
     // Code half with NO authority walk. Leads with what is not established.
     _codeHalfOnlyHtml(c) {
         var self = this;
@@ -4183,11 +4238,15 @@ const CommonRenderer = {
                 ? '<div class="tw-flagged">' + flagged.map(function(f) {
                       return '<div class="tw-flag">' + esc(f) + '</div>'; }).join('') + '</div>'
                 : '') +
+            this._sharedAuthorityHtml(c) +
             // ⚠️ NOT ESTABLISHED is rendered as prominently as what WAS, and
             // verbatim. These entries carry their own attribution — the
-            // MINTER_ROLE finding is riskAnalyst\u2019s walk, not this
-            // producer\u2019s, and summarising it here would strip the credit and
-            // launder one repo\u2019s evidence as another\u2019s.
+            // attribution is inside the producer's own text. ⚠️ This comment used
+            // to say the MINTER_ROLE finding was riskAnalyst's — it WAS, and
+            // security_analyst measured it themselves on 2026-09-06 and retired
+            // the entry. Rendering verbatim is what let that correction reach the
+            // page without a code change; summarising would have frozen the old
+            // credit in this file.
             // ⚠️ COLLAPSED, BUT THE SCOPES STAY VISIBLE. "Not established" must
             // remain as prominent as what WAS established — that is the whole
             // argument for publishing it — but prominence is the reader knowing

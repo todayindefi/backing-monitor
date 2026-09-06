@@ -3,7 +3,7 @@
   "asset": "reusd_re",
   "producer": "security_analyst",
   "as_of": "2026-08-30",
-  "generated_at": "2026-09-06T04:08:02Z",
+  "generated_at": "2026-09-06T04:21:33Z",
   "contract": {
     "headline": "A 48h timelock covers contract-upgrade (DEFAULT_ADMIN_ROLE, UPGRADER_ROLE). asset-permission (MINTER_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply.",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
@@ -19,6 +19,7 @@
           "DEFAULT_ADMIN_ROLE",
           "UPGRADER_ROLE"
         ],
+        "observed_at": "2026-08-30",
         "timelock": "48h",
         "timelock_floor": "none",
         "reach": "full",
@@ -51,6 +52,7 @@
         "keys": [
           "MINTER_ROLE"
         ],
+        "observed_at": "2026-09-06",
         "timelock": "none",
         "reach": "full",
         "paths": [
@@ -82,10 +84,42 @@
       }
     ],
     "unresolved": [
-      "ethereum asset-permission: RESOLVED 2026-09-06 (audits/re-minter-enumeration-2026-09-06.md), no longer unmeasured. Retained note: the three minters were found by RoleGranted/RoleRevoked netting and EACH was then re-confirmed by a live hasRole call with 0x…dEaD as control, because a prior walk in this repo under-counted cancellers by trusting log netting alone.",
       "ethereum contract-upgrade: PROPOSER/CANCELLER role holders on timelock 0x69ddea33…fca93 not enumerated here. Safe 0x8eec1061…fbad is 3-of-5 (measured) and is reported by riskAnalyst as sole PROPOSER, with an independent CANCELLER EOA at nonce 0; neither role assignment was read from the timelock by this repo.",
       "arbitrum/base/avalanche: same-address absence confirmed (code size 0). A deployment at a different address was NOT searched for.",
       "forceNAVUpdate path: 0xe888df3218e070fae8d90d2ba6fcac5520217484 (632B, nonce 1) carries both setSharePrice and forceNAVUpdate selectors and answers no standard interface. Whether it IMPLEMENTS or CALLS them needs disassembly, which was not done. It is also not expressible in this schema — see the `parameter` open item in registry/incidents.md."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "reusde-re",
+        "shares": [
+          {
+            "kind": "timelock",
+            "address": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "roles": [
+              "DEFAULT_ADMIN_ROLE",
+              "UPGRADER_ROLE"
+            ]
+          },
+          {
+            "kind": "implementation",
+            "address": "0xb5276c436f65913cd5332de745d04fedeb4a21d4"
+          },
+          {
+            "kind": "safe",
+            "address": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+            "n": 3,
+            "m": 5,
+            "roles": [
+              "MINTER_ROLE"
+            ]
+          },
+          {
+            "kind": "access-manager",
+            "address": "0x3f0da1c363e34802c6f12f9c27276dc0e6696fd8",
+            "admin_delay": 0
+          }
+        ]
+      }
     ],
     "walk_notes": [
       "⚠️⚠️ THIS FILE HAS A LIVE PUBLIC CONSUMER — ADDED 2026-08-31.",
