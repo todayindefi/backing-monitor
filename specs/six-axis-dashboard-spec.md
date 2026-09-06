@@ -487,7 +487,24 @@ stored state  a re-check reading a STORED value instead of a live one: "not one
               dollar left the vaults" was concluded from a totalAssets() frozen
               two days before the event. The number could not move, so the check
               could not fail.
+git author    ⚠️ MINE, AND THE WORST OF THE FOUR. I verified the authorship of
+              five published walks with `git log` and reported "all five trace to
+              your own commits". Every session on this machine commits as the
+              SAME git author: 72 topology commits, 274 repo commits, one name.
+              The check had exactly one possible output. One of the five was in
+              fact peer-authored and had been on a public page for a day.
 ```
+
+⚠️ **NEVER REPORT GIT AUTHORSHIP AS PROVENANCE IN A SINGLE-AUTHOR ENVIRONMENT.** It cannot
+distinguish and it retires the question, which is worse than not asking: an unanswered question
+gets asked again, a falsely answered one does not. **If you need to know whether a file is a
+producer's, ask the producer.**
+
+⚠️ **AND I WROTE THIS FAMILY INTO THIS SPEC TWO MESSAGES BEFORE RUNNING THAT CHECK.** Having the
+rule written down, in your own words, does not make it fire — I applied it to caching, to staging
+and to stored state, and not to the check I was running at the time. **Test the check against the
+question, not against the codebase: ask what result would constitute a failure, and whether the
+path can produce it.**
 
 ⚠️ **The tell is that the check PASSES for a structural reason rather than an evidential one.**
 Before trusting any verification, ask what would have to be true for it to fail — and whether the
