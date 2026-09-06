@@ -1,27 +1,26 @@
 /**
- * syrupUSDC renderer — 5-axis section layout (band-only common path).
+ * syrupUSDC renderer — six-axis, section-native layout.
  *
- * The common #summary-cards band carries the 5 axis ratings; the bespoke
- * panels below render under matching axis section-header dividers so the page
- * reads top-to-bottom in Peg→Liquidity→Backing→Dependencies→Issuer order
- * (mirroring the crvUSD dashboard).
+ * CommonRenderer owns the six canonical axis sections and their measured
+ * panels. This renderer adds the richer Syrup-specific panels to each axis's
+ * `*-extra-panels` slot. It must never build a second axis spine in
+ * #asset-specific-panels: that makes anchor navigation and provenance point at
+ * empty hidden sections while the useful content sits in an unrelated dump.
  *
  * Render order (each panel keeps its own content; this layer just groups + heads):
- *   §1 Peg         — Peg Performance (market vs NAV metric row + peg-vs-NAV chart)
- *   §2 Liquidity   — Liquidity (free buffer / queue / DEX slippage)
- *                    · Liquidity Layer (pool-owned positions)
- *                    · Repayment Schedule (when capital returns)
- *   §3 Backing     — Pool Coverage chart (relocated #chart-panel) · Risk Flags
- *                    (relocated #risk-flags) · Backing (TVL/cap/NAV/fee + donut)
- *                    · Loan Book Health · Strategy contract slots · Yield
+ *   §1 Peg          — common market-vs-NAV panel + history
+ *   §2 Backing      — common coverage/risk panels · Backing · Loan Book
+ *                     Health · Strategy contract slots · Yield
+ *   §3 Liquidity    — free buffer / queue / DEX slippage · Liquidity Layer
+ *                     · Repayment Schedule
  *   §4 Dependencies — Borrower Concentration (upstream credit)
- *   §5 Issuer      — Trust Stack · Multi-Chain Distribution · Cross-Pool Family
+ *                     · Cross-Pool Family
+ *   §5 Contract     — Trust Stack · Multi-Chain Distribution
+ *   §6 Issuer       — common editorial issuer panel
  *
  * Suppresses the common-header Backing Breakdown table + Allocation pie panel for
  * syrupUSDC only — they're replaced by §3 Backing's asset-composition table + donut.
- * #section-backing is hidden and its two live nodes (#chart-panel, #risk-flags)
- * are relocated into the §3 group in render(). OUSD / crvUSD / USDD don't run this
- * renderer, so they keep the common layout.
+ * OUSD / crvUSD / USDD don't run this renderer, so they keep the common layout.
  */
 
 // Static metadata for the Collateral Mix sub-block + loan-table column.
@@ -191,28 +190,9 @@ var SyrupUSDCRenderer = {
                 wrapper.classList.add('lg:col-span-3');
             }
         }
-        // Band-only 5-axis: the common summary band (#summary-cards) shows the 5 axis cards;
-        // hide the generic per-axis SECTIONS so they don't duplicate the bespoke Syrup panels.
-        // #section-backing is ALSO hidden now: render() relocates its two live nodes
-        // (#chart-panel — the repurposed Pool Coverage chart — and the #risk-flags panel)
-        // into the §3 Backing group inside #asset-specific-panels so they read in 5-axis
-        // order. The relocation runs in render() AFTER the bespoke HTML is in the DOM;
-        // here we just clear the (now-orphan) backing axis head.
-        if (typeof CommonRenderer !== 'undefined' && CommonRenderer.hasAxisBlocks(data)) {
-            // ⚠️ 'section-contract' added with the six-axis split. Every one of these
-            // lists was written when there were five sections, and a new section
-            // leaks through a hardcoded list silently — it rendered a SECOND,
-            // empty Contract & Admin axis under the bespoke one on all five pages.
-            ['section-peg', 'section-liquidity', 'section-contract', 'section-backing', 'section-dependencies', 'section-issuer']
-                .forEach(function(id) { var s = document.getElementById(id); if (s) s.style.display = 'none'; });
-            // Clear the hidden common axis bodies — they contain duplicate-id nodes (notably a
-            // #peg-chart canvas from renderAxisSections) that would shadow our bespoke §1 Peg
-            // canvas under getElementById, binding the chart to a 0×0 hidden canvas. Removing
-            // them lets the bespoke peg chart bind correctly.
-            ['axis-peg-body', 'axis-liquidity-body', 'axis-dependencies-body', 'axis-issuer-body']
-                .forEach(function(id) { var b = document.getElementById(id); if (b) b.innerHTML = ''; });
-            var bh = document.getElementById('axis-backing-head'); if (bh) bh.innerHTML = '';
-        }
+        // The canonical six sections remain visible and populated by CommonRenderer.
+        // Only the generic backing breakdown/pie are suppressed because the Syrup
+        // backing panel replaces them with a loans-vs-liquidity composition view.
     },
 
     // Lightweight axis section-header divider for the bespoke panel stream —
@@ -563,81 +543,35 @@ var SyrupUSDCRenderer = {
         this._suppressCommonPanels(data);
 
         var s = data.summary;
-        var html = '';
+        // The legacy dump must stay empty. Populate only the canonical axis slots.
+        container.innerHTML = '';
+        var backingSlot = document.getElementById('backing-extra-panels');
+        var liquiditySlot = document.getElementById('liquidity-extra-panels');
+        var dependencySlot = document.getElementById('dependencies-extra-panels');
+        var contractSlot = document.getElementById('contract-extra-panels');
 
-        // Panels are grouped under 5-axis section headers so the page reads
-        // top-to-bottom: [band] → §1 Peg → §2 Liquidity → §3 Backing →
-        // §4 Dependencies → §5 Issuer. Each _render* helper still returns its
-        // own self-contained .panel; this layer only reorders + adds the
-        // .axis-head dividers (matching the band's visual style).
-
-        // ---- §1 Peg ----
-        html += this._axisHead(1, 'Peg', 'market vs NAV · secondary discount');
-        html += this._renderPegPanel(data);
-
-        // ---- §2 Liquidity ----
-        html += this._axisHead(2, 'Backing', 'reserves · collateral ratio · loan-book health');
-        html += CommonRenderer.backingBasisPanelHtml(data);
-        // Relocation slot for the common #chart-panel (Pool Coverage CR chart).
-        // The DOM node is physically moved into here after innerHTML so its
-        // canvas (#cr-chart) and chart logic keep working unchanged.
-        html += '<div id="syrup-coverage-chart-slot"></div>';
-        html += this._renderBacking(specific, s, data.asset_slug);
-        html += this._renderLoanBookHealth(specific);                       // loans-only (third-party credit)
-        html += this._renderStrategySlots(specific, data.asset_slug);       // unused contract slots
-        html += this._renderYield(specific);
-
-        // ---- §4 Dependencies ----
-        html += this._axisHead(3, 'Liquidity & Exit', 'exit paths · free buffer · when capital returns');
-        html += this._renderLiquidityAndPeg(specific, s, data.asset_slug);  // free liquidity / queue / DEX slippage (peg moved to §1)
-        html += this._renderLiquidityLayer(specific, data.asset_slug);      // pool-owned positions
-        html += this._renderRepaymentSchedule(specific);                    // future liquidity (when loans return capital)
-
-        // ---- §3 Backing ----
-        html += this._axisHead(4, 'Dependencies', 'upstream credit — borrowers');
-        html += this._renderBorrowerConcentration(specific);
-
-        // ---- §5 Issuer ----
-        // ⚠️ syrupUSDC's producer-supplied label is "Structural", which maps to
-        // Contract & Admin rather than to Issuer — riskAnalyst confirmed
-        // structural_score is authored as contract security AND admin control
-        // (audit 6/10, admin 6/10, upgrade 6/10, timelock 5/10, collateral 1/10),
-        // so the feed descriptor calling it "collateral structure" is stale.
-        html += this._axisHead(5, 'Contract & Admin', 'governance · audits · multi-chain · family');
-        html += this._renderTrustStack(specific);
-        html += this._renderMultiChain(specific, data.asset_slug);
-
-        html += this._axisHead(6, 'Issuer', 'editorial \u2014 subjective axis');
-        html += CommonRenderer.issuerPanelHtml(data) + CommonRenderer._issuerContextHtml(data);
-        // Reserved div for the cross-pool family panel — async-populated below
-        // by _loadCrossPoolFamily once data/syrup_family.json resolves. Stays
-        // empty (zero-height) when the file is missing so the page doesn't
-        // visibly regress.
-        html += '<div id="syrup-family-panel"></div>';
-
-        container.innerHTML = html;
-
-        // Relocate the common Backing nodes (#chart-panel = Pool Coverage chart,
-        // and the #risk-flags panel) out of the now-hidden #section-backing and
-        // into the §3 Backing group, preserving the live canvas/DOM so the chart
-        // still paints. Move the chart panel first, then the risk-flags panel
-        // directly beneath it.
-        var slot = document.getElementById('syrup-coverage-chart-slot');
-        var chartPanel = document.getElementById('chart-panel');
-        if (slot && chartPanel) {
-            chartPanel.style.display = '';   // unhide in case the common path suppressed it
-            slot.appendChild(chartPanel);
-            var riskFlags = document.getElementById('risk-flags');
-            var riskPanel = riskFlags && riskFlags.closest('.panel');
-            if (riskPanel) {
-                var wrapper = riskPanel.parentElement;
-                // Drop the lg:col-span-3 stretch added for the old 2-col backing grid;
-                // the relocated panel now stands alone full-width in the panel stream.
-                if (wrapper && wrapper.classList.contains('lg:col-span-3')) {
-                    wrapper.classList.remove('lg:col-span-3');
-                }
-                slot.appendChild(riskPanel);
-            }
+        if (backingSlot) {
+            backingSlot.innerHTML =
+                this._renderBacking(specific, s, data.asset_slug) +
+                this._renderLoanBookHealth(specific) +
+                this._renderStrategySlots(specific, data.asset_slug) +
+                this._renderYield(specific);
+        }
+        if (liquiditySlot) {
+            liquiditySlot.innerHTML =
+                this._renderLiquidityAndPeg(specific, s, data.asset_slug) +
+                this._renderLiquidityLayer(specific, data.asset_slug) +
+                this._renderRepaymentSchedule(specific);
+        }
+        if (dependencySlot) {
+            dependencySlot.innerHTML =
+                this._renderBorrowerConcentration(specific) +
+                '<div id="syrup-family-panel"></div>';
+        }
+        if (contractSlot) {
+            contractSlot.innerHTML =
+                this._renderTrustStack(specific) +
+                this._renderMultiChain(specific, data.asset_slug);
         }
 
         // Post-render canvases (after innerHTML + relocation so the DOM nodes exist).
@@ -645,7 +579,6 @@ var SyrupUSDCRenderer = {
         this._renderRepaymentScheduleChart(specific);
         this._renderAumCoverageChart(specific, data.asset_slug);
         this._attachLoanTableSort();
-        this._loadPegChart(data);
         this._loadCrossPoolFamily(data);
     },
 
