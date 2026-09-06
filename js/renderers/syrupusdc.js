@@ -2790,9 +2790,20 @@ var SyrupUSDCRenderer = {
                        'data (see Liquidity &amp; Peg panel above).';
         }
 
+        // Detected, not assumed: the declared denominator is a vault figure whose
+        // share base equals ONE enumerated chain's supply, while the numerator
+        // spans more than one.
+        var vs = (specific && specific.vault_state) || {};
+        var nChains = Array.isArray(mc.chains) ? mc.chains.length : null;
+        var scopeMismatch = false;
+        if (nChains && nChains > 1 && typeof vs.total_supply === 'number') {
+            scopeMismatch = mc.chains.some(function(c) {
+                return typeof c.supply_native === 'number' &&
+                       Math.abs(c.supply_native - vs.total_supply) < 0.01;
+            });
+        }
         var recon = SyrupUSDCRenderer._reconciliationLine(
-            mc.cross_chain_supply_reconciliation_pct,
-            Array.isArray(mc.chains) ? mc.chains.length : null);
+            mc.cross_chain_supply_reconciliation_pct, nChains, scopeMismatch);
 
         var emptyStateFooter = '';
         if (isUSDT) {
@@ -2898,8 +2909,37 @@ var SyrupUSDCRenderer = {
     // Plasma: any asset whose enumeration covers a single chain gets the scope
     // stated instead of a green pass. It fires for the next asset too, before
     // anyone knows which chain is missing.
-    _reconciliationLine: function(pct, chainCount) {
+    _reconciliationLine: function(pct, chainCount, scopeMismatch) {
         if (pct == null) return '';
+        // ⚠️ CROSS-SCOPE RATIO: WITHHOLD THE VERDICT, DO NOT COLOUR IT.
+        //
+        // syrupUSDT publishes 133.82% with denominator `vault_state.total_assets`
+        // — and vault_state.total_supply is IDENTICAL to Ethereum's chain supply
+        // to the cent, so the denominator's share base is ONE chain while the
+        // numerator now spans two. A global numerator over a single-chain
+        // denominator is not a reconciliation, and rendering it red as "material
+        // drift" asserts a 34% shortfall the measurement cannot establish.
+        //
+        // ⚠️ Two readings fit and they are opposite in severity: if bridging
+        // LOCKS on Ethereum the supplies overlap and the gap is arithmetic; if it
+        // BURNS, the Plasma shares sit outside the vault's share base and NAV is
+        // computed over 75% of the claims. riskAnalyst's burn-vs-lock test came
+        // back a NULL RESULT — both supplies fell, which a bridge flow would not
+        // produce — so nothing distinguishes them yet. Colouring it picks one.
+        //
+        // Overstating risk is not the safe direction. The scope mismatch is the
+        // finding until the mechanism is measured.
+        if (scopeMismatch) {
+            return '<div class="text-xs mt-3">' +
+                '<span class="text-slate-500">Reconciliation: </span>' +
+                '<span class="text-amber-700 font-mono">' + CommonRenderer.formatPercent(pct, 1) + '</span> ' +
+                '<span class="text-amber-700 font-semibold">\u26a0\ufe0f CROSS-SCOPE \u2014 verdict ' +
+                'withheld.</span> <span class="text-slate-500">The numerator spans ' +
+                (chainCount != null ? chainCount : 'several') + ' chains; the denominator\u2019s share ' +
+                'base matches a single chain exactly. This ratio does not establish a surplus or a ' +
+                'shortfall, and the difference between those readings depends on whether bridging ' +
+                'burns or locks on the source chain \u2014 not yet measured.</span></div>';
+        }
         if (chainCount != null && chainCount <= 1) {
             return '<div class="text-xs mt-3">' +
                 '<span class="text-slate-500">Reconciliation: </span>' +
