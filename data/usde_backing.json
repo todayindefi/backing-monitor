@@ -3,7 +3,7 @@
   "asset": "USDe",
   "asset_slug": "usde",
   "chain": "ethereum",
-  "timestamp": "2026-09-07T00:48:35Z",
+  "timestamp": "2026-09-07T01:47:23Z",
   "summary": {
     "total_supply": 4371157132.4,
     "supply_unit": "USD",
@@ -17,6 +17,13 @@
   },
   "risk_flags": [
     {
+      "id": "attestation_stale",
+      "severity": "warning",
+      "message": "Custody data in use is the July 2026 attestation, 45d old (threshold 45d); latest published (custodian-attestations-of-assets-backing-usde-august-3) is 4d old",
+      "value": 45.1,
+      "scope": "usde_level"
+    },
+    {
       "id": "coinbase_wallet_drift",
       "severity": "warning",
       "message": "A newer attestation (custodian-attestations-of-assets-backing-usde-august-3) is published than the embedded snapshot (custodian-attestations-of-assets-backing-usde-july-3) \u2014 re-derive the per-custodian breakdown AND the disclosed wallet roster. A matching wallet set is NOT sufficient to clear this: custody composition moves while the addresses stay put",
@@ -25,8 +32,8 @@
     {
       "code": "RISK_FEED_STALE",
       "severity": "warning",
-      "age_hours": 71.06,
-      "message": "USDe issuer_score is from a STALE risk-feed \u2014 generated 2026-09-04T01:45:02Z (2+ days old, threshold 48h). Value shown is last known good, not confirmed current."
+      "age_hours": 72.04,
+      "message": "USDe issuer_score is from a STALE risk-feed \u2014 generated 2026-09-04T01:45:02Z (3+ days old, threshold 48h). Value shown is last known good, not confirmed current."
     }
   ],
   "vault_status": null,
@@ -71,13 +78,13 @@
         "0x2bf5d9a2326ad3c5ef8208f91af79c3ca1f0f67c",
         "0x3feaa7483fcfba130e68b41369dd78ff30465459"
       ],
-      "embedded_age_days": 45.0,
+      "embedded_age_days": 45.1,
       "latest_slug": "custodian-attestations-of-assets-backing-usde-august-3",
       "latest_url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
       "latest_lastmod": "2026-09-03T10:43:28.000Z",
       "discovery_status": "ok",
       "latest_published_age_days": 3.6,
-      "age_days": 45.0,
+      "age_days": 45.1,
       "age_basis": "embedded_snapshot",
       "drift_status": "newer_available"
     },
@@ -106,14 +113,16 @@
     "history_field": "market_price"
   },
   "liquidity": {
-    "as_of": "2026-09-06T22:32:28Z",
+    "as_of": "2026-09-07T01:31:41Z",
     "total_tvl": null,
-    "total_2pct_depth": 5000000.0,
-    "total_2pct_depth_is_floor": true,
-    "two_pct_depth_status": "ladder_exhausted",
-    "two_pct_depth_size_responsive": true,
-    "two_pct_depth_unresponsive_note": null,
-    "two_pct_depth_basis": "A FLOOR, not a measurement. The deepest rung quoted ($5,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found.",
+    "total_2pct_depth": 4000000.0,
+    "total_2pct_depth_is_floor": false,
+    "two_pct_depth_status": "bracketed",
+    "two_pct_depth_bracket": [
+      4000000.0,
+      5000000.0
+    ],
+    "two_pct_depth_basis": "The 200bps crossing is BRACKETED between $4,000,000 (clears) and $5,000,000 (285bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap.",
     "volume_24h": null,
     "exit_mark": {
       "source": "kyberswap",
@@ -122,45 +131,47 @@
       "fair_value_basis": "market",
       "quotes": {
         "1000": {
-          "output_usd": 1000.31,
+          "output_usd": 1000.19,
           "slippage_bps": 0.0
         },
         "10000": {
-          "output_usd": 10001.28,
-          "slippage_bps": -1.9
+          "output_usd": 10001.14,
+          "slippage_bps": -0.8
         },
         "50000": {
-          "output_usd": 50006.28,
-          "slippage_bps": -1.9
+          "output_usd": 50005.68,
+          "slippage_bps": -0.8
         },
         "100000": {
-          "output_usd": 100011.53,
-          "slippage_bps": -2.0
+          "error": "http_530"
         },
         "250000": {
-          "output_usd": 250025.27,
-          "slippage_bps": -2.1
+          "output_usd": 250014.77,
+          "slippage_bps": -1.3
         },
         "500000": {
-          "error": "http_530"
+          "output_usd": 500041.52,
+          "slippage_bps": -1.1
         },
         "1000000": {
-          "output_usd": 1000068.1,
-          "slippage_bps": -2.5
+          "output_usd": 1000063.22,
+          "slippage_bps": -1.3
         },
         "2000000": {
-          "output_usd": 1999829.13,
-          "slippage_bps": -4.0
+          "output_usd": 2000006.52,
+          "slippage_bps": -1.9
         },
         "3000000": {
-          "error": "http_530"
+          "output_usd": 2999755.59,
+          "slippage_bps": -2.7
         },
         "4000000": {
-          "error": "http_530"
+          "output_usd": 3998633.75,
+          "slippage_bps": -5.3
         },
         "5000000": {
-          "output_usd": 4995419.38,
-          "slippage_bps": -12.3
+          "output_usd": 4858559.15,
+          "slippage_bps": -284.7
         }
       }
     },
@@ -228,7 +239,7 @@
     "issuer_score_source": "risk-feed@2026-09-04T01:45:02Z",
     "issuer_score_status": "stale",
     "issuer_score_generated_at": "2026-09-04T01:45:02Z",
-    "issuer_score_age_hours": 71.06,
-    "attestation_age_days": 45.0
+    "issuer_score_age_hours": 72.04,
+    "attestation_age_days": 45.1
   }
 }
