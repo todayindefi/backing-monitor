@@ -1574,40 +1574,66 @@ const CommonRenderer = {
     // ⚠️ And it requires a DECLARATION, not just a number: the producer must say
     // the measurement is not derivable. Without that gate an authored score would
     // paper over a feed that is merely broken, which is the opposite of the job.
+    // Returns {score, basis} when accepted, {rejected: why} when a score was
+    // SUPPLIED and refused, or null when the producer offered nothing.
+    //
+    // ⚠️ The rejected case must not be indistinguishable from a genuine refusal.
+    // Both render "Not rated" on the face, but "we correctly declined to compute
+    // a band" and "an authored score arrived malformed and was dropped" are
+    // opposite facts, and this is the same rule §6.3 applies to authored scores —
+    // turned on this gate. The reason rides in the tooltip.
     _authoredLiquidity(data) {
         var lq = data.liquidity || {};
         if (typeof lq.liquidity_score !== 'number') return null;
         var declared = lq.derived_score_status === 'not_computed' ||
             lq.two_pct_depth_status === 'not_size_responsive' ||
             lq.two_pct_depth_size_responsive === false;
-        if (!declared) return null;
+        if (!declared) {
+            return { rejected: 'An authored liquidity score of ' + lq.liquidity_score +
+                '/10 was supplied WITHOUT a non-derivability declaration ' +
+                '(derived_score_status / two_pct_depth_size_responsive), so it was not ' +
+                'rendered. An authored score may only fill a gap the producer has ' +
+                'declared unmeasurable — otherwise it would paper over a broken feed. ' +
+                'Showing neither.' };
+        }
         var basis = lq.liquidity_score_basis || lq.liquidity_score_source;
-        if (!basis) return null;
+        if (!basis) {
+            return { rejected: 'An authored liquidity score of ' + lq.liquidity_score +
+                '/10 was supplied with no basis or source string, so it was not ' +
+                'rendered. A judgement with no stated reasoning cannot be assessed ' +
+                'by a reader. Showing neither.' };
+        }
         return { score: lq.liquidity_score, basis: String(basis) };
     },
 
     _liquidityChipHtml(data) {
         var band = this.liquidityRating(data);
         var authored = this._authoredLiquidity(data);
+        // ⚠️ `authored` has THREE shapes: accepted {score,basis}, {rejected},
+        // and null. Every branch below must test `.score`, not truthiness — a
+        // rejected object is truthy and would render "Authored undefined/10".
+        var accepted = (authored && typeof authored.score === 'number') ? authored : null;
+
         if (band != null) {
             // ⚠️ Both present is a DIVERGENCE, not something to reconcile
             // silently. Render the measurement and SAY the judgement disagrees;
             // a reader who cannot see the conflict cannot report it.
-            if (authored && authored.score !== band * 2) {
+            if (accepted && accepted.score !== band * 2) {
                 return this._ratingChipHtml(band) +
                     '<span class="axis-rating r-warn" title="' + this._escapeAttr(
-                        'An authored Liquidity & Exit score of ' + authored.score + '/10 also exists ' +
-                        'and DISAGREES with the computed band. The measurement is shown. ' + authored.basis) +
-                    '"> ⚠️ authored ' + authored.score + '/10 differs</span>';
+                        'An authored Liquidity & Exit score of ' + accepted.score + '/10 also exists ' +
+                        'and DISAGREES with the computed band. The measurement is shown. ' + accepted.basis) +
+                    '"> ⚠️ authored ' + accepted.score + '/10 differs</span>';
             }
             return this._ratingChipHtml(band);
         }
-        if (authored) {
+        if (accepted) {
             // Say it is authored — the word carries provenance, not the scale (§6.5.1).
             return '<span class="axis-rating r-warn" title="' +
-                this._escapeAttr(authored.basis) + '">Authored ' + authored.score + '/10</span>';
+                this._escapeAttr(accepted.basis) + '">Authored ' + accepted.score + '/10</span>';
         }
-        return this._ratingChipHtml(null);
+        // Same face as a genuine refusal, distinguishable on hover.
+        return this._ratingChipHtml(null, authored ? authored.rejected : null);
     },
 
     _exitScopeHtml(liq) {
