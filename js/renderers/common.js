@@ -3988,8 +3988,25 @@ const CommonRenderer = {
     issuerPanelHtml(data) {
         var issuer = data.issuer || {};
         var info = this._issuerAxisInfo(issuer);
-        var badge = info.badge || (info.score != null ? info.label + ' ' + info.score + '/10' :
-            (info.status === 'unavailable' ? info.label + ' unavailable' : null));
+        // ⚠️ A NAME BADGE MUST NOT DISPLACE THE SCORE. This was
+        // `info.badge || (score…)`, so any badge short-circuited the score
+        // branch. usds publishes badge "Sky (MakerDAO)" — a name, deliberately,
+        // with the analyzer commenting "a name, not a score" — and an authored
+        // issuer_score of 7.0. The name won and the 7.0 reached NO READER, while
+        // susds on the same axis showed "Issuer 7.0/10". A published score
+        // rendering nowhere is the failure this dashboard keeps re-finding.
+        //
+        // Three cases, not two: a badge that ALREADY carries the score is the
+        // score chip; a badge that is a NAME accompanies it; no badge falls back
+        // to the score alone.
+        // One decimal: an authored score reads N.N estate-wide ("Authored 4.0/10",
+        // §6.5.1), and 7.0 arriving as the JS number 7 rendered "Issuer 7/10"
+        // beside susds's "Issuer 7.0/10" for the identical value.
+        var scoreText = (info.score != null)
+            ? info.label + ' ' + Number(info.score).toFixed(1) + '/10'
+            : (info.status === 'unavailable' ? info.label + ' unavailable' : null);
+        var nameBadge = (info.badge && !info.scoredBadge) ? info.badge : null;
+        var badge = info.scoredBadge ? info.badge : scoreText;
         var age = issuer.attestation_age_days;
         var scoreTooltip = this._issuerScoreTooltip(info);
         var methodology = info.label.toLowerCase() === 'issuer'
@@ -3998,6 +4015,9 @@ const CommonRenderer = {
                 ' axis is an editorial, subjective rating. Its asset-specific methodology is assessed in the full report rather than scored live here.';
 
         var chips =
+            // The name, when the badge is one — rendered as identity, not as a rating.
+            (nameBadge ? '<span class="axis-rating r-na">' +
+                this._escapeAttr(nameBadge) + '</span>' : '') +
             (badge ? '<span class="axis-rating r-warn"' +
                 (scoreTooltip ? ' title="' + this._escapeAttr(scoreTooltip) + '"' : '') + '>' +
                 this._escapeAttr(badge) + '</span>' : '') +
