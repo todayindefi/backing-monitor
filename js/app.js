@@ -326,6 +326,43 @@ async function renderAsset(slug) {
             history = await histResp.json();
         }
 
+        // ⚠️ RESOLVE peg.history_ref — the convention is NOT the only filename.
+        // The fetch above assumes `<slug>_backing_history.json`, but six assets
+        // declare `history_ref: <slug>_peg_history.json`, and that is where the
+        // declared `history_field` actually lives:
+        //
+        //   crvusd, usds, yzusd            _backing_history.json exists but LACKS the field
+        //   syzusd, reusd_re, reusde_re    _backing_history.json does not exist at all
+        //
+        // So pegRating was handed a file without the field, silently returned no
+        // 7-day average, and fell through to ONE instantaneous reading — on an
+        // axis whose whole point is measured behaviour over a window. The data was
+        // published correctly the whole time; the consumer fetched the wrong name.
+        //
+        // ⚠️ A declared ref beats a derived name. Deriving a filename that the
+        // producer also declares is the same class as deriving a value they
+        // publish — the convention silently disagrees and nothing says so.
+        var pegRef = data.peg && data.peg.history_ref;
+        if (pegRef && pegRef !== sourceSlug + '_backing_history.json') {
+            var field = data.peg.history_field;
+            var haveField = !!(history && Array.isArray(history.entries) &&
+                history.entries.slice(-5).some(function(e) { return e && e[field] != null; }));
+            if (!haveField) {
+                try {
+                    var refResp = await fetch(dataUrl('data/' + pegRef));
+                    if (refResp && refResp.ok) {
+                        var refJson = await refResp.json();
+                        if (refJson && Array.isArray(refJson.entries) && refJson.entries.length) {
+                            // Keep the backing history reachable — chart code and
+                            // renderers still read collateral series off it.
+                            if (history) refJson._backing_history = history;
+                            history = refJson;
+                        }
+                    }
+                } catch (e) { /* declared ref unreachable: keep the conventional file */ }
+            }
+        }
+
         // Asset-specific pre-render hook — lets the renderer patch top-card
         // overrides (e.g. swap in init-level CR for syrupUSDC/USDT) before
         // the common summary-cards row paints. History is passed too so
