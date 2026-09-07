@@ -1,0 +1,268 @@
+{
+  "schema_version": "contract/1",
+  "asset": "susds",
+  "producer": "security_analyst",
+  "as_of": "2026-09-07",
+  "generated_at": "2026-09-07T02:59:39Z",
+  "contract": {
+    "headline": "All MEASURED authority sits behind a 2d timelock.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-07",
+    "source_file": "security_analyst/topology/assets/susds.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "sUSDS",
+        "terminal_name": "DSPause",
+        "topology": "timelocked",
+        "keys": [
+          "wards"
+        ],
+        "timelock": "2d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x36b072ed8afe665e3aa6daba79decbec63752b22",
+            "name": "SPBEAM",
+            "name_verified": true,
+            "via": "wards",
+            "terminal": "contract",
+            "timelock": "none",
+            "reach": "bounded",
+            "terminal_address": "0x36b072ed8afe665e3aa6daba79decbec63752b22",
+            "holder_kind": "contract",
+            "delay_applies": false,
+            "hand_walk": "Verified-source SPBEAM; susds() returns this layer's target and wards(SPBEAM)=1. set() is bounded by cfgs and tau and exposes no arbitrary-call or upgrade function."
+          },
+          {
+            "holder": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+            "name": "DSPauseProxy",
+            "name_verified": true,
+            "via": "wards",
+            "terminal": "timelock",
+            "timelock": "2d",
+            "reach": "full",
+            "terminal_address": "0xbe286431454714f511008713973d3b053a2d38f3",
+            "holder_kind": "timelock",
+            "delay_applies": true,
+            "timelock_roles": {
+              "state": "ds-auth",
+              "authority": "0x929d9a1435662357f54adcf64dcee4d6b867a6f9",
+              "proposer_and_canceller_authority_same": true,
+              "delay_floor": "none"
+            }
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "base",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "sUSDS",
+        "terminal_name": "DSPause",
+        "topology": "timelocked",
+        "keys": [
+          "wards"
+        ],
+        "timelock": "2d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255",
+            "name": "L2GovernanceRelay",
+            "name_verified": true,
+            "via": "wards -> cross-domain relay -> L1GovernanceRelay wards",
+            "terminal": "timelock",
+            "timelock": "2d",
+            "reach": "full",
+            "terminal_address": "0xbe286431454714f511008713973d3b053a2d38f3",
+            "holder_kind": "timelock",
+            "delay_applies": true,
+            "hand_walk": "l1GovernanceRelay()=0x1ee0ae8a993f2f5abdb51eaf4ac2876202b65c3b; its sole live effective relay ward is DSPauseProxy."
+          },
+          {
+            "holder": "0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7",
+            "name": "ERC1967Proxy",
+            "name_verified": true,
+            "via": "wards -> L2TokenBridge wards -> L2GovernanceRelay -> L1GovernanceRelay wards",
+            "terminal": "timelock",
+            "timelock": "2d",
+            "reach": "full",
+            "terminal_address": "0xbe286431454714f511008713973d3b053a2d38f3",
+            "holder_kind": "timelock",
+            "delay_applies": true,
+            "hand_walk": "Implementation 0x289a37be5d6ccef7a8f2b90535b3bb6bd3905f72; bridge wards(relay)=1 and dead-address control=0."
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "arbitrum",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "sUSDS",
+        "terminal_name": "DSPause",
+        "topology": "timelocked",
+        "keys": [
+          "wards"
+        ],
+        "timelock": "2d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x10e6593cdda8c58a1d0f14c5164b376352a55f2f",
+            "name": "L2GovernanceRelay",
+            "name_verified": true,
+            "via": "wards -> retryable-ticket relay -> L1GovernanceRelay wards",
+            "terminal": "timelock",
+            "timelock": "2d",
+            "reach": "full",
+            "terminal_address": "0xbe286431454714f511008713973d3b053a2d38f3",
+            "holder_kind": "timelock",
+            "delay_applies": true,
+            "hand_walk": "l1GovernanceRelay()=0x9ba25c289e351779e0d481ba37489317c34a899d; DSPauseProxy is its live arbitrary-relay ward."
+          },
+          {
+            "holder": "0x13f7f24ca959359a4d710d32c715d4bce273c793",
+            "name": "ERC1967Proxy",
+            "name_verified": true,
+            "via": "wards -> L2TokenGateway wards -> L2GovernanceRelay -> L1GovernanceRelay wards",
+            "terminal": "timelock",
+            "timelock": "2d",
+            "reach": "full",
+            "terminal_address": "0xbe286431454714f511008713973d3b053a2d38f3",
+            "holder_kind": "timelock",
+            "delay_applies": true,
+            "hand_walk": "Implementation 0xd404ed36d6976bdcad8abbccc9f09ef07e33a9a8; gateway wards(relay)=1 and dead-address control=0."
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "optimism",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "sUSDS",
+        "terminal_name": "DSPause",
+        "topology": "timelocked",
+        "keys": [
+          "wards"
+        ],
+        "timelock": "2d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x10e6593cdda8c58a1d0f14c5164b376352a55f2f",
+            "name": "L2GovernanceRelay",
+            "name_verified": true,
+            "via": "wards -> cross-domain relay -> L1GovernanceRelay wards",
+            "terminal": "timelock",
+            "timelock": "2d",
+            "reach": "full",
+            "terminal_address": "0xbe286431454714f511008713973d3b053a2d38f3",
+            "holder_kind": "timelock",
+            "delay_applies": true,
+            "hand_walk": "l1GovernanceRelay()=0x09b354cda89203bb7b3131cc728dfa06ab09ae2f; DSPauseProxy is its live arbitrary-relay ward."
+          },
+          {
+            "holder": "0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6",
+            "name": "ERC1967Proxy",
+            "name_verified": true,
+            "via": "wards -> L2TokenBridge wards -> L2GovernanceRelay -> L1GovernanceRelay wards",
+            "terminal": "timelock",
+            "timelock": "2d",
+            "reach": "full",
+            "terminal_address": "0xbe286431454714f511008713973d3b053a2d38f3",
+            "holder_kind": "timelock",
+            "delay_applies": true,
+            "hand_walk": "Implementation 0xc2702c859016db756149716cc4d2b7d7a436cf04; bridge wards(relay)=1 and dead-address control=0."
+          }
+        ]
+      },
+      {
+        "authority_layer": "governance",
+        "chain": "ethereum",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "SPBEAM",
+        "terminal_name": "DSPause",
+        "topology": "timelocked",
+        "keys": [
+          "wards",
+          "buds"
+        ],
+        "timelock": "2d",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
+            "name": "DSPauseProxy",
+            "name_verified": true,
+            "via": "wards",
+            "terminal": "timelock",
+            "timelock": "2d",
+            "reach": "full",
+            "terminal_address": "0xbe286431454714f511008713973d3b053a2d38f3",
+            "holder_kind": "timelock",
+            "delay_applies": true,
+            "timelock_roles": {
+              "state": "ds-auth",
+              "authority": "0x929d9a1435662357f54adcf64dcee4d6b867a6f9",
+              "proposer_and_canceller_authority_same": true,
+              "delay_floor": "none"
+            }
+          },
+          {
+            "holder": "0xf0c6e6ec8b367cc483a411e595d3ba0a816d37d0",
+            "name": "SPBEAMMom",
+            "name_verified": true,
+            "via": "wards",
+            "terminal": "contract",
+            "timelock": "none",
+            "reach": "bounded",
+            "terminal_address": "0xf0c6e6ec8b367cc483a411e595d3ba0a816d37d0",
+            "holder_kind": "contract",
+            "delay_applies": false,
+            "hand_walk": "Only privileged action is halt(address), which calls SPBEAM.file('bad',1); owner is DSPauseProxy and authority is 0x929d9a1435662357f54adcf64dcee4d6b867a6f9."
+          },
+          {
+            "holder": "0xe1c6f81d0c3cd570a77813b81aa064c5fff80309",
+            "name": "SafeProxy",
+            "name_verified": true,
+            "via": "buds",
+            "terminal": "safe",
+            "timelock": "none",
+            "reach": "bounded",
+            "terminal_address": "0xe1c6f81d0c3cd570a77813b81aa064c5fff80309",
+            "holder_kind": "safe",
+            "threshold": 2,
+            "owners": 3,
+            "delay_applies": false,
+            "hand_walk": "Sole live bud from complete Kiss/Diss history, rechecked with buds(). set() is bounds/step/tau-limited. Live cfgs: DSR min 0 max 3000 step 400; SSR min 200 max 3000 step 400; tau 57600 seconds."
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "Rollup-native message finality/challenge timing is outside this administrative-delay observation; 2d is the current DSPause setting on the L1 governance path.",
+      "DSPause's DSChief authority is not reduced to an off-chain participant/signature threshold; plot() and drop() were instead verified to share that same on-chain authority."
+    ],
+    "authority_shared_with": [],
+    "review": null,
+    "walk_notes": [
+      "sUSDS topology — hand-walked evidence. Judgment remains in riskAnalyst.",
+      "Read-only live RPC and verified-source walk; reproduction and limits are in",
+      "audits/susds-admin-topology-walk-2026-09-07.md."
+    ]
+  }
+}
