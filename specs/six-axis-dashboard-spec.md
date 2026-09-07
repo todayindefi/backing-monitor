@@ -421,12 +421,16 @@ dropped a measured 93.87% dependency once).
 
 ## 6.5 Scoring — one scale, and provenance on the label
 
-⚠️ **STATUS: the scale rule below is PROPOSED, pending user decision. No code conforms to it yet.**
-Until it is decided, `_ratingChip()` returning `/5` and the authored paths returning `/10` are BOTH
-defensible, because nothing said otherwise. *That ambiguity — not either value — is the defect.*
+✅ **STATUS: DECIDED and LIVE — user decision 2026-09-07.** `_ratingChip()` now renders `/10`
+(common.js). Before the decision, `/5` for computed bands and `/10` for authored paths were BOTH
+defensible because nothing said otherwise — *that ambiguity, not either value, was the defect.*
 Origin: riskAnalyst draft 2026-09-07, after their user spotted both scales on the live usdm page.
 
-### 6.5.1 One scale (PROPOSED)
+⚠️ **Note the order: the rule was written BEFORE the code conformed.** Code-first would have
+back-filled a spec saying "/5 computed, /10 authored" — describing the drift as if it were a design,
+and making it permanent. Write the rule first when the right answer differs from what shipped.
+
+### 6.5.1 One scale
 
 **Every axis chip renders `N/10`. No axis is ever expressed `/5` on any surface.**
 
@@ -688,7 +692,7 @@ reader to compute something wrong with it.**
 
 Apply these to each axis before calling it done:
 
-1. **The so-what test.** Can a reader say what this axis means for them? "Healthy 5/5" over an
+1. **The so-what test.** Can a reader say what this axis means for them? "Healthy 10/10" over an
    issuer-written NAV fails: it says the price tracks the mark, not that the mark is trustworthy.
 2. **The standalone test.** Is the page comprehensible without the report? The report may be
    unpublished, gated, or superseded. ⚠️ An axis that is a score plus a link is not finished.

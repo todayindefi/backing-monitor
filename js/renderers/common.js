@@ -1397,7 +1397,8 @@ const CommonRenderer = {
         };
     },
 
-    // Rating → display chip. 5/4 healthy, 3 watch, ≤2 stress, null = not rated.
+    // Rating → display chip. Bands 5/4 healthy, 3 watch, ≤2 stress, null = not rated.
+    // Internal domain stays 1-5; only the RENDERING is /10 (§6.5.1).
     // ⚠️ Why an axis is UNRATED, when the null is deliberate.
     //
     // "Not rated" looks worse on a live page than "Healthy 5/5", and the first
@@ -1447,11 +1448,27 @@ const CommonRenderer = {
         return null;
     },
 
+    // ⚠️ Bands are 1-5 internally; the PAGE renders /10 (spec §6.5.1, user
+    // decision 2026-09-07). Every other surface in the estate — riskAnalyst
+    // assets, the risk feed, tidresearch reports — is /10, and a /5 chip beside
+    // a /10 report gives a reader no way to tell whether the two AGREE.
+    // The x2 mapping emits only EVEN numbers, and that spacing is the honest
+    // tell that the scale is coarse. Do NOT cap the top at 9 to soften
+    // "10/10": it breaks the spacing and makes 9 read as a FINER measurement
+    // than 8, inventing the granularity the cap was meant to prevent. The
+    // misreading is fixed by the LABEL — the band word plus the tooltip below.
     _ratingChip(rating) {
         if (rating == null) return { cls: 'r-na', text: 'Not rated' };
         var cls = rating >= 4 ? 'r-ok' : (rating === 3 ? 'r-warn' : 'r-crit');
         var word = rating >= 4 ? 'Healthy' : (rating === 3 ? 'Watch' : 'Stress');
-        return { cls: cls, text: word + ' · ' + rating + '/5' };
+        return { cls: cls, text: word + ' · ' + (rating * 2) + '/10', band: rating };
+    },
+
+    // The band word carries provenance (computed) against "Authored" (§6.3);
+    // the tooltip STATES the granularity rather than encoding it in the digits.
+    _ratingChipBasis(rating) {
+        return 'Band ' + rating + ' of 5, mapped to /10. A five-level band, not ' +
+            'a 10-point score — the top band means "inside the healthy threshold", not "perfect".';
     },
 
     _ratingChipHtml(rating, reason) {
@@ -1460,7 +1477,11 @@ const CommonRenderer = {
             return '<span class="axis-rating ' + c.cls + '" title="' +
                 this._escapeAttr(reason) + '">' + c.text + ' \u24d8</span>';
         }
-        return '<span class="axis-rating ' + c.cls + '">' + c.text + '</span>';
+        if (rating == null) {
+            return '<span class="axis-rating ' + c.cls + '">' + c.text + '</span>';
+        }
+        return '<span class="axis-rating ' + c.cls + '" title="' +
+            this._escapeAttr(this._ratingChipBasis(rating)) + '">' + c.text + '</span>';
     },
 
     // --- per-axis ratings ---

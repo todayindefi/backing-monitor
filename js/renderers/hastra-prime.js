@@ -1788,7 +1788,7 @@ var HastraPrimeRenderer = {
             '</div>' +
 
             '<div class="risk-flag risk-warning mb-3">' +
-                '<span class="font-semibold">' + ceilingScope + ' depth is 5/5, and only ' +
+                '<span class="font-semibold">' + ceilingScope + ' depth is 10/10, and only ' +
                 (liq.capacity_ceiling_pct_mcap != null ? liq.capacity_ceiling_pct_mcap.toFixed(2) + '%' : '—') +
                 ' of market cap can use it.</span> This is a hard inventory wall, not a slippage curve: beyond ' +
                 HastraPrimeRenderer._money(liq.capacity_ceiling_usd) +
