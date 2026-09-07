@@ -98,9 +98,22 @@ if [ -f tools/emit_axis5.py ]; then
     # are not publishable (no walk on disk, or generator output rather than a
     # hand-walk) and emits nothing for them, which leaves axis 5 at
     # "Not assessed" exactly as before.
+    # ⚠️ A REFUSAL DOES NOT REMOVE AN ALREADY-EMITTED FILE, and the comment above
+    # ("leaves axis 5 at Not assessed") is only true for a slug that never had
+    # one. Where a file exists and the source has since become unpublishable, the
+    # page keeps serving it and it is never refreshed again — the exact "stale
+    # copy of a retracted walk" this block says it avoids.
+    #
+    # Not auto-deleted: removing live content on a source-side gate change is a
+    # bigger decision than a sync should make silently. Named loudly instead, so
+    # it is a decision someone takes rather than a file nobody notices.
     for slug in $SLUGS; do
-        python3 tools/emit_axis5.py "$slug" --out data/ 2>&1 || \
+        python3 tools/emit_axis5.py "$slug" --out data/ 2>&1 || {
             echo "$(date): axis5 emit skipped for $slug (source walk unavailable)" >&2
+            if [ -f "data/${slug}_contract.json" ]; then
+                echo "$(date): ⚠️ STALE AXIS 5 — data/${slug}_contract.json EXISTS but its source is no longer publishable. The page is serving a copy that will never refresh. Fix the source or delete the file." >&2
+            fi
+        }
     done
 fi
 

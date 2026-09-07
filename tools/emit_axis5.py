@@ -53,8 +53,57 @@ TOPOLOGY_DIR = '/home/danger/security_analyst/topology/assets'
 # "Not assessed" they currently show. Their own trust statement is the gate.
 REQUIRE_HAND_WALK = True
 
+# ⚠️ READ FROM git HEAD, NOT THE WORKING TREE — security_analyst's proposal,
+# 2026-09-07, and it fixes a false assumption on THEIR side that this script
+# created. They built four validators run by tools/check-all.sh, whose header
+# says "Run BEFORE staging, not after" — a design that assumes git is the
+# chokepoint, so that gating at commit time gates publication.
+#
+# This script read the working tree, so WRITING a file published it. Commit and
+# push were irrelevant, and usdm.yaml went public while still uncommitted while
+# they held a push believing that protected something. Three sets of files
+# published unreviewed in one day on that path.
+#
+# Reading from HEAD adds no check here. It makes COMMIT the publish trigger,
+# which puts their four existing validators back on the live path, and makes
+# "uncommitted" mean "unpublished" — which is what everyone already assumed.
+#
+# ⚠️ NECESSARY, NOT SUFFICIENT. Someone can still commit without running
+# check-all.sh and it publishes. The pre-commit hook that closes that is theirs
+# to build; this is one half of two.
+SECURITY_ANALYST_REPO = '/home/danger/security_analyst'
 
-def header_notes(path):
+
+def _rel(fn):
+    return f'topology/assets/{fn}'
+
+
+def source_text(fn):
+    """The walk as COMMITTED. Returns (text, uncommitted_diff: bool).
+
+    ⚠️ Raises when the file is not in HEAD — an uncommitted walk is an
+    UNPUBLISHED one, and emitting nothing is the point, not a failure.
+    """
+    import subprocess
+    r = subprocess.run(['git', '-C', SECURITY_ANALYST_REPO, 'show', f'HEAD:{_rel(fn)}'],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        raise SystemExit(
+            f'NOT COMMITTED: {_rel(fn)} is not in HEAD of {SECURITY_ANALYST_REPO}. '
+            f'Publication is triggered by COMMIT, so an uncommitted walk is '
+            f'deliberately not published. Commit it there to publish.')
+    head = r.stdout
+    # ⚠️ THE COUNTERWEIGHT. This change moves the failure from "publishes work
+    # nobody reviewed" to "finished work sits unpublished and nobody notices" —
+    # the silent direction, which has bitten this repo before (Ethena until
+    # 4975b2368; the one-asset loop at sync_and_push.sh:91). So SAY when the
+    # working tree has moved ahead of what we are publishing.
+    disk = os.path.join(TOPOLOGY_DIR, fn)
+    diverged = os.path.exists(disk) and open(disk, encoding='utf-8').read() != head
+    return head, diverged
+
+
+def header_notes(path):  # `path` is now the file TEXT, read from HEAD
     """The leading comment block, verbatim minus the '# '.
 
     ⚠️ Read rather than skipped: the YAML's structured rows do NOT carry the
@@ -65,7 +114,7 @@ def header_notes(path):
     render the reassuring half of the walk and discard its limits.
     """
     out, seen_key = [], False
-    for line in open(path, encoding='utf-8'):
+    for line in path.splitlines(True):
         if not line.startswith('#'):
             if line.strip() and not line.startswith(' '):
                 seen_key = True
@@ -137,7 +186,13 @@ def emit(slug):
     path = os.path.join(TOPOLOGY_DIR, fn)
     if not os.path.exists(path):
         raise SystemExit(f'MISSING: {path} — emit nothing rather than a stale copy')
-    doc = yaml.safe_load(open(path, encoding='utf-8')) or {}
+    # ⚠️ Publication trigger is COMMIT, not write. See SECURITY_ANALYST_REPO above.
+    path, diverged = source_text(fn)
+    if diverged:
+        print(f'  ⚠️ {fn}: working tree has UNCOMMITTED changes that are NOT being '
+              f'published — publishing the committed version. Commit there to publish them.',
+              file=sys.stderr)
+    doc = yaml.safe_load(path) or {}
 
     # ⚠️ Gate 2. Refuse generator output; see REQUIRE_HAND_WALK above.
     if REQUIRE_HAND_WALK and doc.get('generator_version'):
