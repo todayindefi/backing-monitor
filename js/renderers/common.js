@@ -1846,11 +1846,33 @@ const CommonRenderer = {
                 };
             }
         }
+        // ⚠️ An enumerated list is only as good as its enumeration. If the block
+        // carries a numeric *_score this list does NOT name, that is a producer
+        // adding a field the consumer silently ignores — the exact failure this
+        // helper exists to prevent, one field name later. Report it instead of
+        // returning a bare null that looks like "no authored score exists".
+        for (var k in block) {
+            if (!Object.prototype.hasOwnProperty.call(block, k)) continue;
+            if (typeof block[k] !== 'number') continue;
+            if (!/_score$/.test(k)) continue;
+            if (names.indexOf(k) >= 0) continue;
+            return { score: null, unknownField: k, unknownValue: block[k] };
+        }
         return null;
     },
 
     // Appended to a band chip when an authored score disagrees with it.
     _divergenceChipHtml(band, authored) {
+        // An authored score under a field name this renderer does not know is a
+        // gap, not an absence. Say so rather than render nothing.
+        if (authored && authored.unknownField) {
+            return '<span class="axis-rating r-na" title="' + this._escapeAttr(
+                'The feed publishes "' + authored.unknownField + '" = ' + authored.unknownValue +
+                ', which this renderer does not recognise as an axis score, so it is NOT being ' +
+                'compared against the band. A published score reaching no reader is a transport ' +
+                'gap — the field name needs adding to the consumer, not the value changing.') +
+                '"> ⚠️ unread score field</span>';
+        }
         if (band == null || !authored || typeof authored.score !== 'number') return '';
         if (authored.score === band * 2) return '';   // agree on the /10 scale
         var age = authored.ageHours != null ? ' Authored ' + authored.ageHours.toFixed(1) + 'h ago.' : '';
@@ -2165,7 +2187,10 @@ const CommonRenderer = {
                 label: 'Peg',
                 valueHtml: '<span class="' + pegCls + '">' + this.pegPctText(pegPct, 2) + ' ' + pegArrow + '</span>',
                 sub: 'premium / discount',
-                chip: this._ratingChipHtml(this.pegRating(data, history), null, this.pegRatingBasisNote(data, history))
+                chip: this._ratingChipHtml(this.pegRating(data, history), null,
+                          this.pegRatingBasisNote(data, history)) +
+                      this._divergenceChipHtml(this.pegRating(data, history),
+                          this._authoredAxisScore(data.peg, ['peg_mechanism_score', 'volatility_score']))
             },
             {
                 label: 'Backing',
@@ -2980,7 +3005,10 @@ const CommonRenderer = {
         // 1 · Peg
         this._renderAxisHead('peg', 1, 'Peg',
             (data.peg.source ? 'market vs NAV · ' + data.peg.source : 'market vs NAV'),
-            this._ratingChipHtml(this.pegRating(data, history), null, this.pegRatingBasisNote(data, history)), data.peg);
+            this._ratingChipHtml(this.pegRating(data, history), null,
+                this.pegRatingBasisNote(data, history)) +
+            this._divergenceChipHtml(this.pegRating(data, history),
+                this._authoredAxisScore(data.peg, ['peg_mechanism_score', 'volatility_score'])), data.peg);
         this._renderPegSection(data, history);
 
         // ⚠️ 2 is BACKING and 3 is LIQUIDITY — swapped from the original frame.
