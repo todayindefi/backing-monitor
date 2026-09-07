@@ -1532,7 +1532,13 @@ var HastraPrimeRenderer = {
 
             '<div class="risk-flag risk-warning mt-4">' +
                 '<div class="flex flex-wrap items-center gap-2 mb-1">' +
-                    HastraPrimeRenderer._pill((data.issuer && data.issuer.badge) || 'Issuer 5.5/10', 'warn') +
+                    // ⚠️ NEVER hardcode an editorial score as a fallback. This read
+                    // 'Issuer 5.5/10' while the feed carried 6.5 — a stale number that
+                    // would surface silently the moment `badge` went missing, with
+                    // nothing on the page marking it as a renderer default. Same failure
+                    // as APYX_EDITORIAL_LIQUIDITY, which sat at 8.0 through a depeg.
+                    // Unrated is a defined state (spec §4); an invented score is not.
+                    HastraPrimeRenderer._pill((data.issuer && data.issuer.badge) || 'Issuer — not rated', 'warn') +
                     HastraPrimeRenderer._link((data.issuer && data.issuer.report_url) || HP_REPORT.url, 'Full issuer report ↗') +
                 '</div>' +
                 '<span class="font-semibold">Hastra–Figure is a related-party dependency.</span> ' +
