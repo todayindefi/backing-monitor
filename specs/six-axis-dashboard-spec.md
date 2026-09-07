@@ -403,6 +403,7 @@ failed to load         fetch error, feed outage         -> ⚠️ DANGEROUS
 
 ⚠️ **A bare null cannot distinguish these.** Require an explicit `applies_when` AND the
 producer's basis string. And **label it on the page** — "Authored 5.5/10", never a computed band —
+(the scale itself is governed by §6.5)
 in the tile AND the axis head.
 
 ## 6.4 Provenance
@@ -417,6 +418,91 @@ replaced a non-empty ARRAY (that is a different event from overriding a scalar, 
 dropped a measured 93.87% dependency once).
 
 ---
+
+## 6.5 Scoring — one scale, and provenance on the label
+
+⚠️ **STATUS: the scale rule below is PROPOSED, pending user decision. No code conforms to it yet.**
+Until it is decided, `_ratingChip()` returning `/5` and the authored paths returning `/10` are BOTH
+defensible, because nothing said otherwise. *That ambiguity — not either value — is the defect.*
+Origin: riskAnalyst draft 2026-09-07, after their user spotted both scales on the live usdm page.
+
+### 6.5.1 One scale (PROPOSED)
+
+**Every axis chip renders `N/10`. No axis is ever expressed `/5` on any surface.**
+
+The reason is comparability, not taste. Every other surface in the estate is /10 — `riskAnalyst/assets/*.md`,
+the risk feed, and all tidresearch reports. A /5 dashboard is the only page on a different scale
+from the report it links to, and the same axis showing `Healthy 4/5` here and `8/10` there gives a
+reader no way to tell whether the two AGREE or DISAGREE.
+
+**Provenance is carried by the LABEL, not the denominator:**
+
+```
+computed from feed data + thresholds   "Healthy 8/10"     band word + scale
+authored by riskAnalyst                "Authored 4.0/10"  authored word + scale
+```
+
+⚠️ **§6.3's rule survives intact and is WHY this works** — *"a fallback rendered identically to a
+computed band would let a judgement pass as a measurement."* The WORD already carries provenance
+(`Healthy`/`Watch`/`Stress` vs `Authored`, plus distinct CSS classes). The denominator was doing a
+job the label already does, at the cost of comparability.
+
+### 6.5.2 The mapping, and the honest cost of it
+
+Bands are integers 1–5 from `_ratingChip()` (common.js:1450). The mapping is ×2:
+
+```
+Healthy 5/5 -> Healthy 10/10      Watch  3/5 -> Watch  6/10
+Healthy 4/5 -> Healthy  8/10      Stress 2/5 -> Stress 4/10
+                                  Stress 1/5 -> Stress 2/10
+```
+
+⚠️ **State the cost rather than hide it: a five-level band rendered `/10` implies granularity it does
+not have.** `8/10` invites the reader to think `7.5` was reachable. Three mitigations, all required:
+
+1. **Keep the band WORD.** `Healthy 8/10` carries band semantics; a bare `8/10` does not.
+2. **Tooltip names the basis** — "band 4 of 5 mapped to /10", so the granularity is stated, not inferred.
+3. **⚠️ Do NOT cap the top at 9.** The ×2 mapping emits only EVEN numbers (2/4/6/8/10), and that
+   uniform spacing is itself the tell that the underlying scale is coarse. Capping to 9 breaks the
+   spacing and makes 9 read as a finer measurement than 8 — *inventing exactly the granularity the
+   cap was meant to avoid.* A top band means "inside the healthy threshold", not "perfect"; that is
+   the WORD's job, per mitigation 1.
+
+**The better long-term answer, noted and not scheduled:** render the measured position against the
+thresholds directly rather than mapping a band at all. That REMOVES the granularity problem instead
+of labelling it. Revisit when a third consumer needs the numbers.
+
+### 6.5.3 Three states, never two
+
+```
+RATED        a score, and the inputs behind it
+UNMEASURED   ⚠️ no source is wired. MUST carry WHY, and WHAT WOULD CLOSE IT.
+ABSENT       measured, and the true answer is nothing / zero
+```
+
+⚠️ **One vocabulary, estate-wide: `unmeasured, not zero`.** Chosen over `downstream_tracked` because
+it states the distinction in reader-facing words rather than encoding it in a boolean whose name only
+fits one axis — and it already renders on a live page. riskAnalyst has conformed their axis-5 spec to
+this. **An addendum may never introduce a fifth spelling.**
+
+⚠️ **`UNMEASURED` and `ABSENT` must never render identically.** "No source is wired" and "this asset
+does not trade" are opposite facts, and a reader who cannot tell them apart is worse off than one
+who sees nothing.
+
+For axis 4's fleet-wide unrated state, see §1.1 and §4/Axis 4 — **it is already stated there twice;
+do not restate it a third time here.** A rule written in three places is a rule that will disagree
+with itself the first time one copy is edited.
+
+### 6.5.4 ⚠️ `structural_score` names TWO DIFFERENT FIELDS on two axes
+
+`contract.structural_score` drives the **CONTRACT** chip (common.js:1979, 2894).
+`issuer.structural_score` is an editorial score in the **ISSUER** block (common.js:2591).
+
+When a feed carries only the latter, the Issuer tile falls back to it and **relabels itself
+"STRUCTURAL"** — which is what both syrup pages did until the feed began emitting `issuer_score`.
+Two fields, one name, two axes: **rename one.** Until then, every read of `structural_score` must
+name its axis prefix explicitly — never destructure it bare.
+
 
 # 7. Traps
 
