@@ -1,0 +1,387 @@
+{
+  "schema_version": "contract/1",
+  "asset": "usdm",
+  "producer": "security_analyst",
+  "as_of": "2026-09-07",
+  "generated_at": "2026-09-07T01:08:02Z",
+  "contract": {
+    "headline": "A 2d timelock covers reserve-config (owner, eip1967_admin). asset-permission (owner, eip1967_admin) has NO established delay — timelock: none. The delay protects the code and not the supply.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-07",
+    "source_file": "security_analyst/topology/assets/usdm.yaml",
+    "layers": [
+      {
+        "authority_layer": "asset-permission",
+        "chain": "celo",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "Mento Dollar (USDm; rebranded cUSD)",
+        "topology": "nofm-multisig",
+        "keys": [
+          "owner",
+          "eip1967_admin"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "via": "owner / setMinter / setBurner / setOperator",
+            "terminal": "safe",
+            "terminal_address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "holder_kind": "safe",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "via": "eip1967_admin",
+            "terminal": "safe",
+            "terminal_address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "holder_kind": "safe",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full"
+          }
+        ]
+      },
+      {
+        "authority_layer": "reserve-config",
+        "chain": "celo",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "Mento Reserve (legacy/shared)",
+        "topology": "timelocked",
+        "keys": [
+          "owner",
+          "eip1967_admin"
+        ],
+        "timelock": "2d",
+        "delay_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x890db8a597940165901372dd7db61c9f246e2147",
+            "via": "owner / asset whitelist / spender configuration",
+            "terminal": "timelock",
+            "terminal_address": "0x890db8a597940165901372dd7db61c9f246e2147",
+            "holder_kind": "timelock",
+            "timelock": "2d",
+            "delay_floor": "none",
+            "delay_applies": true,
+            "reach": "full"
+          },
+          {
+            "holder": "0x890db8a597940165901372dd7db61c9f246e2147",
+            "via": "eip1967_admin",
+            "terminal": "timelock",
+            "terminal_address": "0x890db8a597940165901372dd7db61c9f246e2147",
+            "holder_kind": "timelock",
+            "timelock": "2d",
+            "delay_floor": "none",
+            "delay_applies": true,
+            "reach": "full"
+          }
+        ]
+      },
+      {
+        "authority_layer": "governance",
+        "chain": "celo",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "MentoGovernor / TimelockController",
+        "topology": "timelocked",
+        "keys": [
+          "timelock",
+          "eip1967_admin"
+        ],
+        "timelock": "2d",
+        "delay_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x47036d78bb3169b4f5560dd77bf93f4412a59852",
+            "via": "PROPOSER_ROLE and CANCELLER_ROLE",
+            "terminal": "timelock",
+            "terminal_address": "0x890db8a597940165901372dd7db61c9f246e2147",
+            "holder_kind": "timelock",
+            "timelock": "2d",
+            "delay_floor": "none",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "EXECUTOR_ROLE is open to address(0); TIMELOCK_ADMIN_ROLE is self-held. MIN_DELAY() and MINIMUM_DELAY() revert, so no hard floor was found."
+          },
+          {
+            "holder": "0x890db8a597940165901372dd7db61c9f246e2147",
+            "via": "Governor/Timelock eip1967_admin -> ProxyAdmin.owner",
+            "terminal": "timelock",
+            "terminal_address": "0x890db8a597940165901372dd7db61c9f246e2147",
+            "holder_kind": "timelock",
+            "timelock": "2d",
+            "delay_floor": "none",
+            "delay_applies": true,
+            "reach": "full"
+          }
+        ]
+      },
+      {
+        "authority_layer": "reserve-v2-config",
+        "chain": "celo",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "ReserveV2",
+        "topology": "nofm-multisig",
+        "keys": [
+          "owner",
+          "eip1967_admin"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "via": "owner / asset and spender registration",
+            "terminal": "safe",
+            "terminal_address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "holder_kind": "safe",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "via": "eip1967_admin -> ProxyAdmin.owner",
+            "terminal": "safe",
+            "terminal_address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "holder_kind": "safe",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full"
+          }
+        ]
+      },
+      {
+        "authority_layer": "reserve-v2-spend",
+        "chain": "celo",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "ReserveV2",
+        "topology": "nofm-multisig",
+        "keys": [
+          "reserveManagerSpender",
+          "liquidityStrategySpender"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x87647780180b8f55980c7d3ffefe08a9b29e9ae1",
+            "via": "reserveManagerSpender / asset transfer",
+            "terminal": "safe",
+            "terminal_address": "0x87647780180b8f55980c7d3ffefe08a9b29e9ae1",
+            "holder_kind": "safe",
+            "threshold": 3,
+            "owners": 8,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b",
+            "via": "liquidityStrategySpender / ReserveLiquidityStrategy",
+            "terminal": "safe",
+            "terminal_address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "holder_kind": "safe",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "rebalance(address) is publicly callable; the Safe controls strategy configuration and the ReserveV2 spender allowlist."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "monad",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "Mento Dollar (USDm StableTokenSpoke)",
+        "topology": "nofm-multisig",
+        "keys": [
+          "owner",
+          "eip1967_admin"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "via": "owner / setMinter / setBurner",
+            "terminal": "safe",
+            "terminal_address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "holder_kind": "safe",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0x97b239f52f773944dead5250db57322b05875ef5",
+            "via": "eip1967_admin",
+            "terminal": "safe",
+            "terminal_address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "holder_kind": "safe",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full"
+          }
+        ]
+      },
+      {
+        "authority_layer": "reserve-v2-config",
+        "chain": "monad",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "ReserveV2",
+        "topology": "nofm-multisig",
+        "keys": [
+          "owner",
+          "eip1967_admin"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "via": "owner / asset and spender registration",
+            "terminal": "safe",
+            "terminal_address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "holder_kind": "safe",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0x363b8cef44f88ce7b41b8576fc493a3c5946951f",
+            "via": "eip1967_admin",
+            "terminal": "safe",
+            "terminal_address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "holder_kind": "safe",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full"
+          }
+        ]
+      },
+      {
+        "authority_layer": "reserve-v2-spend",
+        "chain": "monad",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "ReserveV2",
+        "topology": "nofm-multisig",
+        "keys": [
+          "reserveManagerSpender",
+          "liquidityStrategySpender"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x87647780180b8f55980c7d3ffefe08a9b29e9ae1",
+            "via": "reserveManagerSpender / asset transfer",
+            "terminal": "safe",
+            "terminal_address": "0x87647780180b8f55980c7d3ffefe08a9b29e9ae1",
+            "holder_kind": "safe",
+            "threshold": 3,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0xa0fb8b16ce6af3634ff9f3f4f40e49e1c1ae4f0b",
+            "via": "liquidityStrategySpender / ReserveLiquidityStrategy",
+            "terminal": "safe",
+            "terminal_address": "0x58099b74f4acd642da77b4b7966b4138ec5ba458",
+            "holder_kind": "safe",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full"
+          }
+        ]
+      },
+      {
+        "authority_layer": "reserve-custody",
+        "chain": "ethereum",
+        "observed_at": "2026-09-07",
+        "walked_by": "hand",
+        "target_name": "Mento Reserve holding wallet",
+        "topology": "nofm-multisig",
+        "keys": [
+          "safe"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x87647780180b8f55980c7d3ffefe08a9b29e9ae1",
+            "via": "custody of Ethereum reserve assets",
+            "terminal": "safe",
+            "terminal_address": "0x87647780180b8f55980c7d3ffefe08a9b29e9ae1",
+            "holder_kind": "safe",
+            "threshold": 3,
+            "owners": 6,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "USDm is not deployed on Ethereum. The Celo Reserve and both ReserveV2 deployments identify this address as other-reserve/reserve-manager-spender; the Ethereum Safe has its own owner set."
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "Celo USDm minter, burner, and operator mappings are non-enumerable; named current candidates were checked, but complete update-event histories were not reconstructed.",
+      "Celo legacy Reserve isSpender is non-enumerable; named current candidates were checked, but complete add/remove history was not reconstructed.",
+      "Celo TimelockController roles are not enumerable through getRoleMemberCount; Governor, self, and open-executor candidates were verified, but complete grant/revoke history was not reconstructed.",
+      "Monad USDm minter/burner mappings are non-enumerable. ReserveLiquidityStrategy is currently both minter and burner, but full history was not reconstructed because the public RPC limits eth_getLogs to 100 blocks.",
+      "No Wormhole NTT manager or transceiver is listed or found on Monad; this is a bounded absent result, with re-open required on a new minter grant or published NTT deployment.",
+      "Off-chain signer independence and custody controls are not observable from contract reads."
+    ],
+    "authority_shared_with": [],
+    "review": null,
+    "walk_notes": [
+      "USDm topology — Mento Dollar, not Mountain Protocol or Monetrix USDM.",
+      "Manual live walk; scoring remains in riskAnalyst."
+    ]
+  }
+}
