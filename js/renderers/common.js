@@ -1608,7 +1608,22 @@ const CommonRenderer = {
             if (devPct != null) devs.push(devPct);
         }
         if (!devs.length) return null;
-        return devs.reduce(function(a, b) { return a + b; }, 0) / devs.length;
+        var mean = devs.reduce(function(a, b) { return a + b; }, 0) / devs.length;
+        // ⚠️ UNIT SANITY GUARD. The price-vs-percent test above is a SUBSTRING
+        // MATCH on 'pct' in the field name, which is fragile by construction: a
+        // field named `peg_deviation` already holds a percent (0.1239) and gets
+        // treated as a PRICE, yielding |0.1239 - 1.1086| / 1.1086 * 100 = 85.8%
+        // — and 85.8% average deviation rates 2/10, a catastrophic misread
+        // rendered as a confident score.
+        //
+        // No stablecoin or NAV-share on this dashboard averages tens of percent
+        // off its reference for a week without being a headline failure, so a
+        // mean this large is far better explained by a unit mismatch than by the
+        // asset. Refuse rather than rate: pegRating then falls back and the chip
+        // says which basis it used. An unrated axis is honest; a 2/10 computed
+        // from a misread unit is not.
+        if (mean > 50) return null;
+        return mean;
     },
 
     liquidityRating(data) {
