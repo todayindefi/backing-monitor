@@ -1717,14 +1717,11 @@ const CommonRenderer = {
             // ⚠️ Both present is a DIVERGENCE, not something to reconcile
             // silently. Render the measurement and SAY the judgement disagrees;
             // a reader who cannot see the conflict cannot report it.
-            if (accepted && accepted.score !== band * 2) {
-                return this._ratingChipHtml(band) +
-                    '<span class="axis-rating r-warn" title="' + this._escapeAttr(
-                        'An authored Liquidity & Exit score of ' + accepted.score + '/10 also exists ' +
-                        'and DISAGREES with the computed band. The measurement is shown. ' + accepted.basis) +
-                    '"> ⚠️ authored ' + accepted.score + '/10 differs</span>';
-            }
-            return this._ratingChipHtml(band);
+            // Threshold and tooltip come from the SAME helpers the peg and
+            // backing axes use — the gap rule is defined once
+            // (AUTHORED_DIVERGENCE_MIN_GAP), not typed into three axes.
+            return this._ratingChipHtml(band, null, this._authoredTooltipNote(band, accepted)) +
+                this._divergenceChipHtml(band, accepted);
         }
         if (accepted) {
             // Say it is authored — the word carries provenance, not the scale (§6.5.1).
@@ -1861,6 +1858,43 @@ const CommonRenderer = {
         return null;
     },
 
+    // ⚠️ MINIMUM GAP BEFORE A DIVERGENCE IS A DISAGREEMENT RATHER THAN ARITHMETIC.
+    //
+    // Bands are 1-5 mapped x2, so they emit ONLY {2,4,6,8,10} — steps of 2.
+    // Authored scores use 0.5 steps across 1.0-10.0. Measured on this
+    // dashboard's own feeds: ZERO of the 6 authored scores currently published
+    // can be expressed by any band. An authored 7.0 sits exactly between bands 6
+    // and 8 and CANNOT match either, so its minimum possible gap is 1.0 on an
+    // asset where nobody disagrees about anything.
+    //
+    // On exact inequality the chip therefore fires on the GRID, not on a
+    // conflict — 14 of 15 backing axes would flag, which is noise that trains a
+    // reader to ignore the marker that matters.
+    //
+    // ⚠️ >= 2.0, NOT > 2.0. 2.0 is exactly one band step, and 6.0 IS expressible
+    // as a band — so an authored 6.0 against a band of 8 is a real one-band
+    // disagreement with nothing structural to explain it, and must fire. Only
+    // sub-2.0 gaps are the ones resolution accounts for. riskAnalyst's checker
+    // uses >= at the same boundary (e6afbdc); two tools sharing a nominal
+    // threshold and disagreeing at exactly 2.0 is its own trap.
+    AUTHORED_DIVERGENCE_MIN_GAP: 2.0,
+
+    // The authored value belongs in the tooltip EVEN WHEN THE CHIP IS SILENT.
+    // Suppressing the warning is a statement about noise, not about the number —
+    // a reader who opens the tooltip must still see both.
+    _authoredTooltipNote(band, authored) {
+        if (band == null || !authored || typeof authored.score !== 'number') return null;
+        var gap = Math.abs(authored.score - band * 2);
+        var head = 'Authored score for this axis: ' + authored.score + '/10 (' + authored.field + '), ' +
+            'against the measured band of ' + (band * 2) + '/10.';
+        if (gap >= this.AUTHORED_DIVERGENCE_MIN_GAP) return head;
+        return head + ' Gap of ' + gap.toFixed(1) + ' is below the ' +
+            this.AUTHORED_DIVERGENCE_MIN_GAP.toFixed(1) + '-point threshold and is NOT flagged: bands ' +
+            'can only emit even numbers, so an authored ' + authored.score + ' cannot match one ' +
+            'exactly. The difference here is resolution, not disagreement.' +
+            (authored.basis ? ' Basis: ' + authored.basis : '');
+    },
+
     // Appended to a band chip when an authored score disagrees with it.
     _divergenceChipHtml(band, authored) {
         // An authored score under a field name this renderer does not know is a
@@ -1874,7 +1908,8 @@ const CommonRenderer = {
                 '"> ⚠️ unread score field</span>';
         }
         if (band == null || !authored || typeof authored.score !== 'number') return '';
-        if (authored.score === band * 2) return '';   // agree on the /10 scale
+        // Below one full band step the difference is the grid, not a conflict.
+        if (Math.abs(authored.score - band * 2) < this.AUTHORED_DIVERGENCE_MIN_GAP) return '';
         var age = authored.ageHours != null ? ' Authored ' + authored.ageHours.toFixed(1) + 'h ago.' : '';
         return '<span class="axis-rating r-warn" title="' + this._escapeAttr(
             'An authored score of ' + authored.score + '/10 (field: ' + authored.field + ') DISAGREES ' +
@@ -2211,7 +2246,8 @@ const CommonRenderer = {
                                b.backing_score + '/10</span>';
                     }
                     var bBand = self.backingRating(data);
-                    return self._ratingChipHtml(bBand, self.backingUnratedReason(data)) +
+                    return self._ratingChipHtml(bBand, self.backingUnratedReason(data),
+                        self._authoredTooltipNote(bBand, self._authoredAxisScore(b, ["backing_score"]))) +
                         self._divergenceChipHtml(bBand, self._authoredAxisScore(b, ['backing_score']));
                 })(this)
             },
