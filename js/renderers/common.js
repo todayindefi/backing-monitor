@@ -1807,6 +1807,46 @@ const CommonRenderer = {
     // the legitimate case. So this requires collateral_ratio_basis — a sentence
     // the producer wrote saying no ratio is establishable. A null cannot carry
     // that; only a declaration can.
+    // ⚠️ A DISAGREEMENT A READER CANNOT SEE IS A DISAGREEMENT NOBODY CAN REPORT.
+    // Same treatment the Liquidity axis already gets: where a computed band AND
+    // an authored score both exist and differ, render the MEASUREMENT and say
+    // the judgement disagrees. Precedence is unchanged — the band stays the
+    // score, nothing is overridden, and this adds no new authority.
+    //
+    // ⚠️ Axis 1 has NO single field name: a stablecoin carries
+    // `peg_mechanism_score`, a vault-share carries `volatility_score`, and both
+    // are the same axis. Reading only one silently shows nothing on half the
+    // fleet — so the candidates are enumerated, not assumed.
+    _authoredAxisScore(block, names) {
+        block = block || {};
+        for (var i = 0; i < names.length; i++) {
+            var n = names[i];
+            if (typeof block[n] === 'number') {
+                return {
+                    score: block[n],
+                    field: n,
+                    basis: block[n + '_basis'] || block[n + '_source'] || null,
+                    status: block[n + '_status'] || null,
+                    ageHours: block[n + '_age_hours'] != null ? block[n + '_age_hours'] : null
+                };
+            }
+        }
+        return null;
+    },
+
+    // Appended to a band chip when an authored score disagrees with it.
+    _divergenceChipHtml(band, authored) {
+        if (band == null || !authored || typeof authored.score !== 'number') return '';
+        if (authored.score === band * 2) return '';   // agree on the /10 scale
+        var age = authored.ageHours != null ? ' Authored ' + authored.ageHours.toFixed(1) + 'h ago.' : '';
+        return '<span class="axis-rating r-warn" title="' + this._escapeAttr(
+            'An authored score of ' + authored.score + '/10 (field: ' + authored.field + ') DISAGREES ' +
+            'with the computed band shown. The measurement is what renders; the judgement is not ' +
+            'overridden, it is flagged so the conflict is visible.' + age +
+            (authored.basis ? ' Basis: ' + authored.basis : '')) +
+            '"> ⚠️ authored ' + authored.score + '/10 differs</span>';
+    },
+
     _authoredBackingRating(data) {
         var b = data.backing || {};
         if (typeof b.backing_score !== 'number') return null;
@@ -2125,11 +2165,14 @@ const CommonRenderer = {
                     // ⚠️ Say it is authored. A fallback rendered identically to a
                     // computed band would let a judgement pass as a measurement,
                     // which is the very thing the producer's rule guards against.
-                    return authored
-                        ? '<span class="axis-rating r-warn" title="' + self._escapeAttr(
-                              String(b.backing_score_basis || '')) + '">Authored ' +
-                          b.backing_score + '/10</span>'
-                        : self._ratingChipHtml(self.backingRating(data), self.backingUnratedReason(data));
+                    if (authored) {
+                        return '<span class="axis-rating r-warn" title="' + self._escapeAttr(
+                                   String(b.backing_score_basis || '')) + '">Authored ' +
+                               b.backing_score + '/10</span>';
+                    }
+                    var bBand = self.backingRating(data);
+                    return self._ratingChipHtml(bBand, self.backingUnratedReason(data)) +
+                        self._divergenceChipHtml(bBand, self._authoredAxisScore(b, ['backing_score']));
                 })(this)
             },
             {
@@ -2947,7 +2990,9 @@ const CommonRenderer = {
                 ? '<span class="axis-rating r-warn" title="' +
                   this._escapeAttr(String(bAuth.backing_score_basis || '')) +
                   '">Authored ' + bAuth.backing_score + '/10</span>'
-                : this._ratingChipHtml(this.backingRating(data))), data.backing);
+                : this._ratingChipHtml(this.backingRating(data)) +
+                  this._divergenceChipHtml(this.backingRating(data),
+                      this._authoredAxisScore(data.backing, ['backing_score']))), data.backing);
         // ⚠️ collateral_ratio_basis was rendered ONLY as a hover tooltip on a ⓘ
         // glyph beside the tile. For most assets that is a reasonable place for
         // a definition. For syzUSD it is not: its basis says the headline
