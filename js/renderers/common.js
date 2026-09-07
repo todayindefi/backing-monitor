@@ -1560,6 +1560,56 @@ const CommonRenderer = {
         return this._rate(data.liquidity ? data.liquidity.total_2pct_depth : null, th, 'high');
     },
 
+    // The liquidity twin of backing's authored path (§6.3, §6.5.1). susds is the
+    // case: its ladder returns an IDENTICAL 0.00bps from $1k to $1M and then a
+    // constant 1078.15bps across $5M-$100M, so liquidityRating correctly refuses
+    // a band — a fixed-rate redemption quote bounds nothing. Meanwhile a measured
+    // Liquidity & Exit judgement existed upstream with nowhere to render.
+    //
+    // ⚠️ PRECEDENCE: THE COMPUTED BAND ALWAYS WINS. An authored number silently
+    // overriding a measured one is the category error §1.1 names, and it is what
+    // put syrup's retired structural_score into a field named issuer_score on two
+    // live pages. Authored fills ONLY where the band is genuinely absent.
+    //
+    // ⚠️ And it requires a DECLARATION, not just a number: the producer must say
+    // the measurement is not derivable. Without that gate an authored score would
+    // paper over a feed that is merely broken, which is the opposite of the job.
+    _authoredLiquidity(data) {
+        var lq = data.liquidity || {};
+        if (typeof lq.liquidity_score !== 'number') return null;
+        var declared = lq.derived_score_status === 'not_computed' ||
+            lq.two_pct_depth_status === 'not_size_responsive' ||
+            lq.two_pct_depth_size_responsive === false;
+        if (!declared) return null;
+        var basis = lq.liquidity_score_basis || lq.liquidity_score_source;
+        if (!basis) return null;
+        return { score: lq.liquidity_score, basis: String(basis) };
+    },
+
+    _liquidityChipHtml(data) {
+        var band = this.liquidityRating(data);
+        var authored = this._authoredLiquidity(data);
+        if (band != null) {
+            // ⚠️ Both present is a DIVERGENCE, not something to reconcile
+            // silently. Render the measurement and SAY the judgement disagrees;
+            // a reader who cannot see the conflict cannot report it.
+            if (authored && authored.score !== band * 2) {
+                return this._ratingChipHtml(band) +
+                    '<span class="axis-rating r-warn" title="' + this._escapeAttr(
+                        'An authored Liquidity & Exit score of ' + authored.score + '/10 also exists ' +
+                        'and DISAGREES with the computed band. The measurement is shown. ' + authored.basis) +
+                    '"> ⚠️ authored ' + authored.score + '/10 differs</span>';
+            }
+            return this._ratingChipHtml(band);
+        }
+        if (authored) {
+            // Say it is authored — the word carries provenance, not the scale (§6.5.1).
+            return '<span class="axis-rating r-warn" title="' +
+                this._escapeAttr(authored.basis) + '">Authored ' + authored.score + '/10</span>';
+        }
+        return this._ratingChipHtml(null);
+    },
+
     _exitScopeHtml(liq) {
         liq = liq || {};
         var pe = liq.primary_exit;
@@ -1976,7 +2026,7 @@ const CommonRenderer = {
                 label: 'Liquidity & Exit',
                 valueHtml: depthTxt,
                 sub: liqSub,
-                chip: this._ratingChipHtml(this.liquidityRating(data))
+                chip: this._liquidityChipHtml(data)
             },
             {
                 label: 'Dependencies',
@@ -2869,7 +2919,7 @@ const CommonRenderer = {
         // from depth alone, which is why the tile states its scope.
         this._renderAxisHead('liquidity', 3, 'Liquidity & Exit',
             'venue depth & primary redemption',
-            this._ratingChipHtml(this.liquidityRating(data)), data.liquidity);
+            this._liquidityChipHtml(data), data.liquidity);
         this._renderDepthScope(data);
         this._renderLiquiditySection(data);
 
