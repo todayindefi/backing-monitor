@@ -1471,7 +1471,7 @@ const CommonRenderer = {
             'a 10-point score — the top band means "inside the healthy threshold", not "perfect".';
     },
 
-    _ratingChipHtml(rating, reason) {
+    _ratingChipHtml(rating, reason, extraNote) {
         var c = this._ratingChip(rating);
         if (rating == null && reason) {
             return '<span class="axis-rating ' + c.cls + '" title="' +
@@ -1480,8 +1480,12 @@ const CommonRenderer = {
         if (rating == null) {
             return '<span class="axis-rating ' + c.cls + '">' + c.text + '</span>';
         }
+        // `extraNote` appends what the band was computed FROM (e.g. 7-day average
+        // vs a single reading). A band and its basis are one fact, not two.
+        var title = this._ratingChipBasis(rating) + (extraNote ? ' — ' + extraNote : '');
+        var warn = (extraNote && extraNote.indexOf('⚠') >= 0) ? ' ⚠️' : '';
         return '<span class="axis-rating ' + c.cls + '" title="' +
-            this._escapeAttr(this._ratingChipBasis(rating)) + '">' + c.text + '</span>';
+            this._escapeAttr(title) + '">' + c.text + warn + '</span>';
     },
 
     // --- per-axis ratings ---
@@ -1490,10 +1494,90 @@ const CommonRenderer = {
         // Prefer 7-day average absolute deviation when peg-history is available;
         // else the latest premium/discount magnitude (As-built: history lives in
         // *_backing_history.json under peg.history_field).
-        var avg = this._pegAvgAbsDev(data, history, 7);
-        var dev = (avg != null) ? avg
-            : (data.peg.premium_discount_pct != null ? Math.abs(data.peg.premium_discount_pct) : null);
-        return this._rate(dev, th, 'low');
+        // Basis is tracked so the chip can SAY whether it is a 7-day average or a
+        // single reading — see _pegDevBasis. Same value as before; the difference
+        // is that the fallback is no longer invisible.
+        var basis = this._pegDevBasis(data, history, 7);
+        return this._rate(basis.value, th, 'low');
+    },
+
+    // Tooltip text for the peg chip: what the band was computed FROM.
+    pegRatingBasisNote(data, history) {
+        var b = this._pegDevBasis(data, history, 7);
+        if (b.value == null) return null;
+        var head = (b.basis === '7d')
+            ? 'Basis: 7-day average absolute deviation (' + b.value.toFixed(4) + '%).'
+            : '⚠️ Basis: ONE instantaneous reading (' + b.value.toFixed(4) + '%), not a 7-day average.';
+        return head + ' ' + (b.note || '');
+    },
+
+    // ⚠️ WHY THE BAND USES A 7-DAY AVERAGE AND WHY THE FALLBACK MUST BE VISIBLE.
+    // The peg axis is a DYNAMIC measured score by design (user decision
+    // 2026-09-07) — it reports how the peg is actually performing, not an
+    // editorial judgement of the mechanism. That is only honest if the window is
+    // real: a single instantaneous reading near par rates 10/10 on one tick.
+    //
+    // The averaging was already the design and SILENTLY WASN'T REACHING a third
+    // of the fleet — 7 of 21 assets fell through to one instantaneous reading and
+    // the chip looked identical either way. Three declared a `history_field`
+    // ('peg_market_price') that does not exist in their own history entries; four
+    // have no history file. A fallback nobody can see is a different metric
+    // wearing the same label.
+    //
+    // So the basis is now computed alongside the value and rendered. This does
+    // NOT guess a replacement field — deriving what a producer should declare is
+    // the mis-scaling trap this codebase keeps hitting. It reports the gap.
+    _pegDevBasis(data, history, days) {
+        var peg = data.peg || {};
+        var declared = peg.history_field || 'peg_premium_discount_pct';
+        var cur = peg.premium_discount_pct != null ? Math.abs(peg.premium_discount_pct) : null;
+        var out = { value: null, basis: 'instant', n: 0, note: null, degenerate: false };
+
+        if (!history || !Array.isArray(history.entries) || !history.entries.length) {
+            out.value = cur;
+            out.note = 'No peg history is published for this asset, so the band is a SINGLE ' +
+                'instantaneous reading rather than a 7-day average. One tick near par rates ' +
+                'the same as a week of stability.';
+            return out;
+        }
+        // Is the declared field actually in the entries?
+        var tail = history.entries.slice(-5), present = false;
+        for (var i = 0; i < tail.length; i++) {
+            if (tail[i] && tail[i][declared] != null) { present = true; break; }
+        }
+        if (!present) {
+            out.value = cur;
+            out.note = 'The feed declares history_field "' + declared + '", which is ABSENT from ' +
+                'its own history entries — so the 7-day average could not be computed and the band ' +
+                'is a single instantaneous reading. This is a producer-side field-name mismatch, ' +
+                'not a missing history.';
+            return out;
+        }
+        // ⚠️ Degenerate: averaging the NAV reference against itself measures NAV
+        // ACCRUAL over the window, not deviation from it. Reported, not silently
+        // repaired — picking a substitute field is the producer's call.
+        if (declared === 'nav' || declared === peg.nav_field) {
+            out.degenerate = true;
+        }
+        var avg = this._pegAvgAbsDev(data, history, days);
+        if (avg == null) {
+            out.value = cur;
+            out.note = 'Peg history is present but yielded no usable readings in the window; ' +
+                'the band is a single instantaneous reading.';
+            return out;
+        }
+        out.value = avg; out.basis = '7d';
+        out.n = history.entries.length;
+        if (out.degenerate) {
+            out.note = '⚠️ The 7-day average is computed from "' + declared + '" against the ' +
+                'current NAV, so for a NAV-tracking asset it measures NAV ACCRUAL over the week ' +
+                'rather than deviation from NAV. Treat this band as indicative until the feed ' +
+                'declares a market-price field.';
+        } else {
+            out.note = '7-day average absolute deviation, the basis for this band — not a single ' +
+                'reading. A momentary print near par cannot lift it on its own.';
+        }
+        return out;
     },
 
     _pegAvgAbsDev(data, history, days) {
@@ -2026,7 +2110,7 @@ const CommonRenderer = {
                 label: 'Peg',
                 valueHtml: '<span class="' + pegCls + '">' + this.pegPctText(pegPct, 2) + ' ' + pegArrow + '</span>',
                 sub: 'premium / discount',
-                chip: this._ratingChipHtml(this.pegRating(data, history))
+                chip: this._ratingChipHtml(this.pegRating(data, history), null, this.pegRatingBasisNote(data, history))
             },
             {
                 label: 'Backing',
@@ -2838,7 +2922,7 @@ const CommonRenderer = {
         // 1 · Peg
         this._renderAxisHead('peg', 1, 'Peg',
             (data.peg.source ? 'market vs NAV · ' + data.peg.source : 'market vs NAV'),
-            this._ratingChipHtml(this.pegRating(data, history)), data.peg);
+            this._ratingChipHtml(this.pegRating(data, history), null, this.pegRatingBasisNote(data, history)), data.peg);
         this._renderPegSection(data, history);
 
         // ⚠️ 2 is BACKING and 3 is LIQUIDITY — swapped from the original frame.
