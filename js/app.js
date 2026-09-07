@@ -5,6 +5,23 @@
 
 var REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 
+// ⚠️ PUBLICATION IS EXPLICIT — user decision 2026-09-07. An asset appears in
+// the grid ONLY if it carries `published: true`. Absence is the staged state.
+//
+// It used to be the other way round: live unless `staged: true` was present,
+// so a registered slug went into the index the moment a producer's file
+// landed, and NOBODY had to decide. usdm published that way on 2026-09-07 —
+// accurate work, but chosen by no one. The absence of a marker is a bad way
+// to express consent.
+//
+// ⚠️ STAGED MEANS UNLISTED, NOT PRIVATE. The page and its JSON are served
+// publicly and always were; staging only removes the link from the index.
+// Do not describe it to anyone as a privacy or embargo control.
+//
+// One flag, not two: `staged` was REMOVED rather than kept alongside this.
+// Two fields meaning one thing is how they drift apart.
+function isPublished(a) { return !!a && a.published === true; }
+
 // Cache-bust JSON fetches to defeat Fastly's bare-URL stickiness on GH Pages.
 // Bumps once per hour so per-page-load fetches still hit the CDN edge most
 // of the time (data syncs at xx:45 hourly), but a stale-by-hour upper bound
@@ -106,15 +123,15 @@ async function renderIndex() {
         var assets = await resp.json();
 
         // ⚠️ STAGED ASSETS ARE OMITTED FROM THE INDEX, NOT FROM THE SITE.
-        // An asset marked `staged: true` renders at ?asset=<slug> so it can be
-        // built and reviewed, and does NOT appear in the grid, so nothing links
-        // to a page that is not finished. Mirrors tidresearch's
-        // `production: false`, which is the convention the reports already use.
+        // Only assets carrying `published: true` appear in the grid — see
+        // isPublished(). Everything else renders at ?asset=<slug> and is absent
+        // from the index, so nothing LINKS to it. Mirrors tidresearch's
+        // `production: false`, which the reports already use.
         //
         // ⚠️ The page itself carries a STAGED banner — see renderAsset. A page
         // that is incomplete and LOOKS finished is the failure this whole
         // dashboard keeps re-learning, and an unlinked URL is still a URL.
-        assets = assets.filter(function(a) { return a && a.staged !== true; });
+        assets = assets.filter(isPublished);
 
         // Try to fetch latest data for each asset to show CR on cards.
         // `data_source` lets a sibling view (e.g. mstr) reuse another
@@ -258,7 +275,7 @@ async function renderAsset(slug) {
             // not. Over that window the generic "Failed to load data" reads as a
             // defect in the dashboard rather than as work in progress, and tells a
             // reader nothing about what is missing or that it is expected.
-            if (assetMeta && assetMeta.staged === true && dataResp.status === 404) {
+            if (assetMeta && !isPublished(assetMeta) && dataResp.status === 404) {
                 showStagedPending(slug, sourceSlug);
                 return;
             }
@@ -348,14 +365,18 @@ async function renderAsset(slug) {
             var el = document.getElementById('staged-banner');
             if (!el) return;
             el.innerHTML = '';
-            if (!assetMeta || assetMeta.staged !== true) return;
+            if (!assetMeta || isPublished(assetMeta)) return;
             el.innerHTML =
                 '<div class="panel" style="border-left:4px solid #b45309;">' +
                     '<div class="text-sm" style="line-height:1.5;">' +
-                    '<span class="font-semibold text-amber-700">\u26a0\ufe0f STAGED \u2014 not finished, not linked.</span> ' +
-                    'This page is under construction and is deliberately absent from the asset index. ' +
-                    'Axes may be incomplete, unrated, or wrong. ' +
-                    'Do not cite figures from it until it is published.' +
+                    // \u26a0\ufe0f Says NOT LINKED, not "unfinished". Since publication became
+                    // explicit, a staged page may be complete and simply awaiting a
+                    // decision \u2014 asserting it is under construction would be a claim
+                    // the renderer cannot check.
+                    '<span class="font-semibold text-amber-700">\u26a0\ufe0f STAGED \u2014 not linked from the index.</span> ' +
+                    'This page is deliberately absent from the asset index and has not been ' +
+                    'published. It may be incomplete, unrated, or still under review \u2014 ' +
+                    'axes may be wrong. Do not cite figures from it until it is published.' +
                     '</div></div>';
         })();
 

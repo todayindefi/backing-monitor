@@ -34,7 +34,9 @@ assets = load(os.path.join(DATA, 'assets.json')) or []
 if isinstance(assets, dict): assets = assets.get('assets', [])
 slugs = {a.get('slug') for a in assets}
 sources = {a.get('slug'): (a.get('data_source') or a.get('slug')) for a in assets}
-staged = {a.get('slug') for a in assets if a.get('staged') is True}
+# ⚠️ Publication is EXPLICIT: `published: true` puts an asset in the grid, and
+# its ABSENCE is the staged state (user decision 2026-09-07, js/app.js).
+staged = {a.get('slug') for a in assets if a.get('published') is not True}
 
 for slug in sorted(slugs):
     src = sources[slug]
@@ -485,6 +487,25 @@ if not slugs:
     fails.append('assets.json parsed to ZERO assets — every check below is '
                  'vacuously satisfied. This is a broken manifest, not a clean run.')
     print('  FAIL  ' + fails[-1])
+
+# ⚠️ STANDING SURFACE FOR THE STAGED SET — the counterweight to explicit
+# publication. Both defaults fail SILENTLY, in opposite directions: the old one
+# published work nobody chose to publish; this one leaves finished work unlinked
+# and nobody notices, because nobody sees the thing that is not there.
+#
+# This repo has been bitten by the invisible direction twice — Ethena's feeds
+# sat finished-but-uncopied until 4975b2368, and sync_and_push.sh:91 carries the
+# scar of a hand-typed loop that ran for exactly one asset. Neither was caught
+# by anyone noticing; both took a deliberate audit.
+#
+# So the staged set is PRINTED EVERY RUN, not warned on. A warning that is
+# always lit is a warning nobody reads, and staging is a legitimate state.
+if staged:
+    print(f'\n  STAGED ({len(staged)}) — built, reachable by direct link, NOT in the index. '
+          f'Awaiting a publish decision:')
+    for slug in sorted(staged):
+        print(f'    · {slug}  →  ?asset={slug}')
+    print('    Publish by adding "published": true to its data/assets.json entry.')
 
 print(f'\n{len(fails)} failures, {len(warns)} warnings across {len(slugs)} assets.')
 sys.exit(1 if fails else 0)
