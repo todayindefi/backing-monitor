@@ -1681,12 +1681,37 @@ const CommonRenderer = {
     // a band" and "an authored score arrived malformed and was dropped" are
     // opposite facts, and this is the same rule §6.3 applies to authored scores —
     // turned on this gate. The reason rides in the tooltip.
-    _authoredLiquidity(data) {
+    // ⚠️ `requireDeclaration` FALSE for the DIVERGENCE case, TRUE for FILL, and
+    // the asymmetry is the point rather than an oversight (riskAnalyst, 2026-09-08).
+    //
+    //   FILL     authored REPLACES an absent band  -> declaration REQUIRED. Without
+    //            it an authored number papers over a feed that is merely broken,
+    //            and broken and unmeasurable are opposite facts.
+    //   DIVERGE  authored shown BESIDE a band      -> no declaration needed. Nothing
+    //            is being papered over: the measurement is rendered right next to
+    //            it and the reader can see both numbers.
+    //
+    // The declaration's whole justification is "this could hide a broken feed",
+    // and that justification does not survive when the feed's own number is on
+    // screen beside it. Applying one condition to both cases silences a real
+    // conflict on any asset whose depth IS derivable — which is exactly the
+    // situation the divergence chip exists for.
+    //
+    // ⚠️ The BASIS requirement stays in both paths. A judgement with no stated
+    // reasoning cannot be assessed by a reader whether or not a band sits beside it.
+    _authoredLiquidity(data, requireDeclaration) {
+        if (requireDeclaration === undefined) requireDeclaration = true;
         var lq = data.liquidity || {};
         if (typeof lq.liquidity_score !== 'number') return null;
         var declared = lq.derived_score_status === 'not_computed' ||
             lq.two_pct_depth_status === 'not_size_responsive' ||
             lq.two_pct_depth_size_responsive === false;
+        if (!declared && !requireDeclaration) {
+            var b0 = lq.liquidity_score_basis || lq.liquidity_score_source;
+            if (!b0) return { rejected: 'An authored liquidity score of ' + lq.liquidity_score +
+                '/10 was supplied with no basis or source string, so it was not rendered.' };
+            return { score: lq.liquidity_score, basis: String(b0) };
+        }
         if (!declared) {
             return { rejected: 'An authored liquidity score of ' + lq.liquidity_score +
                 '/10 was supplied WITHOUT a non-derivability declaration ' +
@@ -1707,7 +1732,10 @@ const CommonRenderer = {
 
     _liquidityChipHtml(data) {
         var band = this.liquidityRating(data);
-        var authored = this._authoredLiquidity(data);
+        // ⚠️ Declaration required ONLY when the authored score would FILL an
+        // absent band. Beside a rendered measurement it is a divergence, and the
+        // gate's justification does not apply — see _authoredLiquidity.
+        var authored = this._authoredLiquidity(data, band == null);
         // ⚠️ `authored` has THREE shapes: accepted {score,basis}, {rejected},
         // and null. Every branch below must test `.score`, not truthiness — a
         // rejected object is truthy and would render "Authored undefined/10".
