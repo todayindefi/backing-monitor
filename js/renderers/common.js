@@ -4791,10 +4791,19 @@ const CommonRenderer = {
             // So the whole note collapses under a named toggle until the producer
             // supplies a one-line form. Coverage stays one click from the table it
             // qualifies, and the table stays first.
+            // ⚠️ `coverage_summary` IS THE FACE, `coverage_note` IS THE DETAIL.
+            // The one-line form earns the position beside the walk date because a
+            // scope limit qualifies every row of the table below it; the 1,287-char
+            // note does not, and putting it there once pushed the measurement under
+            // a wall of prose.
+            (c.coverage_summary
+                ? '<div class="tw-coverage">' + esc(c.coverage_summary) + '</div>'
+                : '') +
             (c.coverage_note
                 ? '<details class="tw-scope"><summary class="tw-code-toggle">' +
-                  'Coverage \u2014 which chains this walk covers</summary>' +
-                  '<div class="tw-sub">' + esc(c.coverage_note) + '</div></details>'
+                  (c.coverage_summary ? 'Coverage \u2014 full scope statement'
+                                      : 'Coverage \u2014 which chains this walk covers') +
+                  '</summary><div class="tw-sub">' + esc(c.coverage_note) + '</div></details>'
                 : '') +
             (layerRows
                 ? '<div class="tw-tablewrap"><table class="tw-table"><thead><tr>' +
