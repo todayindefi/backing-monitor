@@ -1,0 +1,28 @@
+{
+ "schema_version": "contract-overlay/1",
+ "producer": "riskanalyst",
+ "asset": "apxusd",
+ "as_of": "2026-09-10T00:00:00Z",
+ "contract": {
+  "structural_score": 4.5,
+  "structural_score_source": "riskAnalyst:authored",
+  "structural_score_generated_at": "2026-09-10T00:00:00Z",
+  "structural_score_basis": "Axis 5 = CONTRACT & ADMIN. HELD at 4.5 — the number does not move, but it now rests on a VERIFIED per-role delay structure rather than on an unexamined prior. ⚠️ THE REASON THIS NEEDED CHECKING AT ALL: apyUSD's score was cut to 2.5 on a reading of `getTargetFunctionRole` returning ROLE 0, and a negative control showed 0x…dEaD with a fabricated selector returns role 0 too — OpenZeppelin AccessManager's UNCONFIGURED DEFAULT. That cut was retracted. ⚠️ THE ARTIFACT CONTAMINATES ROLE-0 READINGS ONLY, AND apxUSD's WALK CITES NON-ZERO CONFIGURED ROLES — so it is unaffected, and that is established rather than assumed. MEASURED 2026-09-10 on AccessManager 0xe167330e2eac88666de253e9607c6d9ae0ca2824, per holder: role 24 (upgrade) -> MAINTAINER Safe at 259,200s = 72h. role 21 (pause) -> MAINTAINER Safe at 0s. role 22 (unpause) -> MAINTAINER Safe at 14,400s = 4h. ⚠️ THE DELAYS DIFFER PER ROLE, WHICH IS THE PROOF THEY ARE DELIBERATE: an unconfigured default returns the SAME value everywhere. 72h / 0 / 4h is a configuration, not a fallback. ✅ AND THE CONTROLS DISCRIMINATE ON BOTH AXES: 0x…dEaD has NO ACCESS to any of the three, and so does the ADMIN Safe — the 4-of-6 that holds the unconfigured role 0 has NO CONFIGURED OPERATIONAL ROLE AT ALL. Two different non-holders returning 'no access' while the MAINTAINER Safe returns three different delays is a check that discriminates rather than one that says yes to everything. ✅ A FAVOURABLE DESIGN DETAIL WORTH RECORDING BECAUSE IT IS EASY TO MISS: PAUSE IS INSTANT AND UNPAUSE TAKES 4 HOURS. The MAINTAINER Safe can halt immediately but needs four hours to restart. That asymmetry runs in the FAIL-SAFE direction and is the opposite of the usual finding — most assets we scored today can act fast in the direction that harms holders. WHY 4.5 AND NOT HIGHER: the upgrade path reaches FULL at a 4-of-6 Safe, `pause` is genuinely undelayed at full reach, and coverage is ethereum only against three declared chains. WHY NOT LOWER: a REAL 72h on the upgrade path, per-role configuration rather than a blanket admin, and no undelayed path to upgrade or mint.",
+  "coverage_summary": "Ethereum only; apxUSD declares eth/base/bnb. ⚠️ NOT stated as a fraction — no feed publishes supply_by_chain.",
+  "coverage_note": "security_analyst hand-walk, 4 layers, ethereum. ⚠️ COVERAGE IS NOT SUPPLY-WEIGHTED AND MUST NOT BE PRESENTED AS IF IT WERE: apxUSD declares eth/base/bnb and no feed publishes supply_by_chain or supply_scope, so the share ethereum represents DOES NOT EXIST as a number. Converting 'ethereum only' into a percentage would repeat the sUSDai error, where USDai's 99.72% was asserted about a sibling that publishes no split. ⚠️ And the unmeasured part can be the WORST part — usdg's Solana leg turned out to hold strictly more power than any EVM leg.",
+  "code_facts": [
+   "role 24 (contract-upgrade) -> Apyx MAINTAINER Safe, execution delay 259,200s = 72h. The walk's 72h is CONFIRMED live per-holder, not inferred from a layer summary. [riskAnalyst 2026-09-10]",
+   "⚠️ role 21 (pause) -> MAINTAINER Safe at execution delay ZERO. Pause is genuinely undelayed at full reach, and this is a configured role rather than a default. [riskAnalyst 2026-09-10]",
+   "✅ role 22 (unpause) -> MAINTAINER Safe at 14,400s = 4h. PAUSE INSTANT, UNPAUSE FOUR HOURS — a deliberate fail-safe asymmetry: halt fast, restart slow. [riskAnalyst 2026-09-10]",
+   "⚠️ THE ADMIN SAFE (4-of-6) HAS NO ACCESS TO ANY CONFIGURED ROLE — 24, 21 and 22 all return no access for it. Its role-0 holding is the UNCONFIGURED DEFAULT, which is precisely what made the apyUSD bypass reading unsound. [riskAnalyst 2026-09-10]",
+   "✅ CONTROLS: 0x…dEaD returns no access on all three roles, and the delays DIFFER per role (72h/0/4h). An unconfigured default returns the same value everywhere; differing values prove configuration. [riskAnalyst 2026-09-10]",
+   "⚠️ getRoleGrantDelay = 604800s (7d) on all three roles. THAT IS THE DELAY TO GRANT A ROLE TO A NEW PARTY, not the delay for a holder to USE it. A reader seeing 604800 beside a role would infer a week's protection that does not apply to the existing holder. [riskAnalyst 2026-09-10]",
+   "A `parameter` layer at 24h is recorded in the walk and was NOT independently probed here. Carried, not verified. [security_analyst 2026-09-09]"
+  ],
+  "cross_axis": [
+   "⚠️ apxUSD's STRC concentration — 86.7% of backing on the issuer's own netted basis — is AXIS 2 and AXIS 4, not here. Same fact, correct axes; pricing it again would double-count.",
+   "⚠️ `backing_attestation.strcx_safe` (3-of-6) and its signing key sit in an ATTESTATION context. Whether either holds admin over the token is UNESTABLISHED and is NOT priced as an admin root.",
+   "⚠️ apyUSD is capped at this score by spec line 50 and currently sits EQUAL at 4.5. Its own walk still records timelock: none on three ADMIN-Safe paths, which rests on the role-0 artifact and is queued for re-derivation. If that re-derive lowers apyUSD on merit, it moves BELOW this — a wrapper may score under its underlying."
+  ]
+ }
+}
