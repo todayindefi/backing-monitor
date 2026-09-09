@@ -1,0 +1,24 @@
+{
+ "schema_version": "contract-overlay/1",
+ "producer": "riskanalyst",
+ "asset": "syzusd",
+ "as_of": "2026-09-09T00:00:00Z",
+ "contract": {
+  "structural_score": 2.0,
+  "structural_score_source": "riskAnalyst:authored",
+  "structural_score_generated_at": "2026-09-09T00:00:00Z",
+  "structural_score_basis": "Axis 5 = CONTRACT & ADMIN, both halves. HELD at 2.0 and RE-READ 2026-09-09 against security_analyst's 2026-08-30 hand-walk rather than transported unchanged. ⚠️ THE WALK CORROBORATES THE MARK INDEPENDENTLY AND SHARPENS IT IN ONE PLACE. Our own basis was multi-layer construction — vault wrapper + active strategy + custodial cross-chain bridge — with Monad called out as significantly worse (NOT actually ERC-4626 despite the docs, single-EOA upgradeable proxy with full takeover authority, no functional underlying on the same chain). ⚠️ WHAT THE WALK ADDS, AND IT UNDERSTATES NOTHING TO SAY SO: all THREE walked chains — ethereum, monad and plasma — carry a contract-upgrade path via `owner` at `timelock: none` with `reach: full`. So the undelayed full-reach upgrade surface is NOT a Monad peculiarity; it is the shape on every chain measured. Our row's 'Monad significantly worse' framing is still right on its OTHER grounds (the ERC-4626 misdescription and the absent local underlying) but should not be read as implying ethereum and plasma are gated. ⚠️ 2.0 rather than lower because the paths, while undelayed, are MEASURED and named — this is a known open surface, not an unknown one — and the redemption leg on Plasma is genuinely open and verified (permissionless ERC-4626 `redeem()`, no cooldown, no whitelist, not paused, no per-user cap). ⚠️ NOT HIGHER because three full-reach upgrade paths with no established delay on any of them is precisely what this axis exists to price, and the holders behind those `owner` paths are not established either — no threshold, no owner count, no holder kind in any of the three rows.",
+  "authority_note": "⚠️ The authority half is security_analyst's HAND-WALK, observed 2026-08-30 (method: hand-walk), 3 layers, all contract-upgrade, on ETHEREUM, MONAD and PLASMA, 0 unmeasured layers. Their headline is 'No timelock established on any measured authority layer' and it is accurate: every path reads `timelock: none`, `reach: full`, via `owner`. ⚠️ CHAIN COVERAGE IS PARTIAL AND MUST NOT BE READ AS COMPLETE: syzUSD declares SEVEN chains (plasma, monad, sei, pharos, eth, berachain, hyperevm) and THREE were walked. The four unwalked — sei, pharos, berachain, hyperevm — are EXCLUDED, NOT CLEAN. The finding is consistent across all three measured, which makes it unlikely the others differ in kind, but unlikely is not measured. ⚠️ ONE ITEM UNRESOLVED IN THEIR WALK, CARRIED HERE UNPRICED: what 0x4ea00dc0…89ae DOES on plasma is not established. It holds the highest nonce of the three chains there (84) while NOT holding the plasma upgrade path. Establishing its role needs a transaction walk that was not run. An unexplained high-activity address adjacent to an undelayed upgrade surface is worth naming; it is not scored, because nothing about it has been established.",
+  "code_facts": [
+   "Three contract-upgrade paths — ethereum, monad, plasma — each via `owner`, each `timelock: none`, each `reach: full`. No delay established on any measured layer. [security_analyst 2026-08-30, hand-walk]",
+   "⚠️ Monad carries defects beyond the admin path: NOT actually ERC-4626 despite the documentation, single-EOA upgradeable proxy with full takeover authority, and no functional underlying on the same chain. This is why the internal Monad chain-override is 1.5 against a 2.0 default. [riskAnalyst]",
+   "Multi-layer construction — vault wrapper + active strategy + custodial cross-chain bridge — so the contract surface is wider than a plain ERC-4626 wrapper. [riskAnalyst]",
+   "✅ Counterweight, verified on-chain 2026-08-30: the Plasma redemption path is genuinely open — permissionless ERC-4626 `redeem()`, `paused() false`, no cooldown, `maxRedeem` identical to `balanceOf` (no per-user cap), and whitelist/blacklist selectors all REVERT (no gating). An open exit does not offset an undelayed upgrade path, but it is a real contract fact and is recorded rather than omitted. [riskAnalyst]"
+  ],
+  "cross_axis": [
+   "⚠️ The OPEN REDEMPTION finding above is priced on REDEMPTION (Plasma 4.0 vs a 2.0 default), NOT here. It is recorded in code_facts as a contract observation only — same fact, correct axis, do not price it twice.",
+   "⚠️ Backing quality, the junior-tranche question and the related-party attestation problem belong to AXIS 2 and ISSUER respectively. Nothing about reserve composition or attestation independence is credited or docked on this axis.",
+   "⚠️ Audits and code lineage do NOT offset an authority path. Three undelayed full-reach upgrade paths are not netted against anything in code_facts."
+  ]
+ }
+}

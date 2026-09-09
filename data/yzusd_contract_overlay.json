@@ -1,0 +1,24 @@
+{
+ "schema_version": "contract-overlay/1",
+ "producer": "riskanalyst",
+ "asset": "yzusd",
+ "as_of": "2026-09-09T00:00:00Z",
+ "contract": {
+  "structural_score": 5.0,
+  "structural_score_source": "riskAnalyst:authored",
+  "structural_score_generated_at": "2026-09-09T00:00:00Z",
+  "structural_score_basis": "Axis 5 = CONTRACT & ADMIN, both halves. HELD at 5.0 — the substance was authored 2026-08-30 and RE-READ 2026-09-09 against security_analyst's 2026-09-06 hand-walk rather than transported unchanged. The walk CONFIRMS the two facts the 5.0 rests on, independently: both `owner()` and the ProxyAdmin terminate at ONE 48h TimelockController on Plasma — no bare key over yzUSD — and the timelock has NO code-enforced floor (`timelock_floor: none` in their walk; our own read found `MINIMUM_DELAY()` and `MIN_DELAY()` both revert). ⚠️ 48h is therefore a SETTING, not a floor: `updateDelay` can reduce it, though that change must itself clear the current 48h — so it bounds HASTE, not INTENT. ⚠️ THE DOCK THAT KEEPS THIS OFF A HIGHER MARK IS STILL OPEN: the timelock's proposer / executor / canceller set is NOT ESTABLISHED. The 2026-09-06 walk resolves the upgrade PATHS but not the ROLE HOLDERS — its path rows carry no threshold or owner count. A 48h delay whose proposer and canceller may be the same party is a notice period, not an independent veto, and that remains unmeasured.",
+  "authority_note": "⚠️ The authority half is security_analyst's HAND-WALK, observed 2026-09-06 (method: hand-walk), 1 layer: contract-upgrade on PLASMA, terminal timelock 48h, reach full, 0 unmeasured layers. ⚠️ CHAIN COVERAGE IS COMPLETE, and that is worth stating because it is not true of this asset's siblings: yzUSD declares PLASMA ONLY, and plasma is what was walked — 1 of 1. Their headline 'All MEASURED authority sits behind a 48h timelock' is accurate here rather than scope-limited, because both measured paths (via `owner` and via `eip1967_admin`) genuinely read 48h. ⚠️ ONE ITEM UNRESOLVED IN THEIR WALK AND CARRIED HERE RATHER THAN SCORED: the yzUSD implementation MISMATCHES the requesting brief — the brief's 2026-08-30 hint gives 0x32d7d5bf…5cfe, the EIP-1967 slot read 0x8e023928…8ea5 on 2026-09-06. That is EITHER an upgrade executed between the two dates (the timelock being exercised, which is informative rather than adverse) OR a stale brief. Not priced in either direction, because which one it is has not been established.",
+  "code_facts": [
+   "Both upgrade paths — `owner()` and the EIP-1967 ProxyAdmin — terminate at a single TimelockController on Plasma. No bare key holds upgrade authority over yzUSD. [security_analyst 2026-09-06, corroborating riskAnalyst 2026-08-30]",
+   "⚠️ The 48h delay is a SETTING, not a code-enforced floor: `MINIMUM_DELAY()` and `MIN_DELAY()` both revert, and the walk records `timelock_floor: none`. Two independent reads, same conclusion. [riskAnalyst 2026-08-30 + security_analyst 2026-09-06]",
+   "⚠️ The timelock's PROPOSER / EXECUTOR / CANCELLER set is not established — the hand-walk resolves paths, not role holders. A delay whose proposer and canceller are the same party is notice, not veto. [riskAnalyst assessment]",
+   "⚠️ Implementation address mismatch vs the requesting brief is OPEN and deliberately unpriced — upgrade-executed and stale-brief are both consistent with it. [security_analyst 2026-09-06, unresolved]"
+  ],
+  "cross_axis": [
+   "⚠️ The RELATED-PARTY attestation problem — Accountable is the sole source of every backing figure and its founder is a Yuzu investor — is priced on ISSUER (4.0), NOT here. Same fact, correct axis; do not price it twice.",
+   "⚠️ Backing composition and the junior-tranche question are AXIS 2, not this axis. Nothing about reserve quality is credited or docked here.",
+   "⚠️ Audits and code lineage do NOT offset an authority path. The code half is recorded above and is not netted against the unestablished role set."
+  ]
+ }
+}
