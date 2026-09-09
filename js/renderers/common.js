@@ -1897,7 +1897,7 @@ const CommonRenderer = {
                         ' and ' + this.formatCurrency(br[1]), 'text-slate-500');
         }
         if (st === 'not_size_responsive' || liq.two_pct_depth_size_responsive === false) {
-            return wrap('quote does not vary with size \u2014 not a depth curve', 'text-amber-700');
+            return wrap('no depth curve \u2014 this figure bounds nothing', 'text-amber-700');
         }
         if (st === 'quote_failed') {
             return wrap('floor \u2014 the deeper rung returned a broken route', 'text-amber-700');
@@ -4068,8 +4068,20 @@ const CommonRenderer = {
                     // honest reading is "≥$1.0M". It understates, which makes
                     // the liquidity rating harsher than the measurement warrants.
                     '<div class="text-lg font-bold">' +
+                        // ⚠️ NOT_SIZE_RESPONSIVE MUST NOT WEAR FLOOR NOTATION, and this
+                        // panel was doing it while the band tile guarded correctly — the
+                        // same asset rendered "$50.0M" on the tile and "≥$50.0M" here.
+                        // A floor says "AT LEAST this much" and is a real bound; USDS's
+                        // $50M says only that the call returns the same answer at any
+                        // size. The tile's own comment spells out the consequence:
+                        // "≥$50.0M would put USDS above crvUSD's genuinely bracketed
+                        // $25M" — the worst-measured asset rendering as the deepest.
+                        // Found by riskAnalyst reading a truncated comment and ASKING
+                        // rather than asserting.
                         (liq.total_2pct_depth != null
-                            ? (liq.total_2pct_depth_is_floor === true ? '\u2265' : '') +
+                            ? ((liq.total_2pct_depth_is_floor === true &&
+                                liq.two_pct_depth_status !== 'not_size_responsive' &&
+                                liq.two_pct_depth_size_responsive !== false) ? '\u2265' : '') +
                               this.formatCurrency(liq.total_2pct_depth)
                             : 'n/a') + '</div>' +
                     // ⚠️ Four kinds of number wore the same label. The producer
