@@ -1760,6 +1760,51 @@ const CommonRenderer = {
         return this._ratingChipHtml(null, authored ? authored.rejected : null);
     },
 
+    // ⚠️ A LAYER SUMMARY CAN HIDE A PATH OF DIFFERENT CHARACTER, and until now
+    // this table rendered `layers` and NEVER read `.paths`. 13 layers across 7
+    // assets carry paths whose (reach, timelock) differ from the row shown.
+    //
+    // This is not cosmetic. I read crvUSD's layer-level `reach: full` and
+    // attributed it to BOTH paths, then told my user "five keys can mint on a
+    // $244M stablecoin immediately" — the walk said `reach: bounded` and
+    // "not represented as a full arbitrary-mint or upgrade path". riskAnalyst
+    // caught it. The per-path data was right; the page could not show it, so
+    // they carried the branch in their overlay prose with the note "CARRIED HERE
+    // BECAUSE IT RENDERS NOWHERE ELSE". A producer working around a consumer bug
+    // in published copy is the signal to fix the consumer.
+    //
+    // ⚠️ Only DIVERGENT paths render. Where every path matches the summary the
+    // row is complete already and sub-rows would be noise — most layers have one
+    // path, and a table that repeats itself teaches readers to skip it.
+    _divergentPathRows(l, esc) {
+        var paths = Array.isArray(l.paths) ? l.paths : [];
+        if (paths.length < 2) return '';
+        var shapes = {};
+        paths.forEach(function(p) { shapes[(p.reach || '?') + '|' + String(p.timelock)] = 1; });
+        if (Object.keys(shapes).length < 2) return '';
+        return paths.map(function(p) {
+            var tl = String(p.timelock == null ? '' : p.timelock);
+            var undelayed = !tl || tl === 'none';
+            var unknown = tl === 'unresolved';
+            // ⚠️ `terminal` distinguishes a PARTY from a CONTRACT, and conflating
+            // them is how an architectural ward reads as a discretionary actor.
+            // usds's undelayed full-reach path terminates in UsdsJoin — the join
+            // adapter must hold wards to mint. Naming the terminal kind lets a
+            // reader tell that from a key-holder without the renderer judging it.
+            var who = p.name || p.holder_kind || p.terminal || '—';
+            return '<tr class="tw-path">' +
+                '<td style="padding-left:1.5em;opacity:.75;">↳ ' + esc(who) +
+                    (p.terminal ? '<span class="tw-sub"> (' + esc(p.terminal) + ')</span>' : '') + '</td>' +
+                '<td>' + (p.threshold != null ? esc(String(p.threshold)) +
+                    (p.owners != null ? ' of ' + esc(String(p.owners)) : '') : '—') + '</td>' +
+                '<td class="' + (unknown ? 'tw-unknown' : (undelayed ? 'tw-bad' : 'tw-ok')) + '">' +
+                    (unknown ? '\u26a0\ufe0f not measured' : (undelayed ? '\u26a0\ufe0f none' : esc(tl))) + '</td>' +
+                '<td>' + esc(p.via || '—') + '</td>' +
+                '<td>' + esc(p.reach || '—') + '</td>' +
+            '</tr>';
+        }).join('');
+    },
+
     _exitScopeHtml(liq) {
         liq = liq || {};
         var pe = liq.primary_exit;
@@ -4649,7 +4694,7 @@ const CommonRenderer = {
                 '</td>' +
                 '<td>' + esc(l.topology || '—') + '</td>' +
                 '<td>' + esc(l.reach || '—') + '</td>' +
-            '</tr>';
+            '</tr>' + CommonRenderer._divergentPathRows(l, esc);
         }).join('');
 
         var unresolved = Array.isArray(c.unresolved) ? c.unresolved : [];
