@@ -4774,8 +4774,27 @@ const CommonRenderer = {
             // bookkeeping in one string — "2 of 5 chains" next to "replaces
             // generator v2.1 output". The first changes how the table reads; the
             // second is a note about our own gate.
+            // ⚠️ COVERAGE: TOGGLE ON THE FACE, NOT THE PARAGRAPH.
+            //
+            // I asked riskAnalyst to split the reader-facing scope limit out of
+            // `authority_note` and then rendered the whole field inline. crvUSD's
+            // is 1,287 chars, so it sat between the headline and the authority
+            // table and pushed the measurement below a wall — visible text went
+            // 1098 -> 2386, WORSE than before the split I requested.
+            //
+            // ⚠️ A first-sentence split does not rescue it: this note opens with
+            // the label "READER-FACING SCOPE LIMIT.", so the mechanical lead is
+            // the label rather than the scope. Skipping "label-like" sentences
+            // would mean judging what a sentence IS, which is the prose-parsing
+            // line this renderer does not cross.
+            //
+            // So the whole note collapses under a named toggle until the producer
+            // supplies a one-line form. Coverage stays one click from the table it
+            // qualifies, and the table stays first.
             (c.coverage_note
-                ? '<div class="tw-coverage">' + esc(c.coverage_note) + '</div>'
+                ? '<details class="tw-scope"><summary class="tw-code-toggle">' +
+                  'Coverage \u2014 which chains this walk covers</summary>' +
+                  '<div class="tw-sub">' + esc(c.coverage_note) + '</div></details>'
                 : '') +
             (layerRows
                 ? '<div class="tw-tablewrap"><table class="tw-table"><thead><tr>' +
