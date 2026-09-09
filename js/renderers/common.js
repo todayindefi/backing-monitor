@@ -800,8 +800,60 @@ const CommonRenderer = {
         // as a broken feed, and the producer's reason is right there.
         var withheld = l.depth && typeof l.depth === 'object' &&
             l.depth.depth_usd == null && l.depth.basis;
-        if (!ds && !bind && !withheld) return;
         var self = this, bits = [];
+
+        // ⚠️ EMBEDDED FALLBACK. The three fields above are liquidity/1 (DexTracker),
+        // and only 3 of 25 published assets have that overlay — so for the other 22
+        // this function could never fire, no matter what their feed declared. Ten of
+        // them DO declare a measured venue, in four different shapes, and none of it
+        // reached the page: yzUSD publishes a full by_chain breakdown that rendered
+        // nowhere.
+        //
+        // This is the axis-3 twin of the backing axis's `supply_scope` chip, which
+        // exists because usdat published a 100.00% collateral ratio that was an
+        // ETHEREUM-ONLY statement, and the word Ethereum appeared once on the page.
+        // A depth figure with no scope is populated but misleading — it looks
+        // complete, which is worse than a blank.
+        var derived = null;
+        if (!ds && !bind && !withheld) {
+            // 1. An explicit producer declaration beats anything I derive.
+            if (typeof l.scope === 'string' && l.scope.trim()) {
+                derived = 'Measured scope: ' + l.scope.trim().replace(/_/g, ' ');
+            } else {
+                // 2. Otherwise the pools' own chains — but ONLY as a union, never a
+                // pick. Naming one chain when pools span several would be inventing
+                // a scope, which is the failure this line exists to prevent.
+                var pools = Array.isArray(l.pools) ? l.pools : [];
+                var chains = [];
+                pools.forEach(function(pl) {
+                    var c = pl && pl.chain ? String(pl.chain).trim().toLowerCase() : '';
+                    if (c && chains.indexOf(c) < 0) chains.push(c);
+                });
+                // by_chain names venues per chain; use its keys when pools carry none.
+                if (!chains.length && Array.isArray(l.by_chain)) {
+                    l.by_chain.forEach(function(e) {
+                        var c = e && e.chain ? String(e.chain).trim().toLowerCase() : '';
+                        if (c && chains.indexOf(c) < 0) chains.push(c);
+                    });
+                }
+                if (chains.length === 1) {
+                    derived = 'Depth measured on ' + chains[0] + ' only.';
+                } else if (chains.length > 1) {
+                    derived = 'Depth measured across ' + chains.length + ' chains: ' +
+                        chains.sort().join(', ') + '.';
+                }
+            }
+            // ⚠️ NOT `volume_24h_scope`. That names the DATA SOURCE for volume
+            // ("geckoterminal_…"), not the chain depth was measured on. Reading it
+            // as a depth scope would be the same error as reading `base_token` on a
+            // PYUSD-reserved dollar as the token — a field name assumed to mean what
+            // it sounds like.
+            if (!derived) return;
+        }
+        if (derived) {
+            bits.push('<div class="ds-line"><span class="ds-key">Scope:</span> ' +
+                self._escapeAttr(derived) + '</div>');
+        }
         if (withheld) {
             bits.push('<div class="ds-line ds-warn">\u26a0\ufe0f Depth not published \u2014 ' +
                 self._escapeAttr(String(l.depth.basis)) + '</div>');
