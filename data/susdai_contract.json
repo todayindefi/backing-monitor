@@ -3,7 +3,7 @@
   "asset": "susdai",
   "producer": "security_analyst",
   "as_of": "2026-09-09",
-  "generated_at": "2026-09-09T07:08:02Z",
+  "generated_at": "2026-09-09T07:18:14Z",
   "contract": {
     "headline": "A 48h timelock covers contract-upgrade (eip1967_admin, proxyAdmin). pause (PAUSE_ADMIN_ROLE, DEFAULT_ADMIN_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply.",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
@@ -24,7 +24,7 @@
           "proxyAdmin"
         ],
         "timelock": "48h",
-        "timelock_floor": "none",
+        "timelock_floor": "48h",
         "reach": "full",
         "impl_upgradeable": true,
         "paths": [
@@ -37,7 +37,7 @@
             "holder_kind": "timelock",
             "terminal_address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
             "timelock": "48h",
-            "timelock_floor": "none",
+            "timelock_floor": "48h",
             "delay_applies": true,
             "reach": "full",
             "timelock_roles": {
@@ -56,7 +56,7 @@
               ]
             },
             "canceller_independent": false,
-            "hand_walk": "At Arbitrum block 503282689, the proxy's EIP-1967 implementation and admin slots returned 0x88a233b8...7198b and this ProxyAdmin. owner() returned TimelockController 0x0eea1ee0...5639b and getMinDelay() returned 172800 seconds. Live hasRole checks reproduced GOV_SAFE as proposer, canceller, and executor, OPS_SAFE as executor, and the timelock itself as DEFAULT_ADMIN. updateDelay(0) succeeded when eth_call used the timelock as sender and reverted for 0x...dEaD, so 48h is the current setting but the enforced floor is none. This is the SAME terminal governance used by USDai, reached through a DIFFERENT ProxyAdmin."
+            "hand_walk": "At Arbitrum block 503282689, the proxy's EIP-1967 implementation and admin slots returned 0x88a233b8...7198b and this ProxyAdmin. owner() returned TimelockController 0x0eea1ee0...5639b and getMinDelay() returned 172800 seconds. Live hasRole checks reproduced GOV_SAFE as proposer, canceller, and executor, OPS_SAFE as executor, and the timelock itself as DEFAULT_ADMIN. updateDelay(0) succeeding when eth_call used the timelock as sender and reverting for 0x...dEaD tests onlySelf access, not reachability. A delay reduction must itself be scheduled through the current 48h delay. This is the SAME terminal governance used by USDai, reached through a DIFFERENT ProxyAdmin."
           }
         ]
       },
@@ -221,8 +221,9 @@
       "EIP-1967 admin slot, not the slot identifier. That ProxyAdmin is distinct from",
       "USDai's ProxyAdmin but both are owned by the same 48h TimelockController.",
       "",
-      "The current timelock setting is 48h, but there is no code-enforced nonzero",
-      "floor: updateDelay(0) succeeds when called by the timelock itself."
+      "The current timelock setting guarantees 48h notice even for a delay reduction:",
+      "updateDelay(0) is onlySelf, so a direct self-sender eth_call tests access rather",
+      "than reachability; the reduction must itself be scheduled through the 48h delay."
     ]
   }
 }

@@ -3,7 +3,7 @@
   "asset": "usdai",
   "producer": "security_analyst",
   "as_of": "2026-08-26",
-  "generated_at": "2026-09-09T07:08:01Z",
+  "generated_at": "2026-09-09T07:18:14Z",
   "contract": {
     "headline": "A 48h timelock covers contract-upgrade (proxyAdmin). asset-permission (BRIDGE_ADMIN_ROLE, DEFAULT_ADMIN_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply.",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
@@ -23,7 +23,7 @@
           "proxyAdmin"
         ],
         "timelock": "48h",
-        "timelock_floor": "none",
+        "timelock_floor": "48h",
         "reach": "full",
         "impl_upgradeable": true,
         "paths": [
@@ -35,6 +35,7 @@
             "holder_kind": "timelock",
             "terminal_address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
             "timelock": "48h",
+            "timelock_floor": "48h",
             "reach": "full",
             "timelock_roles": {
               "PROPOSER": [
@@ -109,7 +110,7 @@
           "proxyAdmin"
         ],
         "timelock": "48h",
-        "timelock_floor": "none",
+        "timelock_floor": "48h",
         "reach": "full",
         "impl_upgradeable": true,
         "paths": [
@@ -121,6 +122,7 @@
             "holder_kind": "timelock",
             "terminal_address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
             "timelock": "48h",
+            "timelock_floor": "48h",
             "reach": "full",
             "timelock_roles": {
               "PROPOSER": [
@@ -138,7 +140,7 @@
               ]
             },
             "canceller_independent": false,
-            "hand_walk": "Live EIP-1967 reads on USDai 0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF returned ProxyAdmin 0x2ddf39c7...aadc3c and implementation 0x0ab74df5...bc212. ProxyAdmin.owner() returned TimelockController 0x0eea1ee0...95639b; getMinDelay() returned 172800 seconds. Live hasRole checks returned GOV_SAFE as proposer, canceller, and executor, OPS_SAFE as executor, and the timelock itself as DEFAULT_ADMIN. updateDelay(0) succeeded from the timelock itself while the same call from 0x...dEaD reverted, so 48h is the current setting and the enforced floor is none."
+            "hand_walk": "Live EIP-1967 reads on USDai 0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF returned ProxyAdmin 0x2ddf39c7...aadc3c and implementation 0x0ab74df5...bc212. ProxyAdmin.owner() returned TimelockController 0x0eea1ee0...95639b; getMinDelay() returned 172800 seconds. Live hasRole checks returned GOV_SAFE as proposer, canceller, and executor, OPS_SAFE as executor, and the timelock itself as DEFAULT_ADMIN. updateDelay(0) succeeding from the timelock itself while reverting from 0x...dEaD tests the onlySelf access check, not reachability. Reducing the delay must be scheduled and executed through the current 48h delay."
           }
         ]
       }
