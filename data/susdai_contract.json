@@ -1,0 +1,228 @@
+{
+  "schema_version": "contract/1",
+  "asset": "susdai",
+  "producer": "security_analyst",
+  "as_of": "2026-09-09",
+  "generated_at": "2026-09-09T07:08:02Z",
+  "contract": {
+    "headline": "A 48h timelock covers contract-upgrade (eip1967_admin, proxyAdmin). pause (PAUSE_ADMIN_ROLE, DEFAULT_ADMIN_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-09",
+    "source_file": "security_analyst/topology/assets/susdai.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "arbitrum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "Staked USDai",
+        "terminal_name": "TimelockController",
+        "topology": "timelocked",
+        "keys": [
+          "eip1967_admin",
+          "proxyAdmin"
+        ],
+        "timelock": "48h",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x0b3296b6f50611b28d466a6d5a49754dad4d8d9f",
+            "name": "ProxyAdmin (sUSDai)",
+            "name_verified": true,
+            "via": "eip1967_admin -> ProxyAdmin.owner",
+            "terminal": "timelock",
+            "holder_kind": "timelock",
+            "terminal_address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
+            "timelock": "48h",
+            "timelock_floor": "none",
+            "delay_applies": true,
+            "reach": "full",
+            "timelock_roles": {
+              "PROPOSER": [
+                "0x783b08aa21de056717173f72e04be0e91328a07b"
+              ],
+              "CANCELLER": [
+                "0x783b08aa21de056717173f72e04be0e91328a07b"
+              ],
+              "EXECUTOR": [
+                "0x783b08aa21de056717173f72e04be0e91328a07b",
+                "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+              ],
+              "DEFAULT_ADMIN": [
+                "0x0eea1ee08611ff4a4e83bfe3916712751995639b"
+              ]
+            },
+            "canceller_independent": false,
+            "hand_walk": "At Arbitrum block 503282689, the proxy's EIP-1967 implementation and admin slots returned 0x88a233b8...7198b and this ProxyAdmin. owner() returned TimelockController 0x0eea1ee0...5639b and getMinDelay() returned 172800 seconds. Live hasRole checks reproduced GOV_SAFE as proposer, canceller, and executor, OPS_SAFE as executor, and the timelock itself as DEFAULT_ADMIN. updateDelay(0) succeeded when eth_call used the timelock as sender and reverted for 0x...dEaD, so 48h is the current setting but the enforced floor is none. This is the SAME terminal governance used by USDai, reached through a DIFFERENT ProxyAdmin."
+          }
+        ]
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "arbitrum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "Staked USDai",
+        "terminal_name": "Pause Safe / OPS_SAFE",
+        "topology": "nofm-multisig",
+        "n": 2,
+        "m": 3,
+        "keys": [
+          "PAUSE_ADMIN_ROLE",
+          "DEFAULT_ADMIN_ROLE"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x3a32e198cafeb0fcd061ac0c9d8a2256bccab872",
+            "name": "SafeProxy (PAUSE_ADMIN_ROLE)",
+            "name_verified": true,
+            "via": "PAUSE_ADMIN_ROLE",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x3a32e198cafeb0fcd061ac0c9d8a2256bccab872",
+            "threshold": 2,
+            "owners": 3,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "Live hasRole(PAUSE_ADMIN_ROLE, this SafeProxy) returned true; getThreshold() returned 2 and getOwners() returned three addresses. Verified implementation source gates both pause() and unpause() on this role. Pausing blocks deposits, redemption requests, withdrawals, redemptions, operator changes, and bridge mint/burn."
+          },
+          {
+            "holder": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+            "name": "OPS_SAFE",
+            "name_verified": true,
+            "via": "DEFAULT_ADMIN_ROLE -> grantRole(PAUSE_ADMIN_ROLE)",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+            "threshold": 3,
+            "owners": 3,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "Live hasRole(DEFAULT_ADMIN_ROLE, OPS_SAFE) returned true and getRoleAdmin(PAUSE_ADMIN_ROLE) returned DEFAULT_ADMIN_ROLE. The Safe is 3-of-3, so it can grant pause authority to any address without a timelock. Complete RoleGranted/RoleRevoked history was netted and the live role checks confirmed the current direct holders."
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "arbitrum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "Staked USDai redemption queue and loan allocation",
+        "terminal_name": "Strategy Admin Safe / OPS_SAFE",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 4,
+        "keys": [
+          "STRATEGY_ADMIN_ROLE",
+          "DEFAULT_ADMIN_ROLE"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xe7e53f940f8242fec57cbe88054463d4944b3670",
+            "name": "SafeProxy (STRATEGY_ADMIN_ROLE)",
+            "name_verified": true,
+            "via": "STRATEGY_ADMIN_ROLE",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xe7e53f940f8242fec57cbe88054463d4944b3670",
+            "threshold": 3,
+            "owners": 4,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "Live hasRole(STRATEGY_ADMIN_ROLE, this SafeProxy) returned true; getThreshold() returned 3 and getOwners() returned four addresses. Verified source gives this role serviceRedemptions, base-yield harvesting, and loan deposit/cancellation functions. RedemptionLogic imposes a fixed 30-day eligibility window, but only serviceRedemptions advances matured requests and it may service a caller-selected share amount subject to available liquid USDai. The Safe can therefore withhold queue advancement and chooses loanTermsHash, amount, rate or expiration when deploying vault liquidity. No separate sUSDai oracle setter was found in the implementation; totalAssets derives from deposits, base yield, and tracked LoanRouter positions."
+          },
+          {
+            "holder": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+            "name": "OPS_SAFE",
+            "name_verified": true,
+            "via": "DEFAULT_ADMIN_ROLE -> grantRole(STRATEGY_ADMIN_ROLE)",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+            "threshold": 3,
+            "owners": 3,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "Live getRoleAdmin(STRATEGY_ADMIN_ROLE) returned DEFAULT_ADMIN_ROLE, held by this 3-of-3 Safe. It can grant the strategy role to itself or any address without delay, independently of the current 3-of-4 Strategy Admin Safe."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "arbitrum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "Staked USDai bridged supply",
+        "terminal_name": "OPS_SAFE",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 3,
+        "keys": [
+          "bridgeAdapter",
+          "owner"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xffb20098fd7b8e84762eea4609f299d101427f24",
+            "name": "OAdapter (sUSDai LayerZero OFT adapter)",
+            "name_verified": true,
+            "via": "immutable bridgeAdapter -> adapter.owner / setPeer",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
+            "threshold": 3,
+            "owners": 3,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "Verified constructor arguments fix this adapter as _bridgeAdapter; adapter.token() returned sUSDai, endpoint() returned LayerZero V2 Endpoint 0x1a4407...28c, and owner() returned OPS_SAFE. Controlled eth_call showed mint(address,uint256) succeeds from the adapter and reverts from 0x...dEaD. The current implementation uses the immutable onlyBridgeAdapter gate, not the now-revoked historical BRIDGE_ADMIN_ROLE. Adapter owner peer configuration is consequently an undelayed cross-chain mint path."
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "ethereum: declared sUSDai deployment not hand-walked in this pass. No authority, terminal, delay, or share-supply split is inferred from the Arbitrum deployment or deterministic token address.",
+      "base: declared sUSDai deployment not hand-walked in this pass. No authority, terminal, delay, or share-supply split is inferred from Arbitrum.",
+      "plasma: declared sUSDai deployment not hand-walked in this pass. No authority, terminal, delay, or share-supply split is inferred from Arbitrum.",
+      "arbitrum external loan/oracle dependencies: the vault's role-gated loan allocation calls and their effect on totalAssets were walked, but ultimate governance of LoanRouterV2, its loan-term inputs, collateral valuation, and liquidation dependencies was not traversed. No terminal or delay is assigned to those external contracts."
+    ],
+    "authority_shared_with": [],
+    "review": null,
+    "walk_notes": [
+      "sUSDai authority topology — hand-walked from live Arbitrum state and the",
+      "verified implementation source on 2026-09-09. Read-only calls only; no",
+      "transaction was signed or broadcast.",
+      "",
+      "The published admin_slot lead is confirmed: it is the ADDRESS STORED IN the",
+      "EIP-1967 admin slot, not the slot identifier. That ProxyAdmin is distinct from",
+      "USDai's ProxyAdmin but both are owned by the same 48h TimelockController.",
+      "",
+      "The current timelock setting is 48h, but there is no code-enforced nonzero",
+      "floor: updateDelay(0) succeeds when called by the timelock itself."
+    ]
+  }
+}
