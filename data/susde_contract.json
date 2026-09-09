@@ -1,0 +1,193 @@
+{
+  "schema_version": "contract/1",
+  "asset": "susde",
+  "producer": "security_analyst",
+  "as_of": "2026-09-09",
+  "generated_at": "2026-09-09T14:29:01Z",
+  "contract": {
+    "headline": "A 24h timelock covers parameter (DEFAULT_ADMIN_ROLE, owner, setCooldownDuration, role_admin, rescueTokens). pause (BLACKLIST_MANAGER_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-09",
+    "source_file": "security_analyst/topology/assets/susde.yaml",
+    "layers": [
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "Staked USDe cooldown and vault administration",
+        "terminal_name": "Ethena TimelockController",
+        "topology": "timelocked",
+        "keys": [
+          "DEFAULT_ADMIN_ROLE",
+          "owner",
+          "setCooldownDuration",
+          "role_admin",
+          "rescueTokens"
+        ],
+        "timelock": "24h",
+        "timelock_floor": "24h",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94",
+            "name": "Ethena TimelockController",
+            "name_verified": true,
+            "via": "sUSDe.owner / DEFAULT_ADMIN_ROLE",
+            "terminal": "timelock",
+            "holder_kind": "timelock",
+            "terminal_address": "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94",
+            "timelock": "24h",
+            "timelock_floor": "24h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "Live owner() and hasRole(DEFAULT_ADMIN_ROLE, owner) independently returned this TimelockController. getMinDelay()=86400; its sole checked proposer/executor/canceller is the live 5-of-10 Dev Safe. Verified source allows DEFAULT_ADMIN to set cooldownDuration anywhere from zero to MAX_COOLDOWN_DURATION (7776000 seconds), grant/revoke every vault role, rescue non-USDe tokens, and redistribute a fully restricted holder's shares. Current cooldownDuration is 86400 seconds. There is no global pause function: the holder-facing gate is this configurable cooldown plus address-specific restriction roles. Reducing either the governance delay or cooldown first requires the current 24h governance delay because TimelockController.updateDelay is onlySelf."
+          }
+        ]
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "sUSDe address restrictions",
+        "terminal_name": "Ethena Dev Safe",
+        "topology": "nofm-multisig",
+        "n": 5,
+        "m": 10,
+        "keys": [
+          "BLACKLIST_MANAGER_ROLE"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "bounded",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+            "name": "Ethena Dev Safe",
+            "name_verified": true,
+            "via": "BLACKLIST_MANAGER_ROLE",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+            "threshold": 5,
+            "owners": 10,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "bounded",
+            "hand_walk": "Live hasRole(BLACKLIST_MANAGER_ROLE, Dev Safe) returned true and the Safe returned threshold 5 and ten owners. Source permits this role to add or remove soft/full restrictions for chosen addresses; it cannot globally pause the vault. DEFAULT_ADMIN can grant the same role after 24h and can redistribute fully restricted balances, represented in the separate full-reach administration path."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "sUSDe reward inflow",
+        "terminal_name": "Current REWARDER_ROLE holders",
+        "topology": "mixed",
+        "keys": [
+          "REWARDER_ROLE",
+          "transferInRewards"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "bounded",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+            "name": "Ethena Dev Safe",
+            "name_verified": true,
+            "via": "REWARDER_ROLE",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+            "threshold": 5,
+            "owners": 10,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "bounded"
+          },
+          {
+            "holder": "0x71e4f98e8f20c88112489de3dded4489802a3a87",
+            "name": "sUSDe Payout Fund Safe",
+            "name_verified": true,
+            "via": "REWARDER_ROLE",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x71e4f98e8f20c88112489de3dded4489802a3a87",
+            "threshold": 3,
+            "owners": 10,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "bounded"
+          },
+          {
+            "holder": "0xf2fa332bd83149c66b09b45670bce64746c6b439",
+            "name": "StakingRewardsDistributor",
+            "name_verified": true,
+            "via": "REWARDER_ROLE -> operator",
+            "terminal": "eoa",
+            "holder_kind": "delegated-operator",
+            "terminal_address": "0xe3880b792f6f0f8795cbaacd92e7ca78f5d3646e",
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "bounded",
+            "hand_walk": "Live hasRole checks returned true for these three current rewarder addresses. The distributor owner is the Dev Safe and its current operator is the stated EOA. Verified vault logic only pulls the caller's approved USDe into sUSDe and vests it; rewarders cannot remove vault assets or set the cooldown through this role. DEFAULT_ADMIN can change the rewarder set after 24h."
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "ethereum contract-upgrade: measured absence, not an unresolved authority. sUSDe is direct bytecode, its EIP-1967 implementation/admin/beacon slots are zero, and verified source contains no upgrade mechanism.",
+      "arbitrum: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "base: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "optimism: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "bsc: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "mantle: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "blast: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "fraxtal: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "monad: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum; this wrapper-only ninth chain is not assumed to match USDe's footprint."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "usde",
+        "shares": [
+          {
+            "kind": "timelock",
+            "address": "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94",
+            "delay": "24h",
+            "roles": [
+              "ethereum-owner",
+              "ethereum-default-admin"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+            "n": 5,
+            "m": 10,
+            "roles": [
+              "timelock-proposer",
+              "timelock-executor",
+              "timelock-canceller"
+            ]
+          }
+        ]
+      }
+    ],
+    "review": null,
+    "walk_notes": [
+      "sUSDe Ethereum authority topology, hand-walked with read-only live calls on",
+      "2026-09-09. No transaction was signed or broadcast. The vault was established",
+      "independently from USDe; its wider declared chain footprint is not copied from",
+      "the underlying token."
+    ]
+  }
+}
