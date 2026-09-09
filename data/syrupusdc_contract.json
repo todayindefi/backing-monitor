@@ -3,7 +3,7 @@
   "asset": "syrupusdc",
   "producer": "security_analyst",
   "as_of": "2026-09-06",
-  "generated_at": "2026-09-09T00:08:01Z",
+  "generated_at": "2026-09-09T01:08:01Z",
   "contract": {
     "headline": "A 3d timelock covers governance (governor). asset-permission (poolPermissionManager) has NO established delay — timelock: none. The delay protects the code and not the supply. ⚠️ 3 layers NOT MEASURED: contract-upgrade (manager), pause (withdrawalManager), bridge (owner, getCCIPAdmin) — an unknown delay, not an absent one.",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
@@ -498,7 +498,14 @@
       "monad asset-permission: current DEFAULT_ADMIN_ROLE and MINTER_ROLE/BURNER_ROLE candidates were verified live, but complete RoleUpdated history could not be enumerated because the public RPC is pruned and caps log ranges at 100 blocks."
     ],
     "authority_shared_with": [],
-    "review": null,
+    "review": {
+      "scope": "partial",
+      "authored_by": "codex job dispatched by riskAnalyst",
+      "reviewed_by": "security_analyst",
+      "reviewed_at": "2026-09-09",
+      "claims_remeasured": 5,
+      "note": "Not authored by this session — written by codex job axis5-schema-and-remaining-layers-2026-09-06, dispatched by riskAnalyst. Adopted after re-measuring five claims on 2026-09-09 with a negative control. (1) poolDelegate 0xC1e18FFD…C70B49f returns eth_getCode 0x, so EOA. (2) securityAdmin 0x6b1A78C1…D60818 getThreshold()=3, getOwners()=6, so the 3-of-6 is real. (3) THE CRUX WAS SIMULATED, NOT READ FROM A ROLE TABLE: upgrade(999,0x) on the manager returns THREE DISTINCT reverts — PM:U:INVALID_SCHED_CALL from the poolDelegate, MPF:UI:NOT_ALLOWED from the securityAdmin, and PM:U:NO_AUTH from 0x…dEaD. The control fails at authorization while both real holders pass it, so the probe discriminates. The securityAdmin's error comes from the MapleProxyFactory, which it can only reach by passing the PoolManager's scheduled-call check — so it is not subject to one, and only an unregistered version number stopped it. THE WALK'S ASYMMETRY IS CONFIRMED AND THE INTUITION IS BACKWARDS: the delay gates the single EOA and does NOT gate the 3-of-6 Safe. NOT re-measured, and still on the original author's word: the Monad/Plasma token role reads, getMinDelay()=10800 on the chain-local RBACTimelocks, the incomplete historical role enumeration, and the withdrawal-manager paths. If a decision turns on one of those, re-read it rather than trusting this block.\n"
+    },
     "walk_notes": [
       "SyrupUSDC topology — hand-walked evidence. Judgment remains in riskAnalyst.",
       "",
