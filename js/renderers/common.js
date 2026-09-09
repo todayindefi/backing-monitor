@@ -4636,8 +4636,13 @@ const CommonRenderer = {
                 '</ul><div class="tw-sub">\u26a0\ufe0f These describe the CODE. They say nothing ' +
                 'about who can act on it, which is the half above and is unmeasured.</div>' +
             '</details>' +
+            // Same collapse as the walked path — see _topologyWalkHtml.
             (Array.isArray(c.cross_axis) && c.cross_axis.length
-                ? c.cross_axis.map(function(x) { return '<div class="tw-flag">' + esc(x) + '</div>'; }).join('')
+                ? '<details class="tw-scope"><summary class="tw-code-toggle">' +
+                  'What this score does and does not cover \u2014 ' + c.cross_axis.length +
+                  ' notes</summary><ul class="tw-code-list">' +
+                  c.cross_axis.map(function(x) { return '<li>' + esc(x) + '</li>'; }).join('') +
+                  '</ul></details>'
                 : '') +
         '</div>';
     },
@@ -4825,12 +4830,26 @@ const CommonRenderer = {
                   '</ul>' + (c.authority_note ? '<div class="tw-sub">' + esc(c.authority_note) + '</div>' : '') +
                   '</details>'
                 : '') +
-            // ⚠️ One fact answering two questions, on both axes, sources named.
-            // Duplication with the seam declared is right; duplication in silence
-            // is what this avoids.
+            // ⚠️ SCOPE NOTES COLLAPSE. These are "what this score does NOT cover"
+            // — legitimate, and not findings. Rendered flat they stacked four
+            // ⚠️-prefixed paragraphs into the reading path directly under the
+            // authority table, so the tile read as 1,130 characters of caveat
+            // after 700 characters of measurement.
+            //
+            // ⚠️ AND THEY WERE SPENDING THE COLUMN'S ONLY SEVERITY SIGNAL. The
+            // Delay column uses ⚠️ for `none` and `not measured`; five consecutive
+            // ⚠️ where none marks a finding teaches a reader to skip the glyph,
+            // including on the row that means an undelayed full-reach upgrade.
+            //
+            // One click away, not deleted — a technical reader still gets every
+            // word, in the producer's wording, which is the same treatment
+            // code_facts and the walk notes already get.
             (Array.isArray(c.cross_axis) && c.cross_axis.length
-                ? c.cross_axis.map(function(x) {
-                      return '<div class="tw-flag">' + esc(x) + '</div>'; }).join('')
+                ? '<details class="tw-scope"><summary class="tw-code-toggle">' +
+                  'What this score does and does not cover \u2014 ' + c.cross_axis.length +
+                  ' notes</summary><ul class="tw-code-list">' +
+                  c.cross_axis.map(function(x) { return '<li>' + esc(x) + '</li>'; }).join('') +
+                  '</ul></details>'
                 : '') +
             (notes.length
                 ? '<details class="tw-details"><summary>Verification trail &amp; walk notes (verbatim, ' +
