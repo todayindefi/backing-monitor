@@ -4768,6 +4768,15 @@ const CommonRenderer = {
                       esc([c.source_file, c.method_note].filter(Boolean).join(' \u2014 ')) +
                       '">\u24d8</span>'
                     : '') + '</div>' +
+            // ⚠️ COVERAGE ON THE FACE, beside the walk date, because a scope limit
+            // qualifies every row below it. riskAnalyst split this out of
+            // `authority_note`, which mixed a reader-facing scope caveat with repo
+            // bookkeeping in one string — "2 of 5 chains" next to "replaces
+            // generator v2.1 output". The first changes how the table reads; the
+            // second is a note about our own gate.
+            (c.coverage_note
+                ? '<div class="tw-coverage">' + esc(c.coverage_note) + '</div>'
+                : '') +
             (layerRows
                 ? '<div class="tw-tablewrap"><table class="tw-table"><thead><tr>' +
                   '<th>Authority</th><th>Keys</th><th>Delay</th><th>Topology</th><th>Reach</th>' +
@@ -4827,7 +4836,19 @@ const CommonRenderer = {
                 ? '<details class="tw-code"><summary class="tw-code-toggle">Code &amp; audits \u2014 ' +
                   c.code_facts.length + ' points</summary><ul class="tw-code-list">' +
                   c.code_facts.map(function(f) { return '<li>' + esc(f) + '</li>'; }).join('') +
-                  '</ul>' + (c.authority_note ? '<div class="tw-sub">' + esc(c.authority_note) + '</div>' : '') +
+                  '</ul>' +
+                  // ⚠️ FALLBACK ONLY. While a producer still emits the old combined
+                  // `authority_note` AND the new split fields, rendering both would
+                  // show the coverage caveat twice. Rendering NEITHER is the worse
+                  // failure — riskAnalyst kept `authority_note` populated on purpose
+                  // so a split landing before renderer support could not turn a
+                  // verbose paragraph into a silent blank, which is what happened to
+                  // `axis_exemptions` and to usdg's axis-5 score. So: prefer the new
+                  // field, fall back to the old, never drop both.
+                  (c.coverage_note ? '' :
+                      (c.authority_note ? '<div class="tw-sub">' + esc(c.authority_note) + '</div>' : '')) +
+                  // Bookkeeping — collapsed with the code half, never on the face.
+                  (c.provenance_note ? '<div class="tw-sub tw-provenance">' + esc(c.provenance_note) + '</div>' : '') +
                   '</details>'
                 : '') +
             // ⚠️ SCOPE NOTES COLLAPSE. These are "what this score does NOT cover"
