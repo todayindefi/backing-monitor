@@ -4688,9 +4688,22 @@ const CommonRenderer = {
                 '<td class="' + (unknown ? 'tw-unknown' : (undelayed ? 'tw-bad' : 'tw-ok')) + '">' +
                     (unknown ? '\u26a0\ufe0f not measured' : (undelayed ? '\u26a0\ufe0f none' : esc(tl))) +
                     (l.timelock_floor === 'none'
-                        ? '<span class="tw-nofloor" title="MINIMUM_DELAY() and MIN_DELAY() both revert, so no floor is enforced: the delay is reducible by whoever can schedule against the timelock\u2019s own admin. A configured delay is not an enforced one.">' +
+                        ? '<span class="tw-nofloor" title="MINIMUM_DELAY() and MIN_DELAY() both revert, so no MIN_DELAY constant is enforced. \u26a0\ufe0f WHAT THIS DOES NOT SAY: on a stock OZ TimelockController, updateDelay is onlySelf \u2014 reducing the delay must itself be scheduled and executed through the timelock, so it first clears the CURRENT delay. Read this as \u2018no hardcoded minimum\u2019, NOT as \u2018this can happen instantly\u2019. The convention behind this field is being settled between producers.">' +
                           ' \u00b7 no floor</span>'
-                        : (l.timelock_floor ? '<span class="tw-sub"> \u00b7 floor ' + esc(l.timelock_floor) + '</span>' : '')) +
+                        : (l.timelock_floor
+                            ? '<span class="tw-sub"> \u00b7 floor ' + esc(l.timelock_floor) + '</span>'
+                            // ⚠️ UNREAD MUST NOT RENDER AS SILENCE. A delay with no floor
+                            // field was rendering nothing at all, so a reader saw "3d" with
+                            // no qualifier and read it as a clean, complete measurement.
+                            // Absent means NOT MEASURED — the same distinction this column
+                            // already makes for `timelock: unresolved`. Seven layers were
+                            // silently in this state, all syrup.
+                            // ⚠️ Only where a DELAY EXISTS. A floor qualifies a delay; beside
+                            // "⚠️ none" or "not measured" it is noise, and noise in the column
+                            // that carries the real warnings is how a reader learns to skip it.
+                            : ((undelayed || unknown) ? ''
+                                : '<span class="tw-unknown" title="The floor was NOT MEASURED for this layer \u2014 the field is absent, not set to none. Whether this delay can be shortened, and how fast, is unknown rather than established.">' +
+                                  ' \u00b7 floor not measured</span>'))) +
                 '</td>' +
                 '<td>' + esc(l.topology || '—') + '</td>' +
                 '<td>' + esc(l.reach || '—') + '</td>' +
