@@ -1,0 +1,32 @@
+{
+ "schema_version": "contract-overlay/1",
+ "producer": "riskanalyst",
+ "asset": "susdai",
+ "as_of": "2026-09-09T00:00:00Z",
+ "contract": {
+  "structural_score": 3.0,
+  "structural_score_source": "riskAnalyst:authored",
+  "structural_score_generated_at": "2026-09-09T00:00:00Z",
+  "structural_score_basis": "Axis 5 = CONTRACT & ADMIN. CUT 5.5 -> 3.0 on 2026-09-09. ⚠️ NOT A NEW FINDING ABOUT sUSDai — it is this file's OWN finding, finally priced, plus the spec rule. Spec line 50: 'A wrapper may not outrank its underlying on the underlying's own axis. Set EQUAL, don't notch.' USDai's axis 5 was authored today at 3.0. (The unsettled inversion is AXIS 4 only and does not apply here.) ⚠️ AND THIS FILE WAS RIGHT FIRST: on 2026-08-18 its Structural row already stated the 48h timelock covers the UPGRADE PATH ONLY and that DEFAULT_ADMIN_ROLE sits with the ops Safe, so role grants including whatever gates mint() are an undelayed 3-of-3 action. That was correct, load-bearing, and scored 5.5 anyway — THE SCORE DID NOT FOLLOW THE SENTENCE FOR 22 DAYS. Same defect as wylds' Overall/Structural split, in one row rather than two. ⚠️ sUSDai's OWN SURFACE IS ADDITIONAL AND IS NOT PRICED HERE: ERC-7540 async vault, redemption queue, blacklist and oracle sit on top of everything above. The equal-not-notch rule declines to charge for the extra layer — a KNOWN LIMITATION of the rule, recorded rather than worked around. If anything 3.0 is the generous reading for the wrapper.",
+  "coverage_summary": "4 layers walked, 2026-09-09. Arbitrum = 99.72% of supply and is measured. 2 unmeasured: ethereum and base OFT adapters.",
+  "coverage_note": "security_analyst hand-walk, 4 layers, observed 2026-09-09. ⚠️ COVERAGE IS SUPPLY-WEIGHTED AND THAT MATTERS HERE: arbitrum carries 99.72% of supply (286,820,687) against plasma 0.23%, base 0.05% and ethereum 0.00%. An earlier decline of this axis was made when only PLASMA had been walked — 0.23% of the asset — and that decline was correct. ⚠️ Two `unmeasured` entries remain and both are honest: the ethereum and base OFT adapters. ⚠️ ROLE-CHANGE HISTORY IS NOT ESTABLISHED for the Safes; current state is measured, provenance is not.",
+  "provenance_note": "The 2026-09-09 walk REPLACED an obsolete arbitrum `unmeasured` entry rather than leaving it beside the result, and corrected a top-level `observed_at` defect that had shipped on crvusd, usdai and susdai alike. ⚠️ It also records the FLOOR METHOD in the walk itself: `updateDelay(0)` succeeding from the timelock while reverting from 0x…dEaD tests the onlySelf access check, NOT reachability. A wrong value gets fixed; a wrong METHOD keeps manufacturing wrong values.",
+  "code_facts": [
+   "Upgrade path is uniform across all four chains: ProxyAdmin 0x2ddf39c7…aadc3c -> OZ TimelockController 0x0EEA1EE0…95639b, getMinDelay 172800s. ⚠️ Timelock bytecode BYTE-IDENTICAL on all four. [riskAnalyst 2026-08-26]",
+   "⚠️ 48h is a REAL FLOOR, not a setting: stock OZ `updateDelay` is `onlySelf`, so shortening the delay must itself be scheduled and clear the CURRENT delay. Convention B, established by identification rather than inference. [riskAnalyst 2026-09-09]",
+   "⚠️ GOV_SAFE 0x783b08aa…a07b and OPS_SAFE 0x5f0bc72f…5841f are 3-of-3 with the IDENTICAL OWNER SET — 0xe982b3f6…0a69c, 0x986868c9…579b2, 0xd1affe27…7b75e — measured per chain via getOwners(), NOT inferred from a shared address. The two-Safe structure separates nothing. [riskAnalyst 2026-08-26]",
+   "⚠️ CANCELLER = PROPOSER, so there is NO INDEPENDENT VETO. The party that schedules an upgrade is the only party that can cancel it. The 48h is a reaction window for HOLDERS, not a control. [riskAnalyst 2026-08-26]",
+   "⚠️ DEFAULT_ADMIN_ROLE on the token is held by the OPS Safe on all four chains, NOT by the timelock — so role grants, including whatever gates mint(), are an UNDELAYED 3-of-3 action. [riskAnalyst 2026-08-18, first recorded on susdai]",
+   "⚠️ ARBITRUM MINT (99.72% of supply): `mint` is gated by `onlyBridgeAdapter` against an IMMUTABLE `_bridgeAdapter` 0xffa10065…b4bae5, whose owner() is OPS_SAFE — UNDELAYED. Established by simulation with BOTH controls: reverted 0xe6c4247b from 0x…dEaD, SUCCEEDED from the adapter. Selector confirmed against implementation 0x0ab74df5…bc212, not a signature registry. [security_analyst 2026-09-09]",
+   "⚠️ IMMUTABILITY CONSTRAINS *WHAT* CAN MINT, NOT *WHO* CONTROLS IT. The adapter address genuinely cannot change; its owner is an undelayed 3-of-3. Different protections, and only the first is immutable. [riskAnalyst assessment]",
+   "eth/base/plasma mint is AccessControl-gated: the revert NAMES the role — OZ v5 AccessControlUnauthorizedAccount with role 0x751b795d…f4bf = BRIDGE_ADMIN_ROLE, held by a LayerZero OFT adapter the same Safe OWNS, with `setPeer` a second undelayed route. [riskAnalyst 2026-08-26 + 2026-08-27]",
+   "⚠️ sUSDai adds its own surface ON TOP of every fact above: ERC-7540 async vault, redemption queue, blacklist and oracle. Cantina-audited 0 crit/high. NOT priced into this score — equal-not-notch declines to charge for the extra layer. [riskAnalyst assessment]"
+  ],
+  "cross_axis": [
+   "⚠️ USDai's RESERVE COMPOSITION and the PYUSD-reserved backing model are AXIS 2, not this axis. Nothing about reserve quality is credited or docked here.",
+   "⚠️ Cantina's audit (0 crit/high) is recorded on the code half and does NOT offset an authority path. An audit says the code does what it says; it says nothing about who may call it.",
+   "⚠️ Issuer quality and the Singapore/BVI entity questions are ISSUER (5.0), not here.",
+   "⚠️ This overlay is the SCORE + CODE half only. The authority table renders from security_analyst's file (4 layers each, observed 2026-09-09) and is NOT duplicated here."
+  ]
+ }
+}
