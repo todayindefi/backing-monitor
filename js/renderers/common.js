@@ -2340,7 +2340,16 @@ const CommonRenderer = {
                 // ⚠️ Unrated by design, and the card says why rather than showing a
                 // bare dash. contract_score does not exist for any asset; see the
                 // axis-5 comment in renderAxisSections.
-                label: 'Contract',
+                // ⚠️ "Contract & Admin", matching the section head — NOT "Contract".
+                // The axis is TWO halves from two producers: security_analyst's
+                // authority walk (who can act, keys, delays, upgrade & pause) and
+                // riskAnalyst's code half (audits, architecture) plus the score.
+                // A card reading "Contract" invites a reader to take it as
+                // smart-contract risk only, and on most assets here the ADMIN half
+                // is the one carrying the finding — susdai's code is not the issue,
+                // PAUSE_ADMIN and STRATEGY_ADMIN acting with no delay on a $463M
+                // vault is. Same length as 'Liquidity & Exit', so no layout risk.
+                label: 'Contract & Admin',
                 // ⚠️ The per-layer detail moves into the tooltip rather than the
                 // face: the face carries ONE measurement, the tooltip carries
                 // what it is a minimum over — including that a delayed layer with
