@@ -1,0 +1,164 @@
+{
+  "schema_version": "contract/1",
+  "asset": "crvusd",
+  "producer": "security_analyst",
+  "as_of": "2026-08-23",
+  "generated_at": "2026-09-09T05:13:31Z",
+  "contract": {
+    "headline": "No timelock established on any measured authority layer. ⚠️ 1 layer NOT MEASURED: bridge (bridge) — an unknown delay, not an absent one.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-08-23",
+    "source_file": "security_analyst/topology/assets/crvusd.yaml",
+    "layers": [
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "crvUSD Stablecoin",
+        "terminal_name": "Curve Ownership Agent / Emergency Safe",
+        "topology": "unknown",
+        "keys": [
+          "minter",
+          "factory_admin"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
+            "name": "crvUSDControllerFactory",
+            "name_verified": true,
+            "via": "crvUSD.minter -> factory.admin -> ControllerAdmin.dao",
+            "terminal": "contract",
+            "holder_kind": "aragon-agent",
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "terminal_address": "0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+            "hand_walk": "Live minter() returned the factory; factory.admin() returned 0xb7400d2e...afB79; dao() returned this Agent. kernel() returned 0xad068681...d72d and appId() equalled the derived namehash for agent.aragonpm.eth. ControllerAdmin exposes no getMinDelay, delay, minDelay, or MIN_DELAY schedule surface. Source gates execute, transfer_ownership, and set_emergency to dao()."
+          },
+          {
+            "holder": "0x467947ee34af926cf1dcac093870f613c96b1e0c",
+            "name": "GnosisSafeProxy",
+            "name_verified": true,
+            "via": "crvUSD.minter -> factory.admin -> ControllerAdmin.emergency",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "threshold": 5,
+            "owners": 9,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "bounded",
+            "terminal_address": "0x467947ee34af926cf1dcac093870f613c96b1e0c",
+            "hand_walk": "emergency() returned this Safe; live getThreshold()=5 and getOwners() returned nine entries. Source uses dao-or-emergency authorization for bounded parameter actions; reduce_debt_ceiling is one-way. This is not represented as a full arbitrary-mint or upgrade path."
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "arbitrum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "crvUSD ClonableBeaconProxy",
+        "terminal_name": "Arbitrum UpgradeExecutor",
+        "topology": "nofm-multisig",
+        "n": 9,
+        "m": 12,
+        "keys": [
+          "eip1967_beacon",
+          "beacon_owner",
+          "EXECUTOR_ROLE"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xe72ba9418b5f2ce0a6a40501fe77c6839aa37333",
+            "name": "UpgradeableBeacon",
+            "name_verified": true,
+            "via": "eip1967_beacon -> owner -> UpgradeExecutor.EXECUTOR_ROLE",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "threshold": 9,
+            "owners": 12,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "terminal_address": "0x423552c0f05baccac5bfa91c6dcf1dc53a0a1641",
+            "hand_walk": "Beacon owner() returned UpgradeExecutor 0xcf5757...a827. EXECUTOR_ROLE() returned 0xd8aa0f31...69e63; hasRole returned true for this Safe and false for 0x...dEaD. Live getThreshold()=9 and getOwners() returned twelve entries."
+          },
+          {
+            "holder": "0xe72ba9418b5f2ce0a6a40501fe77c6839aa37333",
+            "name": "UpgradeableBeacon",
+            "name_verified": true,
+            "via": "eip1967_beacon -> owner -> UpgradeExecutor.EXECUTOR_ROLE -> L1 alias",
+            "terminal": "timelock",
+            "holder_kind": "l1-to-l2-alias",
+            "timelock": "3d",
+            "delay_applies": true,
+            "reach": "full",
+            "terminal_address": "0xe6841d92b0c345144506576ec13ecf5103ac7f49",
+            "hand_walk": "UpgradeExecutor hasRole returned true for L2 alias 0xf7951d92...905a. Subtracting Arbitrum's alias offset resolves to this Ethereum TimelockController; live getMinDelay()=259200 seconds. The code-empty L2 alias is not an EOA."
+          }
+        ]
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "base",
+        "observed_at": "2026-08-23",
+        "walked_by": "hand",
+        "target_name": "OptimismMintableERC20 crvUSD",
+        "terminal_name": "Base L2StandardBridge",
+        "topology": "unknown",
+        "keys": [
+          "bridge"
+        ],
+        "timelock": "unresolved",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x4200000000000000000000000000000000000010",
+            "name": "Base L2StandardBridge",
+            "name_verified": true,
+            "via": "bridge-gated mint and burn",
+            "terminal": "cross-domain-reference",
+            "holder_kind": "system-proxy",
+            "timelock": "unresolved",
+            "delay_applies": "unknown",
+            "reach": "full",
+            "terminal_address": "0x4200000000000000000000000000000000000010",
+            "hand_walk": "bridge() returned this canonical system proxy; remoteToken() and l1Token() both returned Ethereum crvUSD 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e. Prior controlled calls showed bridge-gated mint/burn while a stranger reverted. Token owner(), admin(), and minter() revert and all five checked proxy slots are zero."
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "ethereum contract-upgrade: no layer is filed because live crvUSD is non-proxy bytecode, admin() reverts, and the prior five proxy-slot checks were zero. This is a measured absence of a reachable token upgrade surface, not an unresolved path; minter replacement and ControllerFactory administration are represented under asset-permission.",
+      "optimism 0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6: not hand-walked in this pass. The generator's accessor-refused placeholder was removed rather than interpreted as no authority or no delay.",
+      "bnb 0xe2fb3f127f5450dee44afe054385d74c392bdef4: not hand-walked in this pass. BNB has no configured explorer in this repo; no empty-holder or no-authority claim is made.",
+      "fraxtal 0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3: not hand-walked in this pass. The generator's accessor-refused placeholder was removed rather than interpreted as no authority or no delay.",
+      "base bridge: the local token gate was measured, but the ultimate L1 governance/signature threshold, current execution delay, and delay floor behind Base L2StandardBridge were not traversed. The bridge layer therefore remains timelock unresolved by construction.",
+      "Curve Ownership Agent participant threshold and Aragon ACL/Voting policy were not reduced to an off-chain signer population. The measured claim is the on-chain authority path and absence of a separate schedule at the ControllerAdmin gate, not signer independence."
+    ],
+    "authority_shared_with": [],
+    "review": null,
+    "walk_notes": [
+      "crvUSD authority topology — hand-walked evidence. Judgment remains in",
+      "riskAnalyst. Read-only live calls were made on 2026-09-09; no transaction was",
+      "signed or sent. Supporting source and independent reads are documented in",
+      "audits/superseded-contracts.md, audits/topology-coverage-2026-08-24.md, and",
+      "handoffs/results/tidmm-crvusd-base.yaml.",
+      "",
+      "This replaces generator v2.1 output. No machine-generator provenance field is",
+      "retained. Placeholder Optimism/BNB/Fraxtal rows are recorded under",
+      "`unmeasured` rather than promoted to findings."
+    ]
+  }
+}
