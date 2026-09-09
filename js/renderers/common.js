@@ -1852,9 +1852,47 @@ const CommonRenderer = {
                 '<td class="' + (unknown ? 'tw-unknown' : (undelayed ? 'tw-bad' : 'tw-ok')) + '">' +
                     (unknown ? '\u26a0\ufe0f not measured' : (undelayed ? '\u26a0\ufe0f none' : esc(tl))) + '</td>' +
                 '<td>' + esc(p.via || '—') + '</td>' +
-                '<td>' + esc(p.reach || '—') + '</td>' +
+                // ⚠️ "bounded" is useless without the bound. security_analyst
+                // corrected apyUSD's ADMIN path from full to bounded and named
+                // what it reaches: "the UnlockReceipt contract only; the apyUSD
+                // vault and apxUSD are not reachable by this path". Rendering
+                // "bounded" alone loses the half that tells a reader whether the
+                // bound matters — a bounded path over in-flight unlock claims is
+                // not the same as a bounded path over a fee parameter.
+                '<td>' + esc(p.reach || '—') +
+                    (p.reach_bound
+                        ? '<span class="tw-sub"> \u2014 ' + esc(p.reach_bound) + '</span>'
+                        : '') + '</td>' +
             '</tr>';
         }).join('');
+    },
+
+    // ⚠️ META-AUTHORITY: who administers the ROLES rather than who holds them.
+    // Recorded as `role_admin` on the layer it bounds (their schema.md 1.9) rather
+    // than as a fourth path, because a path entry would double-count the same Safe
+    // in the holder list.
+    //
+    // ⚠️ IT MUST RENDER OR THE PAGE LOSES THE BINDING NUMBER. apyUSD's ADMIN Safe
+    // reaches only the receipt contract directly — but it administers roles 21-25,
+    // so it CAN reach the vault by re-pointing the gate. That route is 72h, not
+    // instant. Without this row the layer reads "ADMIN · none · bounded" with no
+    // indication the vault is reachable at all, which understates in one direction
+    // while the old "bypassable 72h" reading overstated in the other.
+    _roleAdminRowHtml(l, esc) {
+        var ra = l && l.role_admin;
+        if (!ra || typeof ra !== 'object') return '';
+        var route = ra.shortest_route_to_vault;
+        return '<tr class="tw-path tw-roleadmin">' +
+            '<td style="padding-left:1.5em;opacity:.75;">\u21b3 role admin' +
+                (ra.kind ? '<span class="tw-sub"> (' + esc(ra.kind) + ')</span>' : '') + '</td>' +
+            '<td>' + (ra.holder ? esc(String(ra.holder).slice(0, 10) + '\u2026') : '\u2014') + '</td>' +
+            '<td class="' + (route ? 'tw-ok' : 'tw-unknown') + '"' +
+                (ra.note ? ' title="' + esc(ra.note) + '"' : '') + '>' +
+                (route ? esc(route) + '<span class="tw-sub"> to vault</span>'
+                       : '\u26a0\ufe0f route not measured') + '</td>' +
+            '<td>' + esc(ra.via || '\u2014') + '</td>' +
+            '<td>meta</td>' +
+        '</tr>';
     },
 
     _exitScopeHtml(liq) {
@@ -4785,7 +4823,8 @@ const CommonRenderer = {
                 '</td>' +
                 '<td>' + esc(l.topology || '—') + '</td>' +
                 '<td>' + esc(l.reach || '—') + '</td>' +
-            '</tr>' + CommonRenderer._divergentPathRows(l, esc);
+            '</tr>' + CommonRenderer._roleAdminRowHtml(l, esc) +
+                     CommonRenderer._divergentPathRows(l, esc);
         }).join('');
 
         var unresolved = Array.isArray(c.unresolved) ? c.unresolved : [];
