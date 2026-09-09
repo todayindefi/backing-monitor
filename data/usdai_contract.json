@@ -3,7 +3,7 @@
   "asset": "usdai",
   "producer": "security_analyst",
   "as_of": "2026-08-26",
-  "generated_at": "2026-09-09T06:33:15Z",
+  "generated_at": "2026-09-09T06:33:41Z",
   "contract": {
     "headline": "A 48h timelock covers contract-upgrade (proxyAdmin). asset-permission (BRIDGE_ADMIN_ROLE, DEFAULT_ADMIN_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply.",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
@@ -14,6 +14,8 @@
       {
         "authority_layer": "contract-upgrade",
         "chain": "plasma",
+        "observed_at": "2026-08-26",
+        "walked_by": "hand",
         "target_name": "USDai",
         "terminal_name": "TimelockController",
         "topology": "timelocked",
@@ -21,6 +23,7 @@
           "proxyAdmin"
         ],
         "timelock": "48h",
+        "timelock_floor": "none",
         "reach": "full",
         "impl_upgradeable": true,
         "paths": [
@@ -29,6 +32,7 @@
             "name": "ProxyAdmin",
             "via": "eip1967_admin",
             "terminal": "timelock",
+            "holder_kind": "timelock",
             "terminal_address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
             "timelock": "48h",
             "reach": "full",
@@ -54,6 +58,8 @@
       {
         "authority_layer": "asset-permission",
         "chain": "plasma",
+        "observed_at": "2026-08-26",
+        "walked_by": "hand",
         "target_name": "USDai",
         "terminal_name": "OPS_SAFE",
         "topology": "nofm-multisig",
@@ -64,6 +70,7 @@
           "DEFAULT_ADMIN_ROLE"
         ],
         "timelock": "none",
+        "timelock_floor": "none",
         "reach": "full",
         "paths": [
           {
@@ -71,6 +78,7 @@
             "name": "LayerZero OFT adapter",
             "via": "BRIDGE_ADMIN_ROLE",
             "terminal": "safe",
+            "holder_kind": "safe",
             "terminal_address": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
             "timelock": "none",
             "reach": "full",
@@ -81,16 +89,62 @@
             "name": "OPS_SAFE",
             "via": "DEFAULT_ADMIN_ROLE",
             "terminal": "safe",
+            "holder_kind": "safe",
             "terminal_address": "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f",
             "timelock": "none",
             "reach": "full",
             "note": "getRoleAdmin(BRIDGE_ADMIN_ROLE) == 0x00 == DEFAULT_ADMIN, which OPS_SAFE holds on all four chains. It can grant mint to any address in ONE transaction. Two independent routes to the same undelayed mint.\n"
           }
         ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "arbitrum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "USDai",
+        "terminal_name": "TimelockController",
+        "topology": "timelocked",
+        "keys": [
+          "proxyAdmin"
+        ],
+        "timelock": "48h",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x2ddf39c731377adcfa7f2a056ac60a8a81aadc3c",
+            "name": "ProxyAdmin",
+            "via": "eip1967_admin",
+            "terminal": "timelock",
+            "holder_kind": "timelock",
+            "terminal_address": "0x0eea1ee08611ff4a4e83bfe3916712751995639b",
+            "timelock": "48h",
+            "reach": "full",
+            "timelock_roles": {
+              "PROPOSER": [
+                "0x783b08aa21de056717173f72e04be0e91328a07b"
+              ],
+              "CANCELLER": [
+                "0x783b08aa21de056717173f72e04be0e91328a07b"
+              ],
+              "EXECUTOR": [
+                "0x783b08aa21de056717173f72e04be0e91328a07b",
+                "0x5f0bc72fb5952b2f3f2e11404398ed507b25841f"
+              ],
+              "DEFAULT_ADMIN": [
+                "0x0eea1ee08611ff4a4e83bfe3916712751995639b"
+              ]
+            },
+            "canceller_independent": false,
+            "hand_walk": "Live EIP-1967 reads on USDai 0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF returned ProxyAdmin 0x2ddf39c7...aadc3c and implementation 0x0ab74df5...bc212. ProxyAdmin.owner() returned TimelockController 0x0eea1ee0...95639b; getMinDelay() returned 172800 seconds. Live hasRole checks returned GOV_SAFE as proposer, canceller, and executor, OPS_SAFE as executor, and the timelock itself as DEFAULT_ADMIN. updateDelay(0) succeeded from the timelock itself while the same call from 0x...dEaD reverted, so 48h is the current setting and the enforced floor is none."
+          }
+        ]
       }
     ],
     "unresolved": [
-      "arbitrum: OFT adapter address not identified (log range cap)",
+      "arbitrum asset-permission: OFT adapter remains unidentified after a different bounded method, not a repeat open-ended scan. Starting from the live USDai proxy 0x0A1a1A107E45b7Ced86833863f482BC5f4ed82EF, getRoleMemberCount/getRoleMember are unsupported; the known plasma adapter and both known Safes all returned false for BRIDGE_ADMIN_ROLE; and bounded 10,000-block RoleGranted scans from the RPC's apparent first historical-code block 499272764 through the observation block returned no matching grant. The feed's suggested 0x46850aD61C2B7d64d08c9C754F45254596696984 state-read root identifies itself on-chain as PayPal USD (PYUSD), exposes no endpoint(), and therefore cannot be used as USDai's OFT adapter root. No mint-holder, terminal, or delay is inferred from the plasma deployment.",
       "ethereum: OFT adapter address not identified (log range cap)",
       "base: OFT adapter address not identified (log range cap)"
     ],
