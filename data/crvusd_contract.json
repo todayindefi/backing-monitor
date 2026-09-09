@@ -2,13 +2,13 @@
   "schema_version": "contract/1",
   "asset": "crvusd",
   "producer": "security_analyst",
-  "as_of": "2026-08-23",
-  "generated_at": "2026-09-09T05:13:31Z",
+  "as_of": "2026-09-09",
+  "generated_at": "2026-09-09T05:51:26Z",
   "contract": {
-    "headline": "No timelock established on any measured authority layer. ⚠️ 1 layer NOT MEASURED: bridge (bridge) — an unknown delay, not an absent one.",
+    "headline": "A 7d timelock covers asset-permission (minter, factory_admin, Agent_EXECUTE_ROLE). contract-upgrade (eip1967_beacon, beacon_owner, EXECUTOR_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply. ⚠️ 1 layer NOT MEASURED: bridge (bridge) — an unknown delay, not an absent one.",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
     "method": "hand-walk",
-    "observed_at": "2026-08-23",
+    "observed_at": "2026-09-09",
     "source_file": "security_analyst/topology/assets/crvusd.yaml",
     "layers": [
       {
@@ -17,29 +17,44 @@
         "observed_at": "2026-09-09",
         "walked_by": "hand",
         "target_name": "crvUSD Stablecoin",
-        "terminal_name": "Curve Ownership Agent / Emergency Safe",
-        "topology": "unknown",
+        "terminal_name": "Curve Ownership Voting / Emergency Safe",
+        "topology": "timelocked",
         "keys": [
           "minter",
-          "factory_admin"
+          "factory_admin",
+          "Agent_EXECUTE_ROLE"
         ],
-        "timelock": "none",
-        "timelock_floor": "none",
+        "timelock": "7d",
+        "timelock_floor": "7d",
         "reach": "full",
         "impl_upgradeable": false,
         "paths": [
           {
-            "holder": "0xc9332fdcb1c491dcc683bae86fe3cb70360738bc",
-            "name": "crvUSDControllerFactory",
+            "holder": "0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+            "name": "Curve Ownership Agent",
             "name_verified": true,
-            "via": "crvUSD.minter -> factory.admin -> ControllerAdmin.dao",
-            "terminal": "contract",
-            "holder_kind": "aragon-agent",
-            "timelock": "none",
-            "delay_applies": false,
+            "via": "crvUSD.minter -> factory.admin -> ControllerAdmin.dao -> Agent EXECUTE_ROLE -> Ownership Voting",
+            "terminal": "timelock",
+            "holder_kind": "token-voting",
+            "timelock": "7d",
+            "timelock_floor": "7d",
+            "delay_applies": true,
             "reach": "full",
-            "terminal_address": "0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
-            "hand_walk": "Live minter() returned the factory; factory.admin() returned 0xb7400d2e...afB79; dao() returned this Agent. kernel() returned 0xad068681...d72d and appId() equalled the derived namehash for agent.aragonpm.eth. ControllerAdmin exposes no getMinDelay, delay, minDelay, or MIN_DELAY schedule surface. Source gates execute, transfer_ownership, and set_emergency to dao()."
+            "terminal_address": "0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+            "voting": {
+              "app": "0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+              "governance_token": "0x5f3b5dfeb7b28cdbd7faba78963ee202a494e2a2",
+              "vote_duration": "7d",
+              "support_required_pct": 51,
+              "minimum_quorum_pct": 30,
+              "acl_role": "0xcebf517aa4440d1d125e0355aae64401211d0848a23c02cc5d29a14822580ba4",
+              "acl_role_name": "EXECUTE_ROLE",
+              "acl_holders": [
+                "0xe478de485ad2fe566d49342cbd03e49ed7db3356"
+              ],
+              "acl_history": "complete"
+            },
+            "hand_walk": "Live minter() returned the factory; factory.admin() returned 0xb7400d2e...afB79; dao() returned this Agent. The Agent's derived EXECUTE_ROLE is held solely by Ownership Voting in complete SetPermission history and in live hasPermission checks; 0x...dEaD and Aragon's wildcard address returned false. Voting reports voteTime=604800, supportRequiredPct=0.51e18, and minAcceptQuorumPct=0.30e18. Verified source has no voteTime setter and _canExecute refuses while the seven-day vote is open. The first authority action therefore retains that seven-day floor even if the Voting app is subsequently upgraded through governance."
           },
           {
             "holder": "0x467947ee34af926cf1dcac093870f613c96b1e0c",
@@ -111,7 +126,7 @@
       {
         "authority_layer": "bridge",
         "chain": "base",
-        "observed_at": "2026-08-23",
+        "observed_at": "2026-09-09",
         "walked_by": "hand",
         "target_name": "OptimismMintableERC20 crvUSD",
         "terminal_name": "Base L2StandardBridge",
@@ -134,7 +149,7 @@
             "delay_applies": "unknown",
             "reach": "full",
             "terminal_address": "0x4200000000000000000000000000000000000010",
-            "hand_walk": "bridge() returned this canonical system proxy; remoteToken() and l1Token() both returned Ethereum crvUSD 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e. Prior controlled calls showed bridge-gated mint/burn while a stranger reverted. Token owner(), admin(), and minter() revert and all five checked proxy slots are zero."
+            "hand_walk": "bridge() returned this canonical system proxy; remoteToken() and l1Token() both returned Ethereum crvUSD 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e. Current controlled calls showed mint succeeds from the bridge while a stranger fails the bridge gate; bridge-origin burn passed authorization and reached the balance check while the stranger failed the bridge gate. The EIP-1967 implementation, admin, and beacon slots are zero."
           }
         ]
       }
@@ -144,8 +159,7 @@
       "optimism 0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6: not hand-walked in this pass. The generator's accessor-refused placeholder was removed rather than interpreted as no authority or no delay.",
       "bnb 0xe2fb3f127f5450dee44afe054385d74c392bdef4: not hand-walked in this pass. BNB has no configured explorer in this repo; no empty-holder or no-authority claim is made.",
       "fraxtal 0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3: not hand-walked in this pass. The generator's accessor-refused placeholder was removed rather than interpreted as no authority or no delay.",
-      "base bridge: the local token gate was measured, but the ultimate L1 governance/signature threshold, current execution delay, and delay floor behind Base L2StandardBridge were not traversed. The bridge layer therefore remains timelock unresolved by construction.",
-      "Curve Ownership Agent participant threshold and Aragon ACL/Voting policy were not reduced to an off-chain signer population. The measured claim is the on-chain authority path and absence of a separate schedule at the ControllerAdmin gate, not signer independence."
+      "base bridge: the local token gate was measured, but the ultimate L1 governance/signature threshold, current execution delay, and delay floor behind Base L2StandardBridge were not traversed. The bridge layer therefore remains timelock unresolved by construction."
     ],
     "authority_shared_with": [],
     "review": null,
