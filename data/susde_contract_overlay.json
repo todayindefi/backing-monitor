@@ -1,0 +1,27 @@
+{
+ "schema_version": "contract-overlay/1",
+ "producer": "riskanalyst",
+ "asset": "susde",
+ "as_of": "2026-09-09T00:00:00Z",
+ "contract": {
+  "structural_score": 5.5,
+  "structural_score_source": "riskAnalyst:authored",
+  "structural_score_generated_at": "2026-09-09T00:00:00Z",
+  "structural_score_basis": "Axis 5 = CONTRACT & ADMIN. ⚠️ CUT 7.0 -> 5.5 ON 2026-09-09. NOT A NEW FINDING ABOUT sUSDe — it is spec line 50: 'A wrapper may not outrank its underlying on the underlying's own axis. Set EQUAL, don't notch.' USDe's axis 5 was authored today at 5.5, and sUSDe cannot sit above it. ⚠️ THE 7.0 WAS SET WHILE THE UNDERLYING HAD NO AXIS 5 AT ALL — the same shape as sUSDai's 5.5, which was also authored above an underlying that had never been scored. A wrapper score with no underlying to constrain it drifts upward by default. ⚠️ sUSDe's OWN SURFACE IS ADDITIONAL AND NOT PRICED HERE, per the equal-not-notch rule: the ERC4626 staking vault, the cooldown, and an UNDELAYED bounded pause via BLACKLIST_MANAGER_ROLE held by the same 5-of-10 Safe. A known limitation of the rule, recorded rather than worked around. ⚠️ THE 24h IS A REAL CODE-ENFORCED FLOOR, TESTED DIRECTLY RATHER THAN INHERITED: updateDelay(0) REVERTS from the Dev Safe (a role holder), SUCCEEDS from the timelock itself, REVERTS from 0x…dEaD, with getMinDelay()=86400 answering in the same pass. `onlySelf`, so shortening the delay must itself clear the current 24h. ⚠️ Tested rather than transferred because yzUSD's and usdai's timelocks are BOTH 5,448 bytes with DIFFERENT CODEHASHES — same length, different build. ⚠️ NO INDEPENDENT VETO: the Dev Safe 0x3b0aaf6e…1862, 5-of-10, holds PROPOSER, EXECUTOR *AND* CANCELLER — verified live with 0x…dEaD false on all three. The party that schedules is the only party that could cancel. THIRD ASSET THIS SESSION with that shape, after usdai and crvUSD. ⚠️ USDe AND sUSDe SHARE THEIR GOVERNANCE TERMINAL — timelock 0xe8dc0fab…7c94, established as structured `authority_shared_with` rather than inferred. One compromise reaches both.",
+  "coverage_summary": "Ethereum issuance authority measured. ⚠️ Other chains unwalked and their share is NOT PUBLISHED — no percentage exists.",
+  "coverage_note": "Ethereum only. ⚠️ NOT STATED AS A FRACTION AND IT CANNOT BE: usde declares 8 chains, susde 9, and NEITHER FEED PUBLISHES supply_by_chain OR supply_scope — so the share ethereum represents DOES NOT EXIST as a number. Converting 'ethereum only' into a percentage would be the sUSDai error, where USDai's 99.72% was asserted about a sibling that publishes no split. ⚠️ AND THE UNMEASURED PART CAN BE THE WORST PART: usdg's Solana leg was assumed comparable and turned out to hold strictly more power than any EVM leg. 7 chains unwalked for usde, 8 for susde, each recorded with a reason.",
+  "code_facts": [
+   "⚠️ USDe HAS NO UPGRADE PATH AT ALL — a MEASURED ABSENCE, not an unresolved authority. All three EIP-1967 slots (impl, admin, beacon) read ZERO and verified source contains no upgrade mechanism. ⚠️ THE CONTROL SURVIVES INTO THE SENTENCE: totalSupply() returned 4,460,096,617.78 and owner()/minter() both ANSWERED in the same pass, so the zeros are evidence rather than silence. [security_analyst 2026-09-09, re-verified riskAnalyst]",
+   "⚠️ READ THE PATHS, NOT THE LAYER SUMMARY. The asset-permission layer summarises as `timelock: none, reach: full` — and NO SINGLE PATH IS BOTH. The FULL-reach path (USDe.owner -> setMinter) is 24h-DELAYED; the UNDELAYED path (USDe.minter -> EthenaMintingV2 MINTER_ROLE) is BOUNDED, constrained by supported assets, signed orders and oracle tolerances. A basis built off the layer row would assert undelayed full-reach mint authority on a $4.46B asset. [riskAnalyst — the crvUSD emergency-Safe error, avoided]",
+   "24h timelock 0xe8dc0fab349ea169283c48ccfd09d797e6db7c94, floor 24h, tested by simulation with both controls. [riskAnalyst 2026-09-09]",
+   "⚠️ Dev Safe 0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862 is 5-of-10 and holds PROPOSER + EXECUTOR + CANCELLER. 5-of-10 is the strongest quorum measured this session — but proposer = canceller means the delay is a reaction window for HOLDERS, not a control. [riskAnalyst 2026-09-09, dEaD control on all three]",
+   "⚠️ sUSDe's `setCooldownDuration` SITS BEHIND THE 24h TIMELOCK — and it is the gate a HOLDER ACTUALLY MEETS. sUSDe is a staking vault with a cooldown; who can change that period IS the redemption question, and it is measured and delayed. [security_analyst 2026-09-09]",
+   "⚠️ BLACKLIST_MANAGER_ROLE gives the same 5-of-10 Dev Safe an UNDELAYED pause path — reach BOUNDED, timelock none. Bounded, but not delayed. [security_analyst 2026-09-09]"
+  ],
+  "cross_axis": [
+   "⚠️ USDe's delta-neutral BASIS TRADE, funding-rate exposure and exchange counterparty risk are AXIS 2 (backing 6.5) and PEG (6.5), NOT here. This axis prices the ADMIN TOPOLOGY only.",
+   "⚠️ Ethena Labs' regulatory standing is ISSUER (7.0) — and that number is separately under re-examination, because it sits a rung below two TRUST-CHARTERED issuers while Ethena is essentially unregulated. Not priced here.",
+   "⚠️ This overlay is the SCORE + CODE half. The authority table renders from security_analyst's file."
+  ]
+ }
+}

@@ -3,16 +3,16 @@
   "asset": "crvusd",
   "producer": "security_analyst",
   "as_of": "2026-09-09",
-  "generated_at": "2026-09-09T14:29:01Z",
+  "generated_at": "2026-09-09T15:08:01Z",
   "contract": {
-    "headline": "A 7d timelock covers asset-permission (minter, factory_admin, Agent_EXECUTE_ROLE). contract-upgrade (eip1967_beacon, beacon_owner, EXECUTOR_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply. ⚠️ 1 layer NOT MEASURED: bridge (bridge) — an unknown delay, not an absent one.",
+    "headline": "A 7d timelock covers governance (minter, factory_admin, Agent_EXECUTE_ROLE). contract-upgrade (eip1967_beacon, beacon_owner, EXECUTOR_ROLE) has NO established delay — timelock: none. The delay protects the code and not the supply. ⚠️ 2 layers NOT MEASURED: bridge (bridge), bridge (bridge, bridge_eip1967_admin, proxyadmin_owner, l1_alias) — an unknown delay, not an absent one.",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
     "method": "hand-walk",
     "observed_at": "2026-09-09",
     "source_file": "security_analyst/topology/assets/crvusd.yaml",
     "layers": [
       {
-        "authority_layer": "asset-permission",
+        "authority_layer": "governance",
         "chain": "ethereum",
         "observed_at": "2026-09-09",
         "walked_by": "hand",
@@ -152,13 +152,217 @@
             "hand_walk": "bridge() returned this canonical system proxy; remoteToken() and l1Token() both returned Ethereum crvUSD 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e. Current controlled calls showed mint succeeds from the bridge while a stranger fails the bridge gate; bridge-origin burn passed authorization and reached the balance check while the stranger failed the bridge gate. The EIP-1967 implementation, admin, and beacon slots are zero."
           }
         ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "YieldBasis Factory",
+        "terminal_name": "YieldBasis Aragon OSx TokenVoting",
+        "topology": "token-voting",
+        "keys": [
+          "factory_admin",
+          "ADMIN",
+          "EXECUTE_PERMISSION_ID"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x2be6670de1ccec715bdbba2e3a6c1a05e496ec78",
+            "name": "YieldBasis TokenVoting plugin",
+            "name_verified": true,
+            "via": "factory.admin -> HybridFactoryOwner.ADMIN -> DAO EXECUTE_PERMISSION",
+            "terminal": "token-voting",
+            "holder_kind": "token-voting",
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "terminal_address": "0x2be6670de1ccec715bdbba2e3a6c1a05e496ec78",
+            "permissions": {
+              "dao": "0x42f2a41a0d0e65a440813190880c8a65124895fa",
+              "execute_permission_id": "0xbf04b4486c9663d805744005c3da000eda93de6e3308a4a7a812eb565327b78d",
+              "execute_holders": [
+                "0x2be6670de1ccec715bdbba2e3a6c1a05e496ec78"
+              ],
+              "root_permission_id": "0x815fe80e4b37c8582a3b773d1d7071f983eacfd56b5965db654f3087c25ada33",
+              "root_holders": [
+                "0x42f2a41a0d0e65a440813190880c8a65124895fa"
+              ],
+              "upgrade_dao_permission_id": "0x1f53edd44352e5d15bad2b29233baa93bcd595e09457780bc7c5445bbbe751cc",
+              "upgrade_dao_holders": [
+                "0x42f2a41a0d0e65a440813190880c8a65124895fa"
+              ],
+              "permission_history": "complete",
+              "dead_address_negative_control": false,
+              "curve_ownership_agent_has_permission": false
+            },
+            "voting": {
+              "governance_token": "0x8235c179e9e84688fbd8b12295efc26834dac211",
+              "voting_mode": "early-execution",
+              "vote_duration": "7d",
+              "support_required_pct": 55,
+              "minimum_participation_pct": 30,
+              "minimum_proposer_voting_power": 1,
+              "duration_has_setter": true,
+              "settings_setter": "updateVotingSettings",
+              "settings_setter_permission_id": "0xbba35d41610b7d25c8e486006535c76bd423091563e694d206ae3d71ce949fe5",
+              "settings_setter_holder": "0x42f2a41a0d0e65a440813190880c8a65124895fa"
+            },
+            "hand_walk": "Factory admin() returned HybridFactoryOwner 0xb8ba33cd1ccb091a8468572950bd3669723fa5c6; factory 0x370a449febb9411c95bf897021377fe0b7d100c0 had a 1,000,000,000 crvUSD ceiling and residual, 669,276,044.016069376709134348 idle crvUSD, against 2,104,809,204.981834354272443571 total supply. its ABI-defined ADMIN(), FACTORY(), and STABLECOIN() accessors returned the OSx DAO, this factory, and crvUSD. Complete Granted/Revoked history from deployment through the observation block shows the initial 0x1293c8e86b1d7055c07c32b0c37ed8c14f0c5d10 execute grant revoked and this plugin as the sole remaining execute grantee. Live isGranted checks confirm that state, DAO-self as the sole ROOT and UPGRADE_DAO grantee, and false for the old plugin, Curve Ownership Agent 0x40907540d8a6c65c637785e8f8b742ae6b0b9968, and 0x000000000000000000000000000000000000dead. The plugin implementation reports votingMode=1 (early execution), minDuration=604800, supportThreshold=550000, minParticipation=300000, and exposes updateVotingSettings. The DAO alone holds that setter's permission; the DAO can therefore alter duration through governance."
+          }
+        ]
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "fraxtal",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "OptimismMintableERC20 crvUSD",
+        "terminal_name": "Fraxtal system ProxyAdmin owner",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 5,
+        "keys": [
+          "bridge",
+          "bridge_eip1967_admin",
+          "proxyadmin_owner"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6",
+            "name": "GnosisSafeProxy",
+            "name_verified": true,
+            "via": "bridge-gated mint/burn -> L2StandardBridge -> ProxyAdmin.owner",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "threshold": 3,
+            "owners": 5,
+            "owner_addresses": [
+              "0x8da4e997e051605878c9c0b793c496556eacc2c0",
+              "0x6e74053a3798e0fc9a9775f7995316b27f21c4d2",
+              "0x6933bcc3e96f1c4d2cb73cb391d854b18ab7a4f2",
+              "0x17e06ce6914e3969f7bd37d8b2a563890ca1c96e",
+              "0xcbc616d595d38483e6adc45c7e426f44bf230928"
+            ],
+            "owner_code_kinds": [
+              "eoa",
+              "eoa",
+              "eoa",
+              "eoa",
+              "eoa"
+            ],
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "terminal_address": "0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6",
+            "hand_walk": "Live chainId=252. Token 0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3 has code size 9235 bytes; l1Token(), remoteToken(), and all bridge accessors identify Ethereum crvUSD and L2StandardBridge 0x4200000000000000000000000000000000000010. Token EIP-1967 admin, implementation, and beacon slots and the Zeppelin OS admin slot are zero. The bridge implementation slot is nonzero and its ProxyAdmin 0x4200000000000000000000000000000000000018 owner is this Safe. Live getThreshold()=3, getOwners() returned five full addresses, and all five have zero code. Distinct addresses do not establish independent operators."
+          }
+        ]
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "optimism",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "OptimismMintableERC20 crvUSD",
+        "terminal_name": "Optimism Foundation / Security Council Safe",
+        "topology": "nested-multisig",
+        "keys": [
+          "bridge",
+          "bridge_eip1967_admin",
+          "proxyadmin_owner",
+          "l1_alias"
+        ],
+        "timelock": "unresolved",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x5a0aae59d09fccbddb6c6cceb07b7279367c3d2a",
+            "name": "GnosisSafeProxy",
+            "name_verified": true,
+            "via": "bridge-gated mint/burn -> L2StandardBridge -> ProxyAdmin.owner -> reverse L1-to-L2 alias",
+            "terminal": "nested-multisig",
+            "holder_kind": "nested-multisig",
+            "entity_threshold": 2,
+            "owner_entities": 2,
+            "entity_addresses": [
+              "0x847b5c174615b1b7fdf770882256e2d3e95b9d92",
+              "0xc2819dc788505aac350142a7a707bf9d03e3bd03"
+            ],
+            "timelock": "unresolved",
+            "delay_applies": "unknown",
+            "reach": "full",
+            "terminal_address": "0x5a0aae59d09fccbddb6c6cceb07b7279367c3d2a",
+            "hand_walk": "Token 0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6 bridge accessors return 0x4200000000000000000000000000000000000010 and remote-token accessors return Ethereum crvUSD; token proxy slots are zero. The bridge implementation is nonzero and ProxyAdmin owner is L2 address 0x6b1bae59d09fccbddb6c6cceb07b7279367c4e3b. Subtracting the OP Stack alias offset resolves to this Ethereum Safe. Live getThreshold()=2 and getOwners() returns two contract addresses. Their internal signer sets and any execution delay were not walked, so this row makes no two-key claim."
+          }
+        ]
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "bnb",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "crvUSD BNB token/minter",
+        "terminal_name": "Curve X-Gov storage-proof messenger / LayerZero DVNs",
+        "topology": "dvn-set",
+        "keys": [
+          "minter",
+          "owner",
+          "messenger",
+          "block_hash_oracle",
+          "lz_receiver",
+          "required_dvns"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0xbff1f56c8e48e2f2f52941e16feecc76c49f1825",
+            "name": "Curve X-Dao Message Digest Prover",
+            "name_verified": true,
+            "via": "token.minter -> minter.owner -> relayer.messenger -> storage proof -> block-hash oracle -> LayerZero receiver",
+            "terminal": "dvn-set",
+            "holder_kind": "required-dvn-set",
+            "required_dvn_count": 4,
+            "optional_dvn_count": 0,
+            "optional_dvn_threshold": 0,
+            "confirmations": 15,
+            "required_dvns": [
+              "0x247624e2143504730aec22912ed41f092498bef2",
+              "0x31f748a368a893bdb5abb67ec95f232507601a73",
+              "0xfa9ba83c102283958b997adc8b44ed3a3cdb5dda",
+              "0xfd6865c841c2d64565562fcc7e05e619a30615f0"
+            ],
+            "ethereum_peer": "0x49cdecc38b4caf6a07c13558a32820333bc2ab61",
+            "ethereum_endpoint": "0x66a71dcef29a0ffbdbe3c6a460a3b5bc225cd675",
+            "ethereum_send_library": "0xd231084bfb234c107d3ee2b22f97f3346fdaf705",
+            "bnb_endpoint": "0x3c2269811836af69497e5f486a85d7316753cf62",
+            "bnb_receive_library": "0xff3da3a1cd39bbaeb8d7cb2deb83efc065cbb38f",
+            "signer_thresholds": null,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "terminal_address": "0xbff1f56c8e48e2f2f52941e16feecc76c49f1825",
+            "hand_walk": "Token 0xe2fb3f127f5450dee44afe054385d74c392bdef4 minter() returned 0xc417e91098402dd4f677782a2ec204c429ce513a, whose owner is Ownership Agent 0xc97e2328c5701572c0dfb199b9f860d6ccd74199. Relayer 0x37b6d6d425438a9f8e40c8b4c06c10560967b678 exposes the three agent immutables and messenger 0xbff1f56c8e48e2f2f52941e16feecc76c49f1825; source confirms the Ownership Agent can rotate that messenger. The messenger exposes BLOCK_HASH_ORACLE 0x7cde6ef7e2e2fd3b6355637f1303586d7262ba37 and RELAYER 0x37b6d6d425438a9f8e40c8b4c06c10560967b678. The oracle reports threshold=1 and one committer, but that committer 0x49cdecc38b4caf6a07c13558a32820333bc2ab61 is a contract: a LayerZero receiver, not an EOA. Its BNB endpoint uses receive version 5/library 0xff3da3a1cd39bbaeb8d7cb2deb83efc065cbb38f. The same-address Ethereum sender uses endpoint 0x66a71dcef29a0ffbdbe3c6a460a3b5bc225cd675, send version 4/library 0xd231084bfb234c107d3ee2b22f97f3346fdaf705, and targets LZ chain id 102. Destination getConfig(5,101,receiver,2) decodes to 15 confirmations, four required DVNs, zero optional DVNs, threshold zero. The four full BNB DVN addresses are recorded above. Internal DVN signer membership was not traversed, so no key threshold is filed."
+          }
+        ]
       }
     ],
     "unresolved": [
       "ethereum contract-upgrade: no layer is filed because live crvUSD is non-proxy bytecode, admin() reverts, and the prior five proxy-slot checks were zero. This is a measured absence of a reachable token upgrade surface, not an unresolved path; minter replacement and ControllerFactory administration are represented under asset-permission.",
-      "optimism 0xc52d7f23a2e460248db6ee192cb23dd12bddcbf6: not hand-walked in this pass. The generator's accessor-refused placeholder was removed rather than interpreted as no authority or no delay.",
-      "bnb 0xe2fb3f127f5450dee44afe054385d74c392bdef4: not hand-walked in this pass. BNB has no configured explorer in this repo; no empty-holder or no-authority claim is made.",
-      "fraxtal 0xb102f7efa0d5de071a8d37b3548e1c7cb148caf3: not hand-walked in this pass. The generator's accessor-refused placeholder was removed rather than interpreted as no authority or no delay.",
+      "optimism nested owners: the Safe's two owner entities were identified as contracts, but their internal signer populations, thresholds, and any enforced execution delay were not traversed. The observed 2-of-2 entity threshold must not be interpreted as a two-key compromise cost.",
+      "bnb DVNs: the Ethereum-to-BNB LayerZero configuration requires four named DVN contracts, but the signer sets, signer thresholds, and operator independence inside those four DVNs were not traversed. Key cost therefore remains null; required_dvn_count is not substituted for a key count.",
       "base bridge: the local token gate was measured, but the ultimate L1 governance/signature threshold, current execution delay, and delay floor behind Base L2StandardBridge were not traversed. The bridge layer therefore remains timelock unresolved by construction."
     ],
     "authority_shared_with": [],
