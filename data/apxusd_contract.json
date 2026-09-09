@@ -1,0 +1,307 @@
+{
+  "schema_version": "contract/1",
+  "asset": "apxusd",
+  "producer": "security_analyst",
+  "as_of": "2026-09-09",
+  "generated_at": "2026-09-09T15:11:25Z",
+  "contract": {
+    "headline": "A 72h timelock covers contract-upgrade (authority, upgradeToAndCall). pause (pause, unpause) has NO established delay — timelock: none. The delay protects the code and not the supply.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-09",
+    "source_file": "security_analyst/topology/assets/apxusd.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "apxUSD ERC1967Proxy",
+        "terminal_name": "Apyx MAINTAINER Safe",
+        "topology": "nofm-multisig",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "authority",
+          "upgradeToAndCall"
+        ],
+        "timelock": "72h",
+        "timelock_floor": "72h",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "AccessManager role 24 -> upgradeToAndCall",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "72h",
+            "timelock_floor": "72h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "name/symbol identify apxUSD. authority() returns the shared manager; the EIP-1967 implementation is verified ApxUSD at 0xdd71fd677fde2ed2579a3c45204f41a11016ccb4. Role 24 and the token's target-admin delay are both 259200 seconds."
+          }
+        ]
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "apxUSD transfers",
+        "terminal_name": "Apyx MAINTAINER Safe",
+        "topology": "nofm-multisig",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "pause",
+          "unpause"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 21 -> pause",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 22 -> unpause",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "4h",
+            "timelock_floor": "4h",
+            "delay_applies": true,
+            "reach": "full"
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "apxUSD issuance and CCIP registration",
+        "terminal_name": "Apyx MinterV0 / MAINTAINER Safe",
+        "topology": "mixed",
+        "keys": [
+          "mint",
+          "setSupplyCap",
+          "setCCIPAdmin"
+        ],
+        "timelock": "4h",
+        "timelock_floor": "4h",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x2c36e1adfaa80ee0324b04cc814f5207bb7ba76e",
+            "name": "Apyx MinterV0",
+            "name_verified": true,
+            "via": "role 4 -> mint",
+            "terminal": "contract-role-set",
+            "holder_kind": "restricted-minter",
+            "terminal_address": "0x2c36e1adfaa80ee0324b04cc814f5207bb7ba76e",
+            "timelock": "4h",
+            "timelock_floor": "4h",
+            "delay_applies": true,
+            "reach": "bounded",
+            "hand_walk": "MinterV0 holds role 4 with a 14400-second delay. Verified code also requires signed time-bounded orders and enforces per-order and rolling limits; both limits read 50,000,000 apxUSD, with a 24-hour period."
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 23 -> setSupplyCap",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "24h",
+            "timelock_floor": "24h",
+            "delay_applies": true,
+            "reach": "full"
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 25 -> setCCIPAdmin",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "7d",
+            "timelock_floor": "7d",
+            "delay_applies": true,
+            "reach": "full"
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "apxUSD deny-list and MinterV0 limits",
+        "terminal_name": "Apyx MAINTAINER Safe",
+        "topology": "nofm-multisig",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "setDenyList",
+          "setMaxMintAmount",
+          "setRateLimit"
+        ],
+        "timelock": "24h",
+        "timelock_floor": "24h",
+        "reach": "bounded",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 23 -> deny-list / max order",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "24h",
+            "timelock_floor": "24h",
+            "delay_applies": true,
+            "reach": "bounded"
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 24 -> rolling rate limit",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "72h",
+            "timelock_floor": "72h",
+            "delay_applies": true,
+            "reach": "bounded"
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "ethereum MinterV0 order signer and complete request/execute/cancel role populations were not promoted to a fixed signer topology; no absence of additional operators is inferred.",
+      "base: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "bnb: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "The attestation Safe and signing key were not treated as authority roots. Direct role checks did not establish them as holders of the tested token AccessManager roles; attestation context is not administration."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "apyusd",
+        "shares": [
+          {
+            "kind": "access-manager",
+            "address": "0xe167330e2eac88666de253e9607c6d9ae0ca2824",
+            "delay": "72h",
+            "roles": [
+              "ethereum-authority",
+              "target-admin"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "n": 4,
+            "m": 6,
+            "delay": "none",
+            "roles": [
+              "root-admin"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "none",
+            "roles": [
+              "pause",
+              "maintenance"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "4h",
+            "roles": [
+              "unpause"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "24h",
+            "roles": [
+              "parameters"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "72h",
+            "roles": [
+              "upgrade"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "7d",
+            "roles": [
+              "ccip-admin-rotation"
+            ]
+          }
+        ]
+      }
+    ],
+    "review": null,
+    "walk_notes": [
+      "Hand-walked at Ethereum block 25,940,505 using read-only calls."
+    ]
+  }
+}

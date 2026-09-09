@@ -1,0 +1,356 @@
+{
+  "schema_version": "contract/1",
+  "asset": "apyusd",
+  "producer": "security_analyst",
+  "as_of": "2026-09-09",
+  "generated_at": "2026-09-09T15:11:25Z",
+  "contract": {
+    "headline": "No timelock established on any measured authority layer.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-09",
+    "source_file": "security_analyst/topology/assets/apyusd.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "apyUSD and current UnlockReceipt proxies",
+        "terminal_name": "Apyx MAINTAINER Safe / ADMIN Safe",
+        "topology": "mixed",
+        "keys": [
+          "authority",
+          "upgradeToAndCall"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 24 -> upgradeToAndCall",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "72h",
+            "timelock_floor": "72h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "name/symbol identify apyUSD and asset() returns apxUSD. authority() returns the shared manager; the implementation is verified ApyUSD at 0xfd616567ecc1607f61073951a1e822f7315bb112. Role 24 and the vault target-admin delay are both 259200 seconds."
+          },
+          {
+            "holder": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "name": "Apyx ADMIN Safe",
+            "name_verified": true,
+            "via": "UnlockReceipt role 0 -> upgradeToAndCall",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "Receipt proxy 0x9bf51f33955ec70f87c4b5c49441815589043237 uses verified implementation 0x54f1c7ffe10bc392f08ae9432a7e21a6e86bb982; its upgrade selector maps to role 0 with zero delay."
+          }
+        ]
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "apyUSD vault and current UnlockReceipt",
+        "terminal_name": "MAINTAINER Safe / ADMIN Safe",
+        "topology": "mixed",
+        "keys": [
+          "pause",
+          "unpause"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "vault role 21 -> pause",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "vault role 22 -> unpause",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "4h",
+            "timelock_floor": "4h",
+            "delay_applies": true,
+            "reach": "full"
+          },
+          {
+            "holder": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "name": "Apyx ADMIN Safe",
+            "name_verified": true,
+            "via": "UnlockReceipt role 0 -> pause / unpause",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "The vault and receipt were unpaused. The receipt target-admin delay is zero and tested restricted selectors map to root role 0. Verified code makes pause block mint and claim with no holder emergency-exit bypass."
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "apyUSD vault and unlock parameters",
+        "terminal_name": "MAINTAINER Safe / ADMIN Safe",
+        "topology": "mixed",
+        "keys": [
+          "setUnlockReceipt",
+          "setUnlockingFee",
+          "setFeeCurve",
+          "setFeeWallet",
+          "setVesting",
+          "setDenyList"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 21 -> setUnlockReceipt",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 23 -> unlocking fee / deny-list",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "24h",
+            "timelock_floor": "24h",
+            "delay_applies": true,
+            "reach": "bounded"
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 24 -> vesting / vault fee wallet",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "72h",
+            "timelock_floor": "72h",
+            "delay_applies": true,
+            "reach": "full"
+          },
+          {
+            "holder": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "name": "Apyx ADMIN Safe",
+            "name_verified": true,
+            "via": "UnlockReceipt role 0 -> setFeeCurve / setFeeWallet",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "receipt() is 0x9bf51f33955ec70f87c4b5c49441815589043237; its asset/vault are apxUSD/apyUSD. The live curve is 0 minimum fee, 3.4% maximum fee, 3-day minimum and 20-day maximum duration. Verified source says curve changes affect in-flight receipts; role 0 is immediate."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "apyUSD administrative burn and CCIP registration",
+        "terminal_name": "Apyx MAINTAINER Safe",
+        "topology": "nofm-multisig",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "burnWithAssets",
+          "setCCIPAdmin"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 21 -> burnWithAssets",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 25 -> setCCIPAdmin",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "7d",
+            "timelock_floor": "7d",
+            "delay_applies": true,
+            "reach": "full"
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "Ethereum unlock processing was checked: the live UnlockReceipt at 0x9bf51f33955ec70f87c4b5c49441815589043237 has no privileged queue processor; each receipt owner claims its own matured receipt. The supplied 0x93775e2dfa4e716c361a1f53f212c7ae031bf4e6 UnlockToken is deprecated, still reports a 20-day delay, and remains governed through the pause and parameter paths above rather than being presented as the current queue.",
+      "ethereum complete AccessManager role populations are not asserted. Direct reads establish the named Safe memberships and selector delays, but tested role-enumeration getters revert.",
+      "base: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "bnb: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "The attestation Safe and signing key were not treated as authority roots. Direct role checks did not establish them as holders of tested AccessManager roles; attestation context is not administration."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "apxusd",
+        "shares": [
+          {
+            "kind": "access-manager",
+            "address": "0xe167330e2eac88666de253e9607c6d9ae0ca2824",
+            "delay": "72h",
+            "roles": [
+              "ethereum-authority",
+              "target-admin"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "n": 4,
+            "m": 6,
+            "delay": "none",
+            "roles": [
+              "root-admin"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "none",
+            "roles": [
+              "pause",
+              "maintenance"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "4h",
+            "roles": [
+              "unpause"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "24h",
+            "roles": [
+              "parameters"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "72h",
+            "roles": [
+              "upgrade"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "7d",
+            "roles": [
+              "ccip-admin-rotation"
+            ]
+          }
+        ]
+      }
+    ],
+    "review": null,
+    "walk_notes": [
+      "Hand-walked at Ethereum block 25,940,505 using read-only calls. This replaces",
+      "refused generator output and distinguishes the live receipt from the legacy queue."
+    ]
+  }
+}
