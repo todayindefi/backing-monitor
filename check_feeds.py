@@ -622,6 +622,77 @@ try:
 except OSError:
     pass
 
+# ---------------------------------------------------------------------------
+# ⚠️ INTERNAL VOCABULARY IN FIELDS THAT RENDER TO EXTERNAL READERS.
+#
+# The crvUSD page carried "mixed · security_analyst + riskanalyst · 12 fields"
+# on the face of axis 5, internal file paths a reader cannot open
+# (audits/*.md, assets/*.md, handoffs/*.yaml), and a one-sided account of an
+# argument between two agents. 357 occurrences across 21 assets.
+#
+# The renderer half is fixed. The rest lives inside producer-authored prose,
+# which is rendered VERBATIM by design — this repo does not compose issuer or
+# authority prose and will not start editing it either. So the fix is a
+# convention at the producers, and this is what stops it coming back.
+#
+# ⚠️ WARN, NOT FAIL, AND DELIBERATELY. Every affected asset would fail today, a
+# suite that is red everywhere is one nobody reads, and re-authoring happens on
+# next touch rather than as a 21-asset bulk rewrite. The count is the progress
+# bar.
+#
+# ⚠️ RENDERED FIELDS ONLY. `producer_note` is absent from this list ON PURPOSE:
+# it is the field the convention routes process detail INTO, and it is never
+# rendered. Flagging it would penalise doing the right thing.
+READER_FACING_FIELDS = {
+    'walk_notes', 'structural_score_basis', 'backing_score_basis', 'coverage_note',
+    'coverage_summary', 'summary', 'summary_source', 'code_facts', 'cross_axis',
+    'facts', 'unresolved', 'headline', 'headline_basis', 'note', 'basis',
+    'axis_rating_basis', 'provenance_note', 'method', 'method_note',
+}
+_REPO = re.compile(r'\b(security_analyst|riskAnalyst|riskanalyst|PegTracker|pegtracker'
+                   r'|DexTracker|dextracker|backing[-_]monitor)\b')
+# ⚠️ An extension is REQUIRED. Without one this matched `burnWithAssets(uint256)`
+# as the path "Assets/..." — a check that fires on real content is how a warn
+# block becomes noise nobody reads.
+_PATH = re.compile(r'\b(?:audits|handoffs|assets|topology|specs)/[\w./-]+\.'
+                   r'(?:md|ya?ml|json|py)\b')
+
+def _prose_strings(obj, path=''):
+    if isinstance(obj, dict):
+        for k, v in obj.items():
+            yield from _prose_strings(v, f'{path}.{k}')
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            yield from _prose_strings(v, f'{path}[{i}]')
+    elif isinstance(obj, str):
+        yield path, obj
+
+_vocab = {}
+for _slug in sorted(slugs):
+    _src = str(sources[_slug]).replace('-', '_')
+    _repos, _paths = set(), set()
+    for _f in glob.glob(os.path.join(DATA, f'{_src}_*.json')):
+        _doc = load(_f)
+        if not isinstance(_doc, dict):
+            continue
+        for _k, _v in _prose_strings(_doc):
+            _leaf = re.sub(r'\[\d+\]$', '', _k.split('.')[-1])
+            if _leaf not in READER_FACING_FIELDS:
+                continue
+            _repos.update(m.group(0) for m in _REPO.finditer(_v))
+            _paths.update(m.group(0) for m in _PATH.finditer(_v))
+    if _repos or _paths:
+        _vocab[_slug] = (_repos, _paths)
+        _bits = []
+        if _repos:
+            _bits.append(f'{len(_repos)} producer name(s): ' + ', '.join(sorted(_repos)[:3]))
+        if _paths:
+            _bits.append(f'{len(_paths)} unopenable path(s): ' + ', '.join(sorted(_paths)[:2]))
+        warns.append(
+            f'{_slug}: internal vocabulary in reader-facing prose — ' + '; '.join(_bits) +
+            '. Route process detail to producer_note (never rendered); the rendered '
+            'fields carry the current position and the measurement only.')
+
 print('CORRECTNESS CHECKS (this suite cannot judge legibility)\n')
 for w in warns: print('  WARN  ' + w)
 for f_ in fails: print('  FAIL  ' + f_)
