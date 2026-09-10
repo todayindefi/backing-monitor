@@ -2140,15 +2140,30 @@ const CommonRenderer = {
                 '"> ⚠️ unread score field</span>';
         }
         if (band == null || !authored || typeof authored.score !== 'number') return '';
-        // Below one full band step the difference is the grid, not a conflict.
-        if (Math.abs(authored.score - band * 2) < this.AUTHORED_DIVERGENCE_MIN_GAP) return '';
-        var age = authored.ageHours != null ? ' Authored ' + authored.ageHours.toFixed(1) + 'h ago.' : '';
-        return '<span class="axis-rating r-warn" title="' + this._escapeAttr(
-            'An authored score of ' + authored.score + '/10 (field: ' + authored.field + ') DISAGREES ' +
-            'with the computed band shown. The measurement is what renders; the judgement is not ' +
-            'overridden, it is flagged so the conflict is visible.' + age +
-            (authored.basis ? ' Basis: ' + authored.basis : '')) +
-            '"> ⚠️ authored ' + authored.score + '/10 differs</span>';
+        // ⚠️ THE AUTHORED SCORE IS NO LONGER SHOWN BESIDE A LIVE ONE. Owner decision.
+        //
+        // It rendered "⚠️ authored 6/10 differs" next to a computed band, which read
+        // as a contradiction between two numbers when it was never one: the band is
+        // a live measurement and the authored score is a persistence-filtered
+        // judgement of a DIFFERENT subject. crvUSD's own basis says it outright —
+        // "MEASURES THE MECHANISM, NOT THE CURRENT DEVIATION" — and on liquidity the
+        // authored score prices a dollar exit while the band measures aggregate
+        // depth across pools, not one of which pairs crvUSD with a dollar.
+        //
+        // ⚠️ Flagging a conflict that does not exist is worse than not flagging one
+        // that does: it invites a reader to reconcile two numbers that cannot be
+        // reconciled, and it made the report look wrong. The axes where a live
+        // number exists now show ONLY the live number; the authored score lives in
+        // the report, and the standing note under the score strip says the two can
+        // differ and why.
+        //
+        // ⚠️ This function still returns '' for band == null BY THE LINE ABOVE, so
+        // the authored-only fallbacks are untouched — the four tiles that have an
+        // authored score and NO measured band (thusd backing/liquidity, usds and
+        // susds liquidity) render through separate paths and keep their number. A
+        // blank tile would be worse than an authored one, and with no rival number
+        // there is no divergence to imply.
+        return '';
     },
 
     _authoredBackingRating(data) {
