@@ -8,7 +8,7 @@ class needs a reader, not a suite, and this script must not be taken to cover it
 
 Run: python3 check_feeds.py     (exit 1 on any FAIL)
 """
-import json, glob, os, re, sys, datetime as dt
+import hashlib, json, glob, os, re, sys, datetime as dt
 
 TODAY = dt.date.today()
 
@@ -466,6 +466,58 @@ for f in sorted(glob.glob(os.path.join(DATA, '*_backing.json'))):
                      f'check here and differs only in its timestamp')
     elif hours > limit_warn:
         warns.append(f'{slug}: feed is {hours:.1f}h old (expected ~1h)')
+
+# ⚠️ AXIS-5 WALK DRIFT — a walk can GROW under a score that was correct when authored.
+#
+# crvUSD's walk went from 3 layers to 7 at an UNCHANGED `as_of`: one layer renamed
+# (asset-permission 7d -> governance 7d, same keys, correct home), one added at
+# timelock none, and three per-chain bridge rows. riskAnalyst's 5.5 had been authored
+# against the 3-layer file and its basis never mentioned the new undelayed path.
+#
+# ⚠️ NOTHING IN EITHER PIPELINE SIGNALLED IT. `as_of` is the producer's OBSERVATION
+# date, not a content hash — a walk edited without re-observing keeps its date. This
+# was caught by one sentence in a peer's message ("worth a look before you sync"),
+# not by any check. That is exactly the shape this file exists to remove.
+#
+# ⚠️ AND DIFF ON CONTENT, NEVER ON THE LAYER LABEL. A name-keyed diff would have read
+# crvUSD's reclassification as a seven-day delay VANISHING — a false alarm in the
+# frightening direction. The fingerprint below is over content, and the layer count is
+# carried separately because it is the cheap signal that would have caught this one.
+WALK_STATE = os.path.join(DATA, 'axis5_walk_state.json')
+_prev = load(WALK_STATE) or {}
+_now = {}
+for slug in sorted(slugs):
+    src = sources[slug]
+    cpath = os.path.join(DATA, f'{src}_contract.json')
+    doc = load(cpath)
+    if not doc:
+        continue
+    c = doc.get('contract') or {}
+    layers = c.get('layers') or []
+    fp = hashlib.sha256(json.dumps(
+        [[l.get('authority_layer'), l.get('chain'), str(l.get('timelock')),
+          str(l.get('timelock_floor')), l.get('reach'),
+          len(l.get('paths') or [])] for l in layers],
+        sort_keys=True).encode()).hexdigest()[:16]
+    _now[slug] = {'as_of': doc.get('as_of'), 'layers': len(layers), 'fp': fp}
+    old = _prev.get(slug)
+    if not old:
+        continue
+    if old.get('fp') != fp and old.get('as_of') == doc.get('as_of'):
+        warns.append(
+            f'{slug}: axis-5 walk CONTENT CHANGED while as_of stayed {doc.get("as_of")} '
+            f'(layers {old.get("layers")} -> {len(layers)}). A score authored against the '
+            f'previous content may no longer cover it — check the overlay basis.')
+    elif old.get('layers') != len(layers):
+        warns.append(
+            f'{slug}: axis-5 layer count {old.get("layers")} -> {len(layers)} '
+            f'(as_of {old.get("as_of")} -> {doc.get("as_of")}) — re-derived, not silent drift.')
+try:
+    with open(WALK_STATE, 'w', encoding='utf-8') as fh:
+        json.dump(_now, fh, indent=1, sort_keys=True)
+        fh.write('\n')
+except OSError:
+    pass
 
 print('CORRECTNESS CHECKS (this suite cannot judge legibility)\n')
 for w in warns: print('  WARN  ' + w)
