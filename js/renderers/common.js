@@ -2533,6 +2533,24 @@ const CommonRenderer = {
             }
         ];
 
+        // ⚠️ SAY THAT THESE ARE LIVE, ONCE, WHERE THE SCORES ARE.
+        //
+        // Axes 1-3 are recomputed every refresh from the feed; 5 and 6 are authored
+        // judgements. A reader seeing "Peg 10/10" beside a report saying 6.0 had no way
+        // to know the first is a 7-day performance reading and the second a mechanism
+        // score — the two look like a contradiction and the page never said they answer
+        // different questions.
+        //
+        // ⚠️ Says they MAY differ, never which is right. Neither is: they measure
+        // different things, and picking a winner here would be this renderer adjudicating
+        // between two producers on a question neither asked it.
+        var liveNote = '<div class="axis-band-note text-xs text-slate-500 mt-3">' +
+            'Peg, Backing and Liquidity are <strong>live measurements</strong>, recomputed ' +
+            'each refresh from on-chain and venue data. Contract &amp; Admin and Issuer are ' +
+            '<strong>authored assessments</strong>. Live readings can differ from the scores ' +
+            'in the published report \u2014 they answer different questions, and an asset can ' +
+            'perform well on a mechanism that is structurally weak.' +
+        '</div>';
         container.innerHTML = cards.map(function(c) {
             return '<div class="summary-card">' +
                 '<div class="card-label">' + c.label + '</div>' +
@@ -2540,7 +2558,7 @@ const CommonRenderer = {
                 (c.sub ? '<div class="text-xs text-slate-400 mt-1">' + c.sub + '</div>' : '') +
                 (c.chip ? '<div class="mt-2">' + c.chip + '</div>' : '') +
             '</div>';
-        }).join('');
+        }).join('') + liveNote;
         container.style.display = '';
     },
 
@@ -3270,7 +3288,11 @@ const CommonRenderer = {
 
         // 1 · Peg
         this._renderAxisHead('peg', 1, 'Peg',
-            (data.peg.source ? 'market vs NAV · ' + data.peg.source : 'market vs NAV'),
+            // ⚠️ THE SUBTITLE NAMES WHAT THE NUMBER MEASURES. It was unlabelled while
+            // the authored score beside it said "authored" — one side declared its
+            // provenance and the other did not, so the live reading read as the verdict
+            // and the judgement as a footnote.
+            ('7d peg performance · ' + (data.peg.source ? 'market vs NAV · ' + data.peg.source : 'market vs NAV')),
             this._ratingChipHtml(this.pegRating(data, history), null,
                 this.pegRatingBasisNote(data, history)) +
             this._divergenceChipHtml(this.pegRating(data, history),
@@ -3294,7 +3316,7 @@ const CommonRenderer = {
             typeof bAuth.backing_score === 'number' &&
             bAuth.backing_score_applies_when === 'collateral_ratio_declared_underivable' &&
             bAuth.collateral_ratio_basis;
-        this._renderAxisHead('backing', 2, 'Backing', 'reserves & collateral ratio',
+        this._renderAxisHead('backing', 2, 'Backing', 'live reserves & collateral ratio',
             (backingAuthored
                 ? '<span class="axis-rating r-warn" title="' +
                   this._escapeAttr(String(bAuth.backing_score_basis || '')) +
@@ -3382,7 +3404,7 @@ const CommonRenderer = {
         // issuer — and they fail independently. The rating is still computed
         // from depth alone, which is why the tile states its scope.
         this._renderAxisHead('liquidity', 3, 'Liquidity & Exit',
-            'venue depth & primary redemption',
+            'live venue depth & primary redemption',
             this._liquidityChipHtml(data), data.liquidity);
         this._renderDepthScope(data);
         this._renderLiquiditySection(data);
