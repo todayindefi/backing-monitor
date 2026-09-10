@@ -1,0 +1,21 @@
+{
+ "schema_version": "issuer/1",
+ "producer": "riskanalyst",
+ "asset": "usdat",
+ "as_of": "2026-09-10T12:00:00Z",
+ "issuer": {
+  "summary": "USDat and sUSDat are issued by Saturn Labs; this axis scores the entity, so it is identical for both. The score was cut in August because the admin surface stopped being theoretical — a 2026-08-19 upgrade used it to change the reserve terminal. Authority sits behind a self-administered five-day timelock with permissionless execution and no zero-delay path anywhere, but the same party proposes and cancels, so there is no independent veto. Saturn represents that party as a Fireblocks 2-of-3 MPC wallet, which on-chain reads cannot verify either way. See the full report for the timelock derivation and the unresolved exit path.",
+  "summary_source": "riskAnalyst internal assessment: assets/usdat.md and assets/susdat.md Issuer rows (cut 2026-08-23), plus the Contract & Admin overlays authored 2026-09-10. ⚠️ RE-MEASURED THIS SESSION rather than carried — both timelock delays, self-administration, role membership with dEaD and fabricated-role controls, ProxyAdmin ownership and permissionless execution were all read on-chain 2026-09-10, because the underlying walks came from a codex run that exited 1 and had been verified structurally only. EVERY CLAIM RE-MEASURED CONFIRMED. ⚠️ The Fireblocks MPC representation, the proposer=canceller finding and the ruled-out exit candidates are NOT reflected in the published reports.",
+  "facts": [
+   "Issuer is Saturn Labs. This axis scores the ENTITY, so it is identical for USDat and sUSDat — the pair shares the same operator, the same timelock and the same custody representation. Per-asset differences belong on Contract & Admin and Backing.",
+   "⚠️ CUT 5.5 -> 5.0 on 2026-08-23: the 2026-08-19 upgrade demonstrated the admin surface being USED to change the reserve terminal, so the 2026-08-11 raise gives back half a point. An authority that has been exercised is a different fact from one that merely exists.",
+   "✅ The delay is real and re-measured 2026-09-10: SaturnTimelock 0xfd5782e3… getMinDelay 432,000s = 5 days, getThreshold() REVERTS on it (so it is a timelock, not a Safe — that is the discrimination), and hasRole(DEFAULT_ADMIN, itself) is true, so shortening it must itself clear 5 days.",
+   "✅ Execution is PERMISSIONLESS — hasRole(EXECUTOR, address(0)) is true — so a matured operation cannot be stalled by the operator, and there is NO zero-delay path anywhere on this surface.",
+   "⚠️ PROPOSER = CANCELLER. The same party queues and vetoes, so against a compromised proposer the cancel power belongs to the attacker. There is no independent veto.",
+   "⚠️ That party is represented by Saturn as a FIREBLOCKS 2-of-3 MPC WALLET — issuer representation, pending independent attestation. On-chain reads CANNOT distinguish MPC from a single-key EOA: no contract code and a low nonce look identical either way. The compromise threshold is two shares of a quorum internal to one operator.",
+   "⚠️ EXIT-VS-NOTICE IS NOT ESTABLISHED, and both published candidates are ruled out. vestingPeriod() = 259,200s (3d) is an ERC-4626 yield-drip parameter, not a redemption queue; a 30-day figure carried in tooling is a hardcoded literal returned by no getter on either contract across 18 candidate signatures. A five-day notice only protects if the exit is shorter than it, and that comparison is unresolved.",
+   "⚠️ USDat's BNB leg (2.56% of supply) sits behind a 2-day timelock whose PROPOSER and CANCELLER were not found among seven enumerated candidates — unread, not empty. sUSDat declares Monad and Monad is unwalked.",
+   "⚠️ sUSDat's report carries no `issuer:` field at all while USDat names Saturn Labs — a metadata gap on the wrapper, not a difference in fact."
+  ]
+ }
+}

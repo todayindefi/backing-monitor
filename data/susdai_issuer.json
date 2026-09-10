@@ -1,0 +1,20 @@
+{
+ "schema_version": "issuer/1",
+ "producer": "riskanalyst",
+ "asset": "susdai",
+ "as_of": "2026-09-10T12:00:00Z",
+ "issuer": {
+  "summary": "USDai and sUSDai are issued by Permian Labs; this axis scores the entity, so it is identical for both. The institutional backing is credible — Framework, Dragonfly, Coinbase Ventures, MetaStreet lineage, a Cantina audit with no critical or high findings — but an August walk found an undelayed unlimited-mint path the topology had been credited for not having. OPS_SAFE administers the role gating mint() on all four chains and owns the LayerZero adapter, reaching the same power twice: three keys, one transaction, no timelock, no veto. The 48-hour delay governs upgrades only, and both Safes are 3-of-3 with identical owners. See the full report.",
+  "summary_source": "riskAnalyst internal assessment: assets/usdai.md Issuer row (re-rated 2026-08-26) and assets/susdai.md, which propagates by construction as an entity axis. ⚠️ Based on an admin-topology walk of 2026-08-26 verified PER CHAIN rather than by shared address; the undelayed mint path was found by walking one layer past where the original assessment stopped. ⚠️ NOT re-measured in this session — the reads are 2026-08-26 and a mutable role can move; the mint-path and Safe-composition claims should be re-verified before they carry a further re-rate.",
+  "facts": [
+   "Issuer is Permian Labs. This axis scores the ENTITY, so it is identical for USDai and sUSDai — same operator, same Safes, same audit. It moves on both or neither by construction.",
+   "✅ Credible institutional backing: Framework, Dragonfly, Coinbase Ventures and Arbitrum, with MetaStreet lineage and a Cantina audit returning 0 critical and 0 high.",
+   "⚠️⚠️ RE-RATED 6.0 -> 5.0 on 2026-08-26 after walking one layer further than the original assessment. OPS_SAFE holds DEFAULT_ADMIN_ROLE on the token on ALL FOUR CHAINS and therefore administers BRIDGE_ADMIN_ROLE, the role that gates mint(). It ALSO owns the LayerZero OFT adapter, so setPeer reaches the same power by a second route. THREE KEYS, ONE TRANSACTION, NO TIMELOCK, NO VETO — an undelayed unlimited-mint path that was never priced.",
+   "⚠️ THE 48-HOUR DELAY GOVERNS UPGRADES ONLY. The rationale being corrected had explicitly leaned on it, calling the topology 'adequate, with a real notice window'. It is a real notice window for the wrong surface.",
+   "⚠️ GOV_SAFE and OPS_SAFE are BOTH 3-of-3 WITH THE IDENTICAL THREE OWNERS. The two-Safe structure separates nothing, and CANCELLER = PROPOSER = GOV_SAFE means there is no independent veto on the upgrade path either.",
+   "⚠️ 3-of-3 HAS ZERO REDUNDANCY, and it cuts both ways: lose one key and the timelock becomes permanently un-proposable. A threshold equal to the owner count is not a strength.",
+   "✅ Verified PER CHAIN rather than by shared address: ProxyAdmin -> 48h OZ TimelockController, bytecode byte-identical on all four chains, ADMIN = self.",
+   "⚠️ Held down further by a roughly ten-month track record, a single operator, and no stress test. The entity has not yet been tested by an adverse event."
+  ]
+ }
+}
