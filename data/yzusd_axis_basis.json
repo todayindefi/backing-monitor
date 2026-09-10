@@ -1,0 +1,48 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "yzusd",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "peg_mechanism_score": 4.5,
+  "peg_mechanism_score_source": "riskAnalyst:authored",
+  "peg_mechanism_score_generated_at": "2026-09-11T00:00:00Z",
+  "peg_mechanism_score_basis": "MEASURES THE DEFENCE MECHANISM AND WHO CAN USE IT. Overcollateralized, but \u26a0\ufe0f THE BACKING IS ACTIVE STRATEGIES RATHER THAN INVENTORY, so the collateral must be UNWOUND to defend the peg rather than simply delivered. \u26a0\ufe0f AND REDEMPTION IS KYC-GATED AND BEST-EFFORT \u2014 the arb that would close a discount is unavailable to the marginal secondary holder. \u26a0\ufe0f\u26a0\ufe0f THIS ASSET IS SCORED PER CHAIN AND THE SCORES DIFFER: ETHEREUM 4.5, MONAD 3.5, because Monad has no functional equivalent of the primary path. A single rendered number for 'yzUSD' therefore describes the Ethereum deployment, and a Monad holder faces the lower score.",
+  "peg_mechanism_score_persistence": "filtered \u2014 mechanism and access, not spot-responsive",
+  "peg_mechanism_score_per_chain": "\u26a0\ufe0f ethereum 4.5 \u00b7 monad 3.5 \u2014 the rendered figure is the Ethereum one."
+ },
+ "backing": {
+  "backing_score": 4.5,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "MEASURES THE RESERVE AND ITS FIRST-LOSS STRUCTURE. Reserve Fund plus a yzPP first-loss buffer sits beneath holders \u2014 \u26a0\ufe0f BUT THAT BUFFER HAS ALREADY BEEN DRAWN AGAINST, IN THE NOVEMBER 2025 CONTAGION. A first-loss layer that has absorbed a real loss is evidence the structure WORKS and evidence it is THINNER than nominal; both readings are correct and the score carries both. \u26a0\ufe0f STRATEGY COMPOSITION IS OPAQUE, so the 109.67% collateral_ratio the feed reports on $58,993,453.78 is a ratio over assets whose composition is not independently verifiable \u2014 precision without transparency.",
+  "backing_score_persistence": "filtered \u2014 reserve structure, not a spot ratio"
+ },
+ "liquidity": {
+  "liquidity_score": 3.0,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "\u2705 MEASURED, NOT ESTIMATED, AND THIS IS ONE OF ONLY FIVE ASSETS ON THE BOARD WHOSE DEPTH FIGURE IS A CLEAN MEASUREMENT: the feed reports total_2pct_depth $394,332.89 with status 'solved' and is_floor FALSE \u2014 an actual resolved 2% crossing, not a floor flag or a failed probe. \u26a0\ufe0f AND THE MEASUREMENT IS THE FINDING: ~$394K of 2% depth against a ~$59M book. DEX-only, no CEX. \u26a0\ufe0f PER CHAIN: ethereum 3.0, MONAD 2.5 \u2014 Monad has NEAR-ZERO DIRECT yzUSD LIQUIDITY, so the rendered 3.0 overstates the Monad holder's position.",
+  "liquidity_score_persistence": "filtered \u2014 venue structure; the underlying depth figure IS spot-responsive",
+  "liquidity_score_depth_caveat": "\u2705 status 'solved', is_floor false \u2014 this one may be read as depth.",
+  "liquidity_score_per_chain": "\u26a0\ufe0f ethereum 3.0 \u00b7 monad 2.5."
+ },
+ "dependencies": {
+  "underlying_score": 3.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES COUNTERPARTY CONCENTRATION ACROSS THE STRATEGY SET: 16 UPSTREAM LEGS RESOLVING TO 10 DISTINCT PROTOCOLS. \u26a0\ufe0f\u26a0\ufe0f THE BINDING FACT IS ETHENA AT 34.6% \u2014 4.2x THE RATED SURPLUS. So a single upstream protocol failing at a fraction of its exposure exhausts the buffer that is supposed to absorb it, and the '16 legs' headline reads as diversification while one name carries a third of the book. \u26a0\ufe0f COUNT THE LEGS AGAINST THE SURPLUS, NOT AGAINST EACH OTHER.",
+  "underlying_score_persistence": "filtered \u2014 strategy set, not a daily balance",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record."
+ },
+ "issuer": {
+  "issuer_score": 4.0,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY: YUZU FINTECH LLC, a Virtual Asset Service Provider licensed under the Kutaisi Free Industrial Zone, Republic of Georgia. \u26a0\ufe0f RE-DERIVED 2026-08-29 \u2014 THIS ROW HAD CONTINUED TO SHOW THE SUPERSEDED 3.0/2.5 AND ITS RETRACTED REASONING AFTER THE SCORE MOVED, so the number and its argument disagreed on the same page. \u26a0\ufe0f ethereum 4.0 \u00b7 monad 3.5.",
+  "issuer_score_persistence": "filtered \u2014 entity and licensing, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration."
+ },
+ "staleness_note": "\u26a0\ufe0f `last_verified` ON THIS REPORT IS 2026-06-08 \u2014 over three months old at time of writing. Individual rows carry later re-derivations (issuer 2026-08-29), so the file is not uniformly stale, but no whole-report re-verification has run. Figures quoted here are as-published and were NOT re-measured on-chain for this basis pass.",
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` block \u2014 the contract overlay already carries a rendering structural_score_basis."
+}

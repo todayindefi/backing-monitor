@@ -1,0 +1,48 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "susdat",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "volatility_score": 3.5,
+  "volatility_score_source": "riskAnalyst:authored",
+  "volatility_score_generated_at": "2026-09-11T00:00:00Z",
+  "volatility_score_basis": "MEASURES DISCOUNT-TO-NAV ON A NAV-ACCRUING SHARE, AND THE DRAWDOWN IT PRICES WAS REALIZED, NOT PROJECTED. Cut 4.0 -> 3.5 on 2026-07-13; was 4.5 pre-2026-06-07. The below-par drawdown flagged by the 06-07/06-09 passes REALIZED AT \u221210.70% (on-chain share NAV 0.8930 USDat, 2026-07-13) \u2014 an order of magnitude deeper than the 'low-single-digit' reversal anticipated at the 06-09 anchor. \u26a0\ufe0f\u26a0\ufe0f THE CUT'S ORIGINAL PREMISE NO LONGER HOLDS AS WRITTEN AND THE SCORE IS HELD ANYWAY, DELIBERATELY, PER THE 08-18 RULING: NAV recovered to \u22120.61% (0.993891) by 2026-08-24 \u2014 BUT THE RECOVERY RIDES STRC'S BTC-FUNDED BUYBACK BID, which is a temporary support with a stated exhaustion window. \u26a0\ufe0f\u26a0\ufe0f THAT WINDOW IS LATE SEPTEMBER 2026 AND IT IS NOW 2026-09-11 \u2014 WEEKS AWAY, NOT MONTHS. The upgrade candidate is ARMED, NOT TRIGGERED, and THE GATE IS NAV HOLDING NEAR PAR *AFTER* THAT BID EXPIRES. \u26a0\ufe0f SCORING THE RECOVERY WOULD BE SCORING THE SUPPORT, NOT THE ASSET. Feed 2026-09-10: market 1.009077 against NAV 1.017562 = \u22120.83%, i.e. slightly WIDER than the 08-24 reading of \u22120.61%, on a bid that has not yet expired. The vault is ~98% off-chain STRC/T-bill and absorbs the STRC mark directly.",
+  "volatility_score_persistence": "filtered \u2014 NAV behaviour under a known temporary support; do NOT re-rate before the window closes",
+  "volatility_score_recheck_date": "\u26a0\ufe0f RE-CHECK AFTER LATE SEPTEMBER 2026. This is a DATED gate, not a standing judgement, and a durable range that expires without anything checking it still reads authoritative. The upgrade is armed on one condition: NAV near par AFTER the buyback bid exhausts."
+ },
+ "backing": {
+  "backing_score": 2.5,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "\u26a0\ufe0f\u26a0\ufe0f MEASURES sUSDat'S OWN RESERVE, WHICH IS NOT USDat'S RESERVE \u2014 AND THIS ASSET IS WHY THE 'BOTH AXES' RULE EXISTS. AUTHORED 2026-09-09; never scored on either surface before. THE NAME, THE TICKER AND `underlying_assets: [\"USDat\"]` ALL IMPLY THIS WRAPS USDat. THE BALANCE SHEET SAYS IT HOLDS 1% OF IT. USDat is 100.00% PYUSDx ($63.67M, CR 100.0%). sUSDat is 99.00% OFF-CHAIN STRC CLAIM + 1.00% on-chain USDat. Composition from susdat_backing.json, breakdown summing to total_backing: STRC (off-chain) $73,807,659 = 99.00%, \u26a0\ufe0f TAGGED `oracle_unverified` BY THE PRODUCER ITSELF; USDat (on-chain) $733,670 = 1.00%, THE ONLY SLICE THIS REPO CAN VERIFY. \u26a0\ufe0f SO 99% OF THE BACKING IS AN UNVERIFIED OFF-CHAIN CLAIM AND THE PRODUCER SAYS SO IN THE DATA. A reader who assumes a staked wrapper inherits its underlying's reserve gets this exactly backwards.",
+  "backing_score_persistence": "filtered \u2014 reserve composition, not a spot ratio",
+  "backing_score_denominator": "\u26a0\ufe0f THE FEED REPORTS collateral_ratio 101.7562 WITH surplus $1,266,132.07 ON total_backing $73,360,325.95. That ratio is computed over a book that is 99% oracle_unverified, so its precision is spurious: four decimal places on a number whose dominant input nobody has confirmed. Do not read 101.76% as overcollateralization evidence."
+ },
+ "liquidity": {
+  "liquidity_score": 3.5,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "MEASURES THE INSTANTLY-REDEEMABLE SLICE AND THE ROUTE BEHIND IT, NOT HEADLINE TVL. Cut 4.0 -> 3.5 on 2026-07-13; was 5.0 pre-06-09. \u26a0\ufe0f THE ON-CHAIN USDat BUFFER \u2014 THE ONLY INSTANTLY-REDEEMABLE SLICE \u2014 HAS COLLAPSED TO ~1.8% OF ASSETS ($1.36M of $75.4M, 2026-07-13) FROM ~7% (06-09) AND ~19% (05-20). That is a 10x contraction in the liquid share across two months, so a coordinated exit now depends almost entirely on STRC LIQUIDATION AT THE CUSTODIAN into a still-sub-par market. \u26a0\ufe0f TVL ALSO CONTRACTED ~28% ($104.5M -> $75.4M), so the buffer shrank as a SHARE of a book that was itself shrinking \u2014 both directions adverse. Underlying secondary is a single thin Curve venue at a discount to NAV, and the GATED PRIMARY KEEPS NON-ONBOARDED HOLDERS ON IT. \u26a0\ufe0f The dashboard axis derives off live MARKET-BASIS 2% depth, isolating depth from the standing discount \u2014 which is the Peg axis's job, deliberately.",
+  "liquidity_score_persistence": "filtered \u2014 buffer share and exit route, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f THE FEED'S total_2pct_depth OF $10,000 IS NOT A MEASUREMENT \u2014 is_floor true, status 'quote_failed'. The probe failed at its smallest rung. A failed quote is a WORSE signal than a small measured number, and rendering $10,000 as depth understates how little is known rather than overstating it."
+ },
+ "dependencies": {
+  "underlying_score": 2.5,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES THE COUNTERPARTY CHAIN, AUTHORED 2026-09-09 AND NOT IMPORTED. \u26a0\ufe0f tidresearch PUBLISHES 3.5 AND THAT VALUE HAS NO RATIONALE ROW ANYWHERE ON THE PAGE \u2014 grepped 2026-09-09, the only hits are the frontmatter field and `underlying_assets`. \u26a0\ufe0f THIS IS THE GENUINELY UNSOURCED CASE, and it is the contrast that makes usdat's 5.5 legitimate: there the published number carries a substantial argument answering a different question, here it carries none. So this is authored on merits and the half-point gap STANDS as a real divergence rather than a frame mismatch. THE CHAIN, already stated in our own portfolio resolution (`data/portfolio/summary.json`, asset_resolution['pt-srusdat']): pt-srUSDat -> srUSDat -> sUSDat -> USDat -> STRC -> MSTR -> BTC. \u26a0\ufe0f SEVEN LINKS TO A BITCOIN PRICE, and sUSDat sits at link 3.",
+  "underlying_score_persistence": "filtered \u2014 counterparty chain, not a daily balance",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record."
+ },
+ "issuer": {
+  "issuer_score": 5.0,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY and is held equal across the Saturn/Strata family, which shares an issuer and a terminal. \u26a0\ufe0f NOT RE-DERIVED HERE.",
+  "issuer_score_persistence": "inherited \u2014 entity-level",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED."
+ },
+ "redemption_note": "\u26a0\ufe0f A SEPARATE `redemption_score` EXISTS AT 3.5 and is not rendered through this envelope. It carries the gated-primary constraint that the liquidity basis references: non-onboarded holders have no primary channel and are held on the single thin Curve venue at a discount.",
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as `volatility_score` \u2014 vault share), backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` BLOCK \u2014 susdat's contract overlay already carries a rendering basis at 4.0."
+}

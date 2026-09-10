@@ -1,0 +1,48 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "syzusd",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "volatility_score": 3.0,
+  "volatility_score_source": "riskAnalyst:authored",
+  "volatility_score_generated_at": "2026-09-11T00:00:00Z",
+  "volatility_score_basis": "MEASURES SHARE-PRICE BEHAVIOUR FOR A YIELD-BEARING SHARE \u2014 DISCOUNT-TO-NAV, NOT DEVIATION FROM $1. The share price moves with STRATEGY RETURNS: bounded, but not stable, and not comparable to a stablecoin's peg. Feed: market 1.08001 against NAV 1.080909, a \u22128.3bp discount. Similar regardless of chain.",
+  "volatility_score_persistence": "filtered \u2014 accrual mechanism, not spot price"
+ },
+ "backing": {
+  "backing_score": 4.5,
+  "backing_score_source": "riskAnalyst:inherited",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "\u26a0\ufe0f INHERITED FROM yzUSD AND NOT INDEPENDENTLY JUDGED \u2014 syzUSD's ONLY asset is yzUSD, so its backing IS yzUSD's reserve, and under the wrapper rule it takes the underlying's mark EQUAL rather than notched. \u26a0\ufe0f\u26a0\ufe0f AND THE FEED MAKES THIS INVISIBLE IN A WAY WORTH NAMING: `syzusd_backing.json` AND `yzusd_backing.json` CARRY BYTE-IDENTICAL BACKING FIGURES \u2014 collateral_ratio 109.6695, total_backing $58,993,453.78, surplus $5,201,396.24. That is CORRECT, because there is one reserve. \u26a0\ufe0f BUT TWO ASSETS DISPLAYING THE SAME RATIO LOOK LIKE TWO INDEPENDENT MEASUREMENTS AGREEING, AND THEY ARE ONE MEASUREMENT SHOWN TWICE. Agreement between them is not corroboration \u2014 it is the same operand. The November 2025 draw on the yzPP first-loss buffer and the opaque strategy composition apply here in full, undiluted by the wrapper.",
+  "backing_score_persistence": "inherited \u2014 moves when yzUSD's backing moves, not independently",
+  "backing_score_denominator": "\u26a0\ufe0f THE 109.67% IS yzUSD'S RATIO, NOT A SEPARATELY COMPUTED syzUSD RATIO. Do not cite the two assets as mutually confirming."
+ },
+ "liquidity": {
+  "liquidity_score": 3.0,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "MEASURES EXIT CAPACITY, WHICH IS THE BINDING CONSTRAINT ON THIS ASSET. DEX-only, concentrated in a few pools, no CEX. \u2705 The feed reports total_2pct_depth $200,000 with status 'bracketed' and is_floor FALSE \u2014 a genuine bracketed measurement, one of only five clean depth figures on the board. \u26a0\ufe0f AND THE MEASUREMENT IS THE FINDING: $200K of 2% depth, roughly HALF yzUSD's $394K, on a wrapper of the same reserve \u2014 the wrapping layer costs about half the exit capacity.",
+  "liquidity_score_persistence": "filtered \u2014 venue structure; the depth figure itself is spot-responsive",
+  "liquidity_score_depth_caveat": "\u2705 status 'bracketed', is_floor false \u2014 this one may be read as depth."
+ },
+ "dependencies": {
+  "underlying_score": 2.5,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "\u26a0\ufe0f DELIBERATELY WORSE THAN yzUSD'S 3.0, AND THE DIRECTION IS THE POINT. 100% of this asset's value passes through ONE other asset, so every dependency yzUSD carries \u2014 including Ethena at 34.6%, 4.2x the rated surplus \u2014 arrives here undiluted, PLUS the wrapper's own layer. \u26a0\ufe0f THIS IS THE ONE AXIS WHERE THE WRAPPER RULE INVERTS: on Backing a wrapper may not outrank its underlying and takes it EQUAL; on Dependencies the underlying may not score BELOW its wrapper, because the wrapper adds a leg rather than removing one.",
+  "underlying_score_persistence": "filtered \u2014 counterparty chain, not a daily balance",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record."
+ },
+ "issuer": {
+  "issuer_score": 4.0,
+  "issuer_score_source": "riskAnalyst:inherited",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY \u2014 YUZU FINTECH LLC, VASP-licensed in the Kutaisi Free Industrial Zone, Georgia. Held equal to yzUSD: one entity, one judgement. \u26a0\ufe0f ethereum 4.0 \u00b7 monad 3.5.",
+  "issuer_score_persistence": "inherited \u2014 entity-level",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED."
+ },
+ "redemption_note": "\u26a0\ufe0f A separate `redemption_score` of 4.0 exists and is not rendered through this envelope.",
+ "staleness_note": "\u26a0\ufe0f `last_verified` IS 2026-06-08, over three months old. Figures here are as-published and were NOT re-measured on-chain for this basis pass.",
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` block \u2014 the contract overlay already carries a rendering structural_score_basis."
+}

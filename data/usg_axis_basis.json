@@ -1,0 +1,46 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "usg",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "peg_mechanism_score": 5.0,
+  "peg_mechanism_score_source": "riskAnalyst:authored",
+  "peg_mechanism_score_generated_at": "2026-09-11T00:00:00Z",
+  "peg_mechanism_score_basis": "MEASURES THE MECHANISM'S DESIGN AND ITS TRACK RECORD, NOT THE CURRENT \u221242bp DEVIATION. USG runs the crvUSD architecture, which is proven, and has held WITHOUT POL ISSUANCE AND WITHOUT BAD DEBT \u2014 both of which are the failure modes this design is usually docked for. \u26a0\ufe0f THE SCORE IS CAPPED AT 5.0 NOT ON MECHANISM QUALITY BUT ON SCALE: an architecture proven at crvUSD's size is being run on a ~$5.8M book, and a mechanism's track record does not transfer across two orders of magnitude of depth.",
+  "peg_mechanism_score_persistence": "filtered \u2014 mechanism design, not spot-responsive"
+ },
+ "backing": {
+  "backing_score": 5.0,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "\u2705 MEASURES ACTUAL OVERCOLLATERALIZATION, AND UNLIKE MOST OF THIS CORPUS THE RATIO IS A REAL MEASUREMENT RATHER THAN AN IDENTITY. Borrower collateral ~$4.81M against ~$3.76M debt = ~128% CR; the feed reads collateral_ratio 129.02 on total_backing $5,758,937.73 with a surplus of $1,295,336.95. \u2705 THESE ARE INDEPENDENT QUANTITIES \u2014 collateral posted by borrowers is not defined as equal to debt issued \u2014 so the ~129% CARRIES INFORMATION, which cannot be said of the 100.0 ratios on wrapper and PSM-style assets. POL debt $0 and bad debt $0. \u26a0\ufe0f HELD AT 5.0 DESPITE A GENUINELY SOUND RATIO because the axis prices the COLLATERAL and the ORACLE behind it, not the arithmetic: this is a small book of borrower positions marked by oracle-NAV, and a 129% ratio on illiquid collateral is not equivalent to 129% on cash.",
+  "backing_score_persistence": "filtered \u2014 collateral composition, though the ratio itself is spot-responsive",
+  "backing_score_denominator": "\u2705 ASK WHAT THE RATIO DIVIDES BY \u2014 and here the answer is the good one: borrower collateral over borrower debt, two independently determined quantities. Contrast usdat, susds and the syrup pools, where backing is DEFINED as the supply and the ratio is an accounting identity."
+ },
+ "liquidity": {
+  "liquidity_score": 3.5,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "\u26a0\ufe0f MEASURES THE COUNTER-SIDE INVENTORY AVAILABLE TO ABSORB AN EXIT \u2014 NOT SLIPPAGE ON A LADDER. Keeper pools hold only ~$1.13M of USDC+frxUSD counter-side stables, DOWN FROM ~$1.28M ON 2026-06-10, with NO MEANINGFUL CEX BACKSTOP. \u26a0\ufe0f THE BINDING NUMBER IS ~$1.13M AGAINST A ~$5.76M BOOK \u2014 roughly a fifth of supply has a counterparty at any price the mechanism defends, and THE TREND IS ADVERSE. \u26a0\ufe0f THIS IS THE AXIS THAT SHOULD BE READ FIRST ON THIS ASSET: the backing ratio is genuinely sound at ~129%, and a reader who stops there will conclude USG is well-positioned. Collateral adequacy and exit capacity are different questions, and only one of them is comfortable here.",
+  "liquidity_score_persistence": "filtered \u2014 keeper inventory and venue structure, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f THE FEED COMPUTES NO DEPTH AT ALL FOR THIS ASSET (`total_2pct_depth: null`), so this authored 3.5 has nothing beside it to agree or disagree with. An uncontested number reads as more settled than a contested one; it is not."
+ },
+ "dependencies": {
+  "underlying_score": 4.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES THE COUNTERPARTY SET BEHIND THE LOAN BOOK. \u26a0\ufe0f AUTHORED 2026-09-06 \u2014 PREVIOUSLY UNSCORED, and it is arguably USG's MOST LOAD-BEARING AXIS, because what backs USG is a book of borrower positions and the quality of that book is a dependency question rather than a ratio question. A 129% CR describes the arithmetic; this axis describes what is inside it.",
+  "underlying_score_persistence": "filtered \u2014 book composition, not a daily balance",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record."
+ },
+ "issuer": {
+  "issuer_score": 4.0,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY. \u26a0\ufe0f RE-SCOPED 2026-09-06 \u2014 THE NUMBER DID NOT MOVE AND ITS COMPOSITION DID. Under the old four-axis stablecoin schema this row absorbed concerns that now belong on Dependencies and Contract & Admin. \u26a0\ufe0f AN UNCHANGED SCORE ACROSS A SCHEMA CHANGE IS NOT EVIDENCE OF STABILITY \u2014 it is a coincidence of two different compositions landing on one number, and reading it as 'issuer risk unchanged since the old schema' would be wrong.",
+  "issuer_score_persistence": "filtered \u2014 entity, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration."
+ },
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` block \u2014 the contract overlay already carries a rendering structural_score_basis."
+}

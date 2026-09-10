@@ -1,0 +1,48 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "apyusd",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "volatility_score": 6.5,
+  "volatility_score_source": "riskAnalyst:authored",
+  "volatility_score_generated_at": "2026-09-11T00:00:00Z",
+  "volatility_score_basis": "MEASURES NAV BEHAVIOUR PLUS ASSET-SIDE PEG RISK, NOT DEVIATION FROM $1 \u2014 this is a NAV-accruing ERC-4626, so the question is discount-to-NAV. CUT 7.0 -> 6.5 in June 2026 when the asset-side risk MATERIALISED rather than remained theoretical. The vault itself still accrues normally (CR 100% by construction, yield ~13% APY inside STRC's 11-15% band) \u2014 \u26a0\ufe0f AND 'CR 100% BY CONSTRUCTION' IS AN IDENTITY, NOT A SOLVENCY READING: a wrapper's shares are defined against its own holdings, so the ratio cannot print otherwise. The risk is entirely on the ASSET side: the underlying apxUSD is undercollateralized (~95%). \u26a0\ufe0f HEADLINE NAV GROWTH SINCE LAUNCH STILL INCLUDES THE ONE-TIME WEEK-1 JUMP (~33%); A NEW BUYER EARNS ONLY THE ONGOING RATE, so launch-to-date return is not an achievable forward return.",
+  "volatility_score_persistence": "filtered \u2014 NAV behaviour and asset-side structure, not spot price",
+  "volatility_score_stale_input": "\u26a0\ufe0f THE INTERNAL REPORT STATES A POINT FIGURE WHERE THE PUBLISHED PAGE STATES A RANGE, AND TODAY'S READING FALLS INSIDE THE RANGE. Three internal rows \u2014 Volatility, Liquidity and Redemption \u2014 each say the unit trades '~\u22129% below NAV', a June 2026 reading carried forward as a point. The feed at 2026-09-10T15:48:15Z reads market 1.36472 against NAV 1.42494 = \u22124.23%. \u2705 tidresearch's published page says 'mid-single-digit to about \u22129%' \u2014 A RANGE, WHICH TODAY'S \u22124.23% SITS WITHIN. So the PUBLISHED SURFACE IS NOT WRONG AND MUST NOT BE 'CORRECTED'; the internal source of record is the harsher and staler one, which is the opposite of the usual direction. \u26a0\ufe0f THE INTERNAL POINT FIGURE ERRS HARSH, AND OVERSTATING RISK IS NOT THE SAFE DIRECTION \u2014 a \u22129% repeated in three rows prices an exit worse than the one a holder faces today. \u26a0\ufe0f The Volatility row's NAV of ~1.376 is also stale; NAV is 1.42494. \u26a0\ufe0f I CANNOT ESTABLISH THE TREND AND DO NOT ASSERT ONE: apyusd_backing_history.json carries ZERO points holding both market_price and nav, and the feed source is single-venue coingecko. WHAT WOULD CLOSE IT: an on-chain two-hop route quote against NAV, timestamped in-hours, since Apyx pulls its own depth off-hours and an off-hours reading would overstate the discount again."
+ },
+ "backing": {
+  "backing_score": 2.0,
+  "backing_score_source": "riskAnalyst:inherited",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "\u26a0\ufe0f INHERITED FROM apxUSD 2.0 AND DELIBERATELY NOT RE-DERIVED HERE. apyUSD is a wrapper holding no reserve of its own, so under the wrapper rule it takes the underlying's backing mark EQUAL, NOT NOTCHED \u2014 a wrapper cannot outrank its underlying on the underlying's own axis, and it adds no collateral that could improve it. THE SUBSTANCE LIVES IN apxusd.md: STRC at 86.7% of what backs the token on the issuer's own NETTED basis, with POL and Inventory circular inside it. \u26a0\ufe0f RESTATING THAT ARGUMENT HERE WOULD MANUFACTURE A SECOND DERIVATION OF ONE FINDING and create two surfaces that drift apart. \u26a0\ufe0f ROW ADDED 2026-09-09 \u2014 this score sat in frontmatter with NO RENDERED ROW, so the number was visible and its reasoning was not.",
+  "backing_score_persistence": "inherited \u2014 moves when apxUSD's backing_score moves, not independently",
+  "backing_score_denominator": "\u26a0\ufe0f THE FEED COMPUTES NO RATIO FOR THIS ASSET (`collateral_ratio: null`, `surplus_deficit: null`) against `total_backing` $184,136,324.83. So there is nothing beside this authored 2.0 to agree or disagree with. \u26a0\ufe0f AND THE UNDERLYING'S ATTESTED CR IS NETTED OF POL AND INVENTORY \u2014 a gross/netted inversion here would flatter the number materially. Read apxusd.md's basis before quoting any coverage figure for this asset."
+ },
+ "liquidity": {
+  "liquidity_score": 3.5,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "MEASURES OBSERVED SECONDARY DEPTH PLUS THE DISCRETION BEHIND IT. CUT 5.5 -> 3.5 at the June 2026 depeg. Live derived depth 3.5 with baseline slippage ~430bps. \u26a0\ufe0f THE DURABLE FINDING IS NOT THE SLIPPAGE NUMBER BUT WHO CONTROLS IT: Apyx PULLS ITS OWN DEPTH OFF-HOURS, so this is VARIABLE AND DISCRETIONARY liquidity, not a standing book. A weekend or off-hours reading OVERSTATES the stress case and an in-hours reading understates the holder's exposure to the issuer's choice \u2014 state the timestamp with any depth quote for this asset or it is not interpretable. \u26a0\ufe0f Depth-constrained at institutional sizing, where the cooldown becomes the binding constraint rather than slippage.",
+  "liquidity_score_persistence": "filtered \u2014 venue structure and issuer discretion, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f THE FEED REPORTS `total_2pct_depth: 100000` WITH `total_2pct_depth_is_floor: true` AND `two_pct_depth_status: 'ladder_exhausted'`. That is NOT a measurement of $100k of depth \u2014 it is the ladder reporting that it ran out without resolving a 2% crossing. Reading $100,000 as tested depth inverts the finding: the status says the probe FAILED to bound it, which is a worse signal than a small measured number, not a better one."
+ },
+ "dependencies": {
+  "underlying_score": 3.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES THE COUNTERPARTY CHAIN THIS WRAPPER RESTS ON: apyUSD -> apxUSD -> STRC -> Strategy Inc -> BTC. \u26a0\ufe0f RAISED 2.5 -> 3.0 ON 2026-09-09 WHEN THE WRAPPER AXIS-4 RULE SETTLED AS 'EQUAL, DON'T NOTCH', AND THE DIVERGENCE CLOSED BY INTERNAL MOVING TO PUBLISHED \u2014 the direction the evidence pointed, not the one I had argued. The deciding argument was one I had half-written and then failed to follow: EQUAL satisfies both readings of the spec, NOTCHING satisfies only one, and both of the spec's worked examples are equal (sUSDS = USDS, apyUSD = apxUSD). A rule whose own worked examples contradict it is not a rule. \u26a0\ufe0f I had proposed a 'nameability' test \u2014 notch unless no independently-failing wrapper dependency can be named \u2014 and it FAILS ON sUSDS, which the spec sets equal despite sUSDS having its own vault, accrual and admin. I tested it against the case it was invented for and not against the case that breaks it. THE SUBSTANCE BELOW THE NOTCH IS UNCHANGED AND STILL CORRECT; only the notch was withdrawn.",
+  "underlying_score_persistence": "filtered \u2014 counterparty chain, not a daily balance",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after backing-monitor's 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record."
+ },
+ "issuer": {
+  "issuer_score": 5.0,
+  "issuer_score_source": "riskAnalyst:inherited",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "\u26a0\ufe0f HELD EQUAL TO apxusd.md's ISSUER 5.0 AND EXPLICITLY NOT RE-DERIVED. This axis scores THE ENTITY, so it is identical across every asset Apyx issues; a second derivation would be a second surface for one judgement. WHAT apxUSD'S ROW PRICES: issuer BEHAVIOUR surfaced by the June 2026 depeg \u2014 off-chain reconciliation failing to hold par under a real run, secondary depth pulled off-hours, and a reserve concentrated in a single instrument the issuer chose. \u26a0\ufe0f ROW ADDED 2026-09-09; the score had been in frontmatter with no rendered row. This block exists so the number is CHECKABLE AND ATTRIBUTABLE, not to manufacture a derivation I did not run \u2014 a pointer saying 'inherited, and here is where the argument lives' is honest; a restatement of an argument I did not re-run would not be.",
+  "issuer_score_persistence": "inherited \u2014 moves with Apyx's entity-level score, not with this asset",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration pending the axis-4 render decision."
+ },
+ "redemption_note": "\u26a0\ufe0f A SEPARATE `redemption_score` EXISTS AT 3.5 (cut from 4.5 at the June 2026 depeg) and is NOT rendered through this envelope. It is the axis that carries the two exit paths, and both now END IN A DISCOUNTED OR UNDERCOLLATERALIZED ASSET: (a) a 20-day UnlockToken cooldown to apxUSD (~95% collateralized) then opaque USDC settlement, which also exposes the holder to 20 further days of STRC/CR drift BEFORE the terminal asset is received; (b) a DEX two-hop that realises the NAV discount immediately. Noted here because a reader of the liquidity basis alone would miss that the cooldown, not slippage, is the binding constraint at size.",
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as `volatility_score` \u2014 this is a vault share), backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` BLOCK \u2014 apyusd's contract overlay already carries a rendering structural_score_basis at 4.5."
+}

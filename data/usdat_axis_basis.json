@@ -1,0 +1,47 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "usdat",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "peg_mechanism_score": 6.5,
+  "peg_mechanism_score_source": "riskAnalyst:authored",
+  "peg_mechanism_score_generated_at": "2026-09-11T00:00:00Z",
+  "peg_mechanism_score_basis": "MEASURES HOW THE PEG IS DEFENDED AND BY WHOM \u2014 NOT THE CURRENT DEVIATION, which is \u22121.35bp. Direct 1:1 USDC mint/redeem against M/T-bill backing. \u26a0\ufe0f THE ARB PATH IS PERMISSIONED: only ONBOARDED holders can run it, so the mechanism that defends the peg is not available to the marginal secondary buyer. That is narrower than USDC's open path and more robust than a synthetic RWA wrapper \u2014 the score sits between them deliberately. \u26a0\ufe0f A PLANNED STRC ROTATION IS FORWARD RISK CARRIED IN THIS SCORE and was still unrealized as of 2026-08-11; if it lands, this basis needs re-arguing, not re-dating.",
+  "peg_mechanism_score_persistence": "filtered \u2014 mechanism design and access, not spot-responsive"
+ },
+ "backing": {
+  "backing_score": 5.5,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "\u26a0\ufe0f\u26a0\ufe0f MEASURES HOW MUCH OF THE RESERVE CAN BE INDEPENDENTLY VERIFIED \u2014 NOT WHETHER IT COVERS. THOSE DIVERGE COMPLETELY HERE, AND THE COVERAGE NUMBER IS PERFECT. PYUSDx held equals supply TO THE CENT; the feed reports collateral_ratio 100.0 with surplus_deficit \u22120.0 on $67,164,376.55. \u26a0\ufe0f THAT IS A VERIFIABILITY COLLAPSE, NOT A SOLVENCY ONE, AND A READER SEEING 100.0 WILL CONCLUDE THE OPPOSITE OF THE FINDING. The 2026-08-19 upgrade rotated the reserve to PYUSDx, which VOIDED THE TWO THINGS THE PRIOR 6.5 WAS EXPLICITLY EARNED ON \u2014 'every dollar matched by tokens you can verify with three on-chain calls' and 'all capital sits directly in the USDat smart contract address'. PYUSDx holds NOTHING at its own address: it is an issuer-minted M0-style earner extension whose reserves sit at a PORTAL LAYER THAT HAS NOT BEEN WALKED. So the chain of verification terminates one layer short of the assets. \u26a0\ufe0f 6.5 -> 4.5 -> 5.5, BOTH MOVES ON 2026-08-23 \u2014 the intermediate 4.5 over-corrected. \u26a0\ufe0f AND THIS ROW STATED THE 2026-08-11 POSITION WHILE ITS OWN FRONTMATTER HAD MOVED TWICE, i.e. it was TWO PASSES BEHIND ITSELF until 2026-09-08.",
+  "backing_score_persistence": "filtered \u2014 reserve structure and verifiability, not a spot ratio",
+  "backing_score_denominator": "\u26a0\ufe0f collateral_ratio 100.0 IS AN IDENTITY, NOT EVIDENCE. Backing is defined as PYUSDx held, and PYUSDx held is minted against supply, so the ratio cannot print anything else. It says the two sides of one issuer's ledger agree. It says NOTHING about whether the portal-layer reserves exist. Never quote '100% collateralized' for this asset without the portal caveat attached."
+ },
+ "liquidity": {
+  "liquidity_score": 5.5,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "MEASURES OBSERVED EXECUTABLE DEPTH ON THE SECONDARY VENUE, derived live rather than modelled: $479,957 clears under 25bps, 30-day peg band 6.44bps, single deep venue (\u22121.0), turnover 52% (+0.5), pool/supply 10.0% (\u22120.5) -> 5.5. \u26a0\ufe0f\u26a0\ufe0f THE SCORE MOVED BECAUSE THE MODEL WAS FIXED, NOT BECAUSE THE MARKET GOT WORSE \u2014 and that distinction is the whole basis. The prior 7.5 was A MODEL ARTIFACT. Observed depth is FLAT against 2026-06-04 ($500,000) and the peg band IMPROVED (10.51 -> 6.44bps). Three PegTracker fixes did it: 903a747 slippage-vs-venue-spot, 8eaeb4d truncated-ladder guard, 7040947 $5M exit ladder. \u26a0\ufe0f A SCORE CUT ON A MARKET THAT IMPROVED WILL READ AS DETERIORATION TO ANYONE WHO DOES NOT HAVE THIS SENTENCE. Single-venue concentration remains the binding constraint.",
+  "liquidity_score_persistence": "filtered \u2014 venue structure, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f THE FEED'S total_2pct_depth OF $2,000,000 IS NOT A MEASUREMENT: is_floor is true and two_pct_depth_status is 'quote_failed'. The probe FAILED to resolve a 2% crossing; the number is the largest size attempted. Our 5.5 rests on the live derivation in `usdat_backing.json.summary.liquidity_depth_derived` ($479,957 under 25bps), NOT on that $2M."
+ },
+ "dependencies": {
+  "underlying_score": 5.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES THE COUNTERPARTY SET. \u26a0\ufe0f AUTHORED 2026-09-09 \u2014 absent from this sheet until then. \u26a0\ufe0f\u26a0\ufe0f tidresearch PUBLISHES 5.5 AND THE HALF-POINT GAP IS NOT A DISAGREEMENT \u2014 IT IS TWO DIFFERENT QUESTIONS, AND THIS MUST NOT BE 'RECONCILED'. This report carries no `axis_frame: six`, so on their schema `underlying_score` is OFF-FRAME and means COLLATERAL QUALITY; ours means counterparty concentration. \u2705 THEIR NUMBER IS WELL ARGUED, unlike sUSDat's unsourced 3.5: their line 75 separates Underlying ('what the collateral IS') from Backing ('the arrangement around it and how much you can check'), declines to charge the verifiability loss to both axes, and declines to credit PYUSD's quality upward because doing so would assert a pass-through through PYUSDx that nobody has verified. \u26a0\ufe0f TREATING THIS AS A DIVERGENCE TO RESOLVE WOULD DESTROY A CORRECT DISTINCTION ON BOTH SURFACES.",
+  "underlying_score_persistence": "filtered \u2014 counterparty structure, not a daily balance",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record."
+ },
+ "issuer": {
+  "issuer_score": 5.0,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY. Held equal across the Saturn/Strata family, which shares an issuer and a terminal. \u26a0\ufe0f NOT RE-DERIVED HERE \u2014 a second derivation of one entity judgement creates two surfaces that drift.",
+  "issuer_score_persistence": "inherited \u2014 entity-level, moves with the issuer not the asset",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration."
+ },
+ "contract_note": "\u26a0\ufe0f NO `contract` BLOCK, AND A DEFECT TO KNOW ABOUT: usdat's Scoring Rationale table carries TWO axis-5 rows \u2014 'Contract & Admin' (2026-09-09, from security_analyst's walk) and 'Contract' (2026-09-10, from a re-measured SaturnTimelock getMinDelay of 432,000s = 5 days). Both score 4.0. The newer row originally opened by claiming to be the FIRST axis-5 rationale this asset had, which was false when written \u2014 the older row was directly above it. Corrected and declared 2026-09-11 (97707f2); neither deleted, because each carries evidence the other does not.",
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as `peg_mechanism_score` \u2014 this is a stablecoin), backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted."
+}
