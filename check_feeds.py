@@ -519,6 +519,109 @@ try:
 except OSError:
     pass
 
+# ---------------------------------------------------------------------------
+# ⚠️ PRODUCER FILES THE SYNC CAN NEVER REACH.
+#
+# sync_and_push.sh resolves every path as <root>/<slug><suffix>.json where slug
+# is assets.json's slug with dashes replaced by underscores. A file whose name
+# does not match that shape is not an error there — the loop simply never looks
+# at it, logs nothing, and the asset silently never gets the field.
+#
+# ⚠️ It cost a round trip: riskAnalyst wrote hastra-prime_issuer.json (dashed)
+# while the sync resolved hastra_prime_issuer.json. Complete, correct, verified
+# content that reached nothing, with NO line in sync.log to find. 35 of 150 asset
+# slugs carry a dash, so this recurs by construction.
+#
+# ⚠️ The suffix and root lists are PARSED OUT OF sync_and_push.sh rather than
+# repeated here. Two hardcoded lists in two languages is the exact bug that
+# script's own comments describe — fixing one changed nothing because the other
+# still ran.
+def _sync_lists():
+    try:
+        sh = open('sync_and_push.sh', encoding='utf-8').read()
+    except OSError:
+        return None, None
+    def grab(name):
+        m = re.search(name + r'="((?:[^"\\]|\\\n)*)"', sh)
+        return m.group(1).replace('\\\n', ' ').split() if m else None
+    return grab('SUFFIXES'), grab('SOURCE_ROOTS')
+
+_sufs, _roots = _sync_lists()
+if _sufs and _roots:
+    _src = {s: str(sources[s]).replace('-', '_') for s in slugs}
+    _reachable = {f'{_src[s]}{suf}.json' for s in slugs for suf in _sufs}
+    # Every slug spelling the sync would accept, so a file for an UNREGISTERED
+    # asset is reported differently from one that is merely misspelled.
+    _known = set(_src.values())
+    for _root in _roots:
+        try:
+            _names = os.listdir(_root)
+        except OSError:
+            continue
+        for _n in _names:
+            if not _n.endswith('.json') or _n in _reachable:
+                continue
+            _stem = _n[:-5]
+            _suf = next((x for x in sorted(_sufs, key=len, reverse=True)
+                         if _stem.endswith(x)), None)
+            if not _suf:
+                continue                      # not a block file — none of our business
+            _pfx = _stem[:-len(_suf)]
+            _fixed = _pfx.replace('-', '_')
+            if _fixed in _known:
+                warns.append(
+                    f'{_fixed}: {_root}/{_n} IS UNREACHABLE — the sync resolves '
+                    f'{_fixed}{_suf}.json and skips a miss SILENTLY. Rename it at the '
+                    f'producer; the field will never reach the dashboard as named.')
+            # ⚠️ DELIBERATELY SILENT on a prefix that matches no registered asset.
+            # The first cut warned on those too and produced 17 lines of pure
+            # noise in one run — bold/usdt/frax/usdg/thbill are assets other
+            # producers cover and this dashboard does not, and every *_family.json
+            # is a rollup the sync copies from its OWN explicit list further down.
+            # None is actionable, and a warn block that cries wolf is one nobody
+            # reads, which is worse than not having it.
+            #
+            # The signal is narrower than "unmatched file": it is a file whose
+            # prefix becomes a REGISTERED slug once dashes are normalised. That is
+            # a near-miss on an asset we do publish, and it is always a bug.
+
+# ---------------------------------------------------------------------------
+# ⚠️ REGISTRY DRIFT — because someone else's page now depends on it.
+#
+# tidresearch's /dashboards hub links out to ?asset=<slug> instead of embedding,
+# so an unpublished or renamed slug is no longer a visible broken frame on their
+# page — it is an invisible dead link. Their prebuild gate catches it only where
+# it can read this registry.
+#
+# This does not fix their link. It makes the change VISIBLE here, at the moment
+# it happens, so telling them is a decision someone takes rather than a thing
+# nobody notices.
+REG_STATE = os.path.join(DATA, 'registry_state.json')
+_reg_prev = load(REG_STATE) or {}
+_reg_now = {a['slug']: bool(a.get('published') is True) for a in assets}
+if _reg_prev:
+    for _slug, _was in sorted(_reg_prev.items()):
+        if _slug not in _reg_now:
+            warns.append(
+                f'{_slug}: REMOVED from assets.json (was '
+                f'{"published" if _was else "staged"}) — tidresearch links out to '
+                f'?asset={_slug} and will not notice. Tell them.')
+        elif _was and not _reg_now[_slug]:
+            warns.append(
+                f'{_slug}: UNPUBLISHED (was published) — any external link to '
+                f'?asset={_slug} is now dead to a reader. Tell tidresearch.')
+    for _slug in sorted(set(_reg_now) - set(_reg_prev)):
+        warns.append(
+            f'{_slug}: NEW in assets.json ('
+            f'{"published" if _reg_now[_slug] else "staged"}) — if published, it is '
+            f'listable on tidresearch\'s hub and they have no way to learn that.')
+try:
+    with open(REG_STATE, 'w', encoding='utf-8') as fh:
+        json.dump(_reg_now, fh, indent=1, sort_keys=True)
+        fh.write('\n')
+except OSError:
+    pass
+
 print('CORRECTNESS CHECKS (this suite cannot judge legibility)\n')
 for w in warns: print('  WARN  ' + w)
 for f_ in fails: print('  FAIL  ' + f_)

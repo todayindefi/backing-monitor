@@ -1762,7 +1762,13 @@ const CommonRenderer = {
             var b0 = lq.liquidity_score_basis || lq.liquidity_score_source;
             if (!b0) return { rejected: 'An authored liquidity score of ' + lq.liquidity_score +
                 '/10 was supplied with no basis or source string, so it was not rendered.' };
-            return { score: lq.liquidity_score, basis: String(b0) };
+            // ⚠️ `field` is REQUIRED by _divergenceChipHtml, which prints it as
+            // "(field: X)". Omitting it rendered "field: undefined" on the ONLY
+            // working divergence flag on the page — the one place a reader can see
+            // that a judgement and a measurement disagree looked like a bug.
+            // The peg/backing path gets this free from _authoredAxisScore, which
+            // sets it; this one builds its object by hand and did not.
+            return { score: lq.liquidity_score, basis: String(b0), field: 'liquidity_score' };
         }
         if (!declared) {
             return { rejected: 'An authored liquidity score of ' + lq.liquidity_score +
@@ -1779,7 +1785,7 @@ const CommonRenderer = {
                 'rendered. A judgement with no stated reasoning cannot be assessed ' +
                 'by a reader. Showing neither.' };
         }
-        return { score: lq.liquidity_score, basis: String(basis) };
+        return { score: lq.liquidity_score, basis: String(basis), field: 'liquidity_score' };
     },
 
     _liquidityChipHtml(data) {
