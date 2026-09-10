@@ -928,7 +928,18 @@ var ApyxRenderer = {
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4">' +
                 'Of Apyx\'s total reserves, ' + coveragePctTxt + ' is directly readable on-chain via a single ' +
                 '<span class="font-mono not-italic">balanceOf</span> call on the STRCx contract at the Apyx Safe. The remaining ' +
-                remainingPctTxt + ' (brokerage STRC, cash &amp; equivalents, SATA) is verifiable only through the Accountable ' +
+                // ⚠️ WAS '(brokerage STRC, cash & equivalents, SATA)'. SATA IS ZERO — $0 on
+                // both 7/20 and 7/31 in Apyx's July 2026 Wolf attestation, and it is not a
+                // line in backing.breakdown at all (STRC / Inventory / Protocol Owned
+                // Liquidity / Cash & Equivalents / Other). So this named a reserve
+                // component that does not exist, in prose no data recomputes.
+                //
+                // ⚠️ The enumeration itself was the defect, not the entry. This function
+                // only receives asset_specific and cannot see backing.breakdown, so any
+                // list here is a constant that drifts as composition changes — exactly what
+                // happened. Non-enumerating now; the composition panel above already shows
+                // the real lines, live.
+                remainingPctTxt + ' (brokerage STRC, cash &amp; equivalents and the other reserve lines) is verifiable only through the Accountable ' +
                 'TEE-attested proof-of-solvency feed and monthly Wolf &amp; Company CPA examinations. STRCx is Wolf-anchored ' +
                 'for USD pricing — refreshed when each monthly Wolf attestation publishes. This makes STRCx the only Apyx ' +
                 'reserve component combining TEE attestation + CPA examination + direct on-chain readability.' +
