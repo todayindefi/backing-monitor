@@ -425,8 +425,12 @@ const CommonRenderer = {
     // name that looks slightly odd is a prompt to add it here — dropping it would
     // credit an axis to nobody and nobody would notice.
     PRODUCER_LABELS: {
-        'security_analyst': 'contract walk',
-        'securityanalyst':  'contract walk',
+        // ⚠️ Labels must read in EVERY position they render, not just the chip.
+        // "contract walk" works in "mixed · contract walk + risk desk" and breaks
+        // in "reviewed by contract walk". "security desk" parallels "risk desk"
+        // and reads in both.
+        'security_analyst': 'security desk',
+        'securityanalyst':  'security desk',
         'riskanalyst':      'risk desk',
         'riskAnalyst':      'risk desk',
         'pegtracker':       'peg feed',
@@ -4712,7 +4716,7 @@ const CommonRenderer = {
         var bits = [];
         if (r.scope) bits.push(esc(String(r.scope)) + ' review');
         if (r.claims_remeasured != null) bits.push(esc(r.claims_remeasured) + ' claims re-measured');
-        if (r.reviewed_by) bits.push('reviewed by ' + esc(r.reviewed_by));
+        if (r.reviewed_by) bits.push('reviewed by ' + esc(this._producerLabel(r.reviewed_by)));
         if (r.reviewed_at) bits.push(esc(r.reviewed_at));
         return '<div class="walk-review">' +
             '<div class="wr-head">\u26a0\ufe0f ' + bits.join(' \u00b7 ') + '</div>' +
@@ -4943,9 +4947,18 @@ const CommonRenderer = {
                 (c.headline_basis ? ' title="' + esc(c.headline_basis) + '"' : '') + '>' +
                 esc(c.headline) + '</div>' +
             '<div class="tw-sub">Walked ' + esc(c.observed_at || '?') +
-                (c.source_file || c.method_note
-                    ? ' <span class="tw-meta" title="' +
-                      esc([c.source_file, c.method_note].filter(Boolean).join(' \u2014 ')) +
+                // ⚠️ `source_file` DROPPED FROM THE READER'S TOOLTIP. Its value is a
+                // path into a PRODUCER'S REPO — "security_analyst/topology/assets/
+                // crvusd.yaml" — on 21 of 21 assets that publish it. An external
+                // reader cannot open it, learns nothing from it, and it discloses
+                // how this estate is wired for no benefit. `method_note` is kept:
+                // it describes HOW the walk was done, which is reader material.
+                //
+                // Not deleted from the feed — the field is real provenance and the
+                // producer should keep publishing it. It simply stops being
+                // rendered, the way `producer_note` already is.
+                (c.method_note
+                    ? ' <span class="tw-meta" title="' + esc(c.method_note) +
                       '">\u24d8</span>'
                     : '') + '</div>' +
             // ⚠️ COVERAGE ON THE FACE, beside the walk date, because a scope limit
