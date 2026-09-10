@@ -2570,12 +2570,29 @@ const CommonRenderer = {
         // ⚠️ Says they MAY differ, never which is right. Neither is: they measure
         // different things, and picking a winner here would be this renderer adjudicating
         // between two producers on a question neither asked it.
-        var liveNote = '<div class="axis-band-note text-xs text-slate-500 mt-3">' +
+        // ⚠️ `col-span-full` IS LOAD-BEARING, not styling. #summary-cards is a
+        // 6-column grid, so appending this note made it a grid ITEM and it rendered
+        // as a chip-shaped block one cell wide on the left. Spanning the row is what
+        // makes it read as prose.
+        //
+        // ⚠️ The report link renders ONLY where one exists. The registry and the
+        // feed have DIFFERENT gaps — usg/usdm are absent from the registry but
+        // present in the feed, strc/mstr the reverse — and app.js backfills
+        // registry -> feed before this runs, so the union is 19 of 25. The other six
+        // (ousd, usdd, bmnr, cusd, yzusd, syzusd) get the note with no link rather
+        // than a dangling arrow to nothing.
+        var _reportUrl = (data && data.issuer && data.issuer.report_url) || null;
+        var liveNote = '<div class="axis-band-note col-span-full text-sm text-slate-500 mt-3 leading-relaxed">' +
             'Peg, Backing and Liquidity are <strong>live measurements</strong>, recomputed ' +
             'each refresh from on-chain and venue data. Contract &amp; Admin and Issuer are ' +
             '<strong>authored assessments</strong>. Live readings can differ from the scores ' +
             'in the published report \u2014 they answer different questions, and an asset can ' +
             'perform well on a mechanism that is structurally weak.' +
+            (_reportUrl
+                ? ' <a href="' + this._escapeAttr(_reportUrl) + '" target="_blank" ' +
+                  'rel="noopener noreferrer" class="text-blue-600 hover:underline whitespace-nowrap">' +
+                  'Read the full risk report for the authored scores \u2192</a>'
+                : '') +
         '</div>';
         container.innerHTML = cards.map(function(c) {
             return '<div class="summary-card">' +
