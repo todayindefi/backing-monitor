@@ -2534,7 +2534,7 @@ const CommonRenderer = {
                 sub: this._contractSubText(data),
                 chip: (typeof (data.contract || {}).structural_score === 'number'
                     ? '<span class="axis-rating r-warn" title="' + this._escapeAttr(
-                          String((data.contract || {}).structural_score_basis || '')) + '">Structural ' +
+                          this._mdPlain(String((data.contract || {}).structural_score_basis || ''))) + '">Structural ' +
                       data.contract.structural_score + '/10</span>'
                     : '<span class="axis-rating r-na" title="No contract_score exists for any asset in the risk feed. The material is rendered in the axis below; the score is not yet authored.">Not scored yet</span>')
             },
@@ -3496,7 +3496,7 @@ const CommonRenderer = {
             'admin authority, delay, upgrade & pause surface',
             (typeof cScore === 'number'
                 ? '<span class="axis-rating r-warn" title="' + this._escapeAttr(
-                      String((data.contract || {}).structural_score_basis || '')) + '">Structural ' +
+                      this._mdPlain(String((data.contract || {}).structural_score_basis || ''))) + '">Structural ' +
                   cScore + '/10</span>'
                 : this._ratingChipHtml(null)),
             data.contract || (data.asset_specific || {}).control || (data.asset_specific || {}).governance);
@@ -4808,13 +4808,43 @@ const CommonRenderer = {
     // A basis must render WHERE IT QUALIFIES THE NUMBER. Collapsed is fine —
     // reachable by click, discoverable by an affordance — but a hover is not a
     // place a 2,000-character argument can live.
+    // ⚠️ PRODUCERS WRITE MARKDOWN AND THIS RENDERED IT AS PUNCTUATION.
+    //
+    // 346 emphasis spans across 20 files — 334 of them in structural_score_basis
+    // alone — arrived as literal `**bold**` and backticked `code`. The emphasis is
+    // deliberate: riskAnalyst uses bold to mark the load-bearing turn in a
+    // 5,000-character argument, and stripping it to plain text loses the structure
+    // a reader navigates by.
+    //
+    // ⚠️ ESCAPE FIRST, THEN CONVERT. The input is producer prose and must never
+    // reach innerHTML unescaped; converting afterwards means only the markers this
+    // function creates become tags, and a producer writing "<script>" still lands
+    // as text. The patterns deliberately refuse to span newlines so an unclosed
+    // marker cannot swallow a paragraph.
+    _mdInlineHtml(text) {
+        if (!text || typeof text !== 'string') return '';
+        return this._escapeAttr(text)
+            .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    },
+
+    // ⚠️ TOOLTIPS GET THE MARKERS STRIPPED, NOT CONVERTED. A title="" attribute
+    // renders its value as plain text, so <strong> there would show the TAG to a
+    // reader — worse than the asterisk it replaced. Same prose, two destinations,
+    // two treatments.
+    _mdPlain(text) {
+        if (!text || typeof text !== 'string') return '';
+        return text.replace(/\*\*([^*\n]+)\*\*/g, '$1')
+                   .replace(/`([^`\n]+)`/g, '$1');
+    },
+
     _scoreBasisHtml(label, text) {
         if (!text || typeof text !== 'string') return '';
         var t = text.trim();
         if (!t) return '';
         return '<details class="score-basis"><summary class="score-basis-toggle">' +
             this._escapeAttr(label) + '</summary>' +
-            '<div class="score-basis-body">' + this._escapeAttr(t) + '</div></details>';
+            '<div class="score-basis-body">' + this._mdInlineHtml(t) + '</div></details>';
     },
 
     // ⚠️ HOW FAR THE CHECK WENT, ON THE FACE — because the FINDING is on the
@@ -5119,7 +5149,7 @@ const CommonRenderer = {
                 ? '<details class="tw-scope"><summary class="tw-code-toggle">' +
                   (c.coverage_summary ? 'Coverage \u2014 full scope statement'
                                       : 'Coverage \u2014 which chains this walk covers') +
-                  '</summary><div class="tw-sub">' + esc(c.coverage_note) + '</div></details>'
+                  '</summary><div class="tw-sub">' + self._mdInlineHtml(c.coverage_note) + '</div></details>'
                 : '') +
             (layerRows
                 ? '<div class="tw-tablewrap"><table class="tw-table"><thead><tr>' +
