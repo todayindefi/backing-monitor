@@ -122,7 +122,12 @@ const CommonRenderer = {
     // meta name collision. `flat` is honoured because liquidity/1 shipped that
     // way, not because it is equally good.
     ADOPTED_OVERLAY_SCHEMAS: {
-        issuer:       { 'issuer/1':          { mode: 'merge', payload: 'envelope', identity: 'asset' } },
+        // ⚠️ `additive: true` — an issuer overlay contributes summary / summary_source
+        // / facts, which the asset feed never carries. Sharing no field with the feed
+        // is this schema's NORMAL state, not the ambiguous case the disjoint warning
+        // was written for, and without this every issuer overlay renders an amber
+        // ⚠️ chip saying it overrode nothing.
+        issuer:       { 'issuer/1':          { mode: 'merge', payload: 'envelope', identity: 'asset', additive: true } },
         backing:      { 'backing-overlay/1': { mode: 'merge', payload: 'envelope', identity: 'asset' } },
         dependencies: { 'dependencies/1':    { mode: 'merge', payload: 'envelope', identity: 'asset' } },
         // ⚠️ REPLACE, not merge: security_analyst owns axis 5 outright and the
@@ -405,6 +410,38 @@ const CommonRenderer = {
     // already stated there. Naming a source on all six axes on all 25 assets to
     // say "same as the header" is noise that trains the eye to skip the chip,
     // and the chip's whole job is to be read on the day it says something else.
+    // ⚠️ PRODUCER IDENTIFIERS ARE INTERNAL REPO NAMES AND WERE RENDERING TO
+    // EXTERNAL READERS. The crvUSD page showed "mixed · security_analyst +
+    // riskanalyst · 12 fields" on the face of axis 5 — two repo names, meaningless
+    // to a reader and an unnecessary disclosure of how this estate is wired.
+    //
+    // The provenance itself is worth keeping and is the whole point of the chip:
+    // a reader SHOULD know an authority walk and a judgement came from different
+    // places. What they should not get is our directory listing. So the identity
+    // is mapped to WHAT THE PRODUCER DOES, not what its repo is called.
+    //
+    // ⚠️ Unknown producers fall through to a de-underscored form rather than
+    // being dropped. A new producer must not silently lose attribution, and a
+    // name that looks slightly odd is a prompt to add it here — dropping it would
+    // credit an axis to nobody and nobody would notice.
+    PRODUCER_LABELS: {
+        'security_analyst': 'contract walk',
+        'securityanalyst':  'contract walk',
+        'riskanalyst':      'risk desk',
+        'riskAnalyst':      'risk desk',
+        'pegtracker':       'peg feed',
+        'dextracker':       'depth feed',
+        'backing-monitor':  'this dashboard',
+        'backing_monitor':  'this dashboard',
+    },
+
+    _producerLabel(name) {
+        if (!name || typeof name !== 'string') return name;
+        var key = name.trim();
+        var hit = this.PRODUCER_LABELS[key] || this.PRODUCER_LABELS[key.toLowerCase()];
+        return hit || key.replace(/[_-]+/g, ' ');
+    },
+
     _axisSourceHtml(axis) {
         var p = this.AXIS_PROVENANCE && this.AXIS_PROVENANCE[axis];
         if (!p) return '';
@@ -413,11 +450,12 @@ const CommonRenderer = {
         // by two producers on two declared halves, and crediting only riskanalyst
         // would attribute security_analyst's hand-walk to them — the same
         // laundering the verbatim `unmeasured[]` rendering exists to prevent.
-        var contribs = (p.contributors || []).map(function(c) { return c.producer; })
+        var self = this;
+        var contribs = (p.contributors || []).map(function(c) { return self._producerLabel(c.producer); })
             .filter(function(v, i, a) { return v && a.indexOf(v) === i; });
         var src = contribs.length > 1
             ? contribs.join(' + ')
-            : (p.producer || (p.file || '').split('/').pop() || 'overlay');
+            : (this._producerLabel(p.producer) || (p.file || '').split('/').pop() || 'overlay');
 
         // ⚠️ A REFUSED OVERLAY MUST BE LOUDER THAN AN ACCEPTED ONE. The page is
         // rendering the embedded block while a file from the axis's own producer
@@ -438,7 +476,7 @@ const CommonRenderer = {
                 // Only claim a producer when one was DECLARED. src falls back to
                 // the filename for chip text, and "producer: reusd_re_issuer.json"
                 // would attribute a file to itself.
-                (p.producer ? ' (producer: ' + p.producer + ')' : ' (producer undeclared)') +
+                (p.producer ? ' (producer: ' + this._producerLabel(p.producer) + ')' : ' (producer undeclared)') +
                 '.\n' + why +
                 '\nThe figures shown come from the asset feed, not from ' + src + '.'
             ) + '">\u26a0\ufe0f ' + this._escapeAttr(src) + ' overlay not used</span>';
@@ -469,7 +507,17 @@ const CommonRenderer = {
         // which one the page was showing. Only an overlay declaring a
         // schema_version gets caught by the adoption gate; this one declares
         // none, so it needs its own signal.
-        var disjoint = p.overridden.length === 0 && p.added.length > 0 && p.kept.length > 0;
+        // ⚠️ THE WARNING SAYS THE PAGE "CANNOT TELL" WHETHER AN OVERLAY IS ADDITIVE
+        // BY DESIGN. Where the schema DECLARES it, the page can tell — so asking
+        // the reader to worry is wrong, and firing on every issuer overlay would
+        // train them to ignore the chip on the axes where it means something.
+        //
+        // Only a schema that has NOT declared itself additive still warns; an
+        // unknown vocabulary sharing no field with the feed remains exactly the
+        // ambiguous case this was written for.
+        var _adopted = (this.ADOPTED_OVERLAY_SCHEMAS[axis] || {})[p.schema] || {};
+        var disjoint = p.overridden.length === 0 && p.added.length > 0 &&
+            p.kept.length > 0 && _adopted.additive !== true;
         var tip = 'Axis merged per field, no assembler.\n' +
             'From ' + src + ' (' + (p.file || '?') + '): ' +
             (n ? p.overridden.concat(p.added).sort().join(', ') : 'nothing') + '.\n' +
