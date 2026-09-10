@@ -3937,6 +3937,32 @@ const CommonRenderer = {
         var ladderRows = sizes.map(function(sz) {
             var q = quotes['' + sz] || quotes[sz] || {};
             var bps = q.slippage_bps;
+            // ⚠️ A FAILED QUOTE RENDERED IDENTICALLY TO AN UNATTEMPTED ONE.
+            //
+            // The producer publishes {"error": "http_530"} for a size whose RFQ
+            // did not return, and `error` was never read — so the row printed
+            // "— —", indistinguishable from a size nobody asked about, and from
+            // a reader's point of view indistinguishable from nothing to report.
+            //
+            // ⚠️ On crvUSD it is the $10M rung, sitting exactly at the inflection:
+            // 5M quotes at -2.3 bps and 25M at -606.9 bps. The blank hides that the
+            // measurement FAILED at the one size where the ladder turns, and a
+            // reader scanning down sees smooth, blank, catastrophic.
+            //
+            // A failed read is not an absence — the distinction this estate has
+            // had to relearn repeatedly. It now says so, in the cell, in amber.
+            if (q.error) {
+                return '<tr>' +
+                    '<td class="font-mono">' + CommonRenderer.formatCurrency(sz) + '</td>' +
+                    '<td class="text-right font-mono text-amber-600" title="' +
+                        CommonRenderer._escapeAttr('The quote for this size FAILED (' +
+                        String(q.error) + '). This is an unsuccessful measurement, not a ' +
+                        'measurement of zero and not a size that was skipped — nothing is ' +
+                        'established about depth at this level.') +
+                        '">\u26a0\ufe0f quote failed</td>' +
+                    '<td class="text-right font-mono text-slate-400">not measured</td>' +
+                '</tr>';
+            }
             var cls = bps == null ? '' : (bps <= 25 ? 'text-green-600' : (bps <= 200 ? 'text-amber-600' : 'text-red-600'));
             return '<tr>' +
                 '<td class="font-mono">' + CommonRenderer.formatCurrency(sz) + '</td>' +
