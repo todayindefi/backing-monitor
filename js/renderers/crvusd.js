@@ -287,7 +287,16 @@ var CrvUSDRenderer = {
                             return '<tr>' +
                                 '<td class="font-mono">' + pk.index + '</td>' +
                                 '<td class="font-mono text-xs">' + shortAddr(pk.address) + '</td>' +
-                                '<td class="font-mono text-xs">' + shortAddr(pk.pool) + '</td>' +
+                                // ⚠️ PREFER THE PRODUCER'S NAME OVER THE ADDRESS. PegTracker
+                                // b8c7bf3 adds `pair` to each keeper — the pool the funded
+                                // keeper sits in is Curve crvUSD/USDT, and a bare
+                                // 0x390f35…997BF4 made a reader run an on-chain call to
+                                // read their own dashboard. Falls back to the address when
+                                // no name is published: an address renders fine, a guessed
+                                // label renders as fact.
+                                '<td class="font-mono text-xs">' +
+                                    (pk.pair ? CommonRenderer._escapeAttr(pk.pair)
+                                             : shortAddr(pk.pool)) + '</td>' +
                                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(pk.debt) + '</td>' +
                                 '<td class="text-right font-mono">' + CommonRenderer.formatPercent((pk.debt / totalPkDebt) * 100, 1) + '</td>' +
                             '</tr>';
