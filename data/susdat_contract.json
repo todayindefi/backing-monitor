@@ -1,0 +1,117 @@
+{
+  "schema_version": "contract/1",
+  "asset": "susdat",
+  "producer": "security_analyst",
+  "as_of": "2026-09-09",
+  "generated_at": "2026-09-10T00:22:44Z",
+  "contract": {
+    "headline": "All MEASURED authority sits behind a 5d timelock.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-09",
+    "source_file": "security_analyst/topology/assets/susdat.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "StakedUSDat and WithdrawalQueueERC721 UUPS proxies",
+        "terminal_name": "SaturnTimelock",
+        "topology": "timelocked",
+        "keys": [
+          "DEFAULT_ADMIN_ROLE",
+          "upgradeToAndCall"
+        ],
+        "timelock": "5d",
+        "timelock_floor": "5d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+            "target": "StakedUSDat proxy 0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+            "via": "DEFAULT_ADMIN_ROLE -> upgradeToAndCall",
+            "terminal": "timelock",
+            "holder_kind": "timelock",
+            "terminal_address": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+            "timelock": "5d",
+            "timelock_floor": "5d",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "name/symbol identify Staked USDat/sUSDat and asset() returns USDat at 0x23238f20b894f29041f48d88ee91131c395aaa71. The implementation is 0x2005e0ca201a37694125ff267ae57872bea0a0ce. Verified source gates UUPS upgrades on DEFAULT_ADMIN_ROLE. The timelock has that role and the dead-address negative control does not."
+          },
+          {
+            "holder": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+            "target": "WithdrawalQueueERC721 proxy 0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
+            "via": "DEFAULT_ADMIN_ROLE -> upgradeToAndCall",
+            "terminal": "timelock",
+            "holder_kind": "timelock",
+            "terminal_address": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+            "timelock": "5d",
+            "timelock_floor": "5d",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "The queue implementation is 0x256fa0ba1b6dfb50ee883955c5a99d3c1b017fd5. Verified source gates upgrades on DEFAULT_ADMIN_ROLE. The same timelock has that role, the dead-address control does not, and getMinDelay() is 432000 seconds."
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "sUSDat vault and withdrawal queue administration",
+        "terminal_name": "SaturnTimelock",
+        "topology": "timelocked",
+        "keys": [
+          "DEFAULT_ADMIN_ROLE"
+        ],
+        "timelock": "5d",
+        "timelock_floor": "5d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+            "via": "DEFAULT_ADMIN_ROLE -> role administration / full-reach parameters",
+            "terminal": "timelock",
+            "holder_kind": "timelock",
+            "terminal_address": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+            "timelock": "5d",
+            "timelock_floor": "5d",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "Direct hasRole checks establish this address as DEFAULT_ADMIN_ROLE on both live proxies. Verified source gives that role upgrades, unpause, role administration, rescue, and other full-reach administration."
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "ethereum operational role populations (operator/processor, enforcer or compliance, pauser, and unpauser), terminal signer topologies, and any additional holders were not fully enumerated. No delay or absence is inferred.",
+      "ethereum withdrawal processing is privileged; its operational holders and current bounds require a separate walk before that authority can be scored.",
+      "bnb: no sUSDat contract address was established; no authority, delay, or supply share is inferred from Ethereum or the USDat BNB token.",
+      "monad: no sUSDat contract address was established; no authority, delay, or supply share is inferred from Ethereum."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "usdat",
+        "shares": [
+          {
+            "kind": "timelock",
+            "address": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+            "delay": "5d",
+            "roles": [
+              "ethereum-admin",
+              "upgrade"
+            ]
+          }
+        ]
+      }
+    ],
+    "review": null,
+    "walk_notes": [
+      "Hand-walked at Ethereum block 25,940,744 using read-only calls."
+    ]
+  }
+}

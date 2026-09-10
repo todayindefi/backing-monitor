@@ -1,0 +1,366 @@
+{
+  "schema_version": "contract/1",
+  "asset": "thusd",
+  "producer": "security_analyst",
+  "as_of": "2026-09-10",
+  "generated_at": "2026-09-10T00:22:44Z",
+  "contract": {
+    "headline": "A 48h timelock covers contract-upgrade (upgradeToAndCall). bridge (setPeer, setConfig, setSendLibrary, setReceiveLibrary) has NO established delay — timelock: none. The delay protects the code and not the supply.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-10",
+    "source_file": "security_analyst/topology/assets/thusd.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-09-10",
+        "walked_by": "hand",
+        "target_name": "thUSD token proxy and sthUSD vault proxy",
+        "terminal_name": "Theo governance Safe via 48h TimelockController",
+        "topology": "timelock-multisig",
+        "n": 4,
+        "m": 6,
+        "keys": [
+          "upgradeToAndCall"
+        ],
+        "timelock": "48h",
+        "timelock_floor": "48h",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "role_admin": {
+          "holder": "0x7afb1d3308d22639f1ce698a2985cbf22f96d94a",
+          "kind": "eoa",
+          "via": "CANCELLER_ROLE on the 48h TimelockController, held individually",
+          "note": "Negative authority only — it can cancel any queued operation but cannot originate one. hasRole(CANCELLER, 0x7afb1d33…) is true on Ethereum while PROPOSER, EXECUTOR and DEFAULT_ADMIN are all false for the same address, and 0x…dEaD is false on all four. The holder has no code (nonce 566), so a single key can veto governance unilaterally. It is also an owner of BOTH Safes below."
+        },
+        "paths": [
+          {
+            "holder": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "name": "Theo governance Safe",
+            "name_verified": true,
+            "via": "PROPOSER/EXECUTOR -> TimelockController 0x2bb4b7e6… -> thUSD._authorizeUpgrade (onlyOwner)",
+            "terminal": "timelock",
+            "holder_kind": "safe",
+            "terminal_address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "48h",
+            "timelock_floor": "48h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "thUSD 0xa3fe5c7596024e6811e14f029937d5bd8ae485b3 is an ERC1967Proxy whose implementation slot holds verified ThUSD 0xcd04f57464d25f257089a286aab47df096d300ad. That source is Ownable2StepUpgradeable + UUPSUpgradeable with `_authorizeUpgrade(address) internal override onlyOwner {}`. owner() returns 0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02, which is a verified TimelockController with getMinDelay() = 172800 s. Live hasRole on that timelock discriminates: the Safe is true on PROPOSER, EXECUTOR and CANCELLER and false on DEFAULT_ADMIN, the timelock itself is true ONLY on DEFAULT_ADMIN, and 0x…dEaD is false on all four. Safe 0x94877640… reads getThreshold 4 over 6 owners, VERSION 1.4.1, getModulesPaginated empty. pendingOwner() is the zero address, so no ownership transfer is in flight."
+          },
+          {
+            "holder": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "name": "Theo governance Safe",
+            "name_verified": true,
+            "via": "PROPOSER/EXECUTOR -> TimelockController 0x2bb4b7e6… -> sthUSD._authorizeUpgrade (onlyOwner)",
+            "terminal": "timelock",
+            "holder_kind": "safe",
+            "terminal_address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "48h",
+            "timelock_floor": "48h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "sthUSD 0xa808bc9775cb41c52c7842f8b50427fe7a770326 is an ERC1967Proxy whose slot holds verified SthUSD 0x342487f9fe31d199dda8c89a1c34cc647c5a7dc3 — ERC4626 + Ownable2Step + UUPS, `_authorizeUpgrade` onlyOwner. owner() is the same 48h timelock; pendingOwner() is zero. asset() is thUSD; totalSupply 23,824,319.788719 sthUSD against totalAssets 24,222,265.079391 thUSD at the pinned block."
+          }
+        ]
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "ethereum",
+        "observed_at": "2026-09-10",
+        "walked_by": "hand",
+        "target_name": "thUSD and sthUSD LayerZero OFT adapters",
+        "terminal_name": "48h TimelockController (peers) / governance Safe (LZ config)",
+        "topology": "mixed",
+        "keys": [
+          "setPeer",
+          "setConfig",
+          "setSendLibrary",
+          "setReceiveLibrary"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "name": "Theo governance Safe",
+            "name_verified": true,
+            "via": "PROPOSER/EXECUTOR -> 48h timelock -> OFTAdapter.setPeer",
+            "terminal": "timelock",
+            "holder_kind": "safe",
+            "terminal_address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "48h",
+            "timelock_floor": "48h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "thUSD adapter 0x9aa9aa0530a6af70ee7bc47cf1240100f514b065 (token() = thUSD, approvalRequired() true) and sthUSD adapter 0xd1db209087516883ec705cfeb99e80bb6032d540 (token() = sthUSD) both return owner() = the 48h timelock. Neither has a non-zero ERC-1967 implementation slot, so neither is upgradeable. setPeer was observed being exercised through the timelock: CallScheduled/CallExecuted pairs on selector 0x3400288b to both adapters."
+          },
+          {
+            "holder": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "name": "Theo governance Safe",
+            "name_verified": true,
+            "via": "LayerZero endpoint delegate -> setConfig / setSendLibrary / setReceiveLibrary",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "⚠️ SEPARATE, UNDELAYED PATH ON THE SAME CONTRACTS. LayerZero endpoint 0x1a44076050125825900e736c501f859c50fe728c returns delegates(adapter) = 0x94877640… — the governance Safe DIRECTLY, not the timelock — for BOTH adapters. The delegate configures the messaging security stack (send/receive libraries and DVN config), which is what decides whether an inbound mint message is accepted. Ownership is delayed 48h; delegation is not delayed at all. reach is recorded full because no published bound limits the config, per the schema's absent-is-not-bounded rule. 4 of 6 signatures, zero notice."
+          }
+        ]
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "arbitrum",
+        "observed_at": "2026-09-10",
+        "walked_by": "hand",
+        "target_name": "thUSD OFT and sthUSD OFT on Arbitrum",
+        "terminal_name": "Theo governance Safe (3-of-5) via 18h TimelockController",
+        "topology": "mixed",
+        "keys": [
+          "setPeer",
+          "setConfig",
+          "setSendLibrary",
+          "setReceiveLibrary"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "name": "Theo governance Safe (Arbitrum)",
+            "name_verified": true,
+            "via": "PROPOSER/EXECUTOR -> TimelockController 0x2bb4b7e6… (18h) -> OFT.setPeer",
+            "terminal": "timelock",
+            "holder_kind": "safe",
+            "terminal_address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+            "threshold": 3,
+            "owners": 5,
+            "timelock": "18h",
+            "timelock_floor": "18h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "⚠️ SAME ADDRESSES, DIFFERENT CONFIGURATION. At Arbitrum block 503,424,931 the TimelockController at 0x2bb4b7e6… returns getMinDelay() = 64800 s (18h), against 172800 s for the same address on Ethereum; the deployed code is byte-identical in length (10,903 hex chars) on both. Safe 0x94877640… returns getThreshold 3 over 5 owners here, against 4 over 6 on Ethereum. ⚠️ The Safe ALSO still holds DEFAULT_ADMIN_ROLE on the Arbitrum timelock, which was revoked from it on Ethereum at block 25,094,121 — so timelock role membership on Arbitrum is mutable with no delay, though updateDelay remains onlySelf and the 18h still gates scheduled calls. 0x…dEaD is false on all four roles as a control. thUSD OFT 0x9aa9aa0530a6af70ee7bc47cf1240100f514b065 returns token() = itself (an OFT, not an adapter), name/symbol thUSD, decimals 6, totalSupply 195,599.257616. sthUSD OFT 0xd1db209087516883ec705cfeb99e80bb6032d540 returns token() = itself, totalSupply 3.185000. Neither has a non-zero ERC-1967 slot, so neither is upgradeable."
+          },
+          {
+            "holder": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "name": "Theo governance Safe (Arbitrum)",
+            "name_verified": true,
+            "via": "LayerZero endpoint delegate -> setConfig / setSendLibrary / setReceiveLibrary",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "threshold": 3,
+            "owners": 5,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "⚠️ The same undelegated-to-timelock pattern as Ethereum, at a LOWER quorum. delegates(OFT) on endpoint 0x1a44076050125825900e736c501f859c50fe728c returns 0x94877640… for both Arbitrum OFTs. So the messaging security stack for the Arbitrum thUSD supply is controlled by 3 of 5 signatures with zero notice."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-09-10",
+        "walked_by": "hand",
+        "target_name": "thUSD issuance through ThUSDMinter",
+        "terminal_name": "MINTER_ROLE key / 48h TimelockController",
+        "topology": "mixed",
+        "keys": [
+          "mint",
+          "redeem",
+          "setMinter"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "bounded",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x09ec7c2d4955525237b843f5338dd7982b5553b6",
+            "name": "ThUSDMinter MINTER_ROLE key",
+            "name_verified": false,
+            "via": "MINTER_ROLE -> ThUSDMinter.mint(Order,signature)",
+            "terminal": "eoa",
+            "holder_kind": "eoa",
+            "terminal_address": "0x09ec7c2d4955525237b843f5338dd7982b5553b6",
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "bounded",
+            "reach_bound": "maxMintPerBlock 1e12 = 1,000,000 thUSD per block; orders must be EIP-712 signed and the counterparty whitelisted",
+            "hand_walk": "⚠️ THE ONLY ADDRESS THAT CAN CREATE thUSD IS A SINGLE KEY WITH NO DELAY. Verified ThUSD source gates mint as `if (msg.sender != minter) revert OnlyMinter()` and thUSD.minter() returns ThUSDMinter 0x2d99ac801dc0edadd53f5688fef2317932e8696e. Verified ThUSDMinter gates its own mint as `external nonReentrant whenNotPaused onlyRole(MINTER_ROLE)`. hasRole(MINTER_ROLE, 0x09ec7c2d…) is true and 0x…dEaD is false; the holder has no code (nonce 328), so it is an externally-owned key. It was independently corroborated as the sole observed caller of every mint and redeem transaction on the contract. The cap is real and published — maxMintPerBlock() 1e12 at 6 decimals — hence reach bounded rather than full. maxRedeemPerBlock() is 2e11 and redeemFeeBps() is 5. mintDestination() and redeemDestination() are both the 4-of-5 reserve Safe 0xec417ccb6dd26868cca993a92f37217b1d4b3c2f."
+          },
+          {
+            "holder": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "name": "Theo governance Safe",
+            "name_verified": true,
+            "via": "PROPOSER/EXECUTOR -> 48h timelock -> thUSD.setMinter (onlyOwner)",
+            "terminal": "timelock",
+            "holder_kind": "safe",
+            "terminal_address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "48h",
+            "timelock_floor": "48h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "setMinter(address) is onlyOwner on the verified ThUSD source, so replacing the mint gate entirely takes 48h. reach is full because a replacement minter is not bound by ThUSDMinter's per-block cap — the cap lives in the minter contract, not in the token."
+          }
+        ]
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "observed_at": "2026-09-10",
+        "walked_by": "hand",
+        "target_name": "ThUSDMinter and sthUSD",
+        "terminal_name": "emergency key / 48h TimelockController",
+        "topology": "mixed",
+        "keys": [
+          "pause",
+          "unpause"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "bounded",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xf936df06d35a2f82f26083f32ff2ab72f3ebdd8f",
+            "name": "sthUSD emergencyPauser key",
+            "name_verified": false,
+            "via": "sthUSD.emergencyPauser -> pause()",
+            "terminal": "eoa",
+            "holder_kind": "eoa",
+            "terminal_address": "0xf936df06d35a2f82f26083f32ff2ab72f3ebdd8f",
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "bounded",
+            "reach_bound": "halts sthUSD deposit / mint / withdraw / redeem / initiateRedeem / setYield; cannot move assets",
+            "hand_walk": "Verified SthUSD source: `function pause() external { if (msg.sender != emergencyPauser || emergencyPauser == address(0)) revert NotAuthorizedToPause(); _pause(); }`. emergencyPauser() returns 0xf936df06…, which has no code (nonce 1) — a single key, no delay. paused() is false at the pinned block."
+          },
+          {
+            "holder": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "name": "Theo governance Safe",
+            "name_verified": true,
+            "via": "PROPOSER/EXECUTOR -> 48h timelock -> sthUSD.unpause / ThUSDMinter.unpause",
+            "terminal": "timelock",
+            "holder_kind": "safe",
+            "terminal_address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "48h",
+            "timelock_floor": "48h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "✅ FAIL-SAFE ASYMMETRY, RECORDED AS SEPARATE PATHS BECAUSE THE DELAYS DIFFER. sthUSD.unpause() is onlyOwner and ThUSDMinter.unpause() is onlyRole(DEFAULT_ADMIN_ROLE); hasRole(DEFAULT_ADMIN, 48h timelock) on the minter is true and 0x…dEaD is false. So a halt is instant and a restart takes 48h — the delay runs in the direction that protects holders. ⚠️ thUSD ITSELF HAS NO PAUSE: the verified ThUSD source has no Pausable inheritance and no pause function, so transfers cannot be frozen by any party."
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "observed_at": "2026-09-10",
+        "walked_by": "hand",
+        "target_name": "ThUSDMinter and sthUSD parameters",
+        "terminal_name": "Theo governance Safe via 48h TimelockController",
+        "topology": "timelock-multisig",
+        "n": 4,
+        "m": 6,
+        "keys": [
+          "setMaxMintPerBlock",
+          "setMaxRedeemPerBlock",
+          "setRedeemFeeBps",
+          "setMintDestination",
+          "setRedeemDestination",
+          "addSupportedAsset",
+          "removeSupportedAsset",
+          "setLockupPeriod",
+          "setVestingDuration",
+          "setYieldDistributor",
+          "setEmergencyPauser"
+        ],
+        "timelock": "48h",
+        "timelock_floor": "48h",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "name": "Theo governance Safe",
+            "name_verified": true,
+            "via": "PROPOSER/EXECUTOR -> 48h timelock -> ThUSDMinter onlyRole(DEFAULT_ADMIN_ROLE) setters",
+            "terminal": "timelock",
+            "holder_kind": "safe",
+            "terminal_address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "48h",
+            "timelock_floor": "48h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "Every ThUSDMinter setter reads onlyRole(DEFAULT_ADMIN_ROLE) in verified source, and the timelock is the only DEFAULT_ADMIN member found (the deployer 0x46a9ca32d5c7c866336e75765b099b669fef8bc2 was revoked at block 25,094,154). ⚠️ setMintDestination / setRedeemDestination re-point where minted collateral goes, so this layer reaches custody at 48h, not just pricing."
+          },
+          {
+            "holder": "0x94877640dd9e6f1e3cb56bf7b5665b7152601295",
+            "name": "Theo governance Safe",
+            "name_verified": true,
+            "via": "PROPOSER/EXECUTOR -> 48h timelock -> sthUSD onlyOwner setters",
+            "terminal": "timelock",
+            "holder_kind": "safe",
+            "terminal_address": "0x2bb4b7e6e83fa6b77d0143dad631843cb73dca02",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "48h",
+            "timelock_floor": "48h",
+            "delay_applies": true,
+            "reach": "bounded",
+            "reach_bound": "setLockupPeriod is capped by MAX_LOCKUP_PERIOD = 2592000 s (30 days) in verified source",
+            "hand_walk": "Live values at the pinned block: lockupPeriod() 432000 s (5 days) against a hard MAX_LOCKUP_PERIOD constant of 2592000 s; vestingDuration() 10800 s; yieldDistributor() 0x5a69fb3e2fb7e78dfbdceafc5365d5803b745aac, which has no code (nonce 966) and is therefore a single key; emergencyPauser() 0xf936df06… . ⚠️ setEmergencyPauser is itself onlyOwner, so the 48h timelock can re-point the instant-pause key — the pause path above is only as independent as this one allows."
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "⚠️ ThUSDMinter EMERGENCY_ROLE holders are NOT established. pause() on the minter is onlyRole(EMERGENCY_ROLE), and the contract does not expose AccessControlEnumerable — getRoleMemberCount(bytes32) and getRoleMember reverted, so membership cannot be enumerated. A candidate sweep (both Safes, the timelock, the CANCELLER key, the MINTER_ROLE key, the deployer, 0xf5b0bf09…, 0x…dEaD) returned false for every address tried, and RoleGranted logs across the contract's whole life showed only the DEFAULT_ADMIN grant. NO ABSENCE IS INFERRED: the role may be held by an address not tried, and this walk does not establish that the minter can or cannot be paused. The feed's `minter_paused: false` is a state reading, not an authority reading.",
+      "⚠️ The feed field `guardrails.sthusd_oft_owner` = 0xf5b0bf09acc504f0d470134f05fe776d1f90cae0 does not match any on-chain owner found on the chains walked. That address has NO CODE (nonce 25, balance 25,060,144,032,000 wei) — it is an externally-owned key, not a Safe and not a timelock. Meanwhile the sthUSD OFT adapter on Ethereum and the sthUSD OFT on Arbitrum BOTH return owner() = the TimelockController, exactly as the other three guardrails owner fields do. So on ethereum and arbitrum the four-way asymmetry does not exist on chain. It is either stale in the feed or refers to the undeclared third chain. Not resolved either way; the field is recorded as unverified rather than filed.",
+      "stable: declared as a deployment by the feed but not walked. No canonical token address is published for it, and the name does not resolve to an RPC in tools/topology.py CHAINS. No authority, delay, owner or supply share is inferred for it from ethereum or arbitrum. ⚠️ The 0xf5b0bf09… owner field above may belong to this chain; that is a hypothesis, not a finding.",
+      "No coverage fraction is computed. The feed publishes no supply_by_chain and no supply_scope. Raw supplies read directly, for the record and not as a ratio: thUSD 135,840,056.304851 on ethereum and 195,599.257616 on arbitrum, both at 6 decimals.",
+      "Timelock queue contents were not enumerated. Whether any operation is currently scheduled and pending on either the 48h or the 18h timelock was not read, so a queued but unexecuted change to any parameter above would not appear in this walk.",
+      "Safe owner-key independence is not asserted. Both Safes were read for threshold, owner set and enabled modules (none on either, on either chain), but whether the owner keys are held by distinct parties is not observable from chain state. ⚠️ Worth noting for whoever holds the judgment: the Ethereum governance Safe (4-of-6) and the reserve Safe (4-of-5) share exactly four owners — 0x895f7c37…, 0x7afb1d33…, 0x5c1ea222… and 0xb7cc3051… — and four is the threshold of BOTH. The same four signatures satisfy both Safes."
+    ],
+    "authority_shared_with": [],
+    "review": null,
+    "walk_notes": [
+      "Hand-walked 2026-09-10 with read-only eth_call / eth_getStorageAt / eth_getCode.",
+      "Ethereum pinned at block 25,941,063; Arbitrum at block 503,424,931. No transaction",
+      "was signed or sent. Evidence and controls: audits/thusd-authority-walk-2026-09-10.md",
+      "",
+      "⚠️ THE PUBLISHED \"48h TIMELOCK + 4-of-6 SAFE\" IS TRUE ON ETHEREUM AND FALSE ON ARBITRUM.",
+      "The SAME addresses are deployed on both chains with DIFFERENT configuration:",
+      "ethereum   TimelockController 0x2bb4b7e6… getMinDelay 172800 (48h)   Safe 0x94877640… 4-of-6",
+      "arbitrum   TimelockController 0x2bb4b7e6… getMinDelay  64800 (18h)   Safe 0x94877640… 3-of-5",
+      "The feed's `timelock_legacy_min_delay_seconds` 64800 is NOT purely historical: it is the",
+      "LIVE delay on Arbitrum. On Ethereum 64800 was superseded by 172800 at block 25,094,121."
+    ]
+  }
+}

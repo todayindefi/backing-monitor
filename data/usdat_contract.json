@@ -1,0 +1,105 @@
+{
+  "schema_version": "contract/1",
+  "asset": "usdat",
+  "producer": "security_analyst",
+  "as_of": "2026-09-09",
+  "generated_at": "2026-09-10T00:22:44Z",
+  "contract": {
+    "headline": "All MEASURED authority sits behind a 5d timelock.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-09",
+    "source_file": "security_analyst/topology/assets/usdat.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "USDat TransparentUpgradeableProxy",
+        "terminal_name": "SaturnTimelock",
+        "topology": "timelocked",
+        "keys": [
+          "eip1967_admin",
+          "owner"
+        ],
+        "timelock": "5d",
+        "timelock_floor": "5d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xcf1072da5f0d127aef99136489bad08bfa3d1a7d",
+            "name": "ProxyAdmin",
+            "name_verified": true,
+            "via": "eip1967_admin -> ProxyAdmin.owner",
+            "terminal": "timelock",
+            "holder_kind": "proxy-admin",
+            "terminal_address": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+            "timelock": "5d",
+            "timelock_floor": "5d",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "name/symbol identify USDat. The implementation slot is 0x496a4a33b6181f4536203488d9a05ac1429e702c; ProxyAdmin.owner() is SaturnTimelock, whose getMinDelay() is 432000 seconds. It holds DEFAULT_ADMIN_ROLE on USDat while the dead-address control does not. Proposer 0x610182581c93687ca03f4a8e7f124f8cec616820 is also canceller; the timelock alone holds its root admin role."
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "bnb",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "USDat",
+        "terminal_name": "BNB Saturn timelock",
+        "topology": "timelocked",
+        "keys": [
+          "eip1967_admin",
+          "owner"
+        ],
+        "timelock": "2d",
+        "timelock_floor": "2d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xcb8384df068b55228a66ea6efab4a10fcbfa42a2",
+            "via": "eip1967_admin -> ProxyAdmin.owner",
+            "terminal": "timelock",
+            "holder_kind": "proxy-admin",
+            "terminal_address": "0xf0237a1cb794ea830129966049ef99243082ff0c",
+            "timelock": "2d",
+            "timelock_floor": "2d",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "name/symbol identify USDat. The implementation slot is 0x65458213bb2398f968ca1760b806956966b9adac. ProxyAdmin.owner() resolves to the named timelock; getMinDelay() is 172800 seconds."
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "ethereum mint, freeze/compliance, yield-recipient, and other operational role populations were not enumerated; no absence is inferred.",
+      "bnb operational roles and complete timelock role populations were not enumerated. The separate SY Saturn USD wrapper is not presented as USDat authority.",
+      "No cross-chain supply fraction is computed. Published Ethereum bridge-lock information may make balances representations of the same supply."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "susdat",
+        "shares": [
+          {
+            "kind": "timelock",
+            "address": "0xfd5782e3bff366601da3973ae30c583de4f08a67",
+            "delay": "5d",
+            "roles": [
+              "ethereum-admin",
+              "upgrade"
+            ]
+          }
+        ]
+      }
+    ],
+    "review": null,
+    "walk_notes": [
+      "Hand-walked at Ethereum block 25,940,744 and BNB block 120,903,163."
+    ]
+  }
+}
