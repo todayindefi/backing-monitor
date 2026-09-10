@@ -4512,7 +4512,30 @@ const CommonRenderer = {
         var leadMatch = summary ? /^([\s\S]*?\.)\s+([\s\S]+)$/.exec(summary) : null;
         var lead = leadMatch ? leadMatch[1] : summary;
         var rest = leadMatch ? leadMatch[2] : '';
-        var collapseSummary = summary && facts.length >= 3;
+        // ⚠️ THIS COLLAPSED ON FACT COUNT AND NEVER LOOKED AT LENGTH, which was
+        // right for the summaries that existed when it was written and became
+        // wrong the moment they were rewritten.
+        //
+        // The original reasoning was real: a 290-word block sitting above ten
+        // bullets covering the same ground meant a reader read the same material
+        // twice, badly, and most read neither. But the producer has since split
+        // the roles explicitly — summary = ORIENTATION, facts[] = the depth — and
+        // shortened every summary to ~95 words to match. A 95-word orienting
+        // paragraph is not a wall, and it is no longer a duplicate of the bullets.
+        //
+        // ⚠️ WITH THE OLD RULE ALL FIVE REWRITTEN SUMMARIES STILL COLLAPSED TO ONE
+        // SENTENCE — which is precisely the complaint that prompted the rewrite
+        // ("they read as one key line with the substance hidden behind it"). The
+        // producer shortened the prose believing that would put it on the face; it
+        // would not have, because this rule counts bullets rather than words.
+        //
+        // Length is now the trigger and the fact count stays as a secondary
+        // condition, so the collapse survives as a safety valve for genuinely long
+        // prose (reusd-re's 1,159-character summary still collapses) while an
+        // orienting paragraph renders where it can be read.
+        var SUMMARY_COLLAPSE_CHARS = 900;
+        var collapseSummary = summary && facts.length >= 3 &&
+            summary.length > SUMMARY_COLLAPSE_CHARS;
         var srcHtml = summary
             ? (issuer.summary_source
                   ? '<div class="issuer-summary-src">Source: ' +
