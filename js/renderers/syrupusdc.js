@@ -559,7 +559,7 @@ var SyrupUSDCRenderer = {
         }
         if (liquiditySlot) {
             liquiditySlot.innerHTML =
-                this._renderLiquidityAndPeg(specific, s, data.asset_slug) +
+                this._renderLiquidityAndPeg(specific, s, data.asset_slug, data.liquidity) +
                 this._renderLiquidityLayer(specific, data.asset_slug) +
                 this._renderRepaymentSchedule(specific);
         }
@@ -2362,7 +2362,10 @@ var SyrupUSDCRenderer = {
     // §2 Liquidity panel — exit/free-liquidity only. The market-vs-NAV peg
     // deviation that used to live here moved to the §1 Peg panel
     // (_renderPegPanel); this panel is now liquidity-pure to match its axis.
-    _renderLiquidityAndPeg: function(specific, s, slug) {
+    // ⚠️ `topLiq` added: the free-liquidity share and the exit note live on the
+    // TOP-LEVEL liquidity block, not on asset_specific, and this function only
+    // ever received asset_specific. The absent-ladder branch below needs them.
+    _renderLiquidityAndPeg: function(specific, s, slug, topLiq) {
         var wq = specific.withdrawal_queue;
         var liq = specific.liquidity;
         var lb = specific.loan_book || {};
@@ -2490,6 +2493,40 @@ var SyrupUSDCRenderer = {
             html += '<div class="text-sm font-semibold text-slate-700 mt-2 mb-1">DEX aggregator slippage → ' + underlying + sourceLabel + '</div>' +
                 '<table class="data-table"><thead><tr><th>Notional</th><th class="text-right">Slippage</th><th class="text-right">Output</th></tr></thead><tbody>' + rows + '</tbody></table>' +
                 (liq.pool_tvl ? '<div class="text-xs text-slate-400 mt-2">DEX pool TVL: ' + CommonRenderer.formatCurrency(liq.pool_tvl) + (liq.pool_count ? ' across ' + liq.pool_count + ' pools' : '') + '</div>' : '');
+        } else {
+            // ⚠️ THERE WAS NO ELSE BRANCH, SO AN ABSENT LADDER RENDERED AS NOTHING.
+            //
+            // This renderer serves BOTH syrup pools. syrupUSDC carries
+            // asset_specific.liquidity.quotes and draws the table above;
+            // syrupUSDT's asset_specific.liquidity is null, so the branch never
+            // fired and the section heading rendered with a silent gap beneath it.
+            //
+            // ⚠️ A reader comparing the two saw a slippage table on one and blank
+            // space on the other, with nothing saying which of "not measured",
+            // "measured at zero" or "we forgot" applied. An unavailable
+            // measurement is not a measurement of unavailability.
+            //
+            // The feed is not empty — it publishes the free-liquidity share, the
+            // deployment ratio and a note explaining that larger exits QUEUE
+            // rather than clear at a price. That is the honest answer to "how do
+            // I size an exit here", and it was already in the payload.
+            topLiq = topLiq || {};
+            var freePct = topLiq.free_liquidity_pct;
+            var deployed = topLiq.deployment_ratio_pct;
+            html += '<div class="text-sm font-semibold text-slate-700 mt-2 mb-1">' +
+                    'DEX aggregator slippage \u2014 not published for this pool</div>' +
+                '<div class="risk-flag risk-warning">' +
+                    '<strong>No tiered slippage ladder is published for this asset.</strong> ' +
+                    'That is an absent measurement, not a finding of zero depth' +
+                    (freePct != null
+                        ? ' \u2014 exit sizing here comes from the free-liquidity share (' +
+                          CommonRenderer.formatPercent(freePct, 2) + ' of the pool' +
+                          (deployed != null
+                              ? ', ' + CommonRenderer.formatPercent(deployed, 2) + ' deployed'
+                              : '') + ') and the withdrawal queue rather than from a price ladder.'
+                        : '.') +
+                    (topLiq.note ? ' <span class="text-xs">' + topLiq.note + '</span>' : '') +
+                '</div>';
         }
 
         html += '</div>';
