@@ -73,7 +73,14 @@ var CrvUSDRenderer = {
             html += '<div class="panel">' +
                 '<div class="panel-title">Supply Breakdown</div>' +
                 '<p class="text-sm text-slate-500 mb-3">Issuance-side and Ethereum-scoped: only sources that mint new crvUSD. crvUSD on other chains is bridged from Ethereum (lock-and-mint), so it is already counted here — cross-chain balances must not be added on top.' + supplyDefinitions + '</p>' +
-                '<table class="data-table"><thead><tr><th colspan="3" class="text-xs uppercase tracking-wide text-slate-500">Minting Sources (create new crvUSD)</th></tr><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">%</th></tr></thead><tbody>' +
+                // ⚠️ THE % COLUMNS WERE BARE AND THE PAGE CARRIES THREE DIFFERENT YIELDBASIS
+                // SHARES. Supply Breakdown reads 51.2%, Collateral Breakdown 37.4%, and the
+                // Dependencies list 41.5% — all correct, none reconcilable by a reader,
+                // because the numerator changes as well as the denominator: "deployed" is
+                // crvUSD MINTED TO YieldBasis (debt owed), "YB pool BTC/ETH" is the BTC it
+                // POSTED (asset securing it). Naming only the denominator would still imply
+                // one quantity measured two ways.
+                '<table class="data-table"><thead><tr><th colspan="3" class="text-xs uppercase tracking-wide text-slate-500">Minting Sources (create new crvUSD)</th></tr><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">% of minted supply</th></tr></thead><tbody>' +
                 '<tr><td>YieldBasis deployed (AMM get_debt)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.yb_deployed) + '</td><td class="text-right">' + (sb.yb_deployed / total * 100).toFixed(1) + '%</td></tr>' +
                 '<tr><td>Minting markets (collateral-backed CDPs)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.minting_markets) + '</td><td class="text-right">' + (sb.minting_markets / total * 100).toFixed(1) + '%</td></tr>' +
                 (sb.operator_minted ? '<tr><td>CurveLendOperator (sreUSD market)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.operator_minted) + '</td><td class="text-right">' + (sb.operator_minted / total * 100).toFixed(1) + '%</td></tr>' : '') +
@@ -118,7 +125,11 @@ var CrvUSDRenderer = {
             html += '<div class="panel">' +
                 '<div class="panel-title">Collateral Breakdown</div>' +
                 '<p class="text-sm text-slate-500 mb-3">Conservative CR: <span class="font-bold ' + consCls + '">' + CommonRenderer.formatPercent(s.collateral_ratio, 1) + '</span> &nbsp;·&nbsp; Inclusive CR: <span class="font-bold ' + inclCls + '">' + CommonRenderer.formatPercent(s.inclusive_cr, 1) + '</span>. Conservative drops PegKeeper debt from supply and PK pool stables from collateral; inclusive counts both. PK pool stables are LP-owned (not protocol-owned) — they defend the peg via arbitrage but aren\'t a redemption-style backing claim.</p>' +
-                '<table class="data-table"><thead><tr><th>Component</th><th class="text-right">Value</th><th class="text-right">%</th></tr></thead><tbody>' +
+                // ⚠️ "incl. PegKeeper" IS LOAD-BEARING, not a nicety: this column divides by
+                // total_backing_inclusive (276.97M) while the Dependencies list divides the
+                // SAME YB numerator by total_backing (249.29M), which is why one says 37.4%
+                // and the other 41.5%. The delta is $27.68M of PegKeeper stables.
+                '<table class="data-table"><thead><tr><th>Component</th><th class="text-right">Value</th><th class="text-right">% of backing (incl. PegKeeper)</th></tr></thead><tbody>' +
                 '<tr><td>YB pool BTC/ETH</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.yb_btc_collateral) + '</td><td class="text-right">' + ybPct + '%</td></tr>' +
                 '<tr><td>Minting market collateral</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.mint_collateral) + '</td><td class="text-right">' + mintPct + '%</td></tr>' +
                 '<tr class="border-t border-slate-200"><td class="italic text-slate-600">Subtotal: locked collateral (conservative)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(cb.total) + '</td><td class="text-right">' + consPct + '%</td></tr>' +
