@@ -2127,16 +2127,60 @@ var SaturnRenderer = {
             SaturnRenderer._addrCell(proxyAdminOwner),
             'Same address controls USDat + sUSDat'
         );
-        // Admin custody — Saturn-disclosed Fireblocks MPC representation.
-        // The ⓘ tooltip carries the on-chain-indistinguishability caveat per
-        // saturn-fireblocks-mpc-disclosure-backing-monitor.md.
-        rows += row(
-            'Admin custody',
-            '<span class="font-medium">Saturn-stated Fireblocks 2-of-3 MPC</span>' +
-            ' <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 ml-1 cursor-help" ' +
-            'title="Saturn represents this address as a Fireblocks 2-of-3 MPC wallet. On-chain reads cannot distinguish MPC from single-key EOA — the address shows no contract code and a low outbound nonce in either case. Claim taken at face value pending independent attestation. The raw single-key-compromise vector is closed by the MPC quorum requirement, but concentration-under-Saturn and no-on-chain-timelock remain.">ⓘ on-chain indistinguishable</span>',
-            'Same (shared address)'
-        );
+        // ⚠️ THIS ROW USED TO NAME NO ADDRESS, AND SILENTLY RE-POINTED ITSELF.
+        //
+        // It rendered "Admin custody: Saturn-stated Fireblocks 2-of-3 MPC"
+        // unconditionally, directly beneath the ProxyAdmin-owner row, with a
+        // tooltip beginning "Saturn represents THIS ADDRESS as a Fireblocks
+        // 2-of-3 MPC wallet ... the address shows no contract code".
+        //
+        // That was true when ProxyAdmin.owner() WAS the Saturn EOA. In August the
+        // upstream correction re-pointed proxy_admin_owner at the self-administered
+        // 5-day TimelockController — a CONTRACT, code_size 5497 — and this row did
+        // not move. So a custody claim about an EOA, including the words "no
+        // contract code", came to describe a timelock contract by adjacency alone.
+        // Nothing failed: the row had no address to disagree with.
+        //
+        // ⚠️ The MPC disclosure is REAL and still applies — to admin_eoa /
+        // admin_controller.operator_address (0x610182…), which is the timelock's
+        // PROPOSER and CANCELLER. So the fix is to name the address, not to drop
+        // the claim. Anchoring it to a field means the next re-point moves the row
+        // or blanks it, instead of quietly relabelling whatever sits above.
+        var ac = ts.admin_controller || {};
+        var custodyAddr = ac.operator_address ||
+            ((specific.admin_eoa && specific.admin_eoa.address) || null);
+
+        if (ac.kind === 'timelock' && ac.min_delay_days != null) {
+            rows += row(
+                'Upgrade delay',
+                '<span class="font-mono">' + ac.min_delay_days + ' days</span>' +
+                (ac.self_administered
+                    ? ' <span class="text-xs text-slate-500">· self-administered</span>' : ''),
+                (ac.self_administered
+                    ? 'Shortening the delay must itself clear the delay'
+                    : '\u26a0\ufe0f Not self-administered \u2014 the delay may be shortenable without notice') +
+                (ac.execution_permissionless
+                    ? ' \u00b7 execution is permissionless once matured'
+                    : '')
+            );
+        }
+
+        if (custodyAddr) {
+            // ⚠️ Published by the feed and rendered NOWHERE until now: the operator
+            // is BOTH proposer and canceller, so nobody independent can veto what
+            // it queues. That is the fact the delay's value actually turns on.
+            var bothRoles = (ac.operator_is_proposer === true && ac.operator_is_canceller === true);
+            rows += row(
+                bothRoles ? 'Timelock proposer / canceller' : 'Admin custody',
+                SaturnRenderer._addrCell(custodyAddr) +
+                ' <span class="font-medium">Saturn-stated Fireblocks 2-of-3 MPC</span>' +
+                ' <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 ml-1 cursor-help" ' +
+                'title="Saturn represents THIS address (' + custodyAddr + ') as a Fireblocks 2-of-3 MPC wallet. On-chain reads cannot distinguish MPC from a single-key EOA \u2014 the address shows no contract code and a low outbound nonce either way. Claim taken at face value pending independent attestation. The raw single-key-compromise vector is closed by the quorum requirement; signers remain internal to Saturn\'s custody process and Fireblocks publishes no customer-verifiable infrastructure proof.">\u24d8 on-chain indistinguishable</span>',
+                bothRoles
+                    ? '\u26a0\ufe0f Holds BOTH roles \u2014 it can queue a full-reach upgrade and is also the only party that can cancel one, so there is no independent veto. It cannot execute.'
+                    : 'Same (shared address)'
+            );
+        }
 
         if (slug === 'susdat' && specific.trust_stack && specific.trust_stack.vesting_period_days != null) {
             rows += row('Vesting period', '<span class="font-mono">' + specific.trust_stack.vesting_period_days + ' days</span>',
