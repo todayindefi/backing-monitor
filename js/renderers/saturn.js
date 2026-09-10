@@ -2182,9 +2182,36 @@ var SaturnRenderer = {
             );
         }
 
-        if (slug === 'susdat' && specific.trust_stack && specific.trust_stack.vesting_period_days != null) {
-            rows += row('Vesting period', '<span class="font-mono">' + specific.trust_stack.vesting_period_days + ' days</span>',
-                'ERC-4626 redemption queue');
+        // ⚠️ THIS RENDERED AN UNSOURCED CONSTANT AS A MEASURED REDEMPTION QUEUE.
+        //
+        // `vesting_period_days: 30` is a HARDCODED LITERAL in
+        // PegTracker/saturn_backing_analyzer.py:1856, sitting in a dict of
+        // constants between deposit_fee_bps and min_withdrawal_usdat. It is not a
+        // measurement, and riskAnalyst established 2026-09-10 that NO on-chain
+        // getter returns 2,592,000s across 18 candidate signatures on either the
+        // vault or the WithdrawalQueue.
+        //
+        // ⚠️ AND THE OTHER CANDIDATE IS ALSO NOT THE EXIT PATH. vestingPeriod()
+        // reads 259,200s (3d), but it pairs with lastDistributionTimestamp under a
+        // 90d MAX_VESTING_PERIOD ceiling — that is the ERC-4626 YIELD-DRIP pattern,
+        // not a redemption queue. Both numbers that looked like answers are ruled
+        // out and the WithdrawalQueue exposes no delay getter at all.
+        //
+        // This matters beyond tidiness: whether the 5-day admin notice is usable
+        // depends entirely on the exit being SHORTER than it, so a number labelled
+        // "redemption queue" is load-bearing for a risk argument. Rendering the
+        // constant under that label answered the question with a figure that means
+        // nothing. The row now states the unknown and shows its work.
+        if (slug === 'susdat' && specific.trust_stack &&
+            specific.trust_stack.vesting_period_days != null) {
+            rows += row(
+                'Exit / redemption delay',
+                '<span class="font-medium text-amber-700">\u26a0\ufe0f Not established</span>' +
+                ' <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200 ml-1 cursor-help" ' +
+                'title="The feed publishes vesting_period_days = ' + specific.trust_stack.vesting_period_days +
+                ', a hardcoded constant returned by no on-chain getter (18 candidate signatures tried on the vault and the WithdrawalQueue, with a fabricated getter reverting as the control). vestingPeriod() reads 259,200s (3 days), but it pairs with lastDistributionTimestamp under a 90-day MAX_VESTING_PERIOD ceiling \u2014 an ERC-4626 yield drip, not a redemption queue. Neither figure is the exit path.">\u24d8 both candidate figures ruled out</span>',
+                'Unknown, not zero. \u26a0\ufe0f The 5-day admin notice only protects if the exit is SHORTER than it \u2014 that comparison cannot be made from published sources.'
+            );
         }
         if (slug === 'susdat' && specific.trust_stack && specific.trust_stack.deposit_fee_bps != null) {
             rows += row('Deposit fee', '<span class="font-mono">' + specific.trust_stack.deposit_fee_bps + ' bps</span>', '');
