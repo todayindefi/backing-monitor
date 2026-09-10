@@ -565,7 +565,39 @@ if _sufs and _roots:
             _suf = next((x for x in sorted(_sufs, key=len, reverse=True)
                          if _stem.endswith(x)), None)
             if not _suf:
-                continue                      # not a block file — none of our business
+                # ⚠️ A NEW BLOCK TYPE FOR A REGISTERED ASSET WAS INVISIBLE HERE, and
+                # that is the case most likely to actually happen: a producer adds a
+                # field set, names the file <slug>_<newthing>.json, and the sync's
+                # allowlist has never heard of `_<newthing>`. The file is skipped
+                # silently, exactly like the dashed-filename case this check was
+                # built for — and this check missed it for the same reason the sync
+                # does, by only recognising suffixes it already knows.
+                #
+                # riskAnalyst shipped crvusd_axis_basis.json and it would have sat
+                # there unnoticed. Only fires for a REGISTERED slug, so files for
+                # assets this dashboard does not publish stay quiet.
+                # ⚠️ PRODUCER INTERNALS ARE DELIBERATELY UNPUBLISHED, not oversights.
+                # The first cut of this warned on all of them — 66 lines, of which
+                # ONE was real. sync_and_push.sh's own comment says PegTracker's data
+                # dir holds snapshots and diagnostics that must NOT reach the
+                # dashboard, and these are those: _last_good freeze snapshots,
+                # _cache working files, _alert_state / _baseline alerter state, and
+                # _oft_audit diagnostics. Matched by PATTERN rather than by an exact
+                # list so a new cache file does not reopen the noise.
+                _INTERNAL = ('_last_good', '_cache', '_alert_state', '_oft_audit',
+                             '_baseline')
+                if any(x in _stem for x in _INTERNAL):
+                    continue
+                _cand = next((k for k in sorted(_known, key=len, reverse=True)
+                              if _stem.startswith(k + '_')), None)
+                if _cand:
+                    warns.append(
+                        f'{_cand}: {_root}/{_n} is an UNKNOWN BLOCK TYPE '
+                        f'(_{_stem[len(_cand)+1:]}) for a registered asset — the sync '
+                        f'allowlist has no such suffix, so this file is skipped '
+                        f'SILENTLY and never reaches the dashboard. Add it to SUFFIXES '
+                        f'in sync_and_push.sh, or the producer is publishing into a void.')
+                continue
             _pfx = _stem[:-len(_suf)]
             _fixed = _pfx.replace('-', '_')
             if _fixed in _known:

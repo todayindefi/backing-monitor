@@ -1,0 +1,24 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "crvusd",
+ "as_of": "2026-09-10T12:00:00Z",
+ "peg": {
+  "peg_mechanism_score": 6.0,
+  "peg_mechanism_score_source": "riskAnalyst:authored",
+  "peg_mechanism_score_basis": "MEASURES THE MECHANISM, NOT THE CURRENT DEVIATION. This scores how the peg is defended — PegKeeper arbitrage, the soft-liquidation AMM and the redemption path — not whether crvUSD is at par today. PERSISTENCE-FILTERED: it does not move on a spot reading. A live band showing par tells a reader the mechanism is working right now; this asks whether it holds under stress it has not yet met.",
+  "peg_mechanism_score_persistence": "filtered — not spot-responsive"
+ },
+ "backing": {
+  "backing_score": 5.0,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_basis": "MEASURES RESERVE COMPOSITION AND ITS CONCENTRATION, not the live collateral ratio. ⚠️ EXPLICIT PERSISTENCE RULE: cut below 5.0 only if total_pegkeeper_debt / total_supply holds above 25% for MORE THAN 5 CONSECUTIVE DAILY READINGS. A four-day excursion with the peg at par is the mechanism working, not a deterioration. The rule has been applied against itself: a 2026-08-24 cut to 4.5 was REVERSED on 2026-09-07 because it had been made at the peak of a four-day transient that would not have fired the rule. Current reading 6.8%, well under the line.",
+  "backing_score_persistence": "filtered — 25% threshold over >5 consecutive daily readings"
+ },
+ "liquidity": {
+  "liquidity_score": 6.0,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_basis": "MEASURES THE DOLLAR EXIT SPECIFICALLY, which is why it sits below a live depth band. ⚠️ NOT ONE YieldBasis cryptopool pairs crvUSD with a dollar — all eight are WBTC, cbBTC, tBTC or WETH — so selling into them leaves a holder in BTC or ETH. One-hop dollar exit is $27.68M, 11.91% of issuance-side supply; the two-hop BTC/ETH route is $144.8M and is a REAL exit, just not a dollar one. A live band aggregating both answers a different question from the one a seller asks. PERSISTENCE-FILTERED: prices the standing venue structure, not a daily depth quote.",
+  "liquidity_score_persistence": "filtered — venue structure, not spot depth"
+ }
+}

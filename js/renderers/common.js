@@ -48,8 +48,16 @@ const CommonRenderer = {
         // producers both emit the same block type. Deferred deliberately: it
         // changes the sync's copy shape and every fetch path, so it is a
         // coordinated rename done once, not mid-flight.
-        backing:      '_backing_overlay',
-        liquidity:    '_liquidity',
+        // ⚠️ ONE FILE, THREE AXES. `_axis_basis` carries peg / backing / liquidity
+        // blocks in one envelope, so it is listed under all three. It is ADDITIVE:
+        // it declares what each authored score MEASURES and whether that score is
+        // persistence-filtered — which the feed never said, so a reader saw a live
+        // band beside an authored score with no way to tell why they differ.
+        //
+        // ⚠️ `peg` had NO overlay entry before this. It is the first.
+        peg:          '_axis_basis',
+        backing:      ['_backing_overlay', '_axis_basis'],
+        liquidity:    ['_liquidity', '_axis_basis'],
         dependencies: '_dependencies',
         // ⚠️ TWO PRODUCERS, TWO HALVES OF ONE AXIS — applied in this order.
         // security_analyst's hand-walk supplies the AUTHORITY half and replaces
@@ -128,7 +136,9 @@ const CommonRenderer = {
         // was written for, and without this every issuer overlay renders an amber
         // ⚠️ chip saying it overrode nothing.
         issuer:       { 'issuer/1':          { mode: 'merge', payload: 'envelope', identity: 'asset', additive: true } },
-        backing:      { 'backing-overlay/1': { mode: 'merge', payload: 'envelope', identity: 'asset' } },
+        peg:          { 'axis-basis/1':      { mode: 'merge', payload: 'envelope', identity: 'asset', additive: true } },
+        backing:      { 'backing-overlay/1': { mode: 'merge', payload: 'envelope', identity: 'asset' },
+                        'axis-basis/1':      { mode: 'merge', payload: 'envelope', identity: 'asset', additive: true } },
         dependencies: { 'dependencies/1':    { mode: 'merge', payload: 'envelope', identity: 'asset' } },
         // ⚠️ REPLACE, not merge: security_analyst owns axis 5 outright and the
         // base feed publishes no contract block at all, so nothing is discarded.
@@ -146,7 +156,8 @@ const CommonRenderer = {
         // does NOT drop the redemption leg — checked before adopting, because a
         // wholesale replace that loses the primary window would have made the
         // axis worse while looking richer.
-        liquidity: { 'liquidity/1': { mode: 'replace', payload: 'flat', identity: 'asset_slug' } }
+        liquidity: { 'liquidity/1':   { mode: 'replace', payload: 'flat', identity: 'asset_slug' },
+                     'axis-basis/1': { mode: 'merge',   payload: 'envelope', identity: 'asset', additive: true } }
     },
 
     // ⚠️ A KEPT FIELD THAT RENDERS AN OVERRIDDEN ONE IS STALE, AND IT WINS BY
