@@ -4439,10 +4439,23 @@ const CommonRenderer = {
         }
         if (up.length > 1 && typeof pctSum === 'number' &&
             (dep.is_partition === false || pctSum > 101 || pctSum < 99)) {
+            // ⚠️ THE PRODUCER'S OWN BASIS WINS WHERE IT EXISTS. This composed its
+            // sentence unconditionally and dropped `is_partition_basis`, which on
+            // yzUSD says something this renderer cannot know and must not invent:
+            // "⚠️ The CAUSE of the overlap is NOT established here and is
+            // deliberately not named — the excess is measured, the mechanism is
+            // not." A generic "legs are not mutually exclusive" asserts a mechanism
+            // the producer explicitly refused to assert.
+            //
+            // Same rule as issuer and authority prose: where the producer has
+            // authored the explanation, render theirs; compose only as a fallback.
             upBlock += '<div class="dep-block-note"><span class="text-amber-700">' +
                 'These shares do not partition:</span> they sum to ' + pctSum.toFixed(1) +
-                '%, not 100%. Legs are not mutually exclusive, so they cannot be read as ' +
-                'slices of the backing and must not be added.</div>';
+                '%, not 100%. ' +
+                (typeof dep.is_partition_basis === 'string' && dep.is_partition_basis.trim()
+                    ? this._escapeAttr(dep.is_partition_basis.trim())
+                    : 'Legs are not mutually exclusive, so they cannot be read as ' +
+                      'slices of the backing and must not be added.') + '</div>';
         }
 
         // Downstream is a reserved stub until a consumer analyzer exists. An
