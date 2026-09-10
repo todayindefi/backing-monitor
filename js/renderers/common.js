@@ -3478,7 +3478,31 @@ const CommonRenderer = {
         var downSub = (dep.downstream_tracked === true)
             ? (Array.isArray(dep.downstream) ? dep.downstream.length : 0) + ' downstream'
             : 'downstream not tracked';
-        this._renderAxisHead('dependencies', 4, 'Dependencies', upSub + ' \u00b7 ' + downSub, '', data.dependencies);
+        // ⚠️ AXIS 4 NOW CARRIES ITS AUTHORED SCORE. It was a link tile with no
+        // number while the producer published `underlying_score` with a full basis
+        // — counterparty concentration in the supply architecture, on a denominator
+        // swept from the complete SetDebtCeiling history.
+        //
+        // ⚠️ This does NOT reopen the divergence problem the owner closed today.
+        // That rule was "no authored score beside a LIVE one", because two numbers
+        // measuring different things read as a contradiction. Axis 4 computes
+        // nothing, so the authored score is the only number here — the same case as
+        // axes 5 and 6, which is what the rule permits.
+        //
+        // ⚠️ Labelled "Dependencies", not "Underlying". Axis 5 labels from its field
+        // (`structural_score` -> "Structural") but `underlying_score` -> "Underlying"
+        // tells a reader nothing. The axis name is the honest label and matches
+        // axis 6's "Issuer".
+        var depAuth = this._authoredAxisScore(data.dependencies || {}, ['underlying_score']);
+        var depChip = (depAuth && typeof depAuth.score === 'number')
+            ? '<span class="axis-rating r-na" title="' + this._escapeAttr(
+                  'Authored score for this axis: ' + depAuth.score + '/10' +
+                  (depAuth.basis ? '. ' + this._mdPlain(depAuth.basis) : '') +
+                  '. Axis 4 is not computed from live data \u2014 there is no measured band to ' +
+                  'compare it against.') +
+              '">Dependencies ' + depAuth.score + '/10</span>'
+            : '';
+        this._renderAxisHead('dependencies', 4, 'Dependencies', upSub + ' \u00b7 ' + downSub, depChip, data.dependencies);
         this._renderDependenciesSection(data);
 
         // 5 · Contract & Admin — MEASURED. Split from Issuer because they fail
@@ -4545,8 +4569,21 @@ const CommonRenderer = {
               '</div>';
         }
 
+        // ⚠️ THE BASIS RENDERS WHERE THE SCORE IS, not in a tooltip. A 900-character
+        // argument about counterparty concentration is not something a reader
+        // hovers for — same rule already applied to backing_score_basis and
+        // structural_score_basis, which were tooltip-only until they weren't.
+        var depBasis = (dep.underlying_score_basis && typeof dep.underlying_score_basis === 'string')
+            ? this._scoreBasisHtml('Why this dependencies score', dep.underlying_score_basis) +
+              (dep.underlying_score_denominator
+                  ? '<div class="text-xs text-slate-500 mb-3">Denominator: ' +
+                    this._escapeAttr(String(dep.underlying_score_denominator)) + '</div>'
+                  : '')
+            : '';
+
         body.innerHTML = '<div class="panel">' +
             '<div class="panel-title">Dependencies</div>' +
+            depBasis +
             '<div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Upstream — what this asset depends on</div>' +
             upBlock +
             '<div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 mt-6">Downstream — what depends on this asset</div>' +
