@@ -24,6 +24,7 @@ matching the source it claims to render.
 Usage: tools/emit_axis5.py <slug> [--out DIR]
 """
 import json, os, sys, datetime as yamldt
+import re
 import yaml
 
 TOPOLOGY_DIR = '/home/danger/security_analyst/topology/assets'
@@ -127,6 +128,27 @@ def header_notes(path):  # `path` is now the file TEXT, read from HEAD
     return out
 
 
+def _duration_seconds(t):
+    """Order durations by LENGTH, not by string. '4h' must precede '24h', and
+    '7d' must follow '72h' \u2014 lexical order gets both wrong."""
+    m = re.match(r'^\s*([0-9]+(?:\.[0-9]+)?)\s*([smhdw])\s*$', str(t).lower())
+    if not m:
+        return float('inf')          # unparseable sorts last, never silently first
+    n = float(m.group(1))
+    return n * {'s': 1, 'm': 60, 'h': 3600, 'd': 86400, 'w': 604800}[m.group(2)]
+
+
+def _join_durations(vals):
+    """De-duplicated, shortest first, Oxford-free: '4h, 24h, 72h and 7d'."""
+    uniq = sorted(set(str(v).strip() for v in vals if str(v).strip()),
+                  key=_duration_seconds)
+    if not uniq:
+        return ''
+    if len(uniq) == 1:
+        return uniq[0]
+    return ', '.join(uniq[:-1]) + ' and ' + uniq[-1]
+
+
 def derive_headline(layers):
     """Structural, so it follows the file. Never a stored sentence.
 
@@ -142,10 +164,16 @@ def derive_headline(layers):
     the derivation had drifted from it.
     """
     delayed, undelayed, unmeasured = [], [], []
+    # ⚠️ PATH DELAYS, COLLECTED SEPARATELY — see the `undelayed` branch below for why.
+    path_delays = []
     for l in layers or []:
         tl = str(l.get('timelock', '')).strip()
         keys = ', '.join(l.get('keys') or []) or l.get('authority_layer', '?')
         row = (tl, keys, l.get('authority_layer'))
+        for p in (l.get('paths') or []):
+            pt = str(p.get('timelock', '')).strip()
+            if pt and pt.lower() not in ('none', 'unresolved'):
+                path_delays.append(pt)
         if tl.lower() == 'unresolved':
             unmeasured.append(row)
         elif tl and tl.lower() not in ('none', 'None'.lower()):
@@ -168,6 +196,31 @@ def derive_headline(layers):
     if delayed and not undelayed:
         return (f"All MEASURED authority sits behind a {delayed[0][0]} timelock." + tail)
     if undelayed:
+        # ⚠️ "NO TIMELOCK ESTABLISHED ON ANY LAYER" WAS FLATLY FALSE ON TWO ASSETS.
+        #
+        # A layer's `timelock` summarises to `none` as soon as ONE of its paths is
+        # undelayed. So a layer holding a measured ladder — apyUSD's role map runs
+        # 0s / 4h / 24h / 72h / 7d — summarises to `none`, and when EVERY layer does
+        # that, this branch announced that nothing on the asset is delayed at all.
+        # apyUSD's own paths carried 4h, 24h, 72h and 7d while its headline denied
+        # every one of them; USDe's carried 24h.
+        #
+        # ⚠️ SAME DEFECT AS THE crvUSD "five keys can mint" CLAIM, one artifact over.
+        # That one came from printing a layer summary and not per-path `reach`; the
+        # renderer grew `_divergentPathRows` to fix the TABLE, and this derivation
+        # kept reading the collapsed value. Fixing the table did not fix the sentence
+        # above it.
+        #
+        # The adverse fact stays first and stays unhedged — no layer is fully
+        # delayed, and that is the finding. What changes is that the delays which DO
+        # exist are named, together with the reason they are not protection: they sit
+        # on other paths and do not bound the undelayed one.
+        if path_delays:
+            names = _join_durations(path_delays)
+            return ("No authority layer is fully delayed \u2014 every measured layer contains at "
+                    "least one path with no established delay. Delays of " + names + " are "
+                    "measured on OTHER paths inside those same layers, and do not bound the "
+                    "undelayed ones." + tail)
         return ("No timelock established on any measured authority layer." + tail)
     # Nothing measured at all — assert nothing in either direction.
     return ("No authority layer on this asset has a measured delay."
