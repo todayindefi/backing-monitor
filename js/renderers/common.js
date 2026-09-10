@@ -58,7 +58,12 @@ const CommonRenderer = {
         peg:          '_axis_basis',
         backing:      ['_backing_overlay', '_axis_basis'],
         liquidity:    ['_liquidity', '_axis_basis'],
-        dependencies: '_dependencies',
+        // ⚠️ `_axis_basis` WAS REGISTERED ON THREE AXES AND THE FILE WRITES FOUR.
+        // The crvUSD pilot carries a `dependencies` block with a fully-argued
+        // underlying_score_basis, and nothing read it — the only *_dependencies.json
+        // files on disk belong to two STAGED assets, so that basis reached no reader
+        // at all. Mine to fix: I wired peg/backing/liquidity and stopped.
+        dependencies: ['_dependencies', '_axis_basis'],
         // ⚠️ TWO PRODUCERS, TWO HALVES OF ONE AXIS — applied in this order.
         // security_analyst's hand-walk supplies the AUTHORITY half and replaces
         // the axis; riskAnalyst's overlay merges the CODE half plus the score on
@@ -139,7 +144,8 @@ const CommonRenderer = {
         peg:          { 'axis-basis/1':      { mode: 'merge', payload: 'envelope', identity: 'asset', additive: true } },
         backing:      { 'backing-overlay/1': { mode: 'merge', payload: 'envelope', identity: 'asset' },
                         'axis-basis/1':      { mode: 'merge', payload: 'envelope', identity: 'asset', additive: true } },
-        dependencies: { 'dependencies/1':    { mode: 'merge', payload: 'envelope', identity: 'asset' } },
+        dependencies: { 'dependencies/1':    { mode: 'merge', payload: 'envelope', identity: 'asset' },
+                        'axis-basis/1':      { mode: 'merge', payload: 'envelope', identity: 'asset', additive: true } },
         // ⚠️ REPLACE, not merge: security_analyst owns axis 5 outright and the
         // base feed publishes no contract block at all, so nothing is discarded.
         // The mode still matters — it guarantees no field on this axis is a

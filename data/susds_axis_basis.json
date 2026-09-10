@@ -1,0 +1,44 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "susds",
+ "as_of": "2026-09-11T00:00:00Z",
+ "backing": {
+  "backing_score": 7.0,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "MEASURES THE SURPLUS BUFFER, NOT BACKING-OVER-SUPPLY \u2014 and for this asset those two carry OPPOSITE SIGNS. \u26a0\ufe0f The feed's collateral ratio is `100 + (vow surplus buffer / supply)`, which the feed itself documents; it is NOT backing/supply. Gross backing minus supply is +$17.6M while the published `surplus_deficit` is \u2212$66.4M. Both are correct and they answer different questions, so a reader who re-divides backing by supply will reproduce a quotient without reproducing the basis. \u26a0\ufe0f Every USDS is minted 1:1 against a debt position, so par coverage is ~100% BY CONSTRUCTION and carries no information \u2014 the buffer is the entire signal. INHERITED from usds 7.0 and re-verified, not independently derived: sUSDS holds no reserve of its own, its collateral IS USDS's reserve, so a wrapper cannot outrank the asset it wraps on that asset's own book. Re-measured 2026-09-06: USDS+DAI backing $11.22B against $11.21B supply. Held at 7.0 because the buffer improved from the \u2212$74.4M at last scoring and holders are unimpaired at par.",
+  "backing_score_persistence": "filtered \u2014 buffer level and reserve composition, not a spot ratio",
+  "backing_score_denominator": "\u26a0\ufe0f ASK WHAT THE RATIO DIVIDES BY BEFORE QUOTING IT. The feed's ~99.41% is surplus-based, not backing-based. Recovering the real denominator: D' = backing \u2212 surplus."
+ },
+ "liquidity": {
+  "liquidity_score": 8.5,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "\u26a0\ufe0f MEASURES POCKET BALANCE \u2014 INVENTORY ON A FIXED-RATE ROUTE \u2014 NOT SLIPPAGE, BECAUSE A DEPTH LADDER MEASURES NOTHING FOR THIS ASSET. Re-grounded 2026-09-07 after the ladder was found NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 returns an identical 0.00bps, and $5M, $10M, $25M, $50M and $100M all return a constant 1078.15bps \u2014 identical to the hundredth of a basis point across a 20x range. \u26a0\ufe0f THAT IS A REDEMPTION RATE BEING RETURNED AS A QUOTE, NOT A FILL. A ladder that returns the same answer at every size bounds nothing, so the 8.5 was re-derived from inventory on the exit route rather than from executable depth. \u26a0\ufe0f THE OLD BASIS IS RETRACTED BY NAME: the 8.5 previously rested partly on 'deep permissionless DEX liquidity, ~$7.5M/24h', and that claim is not measurable for this asset. \u2705 CORROBORATED INDEPENDENTLY BY THE FEED, which reached the same conclusion by its own route: `two_pct_depth_status: not_size_responsive` and `total_2pct_depth_is_floor: true`. The $1,000,000 the dashboard shows is A FLOOR, NOT A MEASUREMENT \u2014 do not read it as depth that was tested and cleared.",
+  "liquidity_score_persistence": "filtered \u2014 exit-route structure and inventory, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f ANY DEPTH BAND RENDERED BESIDE THIS SCORE IS MEASURING A QUANTITY THAT DOES NOT EXIST FOR sUSDS. The ladder is constant across a 20x size range; a 2% crossing figure here is a floor flag, not a cleared rung. Comparing this 8.5 against a computed depth band is comparing two different questions."
+ },
+ "dependencies": {
+  "underlying_score": 7.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES CONCENTRATION OF THE COUNTERPARTY SET, NOT ITS QUALITY \u2014 which is why it sits LEVEL with Backing rather than below it. The dependencies are high quality; what this axis records is that they are concentrated rather than diverse. (1) 100% of this asset's value passes through ONE other asset: every risk in usds is a risk here, and no diversification is possible at this layer. (2) \u26a0\ufe0f ~35% of USDS backing is USDC, so sUSDS is CORRELATED TO USDC, NOT DIVERSIFIED FROM IT \u2014 `usdc_raw_pct` 35.41%, range-bound 32.89\u201340.17% across the window. The March 2023 precedent is the point: DAI followed USDC down through the same module. Read sUSDS as roughly two-thirds diversified collateral plus one-third USDC. (3) A less-transparent credit sleeve at ~14.8% (OTC crypto lending 9.64%, AAA corporate 4.99%, private credit 0.21%) \u2014 high-grade on paper, materially harder to look through than a T-bill, and \u26a0\ufe0f DRIFTING THE WRONG WAY: crypto lending 29.18% -> 30.66% of the sleeve while T-bills fell 15.78% -> 13.85%. \u26a0\ufe0f BACKFILLED FROM THE PUBLISHED SURFACE, WHICH IS THE UNUSUAL DIRECTION: tidresearch had carried a fully-argued 7.0 while the internal source of record had no axis 4 at all. Load-bearing figures were re-measured before adoption, not copied \u2014 one passed, one drifted.",
+  "underlying_score_persistence": "filtered \u2014 supply architecture and reserve composition, not a daily balance",
+  "underlying_score_cross_axis": "\u26a0\ufe0f Endgame Stars/subDAO complexity and the cross-chain PSM/bridge surface were priced in THIS row and are PASSTHROUGH \u2014 they belong on Dependencies (7.0). Flagged rather than moved, because moving them changes two scores on a report whose axes currently agree across all surfaces."
+ },
+ "issuer": {
+  "issuer_score": 7.0,
+  "issuer_score_source": "riskAnalyst:frontmatter-only",
+  "issuer_score_basis": null,
+  "issuer_score_persistence": "unknown \u2014 not established",
+  "issuer_score_declared_gap": "\u26a0\ufe0f NO BASIS AUTHORED, AND THIS IS A DECLARATION RATHER THAN AN OMISSION. `issuer_score: 7.0` exists in frontmatter with NO rationale row in the report's Scoring Rationale table, and `susds_issuer.json` carries 7 facts but NO issuer_score and NO basis. So the number has no argument on ANY surface I can read. \u26a0\ufe0f I WILL NOT AUTHOR A BASIS FOR A SCORE I CANNOT SOURCE \u2014 writing one would record my reconstruction as the original reasoning. WHAT WOULD CLOSE IT: author the Issuer row on its merits against the Sky governance record, or inherit explicitly from usds with the wrapper rule stated as Backing does. Cost: one pass over Sky governance, no on-chain work.",
+  "issuer_score_routing": "\u26a0\ufe0f Also unrouted \u2014 axis 6 has no _axis_basis registration. This block is a DECLARATION OF AN ABSENT ARGUMENT, not a claim awaiting render."
+ },
+ "peg": {
+  "peg_score": null,
+  "peg_score_source": "absent",
+  "peg_score_declared_gap": "\u26a0\ufe0f AXIS 1 HAS A RATIONALE BUT NO SCORE \u2014 the inverse of the Issuer gap on this same asset. The Scoring Rationale table carries 'Volatility 9.0' (NAV-accruing over USDS; the $1.10 is accrued yield, not deviation), but there is NO `peg_score` in frontmatter, so nothing renders and no score exists to attach a basis to. \u26a0\ufe0f THE TWO ARE NOT THE SAME QUESTION: 'Volatility' as argued there measures NAV stability of the wrapper, while axis 1 is Peg/Stability of the unit. For a NAV-accruing vault share the honest framing is discount-to-NAV, not deviation from $1 \u2014 the feed reports market 1.11 against NAV 1.10896, a +9.4bp premium. Do NOT promote the 9.0 into `peg_score` without re-arguing it on that basis; the number would render as a peg claim it was never authored to make."
+ },
+ "routing_note": "\u26a0\ufe0f ROUTING, VERIFIED AGAINST backing-monitor/js/renderers/common.js ON 2026-09-11 \u2014 NOT ASSUMED. `_axis_basis` is registered for THREE axes only: peg ('_axis_basis'), backing (['_backing_overlay','_axis_basis']) and liquidity (['_liquidity','_axis_basis']). \u2705 So the peg, backing and liquidity blocks here REACH A READER. \u26a0\ufe0f The `dependencies` block DOES NOT \u2014 axis 4 routes via '_dependencies', and no susds_dependencies.json exists. It is kept because the internal report is a real surface and this is the source of record for what axis 4 measures, but NOTHING RENDERS IT TODAY. Do not read its presence as reaching a dashboard reader. \u26a0\ufe0f The crvusd pilot carries the same unrouted dependencies block; this is pre-existing, not introduced here, and is being raised with backing-monitor. \u26a0\ufe0f NO `contract` BLOCK IS WRITTEN HERE ON PURPOSE: susds_contract_overlay.json already carries a 2,008-character structural_score_basis that DOES render. Two bases for one score would drift apart and both would read as authoritative \u2014 that is the same-file divergence failure, not redundancy."
+}
