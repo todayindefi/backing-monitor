@@ -2477,7 +2477,29 @@ var SyrupUSDCRenderer = {
             '<p class="text-xs text-slate-400 mb-3">Instant-but-thin alternative to the redemption queue: sell into DEX/aggregator liquidity for ' + underlying + ' immediately, taking a slippage hit. Constraint is size / price.</p>';
 
         // DEX aggregator slippage
-        if (liq && liq.quotes) {
+        //
+        // ⚠️ THE CANONICAL PATH WINS, AND THIS ORDER EXISTS TO AVOID A DOUBLE RENDER.
+        //
+        // PegTracker cc14b11 PROMOTES syrupUSDC's ladder to liquidity.exit_mark.quotes
+        // while KEEPING asset_specific.liquidity — its own test asserts both. That is
+        // the right producer change and I asked for it: a consumer sweeping the
+        // canonical key found no ladder here, and I acted on that absence and nearly
+        // cost our reports session a true sentence.
+        //
+        // ⚠️ But common.js ALSO draws an exit-mark ladder whenever
+        // liquidity.exit_mark.quotes exists, and nothing here suppresses it. Verified
+        // against the promoted shape: BOTH fire, so the same four rungs would render
+        // twice on this page the moment that commit is pushed. My handoff created
+        // this; the fix belongs here.
+        //
+        // So: if the canonical path carries the ladder, render NOTHING here and let
+        // the shared renderer own it — which is a strict improvement, because that one
+        // now distinguishes a FAILED quote from an unattempted one and this bespoke
+        // copy does not. The bespoke branch stays as the pre-migration fallback.
+        var canonicalLadder = !!(topLiq && topLiq.exit_mark && topLiq.exit_mark.quotes);
+        if (canonicalLadder) {
+            // Rendered by CommonRenderer._renderLiquiditySection. Intentionally silent.
+        } else if (liq && liq.quotes) {
             var sizes = Object.keys(liq.quotes).sort(function(a, b) { return parseFloat(a) - parseFloat(b); });
             var rows = sizes.map(function(sz) {
                 var q = liq.quotes[sz];
