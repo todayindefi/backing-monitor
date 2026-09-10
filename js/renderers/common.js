@@ -3952,15 +3952,34 @@ const CommonRenderer = {
             // A failed read is not an absence — the distinction this estate has
             // had to relearn repeatedly. It now says so, in the cell, in amber.
             if (q.error) {
+                // ⚠️ AND SAY WHEN IT CANNOT BE A DEPTH LIMIT, because the blank
+                // invited exactly that reading and I made it myself: I described
+                // crvUSD's failed $10M rung as landing "at the inflection", which
+                // read meaning into noise. In 6 of the 9 failures across the
+                // estate a LARGER size quoted successfully in the same run —
+                // crvUSD failed at $10M while $50M returned; susDS failed at $10K.
+                // A quote that fails while a bigger one succeeds cannot mean depth
+                // ran out, and the row should tell a reader that rather than leave
+                // them to notice it.
+                var biggerOk = sizes.some(function(other) {
+                    var oq = quotes['' + other] || quotes[other] || {};
+                    return other > sz && !oq.error && oq.slippage_bps != null;
+                });
                 return '<tr>' +
                     '<td class="font-mono">' + CommonRenderer.formatCurrency(sz) + '</td>' +
                     '<td class="text-right font-mono text-amber-600" title="' +
                         CommonRenderer._escapeAttr('The quote for this size FAILED (' +
                         String(q.error) + '). This is an unsuccessful measurement, not a ' +
                         'measurement of zero and not a size that was skipped — nothing is ' +
-                        'established about depth at this level.') +
+                        'established about depth at this level.' +
+                        (biggerOk
+                            ? ' \u26a0\ufe0f A LARGER size quoted successfully in the same ' +
+                              'run, so this failure CANNOT mean depth ran out — it is a ' +
+                              'failed request, not a liquidity finding.'
+                            : '')) +
                         '">\u26a0\ufe0f quote failed</td>' +
-                    '<td class="text-right font-mono text-slate-400">not measured</td>' +
+                    '<td class="text-right font-mono text-slate-400">' +
+                        (biggerOk ? 'request failed' : 'not measured') + '</td>' +
                 '</tr>';
             }
             var cls = bps == null ? '' : (bps <= 25 ? 'text-green-600' : (bps <= 200 ? 'text-amber-600' : 'text-red-600'));
