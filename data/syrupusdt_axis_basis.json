@@ -1,0 +1,48 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "syrupusdt",
+ "as_of": "2026-09-11T00:00:00Z",
+ "backing": {
+  "backing_score": 6.0,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "MEASURES THE LOAN BOOK'S EVIDENCE QUALITY, NOT A COVERAGE RATIO. \u26a0\ufe0f AUTHORED 2026-09-06 AT 5.5 AND RE-DERIVED THE SAME DAY TO 6.0 ON THE PegTracker RECONCILIATION \u2014 the first figures were wrong-harsh, and the correction is recorded here rather than silently applied. \u26a0\ufe0f SCORED HALF A POINT BELOW syrupUSDC (6.5) ON THE SAME ARCHITECTURE: same operator, same evidence method, smaller and less seasoned book. \u26a0\ufe0f\u26a0\ufe0f THE FEED'S `collateral_ratio: 100.0` IS AN ACCOUNTING IDENTITY, NOT A SOLVENCY MEASUREMENT, AND IT IS THE MOST MISREADABLE NUMBER ON THIS ASSET. The pool's backing IS its loan book: positions enumerate to `principalOut()` with a residual of $0.00, so backing equals supply BY CONSTRUCTION and the ratio cannot print anything but ~100. The published `surplus_deficit` of $5.98 against a $368,859,875.86 book is 0.0000016% of the book \u2014 that is rounding, NOT a buffer. \u26a0\ufe0f A 100.0 here carries NO information about whether the loans are good. Read it as 'the books balance', never as 'the asset is fully covered'. The solvency question lives in LOAN QUALITY and BORROWER CONCENTRATION, which is axis 4.",
+  "backing_score_persistence": "filtered \u2014 loan-book evidence quality, not a spot ratio",
+  "backing_score_denominator": "\u26a0\ufe0f ASK WHAT THE RATIO DIVIDES BY. backing = the loan book = supply by construction, so the quotient is ~100 regardless of loan quality. There is no denominator here that would reveal impairment; only per-loan evidence does."
+ },
+ "liquidity": {
+  "liquidity_score": 6.0,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "MEASURES ACCESS PATTERN AND ROUTE QUALITY, NOT POOL DEPTH. \u26a0\ufe0f A FULL POINT AND A HALF BELOW syrupUSDC'S 7.5 ON THE SAME MECHANISM, and the reason is size not design: a smaller Ethereum pool TVL means higher aggregator slippage at the same notional and a longer queue cadence at institutional size. The permissionless mint/redeem advantage that lifted syrupUSDC applies here identically \u2014 it is the depth behind it that differs. \u26a0\ufe0f Same normal-conditions caveat: stress-case redemption is a queue against an illiquid loan book.",
+  "liquidity_score_persistence": "filtered \u2014 access pattern and route quality, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f THE FEED COMPUTES NO DEPTH FOR THIS ASSET (`total_2pct_depth: null`), so this authored score has NOTHING beside it to agree or disagree with. An uncontested number reads as more settled than a contested one \u2014 it is not."
+ },
+ "dependencies": {
+  "underlying_score": 5.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES BORROWER CONCENTRATION AND SHARED INFRASTRUCTURE. \u26a0\ufe0f AUTHORED 2026-09-06 AT 4.0 ON FIGURES THAT WERE WRONG-HARSH, THEN RE-DERIVED TO 5.0. That direction matters: the error OVERSTATED risk, and an overstated risk score is not the safe direction \u2014 it can push a holder out of a position over a figure that was never right. \u26a0\ufe0f LIQUIDITY CUSTODY EOAs ARE SHARED WITH syrupUSDC (PYUSD + USTB + AMM), so a holder of both pools does not hold two independent positions at the custody layer. \u26a0\ufe0f Below syrupUSDC's 5.5 because this pool is typically ~5-15% of the family book against syrupUSDC's ~20-30%, so the same borrower set concentrates harder here.",
+  "underlying_score_persistence": "filtered \u2014 borrower set and custody architecture, not a daily balance",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after backing-monitor's 49d0b4ca2 but axis 4 RENDERS NO SCORE today \u2014 source-of-record pending their display decision."
+ },
+ "issuer": {
+  "issuer_score": 5.5,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE OPERATOR'S RECORD. \u26a0\ufe0f AUTHORED 2026-08-01 \u2014 this axis had been PUBLISHED WITHOUT AN INTERNAL SOURCE, so the number existed on the public surface before it existed here. Maple Finance: v1 carried $50M+ of bad debt in 2022; v2 has run clean since. \u26a0\ufe0f THE 2022 EVENT IS PRICED, NOT DISCOUNTED \u2014 a clean v2 record is three years of evidence against one realised failure of the same operator, not a reset.",
+  "issuer_score_persistence": "filtered \u2014 operator record, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration until the axis-4 render decision lands."
+ },
+ "peg": {
+  "volatility_score": 8.5,
+  "volatility_score_source": "riskAnalyst:authored",
+  "volatility_score_generated_at": "2026-09-11T00:00:00Z",
+  "volatility_score_basis": "MEASURES DISCOUNT-TO-NAV, NOT DEVIATION FROM $1. The unit trades at 1.13986 against NAV 1.142598, a \u221224.0bp DISCOUNT \u2014 WIDER THAN syrupUSDC's \u221217.8bp on the same mechanism, consistent with the thinner book. \u26a0\ufe0f SCORED EQUAL TO syrupUSDC AT 8.5 DESPITE THE WIDER DISCOUNT because this axis measures NAV behaviour, not secondary-market spread; the spread difference is a liquidity fact and is priced there.",
+  "volatility_score_persistence": "filtered \u2014 NAV behaviour, not spot price",
+  "volatility_score_correction": "\u26a0\ufe0f THIS BLOCK PREVIOUSLY DECLARED 'ARGUMENT PRESENT, SCORE ABSENT' AND THAT WAS FALSE. I searched frontmatter for `peg_score`, found nothing, and reported a gap. THE FIELD DOES NOT EXIST IN THIS REPO: axis 1 is `volatility_score` for a vault share (present here at 8.5) and `peg_mechanism_score` for a stablecoin. backing-monitor's renderer reads BOTH \u2014 `_authoredAxisScore(data.peg, ['peg_mechanism_score','volatility_score'])` \u2014 and says so in a comment. An absence from a key I chose was reported as an absence in the world.",
+  "redemption_score_note": "\u26a0\ufe0f A SEPARATE `redemption_score` EXISTS AND IS 6.5 HERE \u2014 105 assets carry it. It is NOT rendered through this envelope and is not restated in this file; noted so the next reader does not mistake its absence here for absence in the report."
+ },
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` BLOCK \u2014 the contract overlay already carries a rendering structural_score_basis. Two bases for one score drift apart, and both read as authoritative."
+}

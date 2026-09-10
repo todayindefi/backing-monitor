@@ -1,0 +1,47 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "usds",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "peg_mechanism_score": 7.5,
+  "peg_mechanism_score_source": "riskAnalyst:authored",
+  "peg_mechanism_score_generated_at": "2026-09-11T00:00:00Z",
+  "peg_mechanism_score_basis": "MEASURES HOW THE PEG IS DEFENDED, NOT THE CURRENT DEVIATION \u2014 which is why it can sit at 7.5 while the unit trades at 0.99988 (\u22121.2bp). Three-layer, battle-tested: USDC PSM 1:1, DAI parity, and CDP overcollateralization, with a clean ~20-month history. \u26a0\ufe0f ITS STRENGTH AND ITS DEPENDENCY ARE THE SAME FACT: the mechanism is strong PRECISELY BECAUSE it is USDC-anchored through the PSM, so the peg defence and the concentration risk on Dependencies are two readings of one arrangement, NOT two independent findings. Do not treat a strong peg score here as offsetting the USDC concentration priced at axis 4 \u2014 that would count the same mechanism twice, once as comfort and once as risk.",
+  "peg_mechanism_score_persistence": "filtered \u2014 mechanism design, not spot-responsive",
+  "peg_mechanism_score_correction": "\u26a0\ufe0f THE COMMIT MESSAGE FOR THIS FILE (5ec5fb5) SAID usds 'has the same peg_score gap as susds \u2014 the table argues 7.5, frontmatter has no peg_score'. THAT IS FALSE. Frontmatter carries `peg_mechanism_score: 7.5` and `peg_mechanism: \"hybrid\"`. The value written here was correct; the claim that it was being recovered from a gap was not. `peg_score` is not a field in this repo.",
+  "redemption_score_note": "\u26a0\ufe0f usds carries NO redemption_score, unlike the vault shares in this rollout."
+ },
+ "backing": {
+  "backing_score": 7.0,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "MEASURES RESERVE COMPOSITION AND ITS CONCENTRATION, plus the surplus buffer \u2014 NOT backing-over-supply. \u26a0\ufe0f\u26a0\ufe0f THE DISTINCTION IS NOT ACADEMIC HERE: RE-DIVIDING THE OPERANDS GIVES A NUMBER ON THE OTHER SIDE OF 100. Measured 2026-09-11 from the feed's own fields: total_backing $11,308,022,085.78 over supply $11,275,063,843.76 = 100.2923%, A SURPLUS OF $32,958,242.02. The PUBLISHED collateral_ratio is 99.4895% \u2014 A DEFICIT \u2014 because it is `100 + (surplus_deficit / supply)` with surplus_deficit \u2212$57,557,885.05. \u2705 That reconciles to the published 99.49 EXACTLY, which is what confirms the documented basis rather than assuming it. \u26a0\ufe0f 80 BASIS POINTS APART AND OPPOSITE IN SIGN. A reader who divides backing by supply gets a surplus where the feed reports a deficit, and both are correct about different questions. \u26a0\ufe0f Every USDS is minted 1:1 against a debt position, so par coverage is ~100% BY CONSTRUCTION and carries no information \u2014 the vow buffer is the signal. HELD AT 7.0: overcollateralized, diversified and on-chain transparent, well above opaque-CDP peers, held down by the ~33% USDC concentration.",
+  "backing_score_persistence": "filtered \u2014 reserve composition and buffer level, not a spot ratio",
+  "backing_score_denominator": "\u26a0\ufe0f ASK WHAT THE RATIO DIVIDES BY BEFORE QUOTING IT. Published CR is surplus-based. To recover the backing-based figure: D' = backing \u2212 surplus. Quoting 99.49% as 'backed 99.5 cents on the dollar' is wrong in both magnitude and DIRECTION."
+ },
+ "liquidity": {
+  "liquidity_score": 8.5,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "MEASURES CONVERTIBILITY CAPACITY AT PAR \u2014 the PSM and DAI rails \u2014 NOT executable DEX depth. ~$8.4B supply with 1:1 USDC PSM and 1:1 DAI convertibility, no KYC or geo-gate on the on-chain route, so the binding constraint under normal conditions is PSM inventory rather than slippage. \u26a0\ufe0f THE DEPTH LADDER IS NOT THE RIGHT INSTRUMENT AND THE FEED SAYS SO: `two_pct_depth_status: not_size_responsive`, `two_pct_depth_size_responsive: false`, `total_2pct_depth_is_floor: true`. \u26a0\ufe0f THE $50,000,000 IN total_2pct_depth IS A FLOOR FLAG, NOT A CLEARED RUNG \u2014 it is the largest size probed, not a depth that was tested and passed. Rendering it as depth beside this 8.5 shows a reader a tested number where none exists. \u26a0\ufe0f AND THE EXIT INHERITS THE ANCHOR: convertibility at par runs THROUGH USDC, so this score measures a route that is only as good as the asset on the other side of the PSM \u2014 the same USDC dependency priced at axis 4, appearing here as an exit assumption rather than a reserve share.",
+  "liquidity_score_persistence": "filtered \u2014 convertibility rails and PSM capacity, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f ANY 2% DEPTH BAND RENDERED BESIDE THIS SCORE IS A FLOOR, NOT A MEASUREMENT. The ladder is not size-responsive for this asset, so a crossing figure bounds nothing."
+ },
+ "dependencies": {
+  "underlying_score": 7.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES CONCENTRATION OF THE COUNTERPARTY SET, NOT ITS QUALITY. \u26a0\ufe0f AUTHORED 2026-09-06 \u2014 this axis did not exist on EITHER surface before that date, so there is no prior published figure it supersedes. Two concentrations, both real and both high-quality: (1) USDC is the single largest dependency at ~33% of backing, and it is the SAME name the peg mechanism depends on through the PSM \u2014 so peg strength and dependency concentration are one arrangement read twice, not two independent facts. The March 2023 precedent is the point: DAI followed USDC down through this module. (2) A less-transparent credit sleeve whose composition is drifting toward crypto lending and away from T-bills. Level with Backing deliberately: what this axis records is that the dependencies are CONCENTRATED, not that they are poor.",
+  "underlying_score_persistence": "filtered \u2014 supply architecture and reserve composition, not a daily balance"
+ },
+ "issuer": {
+  "issuer_score": 7.0,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ISSUER'S TRACK RECORD AND GOVERNANCE POSTURE, NOT THE ENFORCEABILITY OF ITS DELAY. Sky/MakerDAO is among DeFi's longest-track-record issuers \u2014 DAO-governed, broadly audited, $10M bounty. Docked for the upgradeable contract set and broad governance reach. \u26a0\ufe0f THE 48h GSM IS CITED HERE AS GOVERNANCE POSTURE ONLY. Whether that delay actually protects a holder is priced on Contract & Admin, where it is measured and heavily qualified: no independent canceller (plot() and drop() answer to the same DSAuth authority), no MIN_DELAY constant so 48h is a setting rather than a floor, and a UsdsJoin path recorded at `timelock: none` that never enters the pause contract at all. \u26a0\ufe0f DO NOT READ THE 48h IN THIS ROW AS AN INDEPENDENT MITIGANT \u2014 it is the same delay, and axis 5 owns the question of whether it binds.",
+  "issuer_score_persistence": "filtered \u2014 governance and track record, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 axis 6 has no _axis_basis registration; source of record only."
+ },
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js ON 2026-09-11, NOT ASSUMED. `_axis_basis` is registered for peg, backing and liquidity ONLY. \u2705 Those three blocks reach a reader. \u26a0\ufe0f `dependencies` and `issuer` DO NOT \u2014 kept as source of record and annotated, since the internal report is a real surface, but nothing renders them today. Raised with backing-monitor. \u26a0\ufe0f NO `contract` BLOCK ON PURPOSE: usds_contract_overlay.json already carries a 1,289-character structural_score_basis that DOES render. Two bases for one score drift apart and both read as authoritative \u2014 that is the same-file divergence failure, not redundancy."
+}

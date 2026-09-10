@@ -1,0 +1,48 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "syrupusdc",
+ "as_of": "2026-09-11T00:00:00Z",
+ "backing": {
+  "backing_score": 6.5,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "MEASURES THE LOAN BOOK'S EVIDENCE QUALITY \u2014 whether each position can be shown to exist AND to be collateralised \u2014 NOT a coverage ratio. \u2705 HELD AT 6.5 AFTER RECONCILIATION: all 35 active positions enumerate to $958,757,773.84 = `principalOut()` with residual $0.00, so the former existence/principal gap is RESOLVED. \u26a0\ufe0f BUT RESOLVING EXISTENCE IS NOT RESOLVING BACKING: Maple GraphQL still returns no collateral record for the 4 recovered positions and the loan contracts expose no collateral field, so collateral is priced on ~90.8% of the book and ~9.2% is evidenced only as principal. That gap is why closing the existence question did not cross a half-point. \u26a0\ufe0f\u26a0\ufe0f THE FEED'S `collateral_ratio: 100.0` IS AN ACCOUNTING IDENTITY, NOT A SOLVENCY MEASUREMENT, AND IT IS THE MOST MISREADABLE NUMBER ON THIS ASSET. The pool's backing IS its loan book: positions enumerate to `principalOut()` with a residual of $0.00, so backing equals supply BY CONSTRUCTION and the ratio cannot print anything but ~100. The published `surplus_deficit` of $17.62 against a $952,342,353.50 book is 0.0000019% of the book \u2014 that is rounding, NOT a buffer. \u26a0\ufe0f A 100.0 here carries NO information about whether the loans are good. Read it as 'the books balance', never as 'the asset is fully covered'. The solvency question lives in LOAN QUALITY and BORROWER CONCENTRATION, which is axis 4.",
+  "backing_score_persistence": "filtered \u2014 loan-book evidence quality, not a spot ratio",
+  "backing_score_denominator": "\u26a0\ufe0f ASK WHAT THE RATIO DIVIDES BY. backing = the loan book = supply by construction, so the quotient is ~100 regardless of loan quality. There is no denominator here that would reveal impairment; only per-loan evidence does."
+ },
+ "liquidity": {
+  "liquidity_score": 7.5,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "MEASURES ACCESS PATTERN AND AGGREGATOR ROUTE QUALITY, NOT POOL DEPTH \u2014 which is why it sits well above what a 'DEX pool ~1% of supply' headline implies. $1B+ Ethereum pool; aggregator-route exit achieves single-digit-to-low-double-digit bps at retail-to-low-institutional notional across Uniswap v3/v4, Balancer and others. \u2705 THE BUMP FROM 6.5 TO 7.5 IS FOR PERMISSIONLESS MINT/REDEEM AT THE VAULT LAYER, PRICED EXPLICITLY: anyone can deposit USDC at NAV and submit redemption requests with NO KYC GATE, which materially differentiates this from KYC-gated RWA peers (thBILL is T+4 and $1M institutional-only). That access pattern was under-priced before. Direct redemption queue, multi-chain via CCIP+CCT across 5 chains. \u26a0\ufe0f CAVEAT CARRIED WITH THE SCORE: this is a NORMAL-CONDITIONS reading \u2014 stress-case redemption is a queue against an illiquid loan book, not a market exit.",
+  "liquidity_score_persistence": "filtered \u2014 access pattern and route quality, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f THE FEED COMPUTES NO DEPTH FOR THIS ASSET (`total_2pct_depth: null`), so this authored score has NOTHING beside it to agree or disagree with. An uncontested number reads as more settled than a contested one \u2014 it is not."
+ },
+ "dependencies": {
+  "underlying_score": 5.5,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES BORROWER CONCENTRATION AND SHARED INFRASTRUCTURE. \u2705 HELD AT 5.5 AFTER RECONCILIATION. Per-pool concentration corrects to 16 borrowers, top-1 22.32%, top-3 53.61%. \u26a0\ufe0f CORRECTED HHI, TOP-5 AND FAMILY-WIDE CONCENTRATION ARE STILL PENDING, AND MUST NOT BE RECONSTRUCTED FROM TRUNCATED EXPORTS \u2014 a truncated export gives head-and-tail values that look like the real ones and cannot be distinguished from them. \u26a0\ufe0f AND THE DEPENDENCY IS NOT ONLY BORROWERS: liquidity custody EOAs are SHARED WITH syrupUSDT (PYUSD + USTB + AMM), so the two pools are not independent holdings for a holder of both. The resolved 9.2% existence gap does not remove the collateral-evidence gap on those same recovered positions.",
+  "underlying_score_persistence": "filtered \u2014 borrower set and custody architecture, not a daily balance",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after backing-monitor's 49d0b4ca2 but axis 4 RENDERS NO SCORE today \u2014 source-of-record pending their display decision."
+ },
+ "issuer": {
+  "issuer_score": 5.5,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE OPERATOR'S RECORD. \u26a0\ufe0f AUTHORED 2026-08-01 \u2014 this axis had been PUBLISHED WITHOUT AN INTERNAL SOURCE, so the number existed on the public surface before it existed here. Maple Finance: v1 carried $50M+ of bad debt in 2022; v2 has run clean since. \u26a0\ufe0f THE 2022 EVENT IS PRICED, NOT DISCOUNTED \u2014 a clean v2 record is three years of evidence against one realised failure of the same operator, not a reset.",
+  "issuer_score_persistence": "filtered \u2014 operator record, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration until the axis-4 render decision lands."
+ },
+ "peg": {
+  "volatility_score": 8.5,
+  "volatility_score_source": "riskAnalyst:authored",
+  "volatility_score_generated_at": "2026-09-11T00:00:00Z",
+  "volatility_score_basis": "MEASURES DISCOUNT-TO-NAV FOR A NAV-ACCRUING SHARE, NOT DEVIATION FROM $1 \u2014 the unit trades at 1.18035 against NAV 1.182453, a \u221217.8bp DISCOUNT, and the $1.18 is accrued yield rather than a premium to par. NAV-tracking and yield-bearing with zero principal losses to date in the Syrup product line. \u26a0\ufe0f 'Zero principal losses to date' is a statement about REALISED outcomes on a book whose loan quality is priced on axis 4 \u2014 it is not evidence that the loans are sound, only that none has yet failed.",
+  "volatility_score_persistence": "filtered \u2014 NAV behaviour, not spot price",
+  "volatility_score_correction": "\u26a0\ufe0f THIS BLOCK PREVIOUSLY DECLARED 'ARGUMENT PRESENT, SCORE ABSENT' AND THAT WAS FALSE. I searched frontmatter for `peg_score`, found nothing, and reported a gap. THE FIELD DOES NOT EXIST IN THIS REPO: axis 1 is `volatility_score` for a vault share (present here at 8.5) and `peg_mechanism_score` for a stablecoin. backing-monitor's renderer reads BOTH \u2014 `_authoredAxisScore(data.peg, ['peg_mechanism_score','volatility_score'])` \u2014 and says so in a comment. An absence from a key I chose was reported as an absence in the world.",
+  "redemption_score_note": "\u26a0\ufe0f A SEPARATE `redemption_score` EXISTS AND IS 7.5 HERE \u2014 105 assets carry it. It is NOT rendered through this envelope and is not restated in this file; noted so the next reader does not mistake its absence here for absence in the report."
+ },
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` BLOCK \u2014 the contract overlay already carries a rendering structural_score_basis. Two bases for one score drift apart, and both read as authoritative."
+}
