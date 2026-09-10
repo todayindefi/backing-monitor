@@ -217,13 +217,81 @@ var CrvUSDRenderer = {
         }
 
         // ====== 7. PegKeeper Debt (only show if debt > 0) ======
+        //
+        // ⚠️ THIS REDUCED FIFTEEN KEEPERS TO ONE SUM AND THREW THE REST AWAY.
+        //
+        // `asset_specific.pegkeepers[]` carries every registered keeper with its
+        // index, address, pool and debt. The render summed them into a single
+        // "Total PK Debt" card, so the most load-bearing fact about crvUSD's
+        // downside defence was invisible on the page that exists to show it:
+        // ONE keeper holds the entire burn buffer and the other fourteen are at
+        // exactly zero. A reader seeing "$15.8M" would reasonably assume it is
+        // spread across a fifteen-keeper set. It is not, and a disruption
+        // specific to that one pool takes the whole buffer.
+        //
+        // ⚠️ THE LEVEL IS THE VOLATILE FACT AND THE CONCENTRATION IS THE STABLE
+        // ONE — which is the wrong way round for a card that shows only the
+        // level. Total PK debt ran 33.75M (08-13) -> 98.60M (08-24) -> 36.98M
+        // (09-07) -> 15.80M today while the 100% share did not move through any
+        // of it. The total only ever shows the number that moves.
+        //
+        // ⚠️ EVERYTHING HERE IS COMPUTED. No count, share or address is written
+        // in: when a second keeper takes on debt the line re-derives, and if the
+        // set is genuinely spread the headline says so instead. A hardcoded "1 of
+        // 15" would be a constant nothing recomputes — the exact defect class
+        // this repo has been removing all day.
         var pks = specific.pegkeepers;
         if (pks && pks.length > 0) {
-            var totalPkDebt = pks.reduce(function(a, pk) { return a + pk.debt; }, 0);
+            var totalPkDebt = pks.reduce(function(a, pk) { return a + (pk.debt || 0); }, 0);
             if (totalPkDebt > 0) {
+                var active = pks.filter(function(pk) { return (pk.debt || 0) > 0; })
+                                .sort(function(a, b) { return b.debt - a.debt; });
+                var topShare = (active[0].debt / totalPkDebt) * 100;
+                var concentrated = active.length === 1 || topShare >= 90;
+                var shortAddr = function(a) {
+                    return a ? a.slice(0, 8) + '\u2026' + a.slice(-6) : '\u2014';
+                };
+                var note = concentrated
+                    ? '<div class="risk-flag risk-warning mt-3">' +
+                          '<strong>' + active.length + ' of ' + pks.length +
+                          ' registered keepers ' + (active.length === 1 ? 'holds ' : 'hold ') +
+                          CommonRenderer.formatPercent(topShare, active.length === 1 ? 0 : 1) +
+                          ' of the buffer.</strong> The remaining ' +
+                          (pks.length - active.length) + ' carry no debt, so the burn capacity ' +
+                          'above is not diversified across the keeper set \u2014 a disruption ' +
+                          'confined to the funded pool would remove it.' +
+                      '</div>'
+                    : '<div class="text-xs text-slate-500 mt-3">' + active.length + ' of ' +
+                      pks.length + ' registered keepers carry debt; the largest holds ' +
+                      CommonRenderer.formatPercent(topShare, 1) + '.</div>';
+
                 html += '<div class="panel"><div class="panel-title">PegKeeper Debt</div>' +
                     '<p class="text-sm text-slate-500 mb-3">PegKeepers have minted crvUSD into pools (circular supply). This debt can be withdrawn and burned.</p>' +
-                    '<div class="summary-card" style="display:inline-block"><div class="card-label">Total PK Debt</div><div class="card-value negative">' + CommonRenderer.formatCurrency(totalPkDebt) + '</div></div></div>';
+                    '<div class="summary-card" style="display:inline-block"><div class="card-label">Total PK Debt</div><div class="card-value negative">' + CommonRenderer.formatCurrency(totalPkDebt) + '</div></div>' +
+                    note +
+                    '<div class="data-table-scroll mt-3"><table class="data-table">' +
+                        '<thead><tr><th>#</th><th>Keeper</th><th>Pool</th>' +
+                            '<th class="text-right">Debt</th><th class="text-right">Share</th></tr></thead><tbody>' +
+                        active.map(function(pk) {
+                            return '<tr>' +
+                                '<td class="font-mono">' + pk.index + '</td>' +
+                                '<td class="font-mono text-xs">' + shortAddr(pk.address) + '</td>' +
+                                '<td class="font-mono text-xs">' + shortAddr(pk.pool) + '</td>' +
+                                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(pk.debt) + '</td>' +
+                                '<td class="text-right font-mono">' + CommonRenderer.formatPercent((pk.debt / totalPkDebt) * 100, 1) + '</td>' +
+                            '</tr>';
+                        }).join('') +
+                    '</tbody></table></div>' +
+                    // ⚠️ Zero-debt keepers are listed as a COUNT, not as fourteen
+                    // empty rows. They are registered capacity that currently holds
+                    // nothing — real context, but not fourteen rows of it.
+                    (pks.length > active.length
+                        ? '<div class="text-xs text-slate-400 mt-2">' +
+                          (pks.length - active.length) + ' further registered keeper' +
+                          (pks.length - active.length === 1 ? '' : 's') +
+                          ' currently at zero debt, not listed.</div>'
+                        : '') +
+                    '</div>';
             }
         }
 
