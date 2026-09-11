@@ -1995,6 +1995,61 @@ const CommonRenderer = {
             '">exit unprobed (declared)</span>';
     },
 
+    // ⚠️ THE BAND IS SIZE-BLIND AND THIS IS THE FIX THAT DOES NOT RE-GRADE 25 ASSETS.
+    //
+    // liquidity thresholds are ABSOLUTE — [2M, 1M, 500K, 100K] for every asset —
+    // so $5M of depth rates Healthy 10/10 whether the book is $5M or $600M.
+    // hastra-prime renders 10/10 on depth worth ~0.85% of its supply, against a
+    // measured wall where output stops increasing entirely. USDe rated 3/5 on
+    // 0.011% of supply while yzUSD rated 2/5 on seventy times that share.
+    //
+    // Owner decision: keep the absolute band — it stays comparable across assets,
+    // answers "can MY position exit", and does not inherit the supply-definition
+    // disputes several assets carry — and render the SHARE beside it so a reader
+    // sees both readings at once.
+    //
+    // ⚠️ THE DENOMINATOR IS NAMED, NEVER ASSUMED. total_supply and total_backing
+    // differ materially — apyUSD publishes 129M against 184M, 42% apart — so the
+    // label says which one was divided by. Falls back to backing only where supply
+    // is absent, and renders nothing when neither is.
+    _depthShareHtml(data) {
+        var liq = (data && data.liquidity) || {};
+        var depth = liq.total_2pct_depth;
+        if (typeof depth !== 'number' || !(depth > 0)) return '';
+        // ⚠️ IF THE BAND IS WITHHELD, THE SHARE IS WITHHELD. liquidityRating returns
+        // null exactly where the producer says the figure does not bound anything —
+        // not_size_responsive, or a ladder that contradicts its own published depth.
+        // Dividing such a number by supply produces a percentage that looks precise
+        // and means nothing, printed directly beside a qualifier saying so. If we
+        // will not rate it, we will not divide it.
+        if (this.liquidityRating(data) == null) return '';
+        var sum = (data && data.summary) || {};
+        var bk = (data && data.backing) || {};
+        var denom = null, label = null;
+        if (typeof sum.total_supply === 'number' && sum.total_supply > 0) {
+            denom = sum.total_supply; label = 'supply';
+        } else if (typeof sum.circulating_supply === 'number' && sum.circulating_supply > 0) {
+            denom = sum.circulating_supply; label = 'circulating supply';
+        } else if (typeof sum.real_supply === 'number' && sum.real_supply > 0) {
+            denom = sum.real_supply; label = 'supply';
+        } else if (typeof bk.total_backing === 'number' && bk.total_backing > 0) {
+            denom = bk.total_backing; label = 'backing';
+        }
+        if (denom == null) return '';
+        var pct = (depth / denom) * 100;
+        // ⚠️ Below 0.01% prints "0.0%", which reads as zero rather than as small.
+        var txt = pct >= 0.1 ? pct.toFixed(1) + '%'
+                : pct >= 0.01 ? pct.toFixed(2) + '%'
+                : '<0.01%';
+        return '<div class="text-[11px] text-slate-500" title="' + this._escapeAttr(
+            'The band above grades depth against FIXED dollar thresholds, identical for every ' +
+            'asset, so it answers "can a position of this size exit". This figure answers the ' +
+            'other question — what share of the asset could exit at 2% — and the two can point ' +
+            'in opposite directions on a large book. Denominator: ' + label + ' ' +
+            this.formatCurrency(denom) + '.') +
+            '">\u2248 ' + txt + ' of ' + label + ' exits at 2%</div>';
+    },
+
     _depthQualifierHtml(liq) {
         var st = liq.two_pct_depth_status;
         var br = liq.two_pct_depth_bracket;
@@ -4387,6 +4442,7 @@ const CommonRenderer = {
                     // magnitude. Rendering "≥" or a bracket is what stops a
                     // bound being read as a measurement.
                     this._depthQualifierHtml(liq) +
+                    this._depthShareHtml(data) +
                     (liq.total_2pct_depth == null && liq.total_2pct_depth_note
                         ? '<div class="text-[11px] text-slate-400" title="' +
                           this._escapeAttr(liq.total_2pct_depth_note) + '">unmeasured, not zero \u24d8</div>' : '') +
