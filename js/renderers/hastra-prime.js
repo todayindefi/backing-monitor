@@ -148,7 +148,22 @@ var HP_REPORT = {
         dd_series_note: 'A parsed 31-deal third-party due-diligence series exists but is not yet exported into this feed.',
         caveats: [
             'The Democratized Prime warehouse’s own loan quality is not independently observable — 144A private deals, no Reg-AB loan tape, no per-warehouse delinquency feed.',
-            'The warehouse now also blends auto (Agora) and SMB (Credibly) receivables, so "HELOC" is not the whole book.'
+            'The warehouse now also blends auto (Agora) and SMB (Credibly) receivables, so "HELOC" is not the whole book.',
+            // ⚠️ FILED EVENT + COMPANY PROJECTION, EXPLICITLY NOT A MEASUREMENT.
+            // Verified against Figure's own 8-K and press release rather than
+            // relayed: the merger agreement is dated 2026-06-10, the acquisition
+            // COMPLETED at ~$590M net cash on a $717M transaction, and Figure took
+            // on Kiavi's DSCR loans. The ">$100M/month into Democratized Prime" is
+            // the companies' own forward statement.
+            //
+            // ⚠️ What is NOT claimed here, because nothing in this feed can see it:
+            // that the pool's composition has actually shifted. Naming a change we
+            // cannot measure is how the retracted trust-banner copy shipped.
+            '\u26a0\ufe0f Figure completed its $717M acquisition of <span class="font-semibold">Kiavi</span>, ' +
+            'an investor-focused RTL/DSCR lender, taking on Kiavi\u2019s DSCR loans; both companies state the deal ' +
+            'adds <span class="font-semibold">more than $100M/month to Democratized Prime</span>. Whether the ' +
+            'pool\u2019s composition has actually shifted is <span class="font-semibold">not measurable from this ' +
+            'feed</span> \u2014 read "HELOC" as the name of a facility, not a description of its book.'
         ]
     }
 };
