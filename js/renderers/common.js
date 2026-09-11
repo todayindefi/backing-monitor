@@ -422,6 +422,110 @@ const CommonRenderer = {
         if (typeof block.total_tvl_usd === 'number' && block.total_tvl == null) {
             block.total_tvl = block.total_tvl_usd;
         }
+
+        // ⚠️ FOUR FIELDS CROSSED AND THE MEASUREMENT ITSELF DID NOT.
+        //
+        // liquidity/1 is a `replace` axis — DexTracker owns axis 3 and the whole
+        // block is swapped — so anything this translation does not name is GONE,
+        // including PegTracker's bracket and its exit_mark ladder. The overlay
+        // carries both of its own, under different names, and neither was mapped.
+        // The result on USG: a bare "bracketed" with no range and "No exit-mark
+        // RFQ ladder in this snapshot", on the one asset where BOTH producers had
+        // just built a full ladder. 5b81e8703 taught the qualifier PegTracker's
+        // bracket shape for exactly this asset — the shape `replace` throws away.
+        //
+        // ⚠️ Anything ADDED to liquidity/1 from here on has the same problem by
+        // default. A field that reaches `data.liquidity` is not a field a reader
+        // sees, and on a replace axis an unmapped field is not merely unrendered,
+        // it is deleted.
+        var br = d.bracket;
+        if (br && typeof br === 'object' && !Array.isArray(br) &&
+            typeof br.last_clearing_size_usd === 'number' &&
+            typeof br.first_crossing_size_usd === 'number') {
+            block.two_pct_depth_bracket = {
+                lower_size_usd: br.last_clearing_size_usd,
+                lower_slippage_bps: br.last_clearing_marginal_impact_bps,
+                upper_size_usd: br.first_crossing_size_usd,
+                upper_slippage_bps: br.first_crossing_marginal_impact_bps
+            };
+        }
+        this._adaptLadder(d, block);
+    },
+
+    // liquidity/1 `depth.rungs` -> the `exit_mark.quotes` map the ladder table
+    // reads. Same translate-don't-replace rule as above: the producer's array is
+    // left untouched and the legacy shape is built beside it.
+    _adaptLadder(d, block) {
+        var rungs = Array.isArray(d.rungs) ? d.rungs : null;
+        if (!rungs || !rungs.length) return;
+        var em = block.exit_mark || {};
+        if (em.quotes && Object.keys(em.quotes).length) return;   // producer's own wins
+
+        // ⚠️ THE QUOTES MAP IS KEYED BY SIZE AND A MULTI-ROUTE LADDER IS NOT.
+        // reusd-re quotes the SAME size down several routes — $100 appears four
+        // times, $1,000 returns −84 bps on one venue and −6255 bps on another.
+        // Keying those into one object silently drops all but the last, and the
+        // survivor is whichever the producer happened to write last: a made-up
+        // number wearing a measured number's clothes. The table has no venue
+        // column to tell them apart, so the ladder is WITHHELD rather than
+        // collapsed. A missing ladder is a visible absence; a collapsed one is
+        // not. Revisit by giving the table a route column, not by picking one.
+        var seen = {}, duplicated = false;
+        rungs.forEach(function(r) {
+            if (!r || typeof r.size_usd !== 'number') return;
+            if (seen[r.size_usd]) duplicated = true;
+            seen[r.size_usd] = true;
+        });
+        if (duplicated) return;
+
+        var quotes = {};
+        rungs.forEach(function(r) {
+            if (!r || typeof r.size_usd !== 'number') return;
+            var q = {};
+            if (r.status && r.status !== 'ok') {
+                // The table's failed-quote branch keys off `error` and says, in
+                // the cell, that a failed read is not a measurement of zero.
+                q.error = r.reason || String(r.status).replace(/_/g, ' ');
+            } else {
+                // ⚠️ TWO SLIPPAGE FIELDS AND THE THRESHOLD USES THE SECOND ONE.
+                // usdm's `slippage_bps` is the TOTAL return against the dated
+                // mark and is a flat −9.56 bps at every rung — that is the price
+                // bias, which its own `bias_measures` says is excluded from the
+                // measurement. `slippage_bps_debiased` (~0.00) is the marginal
+                // impact the 2% crossing is actually graded on. Rendering the
+                // raw field would show a 9.6 bps exit cost the producer
+                // explicitly does not claim. usg publishes no debiased field
+                // because its rungs are already baseline-relative ($100 = 0.0).
+                var bps = typeof r.slippage_bps_debiased === 'number'
+                    ? r.slippage_bps_debiased : r.slippage_bps;
+                if (typeof bps === 'number') q.slippage_bps = bps;
+                // ⚠️ The out-leg field is named for the ASSET RECEIVED, and it is
+                // not always dollars: amount_out_usd (usg), amount_out_usdc
+                // (usdm) — but reusde-re's is amount_out_susde, a TOKEN amount.
+                // Printing that in a "Net out" column formatted as currency
+                // would price sUSDe at $1. Only the USD-denominated legs are
+                // carried; the rest leave the cell an em-dash, and size and
+                // slippage still render.
+                var out = typeof r.amount_out_usd === 'number' ? r.amount_out_usd
+                        : (typeof r.amount_out_usdc === 'number' ? r.amount_out_usdc : null);
+                if (out != null) q.output_usd = out;
+            }
+            quotes['' + r.size_usd] = q;
+        });
+        if (!Object.keys(quotes).length) return;
+        em.quotes = quotes;
+        // Header and convention line, so a get_dy ladder is not labelled "RFQ"
+        // and the reader is told which convention the bps column is in.
+        var qt = d.quote || {};
+        if (!em.measured_leg && qt.measured_leg) em.measured_leg = qt.measured_leg;
+        if (!em.slippage_convention && d.slippage_convention) {
+            em.slippage_convention = d.slippage_convention;
+        }
+        if (em.price_bias_bps == null && typeof d.price_bias_bps === 'number') {
+            em.price_bias_bps = d.price_bias_bps;
+            if (d.bias_measures) em.bias_measures = d.bias_measures;
+        }
+        block.exit_mark = em;
     },
 
     // Drop kept-but-stale renderings;    // Drop kept-but-stale renderings; mutates `block` and `kept`, returns what went.
@@ -2096,6 +2200,25 @@ const CommonRenderer = {
             var lo = Array.isArray(br) ? br[0] : br.lower_size_usd;
             var hi = Array.isArray(br) ? br[1] : br.upper_size_usd;
             if (typeof lo === 'number' && typeof hi === 'number') {
+                // ⚠️ A BISECTED BRACKET IS NOT A RANGE, AND PRINTING IT AS ONE
+                // INVENTS AN UNCERTAINTY THAT WAS MEASURED AWAY. DexTracker
+                // bisects to convergence: USG's bracket is $677,124 → $677,139,
+                // fifteen dollars wide, and reusde-re's is under a dollar.
+                // "crossing between $677.1K and $677.1K" reads as a rounding
+                // artefact or a bug; the honest reading is that the headline
+                // figure IS the crossing rather than the last rung below it,
+                // which is the opposite of what a wide bracket says.
+                //
+                // The gap is stated instead of the range, so the precision is
+                // the reader's to judge. 1% is comfortably below any real
+                // bracket — PegTracker's USG ladder is 33% wide and crvUSD's
+                // is 10× — so this cannot swallow one.
+                var gap = hi - lo;
+                if (gap >= 0 && gap <= Math.max(1, lo * 0.01)) {
+                    return wrap('crossing solved \u2014 bracket ' +
+                        (gap < 1 ? '<$1' : this.formatCurrencyExact(gap)) + ' wide',
+                        'text-slate-500');
+                }
                 var loBps = Array.isArray(br) ? null : br.lower_slippage_bps;
                 var hiBps = Array.isArray(br) ? null : br.upper_slippage_bps;
                 // The slippage at each end is what makes the bracket readable: a
@@ -4214,6 +4337,69 @@ const CommonRenderer = {
 
         // Headline exit mark = the KyberSwap RFQ ladder (As-built #2). Lead with it.
         var sizes = Object.keys(quotes).map(Number).filter(function(n) { return !isNaN(n); }).sort(function(a, b) { return a - b; });
+
+        // ⚠️ A BISECTED LADDER ROUNDS TWO DISTINCT RUNGS ONTO ONE LABEL. USG's
+        // bracket rungs are $677,124 and $677,139 at −199.994 and −200.010 bps:
+        // formatted at the table's usual precision they print as two identical
+        // rows, "$677.1K / −200.0 bps", one amber and one red. A reader sees a
+        // duplicated row with inconsistent colouring — which reads as a bug and
+        // hides the one thing those rows exist to show, the 2% crossing falling
+        // between them. Precision widens only when the rounding is what collided.
+        var qOf = function(sz) { return quotes['' + sz] || quotes[sz] || {}; };
+
+        // Smallest precision at which no two rungs share a label. Escalating once
+        // is not enough: reusde-re's bracket rungs are $15,461.12 and $15,461.35
+        // at -199.9984 and -200.0008 bps, which still collide at two decimals.
+        function firstDistinct(decs, label) {
+            for (var i = 0; i < decs.length; i++) {
+                var seenL = {}, clash = false;
+                for (var j = 0; j < sizes.length; j++) {
+                    var k = label(sizes[j], decs[i]);
+                    if (k == null) continue;
+                    if (seenL[k]) { clash = true; break; }
+                    seenL[k] = true;
+                }
+                if (!clash) return decs[i];
+            }
+            return decs[decs.length - 1];
+        }
+        function money(n, dec) {
+            return '$' + n.toLocaleString('en-US',
+                { minimumFractionDigits: dec, maximumFractionDigits: dec });
+        }
+        // -1 is the table's usual compact form ($1.0K / $1.0M); it is kept
+        // wherever it is unambiguous, because whole-dollar sizes are harder to
+        // scan down a column.
+        var sizeDec = firstDistinct([-1, 0, 2], function(sz, dec) {
+            return dec === -1 ? CommonRenderer.formatCurrency(sz) : money(sz, dec);
+        });
+        var sizeLabel = function(sz) {
+            return sizeDec === -1 ? CommonRenderer.formatCurrency(sz) : money(sz, sizeDec);
+        };
+
+        // ⚠️ Not "any duplicate bps" — usdm's ladder is genuinely flat at every
+        // rung and more decimals there add noise without adding a distinction.
+        // Only a collision that STRADDLES the 2% colour boundary is one where
+        // the displayed number contradicts the colour beside it.
+        function bpsClass(bps) {
+            if (bps == null) return null;
+            var m = Math.abs(bps);
+            return m <= 25 ? 'g' : (m <= 200 ? 'a' : 'r');
+        }
+        function bpsCollidesAcrossColour(dec) {
+            var byLabel = {};
+            for (var i = 0; i < sizes.length; i++) {
+                var bps = qOf(sizes[i]).slippage_bps;
+                if (typeof bps !== 'number') continue;
+                var k = bps.toFixed(dec);
+                if (byLabel[k] && byLabel[k] !== bpsClass(bps)) return true;
+                byLabel[k] = bpsClass(bps);
+            }
+            return false;
+        }
+        var bpsDigits = 1;
+        while (bpsDigits < 4 && bpsCollidesAcrossColour(bpsDigits)) bpsDigits++;
+
         var ladderRows = sizes.map(function(sz) {
             var q = quotes['' + sz] || quotes[sz] || {};
             var bps = q.slippage_bps;
@@ -4246,7 +4432,7 @@ const CommonRenderer = {
                     return other > sz && !oq.error && oq.slippage_bps != null;
                 });
                 return '<tr>' +
-                    '<td class="font-mono">' + CommonRenderer.formatCurrency(sz) + '</td>' +
+                    '<td class="font-mono">' + sizeLabel(sz) + '</td>' +
                     '<td class="text-right font-mono text-amber-600" title="' +
                         CommonRenderer._escapeAttr('The quote for this size FAILED (' +
                         String(q.error) + '). This is an unsuccessful measurement, not a ' +
@@ -4262,17 +4448,63 @@ const CommonRenderer = {
                         (biggerOk ? 'request failed' : 'not measured') + '</td>' +
                 '</tr>';
             }
-            var cls = bps == null ? '' : (bps <= 25 ? 'text-green-600' : (bps <= 200 ? 'text-amber-600' : 'text-red-600'));
+            // ⚠️ THE LADDER WAS COLOURED BY SIGNED VALUE, AND HALF THE ESTATE
+            // PUBLISHES COST AS NEGATIVE. `bps <= 25` is true for EVERY negative
+            // rung, so the worst reading on the page rendered green: crvUSD's $50M
+            // rung showed −4197.4 bps — $50M in, $29.0M out, a 42% haircut — in the
+            // same colour as a 0.0 bps fill. Live on crvusd, hastra-prime (−6262),
+            // syzusd (−5265), yzusd (−4007) and usde (−427).
+            //
+            // ⚠️ This is the SAME defect the depth qualifier above documents:
+            // "usde published $5M while quoting that same rung at −1490bps, because
+            // one comparison read a signed cost as though it were a magnitude." It
+            // was fixed there and left standing here. Sign carries the convention,
+            // MAGNITUDE carries the cost — grade on magnitude, always.
+            var mag = bps == null ? null : Math.abs(bps);
+            var cls = mag == null ? '' : (mag <= 25 ? 'text-green-600' : (mag <= 200 ? 'text-amber-600' : 'text-red-600'));
             return '<tr>' +
-                '<td class="font-mono">' + CommonRenderer.formatCurrency(sz) + '</td>' +
-                '<td class="text-right font-mono ' + cls + '">' + (bps != null ? bps.toFixed(1) + ' bps' : '—') + '</td>' +
+                '<td class="font-mono">' + sizeLabel(sz) + '</td>' +
+                '<td class="text-right font-mono ' + cls + '">' + (bps != null ? bps.toFixed(bpsDigits) + ' bps' : '—') + '</td>' +
                 '<td class="text-right font-mono">' + (q.output_usd != null ? CommonRenderer.formatCurrencyExact(q.output_usd) : '—') + '</td>' +
             '</tr>';
         }).join('');
 
+        // ⚠️ "RFQ" WAS A DEFAULT, NOT A READ FIELD. The As-built #2 ladder was a
+        // KyberSwap RFQ, so the fallback named one; the liquidity/1 ladders are
+        // Curve get_dy eth_calls, and labelling an on-chain quote "RFQ" misstates
+        // how the number was obtained. Named source wins; otherwise the leg the
+        // producer says it measured; otherwise nothing.
+        var ladderTitle = em.source
+            ? 'Exit mark — ' + em.source + ' sell into ' + (em.sell_into || '\u2014')
+            : (em.measured_leg
+                ? 'Exit mark — ' + this._escapeAttr(em.measured_leg)
+                : 'Exit mark');
+
+        // ⚠️ TWO CONVENTIONS NOW SHARE ONE COLUMN. PegTracker quotes slippage
+        // against $1 nominal par; liquidity/1 quotes marginal impact against its
+        // own smallest rung, with the price bias held out. Same header, same
+        // colour thresholds, different question — so the producer's own
+        // statement of it renders under the table head rather than being left
+        // for the reader to assume. First sentence visible, full text on hover.
+        var conv = em.slippage_convention;
+        var convLine = '';
+        if (conv) {
+            // Plain split, not a lookbehind — older Safari does not have them
+            // and a thrown regex here would blank the whole axis.
+            var convParts = String(conv).split('. ');
+            var firstSentence = convParts.length > 1 ? convParts[0] + '.' : convParts[0];
+            var biasTxt = typeof em.price_bias_bps === 'number'
+                ? ' \u00b7 price bias ' + em.price_bias_bps.toFixed(1) + ' bps'
+                : '';
+            convLine = '<div class="text-[11px] text-slate-500 mb-2" title="' +
+                this._escapeAttr(conv + (em.bias_measures
+                    ? '\n\nPrice bias measures: ' + em.bias_measures : '')) + '">' +
+                this._escapeAttr(firstSentence) + biasTxt + ' \u24d8</div>';
+        }
+
         var ladderBlock = sizes.length
-            ? '<div class="text-sm font-semibold text-slate-700 mb-2">Exit mark — ' +
-                  (em.source || 'RFQ') + ' sell into ' + (em.sell_into || '—') + '</div>' +
+            ? '<div class="text-sm font-semibold text-slate-700 mb-2">' + ladderTitle + '</div>' +
+              convLine +
               '<div class="data-table-scroll"><table class="data-table">' +
                   '<thead><tr><th>Size sold</th><th class="text-right">Slippage</th><th class="text-right">Net out</th></tr></thead>' +
                   '<tbody>' + ladderRows + '</tbody></table></div>'
