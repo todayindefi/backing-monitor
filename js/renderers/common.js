@@ -2080,9 +2080,32 @@ const CommonRenderer = {
                 (tip ? ' title="' + CommonRenderer._escapeAttr(tip) + '"' : '') + '>' +
                 txt + (tip ? ' \u24d8' : '') + '</div>';
         }
-        if (st === 'bracketed' && Array.isArray(br) && br.length === 2) {
-            return wrap('crossing between ' + this.formatCurrency(br[0]) +
-                        ' and ' + this.formatCurrency(br[1]), 'text-slate-500');
+        // ⚠️ TWO BRACKET SHAPES, AND THE RICHER ONE IS THE NEW DEFAULT.
+        //
+        // The array form [lower, upper] is what crvUSD and syzUSD still publish.
+        // PegTracker's ca4943e emits an OBJECT carrying the slippage at each end —
+        // {lower_size_usd, lower_slippage_bps, upper_size_usd, upper_slippage_bps} —
+        // and USG already ships it. Accepting only the array meant USG rendered a
+        // bare "bracketed" with no range at all, on the one asset where the ladder
+        // had just been built from nothing.
+        //
+        // ⚠️ Every asset migrates to the object form as its ladder is rebuilt, so
+        // this is not a special case for one feed — the array branch is the legacy
+        // one and must keep working until the last of them turns over.
+        if (st === 'bracketed' && br && typeof br === 'object') {
+            var lo = Array.isArray(br) ? br[0] : br.lower_size_usd;
+            var hi = Array.isArray(br) ? br[1] : br.upper_size_usd;
+            if (typeof lo === 'number' && typeof hi === 'number') {
+                var loBps = Array.isArray(br) ? null : br.lower_slippage_bps;
+                var hiBps = Array.isArray(br) ? null : br.upper_slippage_bps;
+                // The slippage at each end is what makes the bracket readable: a
+                // reader can see how close the lower rung came to crossing.
+                var detail = (typeof loBps === 'number' && typeof hiBps === 'number')
+                    ? ' (' + loBps.toFixed(0) + 'bps \u2192 ' + hiBps.toFixed(0) + 'bps)'
+                    : '';
+                return wrap('crossing between ' + this.formatCurrency(lo) +
+                            ' and ' + this.formatCurrency(hi) + detail, 'text-slate-500');
+            }
         }
         if (st === 'not_size_responsive' || liq.two_pct_depth_size_responsive === false) {
             return wrap('no depth curve \u2014 this figure bounds nothing', 'text-amber-700');
