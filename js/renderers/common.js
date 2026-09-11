@@ -3519,8 +3519,12 @@ const CommonRenderer = {
         (function(self) {
             [['axis-peg-head', data.peg, ['peg_mechanism_score', 'volatility_score'],
               'Why the report scores peg differently'],
-             ['axis-liquidity-head', data.liquidity, ['liquidity_score'],
-              'Why the report scores liquidity differently']
+             // ⚠️ LIQUIDITY IS NOT HANDLED HERE. This block runs BEFORE
+             // _renderAxisHead('liquidity', …), so anything appended to that head
+             // is overwritten moments later by the head render. The liquidity
+             // equivalent lives after that call — see below. The peg half worked,
+             // which is exactly why the broken half went unnoticed: a check that
+             // ORs the two axes passes on peg alone.
             ].forEach(function(row) {
                 var head = document.getElementById(row[0]);
                 var blk = row[1] || {};
@@ -3584,6 +3588,37 @@ const CommonRenderer = {
             this._liquidityChipHtml(data), data.liquidity);
         this._renderDepthScope(data);
         this._renderLiquiditySection(data);
+
+        // ⚠️ AFTER the head render, never before — see the note in the peg block.
+        //
+        // Carries three things the liquidity head had been missing:
+        //  - the depth QUALIFIER and the SHARE, which lived in axis-liquidity-body
+        //    until three bespoke renderers were found blanking that node
+        //    (hastra-prime.js, thusd.js, usdai.js). On those assets the band was
+        //    correctly WITHHELD and the reason for it was invisible, which is the
+        //    worse half of the pair.
+        //  - the liquidity BASIS, which was appended too early and overwritten.
+        (function(self) {
+            var lh = document.getElementById('axis-liquidity-head');
+            if (!lh) return;
+            var liq = (data && data.liquidity) || {};
+            var parts = self._depthQualifierHtml(liq) + self._depthShareHtml(data);
+            var basis = typeof liq.liquidity_score_basis === 'string' && liq.liquidity_score_basis.trim()
+                ? liq.liquidity_score_basis : null;
+            var perChain = typeof liq.liquidity_score_per_chain === 'string' && liq.liquidity_score_per_chain.trim()
+                ? liq.liquidity_score_per_chain : null;
+            if (perChain) {
+                parts += '<div class="text-xs text-amber-700 mb-1">' + self._mdInlineHtml(perChain) + '</div>';
+            }
+            if (basis) {
+                parts += self._scoreBasisHtml('Why the report scores liquidity differently', basis);
+            }
+            if (!parts) return;
+            var el = document.createElement('div');
+            el.className = 'axis-basis-note';
+            el.innerHTML = parts;
+            lh.appendChild(el);
+        })(this);
 
         // 4 · Dependencies
         // ⚠️ An array's LENGTH is how many rows the producer sent, not how many
