@@ -1808,6 +1808,26 @@ var HastraPrimeRenderer = {
                 '<thead><tr><th>Venue</th><th>Chain</th><th class="text-right">TVL</th>' +
                 '<th class="text-right">Depth</th><th class="text-right">24h volume</th></tr></thead>' +
                 '<tbody>' + venueRows + '</tbody></table></div>' +
+
+            // ⚠️ THE EVIDENCE FOR THE CLAIM DIRECTLY ABOVE WAS NOT ON THE PAGE.
+            // The banner says "a hard inventory wall, not a slippage curve", and
+            // the feed has measured exactly that: 13 rungs running -2.3bps flat
+            // from $1K to $5M, then -857bps at $6M, -1826bps at $6.7M and
+            // -6088bps at $14M. None of it rendered. This panel replaces the
+            // shared axis-3 body (which hastra-prime.js clears to stop a
+            // duplicate #peg-chart shadowing its own canvases), so everything
+            // CommonRenderer writes there was unreachable here — the ladder
+            // among it.
+            //
+            // Rendered through the SHARED helper, not a copy: a second copy of
+            // this table would have re-acquired the signed-vs-magnitude colouring
+            // defect that was fixed in common.js days ago.
+            (typeof CommonRenderer !== 'undefined' && CommonRenderer.ladderBlockHtml
+                ? (function() {
+                    var ladder = CommonRenderer.ladderBlockHtml(liq);
+                    return ladder ? '<div class="mt-4">' + ladder + '</div>' : '';
+                  })()
+                : '') +
         '</div>';
     },
 

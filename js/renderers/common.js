@@ -4392,10 +4392,20 @@ const CommonRenderer = {
         }
     },
 
-    _renderLiquiditySection(data) {
-        var body = document.getElementById('axis-liquidity-body');
-        if (!body) return;
-        var liq = data.liquidity || {};
+    // ⚠️ SHARED SO A BESPOKE PAGE CANNOT SILENTLY LOSE THE LADDER — OR RE-ACQUIRE
+    // A BUG THIS ONE HAS ALREADY FIXED. hastra-prime renders its own axis-3 panel
+    // and clears `axis-liquidity-body`, so everything below was unreachable on it:
+    // 13 measured rungs, including the collapse from -10.0bps at $5M to -857bps at
+    // $6M and -6088bps at $14M. Its own copy calls that "a hard inventory wall, not
+    // a slippage curve" — the rungs ARE the evidence for the claim, and the page
+    // made the claim without them.
+    //
+    // Copying the markup instead would have re-introduced the signed-vs-magnitude
+    // colouring defect on a fresh page the same week it was fixed here.
+    //
+    // Returns '' when the feed carries no ladder; the caller owns the empty state.
+    ladderBlockHtml(liq) {
+        liq = liq || {};
         var em = liq.exit_mark || {};
         var quotes = em.quotes || {};
 
@@ -4566,13 +4576,24 @@ const CommonRenderer = {
                 this._escapeAttr(firstSentence) + biasTxt + ' \u24d8</div>';
         }
 
-        var ladderBlock = sizes.length
-            ? '<div class="text-sm font-semibold text-slate-700 mb-2">' + ladderTitle + '</div>' +
+        // Empty state is the CALLER's call: the shared axis-3 panel says so out
+        // loud because four n/a tiles beside it would otherwise read as "nothing
+        // known", while a bespoke panel that already states its depth another way
+        // just wants nothing added.
+        if (!sizes.length) return '';
+        return '<div class="text-sm font-semibold text-slate-700 mb-2">' + ladderTitle + '</div>' +
               convLine +
               '<div class="data-table-scroll"><table class="data-table">' +
                   '<thead><tr><th>Size sold</th><th class="text-right">Slippage</th><th class="text-right">Net out</th></tr></thead>' +
-                  '<tbody>' + ladderRows + '</tbody></table></div>'
-            : '<div class="text-sm text-slate-400">No exit-mark RFQ ladder in this snapshot.</div>';
+                  '<tbody>' + ladderRows + '</tbody></table></div>';
+    },
+
+    _renderLiquiditySection(data) {
+        var body = document.getElementById('axis-liquidity-body');
+        if (!body) return;
+        var liq = data.liquidity || {};
+        var ladderBlock = this.ladderBlockHtml(liq) ||
+            '<div class="text-sm text-slate-400">No exit-mark RFQ ladder in this snapshot.</div>';
 
         // ⚠️ Four n/a's read as "we know nothing about this asset's liquidity".
         // For usdm the feed says something quite different: there is no secondary

@@ -1444,13 +1444,31 @@ var UsdaiRenderer = {
 
         // Slippage tiers — shape {output_usd, slippage_bps, ...} keyed by notional.
         var qm = slip[quoteKey] || {};
-        var tiers = ['1000', '10000', '100000', '500000'];
+        // ⚠️ WAS A HARDCODED FOUR. The feed publishes more than these and always
+        // has: usdai quotes $1M and $2M, sUSDai quotes $1M, $2.5M, $5M and $10M.
+        // Every one above $500K was dropped, silently and from the TOP — the end
+        // of the ladder that answers "can a large holder actually get out", on two
+        // assets whose own panel note says "Depth is thin against supply, so a
+        // large holder cannot exit". sUSDai showed four rungs of a ladder measured
+        // to $10M and stopped at $500K.
+        //
+        // Derived from the feed now, so a producer extending the ladder does not
+        // need a change here to be seen. Non-numeric keys are excluded: this map
+        // carries only notional-keyed quotes, and anything else is not a rung.
+        var tiers = Object.keys(qm)
+            .filter(function(k) { return k !== '' && isFinite(Number(k)); })
+            .sort(function(a, b) { return Number(a) - Number(b); });
         var hasAny = tiers.some(function(t) { return qm[t] && (qm[t].slippage_bps != null || qm[t].output_usd != null); });
         var slipBlock = '';
         if (hasAny) {
             var rows = tiers.map(function(t) {
                 var q = qm[t] || {};
-                var sizeTxt = '$' + (Number(t) / 1000).toFixed(0) + 'K';
+                // ⚠️ The old formatter divided by 1000 and appended 'K'
+                // unconditionally, so the $10M rung this list now reaches would
+                // have printed "$10000K". Shared formatter handles the magnitude.
+                var sizeTxt = (typeof CommonRenderer !== 'undefined' && CommonRenderer.formatCurrency)
+                    ? CommonRenderer.formatCurrency(Number(t))
+                    : '$' + (Number(t) / 1000).toFixed(0) + 'K';
                 var out = (q.output_usd != null) ? q.output_usd : q.out;
                 var outTxt = (out != null) ? '$' + Number(out).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—';
                 var bps = q.slippage_bps;
