@@ -74,6 +74,50 @@ for slug in $SLUGS; do
     done
 done
 
+# ============================================================================
+# BLOCK ALIASES — a producer whose MAIN block is not named `_backing`.
+#
+# ⚠️ THE SUFFIXES x SLUGS LOOP ABOVE CANNOT EXPRESS THIS, AND A PAGE SERVED A
+# TWELVE-DAY-OLD SNAPSHOT FOR IT. BMNR's analyzer publishes `bmnr_treasury.json`;
+# the dashboard's loader fetches `<slug>_backing.json` for EVERY asset (the
+# `_backing` suffix is hardcoded in app.js, and `data_source` only rewrites the
+# slug, never the suffix). A bespoke rename used to bridge the two and was lost
+# when this script became the generic loop — js/renderers/bmnr.js still carries
+# the header comment describing it: "renamed from PegTracker's bmnr_treasury.json
+# via sync_and_push.sh".
+#
+# ⚠️ THE FAILURE WAS SILENT BECAUSE THE STALE COPY WAS COMMITTED. `_treasury` IS
+# in SUFFIXES, so the fresh file kept arriving in data/ every hour under its own
+# name with no reader, while the orphaned `bmnr_backing.json` sat beside it,
+# unwritten since 2026-08-30, and the page rendered that. Nothing was missing;
+# the wrong one was being read.
+#
+# ⚠️ An alias is a NAME mapping, not a second copy allowlist — the reason the
+# loop above exists is to stop per-asset cp lines accumulating, and this must not
+# become that. Add an entry only where a producer's main block genuinely has a
+# different name, and say which producer and why.
+#
+# Format: <dashboard-name>:<producer-name>
+BLOCK_ALIASES="bmnr_backing.json:bmnr_treasury.json \
+               bmnr_backing_history.json:bmnr_treasury_history.json"
+
+for pair in $BLOCK_ALIASES; do
+    dest="${pair%%:*}"
+    srcname="${pair##*:}"
+    aliased=""
+    for root in $SOURCE_ROOTS; do
+        [ -f "$root/$srcname" ] || continue
+        cp "$root/$srcname" "data/$dest"
+        aliased="$root"
+    done
+    # ⚠️ A missing source must be LOUD. Silence here is what produced the
+    # original defect: data/$dest keeps its last copy and the page goes on
+    # serving it, looking normal and being old.
+    if [ -z "$aliased" ]; then
+        echo "$(date): ⚠️ BLOCK ALIAS UNRESOLVED — $srcname not found in any source root, so data/$dest was NOT refreshed. If it exists it is now stale and the page is serving it." >&2
+    fi
+done
+
 # ⚠️ AXIS 5 IS GENERATED, NOT COPIED. security_analyst's README invariant 1 is
 # "no stored copies of derivable state — read fresh, cache nothing", written
 # after a hand-maintained position table overstated exposure ~11x for eleven days
