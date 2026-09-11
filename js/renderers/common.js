@@ -3420,6 +3420,58 @@ const CommonRenderer = {
             head.appendChild(el);
         })(this);
 
+        // ⚠️ AXES 1 AND 3 LOST THEIR BASIS WHEN THE AUTHORED SCORE CAME OFF.
+        //
+        // Removing the divergence chip removed a NUMBER that read as a rival to
+        // the live band — correct — but the producer's EXPLANATION lived in the
+        // same chip and went with it. Measured after the change: axis 2 rendered
+        // its basis (it has the block above), axis 1 rendered none at all, and
+        // axis 3 only when an authored score filled an absent band.
+        //
+        // So the axis-basis rollout was writing axis-1 arguments that reached no
+        // reader. This gives 1 and 3 what 2 and 5 already had.
+        //
+        // ⚠️ NO NUMBER ON THE FACE. This is a collapsed explanation, not a second
+        // score — nothing to compare against the band, so it does not reopen the
+        // divergence the owner closed. crvUSD's reads "MEASURES THE MECHANISM, NOT
+        // THE CURRENT DEVIATION … PERSISTENCE-FILTERED", which is precisely why the
+        // page and the report differ and was invisible until now.
+        //
+        // ⚠️ `*_per_chain` RIDES ALONG, and it is the sharper half on some assets:
+        // yzUSD publishes "ethereum 4.5 · monad 3.5 — the rendered figure is the
+        // Ethereum one", and a Monad holder had no way to learn their leg scores
+        // worse. Rendered as the producer's own string; never recomputed here.
+        (function(self) {
+            [['axis-peg-head', data.peg, ['peg_mechanism_score', 'volatility_score'],
+              'Why the report scores peg differently'],
+             ['axis-liquidity-head', data.liquidity, ['liquidity_score'],
+              'Why the report scores liquidity differently']
+            ].forEach(function(row) {
+                var head = document.getElementById(row[0]);
+                var blk = row[1] || {};
+                if (!head) return;
+                var basis = null, perChain = null;
+                row[2].forEach(function(f) {
+                    if (!basis && typeof blk[f + '_basis'] === 'string' && blk[f + '_basis'].trim()) {
+                        basis = blk[f + '_basis'];
+                    }
+                    if (!perChain && typeof blk[f + '_per_chain'] === 'string' && blk[f + '_per_chain'].trim()) {
+                        perChain = blk[f + '_per_chain'];
+                    }
+                });
+                if (!basis && !perChain) return;
+                var el = document.createElement('div');
+                el.className = 'axis-basis-note';
+                el.innerHTML =
+                    (perChain
+                        ? '<div class="text-xs text-amber-700 mb-1">' +
+                          self._mdInlineHtml(perChain) + '</div>'
+                        : '') +
+                    (basis ? self._scoreBasisHtml(row[3], basis) : '');
+                head.appendChild(el);
+            });
+        })(this);
+
         // ⚠️ THE FIRST-LOSS ATTACHMENT POINT, WHICH A COLLATERAL RATIO CANNOT SAY.
         // For a tranched asset the question is not "is there enough collateral"
         // but "how much loss lands on somebody else first". The dashboard cannot
