@@ -156,14 +156,31 @@ var HP_REPORT = {
             // on Kiavi's DSCR loans. The ">$100M/month into Democratized Prime" is
             // the companies' own forward statement.
             //
-            // ⚠️ What is NOT claimed here, because nothing in this feed can see it:
-            // that the pool's composition has actually shifted. Naming a change we
-            // cannot measure is how the retracted trust-banner copy shipped.
+            // ⚠️ CORRECTED FROM THE FIRST VERSION OF THIS LINE, which said the
+            // composition question was "not measurable from this feed". It is
+            // PARTLY measurable and the feed already answers it: warehouse.
+            // loan_tokens carries rtl.forge (7.19e9) and dscr.forge (1.43e8)
+            // beside heloc.forge and nq.heloc.forge, all fully_in_warehouse, and
+            // the panel above already renders that table. RTL and DSCR are the
+            // Kiavi classes. The presence is observable TODAY; only the Kiavi
+            // FLOW is projected.
+            //
+            // ⚠️ WHAT REMAINS UNMEASURABLE IS THE SHARE, AND THE PAGE MUST NOT
+            // INVITE THE ARITHMETIC. decimals_resolved is false, so those native
+            // balances are in unknown and possibly differing units — dividing
+            // 1.43e8 by 4.76e10 would produce a confident "0.3% DSCR" that means
+            // nothing. Same family as the cross-decimal swap-rate defect this
+            // estate has already been bitten by once.
             '\u26a0\ufe0f Figure completed its $717M acquisition of <span class="font-semibold">Kiavi</span>, ' +
             'an investor-focused RTL/DSCR lender, taking on Kiavi\u2019s DSCR loans; both companies state the deal ' +
-            'adds <span class="font-semibold">more than $100M/month to Democratized Prime</span>. Whether the ' +
-            'pool\u2019s composition has actually shifted is <span class="font-semibold">not measurable from this ' +
-            'feed</span> \u2014 read "HELOC" as the name of a facility, not a description of its book.'
+            'adds <span class="font-semibold">more than $100M/month to Democratized Prime</span>. ' +
+            'The pool is <span class="font-semibold">already multi-class, and that part is on-chain, not projected</span>: ' +
+            'the warehouse table above holds <span class="font-mono">heloc.forge</span>, ' +
+            '<span class="font-mono">nq.heloc.forge</span>, <span class="font-mono">rtl.forge</span> and ' +
+            '<span class="font-mono">dscr.forge</span> markers, all fully in the warehouse. ' +
+            '\u26a0\ufe0f <span class="font-semibold">The SHARE of each is not computable</span> \u2014 loan-token ' +
+            'decimals are unresolved, so those native balances cannot be compared with one another. ' +
+            'Read "HELOC" as the name of a facility, not a description of its book.'
         ]
     }
 };
