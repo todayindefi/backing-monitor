@@ -346,27 +346,54 @@ var USGRenderer = {
             var worstShare = s.worst_keeper_usg_share_pct != null ? s.worst_keeper_usg_share_pct : pegDefense.worst_keeper_usg_share_pct;
             var keeperFraming = pegDefense.note || (s.collateral_ratio_alt || {}).note ||
                 (hasPolDeployed ? 'Protocol-owned liquidity is a direct peg-defense resource.' : '');
+            // ⚠️ TWO CORRECT NUMBERS THAT READ AS A CONTRADICTION. "Defense capacity
+            // $0" sat one column left of "Stables $1.1M", on every row and again in
+            // the Total, and a reader scanning the table — rather than reading the
+            // paragraph above it — sees the page assert both that there is no
+            // defense and that there is $1.1M sitting right there. It was reported
+            // as a bug and it is not one: keeper.debt() is 0 on both keepers, so
+            // nothing is POL-minted and nothing can be withdrawn and burned, while
+            // the $1.1M is LP capital in the same pools. Exit liquidity for a
+            // seller; not a resource the protocol can spend.
+            //
+            // The producer already draws that distinction in `peg_defense.note`
+            // ("LP-owned pool assets — exit liquidity for USG sellers, not
+            // deployable peg defense"), and the note renders. Prose above a table
+            // does not survive someone reading the table, so the NUMBERS now carry
+            // it: when no keeper holds debt the all-zero column is stated once and
+            // dropped, and the stables column says whose they are.
+            //
+            // ⚠️ The column stays whenever any keeper HAS debt — then the per-pool
+            // split is the point, and this must not hide it.
+            var anyDefense = pks.some(function(pk) { return (pk.defense_capacity || 0) > 0; });
+            var stablesLabel = anyDefense ? 'Stables' : 'Stables <span class="text-xs font-normal text-slate-400">(LP-owned)</span>';
             html += '<div class="panel"><div class="panel-title">PegKeeper Pools' + (hasPolDeployed ? ' (POL peg defense, ' : ' (') + pks.length + ')</div>' +
                 '<p class="text-sm text-slate-500 mb-3">' + keeperFraming + ' A high USG % signals selling pressure (balanced = 50%).</p>' +
                 '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">' +
                     '<div class="summary-card"><div class="card-label">Keeper defense capacity</div><div class="card-value ' + (defenseCapacity > 0 ? 'positive' : 'negative') + '">' + CommonRenderer.formatCurrency(defenseCapacity || 0) + '</div><div class="text-xs text-slate-400 mt-1">outstanding keeper debt available to withdraw and burn</div></div>' +
                     '<div class="summary-card"><div class="card-label">Worst pool USG share</div><div class="card-value ' + (worstShare > 70 ? 'negative' : worstShare > 60 ? 'text-amber-600' : 'positive') + '">' + CommonRenderer.formatPercent(worstShare, 2) + '</div><div class="text-xs text-slate-400 mt-1">balanced = 50%; higher signals selling pressure</div></div>' +
                 '</div>' +
-                '<table class="data-table"><thead><tr><th>Pool</th><th class="text-right">Defense capacity</th><th class="text-right">Stables</th><th class="text-right">USG</th><th class="text-right">USG %</th><th class="text-right">USG price</th></tr></thead><tbody>';
+                (anyDefense ? '' :
+                    '<p class="text-xs text-slate-500 mb-2">Neither keeper holds debt, so defense capacity is $0 on both pools. ' +
+                    'The stables below are LP capital in the same pools — what a USG seller can exit into, ' +
+                    'not something the protocol can deploy.</p>') +
+                '<table class="data-table"><thead><tr><th>Pool</th>' +
+                    (anyDefense ? '<th class="text-right">Defense capacity</th>' : '') +
+                    '<th class="text-right">' + stablesLabel + '</th><th class="text-right">USG</th><th class="text-right">USG %</th><th class="text-right">USG price</th></tr></thead><tbody>';
             var tStable = 0, tUsg = 0;
             pks.forEach(function(pk) {
                 var usgPct = pk.usg_share_pct;
                 var pctCls = usgPct > 70 ? 'text-red-600 font-bold' : usgPct > 60 ? 'text-amber-600' : 'text-green-600';
                 tStable += pk.stable_in_pool; tUsg += pk.usg_in_pool;
                 html += '<tr><td class="font-mono text-xs">' + pk.stable_symbol + '/USG</td>' +
-                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(pk.defense_capacity) + '</td>' +
+                    (anyDefense ? '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(pk.defense_capacity) + '</td>' : '') +
                     '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(pk.stable_in_pool) + ' <span class="text-xs text-slate-400">' + pk.stable_symbol + '</span></td>' +
                     '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(pk.usg_in_pool) + '</td>' +
                     '<td class="text-right font-mono ' + pctCls + '">' + usgPct.toFixed(0) + '%</td>' +
                     '<td class="text-right font-mono">$' + pk.usg_price.toFixed(4) + '</td></tr>';
             });
             html += '<tr class="font-bold border-t-2 border-slate-200"><td>Total</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(defenseCapacity) + '</td>' +
+                (anyDefense ? '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(defenseCapacity) + '</td>' : '') +
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(tStable) + '</td>' +
                 '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(tUsg) + '</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatPercent(worstShare, 0) + ' worst</td><td></td></tr>' +
