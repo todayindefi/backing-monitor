@@ -1305,6 +1305,17 @@ const CommonRenderer = {
         }
         document.getElementById('chart-panel').style.display = '';
 
+        // Idempotency, not SPA cleanup — every asset change here is a full page
+        // load (nothing in js/ calls pushState or listens for popstate), so the
+        // panel never carries another asset's state. What this guards is a
+        // SECOND call on the same page: the absent-note branch below mutates the
+        // panel, and a re-render must be able to undo that.
+        var chartPanel = document.getElementById('chart-panel');
+        var priorNote = document.getElementById('cr-chart-absent-note');
+        if (priorNote) priorNote.remove();
+        var chartHolder = chartPanel.querySelector('.chart-container');
+        if (chartHolder) chartHolder.style.display = '';
+
         opts = opts || {};
         var bands = opts.bands || {
             critical: [0, 100], thin: [100, 110], amber: [110, 130], healthy: [130, 200],
@@ -1369,6 +1380,32 @@ const CommonRenderer = {
         var rawAltHasData = !opts.omit_alt && rawAltCRValues.some(function(v) {
             return v !== null && v !== undefined;
         });
+        // ⚠️ A CHART FRAME WITH NOTHING IN IT IS NOT AN EMPTY CHART, IT IS AN
+        // UNANSWERED QUESTION. syzusd, reusd-re and reusde-re publish no
+        // `_backing_history.json` at all, so the peg history arrives here and
+        // every point maps to null: axes, bands, gridlines and the title
+        // "Collateral Ratio History" drawn over a blank plot. A reader cannot
+        // tell that from a chart that failed to load, or from a ratio that went
+        // to zero. Same symptom crvusd/usds/yzusd had from the app.js ref swap,
+        // and the same fix applies at the other end — say the series is absent.
+        //
+        // NOT the same as a series filtered to nothing by the suspect or sanity
+        // guards: there the values exist, the exclusion is the finding, and the
+        // stats line already reports it. This branch fires only when the field
+        // is not in the data at all.
+        var anyCRField = rawCRValues.some(function(v) { return v !== null && v !== undefined; });
+        if (!anyCRField && !rawAltHasData) {
+            if (chartHolder) chartHolder.style.display = 'none';
+            var note = document.createElement('div');
+            note.id = 'cr-chart-absent-note';
+            note.className = 'text-sm text-slate-400';
+            note.textContent = 'No collateral-ratio history is published for this asset.';
+            chartPanel.appendChild(note);
+            var sEl = document.getElementById('cr-chart-stats');
+            if (sEl) sEl.innerHTML = '';
+            return;
+        }
+
         var crValues = rawCRValues.filter(function(v, i) {
             return !isSuspect(historyData.entries[i]) && saneCR(v);
         });

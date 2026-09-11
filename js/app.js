@@ -477,7 +477,25 @@ async function renderAsset(slug) {
         // block was added upstream to close.
         chartOpts.history_window = (data.asset_specific && data.asset_specific.history_window) || null;
         chartOpts.asset_slug = data.asset_slug || slug;
-        CommonRenderer.renderCRChart(history, chartOpts);
+        // ⚠️ `_backing_history` WAS WRITTEN AND NEVER READ. The peg-ref block
+        // above reassigns `history` to the PEG history and stashes the backing
+        // history on it, with the stated reason "Keep the backing history
+        // reachable — chart code and renderers still read collateral series off
+        // it." Nothing read it. `renderCRChart` was handed the peg file, whose
+        // entries have no `collateral_ratio` at all, so every point mapped to
+        // null: the panel drew its axes, its bands and its title over an empty
+        // plot. Live on crvusd (362 null points), usds (337) and yzusd (172) —
+        // exactly the three assets that declare a `_peg_history.json` ref AND
+        // have a real backing history to lose.
+        //
+        // ⚠️ The tell was in the chart's own point count matching the peg
+        // chart's exactly. A reachable field is not a read field, and the
+        // comment asserting reachability is what stopped anyone looking.
+        //
+        // Only this one consumer wants the collateral series; the peg-rating and
+        // peg-chart readers below genuinely want the reassigned `history`.
+        var crHistory = (history && history._backing_history) || history;
+        CommonRenderer.renderCRChart(crHistory, chartOpts);
 
         // Breakdown table + pie: skip for crvUSD (handled in asset-specific renderer)
         var assetType = data.asset_specific && data.asset_specific.type;
