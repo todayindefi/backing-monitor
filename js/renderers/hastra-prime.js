@@ -1863,6 +1863,53 @@ var HastraPrimeRenderer = {
         '</div>';
     },
 
+    // ⚠️ A NEGATIVE IS ONLY WORTH RENDERING WITH ITS CONTROL.
+    //
+    // "No decimals available" on its own is untestable by a reader: a dead
+    // endpoint and a genuine absence on chain produce the identical empty
+    // result, and the comfortable reading — "their tool is broken" — is the
+    // wrong one here. The producer probed a KNOWN-GOOD denom, nuva.helocplus,
+    // through the same four endpoints on the same chain; it answers with an
+    // exponent and a net-asset-value. That is what turns an empty result into
+    // evidence, so the control column is not decoration and is never dropped.
+    //
+    // ⚠️ `what_would_resolve_it` carries an explicit warning against fitting the
+    // exponent to a plausible pool size. At 2 decimals the markers sum to about
+    // $475.8M against a ~$607M reserve — close enough to read as corroboration
+    // from a second method, when it is one method plus an assumption, and the
+    // error mode is a power of ten. It renders verbatim.
+    _decimalsProbeHtml: function(w) {
+        var probe = w && w.decimals_probe;
+        if (!probe || !Array.isArray(probe.checks) || !probe.checks.length) return '';
+        var rows = probe.checks.map(function(c) {
+            return '<tr>' +
+                '<td class="font-mono text-xs">' + HastraPrimeRenderer._esc(c.source || '—') + '</td>' +
+                '<td class="text-xs">' + HastraPrimeRenderer._esc(c.result || '—') + '</td>' +
+                '<td class="text-xs text-slate-500">' + HastraPrimeRenderer._esc(c.control || '—') + '</td>' +
+            '</tr>';
+        }).join('');
+        return '<div class="mt-3 border border-slate-200 dark:border-slate-700 rounded-lg p-3">' +
+            '<div class="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">' +
+                'Why the decimals are unresolved \u2014 probed, with controls</div>' +
+            (probe.blocked_figure
+                ? '<div class="text-xs text-slate-500 mb-2"><span class="font-medium">Blocked figure:</span> ' +
+                  HastraPrimeRenderer._esc(probe.blocked_figure) + '</div>'
+                : '') +
+            '<div class="data-table-scroll"><table class="data-table">' +
+                '<thead><tr><th>Endpoint</th><th>Result</th><th>Control (known-good denom)</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody></table></div>' +
+            (probe.what_would_resolve_it
+                ? '<div class="text-xs text-slate-600 dark:text-slate-300 mt-2">' +
+                  '<span class="font-medium">What would resolve it:</span> ' +
+                  HastraPrimeRenderer._esc(probe.what_would_resolve_it) + '</div>'
+                : '') +
+            (probe.probed_at
+                ? '<div class="text-[11px] text-slate-400 mt-1">probed ' +
+                  HastraPrimeRenderer._esc(String(probe.probed_at).replace('T', ' ').slice(0, 16)) + 'Z</div>'
+                : '') +
+        '</div>';
+    },
+
     _renderUpstreamDependencies: function(data) {
         var upstream = data.dependencies && Array.isArray(data.dependencies.upstream)
             ? data.dependencies.upstream : [];
@@ -1899,9 +1946,42 @@ var HastraPrimeRenderer = {
         };
         var warehouseAlerts = flags.filter(function(f) { return alertCodes[f.code]; });
         var tokens = w.loan_tokens || {};
+        // ⚠️ THE DENOMS WERE ON THE PAGE AND THE READING WAS NOT. This table has
+        // always listed heloc.forge, nq.heloc.forge, rtl.forge and dscr.forge —
+        // and RTL and DSCR are exactly the loan classes Figure took on with
+        // Kiavi, so the warehouse has been demonstrably multi-class in plain
+        // sight while the page called it a HELOC warehouse. The producer now
+        // names each class from the denom held, so the column says what the row
+        // means instead of leaving a reader to decode ".forge" prefixes.
+        var tokenClasses = w.collateral_classes_observed || {};
         var tokenRows = Object.keys(tokens).sort().map(function(denom) {
             var row = tokens[denom] || {};
+            var cls = tokenClasses[denom] || {};
+            var classCell;
+            if (cls.class_status === 'named' && cls.class) {
+                classCell = HastraPrimeRenderer._esc(cls.class) +
+                    (cls.non_qualified
+                        ? ' <span class="text-xs text-amber-700 dark:text-amber-300" title="' +
+                          HastraPrimeRenderer._esc('The denom carries an "nq" segment — non-qualified. Reported as a property of the HELOC class, not as a separate class.') +
+                          '">non-qualified</span>'
+                        : '');
+            } else if (cls.class_status) {
+                // ⚠️ RENDERED, LOUDLY. An unrecognised denom is the only
+                // ACTIONABLE state this field has: it is a request for someone to
+                // name the denom. Swallowed to an em-dash it is indistinguishable
+                // from a denom classed correctly, and the naming gap sits there
+                // forever. The producer deliberately refuses to default it to the
+                // largest class; hiding it here would undo that.
+                classCell = '<span class="text-amber-700 dark:text-amber-300" title="' +
+                    HastraPrimeRenderer._esc('This denom matched no known collateral class. It is NOT being assigned to one — ' +
+                        'defaulting it to the largest class would manufacture a composition finding out of a naming gap. ' +
+                        'It needs naming upstream.') +
+                    '">\u26a0\ufe0f unrecognised denom</span>';
+            } else {
+                classCell = '<span class="text-slate-400">\u2014</span>';
+            }
             return '<tr><td class="font-mono">' + denom + '</td>' +
+                '<td>' + classCell + '</td>' +
                 '<td class="text-right font-mono">' + HastraPrimeRenderer._num(row.balance, 0) + '</td>' +
                 '<td class="text-right font-mono">' + HastraPrimeRenderer._num(row.supply, 0) + '</td>' +
                 '<td>' + HastraPrimeRenderer._pill(
@@ -2010,11 +2090,13 @@ var HastraPrimeRenderer = {
             '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase mb-2">Inventory on DP pool contract</div>' +
                     '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Denom</th>' +
+                    '<th>Collateral class</th>' +
                     '<th class="text-right">Balance</th><th class="text-right">Supply</th><th>Custody</th></tr></thead>' +
                     '<tbody>' + tokenRows + '</tbody></table></div>' +
                     '<div class="text-xs text-slate-400 mt-2">Balances are native units. ' +
                     (decimalsResolved ? 'Denom decimals are resolved.' :
-                        'Provenance exposes no denom metadata for these loan tokens, so no decimal guess or USD scale is shown.') + '</div></div>' +
+                        'Provenance exposes no denom metadata for these loan tokens, so no decimal guess or USD scale is shown.') + '</div>' +
+                    HastraPrimeRenderer._decimalsProbeHtml(w) + '</div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase mb-2">Inventory + scope-count trend</div>' +
                     (hasHistory
                         ? '<div style="height:230px;position:relative"><canvas id="hp-warehouse-chart"></canvas></div>'
