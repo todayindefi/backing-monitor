@@ -27,12 +27,13 @@
   "liquidity_score_depth_caveat": "\u2705 status 'bracketed', is_floor false \u2014 this one may be read as depth."
  },
  "dependencies": {
-  "underlying_score": 2.5,
+  "underlying_score": 3.0,
   "underlying_score_source": "riskAnalyst:authored",
   "underlying_score_generated_at": "2026-09-11T00:00:00Z",
-  "underlying_score_basis": "\u26a0\ufe0f DELIBERATELY WORSE THAN yzUSD'S 3.0, AND THE DIRECTION IS THE POINT. 100% of this asset's value passes through ONE other asset, so every dependency yzUSD carries \u2014 including Ethena at 34.6%, 4.2x the rated surplus \u2014 arrives here undiluted, PLUS the wrapper's own layer. \u26a0\ufe0f THIS IS THE ONE AXIS WHERE THE WRAPPER RULE INVERTS: on Backing a wrapper may not outrank its underlying and takes it EQUAL; on Dependencies the underlying may not score BELOW its wrapper, because the wrapper adds a leg rather than removing one.",
+  "underlying_score_basis": "\u2705 RAISED 2.5 -> 3.0 ON 2026-09-11 AND SET EQUAL TO yzUSD. \u26a0\ufe0f THE PRIOR 2.5 WAS A VIOLATION OF A RULE SETTLED ON 2026-09-09, NOT A LIVE DISAGREEMENT: the spec resolves axis 4 as EQUAL, not notched \u2014 a wrapper's dependency set being a SUPERSET of its underlying's is A FLOOR ON THE UNDERLYING, not a mandate to notch the wrapper. syzUSD is a PURE wrapper (its only asset is yzUSD), so the rule binds with no exception. \u26a0\ufe0f AND THE 2.5'S REASONING WAS WORD-FOR-WORD THE REASONING susds USES TO SIT EQUAL AT 7.0 ('100% of this asset's value passes through one other asset') \u2014 identical premise, opposite verdict, which is what made it findable. \u26a0\ufe0f NOTHING ABOUT THE EXPOSURE CHANGED: everything yzUSD carries still arrives here undiluted, including ETHENA AT 34.6% = 4.2x THE RATED SURPLUS. It is priced at 3.0 because that is the same dependency set, not because it got safer.",
   "underlying_score_persistence": "filtered \u2014 counterparty chain, not a daily balance",
-  "underlying_score_routing": "\u26a0\ufe0f Merges after 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record."
+  "underlying_score_routing": "\u26a0\ufe0f Merges after 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record.",
+  "underlying_score_correction": "\u26a0\ufe0f THIS WAS THE ONLY GENUINE AXIS-4 VIOLATION IN THE CORPUS. A sweep of every wrapper pair on 2026-09-11 returned three mismatches; the other two were NOT violations \u2014 susdat (99% off-chain STRC, 1% USDat, so not a wrapper of its namesake) and reusde-re vs usde (a FALSE PAIR: sUSDe is reUSDe's COLLATERAL, not what it wraps). \u26a0\ufe0f `underlying_assets` conflates 'wraps X' with 'holds X', so a sweep keyed on that field alone produces false positives that hide the real one."
  },
  "issuer": {
   "issuer_score": 4.0,

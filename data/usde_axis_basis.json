@@ -6,19 +6,36 @@
  "peg": {
   "peg_mechanism_score": 6.5,
   "peg_mechanism_score_source": "riskAnalyst:authored",
-  "peg_mechanism_score_basis": "MEASURES THE MECHANISM UNDER STRESS, NOT TODAY'S DEVIATION. Hybrid backing — roughly 89% conventional credit-style assets and 11% residual perps — with a mint/burn primary path and arb-driven secondary peg. The score rests on a DEMONSTRATED event rather than a model: it held through a $1.5B+ single-event outflow in October 2025 without peg failure. A live band cannot show that; it shows only that today is calm.",
-  "peg_mechanism_score_persistence": "filtered — demonstrated stress performance, not spot deviation"
+  "peg_mechanism_score_basis": "MEASURES THE MECHANISM UNDER STRESS, NOT TODAY'S DEVIATION. Hybrid backing \u2014 roughly 89% conventional credit-style assets and 11% residual perps \u2014 with a mint/burn primary path and arb-driven secondary peg. The score rests on a DEMONSTRATED event rather than a model: it held through a $1.5B+ single-event outflow in October 2025 without peg failure. A live band cannot show that; it shows only that today is calm.",
+  "peg_mechanism_score_persistence": "filtered \u2014 demonstrated stress performance, not spot deviation"
  },
  "backing": {
   "backing_score": 6.5,
   "backing_score_source": "riskAnalyst:authored",
-  "backing_score_basis": "MEASURES RESERVE COMPOSITION AND THE VERIFICATION STACK, not the live collateral ratio. Lifted on three structural developments — a reserve fund materially above its own floor, continuous third-party proof-of-reserves, and off-exchange institutional custody. ⚠️ The reserve fund's COVER falls as supply grows even when the fund does not move: it fell from 1.534% to 1.409% in fifteen days on dilution alone, which no live ratio surfaces.",
-  "backing_score_persistence": "filtered — composition and verification, not the live ratio"
+  "backing_score_basis": "MEASURES RESERVE COMPOSITION AND THE VERIFICATION STACK, not the live collateral ratio. Lifted on three structural developments \u2014 a reserve fund materially above its own floor, continuous third-party proof-of-reserves, and off-exchange institutional custody. \u26a0\ufe0f The reserve fund's COVER falls as supply grows even when the fund does not move: it fell from 1.534% to 1.409% in fifteen days on dilution alone, which no live ratio surfaces.",
+  "backing_score_persistence": "filtered \u2014 composition and verification, not the live ratio"
  },
  "liquidity": {
   "liquidity_score": 7.0,
   "liquidity_score_source": "riskAnalyst:authored",
-  "liquidity_score_basis": "MEASURES DEPTH RELATIVE TO A SHRINKING BOOK. Genuinely deep across DEX and CEX venues with $100M+ daily volume — but HELD rather than raised, because absolute depth shrank in lockstep with a roughly 60% supply contraction from peak. ⚠️ A ratio that holds while both terms fall is not the same as depth that held.",
-  "liquidity_score_persistence": "filtered — depth relative to book size, not absolute"
+  "liquidity_score_basis": "MEASURES DEPTH RELATIVE TO A SHRINKING BOOK. Genuinely deep across DEX and CEX venues with $100M+ daily volume \u2014 but HELD rather than raised, because absolute depth shrank in lockstep with a roughly 60% supply contraction from peak. \u26a0\ufe0f A ratio that holds while both terms fall is not the same as depth that held.",
+  "liquidity_score_persistence": "filtered \u2014 depth relative to book size, not absolute"
+ },
+ "dependencies": {
+  "underlying_score": 6.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES THE COUNTERPARTY SET \u2014 HOW MANY, HOW CONCENTRATED, HOW SUBSTITUTABLE \u2014 WITH VERIFIABILITY LEFT TO BACKING SO THE TWO AXES DO NOT PRICE ONE FACT TWICE. \u26a0\ufe0f AUTHORED 2026-09-10; this axis existed on NEITHER surface, and tidresearch needed it to publish the Contract & Admin 5.5 authored the same morning. \u26a0\ufe0f\u26a0\ufe0f MEASURED AGAINST THE AUGUST ATTESTATION, WHICH OUR OWN FEED HAS NOT INGESTED: backing-monitor embeds Ethena's JULY 23 snapshot at 48 days old while the AUGUST 26 attestation (its 21st, published 2026-09-03) is live, AND THE DIFFERENCE MOVES THE CENTRAL NUMBER SIXTEEN POINTS IN ETHENA'S FAVOUR. \u26a0\ufe0f SO THIS SCORE IS MEASURED AGAINST BETTER DATA THAN THE DASHBOARD HOLDS \u2014 the unusual direction, and worth stating because a reader who assumes the stale side is the harsh side has it backwards here. \u26a0\ufe0f THIS SCORE IS INHERITED BY susde, so any re-derivation moves both.",
+  "underlying_score_persistence": "filtered \u2014 counterparty set, not a daily balance",
+  "underlying_score_denominator": "\u26a0\ufe0f THE FEED'S ATTESTATION IS 48 DAYS OLD AT THE TIME OF THIS WRITING. Any dependency share computed from backing-monitor's embedded snapshot is a JULY figure. Re-date before quoting.",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after backing-monitor's 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record."
+ },
+ "issuer": {
+  "issuer_score": 7.0,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY AND ITS GOVERNANCE. \u2705 WHAT THE 7.0 RESTS ON, UNCHANGED: doxxed team, top-tier investors, regulatory engagement, PROVEN THROUGH THE OCT 10 2025 STRESS EVENT (which is what raised it from 6.0), and a genuinely broad verification ecosystem \u2014 Reserve Fund subcommittee, LlamaRisk, Blockworks, Chaos Labs, Chainlink. \u26a0\ufe0f\u26a0\ufe0f HELD AT 7.0 ON 2026-09-10 BUT ITS REASONS WERE REWRITTEN, AND THE STRUCK CLAUSE MATTERS: the prior basis said 'ENA-token voting is still absent \u2026 but the Risk Committee structure provides functional governance review'. BOTH HALVES WERE FALSE. ENA-token voting EXISTS, and its first material use (Snapshot 0xcb6b9ed95bf0c64b6101ff7d3a770af86e07701d8419b541cf91a6894022f2a3, closed/final 2026-09-02) EXPLICITLY SUPERSEDED THE RISK COMMITTEE'S PARAMETER \u2014 so the body cited as the COMPENSATING CONTROL is the one that was OVERRIDDEN. \u26a0\ufe0f A SCORE CAN BE RIGHT WHILE ITS STATED REASON IS FALSE, AND THE REASON IS WHAT A READER ACTS ON. \u26a0\ufe0f THIS SCORE IS INHERITED BY susde.",
+  "issuer_score_persistence": "filtered \u2014 entity and governance, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration pending the axis-4 render decision."
  }
 }

@@ -6,19 +6,36 @@
  "peg": {
   "peg_mechanism_score": 2.5,
   "peg_mechanism_score_source": "riskAnalyst:authored",
-  "peg_mechanism_score_basis": "MEASURES THE REDEMPTION MECHANISM, NOT THE MARKET PRICE. An RWA-collateralised synthetic with NO ATOMIC ON-CHAIN REDEMPTION — the peg relies on opaque off-chain USDC settlement plus secondary liquidity. ⚠️ What an earlier revision treated as a temporary intraweek break has HARDENED into a standing discount, so this is scored as a structural feature rather than an excursion. A live price near par would not restore the missing redemption path.",
-  "peg_mechanism_score_persistence": "filtered — redemption mechanism, not market price"
+  "peg_mechanism_score_basis": "MEASURES THE REDEMPTION MECHANISM, NOT THE MARKET PRICE. An RWA-collateralised synthetic with NO ATOMIC ON-CHAIN REDEMPTION \u2014 the peg relies on opaque off-chain USDC settlement plus secondary liquidity. \u26a0\ufe0f What an earlier revision treated as a temporary intraweek break has HARDENED into a standing discount, so this is scored as a structural feature rather than an excursion. A live price near par would not restore the missing redemption path.",
+  "peg_mechanism_score_persistence": "filtered \u2014 redemption mechanism, not market price"
  },
  "backing": {
   "backing_score": 2.0,
   "backing_score_source": "riskAnalyst:authored",
-  "backing_score_basis": "MEASURES ATTESTED COVERAGE AND ITS SCOPE. Attested collateralisation has run SUB-100% since the June 2026 drawdown. ⚠️ The attested ratio is NETTED of protocol-owned liquidity and inventory on both sides — it is not reserves over supply — and only the SECURITIES leg is CPA-examined, leaving roughly 43.6% of the reserve outside that scope. Neither disclosure layer attests liabilities, so no opinion exists on coverage at all.",
-  "backing_score_persistence": "filtered — attested coverage on a netted basis, scope-limited"
+  "backing_score_basis": "MEASURES ATTESTED COVERAGE AND ITS SCOPE. Attested collateralisation has run SUB-100% since the June 2026 drawdown. \u26a0\ufe0f The attested ratio is NETTED of protocol-owned liquidity and inventory on both sides \u2014 it is not reserves over supply \u2014 and only the SECURITIES leg is CPA-examined, leaving roughly 43.6% of the reserve outside that scope. Neither disclosure layer attests liabilities, so no opinion exists on coverage at all.",
+  "backing_score_persistence": "filtered \u2014 attested coverage on a netted basis, scope-limited"
  },
  "liquidity": {
   "liquidity_score": 3.0,
   "liquidity_score_source": "riskAnalyst:authored",
-  "liquidity_score_basis": "MEASURES EXECUTABLE EXIT, and the figure it replaced was an artifact. A prior derivation quoted slippage on a PAR basis while the asset traded at a discount, triple-counting depth; the corrected basis is what this scores. ⚠️ Exit is further constrained by a cooldown into a terminal asset that is itself sub-par, so the realisable exit is worse than a spot quote implies.",
-  "liquidity_score_persistence": "filtered — executable exit including cooldown, not spot slippage"
+  "liquidity_score_basis": "MEASURES EXECUTABLE EXIT, and the figure it replaced was an artifact. A prior derivation quoted slippage on a PAR basis while the asset traded at a discount, triple-counting depth; the corrected basis is what this scores. \u26a0\ufe0f Exit is further constrained by a cooldown into a terminal asset that is itself sub-par, so the realisable exit is worse than a spot quote implies.",
+  "liquidity_score_persistence": "filtered \u2014 executable exit including cooldown, not spot slippage"
+ },
+ "dependencies": {
+  "underlying_score": 3.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES WHAT THE RESERVE PASSES THROUGH TO. Basket 2026-09-07: STRC 56.44%, Inventory 17.55%, Protocol Owned Liquidity 17.33%, Cash & Equivalents 8.67%. \u26a0\ufe0f\u26a0\ufe0f THE GROSS SHARE UNDERSTATES THE CONCENTRATION AND THE ISSUER'S OWN BASIS SAYS SO: apxUSD's attested CR is NETTED ON BOTH SIDES \u2014 (reserves \u2212 POL \u2212 inventory) / (supply \u2212 POL \u2212 inventory) \u2014 so on the issuer's own accounting STRC is a far larger share of what actually backs the token than 56.44% suggests. \u26a0\ufe0f POL AND INVENTORY ARE CIRCULAR INSIDE THE BASKET: they are the protocol's own positions, so counting them as diversification counts the issuer as its own counterparty. \u26a0\ufe0f AUTHORED 2026-09-09 ON MERITS. tidresearch publishes 5.0 and THAT VALUE HAS NO RATIONALE ROW \u2014 grepped 2026-09-09, only the frontmatter field and an unrelated Backing paragraph. The same genuinely-unsourced case as sUSDat, and the OPPOSITE of usdat and hastra-prime whose published Underlying rows are substantive. THE 2-POINT GAP STANDS AS A DIVERGENCE RATHER THAN BEING SILENCED BY ADOPTION.",
+  "underlying_score_persistence": "filtered \u2014 basket composition, not a daily balance",
+  "underlying_score_denominator": "\u26a0\ufe0f ASK WHICH DENOMINATOR THE ATTESTED CR DIVIDES BY. It is NETTED of POL and inventory on both sides. A gross/netted inversion here flatters the coverage AND understates the concentration at the same time.",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after backing-monitor's 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record."
+ },
+ "issuer": {
+  "issuer_score": 5.0,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "\u26a0\ufe0f MEASURES ISSUER BEHAVIOUR UNDER STRESS, NOT CONTRACT POSTURE \u2014 AND THE CUT IS ENTIRELY ON THE FORMER. CUT 5.5 -> 5.0 (June 2026). \u2705 THE CONTRACT/ADMIN POSTURE IS GENUINELY UNCHANGED AND REMAINS ABOVE SELF-ATTESTING PEERS: 3 audits including formal verification, a 4-of-6 Safe with a 72h target delay and a distributed guardian, two-layer disclosure (Accountable TEE PoR plus monthly Wolf AICPA), brokerage named (Alpaca), STRCx Safe identified (0x37b0779a\u2026). \u26a0\ufe0f THE NOTCH IS FOR WHAT THE DEPEG REVEALED ABOUT OPERATIONS: off-chain reconciliation FAILED TO HOLD PAR UNDER A REAL RUN; secondary depth is DISCRETIONARILY PULLED OFF-HOURS; and the reserve is ~66% concentrated in a single instrument (STRC) THE ISSUER CHOSE AND WHICH HAS NOW DE-ANCHORED. \u26a0\ufe0f A GOOD AUDIT RECORD AND A BAD RUN ARE NOT IN TENSION \u2014 they are evidence about different things, and this axis prices the second. STANDING OFFSETS CARRIED: April Wolf cash-scope narrowing, a mid-tier rather than Big-4 auditor, and the STRCx Safe lacking a timelock.",
+  "issuer_score_persistence": "filtered \u2014 operator behaviour and disclosure, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration pending the axis-4 render decision."
  }
 }
