@@ -215,6 +215,26 @@ const CommonRenderer = {
         var expected = [];
         if (typeof data.asset_slug === 'string' && data.asset_slug) expected.push(data.asset_slug);
         if (typeof sourceSlug === 'string' && sourceSlug) expected.push(sourceSlug);
+        // ⚠️ THE DASHED SPELLING WAS REFUSED DESPITE THE COMMENT ABOVE SAYING IT
+        // SHOULD NOT BE. The stated intent is that reusd-re and reusd_re are "the
+        // same identity in the two spellings the pipeline already uses" — but both
+        // entries pushed above are the UNDERSCORED form (asset_slug and the
+        // resolved source slug are derived the same way), so a producer writing the
+        // dashed URL slug in `asset` hit an identity refusal.
+        //
+        // ⚠️ Found on riskAnalyst's completed axis-basis rollout: they renamed
+        // three dashed FILENAMES so the sync would resolve them, deliberately left
+        // the `asset` field dashed — and verified that on purpose, because a rename
+        // that silently rewrote the payload would have been worse. The files then
+        // synced and merged into NOTHING. The trap one level deeper than the one we
+        // had just fixed.
+        //
+        // Normalising both sides closes it without loosening what identity means:
+        // a genuinely wrong slug still refuses.
+        expected.forEach(function(e) {
+            var alt = e.replace(/_/g, '-');
+            if (alt !== e && expected.indexOf(alt) === -1) expected.push(alt);
+        });
 
         overlays.forEach(function(o) {
             if (!o || !o.json || typeof o.json !== 'object' || Array.isArray(o.json)) return;

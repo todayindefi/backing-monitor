@@ -1,0 +1,49 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "reusde-re",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "volatility_score": 3.5,
+  "volatility_score_source": "riskAnalyst:authored",
+  "volatility_score_generated_at": "2026-09-11T00:00:00Z",
+  "volatility_score_basis": "MEASURES NAV BEHAVIOUR WHERE FLUCTUATION IS THE DESIGN, NOT A FAULT. \u26a0\ufe0f NAV IS DESIGNED TO MOVE WITH UNDERWRITING OUTCOMES, SO DRAWDOWNS ARE STRUCTURAL RATHER THAN ANOMALOUS \u2014 a drawdown here is the product working, and scoring it as instability would misread the instrument. \u26a0\ufe0f AND THIS AXIS CARRIES reUSDe's SUBORDINATION, which the Backing row deliberately excludes: seniority is priced here and on Redemption, not twice. Feed: NAV 1.41403 against market 1.41409, +0.5bp \u2014 essentially at NAV, which says the mark is currently uncontested and says nothing about what underwriting will do to it.",
+  "volatility_score_persistence": "filtered \u2014 underwriting exposure, not spot price"
+ },
+ "backing": {
+  "backing_score": 5.5,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "MEASURES THE REINSURANCE BOOK ITSELF, EXPLICITLY EXCLUDING SUBORDINATION. Added 2026-08-30 on the reasoning that this is the SAME reinsurance book as reUSD. \u26a0\ufe0f SUBORDINATION IS DELIBERATELY NOT SCORED HERE \u2014 it is carried by Volatility 3.5 and Redemption 2.0, because scoring seniority twice is the double-count this frame exists to prevent; the same rule was applied to yzPP and to GHO's seized GSM. \u26a0\ufe0f THE FEED COMPUTES NOTHING FOR THIS ASSET (`collateral_ratio: null`, `total_backing: null`), so this authored number is the only figure on the axis and nothing cross-checks it.",
+  "backing_score_persistence": "filtered \u2014 book composition, not a spot ratio",
+  "backing_score_conflict": "\u2705 RESOLVED 2026-09-11 FROM RE'S OWN DOCUMENTATION, NOT BY ARBITRATING BETWEEN OUR TWO ROWS. docs.re.xyz/capital-stack-and-loss-waterfall/loss-waterfall-order states the waterfall bottom-to-top as: reinsurance premiums -> Re capital (junior/first-loss) -> reUSDe (MEZZANINE) -> reUSD (SENIOR), with stated impairment probabilities of 3.9% / 0.9% / 0.03%. Verbatim: 'should an extreme event bring about losses to reUSDe, it'll absorb further losses before reUSD is impacted.' \u26a0\ufe0f\u26a0\ufe0f THE CUT CORRECTLY DOES NOT PROPAGATE, AND THE REASON IS THAT THE TWO ATTACHMENT POINTS COUNT DIFFERENT THINGS: reUSD's backing cut (5.5 -> 5.0 on 2026-09-06) priced the SENIOR'S attachment point \u2014 the cushion beneath reUSD, which is Re capital PLUS reUSDe ITSELF. reUSDe's own cushion is Re capital ALONE. A thinning senior attachment point is therefore not the same measurement as a thinning mezzanine cushion, and applying one to the other would import a figure whose denominator includes the very tranche being scored. \u2705 SO 5.5 STANDS AND WAS NOT MOVED. \u26a0\ufe0f WHAT IS DEFECTIVE IS THE SENTENCE 'SAME reinsurance book as reUSD, THEREFORE the same score': the BOOK is genuinely the same and the CONCLUSION does not follow from it, because these rows price different questions \u2014 reUSD's backing includes subordination adequacy, reUSDe's explicitly excludes it (carried on Volatility 3.5 and Redemption 2.0). The clause was true while both read 5.5 and became misleading the moment one moved for a tranche-specific reason. \u26a0\ufe0f A COINCIDING NUMBER HELD AN UNSOUND INFERENCE UPRIGHT FOR THREE DAYS \u2014 remove the 'therefore', keep the shared-book fact.",
+  "backing_score_tranche": "\u26a0\ufe0f reUSDe IS THE MEZZANINE (SECOND-LOSS) TRANCHE, reUSD IS THE SENIOR \u2014 confirmed against Re's docs 2026-09-11. Stated impairment probability 0.9% against the senior's 0.03%: THIRTY TIMES more likely to be impaired, on the same book. Any comparison of these two assets that does not carry the tranche is comparing two different instruments by their shared collateral."
+ },
+ "liquidity": {
+  "liquidity_score": 2.0,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "MEASURES THE BINDING EXIT CONSTRAINT. \u26a0\ufe0f RAISED 1.5 -> 2.0 ON 2026-09-06 BECAUSE 1.5 WAS WRONG-HARSH \u2014 recorded with the direction stated, because an overstated risk score is not the safe direction: it can push a holder out of a position over a figure that was never right. \u26a0\ufe0f THE FEED EXPLICITLY DECLINES TO MEASURE DEPTH HERE \u2014 `total_2pct_depth: null` with `two_pct_depth_status: 'not_measured'`. \u2705 THAT IS A DECLARED REFUSAL, NOT A FAILURE AND NOT AN OVERSIGHT, and it is the cleanest of the non-measurement cases in this estate: it says nothing was attempted rather than implying something was found. The score rests on the primary channel, not a venue.",
+  "liquidity_score_persistence": "filtered \u2014 exit-channel structure, not spot depth",
+  "liquidity_score_depth_caveat": "\u2705 `not_measured` IS THE HONEST STATUS AND SHOULD BE READ AS SUCH \u2014 contrast usdat/susdat ('quote_failed', a probe that broke) and apyusd/apxusd ('ladder_exhausted', a probe that ran out). Only this one declares that no attempt was made."
+ },
+ "dependencies": {
+  "underlying_score": 4.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES THE COUNTERPARTY SET. \u26a0\ufe0f Added 2026-08-30 and set WORSE THAN reUSD's 5.0 DELIBERATELY: reUSDe depends on the same reinsurance book AND on an additional layer that reUSD does not carry. \u26a0\ufe0f THIS IS THE AXIS WHERE THE WRAPPER RULE INVERTS \u2014 on Backing a wrapper takes its underlying EQUAL, on Dependencies the underlying may not score BELOW its wrapper, because the wrapper adds a leg rather than removing one. The half-point gap against reUSD is that extra leg, priced once.",
+  "underlying_score_persistence": "filtered \u2014 counterparty chain, not a daily balance",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record.",
+  "underlying_score_wrapper_rule": "\u2705 NOT A WRAPPER-RULE VIOLATION. An axis-4 sweep pairs reusde-re 4.0 against usde 6.0 because sUSDe appears in `underlying_assets` \u2014 \u26a0\ufe0f BUT THAT IS COLLATERAL, NOT WRAPPING. reUSDe does not wrap sUSDe; it is Re's MEZZANINE tranche which holds sUSDe as collateral. A FALSE PAIR, produced because `underlying_assets` conflates 'wraps X' with 'holds X'. The relevant comparison is to reusd-re (senior), and that gap is a TRANCHE difference, resolved 2026-09-11 against Re's loss waterfall."
+ },
+ "issuer": {
+  "issuer_score": 5.5,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY: Resilience BVI Ltd., regulated by the BVI Financial Services Commission \u2014 a named, licensed entity, which is what holds this above the unnamed-operator cases. Same issuer as reUSD and held equal to it: one entity, one judgement. \u26a0\ufe0f Added 2026-08-30 \u2014 THIS REPORT RENDERED NO ISSUER AXIS AT ALL before that date.",
+  "issuer_score_persistence": "filtered \u2014 entity and supervision, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration."
+ },
+ "redemption_note": "\u26a0\ufe0f A SEPARATE `redemption_score` OF 2.0 EXISTS and is not rendered through this envelope. REVISED DOWN 2.5 -> 2.0 on 2026-08-12 ON THE FIRST WINDOW'S EVIDENCE \u2014 quarterly windows plus a 40-day notice, and the July 2026 window FILLED TO ITS $1.5M CAP at ~7.9% of the tranche. \u26a0\ufe0f A CAP THAT FILLS IS DEMAND EXCEEDING THE CHANNEL, so the constraint is proven rather than theoretical, and this axis carries reUSDe's subordination alongside Volatility.",
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` block \u2014 the contract overlay already carries a rendering structural_score_basis."
+}
