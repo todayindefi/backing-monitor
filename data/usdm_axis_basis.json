@@ -1,0 +1,47 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "usdm",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "peg_mechanism_score": 7.0,
+  "peg_mechanism_score_source": "riskAnalyst:authored",
+  "peg_mechanism_score_generated_at": "2026-09-11T00:00:00Z",
+  "peg_mechanism_score_basis": "MEASURES THE MECHANISM ON PAPER, AND IT IS THE HIGHEST SCORE ON THIS ASSET BY SOME MARGIN \u2014 WHICH IS THE THING TO BE CAREFUL ABOUT. Reserve-backed by a fiat-stable basket with an oracle-priced FPMM, strong by design. The unit holds: \u22127.6bp, market 0.99924. \u26a0\ufe0f\u26a0\ufe0f BUT THE PEG HOLDING IS NOT EVIDENCE THE RESERVE IS WHOLE. The feed reports collateral_ratio 91.21 \u2014 an $1,325,631.79 DEFICIT on $13,758,936.23 of backing. \u26a0\ufe0f A MECHANISM CAN DEFEND PAR ON AN UNDERCOLLATERALIZED BOOK FOR A LONG TIME, AND A TIGHT PEG BESIDE A 7.0 WILL READ AS CONFIRMATION OF SOLVENCY TO ANY READER WHO DOES NOT SEE THE BACKING AXIS. These two axes disagree on this asset and the disagreement is the finding \u2014 read them together or not at all.",
+  "peg_mechanism_score_persistence": "filtered \u2014 mechanism design, not spot-responsive",
+  "peg_mechanism_score_cross_axis": "\u26a0\ufe0f DO NOT CITE THE \u22127.6bp DEVIATION AS EVIDENCE OF BACKING QUALITY. Observed par is what the mechanism produces; whether there are assets behind it is axis 2, and axis 2 currently says 91.21%."
+ },
+ "backing": {
+  "backing_score": 4.5,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "\u26a0\ufe0f\u26a0\ufe0f MEASURES AGGREGATE MENTO RESERVE COVERAGE, AND IT IS BELOW PAR \u2014 THIS IS ONE OF THE FEW ASSETS IN THE CORPUS WHERE THE RATIO IS BOTH A REAL MEASUREMENT AND ADVERSE. collateral_ratio 91.21 with surplus_deficit \u2212$1,325,631.79 against total_backing $13,758,936.23. \u26a0\ufe0f THAT IS NOT AN ACCOUNTING IDENTITY \u2014 unlike usdat, susds and the syrup pools, where backing is DEFINED as the supply and the ratio cannot print anything but ~100, here reserve assets and liabilities are independently determined, SO 91.21% CARRIES INFORMATION AND THE INFORMATION IS A SHORTFALL. \u26a0\ufe0f CUT FROM 5.0. On-chain verified 2026-07-23 and cross-checked against Mento's own published figures rather than taken from one side. \u26a0\ufe0f COVERAGE IS AGGREGATE ACROSS THE MENTO RESERVE, NOT RING-FENCED PER STABLE \u2014 a USDm holder's claim is on a shared pool, so the 91.21% is not a per-asset coverage figure.",
+  "backing_score_persistence": "filtered \u2014 reserve composition; the ratio itself is spot-responsive",
+  "backing_score_denominator": "\u2705 ASK WHAT THE RATIO DIVIDES BY \u2014 here it is the good case: reserve assets over stablecoin liabilities, two independently determined quantities. \u26a0\ufe0f BUT THE NUMERATOR IS SHARED ACROSS MENTO'S STABLE SET, so this is aggregate coverage and NOT a claim about USDm specifically."
+ },
+ "liquidity": {
+  "liquidity_score": 5.0,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "\u26a0\ufe0f MEASURES WHETHER AN EXIT EXISTS, AND THE HEADLINE POOL IS INCENTIVIZED BUT NOT USED. $509K Mento FPMM USDC/USDm pool on Monad paying ~16.7% APY via Merkl \u2014 \u26a0\ufe0f\u26a0\ufe0f WITH 24-HOUR VOLUME OF $0. A pool that pays to exist and transacts nothing is not exit liquidity; it is TVL. \u26a0\ufe0f AN INCENTIVE-SUSTAINED POOL HAS A DURABILITY QUESTION ATTACHED THAT A NATURALLY-FORMED ONE DOES NOT: the depth is contingent on the campaign continuing, and zero volume means nothing is testing whether it would clear. Thin elsewhere.",
+  "liquidity_score_persistence": "filtered \u2014 venue structure and incentive durability, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f THE FEED COMPUTES NO DEPTH FOR THIS ASSET (`total_2pct_depth: null`), so this authored 5.0 has nothing beside it to agree or disagree with. \u26a0\ufe0f AND A COMPUTED BAND WOULD NOT HAVE HELPED HERE: a 2% depth probe measures what a pool WOULD absorb, not whether anyone has ever traded it. $0 of 24h volume is invisible to a depth ladder."
+ },
+ "dependencies": {
+  "underlying_score": 4.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-11T00:00:00Z",
+  "underlying_score_basis": "MEASURES THE COUNTERPARTY SET BEHIND A SHARED RESERVE. USDm's claim is on the AGGREGATE Mento Reserve, so its dependencies include the other stables drawing on the same pool \u2014 a holder is exposed to redemptions they are not party to. \u26a0\ufe0f THIS IS WHY COVERAGE AND DEPENDENCIES ARE NOT THE SAME QUESTION HERE: the 91.21% is a fact about the pool, and this axis prices who else can draw on it.",
+  "underlying_score_persistence": "filtered \u2014 reserve architecture, not a daily balance",
+  "underlying_score_routing": "\u26a0\ufe0f Merges after 49d0b4ca2 but axis 4 renders no score today \u2014 source-of-record."
+ },
+ "issuer": {
+  "issuer_score": 6.5,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY AND ITS DISCLOSURE, AND IT IS THE SECOND-HIGHEST SCORE ON AN ASSET WHOSE RESERVE IS BELOW PAR. Doxxed Mento Labs team, direct cLabs lineage, $10M Hashkey-led raise, ChainSecurity audits. \u26a0\ufe0f A STRONG ISSUER SCORE IS NOT A MITIGANT FOR A 91.21% RATIO \u2014 it says the team is identifiable and has been audited, not that the reserve is whole. Scoring the shortfall more leniently because the issuer is credible would be the exact move this frame separates axes to prevent.",
+  "issuer_score_persistence": "filtered \u2014 entity and disclosure, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration."
+ },
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` block \u2014 the contract overlay already carries a rendering structural_score_basis."
+}

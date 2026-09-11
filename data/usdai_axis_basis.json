@@ -1,0 +1,40 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "usdai",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "peg_mechanism_score": 7.0,
+  "peg_mechanism_score_source": "riskAnalyst:authored",
+  "peg_mechanism_score_generated_at": "2026-09-11T00:00:00Z",
+  "peg_mechanism_score_basis": "MEASURES THE MECHANISM, NOT THE \u22122.6bp DEVIATION. 1:1 PYUSD mint/redeem is a fiat-backed-with-redemption design, which is the strongest mechanism class in this corpus. \u26a0\ufe0f THE SCORE INHERITS PYUSD'S OWN MECHANISM RISK \u2014 a 1:1 redemption into PYUSD is only as good as PYUSD's redemption, so this 7.0 rests on a second issuer's arrangement and is not independent of it.",
+  "peg_mechanism_score_persistence": "filtered \u2014 mechanism design, not spot-responsive"
+ },
+ "backing": {
+  "backing_score": 7.0,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "MEASURES RESERVE QUALITY AND CUSTODY LOCATION, NOT THE RATIO \u2014 which is an identity. \u2705 THE STRONG FACT IS CUSTODY: the reserve is PYUSD held DIRECTLY IN THE USDai CONTRACT, so the assets are where a reader can see them rather than at an unwalked portal layer. That is precisely what usdat LOST in its 2026-08-19 rotation, and it is why these two assets score differently on similar-looking ratios. Quality is high: PYUSD is regulated and T-Bill backed. \u26a0\ufe0f THE FEED'S collateral_ratio 100.0 WITH A SURPLUS OF $0.92 ON $290,117,769.24 IS AN ACCOUNTING IDENTITY \u2014 ninety-two cents of surplus on a $290M book is rounding, and backing is defined as PYUSD held against supply. The ratio carries no information; THE CUSTODY LOCATION DOES, and that is what the 7.0 prices.",
+  "backing_score_persistence": "filtered \u2014 reserve quality and custody, not a spot ratio",
+  "backing_score_denominator": "\u26a0\ufe0f backing = PYUSD held = supply by construction, so the quotient cannot print anything but ~100. Never quote '100% collateralized' here as though it were a solvency measurement."
+ },
+ "liquidity": {
+  "liquidity_score": 4.5,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "\u26a0\ufe0f THE WEAK DIMENSION, AND IT IS THE ONE TO READ FIRST ON THIS ASSET. USDai/USDC Curve under ~$2M plus a thin Uni V4 pool; no CEX; the retail path is the constraint. \u26a0\ufe0f ~$2M OF VENUE AGAINST A $290,117,769.24 BOOK \u2014 under 0.7% \u2014 so peg 7.0 and backing 7.0 describe an asset most holders cannot exit at scale. The three axes are not in tension; they answer different questions and only one of them is about getting out.",
+  "liquidity_score_persistence": "filtered \u2014 venue structure, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f THE FEED'S total_2pct_depth OF $2,000,000 IS NOT A MEASUREMENT: is_floor true, status 'ladder_exhausted' \u2014 the ladder ran out without resolving a 2% crossing. It coincides with the ~$2M venue figure, \u26a0\ufe0f AND THE COINCIDENCE IS NOT CORROBORATION: a ladder that exhausts at its top rung reports that rung, so agreement with the pool size is arithmetic, not confirmation."
+ },
+ "issuer": {
+  "issuer_score": 5.0,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY. Credible VC backing (Framework, Dragonfly, Coinbase Ventures, Arbitrum) and a MetaStreet lineage. \u26a0\ufe0f VC BACKING IS EVIDENCE ABOUT DILIGENCE AT A POINT IN TIME, NOT AN ONGOING CONTROL \u2014 it does not constrain what the issuer can do after the round, and it is scored as reputation rather than as a mitigant.",
+  "issuer_score_persistence": "filtered \u2014 entity, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration."
+ },
+ "dependencies_note": "\u26a0\ufe0f NO `underlying_score` EXISTS ON THIS ASSET \u2014 axis 4 is genuinely absent, not merely unrouted, so there is no block here. \u26a0\ufe0f THAT IS A REAL GAP AND A LOAD-BEARING ONE: USDai's reserve is entirely another issuer's stablecoin, which makes counterparty concentration close to total and squarely an axis-4 question. Declared rather than authored \u2014 filling it needs a pass on PYUSD's own dependency set, not a restatement of the backing row.",
+ "coverage_note": "\u26a0\ufe0f AXIS 5 IS DECLINED ON THIS ASSET, NOT SCORED LOW: the walk covered plasma only, 1 of 4 declared chains. structural_score 3.0 exists in frontmatter; coverage extension for arbitrum, ethereum and base was routed to security_analyst.",
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` block \u2014 the contract overlay carries the rendering structural_score_basis where one exists."
+}

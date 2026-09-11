@@ -1,0 +1,39 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "cusd",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "peg_mechanism_score": 6.0,
+  "peg_mechanism_score_source": "riskAnalyst:authored",
+  "peg_mechanism_score_generated_at": "2026-09-11T00:00:00Z",
+  "peg_mechanism_score_basis": "MEASURES THE DEFENCE MECHANISM AND ITS ARB PATH. A basket-backed PSM with PROPORTIONAL-BASKET REDEMPTION is reasonable and arb-supported. \u26a0\ufe0f PROPORTIONAL-BASKET IS THE LOAD-BEARING DETAIL AND IT CUTS BOTH WAYS: a redeemer receives a SLICE OF THE BASKET rather than a chosen asset, which protects the reserve from cherry-picking the best collateral, AND means the arb is only as attractive as the WEAKEST constituent. If one basket member is impaired, the whole redemption is discounted and the arb that defends the peg weakens exactly when it is needed.",
+  "peg_mechanism_score_persistence": "filtered \u2014 mechanism design, not spot-responsive"
+ },
+ "backing": {
+  "backing_score": 5.5,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "MEASURES BASKET QUALITY AGAINST WHAT IS DONE WITH IT. \u2705 The basket is genuinely blue-chip \u2014 USDC, USDT, PYUSD, BUIDL, BENJI \u2014 and that is a real strength, not a formality. \u26a0\ufe0f HELD AT 5.5 BECAUSE THE RESERVES ARE ACTIVELY DEPLOYED RATHER THAN HELD: quality of the constituent and availability of the constituent are different questions, and a deployed reserve is subject to whatever it is deployed into. \u26a0\ufe0f SO THE BASKET NAMES DESCRIBE WHAT IS OWED, NOT NECESSARILY WHAT IS SITTING THERE \u2014 do not read the constituent list as an inventory.",
+  "backing_score_persistence": "filtered \u2014 basket composition and deployment, not a spot ratio",
+  "backing_score_denominator": "\u26a0\ufe0f THE FEED CARRIES NO liquidity, backing OR peg BLOCK FOR THIS ASSET \u2014 every score here is uncontested by any measurement. Uncontested reads as settled and is not."
+ },
+ "liquidity": {
+  "liquidity_score": 4.5,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "\u26a0\ufe0f\u26a0\ufe0f THE BINDING WEAKNESS, AND THE TURNOVER FIGURE IS THE ONE TO READ: ~$5,800 OF 24-HOUR VOLUME ON A ~$62M CAP. That is under one-hundredth of one percent of the book trading in a day. DEX-only, no CEX. \u26a0\ufe0f SECONDARY EXIT AT SIZE IS NOT AVAILABLE IN ANY MEANINGFUL SENSE \u2014 a holder of even a modest position is looking at the PSM, not the market, and the PSM returns a proportional basket rather than dollars. \u26a0\ufe0f A DEPTH LADDER WOULD NOT CAPTURE THIS: a 2% probe measures what a pool would absorb in theory, and $5.8k/day says nothing is testing whether it would.",
+  "liquidity_score_persistence": "filtered \u2014 venue structure and turnover, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f NO COMPUTED DEPTH EXISTS FOR THIS ASSET \u2014 the feed carries no liquidity block."
+ },
+ "issuer": {
+  "issuer_score": 5.0,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY AND ITS OPERATING RECORD, AND THE RECORD IS SHORT: a ~11-MONTH-OLD MegaETH-ecosystem protocol. Credible integrations (EigenLayer, Aave) and institutional backing. \u26a0\ufe0f INTEGRATIONS ARE EVIDENCE THAT OTHERS DILIGENCED IT, NOT THAT IT HAS SURVIVED ANYTHING \u2014 eleven months does not include a stress event, so this score prices promise rather than proven behaviour, and should be read as provisional in a way a decade-old issuer's is not.",
+  "issuer_score_persistence": "filtered \u2014 entity and track record, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration."
+ },
+ "coverage_note": "\u26a0\ufe0f 4 OF 6 AXES. No `underlying_score` and no `structural_score` \u2014 genuinely absent, not unrouted. \u26a0\ufe0f The axis-4 absence is material here: a basket-backed stablecoin's dependency set IS its basket, and the constituents are five other issuers. Declared rather than authored.",
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` block \u2014 the contract overlay carries the rendering structural_score_basis where one exists."
+}

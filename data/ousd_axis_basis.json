@@ -1,0 +1,39 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "ousd",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "peg_mechanism_score": 5.5,
+  "peg_mechanism_score_source": "riskAnalyst:authored",
+  "peg_mechanism_score_generated_at": "2026-09-11T00:00:00Z",
+  "peg_mechanism_score_basis": "MEASURES THE MECHANISM AND ITS CIRCULARITY. USDC-backed with rebasing is a sound design. \u26a0\ufe0f THE SCORE IS HELD DOWN BY AMO CIRCULARITY \u2014 protocol-owned liquidity that the protocol itself supplies means part of the depth defending the peg is the protocol's own, which is not independent support. \u2705 REDUCED RATHER THAN ELIMINATED: POL is down to ~9%, so the circular share is now small enough to be a qualification rather than the headline.",
+  "peg_mechanism_score_persistence": "filtered \u2014 mechanism design and POL share, not spot-responsive"
+ },
+ "backing": {
+  "backing_score": 4.5,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-11T00:00:00Z",
+  "backing_score_basis": "MEASURES THE RESERVE AND THE BUFFER ABOVE IT. 100% USDC backing ON PAPER with a surplus improved to \u2248$29,500 (0.47%) from \u2248$10,800. \u26a0\ufe0f\u26a0\ufe0f READ THE MAGNITUDE, NOT THE DIRECTION: A SURPLUS THAT NEARLY TRIPLED IS STILL ABOUT $29,500 ON A ~$6.94M BOOK. The improvement is real and it is not material \u2014 quoting '+173%' would be true and would misrepresent an asset carrying under half a percent of buffer. \u26a0\ufe0f AND A PERCENTAGE MOVE ON A TINY BASE IS THE EASIEST FIGURE IN THIS CORPUS TO OVERSTATE.",
+  "backing_score_persistence": "filtered \u2014 reserve composition and buffer level, not a spot ratio",
+  "backing_score_denominator": "\u26a0\ufe0f THE FEED CARRIES NO liquidity, backing OR peg BLOCK FOR THIS ASSET \u2014 `ousd_backing.json` uses the older summary/backing_breakdown schema, so NONE of these axes has a computed value beside it. Every score on this asset is uncontested, which reads as settled and is not."
+ },
+ "liquidity": {
+  "liquidity_score": 5.0,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "MEASURES THE EXIT ROUTE ON A SMALL BOOK. Market cap \u2248$6.94M. Direct redemption is available BUT POTENTIALLY DELAYED, and the on-chain route is thin. \u26a0\ufe0f SCALE CUTS BOTH WAYS HERE AND THE SCORE REFLECTS THAT: a ~$7M book needs far less depth to clear than a $500M one, so a thin venue is less damning than the same venue on a large asset \u2014 but there is correspondingly less room for a single holder to be large relative to the book.",
+  "liquidity_score_persistence": "filtered \u2014 exit route, not spot depth",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f NO COMPUTED DEPTH EXISTS FOR THIS ASSET \u2014 the feed carries no liquidity block at all."
+ },
+ "issuer": {
+  "issuer_score": 6.0,
+  "issuer_score_source": "riskAnalyst:authored",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY. Origin Protocol is established (2020), VC-backed, doxxed team, multiple audits \u2014 a long operating record is the substance here. \u26a0\ufe0f SHARED CONTRACT SURFACE WITH SIBLING PRODUCTS is carried in this row and is a DEPENDENCY fact as much as an issuer one; it is priced once, here, because this asset has no axis-4 score.",
+  "issuer_score_persistence": "filtered \u2014 entity and track record, not spot-responsive",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration."
+ },
+ "coverage_note": "\u26a0\ufe0f THIS ASSET CARRIES 3 OF 6 AXES. No `underlying_score` and no `structural_score` \u2014 genuinely absent, not unrouted. \u26a0\ufe0f AND THE FEED SUPPLIES NO COMPUTED VALUE ON ANY AXIS, so nothing on this asset is cross-checked by a measurement. Declared rather than papered over.",
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` block \u2014 the contract overlay carries the rendering structural_score_basis where one exists."
+}

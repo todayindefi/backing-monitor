@@ -1,0 +1,32 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "susdai",
+ "as_of": "2026-09-11T00:00:00Z",
+ "peg": {
+  "volatility_score": 5.5,
+  "volatility_score_source": "riskAnalyst:authored",
+  "volatility_score_generated_at": "2026-09-11T00:00:00Z",
+  "volatility_score_basis": "MEASURES NAV SMOOTHNESS AND SECONDARY TRACKING FOR A NAV-ACCRUING SHARE \u2014 NOT DEVIATION FROM $1. LOWERED FROM 6.0 ON 2026-07-22. NAV remains smooth ($1.00 -> 1.0875+) and the secondary tracks it. Feed: market 1.111836 against NAV 1.106946, a +2.7bp PREMIUM \u2014 trading slightly ABOVE NAV, which is the opposite side from most of this corpus and is not itself a concern for a share that accrues.",
+  "volatility_score_persistence": "filtered \u2014 NAV behaviour, not spot price"
+ },
+ "liquidity": {
+  "liquidity_score": 5.0,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+  "liquidity_score_basis": "MEASURES OBSERVED VENUE DEPTH ON A LIKE-FOR-LIKE BASIS, AND IT WAS RAISED ON EVIDENCE. RAISED 4.5 -> 5.0 on 2026-08-12: observed depth $17.05M -> $37.46M like-for-like, as a NEW Fluid sUSDai/USDT pool (~$17.66M) joined the USDC pool \u2014 so the 'thin on either path' single-venue argument NO LONGER HOLDS. \u26a0\ufe0f HELD AT 5.0 RATHER THAN HIGHER FOR THREE STATED REASONS: no CEX; TWO-SIDED TVL MEANS EXECUTABLE DEPTH IS ROUGHLY HALF THE HEADLINE; and the primary exit is still a 30-DAY FIFO QUEUE THAT CAN ROLL.",
+  "liquidity_score_persistence": "filtered \u2014 venue count and queue structure, not spot depth",
+  "liquidity_score_denominator": "\u26a0\ufe0f THE Depth/AUM RATIO IN THIS ROW HAS A DENOMINATOR THAT HAS MOVED. The row states Depth/AUM improved 5.68% -> 10.55% with AUM rising to $355M. `susdai_backing.json` now reports total_backing $466,217,169.01 \u2014 up ~31%. \u26a0\ufe0f IF DEPTH IS UNCHANGED AT $37.46M, THE RATIO IS NOW ~8.0%, NOT 10.55%: THE IMPROVEMENT HAS PARTLY UNWOUND ON GROWTH ALONE, WITH NO DETERIORATION IN DEPTH. \u26a0\ufe0f DO NOT SIMPLY RESTATE 8.0% \u2014 'AUM' and 'total_backing' may not be the same quantity, and re-dividing across two definitions gives a quotient without a basis. Re-measure both on one date and one basis. This is the third instance of this pattern today (reUSD's attachment point, hastra-prime's exit share).",
+  "liquidity_score_depth_caveat": "\u26a0\ufe0f THE FEED'S total_2pct_depth OF $10,000,000 IS NOT A MEASUREMENT \u2014 is_floor true, status 'ladder_exhausted'. \u26a0\ufe0f AND IT IS NOT COMPARABLE TO THE $37.46M IN THIS ROW: the row counts VENUE TVL on a like-for-like basis, the feed reports where a 2% ladder ran out. Two different quantities, and the gap between them is not a disagreement."
+ },
+ "issuer": {
+  "issuer_score": 5.0,
+  "issuer_score_source": "riskAnalyst:propagated",
+  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+  "issuer_score_basis": "MEASURES THE ENTITY. \u26a0\ufe0f 6.0 -> 5.0 ON 2026-08-27, PROPAGATED FROM usdai.md \u2014 same issuer, so one judgement, moved in both places. \u2705 RECORDED AS A PROPAGATION RATHER THAN AN INDEPENDENT RE-DERIVATION, because a second derivation of one entity judgement creates two surfaces that drift. \u26a0\ufe0f THE CONTRAST WORTH NOTING: reusde-re's backing row declares itself equal to reusd-re and did NOT move when that score was cut. This one did.",
+  "issuer_score_persistence": "propagated \u2014 moves with the issuer's score on usdai, not independently",
+  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration."
+ },
+ "coverage_note": "\u26a0\ufe0f NO `backing_score` AND NO `underlying_score` ON THIS ASSET. The feed reports total_backing $466,217,169.01 with collateral_ratio NULL. \u26a0\ufe0f Backing is genuinely absent rather than unrouted, and for a wrapper over usdai it would be inherited rather than derived \u2014 declared, not authored here.",
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` block \u2014 the contract overlay carries the rendering structural_score_basis where one exists."
+}
