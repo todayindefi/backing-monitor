@@ -1920,6 +1920,15 @@ var HastraPrimeRenderer = {
             '<div class="data-table-scroll"><table class="data-table">' +
                 '<thead><tr><th>Endpoint</th><th>Result</th><th>Control (known-good denom)</th></tr></thead>' +
                 '<tbody>' + rows + '</tbody></table></div>' +
+            // ⚠️ WHY THE CONTROL COLUMN EXISTS, IN THE PRODUCER'S OWN WORDS.
+            // A control reads as duplicate metadata to anyone who has not thought
+            // about it, which makes it the first thing a cleanup deletes — and
+            // deleting it leaves the four checks unfalsifiable. The reasoning now
+            // travels with the data instead of being reinvented by each consumer.
+            (probe.control_rationale
+                ? '<div class="text-[11px] text-slate-500 mt-1"><span class="font-medium">Why a control:</span> ' +
+                  HastraPrimeRenderer._esc(probe.control_rationale) + '</div>'
+                : '') +
             (probe.what_would_resolve_it
                 ? '<div class="text-xs text-slate-600 dark:text-slate-300 mt-2">' +
                   '<span class="font-medium">What would resolve it:</span> ' +
@@ -1976,6 +1985,32 @@ var HastraPrimeRenderer = {
         // names each class from the denom held, so the column says what the row
         // means instead of leaving a reader to decode ".forge" prefixes.
         var tokenClasses = w.collateral_classes_observed || {};
+
+        // ⚠️ THE TABLE NEVER SAID WHOSE MARKERS THESE ARE. The facility has four
+        // pools — Home Equity, Automobile, Crypto-Backed Loan, SMB — and this
+        // account holds only the Home Equity pool's. A reader meeting four
+        // real-estate denoms under a panel about "the warehouse" can reasonably
+        // take them for the whole facility, which is the same mistake the
+        // producer's first collateral_scope made in the other direction.
+        //
+        // ⚠️ READ FROM A FLAG, NOT FROM PROSE. The producer publishes
+        // `warehouse_classes_apply` per claim, set by matching pool_contract
+        // against the account that holds the markers. Their first version
+        // expressed this only inside a sentence, and their own test then
+        // substring-matched that sentence — which made the WORDING load-bearing
+        // and would have punished anyone who improved it. Keying on the value
+        // means their copy stays free to change without touching this page.
+        var classOwner = null;
+        (Array.isArray(spec.receipt_claims) ? spec.receipt_claims : [])
+            .concat([spec.heylds_claim, spec.autoylds_claim])
+            .forEach(function(c) {
+                if (c && c.warehouse_classes_apply === true && (c.pool_name || c.leverage_type)) {
+                    // ⚠️ If two pools ever claim the markers, say nothing rather
+                    // than pick one — a wrong owner is worse than no owner.
+                    var name = c.pool_name || c.leverage_type;
+                    classOwner = (classOwner === null || classOwner === name) ? name : false;
+                }
+            });
         var tokenRows = Object.keys(tokens).sort().map(function(denom) {
             var row = tokens[denom] || {};
             var cls = tokenClasses[denom] || {};
@@ -2111,6 +2146,11 @@ var HastraPrimeRenderer = {
 
             '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase mb-2">Inventory on DP pool contract</div>' +
+                    (classOwner
+                        ? '<div class="text-xs text-slate-500 mb-2">These markers are the <span class="font-semibold">' +
+                          HastraPrimeRenderer._esc(classOwner) + '</span> pool\u2019s collateral \u2014 not the whole ' +
+                          'facility. The other pools hold their own.</div>'
+                        : '') +
                     '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Denom</th>' +
                     '<th>Collateral class</th>' +
                     '<th class="text-right">Balance</th><th class="text-right">Supply</th><th>Custody</th></tr></thead>' +
