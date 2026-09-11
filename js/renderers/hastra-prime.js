@@ -1119,7 +1119,29 @@ var HastraPrimeRenderer = {
                 label: 'Redeem vault — ' + HastraPrimeRenderer._esc(symbol) + ' claim',
                 note: HastraPrimeRenderer._esc(claim.pool_name || claim.leverage_type || 'Pool') +
                     ' receipt-token position' +
-                    (claim.contract ? ' · contract ' + HastraPrimeRenderer._pbLink(claim.contract) : ''),
+                    (claim.contract ? ' · contract ' + HastraPrimeRenderer._pbLink(claim.contract) : '') +
+                    // ⚠️ THE POOL NAME IS THE ISSUER'S WORD AND THE PAGE PRINTED IT
+                    // AS A FACT. "Home Equity", "Crypto-Backed Loan" and the rest
+                    // come from Figure's API; nothing here verifies that the
+                    // collateral matches the label. The producer now states that
+                    // provenance per pool, so the row carries it.
+                    //
+                    // ⚠️ The first version of this field was a single constant
+                    // asserting every pool was real-estate-backed — false for
+                    // Automobile, Crypto-Backed Loan and SMB. It is rendered now
+                    // because the emitted values were checked, one per pool, not
+                    // because the field came back with the same name.
+                    //
+                    // Verbatim in the tooltip rather than inline: the clause is
+                    // near-identical across four rows and printing it four times
+                    // would bury the table. The Home Equity pool's extra
+                    // multi-class sentence is NOT duplicated here — it already
+                    // renders visibly in the warehouse panel's collateral-class
+                    // column, which is where a reader can act on it.
+                    (claim.collateral_scope
+                        ? ' · <span class="text-[11px] text-slate-500 border-b border-dotted border-slate-400 cursor-help" title="' +
+                          HastraPrimeRenderer._esc(claim.collateral_scope) + '">issuer-stated class \u24d8</span>'
+                        : ''),
                 kind: 'claim',
                 address: claim.holder || redeem.address,
                 amount: claim.balance,
