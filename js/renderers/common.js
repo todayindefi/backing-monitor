@@ -1330,7 +1330,34 @@ const CommonRenderer = {
         // Asset-specific renderers can opt in through chart_bands metadata;
         // absence preserves the shared renderer's historical behavior.
         var sanityFloor = opts.cr_sanity_floor !== undefined ? opts.cr_sanity_floor : bands.cr_sanity_floor;
-        var excludeSuspect = opts.exclude_suspect !== undefined ? opts.exclude_suspect : bands.exclude_suspect;
+        // ⚠️ THE EXCLUSION WAS OPT-IN AND NOBODY OPTED IN. Every branch below that
+        // filters, counts and discloses a flagged read was gated behind
+        // `chart_bands.exclude_suspect`, and across all 27 assets NOT ONE declares
+        // it — so this machinery had never executed in production. crvUSD is the
+        // only history with a tripped flag, and all three of its flagged reads were
+        // being plotted: the 122.02% spike (producer: "OVERSTATED ... against
+        // neighbours near 107%", an unreadable operator mint) and the 101.15% one
+        // (producer: hardcoded BTC=$67,000/ETH=$2,000 after a CoinGecko failure,
+        // "the true CR was ~106.5%"). Those two ARE the Min and Max, so the whole
+        // published "Range: 20.87pp" was the distance between two reads the
+        // producer had already written a paragraph explaining were wrong.
+        //
+        // A producer that sets `suspect: true` AND writes the reason has made the
+        // call. Requiring a second per-asset declaration before honouring it means
+        // a known-bad read reaches the reader, which is backwards. So the presence
+        // of the field IS the opt-in; an explicit `false` still disables it.
+        //
+        // ⚠️ NOT extended to `cr_sanity_floor`. That one is an editorial threshold
+        // and needs a value per asset — inferring it is the mis-scaling trap this
+        // file keeps hitting. It stays opt-in and stays dormant.
+        //
+        // Nothing is hidden: the excluded count renders in the stats line with the
+        // producer's own reasons in its tooltip.
+        var historyFlagsSuspect = (historyData.entries || []).some(function(e) {
+            return e && Object.prototype.hasOwnProperty.call(e, 'suspect');
+        });
+        var excludeSuspect = opts.exclude_suspect !== undefined ? opts.exclude_suspect
+            : (bands.exclude_suspect !== undefined ? bands.exclude_suspect : historyFlagsSuspect);
         var hardYBounds = opts.hard_y_bounds !== undefined ? opts.hard_y_bounds : bands.hard_y_bounds;
         var hasSanityFloor = sanityFloor !== undefined && sanityFloor !== null;
         function saneCR(v) {
