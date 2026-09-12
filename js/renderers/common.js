@@ -281,20 +281,30 @@ const CommonRenderer = {
             // fallback happened, and the chip explaining it did not render.
             // Found by checking the DOM rather than the merged object: the data
             // was right and the reader was told nothing.
-            function priorRefusal() {
+            // ⚠️ CARRY EVERY VERDICT, NOT JUST THE ONE THAT BIT FIRST. The
+            // original version of this carried `refused` only — and the very
+            // next verdict added (stale_sole_source) was silently dropped by a
+            // later axis-basis/1 merge, reproducing the exact bug this function
+            // was written to fix, one field along. Fixing the symptom is not
+            // fixing the class: anything an earlier overlay concluded about this
+            // axis has to survive a later one.
+            var VERDICT_KEYS = ['refused', 'refused_detail', 'stale_sole_source'];
+            function priorVerdict() {
                 var e = self.AXIS_PROVENANCE[axis];
-                return (e && e.refused)
-                    ? { refused: e.refused, refused_detail: e.refused_detail,
-                        file: e.file, producer: e.producer }
-                    : null;
+                if (!e) return null;
+                var carried = null;
+                VERDICT_KEYS.forEach(function(k) {
+                    if (e[k] != null) { carried = carried || {}; carried[k] = e[k]; }
+                });
+                if (carried) { carried.file = e.file; carried.producer = e.producer; }
+                return carried;
             }
-            function carryRefusal(entry) {
-                var r = priorRefusal();
+            function carryVerdict(entry) {
+                var r = priorVerdict();
                 if (!r) return entry;
-                entry.refused = r.refused;
-                entry.refused_detail = r.refused_detail;
-                // The chip names the file it is refusing, which is the refused
-                // one, not whichever overlay merged afterwards.
+                VERDICT_KEYS.forEach(function(k) { if (r[k] != null) entry[k] = r[k]; });
+                // The chip names the file the verdict is ABOUT, not whichever
+                // overlay merged afterwards.
                 entry.file = r.file;
                 entry.producer = r.producer;
                 return entry;
@@ -310,6 +320,7 @@ const CommonRenderer = {
 
             var schema = typeof ov.schema_version === 'string' ? ov.schema_version : null;
             var spec = schema ? ((self.ADOPTED_OVERLAY_SCHEMAS || {})[axis] || {})[schema] : null;
+            var staleSoleSource = null;
 
             // Identity, checked under whichever key this schema declares. An
             // UNADOPTED schema is refused on the schema before identity is even
@@ -359,6 +370,24 @@ const CommonRenderer = {
                     if (isFinite(stampT)) {
                         var ageDays = (Date.now() - stampT) / 86400000;
                         if (ageDays > spec.max_age_days) {
+                            // ⚠️ REFUSING A SOLE SOURCE LOSES THE MEASUREMENT
+                            // INSTEAD OF REPLACING IT. I shipped this guard
+                            // assuming a fallback always exists. It does not:
+                            // reusde-re and usdm have NO PegTracker ladder, so
+                            // refusing their overlay turned "$15.5K, crossing
+                            // solved" and "≥$500.4K floor" into "n/a" — a stale
+                            // figure that says it is stale replaced by silence,
+                            // which is strictly worse for a reader.
+                            //
+                            // So the horizon only bites where something fresher
+                            // can actually take over. Where the overlay is the
+                            // only source it is KEPT and marked instead, and the
+                            // existing age clock already states how old it is.
+                            if (!self._baseHasDepth(base, axis)) {
+                                staleSoleSource = {
+                                    age_days: ageDays, max_age_days: spec.max_age_days
+                                };
+                            } else {
                             var said = self._overlayDepthSummary(ov, axis);
                             refuse('overlay stale',
                                 'Its as_of is ' + stampStr + ' \u2014 ' + ageDays.toFixed(1) +
@@ -368,6 +397,7 @@ const CommonRenderer = {
                                 'own figures are rendered instead.' +
                                 (said ? ' What the stale overlay said: ' + said : ''));
                             return;
+                            }
                         }
                     }
                 }
@@ -405,12 +435,13 @@ const CommonRenderer = {
                     var droppedKeys = Object.keys(base);
                     self._adaptSchema(axis, schema, pay);
                     data[axis] = pay;
-                    self.AXIS_PROVENANCE[axis] = carryRefusal({
+                    self.AXIS_PROVENANCE[axis] = carryVerdict({
                         contributors: priorContributors().concat([
                             { producer: srcName, file: o.file, schema: schema, half: 'replace' }]),
                         file: o.file, producer: srcName, schema: schema, replaced: true,
                         overridden: [], added: Object.keys(pay), kept: [], dropped: droppedKeys,
-                        overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
+                        overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null,
+                        stale_sole_source: staleSoleSource
                     });
                     return;
                 }
@@ -426,7 +457,7 @@ const CommonRenderer = {
                 var stale = self._dropStaleDerived(axis, m, ovr, kpt);
                 var replacedArrays = self._recordArrayReplacements(base, pay, ovr);
                 data[axis] = m;
-                self.AXIS_PROVENANCE[axis] = carryRefusal({
+                self.AXIS_PROVENANCE[axis] = carryVerdict({
                     contributors: priorContributors().concat([
                         { producer: srcName, file: o.file, schema: schema, half: 'merge' }]),
                     file: o.file, producer: srcName, schema: schema,
@@ -630,6 +661,16 @@ const CommonRenderer = {
     // saying only that something was set aside. Reads only fields the schema
     // declares, and returns '' when it cannot say anything specific instead of
     // guessing at the block's shape.
+    // Does the block the overlay would REPLACE carry a depth reading of its own?
+    // This is the whole question behind keeping vs refusing a stale overlay: a
+    // horizon is only meaningful when something can take over past it.
+    _baseHasDepth(base, axis) {
+        if (axis !== 'liquidity' || !base || typeof base !== 'object') return false;
+        if (typeof base.total_2pct_depth === 'number') return true;
+        var q = (base.exit_mark || {}).quotes;
+        return !!(q && Object.keys(q).length);
+    },
+
     _overlayDepthSummary(ov, axis) {
         if (axis !== 'liquidity' || !ov || typeof ov !== 'object') return '';
         var d = ov.depth;
@@ -720,6 +761,22 @@ const CommonRenderer = {
         // sits unread beside it — the reader is looking at the SECOND-choice
         // source and has no way to know. Silence here reproduces the exact
         // failure this chip exists to end.
+        // ⚠️ KEPT PAST ITS HORIZON BECAUSE NOTHING CAN REPLACE IT. Distinct from
+        // a refusal: the overlay IS being rendered, and the reader needs to know
+        // it is being rendered on sufferance rather than because it is current.
+        if (p.stale_sole_source) {
+            var ss = p.stale_sole_source;
+            return '<span class="axis-src axis-src-stale" title="' + this._escapeAttr(
+                'This overlay is ' + ss.age_days.toFixed(1) + ' days old, past the ' +
+                ss.max_age_days + '-day limit for its schema — but it is the ONLY source of ' +
+                'depth for this asset, so it is still being rendered.\n' +
+                'Refusing it would replace a stale measurement with nothing, which is worse ' +
+                'for a reader than a stale one that says so.\n' +
+                'File: ' + (p.file || '?') +
+                (p.producer ? ' (producer: ' + this._producerLabel(p.producer) + ')' : '') + '.') +
+                '">\u26a0\ufe0f ' + this._escapeAttr(src) + ' overlay stale \u2014 sole source</span>';
+        }
+
         if (p.refused) {
             var why = p.refused === 'schema not adopted'
                 ? 'It declares schema_version "' + (p.refused_detail || '?') + '", which this ' +
