@@ -2439,13 +2439,28 @@ const CommonRenderer = {
         var txt = pct >= 0.1 ? pct.toFixed(1) + '%'
                 : pct >= 0.01 ? pct.toFixed(2) + '%'
                 : '<0.01%';
-        return '<div class="text-[11px] text-slate-500" title="' + this._escapeAttr(
-            'The band above grades depth against FIXED dollar thresholds, identical for every ' +
-            'asset, so it answers "can a position of this size exit". This figure answers the ' +
-            'other question — what share of the asset could exit at 2% — and the two can point ' +
-            'in opposite directions on a large book. Denominator: ' + label + ' ' +
-            this.formatCurrency(denom) + '.') +
-            '">\u2248 ' + txt + ' of ' + label + ' exits at 2%</div>';
+        // ⚠️ DEMOTED FROM THE HEADLINE TILE, AND THE FRAMING RETIRED WITH IT.
+        // This line was added on 2026-09-11 to answer riskAnalyst's criticism
+        // that the absolute band [2M, 1M, 500K, 100K] is size-blind. Their owner
+        // has since ruled the other way: the ladder and redemption status decide
+        // axis 3, and share of supply is CONTEXT, not a deciding factor —
+        // "$5M of depth is the same $5M whether the book behind it is $50M or
+        // $5B". riskAnalyst withdrew the criticism explicitly; tidr's owner put
+        // it sharpest: nobody exits as a percentage of supply, and that holds for
+        // large allocators too.
+        //
+        // ⚠️ Sitting under the headline number in the qualifier's own style, it
+        // read as a rival grading of the same question. It now renders BELOW the
+        // ladder, and the tooltip no longer says the two "can point in opposite
+        // directions" — that sentence presented a retired frame as an equal
+        // reading. Owner's call (2026-09-12): keep the figure, demote it.
+        return '<div class="text-[11px] text-slate-500 mt-3" title="' + this._escapeAttr(
+            'Context only, and not part of the grading. The band above answers "can a position ' +
+            'of this size exit", against fixed dollar thresholds identical for every asset — ' +
+            'which is the holder\u2019s question. This figure is background on how the depth ' +
+            'compares with the size of the book; nobody exits as a percentage of supply. ' +
+            'Denominator: ' + label + ' ' + this.formatCurrency(denom) + '.') +
+            '">For context: \u2248 ' + txt + ' of ' + label + ' would clear at 2% depth</div>';
     },
 
     // ⚠️ A DEPTH MEASURED AGAINST ITS OWN VENUE'S QUOTE, WITH NOTHING SAYING SO.
@@ -4214,7 +4229,21 @@ const CommonRenderer = {
             var lh = document.getElementById('axis-liquidity-head');
             if (!lh) return;
             var liq = (data && data.liquidity) || {};
-            var parts = self._depthQualifierHtml(liq) + self._depthShareHtml(data);
+            // ⚠️ QUALIFIER ONLY — the share was removed from the head on
+            // 2026-09-12 when it was demoted out of the headline position. It
+            // renders once, below the ladder, in the body. Leaving it here too
+            // put it on the page TWICE for every shared-renderer asset, which is
+            // what demoting it without checking the second call site produced.
+            //
+            // ⚠️ The qualifier must stay: three bespoke renderers blank
+            // axis-liquidity-body, and on those assets the band is correctly
+            // WITHHELD while the reason for it lives in this line. Losing the
+            // reason is the worse half of that pair.
+            //
+            // Consequence, accepted: usdai and susdai blank the body, so the
+            // share no longer appears on them at all. Owner's call was "demote
+            // or drop"; on those two it drops.
+            var parts = self._depthQualifierHtml(liq);
             var basis = typeof liq.liquidity_score_basis === 'string' && liq.liquidity_score_basis.trim()
                 ? liq.liquidity_score_basis : null;
             var perChain = typeof liq.liquidity_score_per_chain === 'string' && liq.liquidity_score_per_chain.trim()
@@ -5402,7 +5431,6 @@ const CommonRenderer = {
                     // bound being read as a measurement.
                     this._depthQualifierHtml(liq) +
                     this._selfReferentialHtml(data) +
-                    this._depthShareHtml(data) +
                     (liq.total_2pct_depth == null && liq.total_2pct_depth_note
                         ? '<div class="text-[11px] text-slate-400" title="' +
                           this._escapeAttr(liq.total_2pct_depth_note) + '">unmeasured, not zero \u24d8</div>' : '') +
@@ -5427,7 +5455,8 @@ const CommonRenderer = {
 
         body.innerHTML = '<div class="panel">' +
             '<div class="panel-title">Liquidity &amp; Exit</div>' +
-            statRow + this.exitCapacityHtml(liq) + exitLine + ladderBlock + poolBlock + poolsNote + chainBlock +
+            statRow + this.exitCapacityHtml(liq) + exitLine + ladderBlock +
+            this._depthShareHtml(data) + poolBlock + poolsNote + chainBlock +
         '</div>';
     },
 
