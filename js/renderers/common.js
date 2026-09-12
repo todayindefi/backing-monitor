@@ -2408,6 +2408,48 @@ const CommonRenderer = {
             '">\u2248 ' + txt + ' of ' + label + ' exits at 2%</div>';
     },
 
+    // ⚠️ A DEPTH MEASURED AGAINST ITS OWN VENUE'S QUOTE, WITH NOTHING SAYING SO.
+    // Both producers declare this and the page read neither. usg's overlay
+    // carries `anchor.self_referential: true`; PegTracker declares
+    // `peg.market_price_self_referential: true` for usg AND usdm. usdm renders
+    // "≥$500.4K" as the SOLE source on its page — a floor derived from the same
+    // Mento getAmountOut quote that anchors it — and said nothing at all.
+    //
+    // ⚠️ Why it matters even for a floor: a uniformly mispriced venue quotes
+    // ~0bps against its own mid, so the number cannot detect the failure it
+    // exists to detect. A bound is weaker than a crossing, but it is still a
+    // figure derived from its own mark.
+    //
+    // ⚠️ ATTRIBUTED, NEVER INFERRED. This renders only where a producer has
+    // DECLARED the flag, and the tooltip names which one and about what. The
+    // two declarations are about the same mark but they are not the same claim,
+    // and joining them silently would be the renderer deciding a question that
+    // belongs to the producers. Where neither declares, nothing renders —
+    // absence of a flag is not evidence of independence, and this must not be
+    // read as certifying the assets it stays quiet on.
+    _selfReferentialHtml(data) {
+        var liq = (data && data.liquidity) || {};
+        if (liq.total_2pct_depth == null) return '';
+        var claims = [];
+        var a = (liq.exit_mark || {}).anchor || (liq.depth || {}).anchor || {};
+        if (a.self_referential === true) {
+            claims.push('The depth feed declares its anchor self-referential' +
+                (a.self_referential_note ? ': ' + a.self_referential_note : '.'));
+        }
+        var peg = (data && data.peg) || {};
+        if (peg.market_price_self_referential === true) {
+            claims.push('The price feed declares this market mark self-referential' +
+                (peg.market_price_self_referential_basis
+                    ? ': ' + peg.market_price_self_referential_basis : '.'));
+        }
+        if (!claims.length) return '';
+        return '<div class="text-[11px] text-amber-700 dark:text-amber-300" title="' +
+            this._escapeAttr(claims.join('\n\n') +
+                '\n\nA venue quoted against its own mid returns ~0bps however mispriced it is, ' +
+                'so a depth anchored this way cannot detect the failure it exists to detect.') +
+            '">\u26a0\ufe0f anchored to the venue being measured \u24d8</div>';
+    },
+
     _depthQualifierHtml(liq) {
         var st = liq.two_pct_depth_status;
         var br = liq.two_pct_depth_bracket;
@@ -5028,6 +5070,7 @@ const CommonRenderer = {
                     // magnitude. Rendering "≥" or a bracket is what stops a
                     // bound being read as a measurement.
                     this._depthQualifierHtml(liq) +
+                    this._selfReferentialHtml(data) +
                     this._depthShareHtml(data) +
                     (liq.total_2pct_depth == null && liq.total_2pct_depth_note
                         ? '<div class="text-[11px] text-slate-400" title="' +
