@@ -1490,6 +1490,13 @@ var UsdaiRenderer = {
                     '<td class="font-mono text-right ' + (gated ? 'text-amber-700 dark:text-amber-300' : bpsCls) + '">' +
                         (bps != null ? bps.toFixed(1) + ' bps' : '—') +
                         (gated ? ' <span title="route includes a gated venue">\u26a0</span>' : '') +
+                    // ⚠️ usdai and sUSDai publish slippage_bps with the sign
+                    // INVERTED against their own output column — sUSDai's $10M
+                    // rung reads "11.5 bps" beside $9,988,509 returned from
+                    // $10,000,000, a loss shown as a gain. Shared detector, so
+                    // this table and the common ladder cannot disagree about
+                    // what counts as a contradiction.
+                    CommonRenderer.slippageSignWarningHtml(Number(t), out, bps) +
                     '</td>' +
                 '</tr>';
             }).join('');

@@ -4771,6 +4771,43 @@ const CommonRenderer = {
     // colouring defect on a fresh page the same week it was fixed here.
     //
     // Returns '' when the feed carries no ladder; the caller owns the empty state.
+    // ⚠️ FOUR FEEDS PUBLISH slippage_bps WITH THE SIGN INVERTED, and the
+    // contradiction sits in the same row. susdat's $500K rung reads "+8074.6 bps"
+    // beside a net out of $96,269 from $500,000 — a positive number, which
+    // conventionally means a gain, against an 81% loss. Its $1K rung reads
+    // "-65.0 bps" against $1,007 returned: a gain shown as a cost. usdat, usdai
+    // and susdai are the same. Found by riskAnalyst, who quoted the raw field
+    // into two published scores and got the right magnitudes by luck.
+    //
+    // ⚠️ THE FIGURE IS NOT OVERRIDDEN. Recomputing from output_usd would be
+    // deriving what the producer publishes, and for an asset whose fair_value is
+    // not $1 that recomputation is wrong in a different way. The published value
+    // renders; the CONTRADICTION is flagged.
+    //
+    // ⚠️ The detector is deliberately narrow: sign disagrees AND magnitudes match
+    // within 5%. A fair_value offset moves the magnitude (usde 1.00 vs 2.31,
+    // syrupUSDC 3.30 vs 10.24) and never mirrors it, so those never trip. An
+    // exact mirror cannot be a basis difference.
+    //
+    // Shared because two renderers draw slippage tables — this one and usdai.js,
+    // which serves the other two affected assets.
+    slippageSignWarningHtml(sizeUsd, outputUsd, bps) {
+        if (typeof bps !== 'number' || typeof outputUsd !== 'number' ||
+            typeof sizeUsd !== 'number' || !(sizeUsd > 0)) return '';
+        var realised = (outputUsd / sizeUsd - 1) * 10000;
+        if (Math.abs(realised) <= 1) return '';
+        if ((realised >= 0) === (bps >= 0)) return '';
+        if (Math.abs(Math.abs(realised) - Math.abs(bps)) > Math.abs(realised) * 0.05) return '';
+        return ' <span class="text-amber-700 dark:text-amber-300" title="' + this._escapeAttr(
+            'The sign of this figure contradicts the trade beside it. Selling ' +
+            this.formatCurrency(sizeUsd) + ' returns ' + this.formatCurrencyExact(outputUsd) +
+            ', which is a ' + (realised >= 0 ? 'GAIN' : 'LOSS') + ' of ' +
+            Math.abs(realised).toFixed(1) + ' bps \u2014 the same magnitude, the opposite sign. ' +
+            'The published value is shown unchanged rather than corrected here, because ' +
+            'recomputing a producer\u2019s field is how two numbers come to disagree. Read the ' +
+            'output column.') + '">\u26a0\ufe0f</span>';
+    },
+
     ladderBlockHtml(liq) {
         liq = liq || {};
         var em = liq.exit_mark || {};
@@ -4901,11 +4938,30 @@ const CommonRenderer = {
             // one comparison read a signed cost as though it were a magnitude." It
             // was fixed there and left standing here. Sign carries the convention,
             // MAGNITUDE carries the cost — grade on magnitude, always.
+            // ⚠️ FOUR FEEDS PUBLISH slippage_bps WITH THE SIGN INVERTED, and the
+            // contradiction is visible in the same row. susdat's $500K rung reads
+            // "+8074.6 bps" beside a net out of $96,269 from $500,000 — a
+            // positive number, which conventionally means a gain, against an 81%
+            // loss. Its $1K rung reads "-65.0 bps" against $1,007 returned: a
+            // gain shown as a cost. usdai, susdai and usdat are the same.
+            //
+            // ⚠️ THE FIGURE IS NOT OVERRIDDEN. Recomputing from output_usd would
+            // be deriving what the producer publishes, and for assets whose
+            // fair_value is not $1 my recomputation would be the wrong number in
+            // a different way. The published value renders; the CONTRADICTION is
+            // what gets flagged.
+            //
+            // ⚠️ The detector is deliberately narrow: sign disagrees AND the
+            // magnitudes match within 5%. A fair_value offset moves the
+            // magnitude (usde: 1.00 vs 2.31, syrupUSDC: 3.30 vs 10.24) and never
+            // mirrors it, so those do not trip. An exact mirror cannot be a
+            // basis difference.
+            var signWarn = CommonRenderer.slippageSignWarningHtml(sz, q.output_usd, bps);
             var mag = bps == null ? null : Math.abs(bps);
             var cls = mag == null ? '' : (mag <= 25 ? 'text-green-600' : (mag <= 200 ? 'text-amber-600' : 'text-red-600'));
             return '<tr>' +
                 '<td class="font-mono">' + sizeLabel(sz) + '</td>' +
-                '<td class="text-right font-mono ' + cls + '">' + (bps != null ? bps.toFixed(bpsDigits) + ' bps' : '—') + '</td>' +
+                '<td class="text-right font-mono ' + cls + '">' + (bps != null ? bps.toFixed(bpsDigits) + ' bps' : '—') + signWarn + '</td>' +
                 '<td class="text-right font-mono">' + (q.output_usd != null ? CommonRenderer.formatCurrencyExact(q.output_usd) : '—') + '</td>' +
             '</tr>';
         }).join('');
