@@ -2465,6 +2465,74 @@ const CommonRenderer = {
             '">\u26a0\ufe0f anchored to the venue being measured \u24d8</div>';
     },
 
+    // ⚠️ A VENUE WITH NO CURVE NEEDS A TILE THAT SAYS SO, NOT AN EMPTY DEPTH SLOT.
+    // usdm's Mento FPMM quotes one rate at every size, so there is no 2%
+    // crossing to locate and `depth_usd` is correctly null. Rendering only that
+    // leaves "2% depth n/a" and nothing else — LESS informative than the wrong
+    // $500,430 it replaced, which is the trap when a producer withholds honestly.
+    //
+    // ⚠️ THE BINDING NUMBER IS INVENTORY, NOT SLIPPAGE. The quoter returns a flat
+    // rate however large the ask and does not check the counter-asset exists —
+    // it quoted $5,000,000 out of a book holding $36,578. So the ceiling is the
+    // counter-asset side of the book, and `quoter_honours_inventory: false` is
+    // why the old figure existed at all: a quote from this venue is not an
+    // executability statement.
+    //
+    // Producer's own prose renders verbatim; nothing here is derived.
+    exitCapacityHtml(liq) {
+        var ec = (liq || {}).exit_capacity;
+        if (!ec || typeof ec !== 'object') return '';
+        if (typeof ec.capacity_usd !== 'number') return '';
+        var res = ec.reserves || {};
+        var resPairs = Object.keys(res).filter(function(k) {
+            return typeof res[k] === 'number' && k !== 'block_timestamp';
+        });
+        return '<div class="mt-4 border border-amber-300 dark:border-amber-800 rounded-lg p-3 ' +
+                    'bg-amber-50 dark:bg-amber-950/30">' +
+            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">' +
+                'Exit capacity \u2014 ' + this._escapeAttr(String(ec.venue_type || 'venue').replace(/_/g, ' ')) +
+                ', bounded by ' + this._escapeAttr(String(ec.binding_constraint || 'inventory').replace(/_/g, ' ')) +
+            '</div>' +
+            '<div class="grid grid-cols-2 md:grid-cols-3 gap-3 my-2">' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Capacity</div>' +
+                    '<div class="text-lg font-bold">' + this.formatCurrencyExact(ec.capacity_usd) + '</div>' +
+                    (ec.capacity_basis ? '<div class="text-[11px] text-slate-500" title="' +
+                        this._escapeAttr(ec.capacity_basis) + '">the ceiling, not a depth figure \u24d8</div>' : '') +
+                '</div>' +
+                (typeof ec.cost_bps_flat === 'number'
+                    ? '<div><div class="text-xs text-slate-400 font-medium uppercase">Cost, flat</div>' +
+                      '<div class="text-lg font-bold">' + ec.cost_bps_flat.toFixed(2) + ' bps</div>' +
+                      (ec.cost_note ? '<div class="text-[11px] text-slate-500" title="' +
+                          this._escapeAttr(ec.cost_note) + '">same at every size \u24d8</div>' : '') +
+                      '</div>'
+                    : '') +
+                (resPairs.length
+                    ? '<div><div class="text-xs text-slate-400 font-medium uppercase">Book</div>' +
+                      '<div class="text-sm font-mono">' + resPairs.map(function(k) {
+                          return CommonRenderer._escapeAttr(k) + ' ' +
+                                 CommonRenderer.formatCurrencyExact(res[k]).replace('$', '');
+                      }).join('<br>') + '</div>' +
+                      (res.custody_verified === true
+                          ? '<div class="text-[11px] text-slate-500" title="' + this._escapeAttr(
+                              'The venue\u2019s own getReserves() and the actual ERC20 balances agree exactly.') +
+                            '">reserves verified \u24d8</div>' : '') +
+                      '</div>'
+                    : '') +
+            '</div>' +
+            (ec.quoter_honours_inventory === false
+                ? '<div class="text-xs text-amber-800 dark:text-amber-200" style="line-height:1.5">' +
+                  '<span class="font-semibold">\u26a0\ufe0f The quoter does not check this ceiling.</span> ' +
+                  'It returns the same rate however large the ask, so a quote from this venue is not a ' +
+                  'statement that the trade can be filled \u2014 only the book above bounds it.</div>'
+                : '') +
+            (ec.pool ? '<div class="text-[11px] text-slate-400 mt-2">' +
+                this._escapeAttr(String(ec.chain || '')) + ' \u00b7 ' +
+                this._escapeAttr(String(ec.pool).slice(0, 10)) + '\u2026' +
+                (ec.measured_at ? ' \u00b7 read ' + this._escapeAttr(String(ec.measured_at).replace('T', ' ').slice(0, 16)) + 'Z' : '') +
+                '</div>' : '') +
+        '</div>';
+    },
+
     _depthQualifierHtml(liq) {
         var st = liq.two_pct_depth_status;
         var br = liq.two_pct_depth_bracket;
@@ -4860,8 +4928,15 @@ const CommonRenderer = {
         var body = document.getElementById('axis-liquidity-body');
         if (!body) return;
         var liq = data.liquidity || {};
+        // ⚠️ "No ladder in this snapshot" reads as a MISSING measurement. Where
+        // the producer has published an exit_capacity block it is not missing —
+        // the venue has no curve to ladder, and the capacity block says so and
+        // gives the real ceiling. Saying both invites a reader to look for a
+        // ladder that should not exist.
         var ladderBlock = this.ladderBlockHtml(liq) ||
-            '<div class="text-sm text-slate-400">No exit-mark RFQ ladder in this snapshot.</div>';
+            ((liq.exit_capacity && typeof liq.exit_capacity === 'object')
+                ? ''
+                : '<div class="text-sm text-slate-400">No exit-mark RFQ ladder in this snapshot.</div>');
 
         // ⚠️ Four n/a's read as "we know nothing about this asset's liquidity".
         // For usdm the feed says something quite different: there is no secondary
@@ -5110,6 +5185,15 @@ const CommonRenderer = {
                     (liq.total_2pct_depth == null && liq.total_2pct_depth_note
                         ? '<div class="text-[11px] text-slate-400" title="' +
                           this._escapeAttr(liq.total_2pct_depth_note) + '">unmeasured, not zero \u24d8</div>' : '') +
+                    // ⚠️ A DELIBERATE WITHHOLDING MUST NOT READ AS A GAP. When the
+                    // producer publishes no depth AND says where the real
+                    // constraint lives, "n/a" alone is worse than the wrong
+                    // number it replaced.
+                    (liq.total_2pct_depth == null && liq.two_pct_depth_status === 'not_size_responsive'
+                        ? '<div class="text-[11px] text-amber-700 dark:text-amber-300" title="' +
+                          this._escapeAttr(liq.two_pct_depth_basis ||
+                            'The venue quotes one rate at every size, so there is no crossing to locate.') +
+                          '">no curve to measure \u2014 see exit capacity \u24d8</div>' : '') +
                 '</div>' +
                 sellCard +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Max ≤25 bps</div>' +
@@ -5122,7 +5206,7 @@ const CommonRenderer = {
 
         body.innerHTML = '<div class="panel">' +
             '<div class="panel-title">Liquidity &amp; Exit</div>' +
-            statRow + exitLine + ladderBlock + poolBlock + poolsNote + chainBlock +
+            statRow + this.exitCapacityHtml(liq) + exitLine + ladderBlock + poolBlock + poolsNote + chainBlock +
         '</div>';
     },
 
