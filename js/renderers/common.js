@@ -2482,11 +2482,38 @@ const CommonRenderer = {
                 (peg.market_price_self_referential_basis
                     ? ': ' + peg.market_price_self_referential_basis : '.'));
         }
+        // ⚠️ AN AFFIRMATIVE "NO" FROM THE AXIS OWNER IS ALSO A CLAIM, AND IT HAD
+        // NO READER. DexTracker reviewed usg's anchor and published
+        // `self_referential: false` with determination `input_sizing_only_reviewed`
+        // — the mark converts USD rung sizes to USG and nothing else, so it does
+        // not determine the crossing, which is measured against an independent
+        // baseline. This renderer read only `=== true`, so that determination was
+        // dropped and the page showed the price feed's warning as an unanswered
+        // alarm against a figure whose producer had answered it.
+        //
+        // ⚠️ STILL NOT ADJUDICATED. Both statements are true and they are about
+        // different things: the mark IS venue-native, and it does NOT set the
+        // crossing. Rendering one and hiding the other is the renderer picking a
+        // winner. Both now show, each attributed, and the marker stops reading as
+        // an open question once the owner has closed it.
+        var rebuttal = null;
+        if (a.self_referential === false && a.self_referential_determination) {
+            rebuttal = 'The depth feed reviewed this and determined it does NOT affect the ' +
+                'measurement (' + String(a.self_referential_determination).replace(/_/g, ' ') + ')' +
+                (a.self_referential_basis ? ': ' + a.self_referential_basis : '.');
+        }
         if (!claims.length) return '';
+        var tail = '\n\nA venue quoted against its own mid returns ~0bps however mispriced it is, ' +
+            'so a depth anchored this way cannot detect the failure it exists to detect.';
+        if (rebuttal) {
+            return '<div class="text-[11px] text-slate-500" title="' + this._escapeAttr(
+                claims.join('\n\n') + '\n\n' + rebuttal + tail +
+                '\n\nBoth statements are published and both are true: the mark is venue-native, ' +
+                'and the axis owner holds that it only sizes the input. Neither is adjudicated here.') +
+                '">venue-native mark \u2014 reviewed by the depth feed \u24d8</div>';
+        }
         return '<div class="text-[11px] text-amber-700 dark:text-amber-300" title="' +
-            this._escapeAttr(claims.join('\n\n') +
-                '\n\nA venue quoted against its own mid returns ~0bps however mispriced it is, ' +
-                'so a depth anchored this way cannot detect the failure it exists to detect.') +
+            this._escapeAttr(claims.join('\n\n') + tail) +
             '">\u26a0\ufe0f anchored to the venue being measured \u24d8</div>';
     },
 
