@@ -1,6 +1,6 @@
 # Axis 3 is stalled: five assets, 4–13 days old, and a cron line would make it worse
 
-**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12 · *rev 6*
+**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12 · *rev 7*
 
 Axis 3 stays with DexTracker — that is settled and this dispatch argues for it. The problem is
 that nothing computes depth on a schedule, so five assets are running days stale. **The obvious
@@ -239,15 +239,35 @@ rather than dressed up as a venue mark. The anchor no longer blocks usdm's autom
 
 ⚠️ **`usdm` is now OUT OF SCOPE, and the reason retires an earlier claim in this document.**
 Previous revisions said automating it converts a stale floor into a *fresh floor*. **That is not
-true.** Building the adapter surfaced the venue: `0x462fe04b…` on Celo carries ERC20 metadata
-`symbol=FPMM-USDm/USDC` and holds **zero USDm and zero USDC** — a pricing contract, not a reserve
-pool. Its eight stored rungs are identical to ~5 decimal places across a 5,000× range, every
-debiased slippage ~0.0000227 bps, and fed to DexTracker's own `size_response()` the answer is
+true.**
+
+**The facts below are DexTracker's on-chain reads on Celo at block 77283594, not independently
+verified by this side.** An earlier revision of this section said the venue held *"zero USDm and
+zero USDC"*; that came from a `balanceOf` call with its arguments reversed, was retracted by
+DexTracker within the hour, and was wrong. The corrected picture makes the finding stronger.
+
+`0x462fe04b…` is a real fixed-price market maker with a real but **small** book — USDm 24,382.34,
+USDC 36,578.61, matching its own `getReserves()`. The defect is not missing inventory. **It is that
+the quoter ignores the inventory.** Run live against `getAmountOut(uint256,address)`:
+
+```
+     USDm in        USDC out       rate
+        100          100.00      0.999951
+     36,578       36,576.22      0.999951
+     40,000       39,998.05      0.999951    exceeds the USDC on the book
+    500,430      500,405.59      0.999951    13.7x the USDC on the book
+  5,000,000    4,999,756.06      0.999951    137x
+```
+
+A flat rate across five orders of magnitude, quoting $5,000,000 out of a pool holding $36,578, with
+no bound on whether the counter-asset exists. Its eight stored rungs are identical to ~5 decimal
+places across a 5,000× range, and DexTracker's own `size_response()` returns
 **`not_size_responsive`** — the guard whose docstring reads *"'Clears $5M' is then evidence about
 the call, not the venue."*
 
-**So automating usdm would produce a fresh NON-measurement**, and the `$500,430` currently on the
-page bounds nothing. DexTracker's owner has already agreed to skip the Mento ABI hunt on that
+**So automating usdm would produce a fresh NON-measurement.** And the `$500,430` on the page is not
+merely un-evidenced: it is **13.7× the USDC that exists to pay it**, and is not executable at any
+price. The true ceiling is **$36,578.61**, the counter-asset side of the book. DexTracker's owner has already agreed to skip the Mento ABI hunt on that
 basis, and usdm is deliberately absent from the runner's registry with the reason recorded —
 absence writes no payload, because *"nothing can measure it"* is a different fact from *"no
 liquidity"*.
@@ -289,10 +309,11 @@ be rather than a load-bearing part of the page.
 and the Curve adapter all shipped on 2026-09-12, so `reusde_re` refreshes daily and the dashboard
 shows its cadence. What remains is a scoping decision, not an approval:
 
-- **`usdm` — cancelled, and this is a finding rather than a cut.** Its venue is a pricing contract
-  holding no reserves; the depth figure on the page bounds nothing and a fresh one would bound
-  nothing either. The honest replacement is a capacity-and-availability measure, which is a
-  different piece of work and is **not costed**.
+- **`usdm` — cancelled, and this is a finding rather than a cut.** Its venue quotes a flat rate
+  without bounding on inventory, so the `$500,430` on the page is **13.7× the USDC available to
+  pay it** and not executable at any price; a fresh figure would be no better. The honest
+  replacement is a capacity-and-availability measure — DexTracker is already building to that
+  shape — and it is **not costed**.
 - **`usg`** (multi-pool aggregation), **`reusd_re`** (cross-chain aggregation-or-refusal policy)
   and **`syzusd`** (wiring, never yet run here) — **all three uncosted.** DexTracker declined to
   price them from the estimate that covered the simpler two, and asked that this not be softened:
