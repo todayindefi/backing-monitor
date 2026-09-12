@@ -288,7 +288,16 @@ const CommonRenderer = {
             // was written to fix, one field along. Fixing the symptom is not
             // fixing the class: anything an earlier overlay concluded about this
             // axis has to survive a later one.
-            var VERDICT_KEYS = ['refused', 'refused_detail', 'stale_sole_source'];
+            // ⚠️ ADD TO THIS LIST OR THE FIELD IS SILENTLY DROPPED. Third time:
+            // `refused` was lost first, then `stale_sole_source`, now
+            // `superseded_depth`. The comment saying "add to this list" was
+            // already here and I still missed it — a later overlay on the same
+            // axis reassigns AXIS_PROVENANCE wholesale, so anything an earlier
+            // one concluded survives only by being named here. The symptom is
+            // always the same: the behaviour is right and the chip explaining it
+            // never appears.
+            var VERDICT_KEYS = ['refused', 'refused_detail', 'stale_sole_source',
+                                'superseded_depth'];
             function priorVerdict() {
                 var e = self.AXIS_PROVENANCE[axis];
                 if (!e) return null;
@@ -434,6 +443,30 @@ const CommonRenderer = {
                 if (spec.mode === 'replace') {
                     var droppedKeys = Object.keys(base);
                     self._adaptSchema(axis, schema, pay);
+                    // ⚠️ A STALE REFUSAL WAS HIDING A FRESH MEASUREMENT. reusd_re's
+                    // overlay publishes `depth_usd: null` — a considered refusal to
+                    // reduce four chains to one figure — and `replace` meant that
+                    // absence suppressed PegTracker's ladder entirely. The page read
+                    // "2% depth n/a" while a 9-rung ethereum ladder measured 20
+                    // minutes earlier sat underneath it. The staleness guard could
+                    // not help: the overlay was 4 days old, inside its 7-day window.
+                    //
+                    // ⚠️ NOT merged back in — that is the per-field mixing this axis
+                    // is `replace` to avoid. The superseded figure is STASHED so the
+                    // renderer can show it as what it is: the other producer's
+                    // measurement, attributed, beside the owner's reason for
+                    // declining. Both are real and they answer different questions.
+                    var sup = null;
+                    if (axis === 'liquidity' && pay.total_2pct_depth == null &&
+                        typeof base.total_2pct_depth === 'number') {
+                        sup = {
+                            depth: base.total_2pct_depth,
+                            status: base.two_pct_depth_status || null,
+                            basis: base.two_pct_depth_basis || null,
+                            chain: (base.exit_mark || {}).chain || null,
+                            as_of: base.as_of || null
+                        };
+                    }
                     data[axis] = pay;
                     self.AXIS_PROVENANCE[axis] = carryVerdict({
                         contributors: priorContributors().concat([
@@ -441,7 +474,8 @@ const CommonRenderer = {
                         file: o.file, producer: srcName, schema: schema, replaced: true,
                         overridden: [], added: Object.keys(pay), kept: [], dropped: droppedKeys,
                         overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null,
-                        stale_sole_source: staleSoleSource
+                        stale_sole_source: staleSoleSource,
+                        superseded_depth: sup
                     });
                     return;
                 }
@@ -1222,6 +1256,18 @@ const CommonRenderer = {
             // 1. An explicit producer declaration beats anything I derive.
             if (typeof l.scope === 'string' && l.scope.trim()) {
                 derived = 'Measured scope: ' + l.scope.trim().replace(/_/g, ' ');
+            } else if ((l.exit_mark || {}).chain) {
+                // ⚠️ THE LADDER'S OWN CHAIN, WHICH IS NOT A DERIVATION. The union
+                // of pool chains below is a guess assembled from a listing; this is
+                // the producer stating which chain the quote actually ran on.
+                // reusd_re is the case: PegTracker measures $10.0M via KyberSwap
+                // with `exit_mark.chain: "ethereum"`, while the asset trades on
+                // four chains and its own four pool rows carry chain: null. So the
+                // page showed a single figure for a multi-chain asset with nothing
+                // saying which chain it was, and the scope line could not fire
+                // because the pools had no chains to union.
+                derived = 'Depth measured on ' +
+                    String(l.exit_mark.chain).trim().toLowerCase() + ' only.';
             } else {
                 // 2. Otherwise the pools' own chains — but ONLY as a union, never a
                 // pick. Naming one chain when pools span several would be inventing
@@ -2598,6 +2644,28 @@ const CommonRenderer = {
                 (ec.measured_at ? ' \u00b7 read ' + this._escapeAttr(String(ec.measured_at).replace('T', ' ').slice(0, 16)) + 'Z' : '') +
                 '</div>' : '') +
         '</div>';
+    },
+
+    // Renders the depth figure a `replace` overlay superseded, where the overlay
+    // itself publishes none. Reads only what was stashed at merge time; returns ''
+    // when the owner did publish a figure, which is the normal case.
+    _supersededDepthHtml() {
+        var p = (this.AXIS_PROVENANCE || {}).liquidity;
+        var sup = p && p.superseded_depth;
+        if (!sup || typeof sup.depth !== 'number') return '';
+        var who = this._producerLabel(p.producer) || 'the depth feed';
+        return '<div class="text-[11px] text-amber-700 dark:text-amber-300" title="' +
+            this._escapeAttr(
+                'The asset feed measures ' + this.formatCurrency(sup.depth) +
+                (sup.chain ? ' on ' + String(sup.chain) : '') + '.' +
+                (sup.basis ? '\n\n' + sup.basis : '') +
+                '\n\nIt is NOT shown as this axis\u2019s depth, because ' + who +
+                ' owns the axis and has declined to publish a figure. Both are real and ' +
+                'they answer different questions \u2014 one venue measured, versus a ' +
+                'single figure for the whole asset. Neither is adjudicated here.') +
+            '">asset feed measures ' + this.formatCurrency(sup.depth) +
+            (sup.chain ? ' on ' + this._escapeAttr(String(sup.chain)) : '') +
+            ' \u2014 not used as the axis figure \u24d8</div>';
     },
 
     _depthQualifierHtml(liq) {
@@ -5438,6 +5506,13 @@ const CommonRenderer = {
                     // producer publishes no depth AND says where the real
                     // constraint lives, "n/a" alone is worse than the wrong
                     // number it replaced.
+                    // ⚠️ THE OTHER PRODUCER'S FIGURE, WHEN THE OWNER PUBLISHES NONE.
+                    // Attributed, never substituted: the owner declined to publish
+                    // a depth figure and that decision stands as the axis reading.
+                    // But a reader seeing only "n/a" cannot know a current
+                    // measurement of the same asset exists, on a named chain, from
+                    // the producer whose block this one replaced.
+                    this._supersededDepthHtml() +
                     (liq.total_2pct_depth == null && liq.two_pct_depth_status === 'not_size_responsive'
                         ? '<div class="text-[11px] text-amber-700 dark:text-amber-300" title="' +
                           this._escapeAttr(liq.two_pct_depth_basis ||
