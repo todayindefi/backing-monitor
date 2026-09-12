@@ -162,7 +162,22 @@ const CommonRenderer = {
         // does NOT drop the redemption leg — checked before adopting, because a
         // wholesale replace that loses the primary window would have made the
         // axis worse while looking richer.
-        liquidity: { 'liquidity/1':   { mode: 'replace', payload: 'flat', identity: 'asset_slug' },
+        // ⚠️ max_age_days IS DECLARED ONLY WHERE THE PRODUCER IS A PIPELINE.
+        // A replace overlay SUPPRESSES a live feed, so one that stops refreshing
+        // outranks fresh data forever rather than briefly. DexTracker's
+        // liquidity_payload.py is not on any cron — every overlay is a hand-run
+        // artifact frozen at its authoring date — so syzUSD's 13-day-old refusal
+        // to publish depth was hiding PegTracker's live ladder, which locates
+        // that crossing between $200K and $250K.
+        //
+        // ⚠️ DELIBERATELY NOT APPLIED TO contract/1, WHICH IS ALSO `replace`.
+        // That axis is a security_analyst HAND-WALK: being weeks old is its
+        // normal condition, not a stall, and ageing it out would blank axis 5
+        // across the estate. A staleness horizon is only meaningful for a
+        // producer that was supposed to re-measure. Whoever adds the next
+        // replace schema should ask which of the two it is.
+        liquidity: { 'liquidity/1':   { mode: 'replace', payload: 'flat', identity: 'asset_slug',
+                                        max_age_days: 7 },
                      'axis-basis/1': { mode: 'merge',   payload: 'envelope', identity: 'asset', additive: true } }
     },
 
@@ -249,6 +264,31 @@ const CommonRenderer = {
                 var e = self.AXIS_PROVENANCE[axis];
                 return (e && e.contributors) ? e.contributors.slice() : [];
             }
+            // ⚠️ A REFUSAL MUST SURVIVE A LATER OVERLAY ON THE SAME AXIS.
+            // AXIS_PROVENANCE[axis] is wholly reassigned per overlay and only
+            // `contributors` was carried forward, so liquidity/1 being refused
+            // and then axis-basis/1 merging cleanly ERASED the refusal — the
+            // fallback happened, and the chip explaining it did not render.
+            // Found by checking the DOM rather than the merged object: the data
+            // was right and the reader was told nothing.
+            function priorRefusal() {
+                var e = self.AXIS_PROVENANCE[axis];
+                return (e && e.refused)
+                    ? { refused: e.refused, refused_detail: e.refused_detail,
+                        file: e.file, producer: e.producer }
+                    : null;
+            }
+            function carryRefusal(entry) {
+                var r = priorRefusal();
+                if (!r) return entry;
+                entry.refused = r.refused;
+                entry.refused_detail = r.refused_detail;
+                // The chip names the file it is refusing, which is the refused
+                // one, not whichever overlay merged afterwards.
+                entry.file = r.file;
+                entry.producer = r.producer;
+                return entry;
+            }
             function refuse(reason, detail) {
                 self.AXIS_PROVENANCE[axis] = {
                     contributors: priorContributors(),
@@ -274,6 +314,40 @@ const CommonRenderer = {
 
             if (schema) {
                 if (!spec) { refuse('schema not adopted', schema); return; }
+
+                // ⚠️ A STALLED OWNER MUST NOT OUTRANK A LIVE FEED INDEFINITELY.
+                // Refusal is WHOLESALE — the base block renders untouched —
+                // because per-field merge across these two vocabularies is the
+                // documented-unsafe case that made this a `replace` axis to
+                // begin with. Either the overlay owns the axis or it does not.
+                //
+                // ⚠️ A REFUSAL HAS A SHELF LIFE TOO. What gets set aside here is
+                // usually not a number but a considered decision NOT to publish
+                // one. That decision was sound when it was measured; it is not
+                // evidence about today, and asserting depth is unmeasurable on
+                // the strength of a fortnight-old probe is itself a stale claim.
+                // The chip names exactly what was set aside, so the judgement
+                // stays visible instead of being erased.
+                if (spec.max_age_days) {
+                    var stampStr = typeof ov.as_of === 'string' ? ov.as_of
+                        : (ov[axis] && typeof ov[axis].as_of === 'string' ? ov[axis].as_of : null);
+                    var stampT = stampStr ? Date.parse(
+                        /Z$|[+-]\d\d:?\d\d$/.test(stampStr) ? stampStr : stampStr + 'Z') : NaN;
+                    if (isFinite(stampT)) {
+                        var ageDays = (Date.now() - stampT) / 86400000;
+                        if (ageDays > spec.max_age_days) {
+                            var said = self._overlayDepthSummary(ov, axis);
+                            refuse('overlay stale',
+                                'Its as_of is ' + stampStr + ' \u2014 ' + ageDays.toFixed(1) +
+                                ' days old, past the ' + spec.max_age_days +
+                                '-day limit declared for this schema. The axis owner\u2019s producer ' +
+                                'has not re-measured, so its block is NOT being used and the feed\u2019s ' +
+                                'own figures are rendered instead.' +
+                                (said ? ' What the stale overlay said: ' + said : ''));
+                            return;
+                        }
+                    }
+                }
 
                 // Envelope schemas nest the block under the axis name; flat ones
                 // put it at top level beside the meta keys.
@@ -308,13 +382,13 @@ const CommonRenderer = {
                     var droppedKeys = Object.keys(base);
                     self._adaptSchema(axis, schema, pay);
                     data[axis] = pay;
-                    self.AXIS_PROVENANCE[axis] = {
+                    self.AXIS_PROVENANCE[axis] = carryRefusal({
                         contributors: priorContributors().concat([
                             { producer: srcName, file: o.file, schema: schema, half: 'replace' }]),
                         file: o.file, producer: srcName, schema: schema, replaced: true,
                         overridden: [], added: Object.keys(pay), kept: [], dropped: droppedKeys,
                         overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
-                    };
+                    });
                     return;
                 }
 
@@ -329,14 +403,14 @@ const CommonRenderer = {
                 var stale = self._dropStaleDerived(axis, m, ovr, kpt);
                 var replacedArrays = self._recordArrayReplacements(base, pay, ovr);
                 data[axis] = m;
-                self.AXIS_PROVENANCE[axis] = {
+                self.AXIS_PROVENANCE[axis] = carryRefusal({
                     contributors: priorContributors().concat([
                         { producer: srcName, file: o.file, schema: schema, half: 'merge' }]),
                     file: o.file, producer: srcName, schema: schema,
                     overridden: ovr, added: add, kept: kpt, stale_dropped: stale,
                     replaced_arrays: replacedArrays,
                     overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
-                };
+                });
                 return;
             }
 
@@ -529,6 +603,22 @@ const CommonRenderer = {
     },
 
     // Drop kept-but-stale renderings;    // Drop kept-but-stale renderings; mutates `block` and `kept`, returns what went.
+    // What a refused overlay had claimed, so the chip can name it rather than
+    // saying only that something was set aside. Reads only fields the schema
+    // declares, and returns '' when it cannot say anything specific instead of
+    // guessing at the block's shape.
+    _overlayDepthSummary(ov, axis) {
+        if (axis !== 'liquidity' || !ov || typeof ov !== 'object') return '';
+        var d = ov.depth;
+        if (!d || typeof d !== 'object') return '';
+        var bits = [];
+        if (d.status) bits.push('status "' + String(d.status).replace(/_/g, ' ') + '"');
+        bits.push(typeof d.depth_usd === 'number'
+            ? 'depth ' + CommonRenderer.formatCurrency(d.depth_usd)
+            : 'no depth figure');
+        return bits.join(', ') + '.';
+    },
+
     _dropStaleDerived(axis, block, overridden, kept) {
         var map = (this.DERIVED_FIELDS || {})[axis];
         if (!map) return [];
