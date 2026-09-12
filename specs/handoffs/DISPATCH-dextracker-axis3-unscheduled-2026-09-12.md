@@ -1,6 +1,6 @@
 # Axis 3 is stalled: five assets, 4–13 days old, and a cron line would make it worse
 
-**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12
+**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12 · *rev 2*
 
 Axis 3 stays with DexTracker — that is settled and this dispatch argues for it. The problem is
 that nothing computes depth on a schedule, so five assets are running days stale. **The obvious
@@ -90,38 +90,57 @@ references live across its estate, none declared anywhere until yesterday.
 
 ---
 
-## 4. Also open: a gate that accepts silence
+## 4. The anchor gate — one fix shipped, a worse defect behind it
 
-Found by the DexTracker session while checking the above, and flagged by them as the
-highest-priority item, because it admits figures rather than merely disagreeing about one.
+**Shipped 2026-09-12 (DexTracker's owner authorised this one already).** `depth_is_publishable`
+now requires `self_referential` to be exactly `False`; missing or truthy fails. Previously
+`not None` evaluated True, so a **missing** key passed a gate whose own docstring demands
+freshness be *"affirmatively established, not merely un-denied."* Suite 255 → 258, with a test
+named for the usdm defect and one for a stringly-typed `"false"` smuggling past a truthiness
+check.
+
+⚠️ **It does not retroactively change the files.** The gate runs at build time, so usdm's
+$500,430 and usg's $677,124 are still on disk and still rendering. Whether to rebuild or
+hand-correct those two payloads is an open decision.
+
+### ⚠️ And fixing it exposed a third defect that defeats it
+
+`peg_market_anchor` does not read PegTracker's declared field. It **computes its own answer** by
+prefix-matching the source:
 
 ```python
-return bool(basis) and not basis.get("self_referential") and bool(basis.get("fair_value_as_of"))
+"self_referential": normalized_source.lower().startswith(
+    ("peg_tracker:kyberswap", "peg_tracker:router:", "peg_tracker:aggregator:"))
 ```
 
-`not None` evaluates True, so a **missing** `self_referential` key passes a gate built to catch
-exactly this. The docstring says freshness must be *"affirmatively established, not merely
-un-denied"*; the code does the opposite.
-
-Two anomalies across the seven overlays, both on the two assets in question, and they are
-different failure modes:
+That encodes "aggregator marks are self-referential" and misses the general rule — source
+equality, where an asset's price mark comes from the same venue its ladder measures. Run against
+the live feeds:
 
 ```
-asset   self_referential   gate says            actually publishes
-usdm    undeclared         passes by omission   $500,430 floor
-usg     true               withhold             $677,124 anyway
+asset    computed by DexTracker   declared by PegTracker   gate verdict
+usdm     False                    True                     PASSES
+usg      False                    True                     PASSES
+syzusd   False                    (not declared)           PASSES
 ```
 
-Both marks are genuinely self-referential — each asset's price mark comes from the same venue its
-ladder measures. PegTracker has since declared this upstream on both
-(`market_price_self_referential: true`) with a basis naming the venue. A uniformly mispriced venue
-quotes ~0bps against its own mid, so a depth anchored this way cannot detect the failure it exists
-to detect.
+**This is worse in effect than the silence just closed.** Undeclared at least failed shut once
+the gate was strict. A computed `False` is an *affirmative declaration of independence* for both
+known-bad assets, and it sails through a gate now doing exactly what it should.
 
-⚠️ **Consequence for the dashboard:** if the gate is fixed to treat missing as unsafe, **usdm's
-depth is withheld.** Because usdm is the sole source for its asset, the dashboard keeps the
-overlay rather than falling back — so its depth tile would go empty. That is a real change and it
-should be a decision, not a surprise.
+⚠️ **The adapter work in §5 runs through this path**, so it matters before that lands, not after.
+
+The fix is ready-made: honour `peg.market_price_self_referential` when present, keep the prefix
+heuristic only as a fallback when it is absent. PegTracker built and published that field
+precisely for this; it pays off only once consumers read it. DexTracker has flagged it to their
+owner with this recommendation and has not made the change unasked.
+
+⚠️ **Consequence for the dashboard, unchanged by any of the above:** if usdm's depth is ever
+withheld, its depth tile goes empty — usdm is the sole source for its asset, so the dashboard
+keeps the overlay rather than falling back. That should be a decision, not a surprise.
+
+*(The dashboard renders both producers' claims independently and attributes each, so a computed
+`False` in the overlay does not suppress PegTracker's declared `True`. That side is unaffected.)*
 
 ---
 
@@ -176,9 +195,13 @@ be rather than a load-bearing part of the page.
 
 ## The ask
 
-Approve the three steps in order — **adapters, guard, cron** — and the gate fix alongside them.
-Everything is scoped and both sides agree on the shape; the only thing missing is a decision that
-belongs to DexTracker's owner rather than to either session.
+Approve the three steps in order — **adapters, guard, cron** — plus the anchor-source fix in §4,
+which should land *before* the adapters, since the adapter work runs through that path.
+
+The gate fix is already done. What remains is one decision on scope and one on the two payloads
+currently holding figures the fixed gate would have refused. Everything is scoped and both sides
+agree on the shape; the only thing missing is a decision that belongs to DexTracker's owner
+rather than to either session.
 
 **Longer-term direction, for context rather than approval:** axis 3 migrates fully to DexTracker
 over time. That is where the convention problem actually gets solved — one producer means one
