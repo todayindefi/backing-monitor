@@ -1,6 +1,6 @@
 # Axis 3 is stalled: five assets, 4–13 days old, and a cron line would make it worse
 
-**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12 · *rev 5*
+**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12 · *rev 6*
 
 Axis 3 stays with DexTracker — that is settled and this dispatch argues for it. The problem is
 that nothing computes depth on a schedule, so five assets are running days stale. **The obvious
@@ -79,10 +79,20 @@ usdm         8 rungs · floor                  no ladder at all
 ```
 
 Underneath sits `aggregator_quotes.py`: a source-agnostic ladder engine with an adjudication
-layer covered by 13 tests named for real defects — a route flip (−6bps at $4.0076M, −290bps at
+layer covered by tests named for real defects — a route flip (−6bps at $4.0076M, −290bps at
 $4.0078M), a fixed-rate venue quoting 0bps at every size, a self-referential anchor,
 quote-failure distinguished from no-liquidity. **That layer is the expensive part and it is
 already built.** It also caught phantom pools returning 0.0000bps from $1k to $100M.
+
+⚠️ **One correction to the evidence above, found by DexTracker while reading this section.**
+`refine_crossing` — the bisection function — was the only one in that file with **no test
+coverage, and it was broken.** It appended a synthetic rung at the last size that CLEARED,
+asserting slippage equalled the threshold, so every honest probe above it read as cost *decreasing*
+with size; it refused a straight line at the first probe. **So the tight brackets quoted above were
+narrowed by hand, not by that function.** They are still real measurements and the comparison with
+PegTracker still holds — but they are not evidence that the bisection works, and this document
+previously implied they were. Now fixed with monotonicity over real probes only; that file goes
+13 → 16 tests, 280 across the suite.
 
 PegTracker's own assessment, volunteered against its own claim on the axis: *"my basis discipline
 is weaker than DexTracker's schema, not stronger."* The concrete form — three different slippage
@@ -181,10 +191,11 @@ measured" with the declaring producer's own basis.)*
 
 Order matters and is DexTracker's own. **The cron is last, never first.**
 
-**1. Two `.route()` adapters.** Mento `getAmountsOut` on Celo, and Curve `get_dy` single-pool.
-Reusing the ladder engine unchanged. DexTracker's estimate: **3–5 working days** for both.
+**1. The adapters.** ✅ **Curve `get_dy` single-pool is DONE** — `reusde_re` is live and
+refreshing daily as of 2026-09-12. **Mento is cancelled**, see the usdm note below. DexTracker's
+original estimate was **3–5 working days** for both.
 
-⚠️ **That estimate covers `usdm` and `reusde_re` — the two sole-source assets — and nothing
+⚠️ **That estimate covered `usdm` and `reusde_re` — the two sole-source assets — and nothing
 else.** An earlier revision of this document attached it to "all five assets"; that claim was not
 DexTracker's and they have declined to have their number read as covering it.
 
@@ -210,24 +221,45 @@ handling above the engine. **No estimate has been given for it.**
   route while larger rungs succeeded — and any cross-chain policy has to preserve that
   distinction. **Like `usg`, it is uncosted.**
 
-**2. The refuse-to-downgrade guard.** Proposed by DexTracker: `write_payload` refuses to overwrite
-a payload holding real rungs with a 0-rung stub, and exits non-zero. This is the safety net that
-would have caught the bad cron request — and step 3 is precisely when a scheduled job could start
-silently downgrading things.
+**2. The refuse-to-downgrade guard.** ✅ **DONE and verified live** — a stub write against
+`usg_liquidity.json` is refused and the file keeps its 15 rungs. It tests RUNGS rather than
+`depth_usd`, so a run that quotes and then legitimately withholds still writes.
 
-**3. Then the cron — daily or twice daily.** Minutes of work once steps 1 and 2 make it safe.
-Daily is explicitly sufficient for this axis. Alongside it, declare the cadence in the payload as
-`refresh_cadence` so readers can see it.
+**3. The cron.** ✅ **DONE** — `45 7 * * *`, daily, running `liquidity_refresh.py` and **not** the
+`liquidity_payload.py` assembler that would blank everything. It lands after PegTracker's analyzer
+run at :35 so the anchor is fresh, and before the 09:35 digest. It publishes
+`refresh_cadence: "daily"`, sourced from a single constant in the runner so the declaration and the
+schedule cannot drift apart, and **the dashboard renders it beside the age**: reusde-re's axis now
+reads *"refreshes daily · 0d old"*.
 
 **Already cleared on the other side.** PegTracker shipped `peg.market_price_as_of` for `usdm` and
 `usg`, each with a basis naming what dates it — usdm's is the Mento `getAmountOut` quote's own
 observation time; usg's is the analyzer run clock, explicitly labelled as *bounding* the age
 rather than dressed up as a venue mark. The anchor no longer blocks usdm's automation.
 
-⚠️ **One expectation to set.** Automating `usdm` converts a stale floor into a *fresh floor*, not
-into a located crossing — its Mento pool is oracle-priced and stayed inside the threshold through
-500,000 USDm. `reusde_re` is where the automation delivers a genuine bracket. Nobody should expect
-a number that will not appear.
+⚠️ **`usdm` is now OUT OF SCOPE, and the reason retires an earlier claim in this document.**
+Previous revisions said automating it converts a stale floor into a *fresh floor*. **That is not
+true.** Building the adapter surfaced the venue: `0x462fe04b…` on Celo carries ERC20 metadata
+`symbol=FPMM-USDm/USDC` and holds **zero USDm and zero USDC** — a pricing contract, not a reserve
+pool. Its eight stored rungs are identical to ~5 decimal places across a 5,000× range, every
+debiased slippage ~0.0000227 bps, and fed to DexTracker's own `size_response()` the answer is
+**`not_size_responsive`** — the guard whose docstring reads *"'Clears $5M' is then evidence about
+the call, not the venue."*
+
+**So automating usdm would produce a fresh NON-measurement**, and the `$500,430` currently on the
+page bounds nothing. DexTracker's owner has already agreed to skip the Mento ABI hunt on that
+basis, and usdm is deliberately absent from the runner's registry with the reason recorded —
+absence writes no payload, because *"nothing can measure it"* is a different fact from *"no
+liquidity"*.
+
+⚠️ **The honest replacement for usdm is a different measurement, not a better ladder** — capacity
+and availability (trading limits and their window, reserve backing, breaker state, oracle liveness)
+rather than a slippage curve, because a fixed-price venue has no curve to measure. That is a
+separate scoping question and is not costed here.
+
+`reusde_re` is where the automation delivers a genuine bracket, and **it already has**: refreshed
+2026-09-12 from 8.9 days stale, crossing relocated from $15,461 to $20,312 — a move the page was
+carrying as a stale figure.
 
 ---
 
@@ -253,17 +285,22 @@ be rather than a load-bearing part of the page.
 
 ## The ask
 
-Approve the three steps in order — **adapters, guard, cron**. Both anchor fixes in §4 are already
-shipped and need nothing.
+⚠️ **Most of the original ask is already done — and it was not the expensive part.** Guard, cron
+and the Curve adapter all shipped on 2026-09-12, so `reusde_re` refreshes daily and the dashboard
+shows its cadence. What remains is a scoping decision, not an approval:
 
-Two decisions come with it:
-
-- **Scope — one costed item, three uncosted.** The 3–5 days buys `usdm` and `reusde_re` only.
-  **`usg`** (multi-pool aggregation), **`reusd_re`** (cross-chain aggregation-or-refusal policy)
-  and **`syzusd`** (wiring, never yet run here) carry no estimate. ⚠️ **This is a materially
-  smaller costed scope than "automate axis 3" suggests.** It is stated this way at DexTracker's
-  insistence — their words: they would rather fund the smaller honest scope than approve the
-  larger one and discover the rest. Decide what is in before work starts, not partway.
+- **`usdm` — cancelled, and this is a finding rather than a cut.** Its venue is a pricing contract
+  holding no reserves; the depth figure on the page bounds nothing and a fresh one would bound
+  nothing either. The honest replacement is a capacity-and-availability measure, which is a
+  different piece of work and is **not costed**.
+- **`usg`** (multi-pool aggregation), **`reusd_re`** (cross-chain aggregation-or-refusal policy)
+  and **`syzusd`** (wiring, never yet run here) — **all three uncosted.** DexTracker declined to
+  price them from the estimate that covered the simpler two, and asked that this not be softened:
+  they would rather fund the smaller honest scope than approve the larger one and discover the
+  rest.
+- **The two payloads on disk.** usdm's `$500,430` and usg's `$677,124` were built through the
+  broken gate, and the fixed anchor path now refuses both. Neither has been touched. For usg that
+  means a rebuild withholds the figure; for usdm the figure was never a measurement to begin with.
 - **The two payloads on disk.** usdm's `$500,430` and usg's `$677,124` were built through the
   broken gate and the fixed anchor path now refuses them. Rebuilding is what empties usdm's
   dashboard tile. That is a deliberate call about showing nothing versus showing a figure known to
