@@ -4941,6 +4941,25 @@ const CommonRenderer = {
         var bpsDigits = 1;
         while (bpsDigits < 4 && bpsCollidesAcrossColour(bpsDigits)) bpsDigits++;
 
+        // ⚠️ A FROZEN OUTPUT IS A WALL, AND A bps FIGURE RENDERS IT AS A PRICE.
+        // hastra-prime's output_usd stops at $5,900,633.43: $14M in returns
+        // exactly what $5.99M returns. The slippage column expresses that as
+        // -6088bps, which reads as "very expensive" rather than "cannot fill".
+        // Those are different facts and only one of them is a price.
+        //
+        // ⚠️ No threshold is invented here. The tell is that output_usd is
+        // IDENTICAL on consecutive rungs while the size grew — a pure
+        // observation from published data, which is the same reason
+        // `fill_ratio` is the right shape for the producer and a cutoff is not.
+        var frozenAt = {};
+        (function() {
+            for (var i = 1; i < sizes.length; i++) {
+                var a = qOf(sizes[i - 1]).output_usd, b = qOf(sizes[i]).output_usd;
+                if (typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) < 0.005) {
+                    frozenAt[sizes[i]] = a;
+                }
+            }
+        })();
         var ladderSignInverted = CommonRenderer.slippageSignIsInverted(sizes.map(function(sz) {
             var q0 = qOf(sz);
             return { size: sz, output: q0.output_usd, bps: q0.slippage_bps };
@@ -5030,7 +5049,18 @@ const CommonRenderer = {
             return '<tr>' +
                 '<td class="font-mono">' + sizeLabel(sz) + '</td>' +
                 '<td class="text-right font-mono ' + cls + '">' + (bps != null ? bps.toFixed(bpsDigits) + ' bps' : '—') + signWarn + '</td>' +
-                '<td class="text-right font-mono">' + (q.output_usd != null ? CommonRenderer.formatCurrencyExact(q.output_usd) : '—') + '</td>' +
+                '<td class="text-right font-mono">' +
+                    (q.output_usd != null ? CommonRenderer.formatCurrencyExact(q.output_usd) : '—') +
+                    (frozenAt[sz] != null
+                        ? ' <span class="text-amber-700 dark:text-amber-300" title="' +
+                          CommonRenderer._escapeAttr(
+                            'This rung returns the SAME amount as the smaller one before it, so the ' +
+                            'venue is exhausted rather than expensive. Asking for more returns no ' +
+                            'more. The slippage figure beside it expresses that as a very large ' +
+                            'cost, which reads as a price — but no price fills this size.') +
+                          '">\u26a0\ufe0f wall</span>'
+                        : '') +
+                '</td>' +
             '</tr>';
         }).join('');
 
