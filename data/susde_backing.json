@@ -3,12 +3,12 @@
   "asset": "sUSDe",
   "asset_slug": "susde",
   "chain": "ethereum",
-  "timestamp": "2026-09-12T09:52:04Z",
+  "timestamp": "2026-09-12T10:51:36Z",
   "summary": {
     "total_supply": 1052835719.66,
     "supply_unit": "shares",
-    "total_assets_usde": 1313338386.02,
-    "nav": 1.2477091034862362,
+    "total_assets_usde": 1312648741.82,
+    "nav": 1.2477159530284925,
     "price": 1.2475063429842024,
     "staked_usde_usd": 1313604361.93,
     "paused": null
@@ -18,7 +18,7 @@
       "id": "attestation_stale",
       "severity": "warning",
       "message": "USDe: Custody data in use is the July 2026 attestation, 50d old (threshold 45d); latest published (custodian-attestations-of-assets-backing-usde-august-3) is 9d old",
-      "value": 50.4,
+      "value": 50.5,
       "scope": "usde_level",
       "inherited_from": "USDe"
     },
@@ -35,12 +35,12 @@
     "type": "susde",
     "vault_state": {
       "total_supply_shares": 1052835719.66,
-      "total_assets_usde": 1313338386.0202823,
-      "nav_usde_per_share": 1.2477091034862362
+      "total_assets_usde": 1312648741.824978,
+      "nav_usde_per_share": 1.2477159530284925
     },
     "peg": {
       "market_price": 1.2475063429842024,
-      "nav_usde_per_share": 1.2477091034862362,
+      "nav_usde_per_share": 1.2477159530284925,
       "source": "llamarisk + onchain_nav"
     },
     "history_ref": "susde_backing_history.json",
@@ -61,8 +61,8 @@
   "report_url": "https://tidresearch.com/reports/susde",
   "peg": {
     "market_price": 1.2475063429842024,
-    "nav": 1.2477091034862362,
-    "premium_discount_pct": -0.0163,
+    "nav": 1.2477159530284925,
+    "premium_discount_pct": -0.0168,
     "source": "llamarisk + onchain_nav",
     "history_ref": "susde_backing_history.json",
     "history_field": "market_price",
@@ -70,7 +70,7 @@
     "volatility_score_source": "risk-feed@2026-09-11T01:45:02Z",
     "volatility_score_status": "ok",
     "volatility_score_generated_at": "2026-09-11T01:45:02Z",
-    "volatility_score_age_hours": 32.12
+    "volatility_score_age_hours": 33.11
   },
   "liquidity": {
     "as_of": "2026-09-12T01:34:08Z",
@@ -80,7 +80,7 @@
     "two_pct_depth_status": "ladder_exhausted",
     "two_pct_depth_size_responsive": true,
     "two_pct_depth_unresponsive_note": null,
-    "two_pct_depth_basis": "A FLOOR, not a measurement. The deepest rung quoted ($2,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL (average realized rate over the whole fill) against the venue spot reference, not marginal impact. The same ladder classifies differently under the two conventions, so this basis is required to compare the figure with another producer's.",
+    "two_pct_depth_basis": "A FLOOR, not a measurement. The deepest rung quoted ($2,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
     "volume_24h": null,
     "measured_chain": "ethereum",
     "measured_venue": "kyberswap aggregator on ethereum",
@@ -95,51 +95,60 @@
           "output_usd": 1000.2,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": 0.0
+          "slippage_bps": 0.0,
+          "fill_ratio": 1.0002
         },
         "10000": {
           "output_usd": 10001.35,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": -0.7
+          "slippage_bps": -0.7,
+          "fill_ratio": 1.000135
         },
         "50000": {
           "output_usd": 50005.7,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": -0.9
+          "slippage_bps": -0.9,
+          "fill_ratio": 1.000114
         },
         "100000": {
           "output_usd": 100009.95,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": -1.0
+          "slippage_bps": -1.0,
+          "fill_ratio": 1.000099
         },
         "250000": {
           "output_usd": 250016.06,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": -1.4
+          "slippage_bps": -1.4,
+          "fill_ratio": 1.000064
         },
         "500000": {
           "output_usd": 500005.67,
           "attempts": 2,
           "provider": "kyberswap",
-          "slippage_bps": -1.9
+          "slippage_bps": -1.9,
+          "fill_ratio": 1.000011
         },
         "1000000": {
           "output_usd": 999926.4,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": -2.8
+          "slippage_bps": -2.8,
+          "fill_ratio": 0.999926
         },
         "2000000": {
           "output_usd": 1999489.18,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": -4.6
+          "slippage_bps": -4.6,
+          "fill_ratio": 0.999745
         }
-      }
+      },
+      "slippage_bps_basis": "PRICE IMPACT against this venue's own smallest quoted rung, which EXCLUDES that rung's own spread \u2014 it is not the holder's all-in cost. The all-in figure is fill_ratio (output_usd / size). Impact is measured this way deliberately, so peg discount and source lag do not leak into it."
     },
     "derived_score": null,
     "derived_score_status": "not_computed",
@@ -149,7 +158,7 @@
     "liquidity_score_source": "risk-feed@2026-09-11T01:45:02Z",
     "liquidity_score_status": "ok",
     "liquidity_score_generated_at": "2026-09-11T01:45:02Z",
-    "liquidity_score_age_hours": 32.12
+    "liquidity_score_age_hours": 33.11
   },
   "backing": {
     "collateral_ratio": 101.5594,
@@ -171,7 +180,7 @@
     "backing_score_source": "risk-feed@2026-09-11T01:45:02Z",
     "backing_score_status": "ok",
     "backing_score_generated_at": "2026-09-11T01:45:02Z",
-    "backing_score_age_hours": 32.12
+    "backing_score_age_hours": 33.11
   },
   "dependencies": {
     "upstream": [
@@ -193,8 +202,8 @@
     "issuer_score_source": "risk-feed@2026-09-11T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-09-11T01:45:02Z",
-    "issuer_score_age_hours": 32.12,
-    "attestation_age_days": 50.4,
+    "issuer_score_age_hours": 33.11,
+    "attestation_age_days": 50.5,
     "attestation_age_inherited_from": "USDe",
     "attestation_age_basis": "embedded_snapshot"
   }
