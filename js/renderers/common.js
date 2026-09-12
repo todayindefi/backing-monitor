@@ -699,6 +699,27 @@ const CommonRenderer = {
         bits.push(typeof d.depth_usd === 'number'
             ? 'depth ' + CommonRenderer.formatCurrency(d.depth_usd)
             : 'no depth figure');
+        // ⚠️ "NO DEPTH FIGURE" READS AS "NOTHING MEASURED", AND FOR ONE ASSET IT
+        // IS THE OPPOSITE. reusd_re's overlay carries 15 rungs across four
+        // chains and DECLINES to reduce them to one scalar, because those books
+        // do not share liquidity — a considered refusal. syzusd's carries zero
+        // rungs and was never measured at all. Identical chip text for both let
+        // a reader take the refusal for an absence, and the figure this page
+        // falls back to for reusd_re is precisely the cross-chain aggregate the
+        // axis owner rejects.
+        //
+        // The rung count is the discriminator, and it is published. Same one
+        // DexTracker uses to tell a real payload from a stub in its own guard.
+        var rungs = Array.isArray(d.rungs) ? d.rungs : [];
+        if (typeof d.depth_usd !== 'number' && rungs.length) {
+            var chains = {};
+            rungs.forEach(function(r) { if (r && r.chain) chains[r.chain] = 1; });
+            var nChains = Object.keys(chains).length;
+            bits.push('but ' + rungs.length + ' rungs were quoted' +
+                (nChains > 1 ? ' across ' + nChains + ' chains, which the producer declines to ' +
+                               'reduce to one figure because those books do not share liquidity'
+                             : ' \u2014 a measurement that withholds a scalar, not an absence of one'));
+        }
         return bits.join(', ') + '.';
     },
 
