@@ -4818,21 +4818,57 @@ const CommonRenderer = {
     //
     // Shared because two renderers draw slippage tables — this one and usdai.js,
     // which serves the other two affected assets.
+    // ⚠️ SYSTEMATIC OR NOTHING. A sign inversion is the same arithmetic on every
+    // rung, so it mirrors on ALL of them. A coincidence mirrors on one.
+    //
+    // The first version of this checked each rung independently and was ONE
+    // ROUNDING from flagging susde — its fair_value is 1.2472, so recomputing
+    // from output_usd carries a systematic offset, and at the $100K rung the
+    // true -1.00 and the offset +0.99 coincide in magnitude by chance. Only a
+    // `|realised| > 1` guard excluded it, with 0.99 sitting just under the line.
+    // susde is the asset cited as the control proving this detector is narrow,
+    // so it is the one it could least afford to flag. Caught by PegTracker
+    // running it over every rung rather than one per asset.
+    //
+    //   susdat  3 of 3 mirror -> systematic, a sign bug
+    //   usdat   7 of 7 mirror -> systematic, a sign bug
+    //   susde   1 of 8 mirror -> coincidence, must NOT flag
+    //
+    // Returns true only when every qualifying rung mirrors and there are at
+    // least two to compare, so one coincidence can never trip it.
+    slippageSignIsInverted(rows) {
+        if (!Array.isArray(rows)) return false;
+        var qualifying = 0, mirrored = 0;
+        rows.forEach(function(r) {
+            if (!r || typeof r.bps !== 'number' || typeof r.output !== 'number' ||
+                typeof r.size !== 'number' || !(r.size > 0)) return;
+            var realised = (r.output / r.size - 1) * 10000;
+            if (Math.abs(realised) <= 1) return;
+            qualifying++;
+            if ((realised >= 0) !== (r.bps >= 0) &&
+                Math.abs(Math.abs(realised) - Math.abs(r.bps)) <= Math.abs(realised) * 0.05) {
+                mirrored++;
+            }
+        });
+        return qualifying >= 2 && mirrored === qualifying;
+    },
+
+    // The per-row marker, shown only where the LADDER was found systematically
+    // inverted. The published value is never overridden — recomputing a
+    // producer's field is how two numbers come to disagree, and for an asset
+    // whose fair_value is not $1 the recomputation is wrong in its own way.
     slippageSignWarningHtml(sizeUsd, outputUsd, bps) {
         if (typeof bps !== 'number' || typeof outputUsd !== 'number' ||
             typeof sizeUsd !== 'number' || !(sizeUsd > 0)) return '';
         var realised = (outputUsd / sizeUsd - 1) * 10000;
-        if (Math.abs(realised) <= 1) return '';
-        if ((realised >= 0) === (bps >= 0)) return '';
-        if (Math.abs(Math.abs(realised) - Math.abs(bps)) > Math.abs(realised) * 0.05) return '';
         return ' <span class="text-amber-700 dark:text-amber-300" title="' + this._escapeAttr(
-            'The sign of this figure contradicts the trade beside it. Selling ' +
-            this.formatCurrency(sizeUsd) + ' returns ' + this.formatCurrencyExact(outputUsd) +
-            ', which is a ' + (realised >= 0 ? 'GAIN' : 'LOSS') + ' of ' +
-            Math.abs(realised).toFixed(1) + ' bps \u2014 the same magnitude, the opposite sign. ' +
-            'The published value is shown unchanged rather than corrected here, because ' +
-            'recomputing a producer\u2019s field is how two numbers come to disagree. Read the ' +
-            'output column.') + '">\u26a0\ufe0f</span>';
+            'Every rung on this ladder carries a slippage figure whose sign contradicts its own ' +
+            'output column, at the same magnitude — the signature of an inverted sign rather than ' +
+            'a basis difference. Selling ' + this.formatCurrency(sizeUsd) + ' returns ' +
+            this.formatCurrencyExact(outputUsd) + ', which is a ' +
+            (realised >= 0 ? 'GAIN' : 'LOSS') + ' of ' + Math.abs(realised).toFixed(1) + ' bps. ' +
+            'The published value is shown unchanged rather than corrected here.') +
+            '">\u26a0\ufe0f</span>';
     },
 
     ladderBlockHtml(liq) {
@@ -4905,6 +4941,10 @@ const CommonRenderer = {
         var bpsDigits = 1;
         while (bpsDigits < 4 && bpsCollidesAcrossColour(bpsDigits)) bpsDigits++;
 
+        var ladderSignInverted = CommonRenderer.slippageSignIsInverted(sizes.map(function(sz) {
+            var q0 = qOf(sz);
+            return { size: sz, output: q0.output_usd, bps: q0.slippage_bps };
+        }));
         var ladderRows = sizes.map(function(sz) {
             var q = quotes['' + sz] || quotes[sz] || {};
             var bps = q.slippage_bps;
@@ -4983,7 +5023,8 @@ const CommonRenderer = {
             // magnitude (usde: 1.00 vs 2.31, syrupUSDC: 3.30 vs 10.24) and never
             // mirrors it, so those do not trip. An exact mirror cannot be a
             // basis difference.
-            var signWarn = CommonRenderer.slippageSignWarningHtml(sz, q.output_usd, bps);
+            var signWarn = ladderSignInverted
+                ? CommonRenderer.slippageSignWarningHtml(sz, q.output_usd, bps) : '';
             var mag = bps == null ? null : Math.abs(bps);
             var cls = mag == null ? '' : (mag <= 25 ? 'text-green-600' : (mag <= 200 ? 'text-amber-600' : 'text-red-600'));
             return '<tr>' +

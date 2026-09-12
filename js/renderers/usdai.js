@@ -1468,6 +1468,13 @@ var UsdaiRenderer = {
         var hasAny = tiers.some(function(t) { return qm[t] && (qm[t].slippage_bps != null || qm[t].output_usd != null); });
         var slipBlock = '';
         if (hasAny) {
+            // ⚠️ Ladder-level verdict, not per row: a sign inversion mirrors on
+            // EVERY rung, a coincidence on one. See slippageSignIsInverted.
+            var tierSignInverted = CommonRenderer.slippageSignIsInverted(tiers.map(function(t) {
+                var q0 = qm[t] || {};
+                var o0 = (q0.output_usd != null) ? q0.output_usd : q0.out;
+                return { size: Number(t), output: o0, bps: q0.slippage_bps };
+            }));
             var rows = tiers.map(function(t) {
                 var q = qm[t] || {};
                 // ⚠️ The old formatter divided by 1000 and appended 'K'
@@ -1496,7 +1503,8 @@ var UsdaiRenderer = {
                     // $10,000,000, a loss shown as a gain. Shared detector, so
                     // this table and the common ladder cannot disagree about
                     // what counts as a contradiction.
-                    CommonRenderer.slippageSignWarningHtml(Number(t), out, bps) +
+                    (tierSignInverted
+                        ? CommonRenderer.slippageSignWarningHtml(Number(t), out, bps) : '') +
                     '</td>' +
                 '</tr>';
             }).join('');
