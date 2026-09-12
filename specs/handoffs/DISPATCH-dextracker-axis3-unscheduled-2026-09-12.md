@@ -1,6 +1,6 @@
 # Axis 3 is stalled: five assets, 4–13 days old, and a cron line would make it worse
 
-**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12 · *rev 3*
+**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12 · *rev 4*
 
 Axis 3 stays with DexTracker — that is settled and this dispatch argues for it. The problem is
 that nothing computes depth on a schedule, so five assets are running days stale. **The obvious
@@ -116,8 +116,14 @@ It now prefers PegTracker's `peg.market_price_self_referential`, via `_resolve_s
 Independence requires **both** to agree (`declared or heuristic`): an upstream `False` cannot
 unsay a local router match, an upstream `True` always wins, a declaration present but not boolean
 fails closed, and `routed_mark` deliberately ignores the declaration because it describes
-`peg.market_price` — a different number from the cross-check's routed mark. Anchors now carry
-`self_referential_determination` and `self_referential_basis` for provenance. Suite 255 → 263.
+`peg.market_price` — a different number from the cross-check's routed mark.
+
+**An explicit `null` is distinguished from an absent key**, and treated as self-referential under
+`upstream_declaration_undetermined`, with the heuristic deliberately not consulted — it cannot see
+the venue identity that defeated the producer. An absent key still falls back to the heuristic,
+which stays right for the ~18 feeds that never publish the field. **A stated non-answer is not an
+unasked question.** Anchors carry `self_referential_determination` and `self_referential_basis`
+for provenance. Suite 255 → 264.
 
 The live table, after both fixes:
 
@@ -141,10 +147,18 @@ comparison (`liquidity_tracker.mark_provider`), and **the fleet result is three 
 `hastra_prime` resolves cleanly under the provider form (`geckoterminal` vs `uniswap`) and is not
 affected.
 
-✅ **One design point from PegTracker worth having.** Their `is_self_referential()` returns
-**None** when either source is unknown — unmeasured, not a clean bill of health. A rule returning
-`False` on missing data would hand the newly-strict gate an affirmative pass built from ignorance,
-which is the same shape as the defect fix 2 closed. The two rules are complementary rather than
+✅ **One design point from PegTracker, and it prompted fix 3.** Their `is_self_referential()`
+returns **None** when either source is unknown — unmeasured, not a clean bill of health. A rule
+returning `False` on missing data would hand the newly-strict gate an affirmative pass built from
+ignorance, the same shape as the defect fix 2 closed.
+
+⚠️ **Writing that paragraph is what found the hole.** DexTracker went to confirm their resolver
+handled that value correctly and it did not: `peg.get(...)` returns `None` for an absent key and
+for an explicit null alike, so a deliberate *"I tried and cannot tell"* was being treated as *"this
+feed never considered it"* and falling through to the heuristic — which answers `False` for any
+venue-native mark. **Latent rather than live** (three feeds declare the field today, none null),
+but `is_self_referential()` is designed to emit `None`, so it would have fired on the first
+unreadable source. Now handled, as described above. The two rules are complementary rather than
 overlapping: the prefix heuristic knows an aggregator-routed mark shares the ladder's route; the
 provider rule catches venue-level identity no prefix list would enumerate. Neither is a superset.
 `mark_provider` is available to port, though the upstream declaration is cheaper and cannot drift
