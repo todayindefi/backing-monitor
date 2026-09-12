@@ -566,8 +566,23 @@ const CommonRenderer = {
         // default. A field that reaches `data.liquidity` is not a field a reader
         // sees, and on a replace axis an unmapped field is not merely unrendered,
         // it is deleted.
+        // ⚠️ THE BRACKET ARRIVES IN TWO SHAPES AND REJECTING ONE LOSES THE RANGE.
+        // This adapter originally accepted only the object form. reusde-re's
+        // first automated run published `bracket: [low, high]`, the array form
+        // the qualifier has always handled for crvUSD — and because the adapter
+        // dropped it, a $937-wide located crossing rendered as "≥$20.3K ladder
+        // exhausted — floor, not a measurement". The status said `bracketed`
+        // and the page said the opposite.
+        //
+        // ⚠️ Exactly the defect this adapter was written to fix, in the other
+        // shape: on day one it was the OBJECT form being dropped on USG. A
+        // schema with two accepted encodings needs both read, not whichever one
+        // existed when the code was written.
         var br = d.bracket;
-        if (br && typeof br === 'object' && !Array.isArray(br) &&
+        if (Array.isArray(br) && br.length === 2 &&
+            typeof br[0] === 'number' && typeof br[1] === 'number') {
+            block.two_pct_depth_bracket = br.slice();
+        } else if (br && typeof br === 'object' && !Array.isArray(br) &&
             typeof br.last_clearing_size_usd === 'number' &&
             typeof br.first_crossing_size_usd === 'number') {
             block.two_pct_depth_bracket = {

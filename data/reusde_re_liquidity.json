@@ -1,44 +1,26 @@
 {
  "schema_version": "liquidity/1",
  "asset_slug": "reusde_re",
- "as_of": "2026-09-03T06:00:11Z",
+ "as_of": "2026-09-12T03:33:36Z",
  "producer": "dextracker",
  "note": "Axis 3 (Liquidity & Exit), single producer. The axis is the worse of executable venue depth and primary redemption. Pool TVL is context only and is never substituted for executable depth.",
  "depth": {
   "status": "bracketed",
-  "depth_usd": 15461.12060546875,
-  "is_floor": false,
+  "depth_usd": 20312.5,
+  "is_floor": true,
   "threshold_bps": -200.0,
-  "slippage_convention": "marginal execution-rate deterioration from the smallest successful rung; signed cost, with -200bps as the crossing threshold. The external reUSDe USD mid sizes the input notional and is not the impact reference.",
-  "basis": "The 2% crossing is bracketed by successful Curve get_dy calls. depth_usd is the largest tested USD input notional that cleared the threshold, not pool TVL. Marginal impact is execution-rate deterioration from the smallest successful rung; the dated external reUSDe USD mid converts each rung's input notional to reUSDe but is not the impact reference. Because the pool output is denominated in sUSDe and no sUSDe USD mark is in scope, neither the smallest-rung baseline nor any rung's execution rate can be reconciled to a dollar price.",
-  "price_bias_bps": null,
-  "bias_measures": "not_reconcilable_without_susde_usd_mark",
-  "denomination_scope": {
-   "measured_leg": "reUSDe -> sUSDe",
-   "input_notional": "USD, converted to reUSDe with the external mid",
-   "output_denomination": "sUSDe tokens",
-   "excluded_leg": "sUSDe -> USD",
-   "exit_cost_scope": "Curve venue leg only; this understates complete dollar-exit cost by the unmeasured cost of selling or redeeming sUSDe",
-   "dependency_note": "The secondary venue, WindowRedemption payout asset, and 98.97% of issuer-reported combined protocol reserves all depend on sUSDe; these risks are correlated rather than independent."
-  },
-  "anchor": {
-   "fair_value": 1.4148291827566535,
-   "fair_value_basis": "market",
-   "fair_value_source": "peg_tracker:CoinGecko API external USD aggregate mid for re-protocol-reusde; off-chain market-data API, distinct from the off-chain issuer NAV API and not a contract read",
-   "fair_value_as_of": "2026-09-03T05:50:50Z",
-   "fair_value_choice": "market_price",
-   "fair_value_choice_mode": "inherited",
-   "market_price_cross_check": {
-    "status": "not_reconcilable",
-    "reason": "The external anchor is a reUSDe USD mid while the Curve pool prices reUSDe in sUSDe. Computing a market-price bias requires an sUSDe USD mark, which is outside this measurement's scope."
-   },
-   "self_referential": false
-  },
+  "size_response": "size_responsive",
+  "monotonic": true,
+  "slippage_convention": "Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. The dated external mid sizes the input notional and is NOT the impact reference.",
+  "basis": "The -200bps crossing is BRACKETED between $20,312.50 and $21,250.00 by bisection on live quotes -- located to within $937.50. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor.",
+  "bracket": [
+   20312.5,
+   21250.0
+  ],
   "quote": {
    "method": "eth_call Curve get_dy(int128,int128,uint256), falling through to get_dy(uint256,uint256,uint256)",
+   "venue": "curve",
    "chain": "ethereum",
-   "block": 25894848,
-   "block_as_of": "2026-09-03T06:00:11Z",
    "pool": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
    "token_in": {
     "symbol": "reUSDe",
@@ -53,35 +35,226 @@
     "decimals": 18
    },
    "baseline_size_usd": 100.0,
-   "baseline_exchange_rate_susde_per_reusde": 1.133005678191628,
-   "failed_size_note": "get_dy returned no value at $5M, $10M, and the $19M tranche probe. These are failed calls, not threshold-clearing rungs and not depth floors."
+   "quoted_as_of": "2026-09-12T03:32:19Z"
   },
-  "bracket": {
-   "last_clearing_size_usd": 15461.12060546875,
-   "last_clearing_marginal_impact_bps": -199.99841225963544,
-   "first_crossing_size_usd": 15461.349487304688,
-   "first_crossing_marginal_impact_bps": -200.0008311461865,
-   "monotonic_in_bracket": true
+  "anchor": {
+   "fair_value": 1.4114459985528212,
+   "fair_value_basis": "market",
+   "fair_value_source": "peg_tracker:CoinGecko API external USD aggregate mid for re-protocol-reusde; off-chain market-data API, distinct from the off-chain issuer NAV API and not a contract read",
+   "fair_value_as_of": "2026-09-12T02:53:20Z",
+   "fair_value_choice": "market_price",
+   "fair_value_choice_mode": "inherited",
+   "market_price_cross_check": null,
+   "self_referential": false,
+   "self_referential_determination": "source_prefix_heuristic",
+   "self_referential_basis": null
   },
   "rungs": [
-   {"size_usd": 100.0, "status": "ok", "amount_in_reusde": 70.679910493, "amount_out_susde": 80.08073992254525, "exchange_rate_susde_per_reusde": 1.133005678191628, "slippage_bps": 0.0},
-   {"size_usd": 1000.0, "status": "ok", "amount_in_reusde": 706.799104929, "amount_out_susde": 799.6850066642803, "exchange_rate_susde_per_reusde": 1.1314176844415726, "slippage_bps": -14.015761620805867},
-   {"size_usd": 5000.0, "status": "ok", "amount_in_reusde": 3533.995524646, "amount_out_susde": 3974.9681172964933, "exchange_rate_susde_per_reusde": 1.1247801785756701, "slippage_bps": -72.59892668045941},
-   {"size_usd": 10000.0, "status": "ok", "amount_in_reusde": 7067.991049291, "amount_out_susde": 7897.67470720263, "exchange_rate_susde_per_reusde": 1.117386065166939, "slippage_bps": -137.85997127233495},
-   {"size_usd": 15000.0, "status": "ok", "amount_in_reusde": 10601.986573937, "amount_out_susde": 11777.761377544173, "exchange_rate_susde_per_reusde": 1.1109013669662466, "slippage_bps": -195.09444348647654},
-   {"size_usd": 15461.12060546875, "status": "ok", "amount_out_susde": 12133.754151394596, "exchange_rate_susde_per_reusde": 1.1103457445196803, "slippage_bps": -199.99841225963544},
-   {"size_usd": 15461.349487304688, "status": "ok", "amount_out_susde": 12133.93078092647, "exchange_rate_susde_per_reusde": 1.1103454704584605, "slippage_bps": -200.0008311461865},
-   {"size_usd": 20000.0, "status": "ok", "amount_out_susde": 15623.528752911368, "exchange_rate_susde_per_reusde": 1.1052312208628334, "slippage_bps": -245.13961283164076},
-   {"size_usd": 25000.0, "status": "ok", "amount_out_susde": 19442.042763216414, "exchange_rate_susde_per_reusde": 1.1002867789520554, "slippage_bps": -288.7796581195845},
-   {"size_usd": 50000.0, "status": "ok", "amount_out_susde": 38300.80637079232, "exchange_rate_susde_per_reusde": 1.0837819715301784, "slippage_bps": -434.4524269288286},
-   {"size_usd": 100000.0, "status": "ok", "amount_out_susde": 75718.09503572066, "exchange_rate_susde_per_reusde": 1.0712817051927928, "slippage_bps": -544.7807913668346},
-   {"size_usd": 250000.0, "status": "ok", "amount_out_susde": 179139.29029745812, "exchange_rate_susde_per_reusde": 1.0138059827646384, "slippage_bps": -1052.0661786730168},
-   {"size_usd": 500000.0, "status": "ok", "amount_out_susde": 243892.310022274, "exchange_rate_susde_per_reusde": 0.6901319153388926, "slippage_bps": -3908.839747031092},
-   {"size_usd": 1000000.0, "status": "ok", "amount_out_susde": 272896.7285011019, "exchange_rate_susde_per_reusde": 0.38610225536217835, "slippage_bps": -6592.230182125567},
-   {"size_usd": 2000000.0, "status": "ok", "amount_out_susde": 284849.473557828, "exchange_rate_susde_per_reusde": 0.2015066739412424, "slippage_bps": -8221.485754044375},
-   {"size_usd": 5000000.0, "status": "quote_failed"},
-   {"size_usd": 10000000.0, "status": "quote_failed"},
-   {"size_usd": 19000000.0, "status": "quote_failed"}
+   {
+    "size_usd": 100.0,
+    "status": "ok",
+    "amount_in_tokens": 70.84932764167503,
+    "amount_out_tokens": 80.19942622680072,
+    "slippage_bps": -1980.057377319928,
+    "route_venues": [],
+    "route_leg_count": 0,
+    "gas_usd": null,
+    "router_price_in": null,
+    "router_price_out": null,
+    "slippage_bps_debiased": 0.0,
+    "price_bias_bps": -1980.057377319928
+   },
+   {
+    "size_usd": 1000.0,
+    "status": "ok",
+    "amount_in_tokens": 708.4932764167503,
+    "amount_out_tokens": 800.8789635215018,
+    "slippage_bps": -1991.2103647849822,
+    "route_venues": [],
+    "route_leg_count": 0,
+    "gas_usd": null,
+    "router_price_in": null,
+    "router_price_out": null,
+    "slippage_bps_debiased": -11.152987465054139,
+    "price_bias_bps": -1980.057377319928
+   },
+   {
+    "size_usd": 5000.0,
+    "status": "ok",
+    "amount_in_tokens": 3542.4663820837513,
+    "amount_out_tokens": 3981.0941057224036,
+    "slippage_bps": -2037.8117885551928,
+    "route_venues": [],
+    "route_leg_count": 0,
+    "gas_usd": null,
+    "router_price_in": null,
+    "router_price_out": null,
+    "slippage_bps_debiased": -57.7544112352648,
+    "price_bias_bps": -1980.057377319928
+   },
+   {
+    "size_usd": 10000.0,
+    "status": "ok",
+    "amount_in_tokens": 7084.932764167503,
+    "amount_out_tokens": 7910.308308338164,
+    "slippage_bps": -2089.6916916618356,
+    "route_venues": [],
+    "route_leg_count": 0,
+    "gas_usd": null,
+    "router_price_in": null,
+    "router_price_out": null,
+    "slippage_bps_debiased": -109.63431434190761,
+    "price_bias_bps": -1980.057377319928
+   },
+   {
+    "size_usd": 25000.0,
+    "status": "ok",
+    "amount_in_tokens": 17712.331910418758,
+    "amount_out_tokens": 19476.265955798568,
+    "slippage_bps": -2209.4936176805722,
+    "route_venues": [],
+    "route_leg_count": 0,
+    "gas_usd": null,
+    "router_price_in": null,
+    "router_price_out": null,
+    "slippage_bps_debiased": -229.4362403606442,
+    "price_bias_bps": -1980.057377319928
+   },
+   {
+    "size_usd": 50000.0,
+    "status": "ok",
+    "amount_in_tokens": 35424.663820837515,
+    "amount_out_tokens": 38376.06321477521,
+    "slippage_bps": -2324.7873570449574,
+    "route_venues": [],
+    "route_leg_count": 0,
+    "gas_usd": null,
+    "router_price_in": null,
+    "router_price_out": null,
+    "slippage_bps_debiased": -344.72997972502935,
+    "price_bias_bps": -1980.057377319928
+   },
+   {
+    "size_usd": 100000.0,
+    "status": "ok",
+    "amount_in_tokens": 70849.32764167503,
+    "amount_out_tokens": 75881.76892139518,
+    "slippage_bps": -2411.823107860482,
+    "route_venues": [],
+    "route_leg_count": 0,
+    "gas_usd": null,
+    "router_price_in": null,
+    "router_price_out": null,
+    "slippage_bps_debiased": -431.76573054055416,
+    "price_bias_bps": -1980.057377319928
+   },
+   {
+    "size_usd": 250000.0,
+    "status": "ok",
+    "amount_in_tokens": 177123.31910418757,
+    "amount_out_tokens": 179374.12041100505,
+    "slippage_bps": -2825.0351835597985,
+    "route_venues": [],
+    "route_leg_count": 0,
+    "gas_usd": null,
+    "router_price_in": null,
+    "router_price_out": null,
+    "slippage_bps_debiased": -844.9778062398705,
+    "price_bias_bps": -1980.057377319928
+   },
+   {
+    "size_usd": 500000.0,
+    "status": "ok",
+    "amount_in_tokens": 354246.63820837514,
+    "amount_out_tokens": 243871.06339786787,
+    "slippage_bps": -5122.578732042642,
+    "route_venues": [],
+    "route_leg_count": 0,
+    "gas_usd": null,
+    "router_price_in": null,
+    "router_price_out": null,
+    "slippage_bps_debiased": -3142.5213547227136,
+    "price_bias_bps": -1980.057377319928
+   },
+   {
+    "size_usd": 1000000.0,
+    "status": "ok",
+    "amount_in_tokens": 708493.2764167503,
+    "amount_out_tokens": 272773.42446849495,
+    "slippage_bps": -7272.26575531505,
+    "route_venues": [],
+    "route_leg_count": 0,
+    "gas_usd": null,
+    "router_price_in": null,
+    "router_price_out": null,
+    "slippage_bps_debiased": -5292.208377995123,
+    "price_bias_bps": -1980.057377319928
+   }
+  ],
+  "refinement": {
+   "status": "refined",
+   "probes": [
+    {
+     "size_usd": 17500.0,
+     "status": "ok",
+     "amount_in_tokens": 12398.63233729313,
+     "amount_out_tokens": 13727.531784157512,
+     "slippage_bps": -175.63874601863608,
+     "route_venues": [],
+     "route_leg_count": 0,
+     "gas_usd": null,
+     "router_price_in": null,
+     "router_price_out": null,
+     "slippage_bps_debiased": -175.63874601863608,
+     "price_bias_bps": -1980.057377319928
+    },
+    {
+     "size_usd": 21250.0,
+     "status": "ok",
+     "amount_in_tokens": 15055.482123855943,
+     "amount_out_tokens": 16609.022214909564,
+     "slippage_bps": -203.9321686049825,
+     "route_venues": [],
+     "route_leg_count": 0,
+     "gas_usd": null,
+     "router_price_in": null,
+     "router_price_out": null,
+     "slippage_bps_debiased": -203.9321686049825,
+     "price_bias_bps": -1980.057377319928
+    },
+    {
+     "size_usd": 19375.0,
+     "status": "ok",
+     "amount_in_tokens": 13727.057230574535,
+     "amount_out_tokens": 15170.223249431403,
+     "slippage_bps": -190.14997781225065,
+     "route_venues": [],
+     "route_leg_count": 0,
+     "gas_usd": null,
+     "router_price_in": null,
+     "router_price_out": null,
+     "slippage_bps_debiased": -190.14997781225065,
+     "price_bias_bps": -1980.057377319928
+    },
+    {
+     "size_usd": 20312.5,
+     "status": "ok",
+     "amount_in_tokens": 14391.26967721524,
+     "amount_out_tokens": 15890.087759505404,
+     "slippage_bps": -197.13018723125697,
+     "route_venues": [],
+     "route_leg_count": 0,
+     "gas_usd": null,
+     "router_price_in": null,
+     "router_price_out": null,
+     "slippage_bps_debiased": -197.13018723125697,
+     "price_bias_bps": -1980.057377319928
+    }
+   ]
+  },
+  "two_pct_depth_bracket": [
+   20312.5,
+   21250.0
   ]
  },
  "primary_exit": {
@@ -139,5 +312,6 @@
  "axis_binding_constraint": {
   "leg": "secondary_venue_depth",
   "basis": "The measured Curve-leg 2% depth is materially below the $1.5M quarterly primary-redemption capacity, so the secondary venue is the worse measured leg. Full dollar-exit cost remains understated because sUSDe -> USD is outside this ladder's scope."
- }
+ },
+ "refresh_cadence": "daily"
 }
