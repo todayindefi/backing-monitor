@@ -1,6 +1,6 @@
 # Axis 3 is stalled: five assets, 4–13 days old, and a cron line would make it worse
 
-**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12 · *rev 2*
+**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12 · *rev 3*
 
 Axis 3 stays with DexTracker — that is settled and this dispatch argues for it. The problem is
 that nothing computes depth on a schedule, so five assets are running days stale. **The obvious
@@ -90,57 +90,76 @@ references live across its estate, none declared anywhere until yesterday.
 
 ---
 
-## 4. The anchor gate — one fix shipped, a worse defect behind it
+## 4. The anchor gate — both fixes shipped, one limitation remains
 
-**Shipped 2026-09-12 (DexTracker's owner authorised this one already).** `depth_is_publishable`
-now requires `self_referential` to be exactly `False`; missing or truthy fails. Previously
-`not None` evaluated True, so a **missing** key passed a gate whose own docstring demands
-freshness be *"affirmatively established, not merely un-denied."* Suite 255 → 258, with a test
-named for the usdm defect and one for a stringly-typed `"false"` smuggling past a truthiness
-check.
+**State as of 2026-09-12, `liquidity_payload.py` / `_resolve_self_referential`.** This section has
+already moved twice while being written, so it is dated rather than described as "current" — if
+you are reading it later, check that function rather than trusting this page.
 
-⚠️ **It does not retroactively change the files.** The gate runs at build time, so usdm's
-$500,430 and usg's $677,124 are still on disk and still rendering. Whether to rebuild or
-hand-correct those two payloads is an open decision.
+**Two defects were found and both are fixed.** Neither needs approval; they are recorded because
+they explain why the two payloads on disk are not trustworthy.
 
-### ⚠️ And fixing it exposed a third defect that defeats it
+**Fix 1 — the gate accepted silence.** `depth_is_publishable` used
+`not basis.get("self_referential")`, and `not None` evaluates True, so a **missing** key passed a
+gate whose own docstring demands independence be *"affirmatively established, not merely
+un-denied."* It now requires exactly `False`.
 
-`peg_market_anchor` does not read PegTracker's declared field. It **computes its own answer** by
-prefix-matching the source:
+**Fix 2 — the anchor computed its own answer and ignored the upstream declaration.**
+`peg_market_anchor` decided self-referentiality by prefix-matching the source against
+`peg_tracker:kyberswap` / `:router:` / `:aggregator:`. In DexTracker's own words, now the
+docstring on `_source_prefix_suggests_self_reference`: *"It recognises routed marks and nothing
+else … It cannot see source EQUALITY, which is the property that actually matters."* With fix 1 in
+place and fix 2 outstanding, both known-bad assets would have **affirmatively declared
+independence** through a gate finally doing its job — worse than the silence fix 1 closed.
 
-```python
-"self_referential": normalized_source.lower().startswith(
-    ("peg_tracker:kyberswap", "peg_tracker:router:", "peg_tracker:aggregator:"))
+It now prefers PegTracker's `peg.market_price_self_referential`, via `_resolve_self_referential`.
+Independence requires **both** to agree (`declared or heuristic`): an upstream `False` cannot
+unsay a local router match, an upstream `True` always wins, a declaration present but not boolean
+fails closed, and `routed_mark` deliberately ignores the declaration because it describes
+`peg.market_price` — a different number from the cross-check's routed mark. Anchors now carry
+`self_referential_determination` and `self_referential_basis` for provenance. Suite 255 → 263.
+
+The live table, after both fixes:
+
+```
+asset    resolved   via                      upstream   gate verdict
+usdm     True       upstream_declaration     True       REFUSES
+usg      True       upstream_declaration     True       REFUSES
+syzusd   False      source_prefix_heuristic  —          passes
 ```
 
-That encodes "aggregator marks are self-referential" and misses the general rule — source
-equality, where an asset's price mark comes from the same venue its ladder measures. Run against
-the live feeds:
+⚠️ **The residual limitation, which the fix does not close.** The fallback heuristic still cannot
+see source equality, so for any asset where PegTracker does not declare the field, a venue-native
+mark reads as independent. `syzusd`'s `geckoterminal_pool` is exactly that case and is unchanged.
 
-```
-asset    computed by DexTracker   declared by PegTracker   gate verdict
-usdm     False                    True                     PASSES
-usg      False                    True                     PASSES
-syzusd   False                    (not declared)           PASSES
-```
+⚠️ **And the upstream rule needed a second pass of its own.** PegTracker's source-equality rule
+originally compared strings **exactly**, which cleared `thusd` — whose mark is
+`geckoterminal_pools_volume_weighted` while its exit mark quotes `geckoterminal` and carries that
+very number as `fair_value`. Same apparatus, two spellings. Now fixed as a provider-form
+comparison (`liquidity_tracker.mark_provider`), and **the fleet result is three assets, not two:
+`thusd`, `usdm`, `usg`.** A cross-check this side using string equality had missed it too.
+`hastra_prime` resolves cleanly under the provider form (`geckoterminal` vs `uniswap`) and is not
+affected.
 
-**This is worse in effect than the silence just closed.** Undeclared at least failed shut once
-the gate was strict. A computed `False` is an *affirmative declaration of independence* for both
-known-bad assets, and it sails through a gate now doing exactly what it should.
+✅ **One design point from PegTracker worth having.** Their `is_self_referential()` returns
+**None** when either source is unknown — unmeasured, not a clean bill of health. A rule returning
+`False` on missing data would hand the newly-strict gate an affirmative pass built from ignorance,
+which is the same shape as the defect fix 2 closed. The two rules are complementary rather than
+overlapping: the prefix heuristic knows an aggregator-routed mark shares the ladder's route; the
+provider rule catches venue-level identity no prefix list would enumerate. Neither is a superset.
+`mark_provider` is available to port, though the upstream declaration is cheaper and cannot drift
+from the producer that knows.
 
-⚠️ **The adapter work in §5 runs through this path**, so it matters before that lands, not after.
+⚠️ **The live consequence, now sharper.** usdm's `$500,430` and usg's `$677,124` are still on
+disk and still rendering, because the gate runs at build time and does not retroactively change
+files. **The anchor path now refuses both the moment those payloads are rebuilt** — which the
+adapter work in §5 would do. If usdm's depth is withheld, its dashboard tile goes empty: usdm is
+the sole source for its asset, so the dashboard keeps the overlay rather than falling back.
+**That should be a decision, not a side effect of a rebuild.**
 
-The fix is ready-made: honour `peg.market_price_self_referential` when present, keep the prefix
-heuristic only as a fallback when it is absent. PegTracker built and published that field
-precisely for this; it pays off only once consumers read it. DexTracker has flagged it to their
-owner with this recommendation and has not made the change unasked.
-
-⚠️ **Consequence for the dashboard, unchanged by any of the above:** if usdm's depth is ever
-withheld, its depth tile goes empty — usdm is the sole source for its asset, so the dashboard
-keeps the overlay rather than falling back. That should be a decision, not a surprise.
-
-*(The dashboard renders both producers' claims independently and attributes each, so a computed
-`False` in the overlay does not suppress PegTracker's declared `True`. That side is unaffected.)*
+*(The dashboard reads both producers' claims independently and attributes each, so nothing above
+changes what a reader currently sees: usdm and usg both carry "anchored to the venue being
+measured" with the declaring producer's own basis.)*
 
 ---
 
@@ -148,9 +167,19 @@ keeps the overlay rather than falling back. That should be a decision, not a sur
 
 Order matters and is DexTracker's own. **The cron is last, never first.**
 
-**1. Two `.route()` adapters.** Curve `get_dy` with both selectors, and Mento `getAmountsOut` on
-Celo. Plus per-asset wiring, reusing the ladder engine unchanged. Covers all five assets.
-DexTracker's estimate: **3–5 working days** for both.
+**1. Two `.route()` adapters.** Mento `getAmountsOut` on Celo, and Curve `get_dy` single-pool.
+Reusing the ladder engine unchanged. DexTracker's estimate: **3–5 working days** for both.
+
+⚠️ **That estimate covers `usdm` and `reusde_re` — the two sole-source assets — and nothing
+else.** An earlier revision of this document attached it to "all five assets"; that claim was not
+DexTracker's and they have declined to have their number read as covering it.
+
+⚠️ **`usg` is not a plain adapter and is not costed.** Its ladder splits input across two Curve
+PegKeeper pools in proportion to live USG inventory and values both outputs at $1, while
+`build_routed_ladder` calls `client.route()` once per size. That needs an aggregating client or
+handling above the engine. It is the one piece of the five that is not "wrap an existing quote
+method", and **no estimate has been given for it.** `syzusd` and `reusd_re` route through the
+existing aggregator and need wiring rather than a new adapter.
 
 **2. The refuse-to-downgrade guard.** Proposed by DexTracker: `write_payload` refuses to overwrite
 a payload holding real rungs with a 0-rung stub, and exits non-zero. This is the safety net that
@@ -195,13 +224,21 @@ be rather than a load-bearing part of the page.
 
 ## The ask
 
-Approve the three steps in order — **adapters, guard, cron** — plus the anchor-source fix in §4,
-which should land *before* the adapters, since the adapter work runs through that path.
+Approve the three steps in order — **adapters, guard, cron**. Both anchor fixes in §4 are already
+shipped and need nothing.
 
-The gate fix is already done. What remains is one decision on scope and one on the two payloads
-currently holding figures the fixed gate would have refused. Everything is scoped and both sides
-agree on the shape; the only thing missing is a decision that belongs to DexTracker's owner
-rather than to either session.
+Two decisions come with it:
+
+- **Scope.** The 3–5 day estimate buys `usdm` and `reusde_re`. `syzusd` and `reusd_re` need
+  wiring onto the existing aggregator. **`usg`'s multi-pool aggregation is uncosted** — decide
+  whether it is in or out before the work starts, rather than discovering it partway.
+- **The two payloads on disk.** usdm's `$500,430` and usg's `$677,124` were built through the
+  broken gate and the fixed anchor path now refuses them. Rebuilding is what empties usdm's
+  dashboard tile. That is a deliberate call about showing nothing versus showing a figure known to
+  be anchored to its own venue.
+
+Everything is scoped and both sides agree on the shape; the only thing missing is a decision that
+belongs to DexTracker's owner rather than to either session.
 
 **Longer-term direction, for context rather than approval:** axis 3 migrates fully to DexTracker
 over time. That is where the convention problem actually gets solved — one producer means one
