@@ -1,6 +1,6 @@
 # Axis 3 is stalled: five assets, 4–13 days old, and a cron line would make it worse
 
-**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12 · *rev 4*
+**From:** backing-monitor · **To:** DexTracker (owner decision required) · **Date:** 2026-09-12 · *rev 5*
 
 Axis 3 stays with DexTracker — that is settled and this dispatch argues for it. The problem is
 that nothing computes depth on a schedule, so five assets are running days stale. **The obvious
@@ -191,9 +191,24 @@ DexTracker's and they have declined to have their number read as covering it.
 ⚠️ **`usg` is not a plain adapter and is not costed.** Its ladder splits input across two Curve
 PegKeeper pools in proportion to live USG inventory and values both outputs at $1, while
 `build_routed_ladder` calls `client.route()` once per size. That needs an aggregating client or
-handling above the engine. It is the one piece of the five that is not "wrap an existing quote
-method", and **no estimate has been given for it.** `syzusd` and `reusd_re` route through the
-existing aggregator and need wiring rather than a new adapter.
+handling above the engine. **No estimate has been given for it.**
+
+⚠️ **Two of the remaining three are also uncosted, and only one is close to trivial.**
+
+- **`syzusd`** routes through the existing aggregator and needs wiring rather than a new adapter —
+  single chain, the client exists, per-chain exit assets are already configured and its contested
+  mark is already a reviewed per-asset decision. The caveat is that **this repo has never actually
+  run it**, so "needs wiring" is a reasonable expectation rather than a demonstrated one.
+- **`reusd_re`** needs no new adapter either, **but it is not wiring.** Its 15 rungs are four
+  separate per-chain ladders (ethereum 7, arbitrum 2, base 2, avalanche 4). The engine supports
+  that — `build_routed_ladder` takes one chain per call — but `classify_depth` has **no chain
+  parameter**, so running it across the mixed list reads four venues as a single curve: the same
+  category error as summing depth across venues, one level down. Its current
+  `status: not_measured` with all 15 rungs retained is a deliberate refusal to publish one scalar
+  across four books that do not share liquidity, and nothing in the code encodes that judgement.
+  The uneven rung counts are quote failures, not depth boundaries — ethereum's $1M returned no
+  route while larger rungs succeeded — and any cross-chain policy has to preserve that
+  distinction. **Like `usg`, it is uncosted.**
 
 **2. The refuse-to-downgrade guard.** Proposed by DexTracker: `write_payload` refuses to overwrite
 a payload holding real rungs with a 0-rung stub, and exits non-zero. This is the safety net that
@@ -243,9 +258,12 @@ shipped and need nothing.
 
 Two decisions come with it:
 
-- **Scope.** The 3–5 day estimate buys `usdm` and `reusde_re`. `syzusd` and `reusd_re` need
-  wiring onto the existing aggregator. **`usg`'s multi-pool aggregation is uncosted** — decide
-  whether it is in or out before the work starts, rather than discovering it partway.
+- **Scope — one costed item, three uncosted.** The 3–5 days buys `usdm` and `reusde_re` only.
+  **`usg`** (multi-pool aggregation), **`reusd_re`** (cross-chain aggregation-or-refusal policy)
+  and **`syzusd`** (wiring, never yet run here) carry no estimate. ⚠️ **This is a materially
+  smaller costed scope than "automate axis 3" suggests.** It is stated this way at DexTracker's
+  insistence — their words: they would rather fund the smaller honest scope than approve the
+  larger one and discover the rest. Decide what is in before work starts, not partway.
 - **The two payloads on disk.** usdm's `$500,430` and usg's `$677,124` were built through the
   broken gate and the fixed anchor path now refuses them. Rebuilding is what empties usdm's
   dashboard tile. That is a deliberate call about showing nothing versus showing a figure known to
