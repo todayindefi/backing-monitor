@@ -511,7 +511,8 @@ var HastraPrimeRenderer = {
         html += HastraPrimeRenderer._subHead('Redemption (admin-mediated)');
         html += anc('hp-panel-redemption', HastraPrimeRenderer._renderRedemption(spec));
 
-        html += HastraPrimeRenderer._axisHead(4, 'Dependencies', 'upstream credit · warehouse turnover · loan quality');
+        html += HastraPrimeRenderer._axisHead(4, 'Dependencies', 'upstream credit · warehouse turnover · loan quality',
+            CommonRenderer.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies'));
         html += HastraPrimeRenderer._renderUpstreamDependencies(data);
         html += anc('hp-panel-warehouse',  HastraPrimeRenderer._renderWarehouse(data, spec));
         html += anc('hp-panel-heloc-credit', HastraPrimeRenderer._renderHelocCredit(data, spec));
@@ -580,11 +581,16 @@ var HastraPrimeRenderer = {
         }
     },
 
-    _axisHead: function(num, title, sub) {
+    // ⚠️ `chip` carries an authored axis score into a bespoke header. This page
+    // hides the shared axis section, so anything CommonRenderer writes into that
+    // head is invisible here — which is how riskAnalyst's dependencies score sat
+    // in the DOM behind `display:none` with nobody able to read it.
+    _axisHead: function(num, title, sub, chip) {
         return '<div class="axis-head">' +
             '<span class="axis-num">' + num + '</span>' +
             '<span class="axis-title">' + title + '</span>' +
             (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
+            (chip || '') +
         '</div>';
     },
 

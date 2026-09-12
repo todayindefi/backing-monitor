@@ -212,7 +212,8 @@ var ThusdRenderer = {
         html += anc('thusd-coverage',     ThusdRenderer._renderCoverageHistoryPanel());
         html += anc('thusd-flow',         ThusdRenderer._renderFlowPanel(spec));
 
-        html += head(4, 'Dependencies', 'cross-chain conservation and the thBILL leg');
+        html += head(4, 'Dependencies', 'cross-chain conservation and the thBILL leg',
+            CommonRenderer.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies'));
         html += anc('thusd-chains',       ThusdRenderer._renderConservationTable(spec));
         html += anc('thusd-legs',         ThusdRenderer._renderUpstreamLegs(data));
 
@@ -1130,7 +1131,11 @@ var ThusdRenderer = {
     // ============================================================
     // §10 DEX peg + venues
     // ============================================================
-    _axisHead: function(num, title, sub) {
+    // ⚠️ `chip` carries an authored axis score into a bespoke header. This page
+    // hides the shared axis section, so anything CommonRenderer writes into that
+    // head is invisible here — which is how riskAnalyst's dependencies score sat
+    // in the DOM behind `display:none` with nobody able to read it.
+    _axisHead: function(num, title, sub, chip) {
         // A multi-character number means a MERGED section ("1-2"), not a missing
         // one. The circle badge is fixed-width and would clip it, so widen to a
         // pill for those.
@@ -1139,6 +1144,7 @@ var ThusdRenderer = {
             '<span class="' + numCls + '">' + num + '</span>' +
             '<span class="axis-title">' + title + '</span>' +
             (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
+            (chip || '') +
         '</div>';
     },
 

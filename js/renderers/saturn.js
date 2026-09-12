@@ -293,7 +293,8 @@ var SaturnRenderer = {
         html += head(3, 'Liquidity & Exit', 'exit depth, venue spread and slippage');
         html += anc('panel-liquidity', SaturnRenderer._renderLiquidityPanel(specific, s, slug));
 
-        html += head(4, 'Dependencies', 'what this depends on, and what depends on it');
+        html += head(4, 'Dependencies', 'what this depends on, and what depends on it',
+            CommonRenderer.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies'));
         html += SaturnRenderer._renderDependenciesPanel(data);
 
         // ⚠️ This head said "Issuer" while the panel under it is admin topology —
@@ -1874,11 +1875,16 @@ var SaturnRenderer = {
         '</div>';
     },
 
-    _axisHead: function(num, title, sub) {
+    // ⚠️ `chip` carries an authored axis score into a bespoke header. This page
+    // hides the shared axis section, so anything CommonRenderer writes into that
+    // head is invisible here — which is how riskAnalyst's dependencies score sat
+    // in the DOM behind `display:none` with nobody able to read it.
+    _axisHead: function(num, title, sub, chip) {
         return '<div class="axis-head">' +
             '<span class="axis-num">' + num + '</span>' +
             '<span class="axis-title">' + title + '</span>' +
             (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
+            (chip || '') +
         '</div>';
     },
 

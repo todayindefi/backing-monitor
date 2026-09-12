@@ -2564,6 +2564,31 @@ const CommonRenderer = {
     // `peg_mechanism_score`, a vault-share carries `volatility_score`, and both
     // are the same axis. Reading only one silently shows nothing on half the
     // fleet — so the candidates are enumerated, not assumed.
+    // ⚠️ SHARED SO A BESPOKE PAGE CANNOT HIDE AN AUTHORED SCORE AND SAY NOTHING.
+    // Four renderers hide `section-dependencies` to avoid duplicating their own
+    // panel — usdai (which also serves susdai), thusd and hastra-prime. The axis
+    // head still rendered, into a node with `display:none`, so riskAnalyst's
+    // dependencies scores were in the DOM and invisible: susdai 4.5, usdai 7.0,
+    // thusd 3.0, all with a written basis. Three of those were refreshed the
+    // morning this was found and reached no reader at all.
+    //
+    // ⚠️ Extracted rather than copied into each renderer. A second copy of this
+    // markup would drift from the tooltip the shared path uses, and the tooltip
+    // is where the basis and the "not computed from live data" caveat live.
+    //
+    // Returns '' when the block carries no authored score, so a caller can
+    // append it unconditionally.
+    authoredScoreChipHtml(block, names, label) {
+        var auth = this._authoredAxisScore(block || {}, names);
+        if (!auth || typeof auth.score !== 'number') return '';
+        return '<span class="axis-rating r-na" title="' + this._escapeAttr(
+                'Authored score for this axis: ' + auth.score + '/10' +
+                (auth.basis ? '. ' + this._mdPlain(auth.basis) : '') +
+                '. This axis is not computed from live data \u2014 there is no measured band to ' +
+                'compare it against.') +
+            '">' + this._escapeAttr(label) + ' ' + auth.score + '/10</span>';
+    },
+
     _authoredAxisScore(block, names) {
         block = block || {};
         for (var i = 0; i < names.length; i++) {
@@ -4098,15 +4123,7 @@ const CommonRenderer = {
         // (`structural_score` -> "Structural") but `underlying_score` -> "Underlying"
         // tells a reader nothing. The axis name is the honest label and matches
         // axis 6's "Issuer".
-        var depAuth = this._authoredAxisScore(data.dependencies || {}, ['underlying_score']);
-        var depChip = (depAuth && typeof depAuth.score === 'number')
-            ? '<span class="axis-rating r-na" title="' + this._escapeAttr(
-                  'Authored score for this axis: ' + depAuth.score + '/10' +
-                  (depAuth.basis ? '. ' + this._mdPlain(depAuth.basis) : '') +
-                  '. Axis 4 is not computed from live data \u2014 there is no measured band to ' +
-                  'compare it against.') +
-              '">Dependencies ' + depAuth.score + '/10</span>'
-            : '';
+        var depChip = this.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies');
         this._renderAxisHead('dependencies', 4, 'Dependencies', upSub + ' \u00b7 ' + downSub, depChip, data.dependencies);
         this._renderDependenciesSection(data);
 

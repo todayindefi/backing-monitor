@@ -91,11 +91,16 @@ var UsdaiRenderer = {
     // Axis section divider for the bespoke panel stream — reuses the common
     // layer's .axis-head / .axis-num / .axis-title / .axis-sub styling so these
     // headers match the band above. Same shape as syrupusdc.js / hastra-prime.js.
-    _axisHead: function(num, title, sub) {
+    // ⚠️ `chip` carries an authored axis score into a bespoke header. This page
+    // hides the shared axis section, so anything CommonRenderer writes into that
+    // head is invisible here — which is how riskAnalyst's dependencies score sat
+    // in the DOM behind `display:none` with nobody able to read it.
+    _axisHead: function(num, title, sub, chip) {
         return '<div class="axis-head">' +
             '<span class="axis-num">' + num + '</span>' +
             '<span class="axis-title">' + title + '</span>' +
             (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
+            (chip || '') +
         '</div>';
     },
 
@@ -356,7 +361,8 @@ var UsdaiRenderer = {
             html += head(3, 'Liquidity & Exit', 'exit depth, slippage and route');
             html += anc('panel-liquidity', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'liquidity'));
 
-            html += head(4, 'Dependencies', 'what this depends on, and what depends on it');
+            html += head(4, 'Dependencies', 'what this depends on, and what depends on it',
+                CommonRenderer.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies'));
             html += UsdaiRenderer._renderDependenciesPanel(data);
         } else {
             // sUSDai's §1 is discount-to-NAV, not a peg. It has two NAVs ~0.65%
@@ -378,7 +384,8 @@ var UsdaiRenderer = {
 
             // No collateral ratio here — sUSDai is a NAV vault and has none. The
             // backing axis carries the decomposition and the two residual pills.
-            html += head(4, 'Dependencies', 'what this depends on, and what depends on it');
+            html += head(4, 'Dependencies', 'what this depends on, and what depends on it',
+                CommonRenderer.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies'));
             html += UsdaiRenderer._renderDependenciesPanel(data);
         }
 
