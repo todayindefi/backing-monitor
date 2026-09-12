@@ -162,7 +162,17 @@ const CommonRenderer = {
         // does NOT drop the redemption leg — checked before adopting, because a
         // wholesale replace that loses the primary window would have made the
         // axis worse while looking richer.
-        // ⚠️ max_age_days IS DECLARED ONLY WHERE THE PRODUCER IS A PIPELINE.
+        // ⚠️ max_age_days IS DECLARED WHERE A PRODUCER WAS MEANT TO RE-MEASURE.
+        // ⚠️ NOTE THE CAUSE IS NOT A MISSING CRON LINE. I diagnosed it that way
+        // and asked DexTracker to schedule `liquidity_payload.py`; they refused,
+        // correctly. That script is an ASSEMBLER — it takes depth as an argument
+        // it cannot compute, its `main()` never passes one, and the CLI path
+        // therefore always emits an unmeasured stub. Scheduling it would have
+        // OVERWRITTEN every file holding real rungs with a 0-rung stub. Depth
+        // measurement is bespoke per asset and venue type (Curve get_dy, a
+        // Uniswap v3 tick simulator, a Mento FPMM floor) and generalises behind
+        // no flag. Axis 3 has no automated depth producer — that is a scope
+        // question, not a scheduling one.
         // A replace overlay SUPPRESSES a live feed, so one that stops refreshing
         // outranks fresh data forever rather than briefly. DexTracker's
         // liquidity_payload.py is not on any cron — every overlay is a hand-run
@@ -321,13 +331,26 @@ const CommonRenderer = {
                 // documented-unsafe case that made this a `replace` axis to
                 // begin with. Either the overlay owns the axis or it does not.
                 //
-                // ⚠️ A REFUSAL HAS A SHELF LIFE TOO. What gets set aside here is
-                // usually not a number but a considered decision NOT to publish
-                // one. That decision was sound when it was measured; it is not
-                // evidence about today, and asserting depth is unmeasurable on
-                // the strength of a fortnight-old probe is itself a stale claim.
-                // The chip names exactly what was set aside, so the judgement
-                // stays visible instead of being erased.
+                // ⚠️ A REFUSAL HAS A SHELF LIFE TOO — where there IS one. For an
+                // overlay carrying measured rungs (usg 15, reusde-re 18, usdm 8)
+                // the block is a real measurement, and setting it aside past a
+                // horizon is the judgement call this threshold makes: it was
+                // sound when measured and is not evidence about today.
+                //
+                // ⚠️ BUT DO NOT ASSUME A WITHHELD DEPTH IS A JUDGEMENT AT ALL.
+                // I argued this guard was overriding DexTracker's considered
+                // decision not to publish syzUSD's depth, quoting its basis
+                // string back at them. That string is a HARDCODED FALLBACK in
+                // `build_liquidity_payload`, emitted whenever depth is absent —
+                // and `main()` never passes depth, so the CLI path always emits
+                // it. syzUSD's block is bare CLI output: depth was never measured
+                // for it at all. There was no refusal to have a shelf life.
+                // Corrected by DexTracker, who read their own code rather than
+                // accept my characterisation of it.
+                //
+                // The chip names exactly what was set aside — status and figure,
+                // read from the block — so a stub reads as a stub rather than as
+                // a suppressed judgement.
                 if (spec.max_age_days) {
                     var stampStr = typeof ov.as_of === 'string' ? ov.as_of
                         : (ov[axis] && typeof ov[axis].as_of === 'string' ? ov[axis].as_of : null);
