@@ -3771,7 +3771,28 @@ const CommonRenderer = {
         var h = (Date.now() - t.getTime()) / 3600000;
         var txt = h < 1 ? Math.max(0, Math.round(h * 60)) + 'm' :
                   h < 48 ? h.toFixed(1) + 'h' : Math.round(h / 24) + 'd';
-        return '<span class="axis-clock' + (h > 24 ? ' axis-clock-old' : '') +
+        // ⚠️ AN AGE WITHOUT AN EXPECTED CADENCE IS UNREADABLE. "6d old" means
+        // nothing on its own: a reader cannot tell a producer that refreshes
+        // daily and is five days late from one that was never on a schedule at
+        // all. Axis 3 spent weeks in the second state and the page said only
+        // "Nd old" — the number was right and the reader could not act on it.
+        //
+        // ⚠️ THE CADENCE IS THE PRODUCER'S TO DECLARE, NOT MINE TO ASSERT.
+        // Hardcoding "daily" here would be a claim about another repo's crontab
+        // that goes stale the moment they change it, and would keep reading
+        // "daily" through an outage. Rendered only when the block declares it;
+        // silent otherwise, so a producer that has not declared one is not
+        // credited with a schedule it does not keep.
+        var cadence = block.refresh_cadence || block.cadence_declared || null;
+        var cadenceHtml = '';
+        if (typeof cadence === 'string' && cadence) {
+            cadenceHtml = '<span class="axis-clock" title="' + this._escapeAttr(
+                'The producer declares this block refreshes ' + cadence + '. Compare it with the ' +
+                'age beside it: an age well past the declared cadence means the producer is LATE, ' +
+                'which is a different fact from an axis that was never scheduled.') +
+                '">refreshes ' + this._escapeAttr(cadence) + '</span>';
+        }
+        return cadenceHtml + '<span class="axis-clock' + (h > 24 ? ' axis-clock-old' : '') +
             '" title="Oldest declared input on this axis: ' + this._escapeAttr(stampKey || 'as_of') +
             ' = ' + this._escapeAttr(stamp) +
             '. \u26a0\ufe0f The field is NAMED because the oldest stamp is not always an input \u2014 syzUSD retains coingecko_price_as_of for a mark it REJECTED, and that diagnostic is older than the price actually published. The page header shows when the FILE was assembled, which is not the same thing as any of these.">' +
