@@ -4951,6 +4951,17 @@ const CommonRenderer = {
         // IDENTICAL on consecutive rungs while the size grew — a pure
         // observation from published data, which is the same reason
         // `fill_ratio` is the right shape for the producer and a cutoff is not.
+        // ⚠️ fill_ratio IS THE FIGURE THAT SEPARATES "EXPENSIVE" FROM "GONE", and
+        // it needs no threshold to do it. susdat's $500K reads 0.1925 beside
+        // -8073bps: the bps says a price, the ratio says four fifths of the order
+        // did not fill. PegTracker publishes it per rung across every ladder
+        // rather than a `cannot_fill` status, deliberately — a status needs a
+        // cutoff and a cutoff would be invented. Rendered for every rung on a
+        // ladder that carries it, including the 1.0000s, because suppressing the
+        // healthy ones would itself be a threshold.
+        var hasFill = sizes.some(function(sz) {
+            return typeof qOf(sz).fill_ratio === 'number';
+        });
         var frozenAt = {};
         (function() {
             for (var i = 1; i < sizes.length; i++) {
@@ -5010,6 +5021,7 @@ const CommonRenderer = {
                         '">\u26a0\ufe0f quote failed</td>' +
                     '<td class="text-right font-mono text-slate-400">' +
                         (biggerOk ? 'request failed' : 'not measured') + '</td>' +
+                    (hasFill ? '<td class="text-right font-mono text-slate-400">—</td>' : '') +
                 '</tr>';
             }
             // ⚠️ THE LADDER WAS COLOURED BY SIGNED VALUE, AND HALF THE ESTATE
@@ -5049,6 +5061,7 @@ const CommonRenderer = {
             return '<tr>' +
                 '<td class="font-mono">' + sizeLabel(sz) + '</td>' +
                 '<td class="text-right font-mono ' + cls + '">' + (bps != null ? bps.toFixed(bpsDigits) + ' bps' : '—') + signWarn + '</td>' +
+
                 '<td class="text-right font-mono">' +
                     (q.output_usd != null ? CommonRenderer.formatCurrencyExact(q.output_usd) : '—') +
                     (frozenAt[sz] != null
@@ -5061,6 +5074,17 @@ const CommonRenderer = {
                           '">\u26a0\ufe0f wall</span>'
                         : '') +
                 '</td>' +
+                // ⚠️ AFTER Net out, because that is where the header puts it.
+                // The first version inserted this cell before Net out while the
+                // header appended "Fill" last, so every value sat under the
+                // wrong heading — a column that renders is not a column that
+                // lines up, and only reading the cells in order shows it.
+                (hasFill
+                    ? '<td class="text-right font-mono' +
+                        (typeof q.fill_ratio === 'number' && q.fill_ratio < 0.995
+                            ? ' text-amber-700 dark:text-amber-300' : '') + '">' +
+                      (typeof q.fill_ratio === 'number' ? q.fill_ratio.toFixed(4) : '\u2014') + '</td>'
+                    : '') +
             '</tr>';
         }).join('');
 
@@ -5081,7 +5105,13 @@ const CommonRenderer = {
         // colour thresholds, different question — so the producer's own
         // statement of it renders under the table head rather than being left
         // for the reader to assume. First sentence visible, full text on hover.
-        var conv = em.slippage_convention;
+        // ⚠️ TWO PRODUCERS, TWO FIELD NAMES, ONE FACT. DexTracker declares
+        // `slippage_convention`; PegTracker now declares `slippage_bps_basis`,
+        // naming whether the column is PRICE IMPACT (base spread EXCLUDED) or
+        // ALL-IN against notional. Both are the same statement — what the bps
+        // column means — and a reader comparing two assets needs it far more
+        // than another decimal.
+        var conv = em.slippage_convention || em.slippage_bps_basis || liq.slippage_bps_basis;
         var convLine = '';
         if (conv) {
             // Plain split, not a lookbehind — older Safari does not have them
@@ -5105,7 +5135,13 @@ const CommonRenderer = {
         return '<div class="text-sm font-semibold text-slate-700 mb-2">' + ladderTitle + '</div>' +
               convLine +
               '<div class="data-table-scroll"><table class="data-table">' +
-                  '<thead><tr><th>Size sold</th><th class="text-right">Slippage</th><th class="text-right">Net out</th></tr></thead>' +
+                  '<thead><tr><th>Size sold</th><th class="text-right">Slippage</th><th class="text-right">Net out</th>' +
+                      (hasFill ? '<th class="text-right" title="' + this._escapeAttr(
+                          'output_usd / size_usd. How much of the order actually filled. 1.0000 is a ' +
+                          'complete fill; anything materially below it means the venue ran out, which ' +
+                          'a slippage figure expresses as a price rather than as a failure to fill.') +
+                          '">Fill</th>' : '') +
+                  '</tr></thead>' +
                   '<tbody>' + ladderRows + '</tbody></table></div>';
     },
 
