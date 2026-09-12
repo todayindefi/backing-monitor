@@ -1,0 +1,349 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "usdg",
+ "as_of": "2026-09-09T16:52:54Z",
+ "producer": "dextracker",
+ "note": "Axis 3 liquidity measurement only; no risk score is authored. Pool TVL is not used as depth. Every route is resolved by BOTH token addresses, never by ticker. All published depth on both chains is computed from on-chain Uniswap v3 tick liquidity, NOT from a router quote -- see quote_path_defects.umbra_router_instability for why the router was rejected as a source.",
+ "depth": {
+  "status": "bracketed_per_venue",
+  "depth_usd": null,
+  "is_floor": true,
+  "threshold_bps": -200.0,
+  "depth_usd_withheld_reason": "No single scalar is published. Depth is reported per venue and per chain because (a) the largest clearing rung is only one side of each crossing, and (b) a cross-chain sum would imply a single executable book that does not exist -- USDG on X Layer and USDG on Robinhood Chain are separate instruments with no measured bridge leg between them.",
+  "slippage_convention": "Signed deterioration in output units received per input unit, relative to the smallest successful $100 exact-input rung on the SAME pool. Zero is the $100 rung; -200 bps is the crossing threshold. Uniswap v3 swap fees ARE included (they are charged inside the simulated swap). Gas, bridge legs, and any onward fiat conversion are excluded. Input notional is denominated in USD at 1 USDG = $1, which is an input-sizing convention only and is NOT used as the execution-rate denominator.",
+  "basis": "Deterministic exact-input Uniswap v3 swap simulation over live on-chain tick liquidity, pinned to a single block per pool. Reads slot0, liquidity, fee, tickSpacing, tickBitmap and ticks() directly from each pool contract and walks initialized ticks. Validated against the Umbra router to within 0.03% over $100..$1,000,000 before the router was rejected at larger sizes.",
+  "price_bias_bps": null,
+  "bias_measures": "not_measured",
+  "by_chain": {
+   "robinhood_chain": {
+    "chain_id": 4663,
+    "rpc": "https://rpc.mainnet.chain.robinhood.com",
+    "rpc_chain_id_result": "0x1237",
+    "usdg": {
+     "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+     "decimals": 6,
+     "total_supply": 683443680.0,
+     "supply_source": "on-chain totalSupply()"
+    },
+    "excluded_decoy_token": {
+     "address": "0x0A3B763d66c0e8c7555c986A3701E1DC1Bf3954F",
+     "symbol": "USDG",
+     "name": "Paxos USDG",
+     "total_supply": 1100.0,
+     "reason": "Distinct contract, confirmed on-chain. Joined on address, never on ticker."
+    },
+    "measured_route": {
+     "venue": "uniswap-v3-robinhood",
+     "pool": "0x52e65b17fb6e5ba00ed806f37afcd2daa50271ca",
+     "fee_bps_pool": 1,
+     "token0": {
+      "symbol": "WETH",
+      "address": "0x0bd7d308f8e1639fab988df18a8011f41eacad73",
+      "decimals": 18
+     },
+     "token1": {
+      "symbol": "USDG",
+      "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+      "decimals": 6
+     },
+     "direction": "USDG -> WETH (token1 -> token0)",
+     "block": 58700850,
+     "reserves_on_chain": {
+      "usdg": 18189069.93,
+      "weth": 5459.796
+     },
+     "reference_rate_usdg_per_weth": 2497.99
+    },
+    "two_pct_depth_status": "bracketed",
+    "ladder": [
+     {
+      "size_usd": 100,
+      "slippage_bps": 0.0
+     },
+     {
+      "size_usd": 1000,
+      "slippage_bps": -0.0179
+     },
+     {
+      "size_usd": 10000,
+      "slippage_bps": -0.1973
+     },
+     {
+      "size_usd": 100000,
+      "slippage_bps": -1.9977
+     },
+     {
+      "size_usd": 500000,
+      "slippage_bps": -10.0813
+     },
+     {
+      "size_usd": 1000000,
+      "slippage_bps": -20.7029
+     },
+     {
+      "size_usd": 2000000,
+      "slippage_bps": -42.9373
+     },
+     {
+      "size_usd": 4000000,
+      "slippage_bps": -89.441
+     },
+     {
+      "size_usd": 6000000,
+      "slippage_bps": -139.4513
+     },
+     {
+      "size_usd": 8000000,
+      "slippage_bps": -202.1322
+     },
+     {
+      "size_usd": 10000000,
+      "slippage_bps": -283.7091
+     },
+     {
+      "size_usd": 12000000,
+      "slippage_bps": -398.2543
+     }
+    ],
+    "counter_asset_note": "WETH is the liquid counter-asset on this chain, not a dollar instrument. This ladder measures the USDG->WETH leg only. A complete dollar exit requires a further unmeasured leg.",
+    "exit_capacity_pct_of_local_supply": 1.16,
+    "bracket": {
+     "last_clearing_size_usd": 7958691.6,
+     "last_clearing_marginal_impact_bps": -199.99999,
+     "first_crossing_size_usd": 7958692.07,
+     "first_crossing_marginal_impact_bps": -200.0,
+     "width_usd": 0.47000000067055225,
+     "monotonic_in_bracket": null,
+     "threshold_bps": -200.0
+    }
+   },
+   "x_layer": {
+    "chain_id": 196,
+    "rpc": "https://rpc.xlayer.tech",
+    "rpc_chain_id_result": "0xc4",
+    "rpc_note": "rpc.ankr.com/xlayer returns 403; rpc.xlayer.tech and xlayerrpc.okx.com both answer. A 403 is not a 404.",
+    "usdg": {
+     "address": "0x4ae46a509F6b1D9056937BA4500cb143933D2dc8",
+     "decimals": 6,
+     "total_supply": 1585041965.0,
+     "supply_source": "on-chain totalSupply()"
+    },
+    "venues_exist": true,
+    "venue_enumeration_result": "VENUES EXIST. This is an affirmative enumerated result, not an empty set. 20 CoinGecko ticker rows carry a two-percent book on x-layer (17 uniswap-v3-x-layer, 3 uniswap-v4-x-layer); GeckoTerminal lists 60 USDG pools on the chain. All join on the USDG address 0x4ae4...2dc8.",
+    "measured_routes": [
+     {
+      "venue": "uniswap-v3-x-layer",
+      "pool": "0x0cbe0dbe1400e57f371a38bd3b9bc80f7c3676da",
+      "fee_bps_pool": 1,
+      "token0": {
+       "symbol": "USDG",
+       "address": "0x4ae46a509f6b1d9056937ba4500cb143933d2dc8",
+       "decimals": 6
+      },
+      "token1": {
+       "symbol": "USD\u20ae0",
+       "address": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+       "decimals": 6
+      },
+      "direction": "USDG -> USD\u20ae0 (token0 -> token1)",
+      "block": 70203050,
+      "reserves_on_chain": {
+       "usdg": 4080218.34,
+       "usdt0": 1211363.32
+      },
+      "exhaustion_note": "The -200 bps crossing on this pool coincides with near-total exhaustion of the USD\u20ae0 side ($1,211,363). Beyond ~$1.23M there is no counter-asset left, not merely a worse price.",
+      "ladder": [
+       {
+        "size_usd": 100,
+        "slippage_bps": 0.0
+       },
+       {
+        "size_usd": 10000,
+        "slippage_bps": -0.052
+       },
+       {
+        "size_usd": 100000,
+        "slippage_bps": -0.5254
+       },
+       {
+        "size_usd": 500000,
+        "slippage_bps": -2.6533
+       },
+       {
+        "size_usd": 1000000,
+        "slippage_bps": -5.3171
+       },
+       {
+        "size_usd": 2000000,
+        "slippage_bps": -3975.9287,
+        "exhausted": true
+       }
+      ],
+      "bracket": {
+       "last_clearing_size_usd": 1230336.19,
+       "last_clearing_marginal_impact_bps": -199.9958,
+       "first_crossing_size_usd": 1230337.14,
+       "first_crossing_marginal_impact_bps": -200.0034,
+       "width_usd": 0.9499999999534339,
+       "monotonic_in_bracket": null,
+       "threshold_bps": -200.0
+      }
+     },
+     {
+      "venue": "uniswap-v3-x-layer",
+      "pool": "0xbb9a35f790ea6ea9763b99e885f33bcf95860d40",
+      "fee_bps_pool": 1,
+      "token0": {
+       "symbol": "USDG",
+       "address": "0x4ae46a509f6b1d9056937ba4500cb143933d2dc8",
+       "decimals": 6
+      },
+      "token1": {
+       "symbol": "USDC",
+       "address": "0xb6ceceab302e2e4948951ee7843fc24e92933061",
+       "decimals": 6
+      },
+      "direction": "USDG -> USDC (token0 -> token1)",
+      "block": 70203506,
+      "reserves_on_chain": {
+       "usdg": 452276.04,
+       "usdc": 550765.57
+      },
+      "ladder": [
+       {
+        "size_usd": 100,
+        "slippage_bps": 0.0
+       },
+       {
+        "size_usd": 10000,
+        "slippage_bps": -0.0988
+       },
+       {
+        "size_usd": 100000,
+        "slippage_bps": -0.9969
+       },
+       {
+        "size_usd": 500000,
+        "slippage_bps": -4.9869
+       },
+       {
+        "size_usd": 1000000,
+        "slippage_bps": -4499.419,
+        "exhausted": true
+       }
+      ],
+      "bracket": {
+       "last_clearing_size_usd": 561282.87,
+       "last_clearing_marginal_impact_bps": -199.9843,
+       "first_crossing_size_usd": 561283.82,
+       "first_crossing_marginal_impact_bps": -200.0008,
+       "width_usd": 0.9499999999534339,
+       "monotonic_in_bracket": null,
+       "threshold_bps": -200.0
+      }
+     }
+    ],
+    "combined_stable_exit_2pct_approx": 1791620.0,
+    "combined_note": "Sum of the two per-pool crossings. This is an APPROXIMATION: a router splitting one order across both pools does not reproduce the sum exactly. Published as an order-of-magnitude floor for local stable exit capacity, not as an executable figure.",
+    "exit_capacity_pct_of_local_supply": 0.113,
+    "local_exit_finding": "X Layer carries the largest share of USDG supply (~$1.585B on-chain) but its entire local on-chain stable exit capacity at -200 bps is ~$1.79M, i.e. ~0.11% of local supply. X Layer holders are structurally dependent on an off-chain venue to exit at size."
+   },
+   "mantle": {
+    "usdg": {
+     "address": "0x063C1d1ef6e9099Ce3E8e9AD5C6173d12C49C086",
+     "decimals": 6,
+     "total_supply": 501103.5,
+     "supply_source": "on-chain totalSupply()"
+    },
+    "venues_exist": false,
+    "venue_enumeration_result": "DEPLOYMENT CONFIRMED, ZERO VENUES. The contract is live and holds $501,103.50. GeckoTerminal lists no pools. This is an affirmative 'no local exit' result, not an unqueried set. Immaterial at ~0.015% of total supply."
+   }
+  }
+ },
+ "quote_path_defects": {
+  "robinhood_v4_phantom_reserves": {
+   "severity": "high",
+   "finding": "GeckoTerminal reports uniswap-v4-robinhood USDG pools whose reserves cannot exist. Across the 60 USDG pools it lists on the chain, claimed reserve_in_usd sums to $5,736,538,458 -- 8.4x the entire USDG supply on that chain ($683,443,680). The v4 subset alone claims $5,650,112,279 across 32 pools.",
+   "verdict": "NOT a real deep pool. Two coexisting defects: a broken/non-size-responsive quote path AND a misread reserve.",
+   "evidence": {
+    "not_size_responsive": {
+     "pools": [
+      "RUBp/USDG",
+      "JPYp/USDG"
+     ],
+     "observation": "Umbra router returns priceImpactBps = 0.0000 at EVERY size from $1,000 to $100,000,000, with impactUnknown:true. The quoted rate moves ~2 bps across a 100,000x size increase, then the route vanishes entirely at $1B with 'no route found for this pair with liquidity'. A number produced this way bounds nothing -- same class as the usds/susds finding.",
+     "example_rates_rubp_per_usdg": {
+      "1000": 86.03458733,
+      "1000000": 86.03441586,
+      "100000000": 86.01742646
+     }
+    },
+    "no_routable_liquidity": {
+     "pools": [
+      "ZWLp/USDG",
+      "ARSp/USDG",
+      "ILSp/USDG",
+      "TRYp/USDG",
+      "INRp/USDG",
+      "USDp/USDG"
+     ],
+     "claimed_reserve_each_usd": "~$500,000,000",
+     "observation": "Router returns HTTP 400 'no route found for this pair with liquidity' at $1,000. Pools claiming half a billion dollars each have no routable liquidity at all."
+    },
+    "real_but_tiny": {
+     "pools": [
+      "OPAI/USDG",
+      "ANTH/USDG"
+     ],
+     "claimed_reserve_usd": [
+      727099295,
+      593261334
+     ],
+     "observation": "A $100 trade costs 784 bps. Both tokens have on-chain totalSupply of exactly 1,000,000 units. The reserve figure is not consistent with the executable curve."
+    },
+    "turnover_signature": "The ~$500M cluster shows 0.001%-0.070% daily turnover across 8 unrelated FX-pegged tokens sitting at near-identical reserve values -- the signature of a nominal/virtual figure, not deposits."
+   },
+   "affects_other_assets_on_chain": true,
+   "affects_note": "The defect is a property of the uniswap-v4-robinhood venue feed, not of USDG. Any asset quoted against these pools inherits it. GeckoTerminal's v3 figures on the same chain reconcile to on-chain balances, and its X Layer figures reconcile to within 0.03%, so the defect is v4-Robinhood-specific rather than chain-wide or vendor-wide.",
+   "specific_3e23_row": "The individual row reported at ~3.03e23 is NOT present in the CoinGecko ticker feed as pulled 2026-09-09/10 -- none of these phantom pools appear in the ticker set at all, though GeckoTerminal still carries their inflated reserves. The specific row was not reproduced; the defect CLASS that produces it is reproduced and characterised above. Treat the exclusion as correct and the mechanism as identified, but the exact row as transient and no longer observable."
+  },
+  "umbra_router_instability": {
+   "severity": "high",
+   "finding": "The Umbra Robinhood Chain router (POST umbra.finance/api/rh/quote) silently degraded mid-measurement and stayed degraded. The identical $1,700,000 USDG->WETH quote returned -36.4 bps on one pass and -7,435.6 bps seconds later, switching route from 'v3(100) direct' to 'split: 99% v2(3000)'.",
+   "control": "Six probes spaced 45s apart, each paired with a direct on-chain read of the same v3 pool, showed pool USDG ~$17.0-17.6M, WETH ~5,708-5,958, and liquidity stable at ~9.9e18 throughout. The venue did not change; the router's route selection did.",
+   "adjudication": "Independent on-chain tick-liquidity simulation agrees with the router to within 0.03% over $100..$1,000,000, and shows $2,000,000 executing at -42.9 bps where the router quoted -7,732 bps. The on-chain simulation is therefore the published source and the router is rejected above ~$1M.",
+   "consequence": "Any USDG depth figure for Robinhood Chain derived from this router at size is unreliable and should not be published."
+  }
+ },
+ "concentration_cross_check": {
+  "claim_under_test": "A single pair -- OKX USDG/USDT -- is 61.4% of all measured 2% down-depth.",
+  "numerator_verdict": "CONFIRMED",
+  "okx_usdg_usdt_down_depth_usd": 11363257.39,
+  "tidresearch_implied_absolute_usd": 11362715.0,
+  "numerator_agreement_pct": 0.005,
+  "denominator_verdict": "NOT REPRODUCED",
+  "share_under_denominators": {
+   "tidresearch_total_18506051": 61.4,
+   "dextracker_naive_all_pairs_28835775": 39.4,
+   "dextracker_sign_corrected_exit_side_28646672": 39.7
+  },
+  "aggregation_defect": {
+   "finding": "86.8% of the naive DEX 'down-depth' for USDG comes from pairs where USDG is the QUOTE token. For those pairs cost_to_move_down_usd measures the cost of selling the OTHER asset INTO USDG -- the opposite of a USDG exit. On Robinhood Chain alone, 408 of 449 uniswap-v4 pairs have USDG as the quote token against tokenized equities and FX.",
+   "correction": "Selling USDG is cost_to_move_down when USDG is base, and cost_to_move_up when USDG is the quote token.",
+   "dex_down_depth_usdg_as_base_usd": 324415.0,
+   "dex_down_depth_usdg_as_quote_usd": 2125552.0
+  },
+  "independence_caveat": "This is an independent PULL and an independent AGGREGATION, not an independent SOURCE. Both this measurement and tidresearch's derive from CoinGecko's depth=true ticker feed, so a defect in that feed would be common to both. The on-chain ladders in this payload are the genuinely independent evidence.",
+  "co_dependency_finding": "The co-dependency concern is SHARPENED, not weakened, by the share disagreement. OKX USDG/USDT is the single dominant exit route under every denominator tested (39%-61%). X Layer -- OKX's own chain -- carries the largest share of USDG supply at ~$1.585B, and this measurement shows X Layer's entire local on-chain stable exit capacity at -200 bps is ~$1.79M, or ~0.11% of local supply. The largest host of the asset and its dominant route out are the same party, and the host chain has no meaningful local alternative. A venue failure and a chain failure would not be independent events."
+ },
+ "not_measured": [
+  "Any liquidity or risk score. Axis 3 is riskAnalyst's; no number is proposed here.",
+  "Pool TVL as a depth proxy -- deliberately never substituted.",
+  "The USDG-to-fiat leg on any chain, and USDG convertibility.",
+  "Bridge legs between chains; the per-chain figures are not additive.",
+  "Gas cost.",
+  "CEX order-book depth measured independently -- the OKX figure is a CoinGecko cross-check, not a book read.",
+  "Whether reported venue turnover is genuine two-sided activity.",
+  "Ethereum, Solana and the remaining USDG host chains -- out of scope for this handoff."
+ ]
+}

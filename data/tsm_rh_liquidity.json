@@ -1,0 +1,278 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "tsm_rh",
+ "as_of": "2026-09-06T05:48:23Z",
+ "producer": "dextracker",
+ "note": "Axis 3 liquidity measurement only; no risk score is authored. Pool TVL is not used as depth. The executable route is resolved by token and pool address, never by ticker.",
+ "depth": {
+  "status": "bracketed",
+  "depth_usd": null,
+  "is_floor": false,
+  "threshold_bps": -200.0,
+  "two_pct_depth_status": "bracketed",
+  "two_pct_depth_basis": "USD input notional at the handoff reference price of $425.83 per TSM. The lower rung quoted at -199.94293800 bps and the upper rung at -200.02813544 bps relative to the $100 reference rung. No scalar depth is published because the largest clearing rung is only one side of the crossing.",
+  "slippage_convention": "Signed deterioration in pre-protocol-fee USDG received per TSM versus the smallest successful $100 exact-input rung. Zero is the $100 rung and -200 bps is the crossing threshold. Umbra's fixed 1% protocol fee is excluded by using expectedOut; gas and the unmeasured USDG-to-fiat leg are excluded.",
+  "basis": "Live exact-input routed quotes from the exact Robinhood TSM contract to the exact USDG contract through Umbra's Robinhood Chain quote API. The router reports simulated expectedOut against live chain state. The reference price only sizes TSM input; it is not used as the execution-rate denominator. Pool TVL and reported volume are not treated as executable depth.",
+  "price_bias_bps": null,
+  "bias_measures": "not_measured",
+  "position_comparison": {
+   "position_usd": 4740.13,
+   "position_pct_supply": 0.32,
+   "position_rung_slippage_bps": -10.737036,
+   "headline": "The 2% crossing is materially above the $4,740.13 position size."
+  },
+  "denomination_scope": {
+   "measured_leg": "TSM -> USDG",
+   "input_notional": "USD, converted to TSM at the handoff reference price of $425.83",
+   "output_denomination": "USDG base units (6 decimals)",
+   "excluded_leg": "USDG -> fiat USD",
+   "exit_cost_scope": "Robinhood Chain secondary-venue swap leg only; complete dollar exit additionally depends on USDG liquidity and convertibility."
+  },
+  "anchor": {
+   "fair_value": 425.83,
+   "fair_value_basis": "handoff_reference_price",
+   "fair_value_source": "riskAnalyst handoff",
+   "fair_value_as_of": "2026-09-06",
+   "fair_value_choice": "reference_price_for_input_sizing_only",
+   "self_referential": false
+  },
+  "quote": {
+   "method": "Umbra Robinhood Chain POST /api/rh/quote; exact-input routed quote with live-chain simulation",
+   "chain": "robinhood-chain",
+   "chain_id": 4663,
+   "rpc": "https://rpc.mainnet.chain.robinhood.com",
+   "rpc_chain_id_result": "0x1237",
+   "token_in": {
+    "symbol": "TSM",
+    "address": "0x58ffe4a942d3885baa22d7520691f611ef09e7aa",
+    "decimals": 18
+   },
+   "token_out": {
+    "symbol": "USDG",
+    "address": "0x5fc5360d0400a0fd4f2af552add042d716f1d168",
+    "decimals": 6
+   },
+   "baseline_size_usd": 100.0,
+   "baseline_amount_in_tsm": 0.23483549773383747,
+   "baseline_expected_out_usdg": 100.194899,
+   "baseline_exchange_rate_usdg_per_tsm": 426.658234,
+   "router_protocol_fee_bps": 100,
+   "router_protocol_fee_treatment": "Excluded from the marginal slippage calculation; netOut is retained in rungs for executable proceeds context.",
+   "fee_on_transfer": false,
+   "tax_bps": 0
+  },
+  "bracket": {
+   "last_clearing_size_usd": 233496.09375,
+   "last_clearing_marginal_impact_bps": -199.942938,
+   "first_crossing_size_usd": 233593.75,
+   "first_crossing_marginal_impact_bps": -200.02813544,
+   "width_usd": 97.65625,
+   "monotonic_in_bracket": true,
+   "threshold_bps": -200.0
+  },
+  "rungs": [
+   {
+    "size_usd": 100.0,
+    "status": "ok",
+    "amount_in_tsm": 0.23483549773383747,
+    "expected_out_usdg": 100.194899,
+    "net_out_usdg": 99.192951,
+    "slippage_bps": 0.0,
+    "route_summary": "v4(4000) direct"
+   },
+   {
+    "size_usd": 1000.0,
+    "status": "ok",
+    "amount_in_tsm": 2.3483549773383747,
+    "expected_out_usdg": 1001.739107,
+    "net_out_usdg": 991.721716,
+    "slippage_bps": -2.094747,
+    "route_summary": "v4(4000) direct"
+   },
+   {
+    "size_usd": 2500.0,
+    "status": "ok",
+    "amount_in_tsm": 5.870887443345936,
+    "expected_out_usdg": 2503.473706,
+    "net_out_usdg": 2478.438969,
+    "slippage_bps": -5.584192,
+    "route_summary": "v4(4000) direct"
+   },
+   {
+    "size_usd": 4740.13,
+    "status": "ok",
+    "amount_in_tsm": 11.13150787873095,
+    "expected_out_usdg": 4744.269052,
+    "net_out_usdg": 4696.826362,
+    "slippage_bps": -10.737036,
+    "route_summary": "split: 97% v4(4000) + 2% v4(4980)"
+   },
+   {
+    "size_usd": 5000.0,
+    "status": "ok",
+    "amount_in_tsm": 11.741774886691873,
+    "expected_out_usdg": 5004.081319,
+    "net_out_usdg": 4954.040506,
+    "slippage_bps": -11.305228,
+    "route_summary": "split: v4(4000) + v4(4980)"
+   },
+   {
+    "size_usd": 10000.0,
+    "status": "ok",
+    "amount_in_tsm": 23.483549773383746,
+    "expected_out_usdg": 9998.307556,
+    "net_out_usdg": 9898.324481,
+    "slippage_bps": -21.14114,
+    "route_summary": "split: v4(4000) + v4(5500) + v4(4980)"
+   },
+   {
+    "size_usd": 25000.0,
+    "status": "ok",
+    "amount_in_tsm": 58.708874433459364,
+    "expected_out_usdg": 24928.651887,
+    "net_out_usdg": 24679.365369,
+    "slippage_bps": -47.935719,
+    "route_summary": "split: v4(7500) + v4(4000) + v4(4980)"
+   },
+   {
+    "size_usd": 50000.0,
+    "status": "ok",
+    "amount_in_tsm": 117.41774886691873,
+    "expected_out_usdg": 49744.166697,
+    "net_out_usdg": 49246.725031,
+    "slippage_bps": -70.51912,
+    "route_summary": "split: v4(7500) + v4(4000)"
+   },
+   {
+    "size_usd": 100000.0,
+    "status": "ok",
+    "amount_in_tsm": 234.83549773383746,
+    "expected_out_usdg": 99163.67719,
+    "net_out_usdg": 98172.040419,
+    "slippage_bps": -102.921588,
+    "route_summary": "split: v4(7500) + v4(4000)"
+   },
+   {
+    "size_usd": 150000.0,
+    "status": "ok",
+    "amount_in_tsm": 352.2532466007562,
+    "expected_out_usdg": 148245.551697,
+    "net_out_usdg": 146763.096181,
+    "slippage_bps": -136.187692,
+    "route_summary": "split: v4(7500) + v4(4000)"
+   },
+   {
+    "size_usd": 200000.0,
+    "status": "ok",
+    "amount_in_tsm": 469.6709954676749,
+    "expected_out_usdg": 196934.885649,
+    "net_out_usdg": 194965.536793,
+    "slippage_bps": -172.409593,
+    "route_summary": "split: v4(7500) + v4(4000)"
+   },
+   {
+    "size_usd": 233496.09375,
+    "status": "ok",
+    "amount_in_tsm": 548.3317139468802,
+    "expected_out_usdg": 229273.486768,
+    "slippage_bps": -199.942938,
+    "route_summary": "split: 90% v4(7500) + 9% v4(4000)"
+   },
+   {
+    "size_usd": 233593.75,
+    "status": "ok",
+    "amount_in_tsm": 548.561045487636,
+    "expected_out_usdg": 229367.382938,
+    "slippage_bps": -200.02813544,
+    "route_summary": "split: 90% v4(7500) + 9% v4(4000)"
+   },
+   {
+    "size_usd": 250000.0,
+    "status": "ok",
+    "amount_in_tsm": 587.0887443345937,
+    "expected_out_usdg": 245108.117252,
+    "net_out_usdg": 242657.03608,
+    "slippage_bps": -214.746671,
+    "route_summary": "split: v4(7500) + v4(4000)"
+   }
+  ]
+ },
+ "primary_exit": {
+  "venue": null,
+  "mechanism": "none_for_holders",
+  "at_nav": false,
+  "gated": true,
+  "gate": "legal_eligibility",
+  "gated_basis": "TSM is a tokenized stock, not a stablecoin, and the issuer provides no holder redemption mechanism. Regulation S excludes offers, sales, or delivery within the United States to, or for the account or benefit of, U.S. Persons. The gate is legal eligibility rather than a mechanical redemption queue or capacity limit.",
+  "cadence": null,
+  "capacity_usd": null,
+  "note": "There is no declared primary holder-redemption leg to measure; eligible secondary-market sale is the measured exit."
+ },
+ "enumeration": {
+  "source": "GeckoTerminal pool API for address resolution; Umbra live routed quote for execution",
+  "as_of": "2026-09-06",
+  "venue_count": 4,
+  "chain_count_is_floor": false,
+  "chain_count_note": "Four exact TSM/USDG v4 pools appeared in successful decision-range routes; venue_count is not a census of every TSM pool on Robinhood Chain."
+ },
+ "venues": [
+  {
+   "name": "TSM / USDG 0.75%",
+   "project": "uniswap-v4",
+   "chain": "Robinhood Chain",
+   "kind": "swap",
+   "pool_type": "uniswap_v4",
+   "pool_id": "0x0ba5d53d2f6255f334b7c8ead4f56b6aef5af3402c5e4d11180afd38c6b85fb1",
+   "underlying_tokens": [
+    "0x58ffe4a942d3885baa22d7520691f611ef09e7aa",
+    "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+   ],
+   "depth_role": "Used by routed quotes; pool TVL is not published as depth."
+  },
+  {
+   "name": "TSM / USDG 0.4%",
+   "project": "uniswap-v4",
+   "chain": "Robinhood Chain",
+   "kind": "swap",
+   "pool_type": "uniswap_v4",
+   "pool_id": "0x8055fe6b3c4079318536e2d1c13d32bffc82bc554e0a7619b9ed571cd3ba3eb1",
+   "underlying_tokens": [
+    "0x58ffe4a942d3885baa22d7520691f611ef09e7aa",
+    "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+   ],
+   "depth_role": "Used by routed quotes; pool TVL is not published as depth."
+  },
+  {
+   "name": "TSM / USDG 0.498%",
+   "project": "uniswap-v4",
+   "chain": "Robinhood Chain",
+   "kind": "swap",
+   "pool_type": "uniswap_v4",
+   "pool_id": "0xd801072625f911a198b45ad51a7454d5d37ead5d6fc1e977b468f72cc024d39d",
+   "underlying_tokens": [
+    "0x58ffe4a942d3885baa22d7520691f611ef09e7aa",
+    "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+   ],
+   "depth_role": "Used below the crossing; pool TVL is not published as depth."
+  },
+  {
+   "name": "TSM / USDG 0.55%",
+   "project": "uniswap-v4",
+   "chain": "Robinhood Chain",
+   "kind": "swap",
+   "pool_type": "uniswap_v4",
+   "pool_id": "0x78f4dd7dec56c8af7792cc288cca7b917ed9f759acc6dbd68394d24aa956e955",
+   "underlying_tokens": [
+    "0x58ffe4a942d3885baa22d7520691f611ef09e7aa",
+    "0x5fc5360d0400a0fd4f2af552add042d716f1d168"
+   ],
+   "depth_role": "Used below the crossing; pool TVL is not published as depth."
+  }
+ ],
+ "total_tvl_usd": null,
+ "swap_tvl_usd": null,
+ "axis_binding_constraint": {
+  "leg": "secondary_market_only",
+  "basis": "No holder redemption mechanism exists. The measured TSM-to-USDG 2% crossing is far above the $4,740.13 position, while legal eligibility under Regulation S gates who may participate and USDG-to-fiat remains outside the measured leg."
+ }
+}

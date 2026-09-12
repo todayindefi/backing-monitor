@@ -566,30 +566,34 @@ const CommonRenderer = {
         // default. A field that reaches `data.liquidity` is not a field a reader
         // sees, and on a replace axis an unmapped field is not merely unrendered,
         // it is deleted.
-        // ⚠️ THE BRACKET ARRIVES IN TWO SHAPES AND REJECTING ONE LOSES THE RANGE.
-        // This adapter originally accepted only the object form. reusde-re's
-        // first automated run published `bracket: [low, high]`, the array form
-        // the qualifier has always handled for crvUSD — and because the adapter
-        // dropped it, a $937-wide located crossing rendered as "≥$20.3K ladder
-        // exhausted — floor, not a measurement". The status said `bracketed`
-        // and the page said the opposite.
+        // ⚠️ ONE SHAPE, DELIBERATELY — the dual-form reading here was a WORKAROUND
+        // and it has been retired at the producer's request. liquidity/1 briefly
+        // emitted three encodings (object with named ends, a bare [low, high]
+        // array, and a parallel `two_pct_depth_bracket` array), with tsm_rh
+        // carrying two of them for the same crossing. DexTracker converged on
+        // the object form, built in one place, with an idempotent migration over
+        // the historical payloads. Absorbing a producer's inconsistency here is
+        // what let it persist; reading one shape is what surfaces a regression.
         //
-        // ⚠️ Exactly the defect this adapter was written to fix, in the other
-        // shape: on day one it was the OBJECT form being dropped on USG. A
-        // schema with two accepted encodings needs both read, not whichever one
-        // existed when the code was written.
+        // ⚠️ IF AN ARRAY EVER ARRIVES AGAIN the bracket will simply not be set,
+        // and the qualifier will render a bare "bracketed" with no range — the
+        // day-one USG symptom. That is the shape of the failure to look for.
+        //
+        // ⚠️ The ARRAY form is still read by `_depthQualifierHtml`, and must be:
+        // that is PegTracker's encoding on a different path entirely — crvusd,
+        // reusd_re and syzusd all publish `two_pct_depth_bracket` as [low, high]
+        // in their backing feeds today. Retiring it there would break them.
         var br = d.bracket;
-        if (Array.isArray(br) && br.length === 2 &&
-            typeof br[0] === 'number' && typeof br[1] === 'number') {
-            block.two_pct_depth_bracket = br.slice();
-        } else if (br && typeof br === 'object' && !Array.isArray(br) &&
+        if (br && typeof br === 'object' && !Array.isArray(br) &&
             typeof br.last_clearing_size_usd === 'number' &&
             typeof br.first_crossing_size_usd === 'number') {
             block.two_pct_depth_bracket = {
                 lower_size_usd: br.last_clearing_size_usd,
                 lower_slippage_bps: br.last_clearing_marginal_impact_bps,
                 upper_size_usd: br.first_crossing_size_usd,
-                upper_slippage_bps: br.first_crossing_marginal_impact_bps
+                upper_slippage_bps: br.first_crossing_marginal_impact_bps,
+                // Published now, so it is read rather than recomputed below.
+                width_usd: typeof br.width_usd === 'number' ? br.width_usd : undefined
             };
         }
         this._adaptLadder(d, block);
@@ -2572,7 +2576,13 @@ const CommonRenderer = {
                 // the reader's to judge. 1% is comfortably below any real
                 // bracket — PegTracker's USG ladder is 33% wide and crvUSD's
                 // is 10× — so this cannot swallow one.
-                var gap = hi - lo;
+                // ⚠️ PREFER THE PUBLISHED WIDTH. DexTracker now emits `width_usd`
+                // on every bracket, re-quoting both ends after bisection so the
+                // number carries its own evidence. Recomputing hi - lo here
+                // would be deriving what the producer already measured, and the
+                // two would disagree the first time rounding differed.
+                var gap = (!Array.isArray(br) && typeof br.width_usd === 'number')
+                    ? br.width_usd : (hi - lo);
                 if (gap >= 0 && gap <= Math.max(1, lo * 0.01)) {
                     return wrap('crossing solved \u2014 bracket ' +
                         (gap < 1 ? '<$1' : this.formatCurrencyExact(gap)) + ' wide',
