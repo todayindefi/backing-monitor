@@ -275,6 +275,19 @@ var EthenaRenderer = {
             html += anc('panel-vault', EthenaRenderer._renderSusdeVaultPanel(specific, s));
         }
         html += '<div id="ethena-attestation-panel"></div>';
+        // ⚠️ AXIS 4 WAS ENTIRELY ABSENT FROM THESE TWO PAGES. This renderer hides
+        // every numbered section — correctly, since a lone "5 Contract & Admin"
+        // on a page with no 1/2/3/4/6 reads as a rendering failure — but it then
+        // rendered no dependency information at all. usde lost three upstream
+        // rows naming its custodians (Anchorage Digital Bank · Copper · Ceffu),
+        // its CEX delta-hedge collateral and its liquid slice; susde lost the row
+        // saying USDe is 100% of its backing. The authored 6.0 and its written
+        // basis went with them, into a node with display:none.
+        //
+        // Same shape as backingBasisPanelHtml above: the shared panel already
+        // matches this stream's idiom, so it drops in rather than being rebuilt.
+        // withScoreChip because there is no axis head here to carry the score.
+        html += CommonRenderer.dependenciesPanelHtml(data, { withScoreChip: true });
         html += '<div id="ethena-riskflags-panel"></div>';
         html += '<div id="ethena-family-panel"></div>';
 

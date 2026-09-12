@@ -2586,7 +2586,10 @@ const CommonRenderer = {
                 (auth.basis ? '. ' + this._mdPlain(auth.basis) : '') +
                 '. This axis is not computed from live data \u2014 there is no measured band to ' +
                 'compare it against.') +
-            '">' + this._escapeAttr(label) + ' ' + auth.score + '/10</span>';
+            // ⚠️ An empty label is a supported call, not a mistake: inside a panel
+            // already titled "Dependencies" the labelled chip reads
+            // "Dependencies Dependencies 6/10".
+            '">' + (label ? this._escapeAttr(label) + ' ' : '') + auth.score + '/10</span>';
     },
 
     _authoredAxisScore(block, names) {
@@ -5111,6 +5114,27 @@ const CommonRenderer = {
     _renderDependenciesSection(data) {
         var body = document.getElementById('axis-dependencies-body');
         if (!body) return;
+        body.innerHTML = this.dependenciesPanelHtml(data);
+    },
+
+    // ⚠️ SHARED SO A PAGE WITHOUT AXIS SECTIONS CAN STILL SHOW THIS AXIS.
+    // ethena.js hides every numbered section — deliberately, because a lone
+    // "5 Contract & Admin" on a page with no 1/2/3/4/6 reads as a rendering
+    // failure — and renders a bespoke panel stream instead. It had no axis-4
+    // header to hang a score chip on, so usde and susde showed NO dependency
+    // information at all: not the authored 6.0, not its basis, and not usde's
+    // three upstream rows naming its custodians.
+    //
+    // The panel this returns already matches that stream's idiom (`.panel` +
+    // `.panel-title`), so it drops in unchanged rather than needing a second
+    // layout.
+    //
+    // `opts.withScoreChip` adds the authored score beside the title, for callers
+    // that have no axis head rendering it already. Off by default so the shared
+    // path does not print it twice.
+    dependenciesPanelHtml(data, opts) {
+        opts = opts || {};
+        data = data || {};
         var dep = data.dependencies || {};
         var up = Array.isArray(dep.upstream) ? dep.upstream : [];
         var down = Array.isArray(dep.downstream) ? dep.downstream : [];
@@ -5335,8 +5359,12 @@ const CommonRenderer = {
                   : '')
             : '';
 
-        body.innerHTML = '<div class="panel">' +
-            '<div class="panel-title">Dependencies</div>' +
+        var titleChip = opts.withScoreChip
+            ? this.authoredScoreChipHtml(dep, ['underlying_score'], '') : '';
+        return '<div class="panel">' +
+            '<div class="panel-title">Dependencies' +
+                (titleChip ? ' <span class="ml-2 align-middle">' + titleChip + '</span>' : '') +
+            '</div>' +
             depBasis +
             '<div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Upstream — what this asset depends on</div>' +
             upBlock +
