@@ -234,6 +234,40 @@ async function renderAsset(slug) {
         }
         var sourceSlug = (assetMeta && assetMeta.data_source) ? assetMeta.data_source : slug;
 
+        // ⚠️ AXIS OVERLAYS FOLLOW THE VIEW; THE BASE FEED FOLLOWS THE DATA SOURCE.
+        // These were the same slug, and a sibling lens rendered another asset's
+        // risk judgements as its own for as long as ?asset=mstr has existed.
+        //
+        // mstr declares data_source "strc" to REUSE STRC'S FEED, which is correct —
+        // one analyzer covers Strategy's capital structure and mstr is a second lens
+        // on it. The overlay URLs were built from that same sourceSlug, so the MSTR
+        // page fetched data/strc_axis_basis.json, and because riskAnalyst's envelope
+        // CREATES data.peg on a feed that has none, hasAxisBlocks() (literally
+        // `!!data.peg`) flipped true and unhid the whole six-axis frame on a
+        // common-equity page. Axis 1 read "7d peg performance · market vs NAV" and
+        // carried STRC's basis prose: "MEASURES REALIZED DEVIATION FROM PAR ON A
+        // PAR-ANCHORED PREFERRED". MSTR is common stock. riskAnalyst confirms it
+        // carries ZERO axes by design — every axis reading there was borrowed.
+        //
+        // ⚠️ THE PRODUCER COULD NOT HAVE CAUGHT THIS. Their file's routing_note said
+        // "ROUTING VERIFIED AGAINST common.js", and common.js is right — it merges
+        // exactly what it is handed. A routing claim checked against the merge cannot
+        // see a SECOND CONSUMER of the same file; that lives here, in URL construction.
+        //
+        // An axis score is a judgement about the asset the reader is looking at, so it
+        // resolves from the VIEW slug. Dashes are normalised because the sync writes
+        // underscored filenames: hastra-prime -> hastra_prime_axis_basis.json, which
+        // is the same file it read before. Checked every data_source entry before
+        // changing this — mstr->strc is the ONLY true sibling lens; hastra-prime,
+        // reusd-re and reusde-re are dash/underscore spellings of one asset, and the
+        // normalise keeps them resolving exactly as they did.
+        //
+        // ⚠️ mstr now loads NO overlay, so hasAxisBlocks() is false and the five axis
+        // sections stay hidden. That is the intended outcome: an empty section is
+        // honest about an overall-only asset, and the structure it replaces was
+        // asserting things that are false about it.
+        var axisSlug = slug.replace(/-/g, '_');
+
         // Per-axis overlay files, fetched ALONGSIDE the base rather than after
         // it: a serial fetch would add a round trip per axis to every page load
         // for files that mostly 404 today. A 404 is the normal case — no
@@ -251,7 +285,7 @@ async function renderAsset(slug) {
             var sufs = overlaySuffixes[axis];
             if (!Array.isArray(sufs)) sufs = [sufs];
             sufs.forEach(function(suf) {
-                var file = 'data/' + sourceSlug + suf + '.json';
+                var file = 'data/' + axisSlug + suf + '.json';
                 overlayFetches.push(
                     fetch(dataUrl(file))
                         .then(function(r) { return r && r.ok ? r.json() : null; })
@@ -289,7 +323,11 @@ async function renderAsset(slug) {
         // field keeping its origin. Runs before preRender so a bespoke renderer
         // reads the merged block rather than the pre-merge one — otherwise a
         // renderer and the common frame would disagree about the same axis.
-        CommonRenderer.mergeAxisOverlays(data, overlays, sourceSlug);
+        // ⚠️ axisSlug, not sourceSlug: the identity check compares the overlay's own
+        // `asset` field against the asset it is being applied TO. Passing the source
+        // would let strcx_axis_basis.json (asset "strcx") be accepted on the strc
+        // view — the identity check exists precisely to refuse that.
+        CommonRenderer.mergeAxisOverlays(data, overlays, axisSlug);
 
         // The issuer panel's "Read the full risk report" reads issuer.report_url.
         // On reUSD no producer supplies one — PegTracker's issuer block was
