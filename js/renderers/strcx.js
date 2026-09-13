@@ -197,6 +197,17 @@ var STRCxRenderer = {
                     'contract and cannot be located. Exit depth is scored on axis 3, on its own ' +
                     'measurement.' +
                 '</div>' +
+                // ⚠️ REUSES CommonRenderer._renderPegChart rather than painting a second
+                // one here: it already carries the reference-line reasoning this estate
+                // paid for (a flat line at today's NAV drawn across history read as a
+                // discount that never happened on sUSDe), and for a `_pct`-scale field
+                // it draws the zero line — which is exactly this asset's case. The
+                // canvas id is the one that function looks for.
+                '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-5 mb-2">' +
+                    'Premium to NAV over time</div>' +
+                '<div style="height: 200px; position: relative;"><canvas id="peg-chart"></canvas></div>' +
+                '<div class="text-xs text-slate-400 mt-1">Plotted in percent, as published \u2014 ' +
+                    '0.10% = 10 bps. Zero is at NAV.</div>' +
                 (cross != null ? '<div class="text-xs text-slate-500 leading-relaxed mt-3">' +
                     '⚠️ <strong>The cross-source gap is a diagnostic, not a rival mark.</strong> ' +
                     'CoinGecko’s cross-chain aggregate reads ' + fmtBps(cross) + ' against this ' +
@@ -237,6 +248,27 @@ var STRCxRenderer = {
                 el.textContent = '7-day ' + fmtBps(Math.min.apply(null, vals)) + ' to ' +
                     fmtBps(Math.max.apply(null, vals)) + ' (' + vals.length + ' pts)' +
                     (latestTs ? ' · as of ' + latestTs.slice(0, 16).replace('T', ' ') + 'Z' : '');
+
+                // ⚠️ SHAPED, NOT MUTATED. The shared chart reads history.entries[].timestamp
+                // and data.peg.history_field; this feed publishes `series[].ts`. Passing a
+                // SYNTHETIC {peg:{history_field}} keeps the real data.peg empty — setting
+                // premium_discount_pct on it would give pegRating() an instant value and
+                // produce the rated band this panel exists to avoid.
+                var entries = [];
+                for (var k = 0; k < pts.length; k++) {
+                    if (pts[k] && pts[k].premium_discount_pct != null && pts[k].ts) {
+                        entries.push({ timestamp: pts[k].ts,
+                                       premium_discount_pct: pts[k].premium_discount_pct });
+                    }
+                }
+                if (entries.length && typeof CommonRenderer !== 'undefined' &&
+                    CommonRenderer._renderPegChart) {
+                    try {
+                        CommonRenderer._renderPegChart(
+                            { peg: { history_field: 'premium_discount_pct' } },
+                            { entries: entries });
+                    } catch (e) { /* chart is optional; the figures above are not */ }
+                }
             })
             .catch(function () {
                 var el = document.getElementById('strcx-peg-7d');
