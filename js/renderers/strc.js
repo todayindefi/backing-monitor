@@ -515,6 +515,13 @@ var STRCRenderer = {
         // Sibling-dashboard affordance in the page header (above panel 1).
         STRCRenderer._setupCompanionLink();
 
+        // \u26a0\ufe0f REPLACES the common Peg Performance card, which rendered four dashes
+        // on a security whose discount to par IS published. Same cause as STRCx: the
+        // analyzer emits no `peg` block, so the common card has nothing to read while
+        // `strc_secondary.discount_to_par_bps` sits in the feed unrendered. app.js runs
+        // renderAxisSections() before this, so this write is the last one and wins.
+        STRCRenderer._renderPegVsPar(tradfi);
+
         // Post-paint chart renders — DOM nodes must exist first.
         STRCRenderer._loadHistoryAndPaintCharts(tradfi);
         // Async: events JSON populates the event-log panel + appends any
@@ -798,6 +805,124 @@ var STRCRenderer = {
                 'across <span class="font-mono">' + STRCRenderer._fmtNum(div.outstanding_shares) + '</span> shares.' +
             '</div>' +
         '</div>';
+    },
+
+    // ============================================================
+    // Axis 1 · Price vs par.
+    //
+    // ⚠️ A DIFFERENT MEASUREMENT FROM THE WRAPPER'S, AND THE PANEL SAYS SO. STRCx's
+    // axis 1 asks whether the wrapper tracks the share it holds (−15.7 bps). This one
+    // asks whether the preferred trades at its $100 par (−136 bps). A reader who meets
+    // both and adds them gets a number describing nothing, so the non-stacking is a
+    // tile on this panel rather than a sentence under it.
+    //
+    // ⚠️ NO RATED CHIP, and NOT for the reason the figure is unquotable — this figure
+    // IS quotable, because par is a constant and carries none of the source dispersion
+    // that makes the wrapper premium soft. The reason is the frame: populating data.peg
+    // makes pegRating() compute a band, 1.36% rates 1/5 against the [0.15,0.30,0.50,1.0]
+    // cutoffs, and _divergenceChipHtml returns '' unconditionally — so a 2/10 band would
+    // DELETE riskAnalyst's authored 5.0 rather than sit beside it. Their 5.0 prices the
+    // par-anchor MECHANISM (a cumulative dividend reset that works and is slow); a band
+    // prices today's realized discount. Replacing one with the other reads as a
+    // refutation of a score that was never about that.
+    //
+    // ⚠️ THE HEADLINE IS THE PUBLISHED FIELD, the range is computed — and they agree by
+    // arithmetic, not by luck: (98.64/100 − 1) × 10000 = −136.0 reproduces
+    // discount_to_par_bps = −136 exactly. There is no published discount SERIES, so the
+    // range is computed from the published price history against the published par,
+    // which is arithmetic on two published quantities rather than a re-derivation of a
+    // figure the feed already provides. That distinction is what went wrong on the
+    // STRCx panel, where a derived headline landed outside its own published range.
+    _renderPegVsPar: function (tradfi) {
+        var body = document.getElementById('axis-peg-body');
+        var sec = (tradfi || {}).strc_secondary || {};
+        if (!body || sec.price_usd == null || sec.par_usd == null) return;
+
+        var px = sec.price_usd, par = sec.par_usd;
+        var bps = (sec.discount_to_par_bps != null) ? sec.discount_to_par_bps
+                                                    : (px / par - 1) * 10000;
+        var fmtBps = function (v) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + ' bps'; };
+        var tile = function (label, value, sub) {
+            return '<div class="summary-card">' +
+                '<div class="card-label">' + label + '</div>' +
+                '<div class="card-value">' + value + '</div>' +
+                '<div class="text-xs text-slate-400 mt-1">' + sub + '</div>' +
+            '</div>';
+        };
+        var session = sec.market_session === 'regular' ? 'regular session'
+            : (CommonRenderer.sanitizeQuoteDetail(sec.quote_detail) || 'outside regular session');
+
+        body.innerHTML =
+            '<div class="panel">' +
+                '<div class="panel-title">Price vs par ' +
+                    '<span class="text-xs font-normal text-slate-500">— the preferred against its $100 claim</span></div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-4 gap-3">' +
+                    tile('Market price', '$' + px.toFixed(2),
+                         CommonRenderer._escapeAttr(String(sec.source || 'quote')) + ' · ' +
+                         CommonRenderer._escapeAttr(session)) +
+                    tile('Par value', '$' + par.toFixed(2),
+                         'a constant — no source dispersion') +
+                    tile('Discount to par', fmtBps(bps),
+                         '<span id="strc-par-7d">7-day range loading…</span>') +
+                    tile('Wrapper tracking', '<span id="strc-wrap-now">…</span>',
+                         'STRCx vs THIS security — <a href="?asset=strcx" ' +
+                         'class="text-blue-500 hover:underline">its axis 1 →</a>') +
+                '</div>' +
+                '<div class="text-xs text-slate-500 leading-relaxed mt-4">' +
+                    '<strong>These two numbers do not stack.</strong> The discount to par is this ' +
+                    'security against its own $100 claim. The wrapper figure beside it is STRCx ' +
+                    'against <em>this security</em> — a different reference. Adding them produces ' +
+                    'nothing meaningful, and the gap between them is the point: the wrapper tracks ' +
+                    'its underlying far more tightly than the underlying tracks par.' +
+                '</div>' +
+                '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-5 mb-2">' +
+                    'Discount to par over time</div>' +
+                '<div style="height: 200px; position: relative;"><canvas id="strc-par-chart"></canvas></div>' +
+                '<div class="text-xs text-slate-400 mt-1">Computed from the published price ' +
+                    'history against the published par; the current point reproduces the feed’s ' +
+                    'own <span class="font-mono">discount_to_par_bps</span> exactly. Plotted in ' +
+                    'percent — 1.00% = 100 bps.</div>' +
+            '</div>';
+
+        fetch('data/strc_backing_history.json?nocache=' + Math.floor(Date.now() / 60000))
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (h) {
+                var pts = (h && Array.isArray(h.series)) ? h.series : [];
+                var cut = Date.now() - 7 * 24 * 3600 * 1000;
+                var vals = [], entries = [], wrap = null;
+                for (var i = 0; i < pts.length; i++) {
+                    var p = pts[i]; if (!p || !p.ts) continue;
+                    var t = Date.parse(p.ts); if (isNaN(t)) continue;
+                    if (p.strc_price != null) {
+                        var devPct = (p.strc_price / par - 1) * 100;
+                        entries.push({ timestamp: p.ts, discount_to_par_pct: devPct });
+                        if (t >= cut) vals.push(devPct * 100);
+                    }
+                    if (p.premium_discount_pct != null) wrap = p.premium_discount_pct * 100;
+                }
+                var el = document.getElementById('strc-par-7d');
+                if (el) {
+                    el.textContent = vals.length
+                        ? '7-day ' + fmtBps(Math.min.apply(null, vals)) + ' to ' +
+                          fmtBps(Math.max.apply(null, vals)) + ' (' + vals.length + ' pts)'
+                        : '7-day range unavailable';
+                }
+                var wEl = document.getElementById('strc-wrap-now');
+                if (wEl) wEl.textContent = (wrap != null) ? fmtBps(wrap) : '—';
+                if (entries.length && CommonRenderer._renderPegChart) {
+                    try {
+                        CommonRenderer._renderPegChart(
+                            { peg: { history_field: 'discount_to_par_pct' } },
+                            { entries: entries }, 'strc-par-chart', '0% — at par');
+                    } catch (e) { /* chart optional; the figures are not */ }
+                }
+            })
+            .catch(function () {
+                var el = document.getElementById('strc-par-7d');
+                var wEl = document.getElementById('strc-wrap-now');
+                if (el) el.textContent = 'history unavailable';
+                if (wEl) wEl.textContent = '—';
+            });
     },
 
     // ============================================================

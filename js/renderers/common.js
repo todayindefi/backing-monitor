@@ -4846,7 +4846,7 @@ const CommonRenderer = {
     // that may be hidden — two nodes with one id means getElementById returns whichever
     // comes first, and the visible chart silently stops being the one that gets painted.
     // Passing an id is the way to share this implementation instead of copying it.
-    _renderPegChart(data, history, canvasId) {
+    _renderPegChart(data, history, canvasId, zeroLabel) {
         var ctx = document.getElementById(canvasId || 'peg-chart');
         if (!ctx) return;
         var field = data.peg.history_field || 'peg_market_price';
@@ -4929,7 +4929,7 @@ const CommonRenderer = {
                     annotation: { annotations: (isPct
                         ? { par: { type: 'line', yMin: 0, yMax: 0, borderColor: '#94a3b8',
                                    borderWidth: 1, borderDash: [4, 4],
-                                   label: { content: '0% \u2014 at NAV', display: true, position: 'start',
+                                   label: { content: zeroLabel || '0% \u2014 at NAV', display: true, position: 'start',
                                             font: { size: 9 }, color: '#64748b' } } }
                         : (isPar
                             ? { par: { type: 'line', yMin: 1, yMax: 1, borderColor: '#94a3b8',
