@@ -1,0 +1,32 @@
+{
+ "schema_version": "axis-basis/1",
+ "producer": "riskanalyst",
+ "asset": "strcx",
+ "as_of": "2026-09-13T00:00:00Z",
+ "peg": {
+  "volatility_score": 4.5,
+  "volatility_score_source": "riskAnalyst:authored",
+  "volatility_score_generated_at": "2026-09-13T00:00:00Z",
+  "volatility_score_basis": "\u26a0\ufe0f **AUTHORED FOR STRCx \u2014 NOT INHERITED FROM STRC.** 4.5 against raw STRC's 5.0. The wrapper does not change the underlying's volatility; the **\u22120.5 prices Backed's rebasing `multiplier()` as an ISSUER-UPDATE TIMING VARIANCE** against a deterministic underlying accrual. \u2705 **Measured 2026-09-13 and running AHEAD of expectation, not behind:** 1.0413 (2026-05-27) \u2192 1.08089 (2026-09-13) = **+3.959pp over 109 days = 1.105 pp/month**, against a tracked ~0.96 \u2014 about 15% ahead. **The monitored risk (missing or undersized step-up) has NOT occurred.** \u26a0\ufe0f Raw STRC's own lineage: cut 6.5 \u2192 5.5 (2026-06-07 de-anchoring) \u2192 5.0 (2026-06-26 all-time low). \u26a0\ufe0f **Quote a DATED multiplier reading; \"current\" is not a value for a figure that accrues monthly by construction.**"
+ },
+ "backing": {
+  "backing_score": 4.0,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-13T00:00:00Z",
+  "backing_score_basis": "\u26a0\ufe0f **AUTHORED 2026-09-09 \u2014 absent on BOTH surfaces until then.** `n/a` on the raw-STRC side because `strc.md` carries no `backing_score` (tradfi-preferred, exempt by the 2026-08-27 decision). \u26a0\ufe0f\u26a0\ufe0f **4.0 PRICES A BACKING THAT IS REAL BUT NOT PER-TOKEN CHECKABLE.** Backed publishes NAV/PoR at the **xStocks-FAMILY level, not per token**, so STRCx's 1:1 claim is **not independently verifiable for THIS token at a moment in time** \u2014 verification relies on Backed's representation. \u26a0\ufe0f **And the accrual is an ISSUER INPUT: `multiplier()` is written by Backed, not derived by formula.** \u2705 **This is a statement about what a third party can CHECK without trusting Backed \u2014 NOT a claim that assets are absent.** \u26a0\ufe0f **An on-chain `balanceOf` returns SHARES, not dollars, and those shares are already scaled by the issuer-set multiplier \u2014 the count is verifiable, the value per unit is not.**"
+ },
+ "liquidity": {
+  "liquidity_score": 2.5,
+  "liquidity_score_source": "riskAnalyst:authored",
+  "liquidity_score_generated_at": "2026-09-13T00:00:00Z",
+  "liquidity_score_basis": "\u26a0\ufe0f\u26a0\ufe0f **2.5 AGAINST RAW STRC'S 7.0 \u2014 A 4.5-POINT GAP, AND IT IS THE SINGLE MOST DECISION-RELEVANT FACT ABOUT THIS WRAPPER.** \u2705 **VENUE VERIFIED AGAINST THE PRIMARY 2026-09-13:** raw STRC is listed on **The Nasdaq Global Select Market** \u2014 Strategy Inc's 10-Q cover page (CIK 0001050446, accession 0001050446-26-000044, period 2026-06-30) registers *\"Variable Rate Series A Perpetual Stretch Preferred Stock \u2026 STRC \u2026 The Nasdaq Global Select Market\"*. \u26a0\ufe0f **A `quote_detail` string of \"outside NYSE regular session\" appears in `strc_backing.json` (`source: yfinance`); NYSE appears ZERO times in the 508,121-character filing. The feed string is a quote-vendor generic, not a venue fact \u2014 do not render it as one.** \u26a0\ufe0f **THE 7.0 IS AN EQUITY-MARKET NUMBER AND THE 2.5 IS A DEX NUMBER, AND THEY ARE NOT THE SAME KIND OF LIQUIDITY.** STRCx trades on DEX pools; the observable Jupiter depth is **$398,252**. **Corrected 3.0 \u2192 2.5 on 2026-08-18 because the axis was carrying an ASSUMPTION OVER A MEASUREMENT** \u2014 the 3.0 was never measured pool-by-pool, and a 2026-06-02 GeckoTerminal read settled it. \u26a0\ufe0f **A holder reading the combined presentation must not carry the 7.0 across: the exit that exists for raw STRC is not the exit available to a wrapper holder.**"
+ },
+ "dependencies": {
+  "underlying_score": 3.0,
+  "underlying_score_source": "riskAnalyst:authored",
+  "underlying_score_generated_at": "2026-09-13T00:00:00Z",
+  "underlying_score_basis": "\u26a0\ufe0f **AUTHORED 2026-09-09.** `n/a` on the raw side as `strc.md` carries no `underlying_score`. **3.0 on merits; tidresearch publishes 3.0 and that value is reasoned rather than bare**, so the agreement is corroboration, not adoption. \u26a0\ufe0f **The dependency chain is STRCx \u2192 Backed Finance \u2192 raw STRC \u2192 Strategy Inc's dividend-service capacity**, and a holder is exposed to every link. **Strategy's annual cash obligation is $1,738,033,394, of which STRC alone is $1,230,502,884.**"
+ },
+ "coverage_note": "\u26a0\ufe0f FOUR AXES HERE. Structural 6.0 and Issuer 6.0 live in strcx_issuer.json / a future overlay; redemption 3.0 is deliberately NOT routed (AP-only mint/burn, non-US institutions only \u2014 retail and US persons have NO primary redemption path, which the axis frame renders misleadingly as a score).",
+ "routing_note": "\u26a0\ufe0f THIS FILE IS FOR STRCx ONLY. It must NOT render under `strc` or `mstr`. Its liquidity 2.5 is 4.5 points below STRC's 7.0 precisely because the wrapper's exit is a DEX pool and STRC's is Nasdaq \u2014 rendering either number under the other label inverts the wrapper's whole point. backing-monitor's merge identity-checks `asset` against the VIEW slug as of 2026-09-13, so a mismatch is REFUSED rather than silently merged; a `refused: envelope identity mismatch` in the provenance is that rail working. \u26a0\ufe0f Written only after backing-monitor confirmed the `strcx` slug was registered and published (3fb51da27) \u2014 before that, this file would have been copied by nothing and warned about by nothing."
+}
