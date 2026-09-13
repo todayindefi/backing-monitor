@@ -156,6 +156,25 @@ var HP_REPORT = {
             // on Kiavi's DSCR loans. The ">$100M/month into Democratized Prime" is
             // the companies' own forward statement.
             //
+            // ⚠️ TWO FIGURES, TWO BASES, AND THE BASIS MUST BE ON THE PAGE.
+            // $717M is the ANNOUNCED transaction value; the 8-K Item 2.01 records
+            // "cash consideration, net of cash acquired of approximately $590
+            // million", subject to adjustments. Neither is wrong on its own
+            // terms, which is exactly why an unlabelled one is — this line said
+            // "$717M acquisition" flatly for a day. $590M net is also what makes
+            // the funding consistent with $600M of notes.
+            //
+            // ⚠️ AND RTL WAS MINE TO DROP. The 8-K names Kiavi's "technology
+            // platform and DSCR loans" and says nothing about RTL. I had
+            // described Kiavi as an "RTL/DSCR lender" next to the acquisition,
+            // which invites the reading that RTL arrived with it — and Figure's
+            // own Q2 10-Q footnote already describes its "other" category as
+            // primarily residential transition loans. So attributing RTL to the
+            // acquisition double-counts something Figure held beforehand. The
+            // rtl.forge markers in the warehouse are real and pre-date this.
+            // Caught by riskAnalyst, who had propagated the same error into three
+            // places in their own file from a peer's message.
+            //
             // ⚠️ CORRECTED FROM THE FIRST VERSION OF THIS LINE, which said the
             // composition question was "not measurable from this feed". It is
             // PARTLY measurable and the feed already answers it: warehouse.
@@ -171,13 +190,18 @@ var HP_REPORT = {
             // 1.43e8 by 4.76e10 would produce a confident "0.3% DSCR" that means
             // nothing. Same family as the cross-decimal swap-rate defect this
             // estate has already been bitten by once.
-            '\u26a0\ufe0f Figure completed its $717M acquisition of <span class="font-semibold">Kiavi</span>, ' +
-            'an investor-focused RTL/DSCR lender, taking on Kiavi\u2019s DSCR loans; both companies state the deal ' +
-            'adds <span class="font-semibold">more than $100M/month to Democratized Prime</span>. ' +
+            '\u26a0\ufe0f Figure completed its acquisition of <span class="font-semibold">Kiavi</span> \u2014 ' +
+            '<span class="font-semibold">$590M paid net of cash acquired</span> per the 8-K, against a ' +
+            '$717M announced transaction value \u2014 taking on Kiavi\u2019s technology platform and ' +
+            '<span class="font-semibold">DSCR loans</span>; both companies state the deal adds ' +
+            '<span class="font-semibold">more than $100M/month to Democratized Prime</span>. ' +
             'The pool is <span class="font-semibold">already multi-class, and that part is on-chain, not projected</span>: ' +
             'the warehouse table above holds <span class="font-mono">heloc.forge</span>, ' +
             '<span class="font-mono">nq.heloc.forge</span>, <span class="font-mono">rtl.forge</span> and ' +
             '<span class="font-mono">dscr.forge</span> markers, all fully in the warehouse. ' +
+            '\u26a0\ufe0f <span class="font-semibold">The rtl.forge markers are NOT attributable to this ' +
+            'acquisition</span> \u2014 Figure\u2019s own book already held residential transition loans ' +
+            'before it, and the 8-K names only DSCR. ' +
             '\u26a0\ufe0f <span class="font-semibold">The SHARE of each is not computable</span> \u2014 loan-token ' +
             'decimals are unresolved, so those native balances cannot be compared with one another. ' +
             'Read "HELOC" as the name of a facility, not a description of its book.'
@@ -1984,12 +2008,19 @@ var HastraPrimeRenderer = {
         var warehouseAlerts = flags.filter(function(f) { return alertCodes[f.code]; });
         var tokens = w.loan_tokens || {};
         // ⚠️ THE DENOMS WERE ON THE PAGE AND THE READING WAS NOT. This table has
-        // always listed heloc.forge, nq.heloc.forge, rtl.forge and dscr.forge —
-        // and RTL and DSCR are exactly the loan classes Figure took on with
-        // Kiavi, so the warehouse has been demonstrably multi-class in plain
-        // sight while the page called it a HELOC warehouse. The producer now
-        // names each class from the denom held, so the column says what the row
-        // means instead of leaving a reader to decode ".forge" prefixes.
+        // always listed heloc.forge, nq.heloc.forge, rtl.forge and dscr.forge, so
+        // the warehouse has been demonstrably multi-class in plain sight while
+        // the page called it a HELOC warehouse. The producer now names each class
+        // from the denom held, so the column says what the row means instead of
+        // leaving a reader to decode ".forge" prefixes.
+        //
+        // ⚠️ DO NOT ATTRIBUTE THESE TO THE KIAVI ACQUISITION. An earlier version
+        // of this comment said "RTL and DSCR are exactly the loan classes Figure
+        // took on with Kiavi". The 8-K names the technology platform and DSCR
+        // loans only; it says nothing about RTL, and Figure's own Q2 10-Q already
+        // describes its "other" category as primarily residential transition
+        // loans. So rtl.forge pre-dates the acquisition, and crediting it to
+        // Kiavi double-counts a book Figure already held.
         var tokenClasses = w.collateral_classes_observed || {};
 
         // ⚠️ THE TABLE NEVER SAID WHOSE MARKERS THESE ARE. The facility has four
