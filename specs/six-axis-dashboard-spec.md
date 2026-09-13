@@ -192,7 +192,8 @@ must not look alike, and neither may look like "not applicable".**
 
 | # | Element | When | Absence declared as |
 |---|---|---|---|
-| **Top** | one chip per axis, /10, never blank | always | unrated + reason (§6.5.3) |
+| **Top** | one chip per axis **1–5**, /10, never blank | always | unrated + reason (§6.5.3) |
+| **Top** | ⚠️ axis 6 carries NO chip — editorial, scored in the report | always | say so on the axis; a blank with no statement is the defect |
 | **Top** | computed vs authored labelled on every chip | always | — |
 | **Top** | per-axis clock from that axis's own `as_of` | always | — |
 | **1** | deviation figure, signed, reference NAMED (par or NAV) | always | "no reference establishable" + why |
@@ -332,8 +333,23 @@ is tracked (absent ≠ zero).
 ⚠️ **`name`, not `label`.** ⚠️ **Shares do not necessarily partition** — yzUSD's 16 legs sum to
 108.53%; never render as a pie.
 
-**UNRATED is the DESIGN here**, fleet-wide: axis 4 renders a link list and no score. Do not add a
-score to one asset — it silently redefines what every other page's blank means.
+⚠️ **THIS RULE IS SUPERSEDED BY OBSERVATION — recorded 2026-09-13, not yet reconciled with the
+producer.** It read: *"UNRATED is the DESIGN here, fleet-wide: axis 4 renders a link list and no
+score. Do not add a score to one asset — it silently redefines what every other page's blank
+means."*
+
+**That is no longer what ships. All 22 `*_axis_basis.json` files publish `underlying_score`** (2.5
+to 7.0), and the frame renders it as a `Dependencies N/10` chip. The rule's own hazard — one asset
+scored while the rest are blank — cannot occur, because none are blank.
+
+⚠️ **The rule was not repealed; reality moved and the spec did not.** That is the same failure this
+document exists to prevent, one level up: **a stale spec teaches a builder something the corpus
+already contradicts, and the builder who follows it ships the odd page out.** riskAnalyst owns the
+score and should confirm the intent; until then the observed behaviour is the contract, and a new
+asset SHOULD publish `underlying_score` rather than omit it.
+
+**The surviving half of the original rule still binds:** whatever the answer, it is fleet-wide.
+An asset that omits the score while 22 carry one redefines what its blank means.
 
 ## Axis 5 — Contract & Admin
 
