@@ -2,7 +2,7 @@
  "schema_version": "axis-basis/1",
  "producer": "riskanalyst",
  "asset": "strc",
- "as_of": "2026-09-11T00:00:00Z",
+ "as_of": "2026-09-13T00:00:00Z",
  "peg": {
   "volatility_score": 5.0,
   "volatility_score_source": "riskAnalyst:authored",
@@ -20,5 +20,5 @@
  },
  "redemption_note": "\u26a0\ufe0f A separate `redemption_score` of 5.0 exists and is not rendered through this envelope.",
  "coverage_note": "\u26a0\ufe0f tradfi-preferred: this asset carries TWO scored axes (volatility, liquidity) plus redemption, and no backing, dependencies, issuer or contract score. \u26a0\ufe0f IT WAS INITIALLY GROUPED WITH mstr AND bmnr AS 'tradfi, scored on overall only' AND THAT WAS WRONG \u2014 those two carry ZERO axes, this one carries two. Checking the category and inferring the rest is what produced the error.",
- "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as `volatility_score`) and liquidity route and render. No backing, dependencies or issuer block \u2014 those scores do not exist."
+ "routing_note": "\u26a0\ufe0f\u26a0\ufe0f ROUTING CLAIM CORRECTED 2026-09-13 \u2014 THE PRIOR VERSION WAS TRUE AND INCOMPLETE, AND ITS INCOMPLETENESS RENDERED PROSE FROM THIS FILE ONTO A DIFFERENT ASSET. It read: 'ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as volatility_score) and liquidity route and render.' \u2705 That is correct for ?asset=strc and common.js is not at fault. \u26a0\ufe0f BUT backing-monitor measured that THIS FILE ALSO RENDERS ON ?asset=mstr: app.js:235 sets sourceSlug from assets.json's data_source, and app.js:254 builds the overlay URL as 'data/' + sourceSlug + suffix, so the MSTR view fetches strc_axis_basis.json. hasAxisBlocks() is !!data.peg, so THIS OVERLAY CREATES THE peg BLOCK THAT UNHIDES THE SIX-AXIS FRAME on a common-equity page that carries ZERO axes. Reader-facing result: 'MEASURES REALIZED DEVIATION FROM PAR ON A PAR-ANCHORED PREFERRED' and 'EXIT ON A NASDAQ-LISTED PERPETUAL PREFERRED' attributed to MSTR, which is neither. Mitigated but not excused by the prose sitting in a collapsed <details> and the chips reading 'Not rated'. \u26a0\ufe0f WHY THE ORIGINAL CHECK COULD NOT SEE IT: I verified against the CONSUMER'S MERGE CODE, and the merge code is right. The defect is in URL CONSTRUCTION plus a SECOND REGISTERED SLUG I had no reason to know existed. A ROUTING CLAIM VERIFIED AGAINST THE MERGE CANNOT SEE A SECOND CONSUMER OF THE SAME FILE. Any future routing note must state WHICH VIEWS read the file, not merely that the fields merge. \u26a0\ufe0f SCOPE OF THIS FILE, STATED SO IT IS NOT INFERRED: it is authored for STRC ONLY. Its volatility 5.0 and liquidity 7.0 are NOT valid for MSTR (common equity, zero axes by design) and NOT valid for STRCx (the Backed wrapper, which scores liquidity 2.5 \u2014 4.5 points lower \u2014 precisely for the wrapper layer). DO NOT RENDER THIS FILE UNDER EITHER LABEL."
 }
