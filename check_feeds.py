@@ -34,6 +34,8 @@ assets = load(os.path.join(DATA, 'assets.json')) or []
 if isinstance(assets, dict): assets = assets.get('assets', [])
 slugs = {a.get('slug') for a in assets}
 sources = {a.get('slug'): (a.get('data_source') or a.get('slug')) for a in assets}
+# Full registry entry per slug — the components check below reads `components`.
+sources_meta = {a.get('slug'): a for a in assets}
 # ⚠️ Publication is EXPLICIT: `published: true` puts an asset in the grid, and
 # its ABSENCE is the staged state (user decision 2026-09-07, js/app.js).
 staged = {a.get('slug') for a in assets if a.get('published') is not True}
@@ -806,6 +808,39 @@ for _slug in slugs:
             f'switched it to a percent, the page is now reading ~100x high. Decide the '
             f'unit at the producer and say so in the field name.')
         print('  FAIL  ' + fails[-1])
+
+# ---------------------------------------------------------------------------
+# ⚠️ DECLARED COMPONENTS MUST BE REGISTERED, because an asset this dashboard
+# RENDERS but does not REGISTER is invisible to every guard on both sides.
+#
+# STRCx was that asset for as long as the combined "STRC + STRCx" page existed.
+# It was published here, inside another slug's page, and:
+#   · sync_and_push.sh copies SUFFIXES x REGISTERED SLUGS, so a
+#     strcx_axis_basis.json would have been copied by nothing; and
+#   · the orphan check above is DELIBERATELY SILENT on a prefix matching no
+#     registered asset, because unregistered normally means "an asset other
+#     producers cover and we do not publish" (usdt, frax, thbill...).
+# That suppression's premise — unregistered implies not published here — was
+# false for exactly one asset, so the file would have been skipped by the sync
+# AND certified clean by the guard whose job is catching skipped files.
+#
+# ⚠️ riskAnalyst hit the mirror image in their own repo the same day: their
+# "zero scored axes without a basis" was true of the 27 REGISTERED assets and
+# read as a statement about all 150 reports. Two denominators, two repos, one
+# blind spot, the same cause.
+#
+# `components` names the assets a feed's page(s) cover. Declaring one that is not
+# registered is now a FAILURE rather than a silence.
+for _slug in slugs:
+    _decl = (sources_meta.get(_slug) or {}).get('components') or []
+    for _c in _decl:
+        if _c not in slugs:
+            fails.append(
+                f'{_slug}: declares component "{_c}", which is NOT a registered asset. '
+                f'Anything this dashboard renders for it is invisible to the sync (which '
+                f'copies registered slugs only) and to the orphan check above (which is '
+                f'silent on unregistered prefixes). Register it or stop declaring it.')
+            print('  FAIL  ' + fails[-1])
 
 print(f'\n{len(fails)} failures, {len(warns)} warnings across {len(slugs)} assets.')
 sys.exit(1 if fails else 0)

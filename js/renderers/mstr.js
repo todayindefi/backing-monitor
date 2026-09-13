@@ -188,7 +188,7 @@ var MSTRRenderer = {
         var link = document.getElementById('header-companion-link');
         if (!link) return;
         link.setAttribute('href', '?asset=strc');
-        link.textContent = 'STRC + STRCx preferred analysis → STRC dashboard ↗';
+        link.textContent = 'Preferred-holder analysis → STRC dashboard ↗';
         link.classList.remove('hidden');
     },
 
@@ -770,7 +770,7 @@ var MSTRRenderer = {
                 '<strong>Caveat.</strong> Runway assumes flat BTC, frozen preferred outstanding, and frozen rates. ' +
                 'All three are fragile — a BTC bear case + continued preferred growth + rising STRC rate could collapse runway materially. ' +
                 'The rate-ceiling overlay shows the <em>rate stress dimension only</em> — it does NOT compound with BTC stress; in a joint stress scenario, runway compresses faster than either alone. ' +
-                'See the <a href="https://tidresearch.com/reports/strcx" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">STRC + STRCx report ↗</a> — “How much runway?” and “The rate ceiling — STRC\u2019s hidden constraint”.' +
+                'See the <a href="https://tidresearch.com/reports/strc" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">STRC report ↗</a> — “How much runway?” and “The rate ceiling — STRC\u2019s hidden constraint”.' +
             '</div>';
 
         // ---- History charts (runway over time + STRC rate trajectory).

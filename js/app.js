@@ -68,6 +68,9 @@ var ASSET_RENDERERS = {
     cusd:      typeof CapRenderer       !== 'undefined' ? CapRenderer       : null,
     strc:      typeof STRCRenderer      !== 'undefined' ? STRCRenderer      : null,
     mstr:      typeof MSTRRenderer      !== 'undefined' ? MSTRRenderer      : null,
+    // Shares strc_backing.json via `data_source` but is its OWN asset: its axis
+    // overlays resolve from this view slug (strcx_*), not the source's.
+    strcx:     typeof STRCxRenderer     !== 'undefined' ? STRCxRenderer     : null,
     bmnr:      typeof BMNRRenderer      !== 'undefined' ? BMNRRenderer      : null,
     // Reads hastra_prime_backing.json via assets.json `data_source` (the
     // analyzer's filename is underscored; the URL slug is dashed).
