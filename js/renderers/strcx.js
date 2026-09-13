@@ -87,12 +87,136 @@ var STRCxRenderer = {
             STRCRenderer._loadHistoryAndPaintCharts(data.tradfi || {});
         }
 
+        // \u26a0\ufe0f REPLACES the common Peg Performance card, which rendered four dashes
+        // on an asset whose peg IS measured. app.js runs renderAxisSections() before
+        // this, so overwriting axis-peg-body here is the last write and wins.
+        STRCxRenderer._renderPegVsNav(wrapper);
+
         var link = document.getElementById('header-companion-link');
         if (link) {
             link.setAttribute('href', '?asset=strc');
             link.textContent = 'The underlying preferred \u2192 STRC dashboard \u2197';
             link.classList.remove('hidden');
         }
+    },
+
+    // ============================================================
+    // Axis 1 · Peg vs NAV — a RANGE, not a chip.
+    //
+    // ⚠️ THIS ASSET'S PEG IS MEASURED AND THE FRAME SHOWED FOUR DASHES. The
+    // analyzer emits no `peg` block, so data.peg.premium_discount_pct does not exist
+    // and the common card had nothing to print — while the mark and its reference
+    // sat one panel below, in wrapper_strcx, under different names.
+    //
+    // ⚠️ WHY A PANEL AND NOT A RATED CHIP. Populating data.peg would make
+    // pegRating() compute a band, and this frame's owner decision is that an authored
+    // score is NEVER shown beside a live one — so the report's 4.5 would vanish and be
+    // replaced by a green band, turning "report 4.5 / panel Not rated" into "report
+    // 4.5 / panel 8-10 of 10". Two numbers pointing opposite ways is worse than one
+    // absence. A chip is a single number; this quantity is a range with three
+    // dispersions around it, so it gets a panel and axis 1 keeps its stated refusal.
+    //
+    // ⚠️ EVERY FIGURE IS FIRST-PARTY — computed from wrapper_strcx and the history
+    // series in this repo. The report's pool-level depth measurements are deliberately
+    // NOT copied in: they are riskAnalyst's, they live on axis 3 with their basis, and
+    // a number retyped here is one that nothing refreshes.
+    _renderPegVsNav: function (wrapper) {
+        var body = document.getElementById('axis-peg-body');
+        if (!body || !wrapper) return;
+        var mk = wrapper.market_price_usd, nav = wrapper.underlying_strc_price_usd;
+        if (mk == null || nav == null) return;
+
+        var bps = (mk / nav - 1) * 10000;
+        var cross = wrapper.price_crosscheck_bps;
+        var fmtBps = function (v) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + ' bps'; };
+        var money = function (v) { return (typeof STRCRenderer !== 'undefined')
+            ? STRCRenderer._fmtMoneyShort(v) : ('$' + v); };
+
+        var pc = wrapper.per_chain || {};
+        var eth = (pc.ethereum || {}).total_supply, sol = (pc.solana || {}).total_supply;
+        var tot = wrapper.total_supply_all_chains;
+        var held = (wrapper.top_holders_ethereum || []).reduce(function (a, h) {
+            return a + (h && h.balance ? h.balance : 0); }, 0);
+        var ethFloat = (eth != null) ? eth - held : null;
+        var num = function (v) { return v == null ? '—'
+            : v.toLocaleString('en-US', { maximumFractionDigits: 0 }); };
+        var pct = function (v) { return (v == null || !tot) ? '—' : (v / tot * 100).toFixed(1) + '%'; };
+
+        var tile = function (label, value, sub) {
+            return '<div class="summary-card">' +
+                '<div class="card-label">' + label + '</div>' +
+                '<div class="card-value">' + value + '</div>' +
+                '<div class="text-xs text-slate-400 mt-1">' + sub + '</div>' +
+            '</div>';
+        };
+
+        body.innerHTML =
+            '<div class="panel">' +
+                '<div class="panel-title">Peg vs NAV ' +
+                    '<span class="text-xs font-normal text-slate-500">— wrapper against the share it holds</span></div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-4 gap-3">' +
+                    tile('Market price', '$' + mk.toFixed(2),
+                         CommonRenderer._escapeAttr(wrapper.market_price_source || 'DEX') +
+                         ' · multiplier-adjusted') +
+                    tile('NAV per token', '$' + nav.toFixed(2),
+                         'the underlying STRC share — exact, 1:1') +
+                    tile('Premium to NAV', fmtBps(bps),
+                         '<span id="strcx-peg-7d">7-day range loading…</span>') +
+                    tile('Cross-source check', (cross != null ? fmtBps(cross) : '—'),
+                         'CoinGecko aggregate vs this mark') +
+                '</div>' +
+                '<div class="text-xs text-slate-500 leading-relaxed mt-4">' +
+                    '<strong>NAV is exact here, which is unusual.</strong> STRCx is 1:1 against real ' +
+                    'STRC shares and the rebasing multiplier does the scaling, so the reference is a ' +
+                    'listed share price rather than an estimate.' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 leading-relaxed mt-3">' +
+                    '<strong>Priced on Solana, which is the right venue rather than a compromise.</strong> ' +
+                    'Ethereum holds ' + num(eth) + ' STRCx (' + pct(eth) + ' of supply), but ' +
+                    num(held) + ' of that sits in two custodial addresses — the Apyx treasury and ' +
+                    'Backed’s distribution hub — leaving about ' + num(ethFloat) + ' (' +
+                    pct(ethFloat) + ' of supply) as float. Solana carries ' + num(sol) + ' (' +
+                    pct(sol) + '), essentially all float, and it is the side with an order book' +
+                    (wrapper.jupiter_liquidity_usd != null
+                        ? ' (' + money(wrapper.jupiter_liquidity_usd) + ' visible depth)' : '') +
+                    '. ' + num(wrapper.implied_other_chains_supply) + ' (' +
+                    pct(wrapper.implied_other_chains_supply) + ') sits on chains with no registered ' +
+                    'contract and cannot be located. Exit depth is scored on axis 3, on its own ' +
+                    'measurement.' +
+                '</div>' +
+                (cross != null ? '<div class="text-xs text-slate-500 leading-relaxed mt-3">' +
+                    '⚠️ <strong>The cross-source gap is a diagnostic, not a rival mark.</strong> ' +
+                    'CoinGecko’s cross-chain aggregate reads ' + fmtBps(cross) + ' against this ' +
+                    'mark, and the gap moves. A plausible reading is that the aggregate folds in ' +
+                    'quotes from chains with no real trading, which would drag it exactly this way ' +
+                    '— stated as a hypothesis, not a finding: nothing here reads CoinGecko’s ' +
+                    'per-chain inputs.' +
+                '</div>' : '') +
+            '</div>';
+
+        // 7-day range from the published series. ⚠️ The field is
+        // `premium_discount_pct` under `series` — this feed does not use `entries`,
+        // which is why the frame's own 7-day path cannot see it.
+        fetch('data/strc_backing_history.json?nocache=' + Math.floor(Date.now() / 60000))
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (h) {
+                var el = document.getElementById('strcx-peg-7d');
+                if (!el) return;
+                var pts = (h && Array.isArray(h.series)) ? h.series : [];
+                var cut = Date.now() - 7 * 24 * 3600 * 1000, vals = [];
+                for (var i = 0; i < pts.length; i++) {
+                    var v = pts[i] && pts[i].premium_discount_pct;
+                    var t = pts[i] && pts[i].ts ? Date.parse(pts[i].ts) : NaN;
+                    if (v != null && !isNaN(t) && t >= cut) vals.push(v * 100);
+                }
+                if (!vals.length) { el.textContent = '7-day range unavailable'; return; }
+                el.textContent = '7-day ' + fmtBps(Math.min.apply(null, vals)) + ' to ' +
+                    fmtBps(Math.max.apply(null, vals)) + ' (' + vals.length + ' pts)';
+            })
+            .catch(function () {
+                var el = document.getElementById('strcx-peg-7d');
+                if (el) el.textContent = '7-day range unavailable';
+            });
     },
 
     // \u26a0\ufe0f The STRC panels are NOT repeated here. Everything about the preferred
