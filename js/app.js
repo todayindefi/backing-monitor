@@ -297,12 +297,30 @@ async function renderAsset(slug) {
             });
         });
 
+        // ⚠️ THE FAMILY ENVELOPE IS FETCHED FROM THE **SOURCE**, AND THAT IS NOT A
+        // RELAPSE INTO SOURCE-KEYED AXIS RESOLUTION. Axis SCORES are judgements about
+        // one asset and follow the view (axisSlug, above). `family_overalls` is the
+        // opposite kind of object: one block describing SEVERAL assets — MSTR 4.5,
+        // STRC 4.0, STRCx 3.0 — published once in the shared feed's envelope because
+        // it is about the family, not about whichever page is open.
+        //
+        // ⚠️ IT IS RAW AND UNMERGED. Nothing here may read an AXIS field off it; the
+        // merge is the only thing allowed to do that, and it has staleness and
+        // identity rules this does not. Envelope-level extras only.
+        var familyFetch = fetch(dataUrl('data/' + sourceSlug + '_axis_basis.json'))
+            .then(function (r) { return r && r.ok ? r.json() : null; })
+            .catch(function () { return null; });
+
         var fetched = await Promise.all([
             fetch(dataUrl('data/' + sourceSlug + '_backing.json')),
             fetch(dataUrl('data/' + sourceSlug + '_backing_history.json')).catch(function() { return null; })
-        ].concat(overlayFetches));
+        ].concat(overlayFetches).concat([familyFetch]));
         var dataResp = fetched[0], histResp = fetched[1];
-        var overlays = fetched.slice(2).filter(Boolean);
+        var familyEnvelope = fetched[fetched.length - 1];
+        var overlays = fetched.slice(2, fetched.length - 1).filter(Boolean);
+        if (typeof CommonRenderer !== 'undefined') {
+            CommonRenderer.FAMILY_ENVELOPE = familyEnvelope || null;
+        }
 
         if (!dataResp.ok) {
             // ⚠️ A REGISTERED-BUT-UNFED slug is a DECLARED state, not a broken page.

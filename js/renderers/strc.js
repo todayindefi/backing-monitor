@@ -121,9 +121,65 @@ function strcMnavWatchCaption(tradfi) {
         : ' Reserve drawdown is not satisfied.';
 
     return '<span class="font-semibold">' + thresholdTxt + '</span> ' +
-        (printCount != null ? 'This is sub-1.0 weekly print #' + printCount + '; ' : '') +
+        // ⚠️ `> 0`, NOT `!= null`. sub_1_0_weekly_prints is 0 today and 0 is not
+        // null, so this rendered "This is sub-1.0 weekly print #0" — a sentence
+        // that says a thing happened zero times while counting it.
+        (printCount != null && printCount > 0
+            ? 'This is sub-1.0 weekly print #' + printCount + '; ' : '') +
         'no discount-regime break alert because the re-arm rule requires sustained sub-1.0 mNAV plus a flat-to-declining reserve.' +
-        reserveClause + stateTxt + ' The ~0.98 print is held down partly by the record cash deduction, not equity weakness; MSTR rose this week. Scores held (MSTR 4.5 / STRC 4.0 / STRCx 3.0).';
+        reserveClause + stateTxt +
+        // ⚠️ REMOVED: " The ~0.98 print is held down partly by the record cash
+        // deduction, not equity weakness; MSTR rose this week." Authored prose with
+        // no producer and no as_of, asserting a ~0.98 mNAV print. The live value is
+        // 1.1069 — the sentence had been ~13% wrong for as long as mNAV has been
+        // above parity, on both this page and MSTR's, and "MSTR rose this week" was
+        // frozen the day it was typed. NOT replaced with a generated equivalent:
+        // there is no field that says why a print sits where it does, and inventing
+        // one here is the same defect with fresher numbers.
+        strcFamilyOverallsClause();
+}
+
+// ⚠️ WAS THE HARDCODED STRING "Scores held (MSTR 4.5 / STRC 4.0 / STRCx 3.0)."
+// Three editorial scores in reader-facing prose with no producer, no as_of and
+// nothing to refresh them — accurate on the day it was typed, and wrong the first
+// time any of the three moved without anyone noticing the sentence existed.
+//
+// riskAnalyst now publishes them in strc_axis_basis.json's `family_overalls`, with
+// a PER-ASSET last_verified (08-26 / 08-24 / 08-18, which diverge by design — a
+// block-level date would render at least one of them false) and an authored
+// `movement` string. They verified "held" rather than asserting it, by walking each
+// report's overall_score through git history: MSTR 5.0→4.5 and STRC 5.0→4.0 both on
+// 2026-06-25, STRCx 4.0→3.0 on 2026-05-30.
+//
+// ⚠️ NO FALLBACK, BY DESIGN AND BY AGREEMENT. If the block is absent this renders
+// NOTHING — it must never fall back to a remembered constant, because a constant
+// standing in for a live number is exactly how the sentence it replaces went stale.
+// A parenthetical a reader loses beats a 2026 number read in 2027. The producer
+// endorsed this in the block's own note.
+//
+// ⚠️ `family_overalls.note` is NOT rendered: it is addressed to this renderer, not
+// to a reader, and check_feeds.py's internal-vocabulary guard flags it for exactly
+// that reason.
+function strcFamilyOverallsClause() {
+    var env = (typeof CommonRenderer !== 'undefined') ? CommonRenderer.FAMILY_ENVELOPE : null;
+    var fo = env && env.family_overalls;
+    var rows = (fo && Array.isArray(fo.assets)) ? fo.assets : [];
+    var parts = rows.map(function (a) {
+        if (!a || a.overall_score == null) return null;
+        var label = a.label || a.slug || '';
+        // Each score carries its OWN verified date and movement on hover — the two
+        // facts that make a number checkable, and the two a shared block-level date
+        // would have destroyed.
+        var title = [
+            a.last_verified ? 'Last verified ' + a.last_verified : null,
+            a.movement || null,
+            fo.source ? 'Source: ' + fo.source : null
+        ].filter(Boolean).join(' \u00b7 ');
+        return '<span title="' + CommonRenderer._escapeAttr(title) + '">' +
+            CommonRenderer._escapeAttr(label) + ' ' + a.overall_score.toFixed(1) + '</span>';
+    }).filter(Boolean);
+    if (!parts.length) return '';
+    return ' Overall scores: ' + parts.join(' \u00b7 ') + '.';
 }
 
 // Builds the Digital Credit Capital Framework card from the `digital_credit_framework`

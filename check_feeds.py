@@ -489,8 +489,15 @@ WALK_STATE = os.path.join(DATA, 'axis5_walk_state.json')
 _prev = load(WALK_STATE) or {}
 _now = {}
 for slug in sorted(slugs):
+    # ⚠️ VIEW FIRST, source as fallback — tools/emit_axis5.py writes
+    # {slug}_contract.json per REGISTERED slug, so a sibling view's axis-5 file is
+    # under its own name. Resolving only through data_source watched the wrong
+    # asset's walk. See the note in the vocabulary check above.
     src = sources[slug]
-    cpath = os.path.join(DATA, f'{src}_contract.json')
+    _v = str(slug).replace('-', '_')
+    cpath = os.path.join(DATA, f'{_v}_contract.json')
+    if not os.path.exists(cpath):
+        cpath = os.path.join(DATA, f'{src}_contract.json')
     doc = load(cpath)
     if not doc:
         continue
@@ -703,9 +710,24 @@ def _prose_strings(obj, path=''):
 
 _vocab = {}
 for _slug in sorted(slugs):
+    # ⚠️ BOTH SPELLINGS, because overlays follow the VIEW and the base feed follows
+    # the SOURCE. Keyed on sources[slug] alone, this scanned data/strc_*.json for
+    # slug `strcx` — and `strc_*` does not match `strcx_axis_basis.json`, so STRCx's
+    # OWN issuer and axis files were inspected by nothing. strcx appeared in this
+    # check's output only because it inherited strc's shared feed, which reads as
+    # coverage and was its absence.
+    #
+    # Same root cause as the app.js axisSlug bug fixed in 4cac62127: a sibling view
+    # sharing a base feed has its own per-axis files, and anything resolving them
+    # through data_source looks at the wrong asset. That bug put STRC's prose on the
+    # MSTR page; this one made a new asset's files unguarded. One confusion, two
+    # surfaces, and the guard was the surface nobody thought to check.
     _src = str(sources[_slug]).replace('-', '_')
+    _view = str(_slug).replace('-', '_')
     _repos, _paths = set(), set()
-    for _f in glob.glob(os.path.join(DATA, f'{_src}_*.json')):
+    _files = set(glob.glob(os.path.join(DATA, f'{_src}_*.json')))
+    _files |= set(glob.glob(os.path.join(DATA, f'{_view}_*.json')))
+    for _f in sorted(_files):
         _doc = load(_f)
         if not isinstance(_doc, dict):
             continue
@@ -799,14 +821,24 @@ for _slug in slugs:
     _pub = _safe.get('coverage_pct_of_total_reserves')
     if _verified is None or not _total or _pub is None:
         continue
+    # ⚠️ HONOUR THE DECLARED UNIT. PegTracker adopted a `_units` map in this block
+    # on 2026-09-13 (riskAnalyst's handoff) and their validator enforces it, so this
+    # check must read the declaration rather than assume the fraction it was written
+    # against — otherwise the analyzer's next run turns this suite RED on a payload
+    # that is correct and newly self-describing. A guard that fails on the fix it
+    # asked for is how a suite gets disabled.
+    _declared = ((_ba.get('_units') or {}).get('coverage_pct_of_total_reserves')
+                 if isinstance(_ba.get('_units'), dict) else None)
     _witness = _verified / _total            # 0.2342-style fraction
-    if abs(_pub - _witness) > 0.005:
+    if _declared in ('percent', 'percentage_points'):
+        _witness *= 100
+    if abs(_pub - _witness) > (0.5 if _declared in ('percent', 'percentage_points') else 0.005):
         fails.append(
             f'{_slug}: coverage_pct_of_total_reserves = {_pub} does NOT agree with '
-            f'onchain_verified_usd / total_reserves_usd = {_witness:.4f}. The renderer '
-            f'scales this field by 100 on the FRACTION reading; if the producer has '
-            f'switched it to a percent, the page is now reading ~100x high. Decide the '
-            f'unit at the producer and say so in the field name.')
+            f'onchain_verified_usd / total_reserves_usd = {_witness:.4f} '
+            f'(declared unit: {_declared or "none — read as a fraction"}). The renderer '
+            f'reads _units when present and falls back to the fraction shape; a '
+            f'mismatch here means the VALUE moved, not the convention.')
         print('  FAIL  ' + fails[-1])
 
 # ---------------------------------------------------------------------------

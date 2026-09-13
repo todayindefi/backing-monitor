@@ -866,13 +866,34 @@ var ApyxRenderer = {
         // 23.4219%, which matches coverage_pct_of_total_reserves x 100 exactly. A
         // magnitude guard ("if it looks small, scale it") inverts the first time
         // coverage legitimately sits under 1%.
-        var PCT_FRACTION_SCALE = 100;
-        var coverageTotal = (safe.coverage_pct_of_total_reserves != null)
-            ? safe.coverage_pct_of_total_reserves * PCT_FRACTION_SCALE : null;
-        var coverageStrc = (safe.coverage_pct_of_strc_bucket != null)
-            ? safe.coverage_pct_of_strc_bucket * PCT_FRACTION_SCALE : null;
-        var delta = (safe.delta_vs_last_wolf_attestation_pct != null)
-            ? safe.delta_vs_last_wolf_attestation_pct * PCT_FRACTION_SCALE : null;
+        // ⚠️ PREFER THE DECLARED UNIT NOW THAT ONE EXISTS. PegTracker adopted a
+        // `_units` map in backing_attestation (2026-09-13, via riskAnalyst's handoff)
+        // and their validator enforces it — so the unit is PUBLISHED rather than
+        // inferred, and a published field beats a constant in this renderer.
+        //
+        // ⚠️ THEY FOUND A THIRD UNIT WE HAD NOT NAMED. The handoff described percent
+        // and fraction; their map also carries `percentage_points`
+        // (attested_basis_residual_pp). Three units in one object, which is why
+        // "scale everything by 100" would have been wrong as a blanket rule and why
+        // this reads per field.
+        //
+        // The fraction default stands for payloads without the map — as of this
+        // commit data/ still carries the pre-`_units` shape, because the analyzer
+        // source is fixed and its next run has not happened. Both shapes render
+        // correctly; check_feeds.py's cross-check against the USD ratio still guards
+        // the values themselves either way.
+        var _units = (ba && ba._units) || {};
+        function pctOf(field) {
+            var v = safe[field];
+            if (v == null) return null;
+            var declared = _units[field];
+            if (declared === 'percent' || declared === 'percentage_points') return v;
+            // 'fraction', or undeclared — the shape this section shipped against.
+            return v * 100;
+        }
+        var coverageTotal = pctOf('coverage_pct_of_total_reserves');
+        var coverageStrc = pctOf('coverage_pct_of_strc_bucket');
+        var delta = pctOf('delta_vs_last_wolf_attestation_pct');
         var priceSource = safe.implied_price_source;
         var addr = safe.address;
         var etherscanUrl = safe.etherscan_url ||
