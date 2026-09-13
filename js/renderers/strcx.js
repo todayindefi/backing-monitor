@@ -177,11 +177,17 @@ var STRCxRenderer = {
                     // publishes this premium as a series; recomputing it from two fields I picked
                     // is the derive-instead-of-read trap, and it produced a number that contradicted
                     // the producer's own.
-                    '<span class="italic">The premium is the analyzer’s published measure on its ' +
-                    'own paired snapshot, not a division of the two tiles beside it — those are ' +
-                    'sampled independently and will not divide to it exactly. The feed also carries a ' +
-                    'second STRC reference about 18 bps from this one, which is part of why no tighter ' +
-                    'figure is quotable.</span>' +
+                    // ⚠️ WAS "the analyzer's published measure on its own paired snapshot,
+                    // not a division of the two tiles beside it". That described the
+                    // misidentified MSTR series and SURVIVED the retraction that removed it,
+                    // leaving the section contradicting itself: the tile said computed from
+                    // these two prices, this sentence said explicitly not. Caught by tidr
+                    // reading the panel end to end. My patch to this line had failed on a
+                    // later assertion and written nothing, and I did not re-check.
+                    '<span class="italic">The premium IS the division of the two tiles beside it, ' +
+                    'computed here because no producer publishes this wrapper’s premium. The feed ' +
+                    'carries a second STRC reference about 18 bps from this one, so the figure moves ' +
+                    'with which reference is used — part of why no tighter figure is quotable.</span>' +
                 '</div>' +
                 '<div class="text-xs text-slate-500 leading-relaxed mt-3">' +
                     '<strong>Priced on Solana, which is the right venue rather than a compromise.</strong> ' +

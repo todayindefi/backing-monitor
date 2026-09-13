@@ -4164,7 +4164,15 @@ const CommonRenderer = {
             // the authored score beside it said "authored" — one side declared its
             // provenance and the other did not, so the live reading read as the verdict
             // and the judgement as a footnote.
-            ('7d peg performance · ' + (data.peg.source ? 'market vs NAV · ' + data.peg.source : 'market vs NAV')),
+            // ⚠️ THE LABEL MOVES WITH THE VALUE (spec §3). This read "7d peg performance"
+            // unconditionally, including on the 7 assets where no 7-day series exists —
+            // promising a history the body withdraws. tidr caught it on strcx, where the
+            // panel says in terms that no premium history is published while the heading
+            // above it advertised one. _pegDevBasis already knows which it is, so the
+            // subtitle now asks it instead of asserting.
+            ((this._pegDevBasis(data, history, 7).basis === '7d'
+                ? '7d peg performance · ' : 'market vs its reference · ') +
+             (data.peg.source ? 'market vs NAV · ' + data.peg.source : 'market vs NAV')),
             // ⚠️ A REFUSAL WITH NO STATED REASON READS AS MISSING DATA. Axis 3 returns a
             // `rejected` string and prints "Not rated ⓘ" whose hover says the panel is
             // withholding deliberately; axis 1 printed a bare "Not rated" and told the
