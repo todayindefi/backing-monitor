@@ -383,8 +383,12 @@ var STRCRenderer = {
         // page (CIK 0001050446, accession 0001050446-26-000044, period 2026-06-30)
         // lists the Variable Rate Series A Perpetual Stretch Preferred on THE NASDAQ
         // GLOBAL SELECT MARKET, and "NYSE" appears zero times in that filing.
-        // Citation is riskAnalyst's, read from the primary; the only local source
-        // saying otherwise is a yfinance session string.
+        // ⚠️ THE CITATION IS IN THIS REPO, not in a message — data/strcx_axis_basis.json
+        // carries the accession, the registered title, the "10-Q cover" locator and
+        // the 508,121-char zero-hit NYSE control, so a future reader can check the
+        // venue without trusting a peer's account of it. That is what makes this a
+        // registry fact rather than a claim borrowed from another session. The only
+        // local source saying otherwise is a yfinance session string.
         if (!data.chain) data.chain = 'Nasdaq';
         if (!data.timestamp && data.timestamp_utc) data.timestamp = data.timestamp_utc;
 

@@ -1940,11 +1940,13 @@ const CommonRenderer = {
     // "NYSE" appears ZERO times in the 508,121-character filing. The venue word is a
     // yfinance generic session label that rode along into a published field.
     //
-    // ⚠️ IT STRIPS RATHER THAN CORRECTS. Rendering "Nasdaq" here would replace one
-    // unverified venue claim with another sourced from a filing this repo has not
-    // read — the citation above is riskAnalyst's, and the honest use of it is to stop
-    // asserting a venue, not to assert a different one. The session fact survives:
-    // "outside NYSE regular session" -> "outside regular session".
+    // ⚠️ IT STRIPS RATHER THAN CORRECTS, AND THAT STANDS EVEN NOW THE CITATION IS
+    // LOCAL. data/strcx_axis_basis.json carries the accession and the zero-hit NYSE
+    // control, so the venue is checkable here — which is why the chain LABEL says
+    // Nasdaq. This string is different in kind: it is a VENDOR-GENERATED session
+    // annotation, so the honest repair is to stop it naming an exchange, not to make
+    // it name a better one. Different provenance, different treatment. The session
+    // fact survives: "outside NYSE regular session" -> "outside regular session".
     //
     // The fix belongs at the producer and is on a handoff to PegTracker. This is the
     // consumer-side stopgap so a wrong venue is not on the page in the meantime.
