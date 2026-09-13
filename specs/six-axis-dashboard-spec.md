@@ -173,6 +173,81 @@ Six tiles, one per axis, in axis order. **A tile is a summary OF its axis, not a
 For each axis: **REQUIRED** (render or the axis is incomplete), **OPTIONAL**, and ⚠️ **UNRATED
 RULE** — what to render when it cannot be scored. *Unrated is a defined state, not a gap.*
 
+## 4.0 ⚠️ BASELINE RENDER MANIFEST — what every six-axis page ships
+
+Added 2026-09-13 on a user finding: *"too many times I ask for a dashboard and there's no peg
+history or collateral history."* ⚠️ **§4's per-axis contract below says what each axis must
+ESTABLISH; it did not list the ELEMENTS that carry it, so history charts, breakdowns and venue
+tables kept being treated as nice-to-have.** They are not. This section is the manifest; the
+contract below is still the reasoning.
+
+**THE GOVERNING RULE, and it is the whole point:**
+
+> ⚠️ **Every element below is either RENDERED or its absence is DECLARED ON THE PAGE.**
+> Silence is the failure. "No peg history is published for this asset" is a complete, acceptable
+> render of the history element. A blank space is not, and neither is omitting the element.
+
+This is §6.5.3's three-states rule applied to elements instead of scores: **ABSENT and UNMEASURED
+must not look alike, and neither may look like "not applicable".**
+
+| # | Element | When | Absence declared as |
+|---|---|---|---|
+| **Top** | one chip per axis, /10, never blank | always | unrated + reason (§6.5.3) |
+| **Top** | computed vs authored labelled on every chip | always | — |
+| **Top** | per-axis clock from that axis's own `as_of` | always | — |
+| **1** | deviation figure, signed, reference NAMED (par or NAV) | always | "no reference establishable" + why |
+| **1** | reference SOURCE and its `as_of` | always | — |
+| **1** | status / classification of the deviation | always | — |
+| **1** | **history chart** | always | "no peg history is published" |
+| **1** | cross-source check | ≥2 price sources exist | — |
+| **2** | coverage figure, or non-derivable + basis | always | "no collateral ratio is establishable" + why |
+| **2** | supply and its SCOPE (which chains) | always | — |
+| **2** | **coverage history chart** | a coverage figure exists | "coverage is not tracked over time" |
+| **2** | **breakdown table** | feed publishes composition | "composition is not published" |
+| **2** | allocation chart | components PARTITION | ⚠️ never render where they do not — yzUSD's 16 legs sum to 108.53% |
+| **2** | attestations | published | — |
+| **3** | depth figure + STATUS + floor flag | always | "depth not measured" + what would close it |
+| **3** | what the depth was measured AGAINST | a depth figure exists | — |
+| **3** | primary redemption: gated or not, for WHOM | always | — |
+| **3** | **venue breakdown** | >1 venue | "single venue" (state which) |
+| **3** | exit ladder | a ladder was run | "no ladder run" |
+| **4** | upstream list: `name`, `metric`, `source` per entry | always | "no upstream dependencies tracked" |
+| **4** | downstream tracked, or explicitly not | always | ⚠️ absent ≠ zero |
+| **4** | ⚠️ NO score, fleet-wide, and NEVER a pie | always | — |
+| **5** | per layer: what it controls · keys · delay · topology | always | "not assessed" (§ below) |
+| **5** | ⚠️ explicit NOT-ESTABLISHED list | always | — |
+| **5** | method (hand-walk vs generated) + walk `observed_at` | always | — |
+| **5** | audits / code review | published | "no audit published" |
+| **6** | WHO the issuer is | always | — |
+| **6** | producer's summary, rendered VERBATIM | always | "no issuer assessment published" |
+| **6** | report link, or why there is none | always | — |
+
+⚠️ **CONDITIONAL IS A TEST ON THE DATA, NOT ON EFFORT.** "≥2 price sources exist" is checkable;
+"we didn't get to it" is not a condition. If the condition holds and the element is missing, the
+page is incomplete — not customised.
+
+### Asset-specific panels are ADDITIONS, never substitutions
+
+An asset may render anything extra its subject demands — STRC's rate-ceiling overlay, USG's
+PegKeeper table, sUSDat's verification commands, STRCx's per-chain supply. ⚠️ **Those sit INSIDE
+the axis section they belong to (§2) and do not discharge a baseline element.** A bespoke panel
+that shows the same quantity better still leaves the baseline element owed, because a reader
+comparing two assets needs the same thing in the same place on both.
+
+⚠️ **The failure this prevents is specific: a bespoke renderer is written to the asset's
+interesting parts, and the standard elements are never noticed as missing** — nobody looks for
+what was never drafted. STRCx shipped 2026-09-13 with four dashes on axis 1 and no peg chart while
+carrying a 2,762-point premium series in its own history file.
+
+### Conformance is reported, not remembered
+
+`check_feeds.py` prints a per-asset manifest gap list on every run. ⚠️ **It reports data-side
+presence only** — it cannot see the DOM, so it catches "the element has no data behind it" and not
+"the data exists and nothing renders it". The second is what the published-vs-DOM diff in §9 is
+for, and it remains the higher-yield check.
+
+---
+
 ## Axis 1 — Peg / Stability
 
 **REQUIRED** · the deviation figure, signed · what it is measured AGAINST (par or NAV — say which)

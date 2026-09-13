@@ -880,5 +880,91 @@ for _slug in slugs:
                 f'silent on unregistered prefixes). Register it or stop declaring it.')
             print('  FAIL  ' + fails[-1])
 
+# ---------------------------------------------------------------------------
+# ⚠️ BASELINE MANIFEST CONFORMANCE — specs/six-axis-dashboard-spec.md §4.0.
+#
+# User finding 2026-09-13: "too many times I ask for a dashboard and there's no peg
+# history or collateral history." The spec's per-axis contract said what each axis
+# must ESTABLISH and never listed the ELEMENTS, so charts and breakdowns were built
+# where someone remembered and skipped where nobody did. A spec with no check is how
+# that drifts — this is the check.
+#
+# ⚠️ PRINTED EVERY RUN, NOT WARNED. Most gaps here are legitimate: a NYSE preferred
+# has no collateral ratio and a TradFi treasury has no DEX depth. A warn that is
+# always lit is one nobody reads (the same reasoning as the STAGED block below), so
+# this reports a standing picture and leaves the judgement to a person.
+#
+# ⚠️ DATA-SIDE ONLY. It sees whether an element has data behind it, never whether a
+# renderer draws it. "Published but unrendered" is this repo's most repeated defect
+# and needs the DOM diff in spec §9 — do not read a clean row here as a clean page.
+def _manifest_row(slug):
+    src = str(sources[slug]).replace('-', '_')
+    view = str(slug).replace('-', '_')
+    d = load(os.path.join(DATA, f'{src}_backing.json')) or {}
+    h = load(os.path.join(DATA, f'{src}_backing_history.json')) or {}
+    ents = h.get('entries') or h.get('series') or []
+    tail = ents[-40:]
+    def has(*names):
+        return any(any(e.get(n) is not None for n in names) for e in tail if isinstance(e, dict))
+    sm = d.get('summary') or {}
+    sp = d.get('asset_specific') or {}
+    # ⚠️ THE FIRST CUT CHECKED ONE KEY PER ELEMENT AND INVENTED GAPS. It read only
+    # summary.collateral_ratio and only backing_breakdown, so usdat (which publishes
+    # `backing_ratio`) and apxUSD (whose composition is
+    # backing_attestation.reserves_split, rendered as the donut + table) came back
+    # "missing" for data that is already on the page. A conformance report that sends
+    # someone to re-add data that exists is worse than none — cry-wolf with a work
+    # order attached. Surveyed the corpus for the shapes in use rather than assuming.
+    _COV = ('collateral_ratio', 'backing_ratio', 'coverage_ratio', 'coverage_pct',
+            'on_chain_coverage_pct', 'psm_coverage_pct', 'collateral_ratio_inclusive')
+    def _cov_present():
+        return any(sm.get(k) is not None for k in _COV)
+    def _comp_present():
+        if d.get('backing_breakdown'):
+            return True
+        for k, v in sp.items():
+            if v and any(t in k for t in ('composition', 'breakdown', 'decomposition')):
+                return True
+            if isinstance(v, dict):
+                for kk, vv in v.items():
+                    if vv and any(t in kk for t in ('reserves_split', 'reserve_split',
+                                                    'breakdown', 'composition')):
+                        return True
+        return False
+    peg = d.get('peg') or {}
+    con = (load(os.path.join(DATA, f'{view}_contract.json')) or {}).get('contract') or {}
+    iss = ((load(os.path.join(DATA, f'{view}_issuer.json')) or {}).get('issuer')
+           or d.get('issuer') or {})
+    return {
+        '1 peg dev':    peg.get('premium_discount_pct') is not None or peg.get('market_price') is not None,
+        '1 peg hist':   bool(peg.get('history_ref')) or has('peg_premium_discount_pct',
+                             'peg_market_price', 'premium_discount_pct'),
+        '2 coverage':   _cov_present(),
+        '2 cov hist':   has('collateral_ratio', 'coverage_pct', 'cr'),
+        '2 breakdown':  _comp_present(),
+        '3 liquidity':  bool(d.get('liquidity')) or bool(sp.get('liquidity')) or
+                        bool(sp.get('slippage_tiers')) or bool(sp.get('secondary')),
+        '4 upstream':   bool((d.get('dependencies') or {}).get('upstream')),
+        '5 authority':  bool(con.get('layers')),
+        '6 issuer':     bool(iss.get('summary') or iss.get('facts')),
+    }
+
+_pub = [s_ for s_ in sorted(slugs) if s_ not in staged]
+_mrows = {s_: _manifest_row(s_) for s_ in _pub}
+if _mrows:
+    _cols = list(next(iter(_mrows.values())).keys())
+    _incomplete = {s_: [c for c in _cols if not r[c]] for s_, r in _mrows.items()}
+    _incomplete = {s_: v for s_, v in _incomplete.items() if v}
+    print(f'\n  BASELINE MANIFEST (spec §4.0) — {len(_pub) - len(_incomplete)}/{len(_pub)} '
+          f'published assets carry every element with data behind it.')
+    if _incomplete:
+        print('  Each line is an element with NO DATA — render it, or declare the absence on the page:')
+        for s_ in sorted(_incomplete):
+            print(f'    {s_:16} missing: ' + ', '.join(_incomplete[s_]))
+    for _c in _cols:
+        _n = sum(1 for r in _mrows.values() if r[_c])
+        if _n < len(_pub):
+            print(f'      {_c:14} {_n:2}/{len(_pub)}')
+
 print(f'\n{len(fails)} failures, {len(warns)} warnings across {len(slugs)} assets.')
 sys.exit(1 if fails else 0)
