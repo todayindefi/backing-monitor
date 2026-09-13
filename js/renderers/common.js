@@ -4194,16 +4194,30 @@ const CommonRenderer = {
         var sdBasis = this._surplusBasis(data);
         var backingHead = document.getElementById('axis-backing-head');
         if ((basisText || sdBasis) && backingHead) {
+            // ⚠️ textContent RENDERED PRODUCER MARKDOWN AS PUNCTUATION. These two
+            // notes are the only reader-facing basis strings that went to the DOM as
+            // text rather than through the converter, so `**bold**` printed its
+            // asterisks — visible the moment riskAnalyst published a
+            // collateral_ratio_basis for STRCx with emphasis in it, directly under
+            // the "Authored 4/10" chip. The score-basis <details> beside it converts
+            // correctly; these did not.
+            //
+            // ⚠️ THIRD PATH WITH THIS DEFECT TODAY (issuer facts, issuer summary, and
+            // now these). The pattern is that each one was written with its own
+            // escaping decision instead of reaching for the shared helper, and each
+            // stayed invisible until a producer used emphasis on that particular
+            // field. _mdInlineHtml escapes FIRST and converts after, so replacing
+            // textContent with it is not a loosening: "<script>" still lands as text.
             if (basisText) {
                 var bNote = document.createElement('div');
                 bNote.className = 'axis-basis-note';
-                bNote.textContent = 'Basis: ' + basisText;
+                bNote.innerHTML = 'Basis: ' + this._mdInlineHtml(String(basisText));
                 backingHead.appendChild(bNote);
             }
             if (sdBasis) {
                 var sNote = document.createElement('div');
                 sNote.className = 'axis-basis-note';
-                sNote.textContent = 'Surplus basis: ' + sdBasis;
+                sNote.innerHTML = 'Surplus basis: ' + this._mdInlineHtml(String(sdBasis));
                 backingHead.appendChild(sNote);
             }
         }
