@@ -520,7 +520,7 @@ var STRCRenderer = {
         // analyzer emits no `peg` block, so the common card has nothing to read while
         // `strc_secondary.discount_to_par_bps` sits in the feed unrendered. app.js runs
         // renderAxisSections() before this, so this write is the last one and wins.
-        STRCRenderer._renderPegVsPar(tradfi);
+        STRCRenderer._renderPegVsPar(tradfi, wrapper);
 
         // Post-paint chart renders — DOM nodes must exist first.
         STRCRenderer._loadHistoryAndPaintCharts(tradfi);
@@ -833,7 +833,7 @@ var STRCRenderer = {
     // which is arithmetic on two published quantities rather than a re-derivation of a
     // figure the feed already provides. That distinction is what went wrong on the
     // STRCx panel, where a derived headline landed outside its own published range.
-    _renderPegVsPar: function (tradfi) {
+    _renderPegVsPar: function (tradfi, wrapper) {
         var body = document.getElementById('axis-peg-body');
         var sec = (tradfi || {}).strc_secondary || {};
         if (!body || sec.price_usd == null || sec.par_usd == null) return;
@@ -849,6 +849,16 @@ var STRCRenderer = {
                 '<div class="text-xs text-slate-400 mt-1">' + sub + '</div>' +
             '</div>';
         };
+        // ⚠️ COMPUTED FROM THE WRAPPER BLOCK, NOT FROM THE HISTORY. The first version
+        // read `premium_discount_pct` out of strc_backing_history — which is NOT the
+        // wrapper premium at all: it is mstr_view.premium_discount_pct, MSTR's price
+        // against per-share BTC NAV, as a FRACTION. No series of the wrapper premium is
+        // published, so this is a point-in-time computation and carries no range.
+        var wrapBps = '—';
+        if (wrapper && wrapper.market_price_usd != null && wrapper.underlying_strc_price_usd != null) {
+            var wb = (wrapper.market_price_usd / wrapper.underlying_strc_price_usd - 1) * 10000;
+            wrapBps = (wb >= 0 ? '+' : '−') + Math.abs(wb).toFixed(1) + ' bps';
+        }
         var session = sec.market_session === 'regular' ? 'regular session'
             : (CommonRenderer.sanitizeQuoteDetail(sec.quote_detail) || 'outside regular session');
 
@@ -864,7 +874,7 @@ var STRCRenderer = {
                          'a constant — no source dispersion') +
                     tile('Discount to par', fmtBps(bps),
                          '<span id="strc-par-7d">7-day range loading…</span>') +
-                    tile('Wrapper tracking', '<span id="strc-wrap-now">…</span>',
+                    tile('Wrapper tracking', wrapBps,
                          'STRCx vs THIS security — <a href="?asset=strcx" ' +
                          'class="text-blue-500 hover:underline">its axis 1 →</a>') +
                 '</div>' +
@@ -889,7 +899,7 @@ var STRCRenderer = {
             .then(function (h) {
                 var pts = (h && Array.isArray(h.series)) ? h.series : [];
                 var cut = Date.now() - 7 * 24 * 3600 * 1000;
-                var vals = [], entries = [], wrap = null;
+                var vals = [], entries = [];
                 for (var i = 0; i < pts.length; i++) {
                     var p = pts[i]; if (!p || !p.ts) continue;
                     var t = Date.parse(p.ts); if (isNaN(t)) continue;
@@ -898,7 +908,7 @@ var STRCRenderer = {
                         entries.push({ timestamp: p.ts, discount_to_par_pct: devPct });
                         if (t >= cut) vals.push(devPct * 100);
                     }
-                    if (p.premium_discount_pct != null) wrap = p.premium_discount_pct * 100;
+
                 }
                 var el = document.getElementById('strc-par-7d');
                 if (el) {
@@ -907,8 +917,6 @@ var STRCRenderer = {
                           fmtBps(Math.max.apply(null, vals)) + ' (' + vals.length + ' pts)'
                         : '7-day range unavailable';
                 }
-                var wEl = document.getElementById('strc-wrap-now');
-                if (wEl) wEl.textContent = (wrap != null) ? fmtBps(wrap) : '—';
                 if (entries.length && CommonRenderer._renderPegChart) {
                     try {
                         CommonRenderer._renderPegChart(
@@ -919,9 +927,7 @@ var STRCRenderer = {
             })
             .catch(function () {
                 var el = document.getElementById('strc-par-7d');
-                var wEl = document.getElementById('strc-wrap-now');
                 if (el) el.textContent = 'history unavailable';
-                if (wEl) wEl.textContent = '—';
             });
     },
 

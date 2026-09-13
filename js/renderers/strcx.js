@@ -160,8 +160,8 @@ var STRCxRenderer = {
                          ' · multiplier-adjusted') +
                     tile('NAV per token', '$' + nav.toFixed(2),
                          'the underlying STRC share — exact, 1:1') +
-                    tile('Premium to NAV', '<span id="strcx-peg-now">…</span>',
-                         '<span id="strcx-peg-7d">loading published series…</span>') +
+                    tile('Premium to NAV', fmtBps(bps),
+                         'computed from the two prices left \u2014 no premium series is published') +
                     tile('Cross-source check', (cross != null ? fmtBps(cross) : '—'),
                          'CoinGecko aggregate vs this mark') +
                 '</div>' +
@@ -197,18 +197,19 @@ var STRCxRenderer = {
                     'contract and cannot be located. Exit depth is scored on axis 3, on its own ' +
                     'measurement.' +
                 '</div>' +
-                // ⚠️ REUSES CommonRenderer._renderPegChart rather than painting a second
-                // one here: it already carries the reference-line reasoning this estate
-                // paid for (a flat line at today's NAV drawn across history read as a
-                // discount that never happened on sUSDe), and for a `_pct`-scale field
-                // it draws the zero line — which is exactly this asset's case. The
-                // canvas id is passed in, because declaring a second <canvas id="peg-chart">
-                // collides with the common one and check_feeds.py fails it.
-                '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-5 mb-2">' +
-                    'Premium to NAV over time</div>' +
-                '<div style="height: 200px; position: relative;"><canvas id="strcx-peg-chart"></canvas></div>' +
-                '<div class="text-xs text-slate-400 mt-1">Plotted in percent, as published \u2014 ' +
-                    '0.10% = 10 bps. Zero is at NAV.</div>' +
+                // ⚠️ NO HISTORY CHART, AND THE ABSENCE IS DECLARED — spec §4.0.
+                // The chart that stood here plotted `premium_discount_pct` from the STRC
+                // history, which is NOT this wrapper's premium: it is
+                // `mstr_view.premium_discount_pct`, MSTR's price against per-share BTC NAV,
+                // as a FRACTION (strc_backing_analyzer.py:1571; reproduced at 14 of 14
+                // spaced points as mstr_price / btc_nav_per_share_basic - 1). No series of
+                // this wrapper's premium is published anywhere, so there is nothing to plot.
+                '<div class="text-xs text-slate-500 leading-relaxed mt-4">' +
+                    '<strong>No premium history is published for this wrapper.</strong> The ' +
+                    'figure above is a point-in-time computation from the two prices shown — ' +
+                    'there is no series behind it, so no range and no chart. Adding the wrapper ' +
+                    'mark to the history series is what would close it.' +
+                '</div>' +
                 (cross != null ? '<div class="text-xs text-slate-500 leading-relaxed mt-3">' +
                     '⚠️ <strong>The cross-source gap is a diagnostic, not a rival mark.</strong> ' +
                     'CoinGecko’s cross-chain aggregate reads ' + fmtBps(cross) + ' against this ' +
@@ -218,65 +219,6 @@ var STRCxRenderer = {
                     'per-chain inputs.' +
                 '</div>' : '') +
             '</div>';
-
-        // 7-day range from the published series. ⚠️ The field is
-        // `premium_discount_pct` under `series` — this feed does not use `entries`,
-        // which is why the frame's own 7-day path cannot see it.
-        fetch('data/strc_backing_history.json?nocache=' + Math.floor(Date.now() / 60000))
-            .then(function (r) { return r.ok ? r.json() : null; })
-            .then(function (h) {
-                var el = document.getElementById('strcx-peg-7d');
-                if (!el) return;
-                var pts = (h && Array.isArray(h.series)) ? h.series : [];
-                var cut = Date.now() - 7 * 24 * 3600 * 1000, vals = [];
-                for (var i = 0; i < pts.length; i++) {
-                    var v = pts[i] && pts[i].premium_discount_pct;
-                    var t = pts[i] && pts[i].ts ? Date.parse(pts[i].ts) : NaN;
-                    if (v != null && !isNaN(t) && t >= cut) vals.push(v * 100);
-                }
-                var nowEl = document.getElementById('strcx-peg-now');
-                // ⚠️ The LATEST PUBLISHED POINT is the premium, not a figure derived here.
-                // Same field as the range, so the headline is inside its own range by
-                // construction rather than by luck.
-                var latest = null, latestTs = null;
-                for (var j = pts.length - 1; j >= 0; j--) {
-                    if (pts[j] && pts[j].premium_discount_pct != null) {
-                        latest = pts[j].premium_discount_pct * 100; latestTs = pts[j].ts; break;
-                    }
-                }
-                if (nowEl) nowEl.textContent = (latest != null) ? fmtBps(latest) : '—';
-                if (!vals.length) { el.textContent = '7-day range unavailable'; return; }
-                el.textContent = '7-day ' + fmtBps(Math.min.apply(null, vals)) + ' to ' +
-                    fmtBps(Math.max.apply(null, vals)) + ' (' + vals.length + ' pts)' +
-                    (latestTs ? ' · as of ' + latestTs.slice(0, 16).replace('T', ' ') + 'Z' : '');
-
-                // ⚠️ SHAPED, NOT MUTATED. The shared chart reads history.entries[].timestamp
-                // and data.peg.history_field; this feed publishes `series[].ts`. Passing a
-                // SYNTHETIC {peg:{history_field}} keeps the real data.peg empty — setting
-                // premium_discount_pct on it would give pegRating() an instant value and
-                // produce the rated band this panel exists to avoid.
-                var entries = [];
-                for (var k = 0; k < pts.length; k++) {
-                    if (pts[k] && pts[k].premium_discount_pct != null && pts[k].ts) {
-                        entries.push({ timestamp: pts[k].ts,
-                                       premium_discount_pct: pts[k].premium_discount_pct });
-                    }
-                }
-                if (entries.length && typeof CommonRenderer !== 'undefined' &&
-                    CommonRenderer._renderPegChart) {
-                    try {
-                        CommonRenderer._renderPegChart(
-                            { peg: { history_field: 'premium_discount_pct' } },
-                            { entries: entries }, 'strcx-peg-chart');
-                    } catch (e) { /* chart is optional; the figures above are not */ }
-                }
-            })
-            .catch(function () {
-                var el = document.getElementById('strcx-peg-7d');
-                var n2 = document.getElementById('strcx-peg-now');
-                if (el) el.textContent = 'published series unavailable';
-                if (n2) n2.textContent = '—';
-            });
     },
 
     // \u26a0\ufe0f The STRC panels are NOT repeated here. Everything about the preferred
