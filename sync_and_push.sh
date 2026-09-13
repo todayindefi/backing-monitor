@@ -59,12 +59,56 @@ SOURCE_ROOTS="/home/danger/PegTracker/data \
               /home/danger/DexTracker/data/liquidity \
               /home/danger/riskAnalyst/data/axes"
 
+# ⚠️ COPYING IS PUBLISHING. Everything that lands in data/ is committed and
+# pushed to a public site by this same script, minutes later. There is no review
+# step between a producer writing a file and a reader seeing it.
+#
+# ⚠️ riskAnalyst asked us to hold four liquidity scores that were still with
+# tidresearch's owner — "none is published, so don't sync them yet". They had
+# already synced, because they had been written to data/axes/ and this loop runs
+# hourly. They were reasoning as though a directory were a staging area. It is
+# not: WRITING A FILE TO A SOURCE ROOT PUBLISHES IT.
+#
+# The primary fix is theirs and is structural: unapproved work goes to
+# data/axes_pending/, which is not in SOURCE_ROOTS and therefore cannot be read.
+# A path that is not listed fails safe with no agreement to maintain, which is
+# why it beats a flag both sides must remember to set.
+#
+# ⚠️ This guard is the SECOND line, for the case the path discipline misses —
+# a file written to the published directory by mistake. It refuses to copy
+# anything that declares itself unpublished, and says so loudly rather than
+# skipping quietly, because a silently absent feed is the failure this estate
+# keeps rediscovering.
+unpublished_marker() {
+    # Reads a declared marker only. Never infers: a file with no marker is
+    # published, which is the existing behaviour for every producer that has not
+    # adopted one.
+    python3 - "$1" <<'PYEOF' 2>/dev/null
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(1)                      # unreadable: not our call, let the copy proceed
+if not isinstance(d, dict):
+    sys.exit(1)
+if d.get("published") is False or str(d.get("status", "")).lower() in ("draft", "pending", "unpublished"):
+    print(d.get("status") or "published:false")
+    sys.exit(0)
+sys.exit(1)
+PYEOF
+}
+
 for slug in $SLUGS; do
     for suf in $SUFFIXES; do
         found=""
         for root in $SOURCE_ROOTS; do
             src="$root/${slug}${suf}.json"
             [ -f "$src" ] || continue
+            why=$(unpublished_marker "$src")
+            if [ -n "$why" ]; then
+                echo "$(date): ⚠️ NOT PUBLISHED — ${slug}${suf}.json in $root declares '$why', so it was NOT copied. Producers: unapproved work belongs in a directory this sync does not read (e.g. data/axes_pending/); this marker is a backstop, not the mechanism." >&2
+                continue
+            fi
             if [ -n "$found" ]; then
                 echo "$(date): SYNC_COLLISION ${slug}${suf}.json in both $found and $root — using $root" >&2
             fi
