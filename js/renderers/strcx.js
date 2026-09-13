@@ -38,7 +38,13 @@ var STRCxRenderer = {
             data.summary = {
                 total_supply: wrapper.total_supply_usd,
                 total_backing: wrapper.total_supply_usd,
-                collateral_ratio: 100,
+                // ⚠️ NOT 100. A placeholder CR here is not inert: the common frame RATES
+                // axis 2 off it, and 100 lands in the [130,110,100,90] band at 3/5, so
+                // the Backing head printed "Watch · 6/10" — a score computed from a
+                // number this renderer invented, sitting above riskAnalyst's authored
+                // backing 4.0. null rates as "Not rated", which is what an asset with no
+                // published collateral ratio actually is.
+                collateral_ratio: null,
                 collateral_ratio_alt: { label: 'Multiplier', value: wrapper.multiplier || 0, is_currency: false },
                 surplus_deficit: 0
             };
@@ -47,6 +53,11 @@ var STRCxRenderer = {
         if (!data.asset_specific) data.asset_specific = { type: 'strcx' };
         // The combined title belongs to the combined page that no longer exists.
         data.asset = 'STRCx';
+        // ⚠️ app.js:439 renders `data.asset + ' (' + data.chain + ')'` and the shared
+        // STRC feed carries no `chain`, so this page's header read "STRCx (undefined)"
+        // — on the asset whose whole point is that it is multi-chain. STRCRenderer
+        // sets its own; the copy that became this file did not bring that line.
+        if (!data.chain) data.chain = 'Ethereum · Solana · BNB · Arbitrum · Mantle';
     },
 
     render: function (data) {
@@ -65,6 +76,16 @@ var STRCxRenderer = {
             html += STRCRenderer._renderFreshness(data);
         }
         container.innerHTML = html;
+
+        // ⚠️ THE PANEL MOVED AND ITS PAINTER DID NOT. The wrapper panel carries a
+        // <canvas id="strc-multiplier-chart">, and the only thing that draws into it
+        // is STRCRenderer's history loader — which this page never called, so
+        // "Multiplier over time" rendered as a heading above blank space. Every
+        // painter in that loader guards on node existence, so calling it here paints
+        // the one canvas this page has and no-ops on the four it does not.
+        if (typeof STRCRenderer !== 'undefined' && STRCRenderer._loadHistoryAndPaintCharts) {
+            STRCRenderer._loadHistoryAndPaintCharts(data.tradfi || {});
+        }
 
         var link = document.getElementById('header-companion-link');
         if (link) {

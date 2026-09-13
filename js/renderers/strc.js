@@ -455,7 +455,14 @@ var STRCRenderer = {
             data.summary = {
                 total_supply: supplyUsd,
                 total_backing: supplyUsd,
-                collateral_ratio: 100,
+                // ⚠️ WAS 100, AND IT WAS NOT INERT. The strip these values exist to
+                // protect is hidden, but the common frame RATES axis 2 off
+                // collateral_ratio — 100 lands at 3/5 in the [130,110,100,90] band, so
+                // the Backing head has been printing "Watch · 6/10" on STRC and MSTR:
+                // a rating derived from a placeholder this renderer invented for an
+                // instrument that has no collateral ratio at all. null rates as
+                // "Not rated", which is the honest reading.
+                collateral_ratio: null,
                 collateral_ratio_alt: {
                     label: 'mNAV',
                     value: mnavValue != null ? mnavValue * 100 : 0,
