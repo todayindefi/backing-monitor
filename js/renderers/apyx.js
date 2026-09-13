@@ -940,10 +940,8 @@ var ApyxRenderer = {
                 (badgeHtml ? '<div>' + badgeHtml + '</div>' : '') +
             '</div>';
 
-        // Methodology footnote — surfaces "STRCx = only TEE + CPA + on-chain
-        // triple-verified component." Uses "approximately" rather than tilde
-        // per feedback_markdown_tilde_gfm gotcha (same applies if this string
-        // ever flows through a markdown layer).
+        // Methodology footnote + the scope caveat beneath it.
+        //
         // ⚠️ THE FALLBACK CONSTANTS ARE GONE. They read "approximately 16%" / "84%"
         // — a hand-computed pair with no producer and no as_of, and already wrong
         // (the figure is ~23% today). A constant standing in for a live number is
@@ -954,6 +952,13 @@ var ApyxRenderer = {
             ? 'approximately ' + coverageTotal.toFixed(0) + '%' : null;
         var remainingPctTxt = (coverageTotal != null)
             ? 'approximately ' + (100 - coverageTotal).toFixed(0) + '%' : null;
+
+        // ⚠️ DROPPED: "This makes STRCx the only Apyx reserve component combining TEE
+        // attestation + CPA examination + direct on-chain readability." That sentence
+        // was the over-claim riskAnalyst flagged — `balanceOf` returns a SHARE COUNT
+        // and the section spent it as a claim about RESERVES. The caveat below is
+        // theirs, authored on their side and rendered here; the sentence it replaces
+        // is not restated anywhere.
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4">' +
                 'Of Apyx\'s total reserves, ' + (coveragePctTxt || 'a share the feed does not currently publish') +
@@ -972,10 +977,9 @@ var ApyxRenderer = {
                 // happened. Non-enumerating now; the composition panel above already shows
                 // the real lines, live.
                 (remainingPctTxt || '') + ' (brokerage STRC, cash &amp; equivalents and the other reserve lines) is verifiable only through the Accountable ' +
-                'TEE-attested proof-of-solvency feed and monthly Wolf &amp; Company CPA examinations. STRCx is Wolf-anchored ' +
-                'for USD pricing — refreshed when each monthly Wolf attestation publishes. This makes STRCx the only Apyx ' +
-                'reserve component combining TEE attestation + CPA examination + direct on-chain readability.' +
-            '</div>';
+                'TEE-attested proof-of-solvency feed and monthly Wolf &amp; Company CPA examinations.' +
+            '</div>' +
+            ApyxRenderer._renderOnChainScopeCaveat(safe, coverageTotal, delta);
 
         var divider = '<div class="border-t border-slate-200 pt-6 mt-6"></div>';
         return divider +
@@ -986,6 +990,111 @@ var ApyxRenderer = {
             tilesRow +
             addressRow +
             methodology;
+    },
+
+    // ⚠️ AUTHORED BY riskAnalyst, RENDERED VERBATIM IN WORDING — see the apyx trust
+    // banner retraction (PR #2 -> PR #4) for why this side does not write claims
+    // about a custodian's attestation scope. What this function owns is BINDING THE
+    // FIGURES TO THE FEED: their draft carried nine hardcoded numbers (the balance,
+    // $72.75M, ~23%, the 1.08089 multiplier, $103.0454, $98.27, 4.9%, $3.37M, ~41%),
+    // every one of which is a live field. Freezing them into prose is how a page ends
+    // up asserting a four-month-old figure in the present tense — which is the very
+    // defect this paragraph exists to describe.
+    //
+    // ⚠️ TWO VALUES ARE DERIVED, and deliberately: the price premium and its dollar
+    // cost are not published by the feed. They are arithmetic on two published prices
+    // (implied vs live), not a re-derivation of something already published — the
+    // distinction that matters is whether a canonical figure exists to prefer, and
+    // here none does.
+    //
+    // Degrades clause by clause: any leg whose field is missing is omitted rather
+    // than guessed, and the paragraph disappears entirely if the price legs are absent.
+    _renderOnChainScopeCaveat: function(safe, coverageTotal, delta) {
+        if (!safe) return '';
+        var impliedPx = safe.implied_price_per_token_usd;
+        var livePx = safe.price_usd;
+        var balance = safe.balance_strcx;
+        var mult = safe.strcx_multiplier;
+        if (impliedPx == null || livePx == null || balance == null) return '';
+
+        var b = function(t) { return '<strong class="not-italic">' + t + '</strong>'; };
+        var num = function(v, d) {
+            return (v == null) ? null : v.toLocaleString('en-US',
+                { minimumFractionDigits: d, maximumFractionDigits: d });
+        };
+
+        // "wolf_april_2026" -> "the April 2026 Wolf attestation". Falls back to the
+        // raw source string rather than inventing a date it cannot parse.
+        var vintage = (function(src) {
+            if (!src) return null;
+            var parts = String(src).split('_');
+            var MONTHS = ['january','february','march','april','may','june','july',
+                          'august','september','october','november','december'];
+            var mi = -1, yr = null, i;
+            for (i = 0; i < parts.length; i++) {
+                if (MONTHS.indexOf(parts[i].toLowerCase()) >= 0) mi = i;
+                if (/^(19|20)\d{2}$/.test(parts[i])) yr = parts[i];
+            }
+            if (mi < 0 || !yr) return '<span class="font-mono not-italic">' + src + '</span>';
+            var month = parts[mi].charAt(0).toUpperCase() + parts[mi].slice(1).toLowerCase();
+            var who = parts[0].charAt(0).toUpperCase() + parts[0].slice(1).toLowerCase();
+            return 'the ' + month + ' ' + yr + ' ' + who + ' attestation';
+        })(safe.implied_price_source);
+
+        var premiumPct = (livePx > 0) ? ((impliedPx / livePx) - 1) * 100 : null;
+        var premiumUsd = balance * (impliedPx - livePx);
+        var verifiedUsd = safe.onchain_verified_usd;
+
+        var valueClause = (verifiedUsd != null)
+            ? b(CommonRenderer.formatCurrency(verifiedUsd)) +
+              (coverageTotal != null ? ' (~' + coverageTotal.toFixed(0) + '% of total reserves)' : '')
+            : 'the dollar figure';
+
+        var legTwo = 'those shares are already scaled by Backed\'s rebasing ' +
+            '<span class="font-mono not-italic">multiplier()</span>' +
+            (mult != null ? ' — currently ' + b(num(mult, 5)) + ' — ' : ' — ') +
+            'which is an issuer-set input, not a deterministic accrual, and Backed attests ' +
+            'reserves at the xStocks-family level rather than per token, so STRCx\'s own 1:1 ' +
+            'backing is not independently checkable at a moment in time';
+
+        var legThree = 'the per-token price used is ' + b('$' + num(impliedPx, 4)) +
+            (vintage ? ', derived from ' + vintage : '') +
+            ', while the live multiplier-adjusted market mark is ' + b('$' + num(livePx, 2)) +
+            (premiumPct != null
+                ? ' — the applied price is ' + b(premiumPct.toFixed(1) + '% higher') +
+                  ', worth about ' + b(CommonRenderer.formatCurrency(premiumUsd)) + ' of the figure above'
+                : '');
+
+        var driftClause = (delta != null)
+            ? ' The Safe\'s balance has grown ' + b('~' + delta.toFixed(0) + '%') +
+              ' since that attestation, so the anchor prices a materially different ' +
+              'position than the one held today.'
+            : '';
+
+        return '<div class="text-xs text-slate-500 italic leading-relaxed mt-3 pt-3 ' +
+                    'border-t border-slate-200">' +
+            b('What the on-chain read establishes, and what it does not.') + ' A single ' +
+            '<span class="font-mono not-italic">balanceOf</span> call on the STRCx contract ' +
+            'at the Apyx Safe returns ' + b(num(balance, 2) + ' tokens') + ', and that read is ' +
+            'genuine and independent — it is the balance, from the chain, with no issuer in ' +
+            'the path. What it does not establish is a dollar figure. Converting that count ' +
+            'into the ' + valueClause + ' shown above passes through two issuer inputs and one ' +
+            'stale one, and none of the three is verified by the on-chain read: ' +
+            '(1) <span class="font-mono not-italic">balanceOf</span> returns ' +
+            b('shares, not dollars') + '; (2) ' + legTwo + '; (3) ' + legThree + '.' +
+            driftClause +
+            ' The honest claim is therefore narrower than “verified reserves”: the token ' +
+            b('count') + ' is independently verifiable on-chain; its ' + b('value per unit') +
+            // ⚠️ Their draft read "a four-month-old anchor". That is a RELATIVE age
+            // frozen into prose — correct the day it was written and wrong every
+            // month after, on a page whose whole subject is a stale mark. Names the
+            // anchor instead, from the same field the price vintage comes from.
+            ' is set by the issuer and marked at ' +
+            (vintage ? 'an anchor from ' + vintage : 'a stale anchor') +
+            '. Both can be true ' +
+            'while the backing is real — this is a statement about what a third party can ' +
+            'check without trusting Backed, not a statement that the assets are absent.' +
+        '</div>';
     },
 
     // Reconciliation badge for the STRCx Safe vs last Wolf attestation.

@@ -852,10 +852,25 @@ var STRCRenderer = {
                     '<div class="card-value">' + STRCRenderer._fmtNum(totalSupply, 0) + ' STRCx</div>' +
                     '<div class="text-xs text-slate-400 mt-1">≈ ' + STRCRenderer._fmtMoneyShort(supplyUsd) + '</div>' +
                 '</div>' +
+                // ⚠️ "from ethereum.multiplier()" ALONE PRESENTS AN ISSUER INPUT AS AN
+                // OBSERVATION. The call is a chain read, so the provenance line was
+                // true and the implication was not: the VALUE is written by Backed,
+                // not derived by formula. Caveat authored by riskAnalyst and rendered
+                // in their wording; this side does not write claims about Backed's
+                // attestation scope (see the apyx trust-banner retraction).
                 '<div class="summary-card">' +
-                    '<div class="card-label">Current multiplier</div>' +
+                    '<div class="card-label">Current multiplier ' +
+                        '<span class="text-slate-400 font-normal" title="' +
+                        CommonRenderer._escapeAttr(
+                            'Read as an issuer input, not an observation. multiplier() is read from the ' +
+                            'chain, but the value is written by Backed, not derived from an on-chain ' +
+                            'formula — it is how the STRC dividend is passed through, net of ' +
+                            'withholding. A missing or undersized monthly step-up would be an ' +
+                            'issuer-behaviour signal, not a market one. (Expected pattern ~0.96pp/month ' +
+                            'at the current rate.)') + '">\u24d8 issuer-set</span></div>' +
                     '<div class="card-value">' + (multiplier != null ? multiplier.toFixed(6) : '—') + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">from ethereum.multiplier()</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">from ethereum.multiplier() \u2014 ' +
+                        '<span class="text-amber-700 dark:text-amber-300">written by Backed, not formula-derived</span></div>' +
                 '</div>' +
                 STRCRenderer._renderStrcxMarkCard(wrapper) +
             '</div>' +
