@@ -1958,6 +1958,22 @@ const CommonRenderer = {
             .trim();
     },
 
+    // Why axis 1 is unrated, said out loud. Returns null when there is nothing
+    // specific to say, so the chip falls back to its plain "Not rated" face rather
+    // than inventing an explanation.
+    _pegUnratedReason(data) {
+        var auth = this._authoredAxisScore((data && data.peg) || {},
+            ['peg_mechanism_score', 'volatility_score']);
+        if (!auth || typeof auth.score !== 'number') return null;
+        return 'The report scores this axis ' + auth.score + '/10, and the dashboard is ' +
+            'NOT showing it. There is no live peg measurement for this asset for the ' +
+            'score to sit beside, and unlike the backing and liquidity axes this one has ' +
+            'no way to accept a producer declaration that the axis is not measurable. ' +
+            'So the number exists and is published — this frame has no path to render it. ' +
+            'It is a gap in the dashboard, not an absence of data or a judgement about ' +
+            'the score.';
+    },
+
     hasAxisBlocks(data) {
         return !!(data && data.peg && typeof data.peg === 'object');
     },
@@ -2353,7 +2369,12 @@ const CommonRenderer = {
         if (accepted) {
             // Say it is authored — the word carries provenance, not the scale (§6.5.1).
             return '<span class="axis-rating r-warn" title="' +
-                this._escapeAttr(accepted.basis) + '">Authored ' + accepted.score + '/10</span>';
+                // ⚠️ _mdPlain first — same rule as the dependencies chip 500 lines below,
+                // which has always done it. This one and the backing one had not, so the
+                // two chips riskAnalyst's declarations unlocked came up with 16 and 14
+                // literal asterisks in their hovers.
+                this._escapeAttr(this._mdPlain(String(accepted.basis))) +
+                '">Authored ' + accepted.score + '/10</span>';
         }
         // Same face as a genuine refusal, distinguishable on hover.
         return this._ratingChipHtml(null, authored ? authored.rejected : null);
@@ -3271,8 +3292,12 @@ const CommonRenderer = {
                     // computed band would let a judgement pass as a measurement,
                     // which is the very thing the producer's rule guards against.
                     if (authored) {
+                        // ⚠️ _mdPlain BEFORE _escapeAttr. A title="" renders as plain text, so
+                        // producer markdown shows its asterisks here; the file's own rule is
+                        // "tooltips get the markers STRIPPED, not converted" — converting would
+                        // show the <strong> TAG, which is worse than the asterisk it replaced.
                         return '<span class="axis-rating r-warn" title="' + self._escapeAttr(
-                                   String(b.backing_score_basis || '')) + '">Authored ' +
+                                   self._mdPlain(String(b.backing_score_basis || ''))) + '">Authored ' +
                                b.backing_score + '/10</span>';
                     }
                     var bBand = self.backingRating(data);
@@ -3865,7 +3890,7 @@ const CommonRenderer = {
                 var covCls = cov >= 70 ? 'text-green-600' : 'text-red-600';
                 var covBasis = (data.backing || {}).collateral_ratio_basis;
                 return '<span class="' + covCls + '"' +
-                    (covBasis ? ' title="' + this._escapeAttr(covBasis) + '"' : '') + '>' +
+                    (covBasis ? ' title="' + this._escapeAttr(this._mdPlain(String(covBasis))) + '"' : '') + '>' +
                     this.formatPercent(cov, 2) + '</span>' +
                     '<span class="text-slate-400 text-xs"> on-chain</span>';
             }
@@ -4140,8 +4165,18 @@ const CommonRenderer = {
             // provenance and the other did not, so the live reading read as the verdict
             // and the judgement as a footnote.
             ('7d peg performance · ' + (data.peg.source ? 'market vs NAV · ' + data.peg.source : 'market vs NAV')),
-            this._ratingChipHtml(this.pegRating(data, history), null,
-                this.pegRatingBasisNote(data, history)) +
+            // ⚠️ A REFUSAL WITH NO STATED REASON READS AS MISSING DATA. Axis 3 returns a
+            // `rejected` string and prints "Not rated ⓘ" whose hover says the panel is
+            // withholding deliberately; axis 1 printed a bare "Not rated" and told the
+            // reader nothing — on assets where the producer HAS published a score.
+            //
+            // This does NOT change what is displayed. Whether an authored peg score may
+            // render at all is a frame-wide decision that is not being taken here; this
+            // only says why the chip is empty, which needs no such decision. tidr's
+            // framing: a silent refusal and an explained refusal are different defects,
+            // and only one of them misleads.
+            this._ratingChipHtml(this.pegRating(data, history),
+                this._pegUnratedReason(data), this.pegRatingBasisNote(data, history)) +
             this._divergenceChipHtml(this.pegRating(data, history),
                 this._authoredAxisScore(data.peg, ['peg_mechanism_score', 'volatility_score'])), data.peg);
         this._renderPegSection(data, history);
@@ -4166,7 +4201,7 @@ const CommonRenderer = {
         this._renderAxisHead('backing', 2, 'Backing', 'live reserves & collateral ratio',
             (backingAuthored
                 ? '<span class="axis-rating r-warn" title="' +
-                  this._escapeAttr(String(bAuth.backing_score_basis || '')) +
+                  this._escapeAttr(this._mdPlain(String(bAuth.backing_score_basis || ''))) +
                   '">Authored ' + bAuth.backing_score + '/10</span>'
                 : this._ratingChipHtml(this.backingRating(data)) +
                   this._divergenceChipHtml(this.backingRating(data),
@@ -4497,7 +4532,7 @@ const CommonRenderer = {
                 var basis = obj[k.replace(/_pct$|_usd$/, '') + '_basis'] || obj[k + '_basis'];
                 return '<tr>' +
                     '<td class="text-slate-600 dark:text-slate-300">' + self._escapeAttr(self._humanizeKey(k)) + '</td>' +
-                    '<td class="text-right font-mono"' + (basis ? ' title="' + self._escapeAttr(basis) + '"' : '') +
+                    '<td class="text-right font-mono"' + (basis ? ' title="' + self._escapeAttr(self._mdPlain(String(basis))) + '"' : '') +
                         '>' + val + (basis ? ' \u24d8' : '') + '</td>' +
                 '</tr>';
             }).join('');
@@ -5365,7 +5400,7 @@ const CommonRenderer = {
             '<div><div class="text-xs text-slate-400 font-medium uppercase">Sell-side inventory</div>' +
                 '<div class="text-lg font-bold">' + this.formatCurrency(sellSide) + '</div>' +
                 '<div class="text-[11px] text-slate-400"' +
-                    (liq.sell_side_basis ? ' title="' + this._escapeAttr(liq.sell_side_basis) + '"' : '') +
+                    (liq.sell_side_basis ? ' title="' + this._escapeAttr(this._mdPlain(String(liq.sell_side_basis))) + '"' : '') +
                     '>executable, not quoted depth' +
                     (liq.worst_pool_usg_share_pct != null
                         ? ' \u00b7 worst pool ' + liq.worst_pool_usg_share_pct.toFixed(1) + '% skewed' : '') +
