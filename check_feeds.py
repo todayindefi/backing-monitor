@@ -234,9 +234,15 @@ for slug in sorted(slugs):
 
 # 7. Canvas ids in bespoke renderers must not collide with the common #peg-chart,
 #    which renderAxisSections creates inside a hidden section.
+#    ⚠️ COMMENT LINES ARE SKIPPED. This fired on strcx.js for a `//` comment that
+#    QUOTED the forbidden string while explaining the trap — the check cannot tell a
+#    declaration from a description of one. Left un-skipped, the next person to
+#    document this rule trips it, and the cheapest way out is to weaken the rule. A
+#    guard that punishes writing down why it exists gets deleted eventually.
 for f in glob.glob('js/renderers/*.js'):
     if f.endswith('common.js'): continue
     src = open(f, encoding='utf-8', errors='replace').read()
+    src = '\n'.join(ln for ln in src.splitlines() if not ln.lstrip().startswith('//'))
     if re.search(r'<canvas id="peg-chart"', src):
         fails.append(f'{os.path.basename(f)}: declares <canvas id="peg-chart"> — '
                      f'collides with the hidden common canvas')

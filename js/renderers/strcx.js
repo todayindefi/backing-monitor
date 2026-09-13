@@ -202,10 +202,11 @@ var STRCxRenderer = {
                 // paid for (a flat line at today's NAV drawn across history read as a
                 // discount that never happened on sUSDe), and for a `_pct`-scale field
                 // it draws the zero line — which is exactly this asset's case. The
-                // canvas id is the one that function looks for.
+                // canvas id is passed in, because declaring a second <canvas id="peg-chart">
+                // collides with the common one and check_feeds.py fails it.
                 '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-5 mb-2">' +
                     'Premium to NAV over time</div>' +
-                '<div style="height: 200px; position: relative;"><canvas id="peg-chart"></canvas></div>' +
+                '<div style="height: 200px; position: relative;"><canvas id="strcx-peg-chart"></canvas></div>' +
                 '<div class="text-xs text-slate-400 mt-1">Plotted in percent, as published \u2014 ' +
                     '0.10% = 10 bps. Zero is at NAV.</div>' +
                 (cross != null ? '<div class="text-xs text-slate-500 leading-relaxed mt-3">' +
@@ -266,7 +267,7 @@ var STRCxRenderer = {
                     try {
                         CommonRenderer._renderPegChart(
                             { peg: { history_field: 'premium_discount_pct' } },
-                            { entries: entries });
+                            { entries: entries }, 'strcx-peg-chart');
                     } catch (e) { /* chart is optional; the figures above are not */ }
                 }
             })

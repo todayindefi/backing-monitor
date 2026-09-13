@@ -4840,8 +4840,14 @@ const CommonRenderer = {
         }
     },
 
-    _renderPegChart(data, history) {
-        var ctx = document.getElementById('peg-chart');
+    // ⚠️ `canvasId` is OPTIONAL and exists so a bespoke renderer can reuse this chart
+    // WITHOUT declaring a second <canvas id="peg-chart">. check_feeds.py fails any
+    // renderer that does, because the common #peg-chart is created inside a section
+    // that may be hidden — two nodes with one id means getElementById returns whichever
+    // comes first, and the visible chart silently stops being the one that gets painted.
+    // Passing an id is the way to share this implementation instead of copying it.
+    _renderPegChart(data, history, canvasId) {
+        var ctx = document.getElementById(canvasId || 'peg-chart');
         if (!ctx) return;
         var field = data.peg.history_field || 'peg_market_price';
         var nav = data.peg.nav != null ? data.peg.nav : 1.0;
