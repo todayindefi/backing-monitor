@@ -160,15 +160,28 @@ var STRCxRenderer = {
                          ' · multiplier-adjusted') +
                     tile('NAV per token', '$' + nav.toFixed(2),
                          'the underlying STRC share — exact, 1:1') +
-                    tile('Premium to NAV', fmtBps(bps),
-                         '<span id="strcx-peg-7d">7-day range loading…</span>') +
+                    tile('Premium to NAV', '<span id="strcx-peg-now">…</span>',
+                         '<span id="strcx-peg-7d">loading published series…</span>') +
                     tile('Cross-source check', (cross != null ? fmtBps(cross) : '—'),
                          'CoinGecko aggregate vs this mark') +
                 '</div>' +
                 '<div class="text-xs text-slate-500 leading-relaxed mt-4">' +
                     '<strong>NAV is exact here, which is unusual.</strong> STRCx is 1:1 against real ' +
                     'STRC shares and the rebasing multiplier does the scaling, so the reference is a ' +
-                    'listed share price rather than an estimate.' +
+                    'listed share price rather than an estimate. ' +
+                    // ⚠️ THE TILES DO NOT DIVIDE TO THE PREMIUM, AND SAYING SO IS THE POINT.
+                    // The first version of this panel computed the premium itself, from the mark
+                    // over `underlying_strc_price_usd`, and printed −20.9 bps directly above a
+                    // published 7-day range of −17.7 to −9.4 — a headline sitting OUTSIDE
+                    // its own stated range, because the two were different measurements. The feed
+                    // publishes this premium as a series; recomputing it from two fields I picked
+                    // is the derive-instead-of-read trap, and it produced a number that contradicted
+                    // the producer's own.
+                    '<span class="italic">The premium is the analyzer’s published measure on its ' +
+                    'own paired snapshot, not a division of the two tiles beside it — those are ' +
+                    'sampled independently and will not divide to it exactly. The feed also carries a ' +
+                    'second STRC reference about 18 bps from this one, which is part of why no tighter ' +
+                    'figure is quotable.</span>' +
                 '</div>' +
                 '<div class="text-xs text-slate-500 leading-relaxed mt-3">' +
                     '<strong>Priced on Solana, which is the right venue rather than a compromise.</strong> ' +
@@ -209,13 +222,27 @@ var STRCxRenderer = {
                     var t = pts[i] && pts[i].ts ? Date.parse(pts[i].ts) : NaN;
                     if (v != null && !isNaN(t) && t >= cut) vals.push(v * 100);
                 }
+                var nowEl = document.getElementById('strcx-peg-now');
+                // ⚠️ The LATEST PUBLISHED POINT is the premium, not a figure derived here.
+                // Same field as the range, so the headline is inside its own range by
+                // construction rather than by luck.
+                var latest = null, latestTs = null;
+                for (var j = pts.length - 1; j >= 0; j--) {
+                    if (pts[j] && pts[j].premium_discount_pct != null) {
+                        latest = pts[j].premium_discount_pct * 100; latestTs = pts[j].ts; break;
+                    }
+                }
+                if (nowEl) nowEl.textContent = (latest != null) ? fmtBps(latest) : '—';
                 if (!vals.length) { el.textContent = '7-day range unavailable'; return; }
                 el.textContent = '7-day ' + fmtBps(Math.min.apply(null, vals)) + ' to ' +
-                    fmtBps(Math.max.apply(null, vals)) + ' (' + vals.length + ' pts)';
+                    fmtBps(Math.max.apply(null, vals)) + ' (' + vals.length + ' pts)' +
+                    (latestTs ? ' · as of ' + latestTs.slice(0, 16).replace('T', ' ') + 'Z' : '');
             })
             .catch(function () {
                 var el = document.getElementById('strcx-peg-7d');
-                if (el) el.textContent = '7-day range unavailable';
+                var n2 = document.getElementById('strcx-peg-now');
+                if (el) el.textContent = 'published series unavailable';
+                if (n2) n2.textContent = '—';
             });
     },
 
