@@ -378,7 +378,14 @@ var STRCRenderer = {
         // ⚠️ WAS 'STRC + STRCx'. The wrapper is ?asset=strcx now; a title naming two
         // assets on a page that scores one is how the two got conflated to begin with.
         if (data.asset === 'strc') data.asset = 'STRC';
-        if (!data.chain) data.chain = 'NYSE + multi-chain wrapper';
+        // ⚠️ WAS 'NYSE + multi-chain wrapper' — wrong on BOTH halves. The wrapper is
+        // ?asset=strcx now, and the venue was never NYSE: Strategy Inc's 10-Q cover
+        // page (CIK 0001050446, accession 0001050446-26-000044, period 2026-06-30)
+        // lists the Variable Rate Series A Perpetual Stretch Preferred on THE NASDAQ
+        // GLOBAL SELECT MARKET, and "NYSE" appears zero times in that filing.
+        // Citation is riskAnalyst's, read from the primary; the only local source
+        // saying otherwise is a yfinance session string.
+        if (!data.chain) data.chain = 'Nasdaq';
         if (!data.timestamp && data.timestamp_utc) data.timestamp = data.timestamp_utc;
 
         // Synthesize summary for common.renderSummaryCards. The whole strip
@@ -508,7 +515,10 @@ var STRCRenderer = {
         var priceVal = (strc.price_usd != null) ? '$' + strc.price_usd.toFixed(2) : '—';
         var isRegularSession = strc.market_session === 'regular';
         var quoteLabel = strc.quote_label || (isRegularSession ? 'Live market quote' : 'Latest market quote');
-        var quoteDetail = strc.quote_detail || (strc.market_session ? '' : 'session unknown');
+        // Venue stripped — the feed says NYSE and the 10-Q says Nasdaq. See
+        // CommonRenderer.sanitizeQuoteDetail.
+        var quoteDetail = CommonRenderer.sanitizeQuoteDetail(strc.quote_detail) ||
+            (strc.market_session ? '' : 'session unknown');
         var bpsTxt = '';
         if (strc.discount_to_par_bps != null) {
             var sign = strc.discount_to_par_bps >= 0 ? '+' : '';

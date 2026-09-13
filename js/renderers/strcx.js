@@ -8,7 +8,7 @@
 // `liquidity.liquidity_score`. STRC's 5.0/7.0 and STRCx's 4.5/2.5 are the SAME
 // FIELD NAMES, so a combined file had to delete one asset's number per axis —
 // and the number it would have deleted is the most decision-relevant one here:
-// liquidity 7.0 on a NYSE listing versus 2.5 on a ~$400k Jupiter pool, 4.5
+// liquidity 7.0 on a Nasdaq listing versus 2.5 on a ~$400k Jupiter pool, 4.5
 // points apart, for the wrapper layer that is this asset's entire subject.
 //
 // ⚠️ THE WRAPPER PANELS MOVED HERE RATHER THAN BEING SHARED. Rendering STRCx on
@@ -91,9 +91,12 @@ var STRCxRenderer = {
         var px = (sec.price_usd != null) ? sec.price_usd : null;
         var parTxt = (sec.par_usd != null) ? 'par $' + sec.par_usd.toFixed(0) : 'par $100';
         var disc = sec.discount_to_par_bps;
-        // ⚠️ The venue is NOT named here. The feed's own quote_detail says "NYSE" while
-        // the report's liquidity basis says "NASDAQ-listed", and this side does not
-        // settle that by picking one — the price and the par are what the card claims.
+        // ⚠️ The venue is still not named on this card, but the CONTRADICTION is
+        // resolved: the feed's quote_detail said "NYSE", the report said Nasdaq, and
+        // the 10-Q cover page (accession 0001050446-26-000044) says The Nasdaq Global
+        // Select Market with zero NYSE hits. The feed is wrong and its venue word is
+        // stripped at render — see CommonRenderer.sanitizeQuoteDetail. Neither side
+        // deferring to the other's account is what got this read from the primary.
         return '<div class="panel">' +
             '<div class="panel-title">Underlying <span class="text-xs font-normal text-slate-500">\u2014 STRC (Strategy Series A perpetual preferred)</span></div>' +
             '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">' +

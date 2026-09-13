@@ -1519,7 +1519,9 @@ var ApyxRenderer = {
             if (target) {
                 var isRegularSession = secondary.market_session === 'regular';
                 var quoteLabel = secondary.quote_label || (isRegularSession ? 'Live market quote' : 'Latest market quote');
-                var quoteDetail = secondary.quote_detail ? ' · ' + secondary.quote_detail : '';
+                // Same STRC quote, same venue problem — see CommonRenderer.sanitizeQuoteDetail.
+                var cleanDetail = CommonRenderer.sanitizeQuoteDetail(secondary.quote_detail);
+                var quoteDetail = cleanDetail ? ' · ' + cleanDetail : '';
                 target.innerHTML =
                     quoteLabel + ': STRC <span class="font-mono font-semibold text-slate-700 dark:text-slate-200">$' +
                     price.toFixed(2) + '</span>' + bpsTxt +

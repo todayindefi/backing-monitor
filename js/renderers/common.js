@@ -1930,6 +1930,32 @@ const CommonRenderer = {
 
     // True once the analyzer emits the standard axis contract. Keyed on `peg`
     // (the first block the analyzer attaches); the whole set lands together.
+    // ⚠️ STRIPS A VENUE NAME FROM A PRODUCER'S SESSION STRING, because the string is
+    // about TIMING and the venue in it is not a fact the producer established.
+    //
+    // strc_backing.json publishes quote_detail = "outside NYSE regular session". STRC
+    // is not NYSE-listed. Strategy Inc's 10-Q cover page (CIK 0001050446, accession
+    // 0001050446-26-000044, period 2026-06-30) lists the Variable Rate Series A
+    // Perpetual Stretch Preferred as trading on THE NASDAQ GLOBAL SELECT MARKET, and
+    // "NYSE" appears ZERO times in the 508,121-character filing. The venue word is a
+    // yfinance generic session label that rode along into a published field.
+    //
+    // ⚠️ IT STRIPS RATHER THAN CORRECTS. Rendering "Nasdaq" here would replace one
+    // unverified venue claim with another sourced from a filing this repo has not
+    // read — the citation above is riskAnalyst's, and the honest use of it is to stop
+    // asserting a venue, not to assert a different one. The session fact survives:
+    // "outside NYSE regular session" -> "outside regular session".
+    //
+    // The fix belongs at the producer and is on a handoff to PegTracker. This is the
+    // consumer-side stopgap so a wrong venue is not on the page in the meantime.
+    sanitizeQuoteDetail(detail) {
+        if (typeof detail !== 'string' || !detail) return detail;
+        return detail
+            .replace(/\b(the\s+)?(NYSE|NASDAQ|Nasdaq|N\.Y\.S\.E\.)\b\s*/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    },
+
     hasAxisBlocks(data) {
         return !!(data && data.peg && typeof data.peg === 'object');
     },
@@ -5892,8 +5918,18 @@ const CommonRenderer = {
         // collapsing those buys nothing.
         var factsList = facts.length
             ? '<ul class="text-sm text-slate-600 dark:text-slate-300 list-disc ml-5 space-y-1">' +
+                // ⚠️ _mdInlineHtml, not _escapeAttr. Producers write markdown — the
+                // score-basis path has converted `**bold**` and `code` since the
+                // 346-span find, and this path did not, so the FIRST issuer file to
+                // use emphasis rendered its asterisks as punctuation (strcx_issuer,
+                // 8 spans, on the axis whose whole job is separating Backed from
+                // Strategy). Same producer, same prose, two destinations, and only
+                // one of them had been taught the convention.
+                //
+                // _mdInlineHtml escapes FIRST and converts after, so this is not a
+                // loosening: a producer writing "<script>" still lands as text.
                 facts.map(function (f) {
-                    return '<li>' + CommonRenderer._escapeAttr(String(f)) + '</li>';
+                    return '<li>' + CommonRenderer._mdInlineHtml(String(f)) + '</li>';
                 }).join('') +
               '</ul>'
             : '';
@@ -5973,15 +6009,17 @@ const CommonRenderer = {
                   : '<div class="issuer-summary-src issuer-summary-src-none">\u26a0\ufe0f No source ' +
                     'declared for this summary.</div>')
             : '';
+        // Markdown in the summary too — same reason as facts[] above. The <summary>
+        // TOGGLE keeps _escapeAttr: it is a one-line control, not prose.
         var summaryHtml = !summary ? ''
             : collapseSummary && rest
-                ? '<div class="issuer-lead">' + this._escapeAttr(lead) + '</div>' +
+                ? '<div class="issuer-lead">' + this._mdInlineHtml(lead) + '</div>' +
                   '<details class="issuer-summary-details"><summary class="issuer-summary-toggle">' +
                   'Full issuer assessment' +
                   (issuer.entity ? ' \u2014 ' + this._escapeAttr(String(issuer.entity)) : '') +
-                  '</summary><div class="issuer-summary">' + this._escapeAttr(rest) +
+                  '</summary><div class="issuer-summary">' + this._mdInlineHtml(rest) +
                   srcHtml + '</div></details>'
-                : '<div class="issuer-summary">' + this._escapeAttr(summary) + srcHtml + '</div>';
+                : '<div class="issuer-summary">' + this._mdInlineHtml(summary) + srcHtml + '</div>';
 
         return '<div class="panel">' +
             '<div class="panel-title">' + this._escapeAttr(info.label) + '</div>' +
