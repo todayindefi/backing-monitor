@@ -846,9 +846,33 @@ var ApyxRenderer = {
         var onchainPill = ApyxRenderer._provenancePill('onchain');
 
         var balanceTokens = safe.balance_strcx;
-        var coverageTotal = safe.coverage_pct_of_total_reserves;
-        var coverageStrc = safe.coverage_pct_of_strc_bucket;
-        var delta = safe.delta_vs_last_wolf_attestation_pct;
+        // ⚠️ THESE THREE `_pct` FIELDS ARE FRACTIONS, AND THEY WERE RENDERED RAW —
+        // four wrong numbers on the live page for both apxUSD and apyUSD: coverage
+        // showed 0.23% (true 23.42%), 0.43% of the STRC family (true 42.69%), the
+        // methodology footnote read "approximately 0% is directly readable on-chain"
+        // (true ~23%), and the Wolf delta showed +0.4% (true +41.19%), which put the
+        // reconciliation badge in the emerald "Reconciles" band when +41% is the
+        // amber one. The defect understated the verifiable share by 100x.
+        //
+        // ⚠️ `_pct` IS NOT A UNIT IN THIS FEED. The same backing_attestation block
+        // carries collateralization_pct = 100.2615 (a PERCENT) beside
+        // reserves_split_pct = {STRC: 0.5486} (a FRACTION). _renderBackingAttestation
+        // 150 lines above ALREADY multiplies reserves_split_pct by 100; this section
+        // shipped later (fields added via the PegTracker apyx-strcx-verification-fields
+        // handoff) and did not pick up the convention its own file had established.
+        //
+        // ⚠️ RESOLVED BY CROSS-CHECK AGAINST THE USD FIGURES, NEVER BY MAGNITUDE —
+        // onchain_verified_usd / total_reserves_usd = 72,745,565.7 / 310,588,223.02 =
+        // 23.4219%, which matches coverage_pct_of_total_reserves x 100 exactly. A
+        // magnitude guard ("if it looks small, scale it") inverts the first time
+        // coverage legitimately sits under 1%.
+        var PCT_FRACTION_SCALE = 100;
+        var coverageTotal = (safe.coverage_pct_of_total_reserves != null)
+            ? safe.coverage_pct_of_total_reserves * PCT_FRACTION_SCALE : null;
+        var coverageStrc = (safe.coverage_pct_of_strc_bucket != null)
+            ? safe.coverage_pct_of_strc_bucket * PCT_FRACTION_SCALE : null;
+        var delta = (safe.delta_vs_last_wolf_attestation_pct != null)
+            ? safe.delta_vs_last_wolf_attestation_pct * PCT_FRACTION_SCALE : null;
         var priceSource = safe.implied_price_source;
         var addr = safe.address;
         var etherscanUrl = safe.etherscan_url ||
@@ -920,14 +944,22 @@ var ApyxRenderer = {
         // triple-verified component." Uses "approximately" rather than tilde
         // per feedback_markdown_tilde_gfm gotcha (same applies if this string
         // ever flows through a markdown layer).
-        var coveragePctTxt = (coverageTotal != null) ?
-            'approximately ' + coverageTotal.toFixed(0) + '%' : 'approximately 16%';
-        var remainingPctTxt = (coverageTotal != null) ?
-            'approximately ' + (100 - coverageTotal).toFixed(0) + '%' : 'approximately 84%';
+        // ⚠️ THE FALLBACK CONSTANTS ARE GONE. They read "approximately 16%" / "84%"
+        // — a hand-computed pair with no producer and no as_of, and already wrong
+        // (the figure is ~23% today). A constant standing in for a live number is
+        // how a stale figure outlives the balance it described; the sentence now
+        // drops the proportion clause entirely when the field is absent rather
+        // than asserting one nothing refreshes.
+        var coveragePctTxt = (coverageTotal != null)
+            ? 'approximately ' + coverageTotal.toFixed(0) + '%' : null;
+        var remainingPctTxt = (coverageTotal != null)
+            ? 'approximately ' + (100 - coverageTotal).toFixed(0) + '%' : null;
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4">' +
-                'Of Apyx\'s total reserves, ' + coveragePctTxt + ' is directly readable on-chain via a single ' +
+                'Of Apyx\'s total reserves, ' + (coveragePctTxt || 'a share the feed does not currently publish') +
+                ' is directly readable on-chain via a single ' +
                 '<span class="font-mono not-italic">balanceOf</span> call on the STRCx contract at the Apyx Safe. The remaining ' +
+                (remainingPctTxt ? '' : 'balance ') +
                 // ⚠️ WAS '(brokerage STRC, cash & equivalents, SATA)'. SATA IS ZERO — $0 on
                 // both 7/20 and 7/31 in Apyx's July 2026 Wolf attestation, and it is not a
                 // line in backing.breakdown at all (STRC / Inventory / Protocol Owned
@@ -939,7 +971,7 @@ var ApyxRenderer = {
                 // list here is a constant that drifts as composition changes — exactly what
                 // happened. Non-enumerating now; the composition panel above already shows
                 // the real lines, live.
-                remainingPctTxt + ' (brokerage STRC, cash &amp; equivalents and the other reserve lines) is verifiable only through the Accountable ' +
+                (remainingPctTxt || '') + ' (brokerage STRC, cash &amp; equivalents and the other reserve lines) is verifiable only through the Accountable ' +
                 'TEE-attested proof-of-solvency feed and monthly Wolf &amp; Company CPA examinations. STRCx is Wolf-anchored ' +
                 'for USD pricing — refreshed when each monthly Wolf attestation publishes. This makes STRCx the only Apyx ' +
                 'reserve component combining TEE attestation + CPA examination + direct on-chain readability.' +

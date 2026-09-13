@@ -765,5 +765,47 @@ if staged:
         print(f'    · {slug}  →  ?asset={slug}')
     print('    Publish by adding "published": true to its data/assets.json entry.')
 
+# ---------------------------------------------------------------------------
+# ⚠️ UNIT DRIFT ON A `_pct` FIELD, because `_pct` is not a unit in this estate.
+#
+# apyx's backing_attestation block carries collateralization_pct = 100.2615 (a
+# PERCENT) beside reserves_split_pct = {STRC: 0.5486} (a FRACTION), in the same
+# object. js/renderers/apyx.js rendered the strcx_safe coverage fields raw and
+# published four wrong numbers on apxUSD and apyUSD for as long as that section
+# has existed: 0.23% where the truth was 23.42%, "approximately 0% is directly
+# readable on-chain" where it was ~23%, and a +0.4% Wolf delta that put the
+# reconciliation badge in the emerald band when the real +41.19% is the amber one.
+#
+# ⚠️ THE RENDERER NOW MULTIPLIES BY 100, WHICH CREATES THE OPPOSITE EXPOSURE: if
+# the producer ever "fixes" these fields to real percents, the page silently
+# reads 2342%. This check is the thing that notices, in either direction.
+#
+# ⚠️ It resolves by CROSS-CHECK, NOT BY MAGNITUDE. The two USD figures in the
+# same block are unambiguous, so the published fraction has an independent
+# witness: onchain_verified_usd / total_reserves_usd. A magnitude rule ("small
+# means fraction") inverts the first time coverage legitimately sits under 1%,
+# which is the CR-scale bug this repo already owns once.
+for _slug in slugs:
+    try:
+        _d = json.load(open(f'data/{str(sources[_slug]).replace("-", "_")}_backing.json',
+                            encoding='utf-8'))
+    except Exception:
+        continue
+    _ba = ((_d.get('asset_specific') or {}).get('backing_attestation') or {})
+    _safe = _ba.get('strcx_safe') or {}
+    _verified, _total = _safe.get('onchain_verified_usd'), _ba.get('total_reserves_usd')
+    _pub = _safe.get('coverage_pct_of_total_reserves')
+    if _verified is None or not _total or _pub is None:
+        continue
+    _witness = _verified / _total            # 0.2342-style fraction
+    if abs(_pub - _witness) > 0.005:
+        fails.append(
+            f'{_slug}: coverage_pct_of_total_reserves = {_pub} does NOT agree with '
+            f'onchain_verified_usd / total_reserves_usd = {_witness:.4f}. The renderer '
+            f'scales this field by 100 on the FRACTION reading; if the producer has '
+            f'switched it to a percent, the page is now reading ~100x high. Decide the '
+            f'unit at the producer and say so in the field name.')
+        print('  FAIL  ' + fails[-1])
+
 print(f'\n{len(fails)} failures, {len(warns)} warnings across {len(slugs)} assets.')
 sys.exit(1 if fails else 0)
