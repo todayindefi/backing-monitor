@@ -231,7 +231,44 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
     var reserveBalanceTxt = fmt(reserve.balance_usd);
     var divDetail = '<strong>Discretionary soft floor</strong> · <em>will not necessarily hike solely because STRC &lt; par</em>' +
         (div.auto_hike_on_subpar === false ? '' : '') +
-        ' · ' + reserveBalanceTxt + ' reserve cushioning the downside · evaluated monthly on price / yields / spreads / BTC vol / reserve coverage.';
+        ' · ' + reserveBalanceTxt +
+        // ⚠️ Same figure, second appearance, and it was undated here while the
+        // reserve row above carries its stamp. A number that is right this week
+        // only because the reserve was flat is invisible until the week it is not.
+        (reserve.as_of ? ' <span class="text-slate-500">(' + reserve.as_of + ')</span>' : '') +
+        ' reserve cushioning the downside · evaluated monthly on price / yields / spreads / BTC vol / reserve coverage.';
+
+    // ⚠️ THIS STAMP WAS WRITTEN FOR EXACTLY THIS PROBLEM AND THEN NEVER FIRED.
+    // It was gated on `dcs.as_of`, and the payload has no such field — it stamps
+    // each figure separately (`remaining_as_of`, `executed_as_of`,
+    // `authorized_as_of`, `shares_retired_as_of`). So the guard was always false
+    // and $1.19B rendered bare, in a file written minutes earlier, six days after
+    // the figure it carries. ⚠️ A fix keyed to a field name that does not exist is
+    // indistinguishable at review time from no fix at all — the comment beside it
+    // described behaviour the code could not produce.
+    // riskAnalyst raised it 2026-09-14; the DCS figure was $1.19B as of 09-08
+    // against $1.05B actual by 09-13.
+    //
+    // Reads the per-field stamps that DO exist. One date if they agree, the
+    // figure-by-figure pairs if they diverge, so a reader is never told a single
+    // date covers numbers taken on different days.
+    var dcsStampFields = [
+        ['authorized', dcs.authorized_as_of],
+        ['executed', dcs.executed_as_of],
+        ['remaining', dcs.remaining_as_of],
+        ['shares retired', dcs.shares_retired_as_of]
+    ].filter(function(f) { return !!f[1]; });
+    var dcsDates = dcsStampFields.map(function(f) { return f[1]; })
+        .filter(function(v, i, a) { return a.indexOf(v) === i; });
+    var dcsStamp = '';
+    if (dcs.as_of || dcsDates.length) {
+        var stampTxt = dcs.as_of ? dcs.as_of
+            : (dcsDates.length === 1 ? dcsDates[0]
+                : dcsStampFields.map(function(f) { return f[0] + ' ' + f[1]; }).join(', '));
+        dcsStamp = ' <span class="text-slate-500">(as of <span class="font-mono">' + stampTxt + '</span>' +
+            (dcs.source_accession ? ', accession <span class="font-mono">' + dcs.source_accession + '</span>' : '') +
+            '; filing-stamped, later filings may supersede)</span>';
+    }
 
     var dcsDetail = '<span class="font-mono font-semibold">' + fmt(dcs.authorized_usd) + '</span> authorized · ' +
         '<strong>' + (dcs.initial_priority || 'STRC') + ' = initial priority</strong> (if accretive) · BTC-funded · ' +
@@ -246,9 +283,7 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
         // a stale number appeared as current. Surface the date and accession so a
         // reader who sees a newer figure elsewhere can tell which is older rather
         // than which is wrong.
-        (dcs.as_of ? ' <span class="text-slate-500">(as of ' + dcs.as_of +
-            (dcs.source_accession ? ', accession <span class="font-mono">' + dcs.source_accession + '</span>' : '') +
-            '; later filings may supersede)</span>' : '');
+        dcsStamp;
 
     var commonDetail = '<span class="font-mono font-semibold">' + fmt(common.authorized_usd) + '</span> authorized · BTC-funded · ' +
         'executed <span class="font-mono">' + fmt(common.executed_usd != null ? common.executed_usd : 0) + '</span>';
