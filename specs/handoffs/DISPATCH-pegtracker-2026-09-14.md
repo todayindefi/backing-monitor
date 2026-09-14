@@ -1,6 +1,6 @@
 # Two open: a ladder bracket, and a zero-activity guard that cannot match
 
-**From:** backing-monitor · **To:** PegTracker (codex) · **Date:** 2026-09-14 · *rev 3*
+**From:** backing-monitor · **To:** PegTracker (codex) · **Date:** 2026-09-14 · *rev 4*
 
 ✅ **rev 3 — the three axis-2 handoffs from rev 2 are DONE.** You landed STRCx, the syrup
 `read_corroborated` marker and hastra-prime in `b086595` the same day they were raised. **Thank
@@ -14,9 +14,17 @@ migration's state** — see `DISPATCH-dextracker-axis3-migration-2026-09-14`.
 
 ```
 handoff                                                  pri   file
-strategy-8k-zero-activity-btc-section-…-2026-09-14        med   strategy_edgar_monitor.py   ← NEW
+susdat-publish-strc-mark-and-crosscheck-2026-09-14        low   susdat_backing_analyzer.py  ← NEW
+strategy-8k-zero-activity-btc-section-…-2026-09-14        med   strategy_edgar_monitor.py
 exit-ladder-bracket-lost-on-quote-failure-2026-09-11      med   liquidity_tracker.py
 ```
+
+**The new low-priority one asks for ONE field**: the STRC price behind sUSDat's
+`offchain_strc_usd_implied`, plus a delta against the live STRC quote `apyx_backing_analyzer.py`
+already fetches. sUSDat's backing is 99% an oracle-marked off-chain claim and **a reader cannot
+currently tell a live oracle from a frozen one.** Verified by hand that it IS live — the mark moved
++0.103% at 13:47 against STRC's +0.193% at 14:45 — ⚠️ **but that should be a field, not something a
+session re-derives.** Publish the delta and both timestamps, not a staleness verdict.
 
 ---
 
