@@ -1361,7 +1361,37 @@ var MSTRRenderer = {
                         'filings made after it are not in this window</span>';
             }
         }
-        el.innerHTML = ' · EDGAR last polled <span class="font-mono">' + txt + '</span>' + stale;
+        // ⚠️⚠️ A SUCCESSFUL POLL IS NOT A COMPLETE WINDOW, AND SAYING ONLY THE POLL
+        // TIME MAKES THE GAP WORSE. Adding the poll stamp earlier today fixed the
+        // case where a stale poll went unmentioned — and then created its mirror:
+        // on 2026-09-14 the poll ran, succeeded, consecutive_failures stayed 0, and
+        // TWO filings in this window still contributed nothing because their
+        // btc_update table failed to parse. A fresh timestamp beside an incomplete
+        // aggregation reads as an assurance the data does not support.
+        //
+        // The producer is explicit that this is absence, not zero:
+        //   "the filing's data is MISSING from the event log, not zero"
+        // so the panel must not let a reader total these rows and believe them.
+        var failed = (events.events || []).filter(function (e) {
+            if (!e || e.type !== 'PARSE_FAILURE') return false;
+            var fd = Date.parse(e.filing_date || e.ts_utc || '');
+            return isNaN(fd) ? true : (Date.now() - fd) <= 90 * 86400000;
+        });
+        var gap = '';
+        if (failed.length) {
+            var dates = failed.map(function (e) { return e.filing_date || '?'; })
+                .filter(function (v, i, a) { return a.indexOf(v) === i; }).sort().reverse();
+            var sections = failed.map(function (e) { return (e.extracted || {}).section; })
+                .filter(function (v, i, a) { return v && a.indexOf(v) === i; });
+            gap = '<div class="text-amber-700 mt-1">⚠ <strong>' + failed.length + ' filing' +
+                (failed.length === 1 ? '' : 's') + ' in this window did not fully parse</strong> (' +
+                dates.join(', ') + (sections.length ? ' · ' + sections.join('/') + ' section' : '') +
+                '). <strong>Their figures are missing from these totals, not zero</strong> — the rows above ' +
+                'understate the window by an unknown amount, and a fresh poll above does not mean a ' +
+                'complete one.</div>';
+        }
+
+        el.innerHTML = ' · EDGAR last polled <span class="font-mono">' + txt + '</span>' + stale + gap;
     },
 
     _paintMnavChart: function (series) {
