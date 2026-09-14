@@ -451,7 +451,7 @@ var ApyxRenderer = {
 
         // Post-render chart renders — DOM nodes must exist first.
         // Exit cost / slippage is owned by the common Liquidity section's
-        // market-basis exit_mark ladder; apxUSD peg history is owned by the
+        // exit_mark ladder; apxUSD peg history is owned by the
         // common Peg section. Both bespoke par-basis charts were removed, so
         // their loaders (apyx-slippage-chart, apyx-peg-history) are no longer
         // invoked here.
@@ -2449,8 +2449,8 @@ var ApyxRenderer = {
     // ============================================================
     // Depth sub-section — per-venue pool tables (depth_usd + Curve balance
     // ratio), split into primary-exit (→USDC) vs cross-asset for apxUSD.
-    // Exit-cost/slippage is owned by the common Liquidity section's market-basis
-    // exit_mark ladder, so no slippage chart is rendered here.
+    // Exit-cost/slippage is owned by the common Liquidity section's exit_mark
+    // ladder, so no slippage chart is rendered here.
     // ============================================================
     _renderLiquidityDepthSection: function(specific, slug) {
         var liq = specific.liquidity || {};
@@ -2537,20 +2537,29 @@ var ApyxRenderer = {
             sectionsHtml = sectionHtml('Pools', pools, null);
         }
 
-        // Exit cost / slippage is intentionally NOT shown here. The old
-        // KyberSwap "slippage tiers" chart + route pill read the par-basis
-        // `liquidity.quotes[...].slippage_pct` (output ÷ $1-par ≈ 7.9% at $100K),
-        // which bundles the peg discount and contradicts the market-basis
-        // exit_mark ladder (~0.7–1.1%). Exit cost now lives in exactly one
-        // place: the common Liquidity section's `exit_mark`. This sub-section
-        // keeps only the unique per-venue depth / balance-ratio tables above.
+        // Exit cost / slippage is intentionally NOT shown here — it lives in
+        // exactly one place, the common Liquidity section's `exit_mark`. This
+        // sub-section keeps only the per-venue depth / balance-ratio tables.
+        //
+        // ⚠️ THE REASON THIS COMMENT USED TO GIVE IS NO LONGER TRUE, and it is
+        // worth saying why rather than deleting it. It described two distinct
+        // objects — a par-basis `liquidity.quotes[...].slippage_pct` (~7.9% at
+        // $100K, peg discount bundled) versus a market-basis `exit_mark`
+        // (~0.7–1.1%). ⚠️ TODAY THEY ARE THE SAME OBJECT: `exit_mark.quotes` is
+        // byte-identical to `asset_specific.liquidity.quotes` on both assets,
+        // and the apxUSD ladder is quoted against apxUSD's LIVE MARKET MARK, so
+        // it reads ~0.9 bps at $100K, not 7.9%. Verified 2026-09-14 against the
+        // feed and against the analyzer's own scoring docstring.
+        // ⚠️ Do not restore the par-basis reading from this comment's history —
+        // the published `fair_value_basis: "par_fallback"` on apxUSD is WRONG
+        // (hardcoded upstream); the numbers reconcile to the market mark.
         return (sectionsHtml || '<div class="text-xs text-slate-400 italic mt-2">No pools enumerated in this snapshot.</div>');
     },
 
-    // (Removed: _renderSlippageChart — it plotted the par-basis
-    // `liquidity.quotes[...].slippage_pct` ladder (~7.9% at $100K, peg-discount
-    // bundled). Exit cost is now owned solely by the common Liquidity section's
-    // market-basis exit_mark ladder.)
+    // (Removed: _renderSlippageChart — exit cost is owned solely by the common
+    // Liquidity section's exit_mark ladder. ⚠️ Its old justification — that this
+    // ladder was "par-basis ~7.9% at $100K" — no longer describes the feed; see
+    // the note in the pools sub-section above.)
 
     // ============================================================
     // §5 Multi-chain + CCIP Bridge

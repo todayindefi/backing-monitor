@@ -5144,10 +5144,63 @@ const CommonRenderer = {
             '">\u26a0\ufe0f</span>';
     },
 
+    // ⚠️ A LADDER NESTED ONE LEVEL DEEPER RENDERED AS A DECLARED ABSENCE.
+    // Seven feeds key exit_mark.quotes directly on size ("1000": {...}); the two
+    // apyx feeds key on the PAIR first ("apxUSD_to_USDC": {"1000": {...}}). The
+    // size scan below found no numeric keys, sizes came back empty, and the page
+    // printed "No exit-mark RFQ ladder in this snapshot" over a complete four-rung
+    // ladder. ⚠️ A FALSE ABSENCE IS NOT A SAFE FAILURE — it is a wrong statement
+    // about what is known, and it sat beside "Max ≤25 bps $100.0K", which is
+    // derived from the very quotes being called absent.
+    // Unwrap ONE level when the top level holds exactly one pair whose own keys
+    // are sizes. Handoff filed asking apyx to emit the fleet shape; when it does,
+    // the top level is numeric and this is a no-op.
+    _unwrapLadderQuotes(quotes) {
+        var hasNumeric = Object.keys(quotes).some(function(k) { return !isNaN(Number(k)); });
+        if (hasNumeric) return { quotes: quotes, pair: null };
+        var keys = Object.keys(quotes);
+        if (keys.length !== 1) return { quotes: quotes, pair: null };
+        var inner = quotes[keys[0]];
+        if (!inner || typeof inner !== 'object') return { quotes: quotes, pair: null };
+        if (!Object.keys(inner).some(function(k) { return !isNaN(Number(k)); })) return { quotes: quotes, pair: null };
+        return { quotes: inner, pair: keys[0] };
+    },
+
+    // ⚠️ ONE FACT, TWO UNITS. The flat feeds publish `slippage_bps`; the apyx
+    // feeds publish `slippage_pct` for the same quantity. Everything downstream
+    // — colouring, the ≤25bps qualifier, the sign-inversion check — reads bps, so
+    // a pct feed would be graded as though 1.93 meant 1.93 bps rather than 193.
+    // Normalise on read; never write the converted value back to the feed object.
+    _ladderRungBps(q) {
+        if (!q || typeof q !== 'object') return null;
+        if (q.slippage_bps != null) return q.slippage_bps;
+        if (q.slippage_pct != null) return q.slippage_pct * 100;
+        return null;
+    },
+
+    // The ladder's smallest rung IS the producer's baseline (its scoring code
+    // takes depth_baseline_bps = raw bps of the smallest size). Recovering it
+    // here rather than reading a published field, because `baseline_bps` is
+    // computed upstream and never reaches our feed.
+    _ladderBaselineBps(liq) {
+        var em = (liq || {}).exit_mark || {};
+        var q = this._unwrapLadderQuotes(em.quotes || {}).quotes;
+        var sizes = Object.keys(q).map(Number).filter(function(n) { return !isNaN(n); })
+            .sort(function(a, b) { return a - b; });
+        for (var i = 0; i < sizes.length; i++) {
+            var bps = this._ladderRungBps(q['' + sizes[i]] || q[sizes[i]]);
+            if (bps != null) return bps;
+        }
+        return null;
+    },
+
     ladderBlockHtml(liq) {
         liq = liq || {};
         var em = liq.exit_mark || {};
-        var quotes = em.quotes || {};
+        var rawQuotes = em.quotes || {};
+        var unwrapped = this._unwrapLadderQuotes(rawQuotes);
+        var quotes = unwrapped.quotes;
+        var ladderPair = unwrapped.pair;
 
         // Headline exit mark = the KyberSwap RFQ ladder (As-built #2). Lead with it.
         var sizes = Object.keys(quotes).map(Number).filter(function(n) { return !isNaN(n); }).sort(function(a, b) { return a - b; });
@@ -5203,7 +5256,7 @@ const CommonRenderer = {
         function bpsCollidesAcrossColour(dec) {
             var byLabel = {};
             for (var i = 0; i < sizes.length; i++) {
-                var bps = qOf(sizes[i]).slippage_bps;
+                var bps = CommonRenderer._ladderRungBps(qOf(sizes[i]));
                 if (typeof bps !== 'number') continue;
                 var k = bps.toFixed(dec);
                 if (byLabel[k] && byLabel[k] !== bpsClass(bps)) return true;
@@ -5246,11 +5299,11 @@ const CommonRenderer = {
         })();
         var ladderSignInverted = CommonRenderer.slippageSignIsInverted(sizes.map(function(sz) {
             var q0 = qOf(sz);
-            return { size: sz, output: q0.output_usd, bps: q0.slippage_bps };
+            return { size: sz, output: q0.output_usd, bps: CommonRenderer._ladderRungBps(q0) };
         }));
         var ladderRows = sizes.map(function(sz) {
             var q = quotes['' + sz] || quotes[sz] || {};
-            var bps = q.slippage_bps;
+            var bps = CommonRenderer._ladderRungBps(q);
             // ⚠️ A FAILED QUOTE RENDERED IDENTICALLY TO AN UNATTEMPTED ONE.
             //
             // The producer publishes {"error": "http_530"} for a size whose RFQ
@@ -5277,7 +5330,7 @@ const CommonRenderer = {
                 // them to notice it.
                 var biggerOk = sizes.some(function(other) {
                     var oq = quotes['' + other] || quotes[other] || {};
-                    return other > sz && !oq.error && oq.slippage_bps != null;
+                    return other > sz && !oq.error && CommonRenderer._ladderRungBps(oq) != null;
                 });
                 return '<tr>' +
                     '<td class="font-mono">' + sizeLabel(sz) + '</td>' +
@@ -5404,9 +5457,46 @@ const CommonRenderer = {
         // loud because four n/a tiles beside it would otherwise read as "nothing
         // known", while a bespoke panel that already states its depth another way
         // just wants nothing added.
+        // ⚠️ A LADDER CAN BE DENOMINATED IN SOMETHING THAT IS NOT A DOLLAR.
+        // apyUSD is an ERC-4626 vault over apxUSD: the producer divides the size
+        // by `nav` (apxUSD PER SHARE) and takes the proceeds in apxUSD, so both
+        // legs are apxUSD and the ratio is internally consistent — it is cost
+        // against contract NAV, and its ~173 bps floor at the smallest rung is
+        // the deliberate NAV-discount / cooldown-arb signal the analyzer's own
+        // scoring docstring describes, not a measurement error.
+        // ⚠️ I FIRST READ THIS AS A MIXED-BASIS RATIO AND NEARLY WITHHELD THE
+        // LADDER over it. What is actually wrong is narrower: the field is named
+        // `output_usd` and the column heading says "Net out", so apxUSD units
+        // render as though they were dollars. Name the unit; show the numbers.
+        // Detected, not hardcoded: proceeds marked at exactly 1.0 (output_usd ==
+        // output_token) while the asset they are denominated in is not a dollar
+        // unit. Unknown sell_into fails SAFE — it adds a note, never hides a row.
+        var DOLLAR_UNITS = /^(USDC|USDT|DAI|USDS|USDP|PYUSD|USDe|GUSD|USD)$/i;
+        var parJudged = 0, parMatches = 0;
+        sizes.forEach(function(sz) {
+            var q = quotes['' + sz] || quotes[sz] || {};
+            if (q.error || q.output_usd == null || q.output_token == null) return;
+            parJudged++;
+            if (Math.abs(q.output_usd - q.output_token) <= Math.max(0.01, q.output_token * 1e-6)) parMatches++;
+        });
+        // ⚠️ Judged over the rungs that CARRY both values, not over every rung.
+        // An earlier version used every() across all of them, and a single
+        // http_503 on one rung flipped the whole test off — a guard an upstream
+        // hiccup switches off is not a guard.
+        var outMarkedAtPar = parJudged > 0 && parMatches === parJudged;
+        var sellInto = em.sell_into || '';
+        var unitNote = '';
+        if (outMarkedAtPar && sellInto && !DOLLAR_UNITS.test(sellInto)) {
+            unitNote = '<div class="text-[11px] text-amber-700 mb-2">⚠️ Figures are denominated in ' +
+                '<span class="font-mono">' + this._escapeAttr(sellInto) + '</span>, not USD — size, ' +
+                'net out and slippage are all measured in it, so the ratio is consistent but the ' +
+                '“$” is this asset\'s unit of account. ' + this._escapeAttr(sellInto) +
+                '\u2019s own mark against the dollar is a separate figure on its own page.</div>';
+        }
+
         if (!sizes.length) return '';
         return '<div class="text-sm font-semibold text-slate-700 mb-2">' + ladderTitle + '</div>' +
-              convLine +
+              convLine + unitNote +
               '<div class="data-table-scroll"><table class="data-table">' +
                   '<thead><tr><th>Size sold</th><th class="text-right">Slippage</th><th class="text-right">Net out</th>' +
                       (hasFill ? '<th class="text-right" title="' + this._escapeAttr(
@@ -5478,6 +5568,27 @@ const CommonRenderer = {
             : '';
 
         var eff = liq.effective_max_under_25bps_usd;
+
+        // ⚠️ THIS CARD AND THE LADDER BELOW IT ANSWER DIFFERENT QUESTIONS, and on
+        // apyUSD they look like a contradiction: the card reads "Max ≤25 bps
+        // $100.0K" directly above a ladder whose $100K rung is 193.3 bps. Both are
+        // right. The producer's max_under_25 is measured on MARGINAL bps (raw
+        // minus the smallest rung's own baseline — 193.3 − 173.5 = 19.8, under 25),
+        // while the ladder prints RAW. Nothing on the page said so, and a reader
+        // who tries to reconcile them concludes one is broken.
+        // Only shown where the baseline is actually material, so the ~26 assets
+        // whose smallest rung sits near zero (apxUSD: 0.04 bps) are untouched —
+        // there, marginal and raw are the same number and the note would be noise.
+        var effBaseline = this._ladderBaselineBps(liq);
+        var effBasisNote = '';
+        if (eff != null && effBaseline != null && Math.abs(effBaseline) >= 25) {
+            effBasisNote = '<div class="text-[11px] text-amber-700" title="' +
+                this._escapeAttr('The ladder below prints RAW slippage; this figure is MARGINAL — raw minus ' +
+                    'the smallest rung\u2019s own ' + Math.abs(effBaseline).toFixed(0) + ' bps baseline. ' +
+                    'The baseline is a standing entry cost at every size, not something that appears as you ' +
+                    'trade bigger, so it is held out of the size-capacity question this card answers.') +
+                '">marginal basis · ' + Math.abs(effBaseline).toFixed(0) + ' bps baseline held out \u24d8</div>';
+        }
 
         // ⚠️ Sell-side inventory: a MEASURED number that was going unshown.
         //
@@ -5697,7 +5808,8 @@ const CommonRenderer = {
                 '</div>' +
                 sellCard +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Max ≤25 bps</div>' +
-                    '<div class="text-lg font-bold">' + (eff != null ? this.formatCurrency(eff) : 'n/a') + '</div></div>' +
+                    '<div class="text-lg font-bold">' + (eff != null ? this.formatCurrency(eff) : 'n/a') + '</div>' +
+                    effBasisNote + '</div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Pool TVL</div>' +
                     '<div class="text-lg font-bold">' + (liq.total_tvl != null ? this.formatCurrency(liq.total_tvl) : 'n/a') + '</div></div>' +
                 volCard +

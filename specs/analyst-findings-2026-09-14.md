@@ -7,12 +7,17 @@ status: WORKING BACKLOG. Items 12-15 FIXED 2026-09-14; items 1-11 UNVERIFIED.
 
 # ▶ START HERE — resume context
 
-**Items 12, 13, 14 and 15 are BUILT, rendered and verified** (`js/renderers/syrupusdc.js`). The
-S1–S3 block of the triage is closed. ⚠️ **Three of the claims below needed correcting before they
-were safe to act on — read each item's Check, not just its Claim.**
+**Items 12, 13, 14, 15 and 5 are BUILT, rendered and verified.** Triage bands S1–S4 are closed.
+⚠️ **Four of the five claims needed correcting before they were safe to act on, and item 5's
+stated cause was REFUTED outright — read each item's Check, not just its Claim.**
 
-**Immediate next action: item 5 (apxUSD slippage measured against $1.00).** It is the next entry
-in the triage (S4) and nothing has been checked on it yet. Items 1–11 are all still `unverified`.
+**Immediate next action: item 8 (sUSDat NAV monotonicity), triage S5.** Items 1–4 and 6–11 are
+still `unverified` — nothing has been checked on any of them.
+
+⚠️ **Item 5 is the cautionary one.** The analyst read a published `fair_value_basis` field and
+reported exactly what it said; the field is hardcoded and contradicts the numbers beside it. Two
+renderer defects were found underneath it that nobody had reported, including a ladder that had
+been rendering as *"No exit-mark RFQ ladder in this snapshot"* over live data.
 
 **One new defect surfaced by rendering the fix** — recorded at the bottom under *Found while
 building*, not fixed, because it is outside every item on this list and is an editorial call:
@@ -77,8 +82,8 @@ self-contradicting. Everything else is a gap or a framing problem.
 S1  syrupUSDC collateral column corrupt          items 12, 13   ✅ FIXED 2026-09-14
 S2  syrupUSDC Liquidity Layer math               item 14        ✅ FIXED 2026-09-14
 S3  syrupUSDC free liquidity: 3 values           item 15        ✅ FIXED 2026-09-14
-S4  apxUSD slippage measured against $1.00       item 5         ← NEXT
-S5  sUSDat NAV monotonicity claim is wrong       item 8
+S4  apxUSD slippage measured against $1.00       item 5         ⚠️ CAUSE REFUTED · fixed 2026-09-14
+S5  sUSDat NAV monotonicity claim is wrong       item 8         ← NEXT
 S6  sUSDat backing tile hides its own caveat     item 7
 S7  Wolf table self-contradiction                item 9
 S8  liquidity venues missing / not wired         items 1, 2, 3
@@ -134,9 +139,88 @@ sUSDat's $36K ceiling.** Absent from both Dependencies panels.
 **$1.00** — while the Peg panel on the same screen says **0.9770**. A reader sees
 *"+0.02% slippage at 100K"* beside *"-2.30% peg"* and cannot reconcile them.
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ⚠️ **THE STATED CAUSE IS REFUTED. The symptom was real but not on this asset, and the
+field the analyst cited is itself wrong.** Three separate findings — take them in order.
+
+**(a) apxUSD's ladder is NOT measured against $1.00.** The arithmetic settles it without needing
+the producer. `quote_pair` sets `amount_in = size_usd / fair_value_usd_per_in`, so the implied
+execution price is `output_usd ÷ amount_in`:
+
+```
+size      output_usd    if measured vs MARKET (0.976908)   if measured vs PAR ($1.00)
+$1,000     1,000.00     implied 0.976908  ← the peg mark   implied 1.000000
+$100,000  99,990.86     implied 0.976819  (−0.9 bps)       implied 0.999909
+```
+
+⚠️ **Under the par hypothesis apxUSD would have to trade at exactly $1.000000 on-chain**, while
+the peg tracker's own `market_price_source: "kyberswap_rfq"` says 0.976909 and its
+`market_price_reference_coingecko` cross-check says 0.977661 — **two independent sources, 8 bps
+apart.** The market hypothesis requires only one hardcoded metadata field to be wrong.
+
+✅ **And the producer says so itself.** `derive_liquidity_score_apyx`'s docstring:
+*"apxUSD is quoted against its live MARKET mark (executable exit ≈ smallest-tier price)."*
+
+**(b) ⚠️ SO WHY DOES THE FEED SAY `par_fallback`? BECAUSE IT IS HARDCODED.**
+`apyx_backing_analyzer.py:3486-3487` publishes `"fair_value": None, "fair_value_basis":
+"par_fallback"` as literals, while the sibling apyUSD block six lines later publishes the real
+values. The quote code above it branches correctly on `apxusd_mark_valid` and passes
+`fair_value_basis="market"` — **that branch's result is then overwritten by the literal.**
+
+⚠️ **The analyst did nothing wrong: they read a published field and reported what it said. The
+field is a lie about the data next to it.** This is the *"stated reasons are claims"* pattern in
+its purest form — a wrong explanation that closes the question, shipped in the feed.
+
+**(c) The symptom the claim describes is real — on apyUSD, with a different cause.** The
+*"Max ≤25 bps"* card and the ladder beneath it are measured differently:
+
+```
+card    Max ≤25 bps  $100.0K     ← max_under_25 reads MARGINAL bps (raw − baseline)
+ladder  $100K rung   193.3 bps   ← prints RAW
+        193.3 − 173.5 = 19.8 bps marginal, which IS under 25. Both figures correct.
+```
+
+⚠️ **Nothing on the page said they were different measures**, so the card and the table under it
+read as a contradiction — exactly the *"cannot reconcile them"* the claim describes.
+
+**(d) ⚠️ AND THE LADDER WAS NOT RENDERING AT ALL — a FALSE ABSENCE, fleet-wide in shape.**
+`common.js` scanned `exit_mark.quotes` for numeric size keys. Seven feeds key on size directly;
+**the two apyx feeds key on the PAIR first** (`{"apxUSD_to_USDC": {"1000": …}}`), so the scan found
+nothing and the page printed **"No exit-mark RFQ ladder in this snapshot"** over a complete
+four-rung ladder — *while showing "Max ≤25 bps $100.0K" beside it, derived from the very quotes it
+called absent.* The apyx feeds also publish `slippage_pct` where the other seven publish
+`slippage_bps`, so every downstream bps comparison would have graded 1.93 as 1.93 bps, not 193.
+
+**Built.** ✅ `js/renderers/common.js`:
+
+```
+_unwrapLadderQuotes()   unwrap ONE level when the top holds exactly one pair of sizes
+_ladderRungBps()        slippage_bps, else slippage_pct × 100 — normalise on read
+_ladderBaselineBps()    smallest rung = the producer's own depth_baseline_bps
+```
+
+apxUSD now renders `0.0 / 0.7 / ⚠ quote failed / 0.9 bps`; apyUSD renders its rungs with a note
+that they are denominated in **apxUSD, not USD** (it is an ERC-4626 vault over apxUSD, so its NAV
+is apxUSD-per-share and BOTH legs are apxUSD — the ratio is consistent, only `output_usd` is a
+misnomer). The 25bps card now carries **"marginal basis · 174 bps baseline held out"**, shown only
+where the baseline is material so the ~26 near-zero-baseline assets are untouched.
+
+⚠️ **A CORRECTION I MADE MID-BUILD, recorded because the first answer was confident and wrong.**
+I read apyUSD's ladder as mixed-basis — size divided by NAV, proceeds valued at $1.00 while apxUSD
+marks at 0.977 — and **built a block that WITHHELD the ladder as "not an exit cost on either
+basis."** Then I read `apyusd_nav = nav_raw / 10**APXUSD_DEC`, printed by the analyzer as
+`apyUSD NAV: … apxUSD/share`. **Both legs are apxUSD. The ladder was right and I was about to
+suppress it.** Reverted before it shipped; the near-miss is in the code comment.
+
+**Blast radius.** 7 flat feeds verified untouched by construction (numeric keys → unwrap is a
+no-op; `slippage_bps` present → normaliser passes it through) and by render: USG unchanged at
+`0.0 / −0.0 / −0.2 … −416.3 bps`, no unit note, no basis note. ⚠️ The at-par test also had to be
+hardened — an `every()` over all rungs meant one `http_503` on apxUSD's $50K rung switched the
+whole guard off.
+
+**Plan.** Handoff filed for (b) and the shape/unit divergence in (d). Nothing further here.
+
+**Status.** ⚠️ **cause REFUTED · symptom confirmed on apyUSD · two renderer defects FIXED** ·
+handoff written to `~/PegTracker/handoffs/inbox/apyx-fair-value-basis-hardcoded-2026-09-14.md`
 
 ## 6 · apxUSD — reserve denominator includes POL
 
@@ -513,7 +597,10 @@ rediscover them.
 - **Axis 6** — 19 of 21 issuer blocks publish no score. The frame reads `issuer_score` and would
   render it. Their editorial choice to confirm, not our defect to fix.
 
-**Waiting on PegTracker** (three handoffs at `status: ready`, unworked):
+**Waiting on PegTracker** (four handoffs at `status: ready`, unworked):
+- `apyx-fair-value-basis-hardcoded-2026-09-14` — written this session, uncommitted. apxUSD's
+  `fair_value` / `fair_value_basis` are literals that overwrite the branch that computed them, and
+  the apyx pair is the only one of nine off the fleet ladder shape (pair-nested, `slippage_pct`).
 - `syrup-loan-artifact-marker-not-stamped-2026-09-14` — written this session, uncommitted. Asks
   them to stamp the corroboration verdict on the loan record so consumers stop reconstructing it,
   and flags that the `usd_anomaly` threshold (`raw < required * 0.05`) misses the four $25M loans
