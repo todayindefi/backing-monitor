@@ -126,7 +126,20 @@ var STRCxRenderer = {
         var mk = wrapper.market_price_usd, nav = wrapper.underlying_strc_price_usd;
         if (mk == null || nav == null) return;
 
-        var bps = (mk / nav - 1) * 10000;
+        // \u26a0\ufe0f PREFER THE PUBLISHED FIELD \u2014 precondition stated, because the precondition
+        // is what was missing last time. PegTracker now emits premium_to_underlying_bps
+        // (044593b). Established as the SAME quantity by READING THE PRODUCER, not by
+        // matching a magnitude:
+        //   _premium_bps(mark, reference) = round((mark / reference - 1) * 10_000, 1)
+        //   called as _premium_bps(market_price_usd, strcx_underlying_usd)
+        // Same pair, same direction, same unit. The local computation stays as the fallback
+        // for snapshots emitted before that commit had run.
+        var pubBps = wrapper.premium_to_underlying_bps;
+        var derived = (mk / nav - 1) * 10000;
+        var bps = (typeof pubBps === 'number') ? pubBps : derived;
+        var bpsProvenance = (typeof pubBps === 'number')
+            ? 'published by the analyzer'
+            : 'computed from the two prices left';
         var cross = wrapper.price_crosscheck_bps;
         var fmtBps = function (v) { return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + ' bps'; };
         var money = function (v) { return (typeof STRCRenderer !== 'undefined')
@@ -161,7 +174,7 @@ var STRCxRenderer = {
                     tile('NAV per token', '$' + nav.toFixed(2),
                          'the underlying STRC share — exact, 1:1') +
                     tile('Premium to NAV', fmtBps(bps),
-                         'computed from the two prices left \u2014 no premium series is published') +
+                         bpsProvenance + ' \u00b7 <span id="strcx-peg-hist">checking history\u2026</span>') +
                     tile('Cross-source check', (cross != null ? fmtBps(cross) : '—'),
                          'CoinGecko aggregate vs this mark') +
                 '</div>' +
@@ -210,11 +223,22 @@ var STRCxRenderer = {
                 // as a FRACTION (strc_backing_analyzer.py:1571; reproduced at 14 of 14
                 // spaced points as mstr_price / btc_nav_per_share_basic - 1). No series of
                 // this wrapper's premium is published anywhere, so there is nothing to plot.
-                '<div class="text-xs text-slate-500 leading-relaxed mt-4">' +
-                    '<strong>No premium history is published for this wrapper.</strong> The ' +
-                    'figure above is a point-in-time computation from the two prices shown — ' +
-                    'there is no series behind it, so no range and no chart. Adding the wrapper ' +
-                    'mark to the history series is what would close it.' +
+                // \u26a0\ufe0f REPLACED IN PLACE once the history carries marks. Declared absence
+                // (spec \u00a74.0) until then, and it says WHY the series is short so that a
+                // three-point chart cannot imply a long record.
+                '<div id="strcx-peg-histblock" class="text-xs text-slate-500 leading-relaxed mt-4">' +
+                    '<strong>No premium history is published for this wrapper yet.</strong> The ' +
+                    'figure above is a point-in-time reading \u2014 no series stands behind it, so ' +
+                    'no range and no chart. PegTracker began storing the wrapper mark and its ' +
+                    'paired reference on 2026-09-14; the series builds from there and cannot be ' +
+                    'backfilled, because the earlier marks were never written down.' +
+                '</div>' +
+                '<div id="strcx-peg-chartwrap" class="hidden">' +
+                    '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-5 mb-2">' +
+                        'Premium to NAV over time</div>' +
+                    '<div style="height: 200px; position: relative;">' +
+                        '<canvas id="strcx-peg-chart"></canvas></div>' +
+                    '<div id="strcx-peg-chartnote" class="text-xs text-slate-400 mt-1"></div>' +
                 '</div>' +
                 (cross != null ? '<div class="text-xs text-slate-500 leading-relaxed mt-3">' +
                     '⚠️ <strong>The cross-source gap is a diagnostic, not a rival mark.</strong> ' +
@@ -225,6 +249,73 @@ var STRCxRenderer = {
                     'per-chain inputs.' +
                 '</div>' : '') +
             '</div>';
+
+        // ⚠️ THE SERIES IS NEW AND HAS NO BACKFILL. PegTracker began storing
+        // strcx_market_price_usd + strcx_underlying_strc_usd on 2026-09-14 (044593b); every
+        // earlier point is gone because the mark was never written down. So the chart and
+        // range appear only once points exist, and BOTH always carry "since <date> · N pts"
+        // — a three-point chart must not read as a history.
+        //
+        // ⚠️ Computed from the STORED PAIR, never from the live snapshot's reference: the
+        // feed carries two STRC references ~18 bps apart, and the stored pair is the one the
+        // analyzer actually used at that instant. That is the whole reason the handoff asked
+        // for both fields rather than just the mark.
+        fetch('data/strc_backing_history.json?nocache=' + Math.floor(Date.now() / 60000))
+            .then(function (r) { return r.ok ? r.json() : null; })
+            .then(function (h) {
+                var pts = (h && Array.isArray(h.series)) ? h.series : [];
+                var entries = [], vals = [], first = null;
+                var cut = Date.now() - 7 * 24 * 3600 * 1000;
+                for (var i = 0; i < pts.length; i++) {
+                    var q = pts[i];
+                    if (!q || !q.ts) continue;
+                    var m2 = q.strcx_market_price_usd, r2 = q.strcx_underlying_strc_usd;
+                    if (typeof m2 !== 'number' || typeof r2 !== 'number' || r2 <= 0) continue;
+                    var pct = (m2 / r2 - 1) * 100;
+                    entries.push({ timestamp: q.ts, premium_to_underlying_pct: pct });
+                    if (first === null) first = q.ts;
+                    var t = Date.parse(q.ts);
+                    if (!isNaN(t) && t >= cut) vals.push(pct * 100);
+                }
+                var slot = document.getElementById('strcx-peg-hist');
+                if (!entries.length) {
+                    if (slot) slot.textContent = 'no series yet';
+                    return;
+                }
+                var since = ' since ' + String(first).slice(0, 10) + ' · ' + entries.length + ' pts';
+                if (slot) {
+                    slot.textContent = vals.length
+                        ? '7-day ' + fmtBps(Math.min.apply(null, vals)) + ' to ' +
+                          fmtBps(Math.max.apply(null, vals)) + ',' + since
+                        : 'series building' + since;
+                }
+                var blk = document.getElementById('strcx-peg-histblock');
+                if (blk) {
+                    blk.innerHTML = '<strong>The premium series starts 2026-09-14.</strong> ' +
+                        'PegTracker stores the wrapper mark and its paired reference from that ' +
+                        'date; nothing earlier can be recovered, because those marks were never ' +
+                        'written down. Read the chart as a record that began then, not as this ' +
+                        'wrapper\u2019s history.';
+                }
+                var wrap = document.getElementById('strcx-peg-chartwrap');
+                if (wrap) wrap.classList.remove('hidden');
+                var note = document.getElementById('strcx-peg-chartnote');
+                if (note) {
+                    note.textContent = 'Computed from the stored mark and its paired reference' +
+                        since + '. Plotted in percent \u2014 0.10% = 10 bps. Zero is at NAV.';
+                }
+                if (CommonRenderer._renderPegChart) {
+                    try {
+                        CommonRenderer._renderPegChart(
+                            { peg: { history_field: 'premium_to_underlying_pct' } },
+                            { entries: entries }, 'strcx-peg-chart', '0% \u2014 at NAV');
+                    } catch (e) { /* chart optional; the figure above is not */ }
+                }
+            })
+            .catch(function () {
+                var slot = document.getElementById('strcx-peg-hist');
+                if (slot) slot.textContent = 'history unavailable';
+            });
     },
 
     // \u26a0\ufe0f The STRC panels are NOT repeated here. Everything about the preferred
