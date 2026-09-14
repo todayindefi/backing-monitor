@@ -250,11 +250,10 @@ var STRCxRenderer = {
                 '</div>' : '') +
             '</div>';
 
-        // ⚠️ THE SERIES IS NEW AND HAS NO BACKFILL. PegTracker began storing
-        // strcx_market_price_usd + strcx_underlying_strc_usd on 2026-09-14 (044593b); every
-        // earlier point is gone because the mark was never written down. So the chart and
-        // range appear only once points exist, and BOTH always carry "since <date> · N pts"
-        // — a three-point chart must not read as a history.
+        // Direct Jupiter pairs begin 2026-09-14. Earlier points are explicitly
+        // reconstructed from the primary pool's completed hourly close divided by
+        // that row's stored multiplier, against its stored Yahoo STRC mark. Never
+        // describe reconstructed points as recovered Jupiter observations.
         //
         // ⚠️ Computed from the STORED PAIR, never from the live snapshot's reference: the
         // feed carries two STRC references ~18 bps apart, and the stored pair is the one the
@@ -264,7 +263,7 @@ var STRCxRenderer = {
             .then(function (r) { return r.ok ? r.json() : null; })
             .then(function (h) {
                 var pts = (h && Array.isArray(h.series)) ? h.series : [];
-                var entries = [], vals = [], first = null;
+                var entries = [], vals = [], first = null, reconstructed = 0, direct = 0;
                 var cut = Date.now() - 7 * 24 * 3600 * 1000;
                 for (var i = 0; i < pts.length; i++) {
                     var q = pts[i];
@@ -273,6 +272,8 @@ var STRCxRenderer = {
                     if (typeof m2 !== 'number' || typeof r2 !== 'number' || r2 <= 0) continue;
                     var pct = (m2 / r2 - 1) * 100;
                     entries.push({ timestamp: q.ts, premium_to_underlying_pct: pct });
+                    if (q.strcx_reconstructed === true) reconstructed++;
+                    else direct++;
                     if (first === null) first = q.ts;
                     var t = Date.parse(q.ts);
                     if (!isNaN(t) && t >= cut) vals.push(pct * 100);
@@ -291,18 +292,21 @@ var STRCxRenderer = {
                 }
                 var blk = document.getElementById('strcx-peg-histblock');
                 if (blk) {
-                    blk.innerHTML = '<strong>The premium series starts 2026-09-14.</strong> ' +
-                        'PegTracker stores the wrapper mark and its paired reference from that ' +
-                        'date; nothing earlier can be recovered, because those marks were never ' +
-                        'written down. Read the chart as a record that began then, not as this ' +
-                        'wrapper\u2019s history.';
+                    blk.innerHTML = '<strong>History before 2026-09-14 is reconstructed.</strong> ' +
+                        reconstructed + ' points use the primary STRCx/USDC pool\u2019s completed ' +
+                        'hourly close divided by the multiplier stored at that time, against the ' +
+                        'contemporaneous stored Yahoo STRC mark. ' + direct + ' point' +
+                        (direct === 1 ? '' : 's') + ' use the directly stored Jupiter pair. ' +
+                        'The reconstructed reference can differ from Jupiter stockData, so small ' +
+                        'premiums around zero are source-sensitive.';
                 }
                 var wrap = document.getElementById('strcx-peg-chartwrap');
                 if (wrap) wrap.classList.remove('hidden');
                 var note = document.getElementById('strcx-peg-chartnote');
                 if (note) {
-                    note.textContent = 'Computed from the stored mark and its paired reference' +
-                        since + '. Plotted in percent \u2014 0.10% = 10 bps. Zero is at NAV.';
+                    note.textContent = reconstructed + ' reconstructed, ' + direct +
+                        ' direct observations;' + since + '. Plotted in percent \u2014 0.10% = ' +
+                        '10 bps. Zero is at the reference used by each row.';
                 }
                 if (CommonRenderer._renderPegChart) {
                     try {
