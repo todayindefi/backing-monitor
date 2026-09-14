@@ -4854,12 +4854,42 @@ const CommonRenderer = {
     // that may be hidden — two nodes with one id means getElementById returns whichever
     // comes first, and the visible chart silently stops being the one that gets painted.
     // Passing an id is the way to share this implementation instead of copying it.
-    _renderPegChart(data, history, canvasId, zeroLabel) {
+    // ⚠️ ONE WINDOW ACROSS THE FLEET, so two assets' peg charts can be read against each
+    // other. Measured before choosing it: the median span already rendered is 29 DAYS and
+    // 11 of 19 assets sit exactly there — a 30-day retention window in the history files,
+    // not a rendering decision anyone made. So this standardises what retention already
+    // imposes rather than imposing something new.
+    //
+    // ⚠️ It CLIPS rather than truncates silently. Eight assets retain longer (crvUSD 535d,
+    // usds 347d, yzUSD 173d, syzUSD/usde/susde ~90d, susds 67d, strcx 108d) and their
+    // earlier points stop being drawn — so the function returns what it showed and what
+    // existed, and a caller that does not say so is the defect. A chart whose window is
+    // invisible reads as "this is all there is".
+    PEG_CHART_WINDOW_DAYS: 30,
+    _renderPegChart(data, history, canvasId, zeroLabel, windowDays, parLevel) {
         var ctx = document.getElementById(canvasId || 'peg-chart');
-        if (!ctx) return;
+        if (!ctx) return null;
         var field = data.peg.history_field || 'peg_market_price';
         var nav = data.peg.nav != null ? data.peg.nav : 1.0;
-        var entries = history.entries.filter(function(e) { return e[field] != null; });
+        var all = history.entries.filter(function(e) { return e[field] != null; });
+        var win = (windowDays === null) ? null
+            : (typeof windowDays === 'number' ? windowDays : this.PEG_CHART_WINDOW_DAYS);
+        var entries = all;
+        if (win) {
+            var cutoff = Date.now() - win * 24 * 3600 * 1000;
+            var kept = all.filter(function(e) {
+                var t = Date.parse(e.timestamp);
+                return isNaN(t) ? true : t >= cutoff;
+            });
+            // ⚠️ Never clip to nothing: a stale feed whose newest point predates the window
+            // would render an empty chart, which reads as "no data" rather than "no recent
+            // data". Fall back to the full series and let the caller say the window missed.
+            if (kept.length >= 2) entries = kept;
+        }
+        var _shown = { shown: entries.length, total: all.length,
+                       windowDays: win, clipped: entries.length < all.length,
+                       firstShown: entries.length ? entries[0].timestamp : null,
+                       firstAvailable: all.length ? all[0].timestamp : null };
         var labels = entries.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });
         var series = entries.map(function(e) { return e[field]; });
 
@@ -4899,7 +4929,13 @@ const CommonRenderer = {
         // "fix" it into something worse, and the first cut of this did exactly
         // that: stripped its marker and captioned it as unreferenced.
         var isSelfNav = /^(nav|nav_per_share|peg_theoretical_price)$/.test(field);
-        var isPar = !isPct && !hasTheo && !isSelfNav && Math.abs(nav - 1) < 1e-9;
+        // ⚠️ parLevel lets a NON-$1 par draw its reference line. The original test was
+        // hardcoded to nav==1, which is right for a dollar stablecoin and silently drops
+        // the reference for a $100 preferred — STRC would have rendered a bare price
+        // series with "no reference drawn", the one outcome this block calls worse
+        // than none.
+        var parAt = (typeof parLevel === 'number') ? parLevel : (Math.abs(nav - 1) < 1e-9 ? 1 : null);
+        var isPar = !isPct && !hasTheo && !isSelfNav && parAt != null;
         var noReference = !isPct && !hasTheo && !isPar && !isSelfNav;
 
         if (window._pegChart) window._pegChart.destroy();
@@ -4940,9 +4976,10 @@ const CommonRenderer = {
                                    label: { content: zeroLabel || '0% \u2014 at NAV', display: true, position: 'start',
                                             font: { size: 9 }, color: '#64748b' } } }
                         : (isPar
-                            ? { par: { type: 'line', yMin: 1, yMax: 1, borderColor: '#94a3b8',
+                            ? { par: { type: 'line', yMin: parAt, yMax: parAt, borderColor: '#94a3b8',
                                        borderWidth: 1, borderDash: [4, 4],
-                                       label: { content: 'Par 1.00', display: true, position: 'start',
+                                       label: { content: 'Par ' + (parAt === 1 ? '1.00' : ('$' + parAt.toFixed(2))),
+                                                display: true, position: 'start',
                                                 font: { size: 9 }, color: '#64748b' } } }
                             : (isSelfNav
                                 ? { par: { type: 'line', yMin: nav, yMax: nav, borderColor: '#94a3b8',
@@ -4954,6 +4991,9 @@ const CommonRenderer = {
                 interaction: { intersect: false, mode: 'index' }
             }
         });
+
+        // (returns _shown at the end so a caller can state the window — see below)
+        this._lastPegChartWindow = _shown;
 
         // When no reference can be drawn honestly, say so rather than leaving a
         // bare series a reader will mentally compare against par.

@@ -886,12 +886,13 @@ var STRCRenderer = {
                     'its underlying far more tightly than the underlying tracks par.' +
                 '</div>' +
                 '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-5 mb-2">' +
-                    'Discount to par over time</div>' +
+                    'STRC price against its $100 par</div>' +
                 '<div style="height: 200px; position: relative;"><canvas id="strc-par-chart"></canvas></div>' +
-                '<div class="text-xs text-slate-400 mt-1">Computed from the published price ' +
-                    'history against the published par; the current point reproduces the feed’s ' +
-                    'own <span class="font-mono">discount_to_par_bps</span> exactly. Plotted in ' +
-                    'percent — 1.00% = 100 bps.</div>' +
+                '<div class="text-xs text-slate-400 mt-1" id="strc-par-chartnote">' +
+                    'STRC’s secondary price against its $100 par — the gap to the dashed line ' +
+                    'is the discount, currently ' +
+                    (sec.discount_to_par_bps != null ? fmtBps(sec.discount_to_par_bps) : '—') +
+                    '.</div>' +
             '</div>';
 
         fetch('data/strc_backing_history.json?nocache=' + Math.floor(Date.now() / 60000))
@@ -905,7 +906,8 @@ var STRCRenderer = {
                     var t = Date.parse(p.ts); if (isNaN(t)) continue;
                     if (p.strc_price != null) {
                         var devPct = (p.strc_price / par - 1) * 100;
-                        entries.push({ timestamp: p.ts, discount_to_par_pct: devPct });
+                        // Price with a par reference line, matching the fleet's peg charts.
+                        entries.push({ timestamp: p.ts, price: p.strc_price });
                         if (t >= cut) vals.push(devPct * 100);
                     }
 
@@ -920,8 +922,8 @@ var STRCRenderer = {
                 if (entries.length && CommonRenderer._renderPegChart) {
                     try {
                         CommonRenderer._renderPegChart(
-                            { peg: { history_field: 'discount_to_par_pct' } },
-                            { entries: entries }, 'strc-par-chart', '0% — at par');
+                            { peg: { history_field: 'price' } },
+                            { entries: entries }, 'strc-par-chart', null, undefined, par);
                     } catch (e) { /* chart optional; the figures are not */ }
                 }
             })

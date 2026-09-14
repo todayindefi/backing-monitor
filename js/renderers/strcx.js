@@ -197,10 +197,20 @@ var STRCxRenderer = {
                     // these two prices, this sentence said explicitly not. Caught by tidr
                     // reading the panel end to end. My patch to this line had failed on a
                     // later assertion and written nothing, and I did not re-check.
-                    '<span class="italic">The premium IS the division of the two tiles beside it, ' +
-                    'computed here because no producer publishes this wrapper’s premium. The feed ' +
-                    'carries a second STRC reference about 18 bps from this one, so the figure moves ' +
-                    'with which reference is used — part of why no tighter figure is quotable.</span>' +
+                    // ⚠️ CONDITIONAL, because this sentence has been a fossil twice. It began
+                    // as "the analyzer's published measure", survived the retraction that
+                    // removed the series it described, was rewritten to "computed here because
+                    // no producer publishes it" — and PegTracker then started publishing it, so
+                    // the fix went stale the same way. It follows the value now.
+                    '<span class="italic">' +
+                    ((typeof pubBps === 'number')
+                        ? 'The premium is the analyzer\u2019s own, published with the snapshot; the ' +
+                          'two tiles left are the inputs behind it. '
+                        : 'The premium IS the division of the two tiles beside it, computed here ' +
+                          'because the snapshot carries no published figure. ') +
+                    'The feed carries a second STRC reference about 18 bps from this one, so the ' +
+                    'figure moves with which reference is used \u2014 part of why no tighter ' +
+                    'figure is quotable.</span>' +
                 '</div>' +
                 '<div class="text-xs text-slate-500 leading-relaxed mt-3">' +
                     '<strong>Priced on Solana, which is the right venue rather than a compromise.</strong> ' +
@@ -235,7 +245,8 @@ var STRCxRenderer = {
                 '</div>' +
                 '<div id="strcx-peg-chartwrap" class="hidden">' +
                     '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-5 mb-2">' +
-                        'Premium to NAV over time</div>' +
+                        // the label moves with the value: this plots prices now, not a ratio
+                        'STRCx price against its STRC reference</div>' +
                     '<div style="height: 200px; position: relative;">' +
                         '<canvas id="strcx-peg-chart"></canvas></div>' +
                     '<div id="strcx-peg-chartnote" class="text-xs text-slate-400 mt-1"></div>' +
@@ -271,7 +282,13 @@ var STRCxRenderer = {
                     var m2 = q.strcx_market_price_usd, r2 = q.strcx_underlying_strc_usd;
                     if (typeof m2 !== 'number' || typeof r2 !== 'number' || r2 <= 0) continue;
                     var pct = (m2 / r2 - 1) * 100;
-                    entries.push({ timestamp: q.ts, premium_to_underlying_pct: pct });
+                    // ⚠️ PRICE, NOT PERCENT. A premium/discount series asks a reader to hold
+                    // a ratio in their head; two price lines show the same thing directly —
+                    // the gap between them IS the premium. This is the shape apyUSD and the
+                    // rest already use (`Market price` + a dashed `NAV / theoretical`), so
+                    // it is the fleet convention rather than a new one. pct is still
+                    // computed for the range and the tiles.
+                    entries.push({ timestamp: q.ts, price: m2, peg_theoretical_price: r2 });
                     if (q.strcx_reconstructed === true) reconstructed++;
                     else direct++;
                     if (first === null) first = q.ts;
@@ -316,18 +333,28 @@ var STRCxRenderer = {
                 }
                 var wrap = document.getElementById('strcx-peg-chartwrap');
                 if (wrap) wrap.classList.remove('hidden');
-                var note = document.getElementById('strcx-peg-chartnote');
-                if (note) {
-                    note.textContent = reconstructed + ' reconstructed, ' + direct +
-                        ' direct observations;' + since + '. Plotted in percent \u2014 0.10% = ' +
-                        '10 bps. Zero is at the reference used by each row.';
-                }
+                // ⚠️ CHART FIRST, THEN THE NOTE. The note describes the window the chart
+                // actually drew, and _lastPegChartWindow is set BY the chart — reading it
+                // first returned the previous render's value, so the caption claimed "all
+                // 2762 points" over an 893-point clipped chart.
                 if (CommonRenderer._renderPegChart) {
                     try {
                         CommonRenderer._renderPegChart(
-                            { peg: { history_field: 'premium_to_underlying_pct' } },
-                            { entries: entries }, 'strcx-peg-chart', '0% \u2014 at NAV');
+                            { peg: { history_field: 'price' } },
+                            { entries: entries }, 'strcx-peg-chart', null);
                     } catch (e) { /* chart optional; the figure above is not */ }
+                }
+                var note = document.getElementById('strcx-peg-chartnote');
+                if (note) {
+                    var win = CommonRenderer._lastPegChartWindow || {};
+                    note.textContent = 'STRCx mark against the STRC reference stored with it — ' +
+                        'the gap between the lines is the premium. ' +
+                        (win.clipped
+                            ? 'Showing the last ' + win.windowDays + ' days (' + win.shown +
+                              ' of ' + win.total + ' points, series begins ' +
+                              String(win.firstAvailable || '').slice(0, 10) + '). '
+                            : 'Showing all ' + (win.total || entries.length) + ' points' + since + '. ') +
+                        reconstructed + ' reconstructed, ' + direct + ' direct.';
                 }
             })
             .catch(function () {
