@@ -755,6 +755,42 @@ var ApyxRenderer = {
             '<td class="text-right">100.00%</td>' +
             '<td></td>' +
         '</tr>';
+        // ⚠️ ONE $170.2M STRC POSITION, THREE DEFENSIBLE DENOMINATORS — and the
+        // page quoted one of them without saying so. The table's basis is net
+        // backing (ex-Inventory), which puts STRC at 67.78%; Apyx's own dashboard
+        // is reported to quote ~86.3%, which is the same numerator over reserves
+        // that ALSO exclude Protocol Owned Liquidity. A reader comparing the two
+        // surfaces sees a 19-point gap and no way to reconcile it.
+        //
+        // ⚠️ NEITHER FIGURE IS WRONG, so this states the bases rather than picking
+        // one — whether reflexively-deployed POL dilutes a concentration measure
+        // is a judgement, not a calculation. All three come from published fields
+        // and reconcile exactly; nothing here is attributed to Accountable's
+        // dashboard, which is not a surface this repo can read.
+        var strcUsd = splitUsd['STRC'];
+        var polUsd = (ba.pol_usd != null) ? ba.pol_usd : splitUsd['Protocol Owned Liquidity'];
+        var basisNote = '';
+        if (strcUsd != null && polUsd != null && netBacking > polUsd && totalReserves > 0) {
+            var pGross = strcUsd / totalReserves * 100;
+            var pNet = strcUsd / netBacking * 100;
+            var pExPol = strcUsd / (netBacking - polUsd) * 100;
+            basisNote =
+                '<div class="text-xs text-slate-500 mt-2 leading-relaxed">' +
+                    '<strong>STRC concentration depends on what counts as a reserve.</strong> The same ' +
+                    '<span class="font-mono">' + CommonRenderer.formatCurrency(strcUsd) + '</span> position reads ' +
+                    '<span class="font-mono">' + pGross.toFixed(2) + '%</span> of gross reserves, ' +
+                    '<span class="font-mono font-semibold">' + pNet.toFixed(2) + '%</span> of net backing ' +
+                    '(the basis used in the table above), and ' +
+                    '<span class="font-mono">' + pExPol.toFixed(2) + '%</span> if Protocol Owned Liquidity is ' +
+                    'excluded as well. ' +
+                    'POL is real USDC, but it is deployed against Apyx\'s own assets — whether that dilutes a ' +
+                    'concentration measure is a judgement, not a calculation, and published figures elsewhere ' +
+                    'may use any of the three. <strong>All three are the same numerator over three ' +
+                    'denominators</strong>, so a gap between surfaces is a basis difference, not a disagreement ' +
+                    'about the position.' +
+                '</div>';
+        }
+
         resRows += '<tr class="text-xs text-slate-400">' +
             '<td>Gross reserves <span class="font-normal">(incl. net-zero Inventory)</span></td>' +
             '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(totalReserves) + '</td>' +
@@ -778,6 +814,7 @@ var ApyxRenderer = {
                             '<tbody>' + resRows + '</tbody>' +
                         '</table>' +
                     '</div>' +
+                    basisNote +
                 '</div>' +
                 '<div class="lg:col-span-2">' +
                     '<div class="text-sm font-semibold text-slate-700 mb-2">Composition</div>' +

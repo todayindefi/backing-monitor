@@ -7,24 +7,42 @@ status: WORKING BACKLOG. Items 12-15 FIXED 2026-09-14; items 1-11 UNVERIFIED.
 
 # ▶ START HERE — resume context
 
-**Items 12, 13, 14, 15, 5, 8, 7, 9, 1 and 3 are BUILT, rendered and verified; item 2 is confirmed
-but deferred upstream.** Triage bands S1–S8 are closed. ⚠️ **Six of the eleven claims needed
-correcting before they were safe to act on, and item 5's stated cause was REFUTED outright — read
-each item's Check, not just its Claim.**
+**ALL 15 ITEMS ARE CLOSED. Triage bands S1–S11 complete.** 14 built and rendered; item 2 confirmed
+as an absence and deferred upstream because the venue it names is not in any feed we hold.
 
-**Immediate next action: item 6 (apxUSD reserve denominator, POL in or out), triage S10.** Items
-10 and 11 are also still `unverified` — nothing has been checked on either.
+⚠️ **Seven of the fifteen claims needed correcting before they were safe to act on, and item 5's
+stated cause was REFUTED outright.** Read each item's **Check**, not its **Claim** — the Claims are
+recorded as received and several are wrong in ways that would have sent a fix at the wrong thing.
 
-⚠️ **Item 5 is the cautionary one.** The analyst read a published `fair_value_basis` field and
-reported exactly what it said; the field is hardcoded and contradicts the numbers beside it. Two
-renderer defects were found underneath it that nobody had reported, including a ladder that had
-been rendering as *"No exit-mark RFQ ladder in this snapshot"* over live data.
+**What is left, and it is all someone else's to land:**
 
-**One new defect surfaced by rendering the fix** — recorded at the bottom under *Found while
-building*, not fixed, because it is outside every item on this list and is an editorial call:
-a $50.0M BTC loan at **124.9%** collateralisation renders **red 🔴** on buffer-to-init while the
-same panel says *"init is not the health threshold."* My change promoted that loan to the
-headline, so the contradiction is now more visible than it was.
+```
+PegTracker   5 handoffs at status: ready, all uncommitted (their commit = adoption)
+riskAnalyst  owes the sUSDat surplus_deficit_basis "~97%" vs off_chain_pct 99.0% adjudication
+```
+
+⚠️ **The one open QUESTION that changes a rendered number:** whether CoinGecko's STRCx cross-chain
+aggregate is on the scaled or pre-scaled basis. It decides which of two upstream figures is wrong
+— `total_supply_usd` (item 10) or the 629,032 unlocatable residual (item 11) — and it cannot be
+answered from this repo. Handoff filed.
+
+## What this backlog was actually about
+
+Almost none of it was arithmetic. **Eleven of the fifteen were a number rendered without its basis,
+or a basis asserted that the data did not support:**
+
+```
+· a verdict the producer had already published, joined to nothing        12, 13
+· a closed name list applied to rollups that carry the real field        14
+· two correct measurements sharing one label                             15, 10
+· a hardcoded metadata string contradicting the data beside it           5
+· a claim inherited from an asset where it was TRUE                      8
+· a qualifier that existed only on hover                                 7
+· a stale list read as complete, then an over-retraction on top of it    9
+· a measurement present in the feed and rendered nowhere                 3, 4
+· one numerator over three denominators, none of them named              6
+· a residual presented as an observation                                 11
+```
 
 ## What a fresh session needs to know
 
@@ -89,8 +107,8 @@ S6  sUSDat backing tile hides its own caveat     item 7         ✅ FIXED 2026-0
 S7  Wolf table self-contradiction                item 9         ✅ FIXED 2026-09-14
 S8  liquidity venues missing / not wired         items 1, 2, 3  ✅ 3 FIXED · 1 partial · 2 upstream
 S9  apyUSD <-> sUSDat link absent from deps      item 4         ✅ FIXED 2026-09-14 (via shared upstream)
-S10 apxUSD reserve denominator (POL in/out)      item 6         ← NEXT
-S11 STRCx supply basis + unlocatable supply      items 10, 11
+S10 apxUSD reserve denominator (POL in/out)      item 6         ✅ FIXED 2026-09-14
+S11 STRCx supply basis + unlocatable supply      items 10, 11   ✅ FIXED 2026-09-14
 ```
 
 ---
@@ -333,9 +351,32 @@ handoff written to `~/PegTracker/handoffs/inbox/apyx-fair-value-basis-hardcoded-
 **Claim.** Shows **STRC at 67.8%** by counting **$53.9M of POL** as a reserve asset. Accountable's
 own dashboard says **86.3%** excluding it. ⚠️ **Both defensible.**
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED — and BOTH of the analyst's figures reproduce to the cent from our own
+feed.** The same $170.2M STRC position over three denominators:
+
+```
+everything in                310,305,302   54.83%   reserves_split_pct
+ex-Inventory                 251,049,483   67.78%   reserves_split_pct_ex_inventory  ← what we show
+ex-Inventory, ex-POL         197,158,624   86.30%   ← the analyst's Accountable figure
+```
+
+The table already names its own basis (*"Net backing (ex-Inventory)"* = 100.00%) and POL carries a
+*"⟳ reflexive"* badge. ⚠️ **What was missing is the third denominator** — a reader comparing this
+page to the issuer's sees 67.8% vs 86.3% with no way to reconcile them.
+
+**Built.** ✅ A note under the reserves table giving all three, computed from published fields:
+
+> *"**STRC concentration depends on what counts as a reserve.** The same $170.2M position reads
+> 54.83% of gross reserves, 67.78% of net backing (the basis used in the table above), and 86.30%
+> if Protocol Owned Liquidity is excluded as well. POL is real USDC, but it is deployed against
+> Apyx's own assets — whether that dilutes a concentration measure is a judgement, not a
+> calculation… **All three are the same numerator over three denominators**, so a gap between
+> surfaces is a basis difference, not a disagreement about the position."*
+
+⚠️ **Nothing is attributed to Accountable's dashboard** — that is a surface this repo cannot read
+(same rule that kept UniV4 off the page in items 1, 2, 4).
+
+**Status.** confirmed · **FIXED** (the analyst's "both defensible" is right; the page now says so)
 
 ## 7 · sUSDat — headline tile hides what its own basis says
 
@@ -545,18 +586,70 @@ until riskAnalyst supplies the reports)
 **Claim.** We show **$297.2M on total supply**; CoinGecko shows **$155.3M on 1.462M circulating**
 — looks like CG nets out the custodial addresses.
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED, and investigating it surfaced a worse defect the claim does not
+mention: our own $ figure mixes two price bases.**
+
+The supply-basis gap is real (2.817M total vs CG's 1.462M circulating). ⚠️ **But
+`total_supply_usd` is computed at CoinGecko's PRE-SCALED price while the page's headline mark is
+the multiplier-adjusted one:**
+
+```
+strc_backing_analyzer.py:2270   total_supply_usd = total_supply_all_chains * cg_price_usd
+  2,817,125 x $105.55 (pre-scaled)  = $297,347,509   ← published, and shown as the headline
+  2,817,125 x $ 98.38 (the mark)    = $277,159,712
+                               gap  = $20.2M / 7.3% = exactly the multiplier
+```
+
+⚠️⚠️ **The tile read "≈ $297.3M at the current mark" — and that is not the current mark.** This
+file's own mark-card comment says the CoinGecko price *"overstates by ~the multiplier"* and is
+*"shown as a labeled reference only, never the headline mark"*. **The supply tile used it as the
+headline anyway.** The token count is on the scaled basis (Ethereum's leg is an on-chain
+`totalSupply()` call), so the mark is the consistent pairing.
+
+**Built.** ✅ Valued at the mark — *"≈ $277.2M at the $98.38 mark"* — with a note naming both
+figures and what would overturn the choice. ⚠️ **The first pass fixed ONE of the two sites** and
+left the sibling panel showing $297.3M, so the page briefly carried both. Caught by grepping the
+rendered DOM for `$297`, not by reading the diff. Now 4 consistent occurrences of $277.2M and
+exactly one `$297.3M` — inside the note that explains it.
+
+⚠️ **NOT resolved, and it cannot be from here:** whether CoinGecko's cross-chain aggregate is
+itself scaled. That single question decides which of two upstream figures is wrong — see item 11.
+
+**Status.** confirmed · **FIXED** · basis question raised upstream
+
+
 
 ## 11 · STRCx — unlocatable supply is a basis note, not a flag
 
 **Claim.** **629,032 STRCx (22.3%, ~$62M)** on chains with no registered contract sits in a basis
 note rather than a top-line flag.
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED exactly** — 629,032.4322 STRCx = **22.33%** of supply = **$61.9M** at the
+mark, and it was a clause in a paragraph on a page whose Risk Flags panel reads *"No risk flags"*.
+
+**Built.** ✅ Promoted to a visible amber callout. ⚠️ **NOT injected into `data.risk_flags`** —
+that would dress a renderer's inference as a producer's finding.
+
+⚠️ **And the callout says what the number IS, which the original prose did not:**
+
+> *"629,032 STRCx (22.3% of supply, $61.9M at the mark) cannot be located on any chain this
+> dashboard can read. **It is a residual, not an observation** — CoinGecko's cross-chain aggregate
+> minus the Ethereum and Solana supplies read directly. Arbitrum, BNB and Mantle have no registered
+> contract address… ⚠️ **A residual also absorbs any basis mismatch** between the aggregate and the
+> on-chain counts, so it is an upper bound on what is genuinely elsewhere."*
+
+⚠️⚠️ **THE TWO UPSTREAM READINGS ARE MUTUALLY EXCLUSIVE**, and this is the finding worth carrying:
+
+```
+CG aggregate is SCALED      -> total_supply_usd is overstated by the multiplier   (item 10)
+CG aggregate is PRE-SCALED  -> this 629,032 residual is inflated by a basis mismatch
+```
+
+`other_chains_implied = cg_total_supply - known_supply` subtracts an on-chain (scaled) sum from the
+CG aggregate. **One of those two figures is wrong and the same unanswered question decides which.**
+Handoff filed asking PegTracker to settle it and publish the basis.
+
+**Status.** confirmed · **FIXED** · the underlying basis question is upstream
 
 ## 12 · syrupUSDC — collateral column is corrupt and shown as fact ⚠️ TOP PRIORITY
 

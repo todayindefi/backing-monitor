@@ -437,7 +437,24 @@ var STRCxRenderer = {
             ? STRCRenderer._fmtMoneyShort(v) : ('$' + v); };
 
         var supply = wrapper.total_supply_all_chains;
-        var supplyUsd = wrapper.total_supply_usd;
+        // ⚠️ `total_supply_usd` IS NOT "AT THE CURRENT MARK", WHICH IS WHAT THIS
+        // TILE SAID IT WAS. The analyzer computes it as total_supply_all_chains x
+        // coingecko_price_usd — CoinGecko's PRE-SCALED price — while this page's
+        // headline mark is the multiplier-adjusted one, and this file's own
+        // mark-card comment says the CoinGecko figure "overstates by ~the
+        // multiplier" and is "shown as a labeled reference only, never the
+        // headline mark". The supply tile used it as the headline anyway: $297.3M
+        // where the mark gives $277.2M, a $20M / 7.3% gap on the page's biggest
+        // number.
+        // ⚠️ The token COUNT is on the scaled basis — Ethereum's leg is an on-chain
+        // totalSupply() call — so the mark is the consistent pairing. The published
+        // figure is kept beside it rather than dropped: whether CoinGecko's
+        // cross-chain aggregate is itself scaled is NOT answerable from this repo,
+        // and that is the one thing that could make the larger number right.
+        var supplyUsdPublished = wrapper.total_supply_usd;
+        var markPrice = wrapper.market_price_usd;
+        var supplyUsdAtMark = (supply != null && markPrice != null) ? supply * markPrice : null;
+        var supplyUsd = (supplyUsdAtMark != null) ? supplyUsdAtMark : supplyUsdPublished;
         var mult = wrapper.multiplier;
         var pc = wrapper.per_chain || {};
         var eth = (pc.ethereum || {}).total_supply;
@@ -481,18 +498,62 @@ var STRCxRenderer = {
                 '</div>';
         }
 
+        // ⚠️ ONE SUPPLY, TWO DOLLAR FIGURES — name both rather than pick silently.
+        var basisNote = '';
+        if (supplyUsdAtMark != null && supplyUsdPublished != null && markPrice != null &&
+            Math.abs(supplyUsdAtMark - supplyUsdPublished) > supplyUsdAtMark * 0.005) {
+            basisNote =
+                '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
+                    'ⓘ <strong>Two dollar figures exist for this supply, and they differ by the multiplier.</strong> ' +
+                    'The tile values it at the <span class="font-mono">$' + markPrice.toFixed(2) + '</span> ' +
+                    'multiplier-adjusted mark this page displays (' + fmtM(supplyUsdAtMark) + '). The feed\'s ' +
+                    '<span class="font-mono">total_supply_usd</span> is ' + fmtM(supplyUsdPublished) + ', ' +
+                    'computed at CoinGecko\'s <span class="font-mono">$' +
+                    (wrapper.coingecko_price_usd != null ? wrapper.coingecko_price_usd.toFixed(2) : '\u2014') +
+                    '</span> pre-scaled price — the price this page declines to use as the mark. The token count ' +
+                    'is on the scaled basis (Ethereum\'s leg is an on-chain <span class="font-mono">totalSupply()' +
+                    '</span> call), so the mark is the consistent pairing. ⚠️ Whether CoinGecko\'s cross-chain ' +
+                    'aggregate is itself scaled is not answerable from this dashboard, and that is the one thing ' +
+                    'that would make the larger figure right.' +
+                '</div>';
+        }
+
+        // ⚠️ 22% OF SUPPLY THAT CANNOT BE LOCATED WAS A CLAUSE IN A PARAGRAPH, on a
+        // page whose Risk Flags panel reads "No risk flags". Promoted to a visible
+        // callout — but NOT injected into data.risk_flags, which would dress a
+        // renderer's inference as a producer's finding.
+        var unlocatableFlag = '';
+        var otherSupply = wrapper.implied_other_chains_supply;
+        if (otherSupply != null && supply > 0 && otherSupply / supply > 0.05) {
+            var otherUsd = (markPrice != null) ? otherSupply * markPrice : null;
+            unlocatableFlag =
+                '<div class="risk-flag risk-warning mt-3">' +
+                    '⚠ <strong>' + fmtN(otherSupply) + ' STRCx (' + (otherSupply / supply * 100).toFixed(1) +
+                    '% of supply' + (otherUsd != null ? ', ' + fmtM(otherUsd) + ' at the mark' : '') +
+                    ') cannot be located on any chain this dashboard can read.</strong>' +
+                    '<div class="text-xs mt-1">It is a residual, not an observation — CoinGecko\'s cross-chain ' +
+                    'aggregate minus the Ethereum and Solana supplies read directly. Arbitrum, BNB and Mantle have ' +
+                    'no registered contract address in the CoinGecko/Backed feeds, so the balance there is neither ' +
+                    'confirmed nor refuted. ⚠️ A residual also absorbs any basis mismatch between the aggregate and ' +
+                    'the on-chain counts, so it is an upper bound on what is genuinely elsewhere.</div>' +
+                '</div>';
+        }
+
         slot.innerHTML =
             '<div class="panel">' +
                 '<div class="panel-title">What backs this token ' +
                     '<span class="text-xs font-normal text-slate-500">— a claim on real STRC shares</span></div>' +
                 '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
                     tile('Wrapped supply', fmtN(supply) + ' STRCx',
-                         '≈ ' + fmtM(supplyUsd) + ' at the current mark') +
+                         '≈ ' + fmtM(supplyUsd) + ' at the ' +
+                         (markPrice != null ? '$' + markPrice.toFixed(2) + ' mark' : 'current mark')) +
                     tile('One token is', '1 STRC share',
                          'scaled by multiplier ' + (mult != null ? mult.toFixed(6) : '—')) +
                     tile('Held by', 'Backed Finance',
                          'off-chain qualified custodian') +
                 '</div>' +
+                basisNote +
+                unlocatableFlag +
                 '<div class="text-xs text-slate-500 leading-relaxed mt-4">' +
                     '<strong>Single-asset backing, so there is no composition to chart.</strong> ' +
                     'Every STRCx is a claim on one STRC share; a breakdown table or allocation ' +
@@ -626,7 +687,14 @@ var STRCxRenderer = {
     // ============================================================
     _renderStrcxWrapper: function (wrapper, riskFlags) {
         var totalSupply = wrapper.total_supply_all_chains;
-        var supplyUsd = wrapper.total_supply_usd;
+        // ⚠️ SAME BASIS AS THE PANEL ABOVE, AND THIS SITE WAS MISSED ON THE FIRST
+        // PASS — the page showed $277.2M in one panel and $297.3M in two cells of
+        // the next, which is the exact defect the fix exists to remove. Value the
+        // scaled token count at the scaled mark; see the long note at the
+        // "What backs this token" panel for why, and for what would overturn it.
+        var supplyUsd = (wrapper.total_supply_all_chains != null && wrapper.market_price_usd != null)
+            ? wrapper.total_supply_all_chains * wrapper.market_price_usd
+            : wrapper.total_supply_usd;
         var multiplier = wrapper.multiplier;
         var perChain = wrapper.per_chain || {};
         var holders = wrapper.top_holders_ethereum || [];
