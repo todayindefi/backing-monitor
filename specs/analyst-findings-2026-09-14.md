@@ -623,7 +623,30 @@ exactly one `$297.3M` — inside the note that explains it.
 ⚠️ **NOT resolved, and it cannot be from here:** whether CoinGecko's cross-chain aggregate is
 itself scaled. That single question decides which of two upstream figures is wrong — see item 11.
 
-**Status.** confirmed · **FIXED** · basis question raised upstream
+**⚠️⚠️ REVERSED SAME DAY — I GOT THIS BACKWARDS AND IT RENDERED WRONG UNTIL PEGTRACKER ANSWERED.**
+
+PegTracker settled the open question: **CoinGecko's supply aggregate AND its price are both
+pre-scaled.** So their pairing is internally consistent and **mine was the mixed-basis one:**
+
+```
+cg_count x cg_price     = $298.6M   consistent (pre-scaled x pre-scaled)   ← theirs, CORRECT
+cg_count x scaled mark  = $277.9M   pre-scaled count x SCALED price        ← MINE, WRONG
+sanity: count x multiplier x underlying STRC $98.58 = $300.2M, which brackets $298.6M
+```
+
+⚠️ **The tell was available to me and I did not use it.** One *scaled* STRCx is one STRC share
+($98.58), so a scaled count at a scaled price should land near the STRC-share valuation. $277.9M
+does not; $298.6M does. **I verified that the two prices differed by the multiplier and stopped
+there** — the same "sampled where the curve was flat" mistake PegTracker named the same day in the
+slippage conventions.
+
+**Reverted.** The tile renders the producer's `total_supply_usd` again, labelled *"at CoinGecko's
+pre-scaled mark"*, with the basis recorded so nobody re-opens it.
+
+⚠️ **What WAS right: the two figures could not both be right, and the residual is the wrong one**
+— see item 11.
+
+**Status.** ⚠️ **my fix REVERTED · the feed's figure was correct · basis now settled upstream**
 
 
 
@@ -657,7 +680,14 @@ CG aggregate is PRE-SCALED  -> this 629,032 residual is inflated by a basis mism
 CG aggregate. **One of those two figures is wrong and the same unanswered question decides which.**
 Handoff filed asking PegTracker to settle it and publish the basis.
 
-**Status.** confirmed · **FIXED** · the underlying basis question is upstream
+**⚠️ UPDATED — the basis is settled and this residual is the figure that was wrong.**
+`cg_aggregate - known_onchain` subtracts **SCALED** on-chain supplies from a **PRE-SCALED**
+aggregate. Converting first makes the gap **larger**: ~856,918 (28.1%), not 629,032 (22.3%).
+**So the warning understated.** PegTracker has corrected it upstream; their figure has not reached
+our feed yet, so the callout shows the published number **with the direction of its error stated**
+rather than replaced by our own arithmetic.
+
+**Status.** confirmed · **FIXED** · ⚠️ figure is superseded-basis pending PegTracker's re-run
 
 ## 12 · syrupUSDC — collateral column is corrupt and shown as fact ⚠️ TOP PRIORITY
 

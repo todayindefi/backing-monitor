@@ -437,24 +437,26 @@ var STRCxRenderer = {
             ? STRCRenderer._fmtMoneyShort(v) : ('$' + v); };
 
         var supply = wrapper.total_supply_all_chains;
-        // ⚠️ `total_supply_usd` IS NOT "AT THE CURRENT MARK", WHICH IS WHAT THIS
-        // TILE SAID IT WAS. The analyzer computes it as total_supply_all_chains x
-        // coingecko_price_usd — CoinGecko's PRE-SCALED price — while this page's
-        // headline mark is the multiplier-adjusted one, and this file's own
-        // mark-card comment says the CoinGecko figure "overstates by ~the
-        // multiplier" and is "shown as a labeled reference only, never the
-        // headline mark". The supply tile used it as the headline anyway: $297.3M
-        // where the mark gives $277.2M, a $20M / 7.3% gap on the page's biggest
-        // number.
-        // ⚠️ The token COUNT is on the scaled basis — Ethereum's leg is an on-chain
-        // totalSupply() call — so the mark is the consistent pairing. The published
-        // figure is kept beside it rather than dropped: whether CoinGecko's
-        // cross-chain aggregate is itself scaled is NOT answerable from this repo,
-        // and that is the one thing that could make the larger number right.
-        var supplyUsdPublished = wrapper.total_supply_usd;
+        // ⚠️⚠️ I GOT THIS WRONG ON 2026-09-14 AND IT RENDERED WRONG UNTIL THE
+        // SAME DAY. I read `total_supply_usd = count x coingecko_price_usd` as
+        // pricing a SCALED count at a PRE-SCALED price, and switched this tile to
+        // count x market_price_usd. PegTracker then established that CoinGecko's
+        // supply aggregate AND its price are BOTH pre-scaled — so their pairing is
+        // internally consistent and mine was the mixed-basis one:
+        //
+        //   cg_count x cg_price      = $298.6M   consistent (pre-scaled x pre-scaled)
+        //   cg_count x scaled mark   = $277.9M   MINE — pre-scaled count, scaled price
+        //   sanity: count x mult x underlying STRC = $300.2M, which brackets $298.6M
+        //
+        // ⚠️ The tell I had and did not use: 1 SCALED unit ~ 1 STRC share ($98.58),
+        // so a scaled count times a scaled price should land near the STRC-share
+        // valuation. $277.9M does not; $298.6M does. I checked that the two prices
+        // differed by the multiplier and stopped, which is the same "sampled where
+        // it was flat" mistake PegTracker named in the slippage conventions.
+        //
+        // Render the producer's figure. It is right.
+        var supplyUsd = wrapper.total_supply_usd;
         var markPrice = wrapper.market_price_usd;
-        var supplyUsdAtMark = (supply != null && markPrice != null) ? supply * markPrice : null;
-        var supplyUsd = (supplyUsdAtMark != null) ? supplyUsdAtMark : supplyUsdPublished;
         var mult = wrapper.multiplier;
         var pc = wrapper.per_chain || {};
         var eth = (pc.ethereum || {}).total_supply;
@@ -498,34 +500,51 @@ var STRCxRenderer = {
                 '</div>';
         }
 
-        // ⚠️ ONE SUPPLY, TWO DOLLAR FIGURES — name both rather than pick silently.
-        var basisNote = '';
-        if (supplyUsdAtMark != null && supplyUsdPublished != null && markPrice != null &&
-            Math.abs(supplyUsdAtMark - supplyUsdPublished) > supplyUsdAtMark * 0.005) {
-            basisNote =
-                '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
-                    'ⓘ <strong>Two dollar figures exist for this supply, and they differ by the multiplier.</strong> ' +
-                    'The tile values it at the <span class="font-mono">$' + markPrice.toFixed(2) + '</span> ' +
-                    'multiplier-adjusted mark this page displays (' + fmtM(supplyUsdAtMark) + '). The feed\'s ' +
-                    '<span class="font-mono">total_supply_usd</span> is ' + fmtM(supplyUsdPublished) + ', ' +
-                    'computed at CoinGecko\'s <span class="font-mono">$' +
-                    (wrapper.coingecko_price_usd != null ? wrapper.coingecko_price_usd.toFixed(2) : '\u2014') +
-                    '</span> pre-scaled price — the price this page declines to use as the mark. The token count ' +
-                    'is on the scaled basis (Ethereum\'s leg is an on-chain <span class="font-mono">totalSupply()' +
-                    '</span> call), so the mark is the consistent pairing. ⚠️ Whether CoinGecko\'s cross-chain ' +
-                    'aggregate is itself scaled is not answerable from this dashboard, and that is the one thing ' +
-                    'that would make the larger figure right.' +
-                '</div>';
-        }
+        // The basis question is SETTLED — record it so nobody re-opens it.
+        var basisNote =
+            '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
+                'ⓘ <strong>Basis:</strong> CoinGecko\'s cross-chain supply aggregate and its price ' +
+                'are <strong>both pre-scaled</strong>, so this valuation pairs like with like. ' +
+                'One <em>scaled</em> STRCx (what <span class="font-mono">balanceOf</span> returns) is ' +
+                'one STRC share, currently ' +
+                (wrapper.underlying_strc_price_usd != null
+                    ? '<span class="font-mono">$' + wrapper.underlying_strc_price_usd.toFixed(2) + '</span>'
+                    : 'the STRC mark') +
+                '; one <em>pre-scaled</em> unit is ' +
+                (wrapper.multiplier != null ? wrapper.multiplier.toFixed(6) : 'the multiplier') +
+                ' of those. ⚠️ Valuing this count at the scaled mark would mix the two and ' +
+                '<strong>understate the book by the multiplier</strong> — this page did exactly that for ' +
+                'part of 2026-09-14 before PegTracker settled the basis.' +
+            '</div>';
 
         // ⚠️ 22% OF SUPPLY THAT CANNOT BE LOCATED WAS A CLAUSE IN A PARAGRAPH, on a
         // page whose Risk Flags panel reads "No risk flags". Promoted to a visible
         // callout — but NOT injected into data.risk_flags, which would dress a
         // renderer's inference as a producer's finding.
-        var unlocatableFlag = '';
+        // ⚠️ THE PUBLISHED RESIDUAL IS ON A SUPERSEDED BASIS AND UNDERSTATES.
+        // It is `cg_aggregate - known_onchain`, which only works if both are the
+        // same unit. PegTracker established 2026-09-14 that the CG aggregate is
+        // PRE-SCALED while the on-chain legs are SCALED, so the subtraction is
+        // cross-unit. Converting the aggregate first makes the gap LARGER, not
+        // smaller. Their corrected figure has not reached this feed yet, so the
+        // published number is shown with the direction of its error stated rather
+        // than replaced by our own arithmetic.
+        var unlocatableFlag = '', residualBasisNote = '';
         var otherSupply = wrapper.implied_other_chains_supply;
         if (otherSupply != null && supply > 0 && otherSupply / supply > 0.05) {
-            var otherUsd = (markPrice != null) ? otherSupply * markPrice : null;
+            var otherUsd = (wrapper.coingecko_price_usd != null)
+                ? otherSupply * wrapper.coingecko_price_usd : null;
+            var m = wrapper.multiplier;
+            if (m && m > 1 && supply > 0) {
+                var rescaled = supply * m - (supply - otherSupply);
+                residualBasisNote =
+                    ' ⚠️ <strong>This figure is on a superseded basis and understates.</strong> It subtracts ' +
+                    'SCALED on-chain supplies from a PRE-SCALED CoinGecko aggregate. Converting the aggregate ' +
+                    'first gives roughly <span class="font-mono">' + fmtN(rescaled) + '</span> (' +
+                    (rescaled / (supply * m) * 100).toFixed(1) + '%). PegTracker settled the basis on ' +
+                    '2026-09-14 and their corrected figure has not reached this feed yet, so the published ' +
+                    'number is shown with the direction of its error rather than replaced by our arithmetic.';
+            }
             unlocatableFlag =
                 '<div class="risk-flag risk-warning mt-3">' +
                     '⚠ <strong>' + fmtN(otherSupply) + ' STRCx (' + (otherSupply / supply * 100).toFixed(1) +
@@ -534,8 +553,7 @@ var STRCxRenderer = {
                     '<div class="text-xs mt-1">It is a residual, not an observation — CoinGecko\'s cross-chain ' +
                     'aggregate minus the Ethereum and Solana supplies read directly. Arbitrum, BNB and Mantle have ' +
                     'no registered contract address in the CoinGecko/Backed feeds, so the balance there is neither ' +
-                    'confirmed nor refuted. ⚠️ A residual also absorbs any basis mismatch between the aggregate and ' +
-                    'the on-chain counts, so it is an upper bound on what is genuinely elsewhere.</div>' +
+                    'confirmed nor refuted.' + residualBasisNote + '</div>' +
                 '</div>';
         }
 
@@ -545,8 +563,7 @@ var STRCxRenderer = {
                     '<span class="text-xs font-normal text-slate-500">— a claim on real STRC shares</span></div>' +
                 '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
                     tile('Wrapped supply', fmtN(supply) + ' STRCx',
-                         '≈ ' + fmtM(supplyUsd) + ' at the ' +
-                         (markPrice != null ? '$' + markPrice.toFixed(2) + ' mark' : 'current mark')) +
+                         '≈ ' + fmtM(supplyUsd) + ' at CoinGecko\'s pre-scaled mark') +
                     tile('One token is', '1 STRC share',
                          'scaled by multiplier ' + (mult != null ? mult.toFixed(6) : '—')) +
                     tile('Held by', 'Backed Finance',
@@ -687,14 +704,10 @@ var STRCxRenderer = {
     // ============================================================
     _renderStrcxWrapper: function (wrapper, riskFlags) {
         var totalSupply = wrapper.total_supply_all_chains;
-        // ⚠️ SAME BASIS AS THE PANEL ABOVE, AND THIS SITE WAS MISSED ON THE FIRST
-        // PASS — the page showed $277.2M in one panel and $297.3M in two cells of
-        // the next, which is the exact defect the fix exists to remove. Value the
-        // scaled token count at the scaled mark; see the long note at the
-        // "What backs this token" panel for why, and for what would overturn it.
-        var supplyUsd = (wrapper.total_supply_all_chains != null && wrapper.market_price_usd != null)
-            ? wrapper.total_supply_all_chains * wrapper.market_price_usd
-            : wrapper.total_supply_usd;
+        // ⚠️ REVERTED with the panel above: I briefly recomputed this at the scaled
+        // mark, which mixes a pre-scaled count with a scaled price. CoinGecko's
+        // supply and price are both pre-scaled; the published figure is correct.
+        var supplyUsd = wrapper.total_supply_usd;
         var multiplier = wrapper.multiplier;
         var perChain = wrapper.per_chain || {};
         var holders = wrapper.top_holders_ethereum || [];
