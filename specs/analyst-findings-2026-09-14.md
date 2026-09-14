@@ -5,6 +5,49 @@ source: user's analyst, relayed 2026-09-14
 status: WORKING BACKLOG. Each item is UNVERIFIED until checked here.
 ---
 
+# ▶ START HERE — resume context
+
+**Immediate next action: BUILD the fix for items 12/13 (syrupUSDC collateral column).** It is fully
+investigated, the plan is settled, and the user was asked to approve the build. ⚠️ **Nothing has
+been built yet.** Everything below item 13's **Plan** is ready to implement as written.
+
+**The four other syrupUSDC items (14, 15) are in the same renderer** and are cheap to do in the same
+pass once you are in that file.
+
+## What a fresh session needs to know
+
+⚠️ **Verify every claim in this file before acting on it — including the ones marked confirmed.**
+The Check sections name the command or file that settled each one; re-run rather than trust. This
+estate has repeatedly shipped defects by acting on plausible claims, including from peer sessions
+and including my own.
+
+**House rules that apply to this work** (all learned the hard way, all in `specs/six-axis-dashboard-spec.md`):
+
+```
+· render the page and READ it — a DOM query scoped to what you changed cannot see what you didn't
+· a wrong number is worse than a declared absence; absences are renderable
+· prefer the published field — ONCE you have established it measures the same thing (read the producer)
+· two figures shown together must be consistent BY CONSTRUCTION, not by re-checking
+· measure the blast radius before touching a shared component
+· a defect report needs two measurements: what is inconsistent, AND who depends on it
+· serve on a NEW PORT to verify — dataUrl() buckets its cache-buster by the hour
+· a patch script that dies mid-way may have written NOTHING; re-grep each intended change
+```
+
+**Peers, and how to reach them** (`ListAgents`, then `SendMessage`):
+
+```
+riskanalyst - reports update   axis scores, issuer/contract overlays, the reports
+tidr                           tidresearch.com — EMBEDS our dashboards in reports
+securty analyst                axis 5 topology walks
+pegtracker-f9                  the analyzers; file-based handoffs to ~/PegTracker/handoffs/inbox/
+```
+
+⚠️ **A peer's agreement is not authorisation.** Adoption decisions stay with whoever owns the repo.
+⚠️ **Handoffs: write the file, do NOT commit it** — the owner's commit is the adoption.
+
+---
+
 # How this file works
 
 ⚠️ **Every claim below is the analyst's, recorded as received.** None is verified until its
@@ -157,9 +200,64 @@ but ⚠️ **the table still prints red flags**, and **"Buffer health / distance
 **"Tightest loan: $6.5M BTC @ 21.9%"** are all computed off the bad values. That loan is
 **201.6%** on Maple.
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED, and the cause is not what anyone assumed.** Measured from
+`data/syrupusdc_backing.json`:
+
+```
+11 loans below 100%: $372,550,005 of a $941,268,474 book = 39.6%
+  $200,000,000   62.89%   init 143%    1,616.7734 BTC   chainlink   healthy
+  $ 30,000,000   61.45%   init 125%      236.9727 BTC   chainlink   healthy
+  $ 25,000,000    7.78%   init 125%       25.0000 BTC   chainlink   healthy   ×4 loans
+  $ 20,000,000   61.59%   init 125%      158.3505 BTC   chainlink   healthy
+  $ 10,000,000   96.00%   init 143%    3,809.5479 ETH   chainlink   healthy
+  $  6,550,000   22.16%   init 167%       18.6610 BTC   chainlink   healthy
+  $  6,000,000   40.63%   init 167%       31.3391 BTC   chainlink   healthy
+  $          5   14.06%   init 100%        0.7028 USTB  peg_assumed healthy   (dust, at-par)
+```
+
+⚠️ **The ratio arithmetic is CORRECT** — `collateral.usd / principal` reproduces every figure
+exactly. The wrong value is `collateral.amount`, upstream.
+
+⚠️⚠️ **AND THE PRODUCER ALREADY KNOWS.** `syrupusdc_backing_analyzer.py` runs a corroboration gate:
+a below-100 read only pages CRITICAL if the pool shows `unrealizedLosses > 0` **or** the loan is
+impaired/called/defaulted. Its own comment: *"Uncorroborated below-100 reads are almost always
+Maple GraphQL collateral-amount artifacts (currentAssetAmount understated while the pool is
+clean)."* It emits an **info** flag, present in our feed right now:
+
+> *"10 Set A loans ($373M, 39.6% of book) read below 100% collateralization in Maple GraphQL but
+> are uncorroborated (unrealizedLosses=0, none impaired/called/defaulted) — likely collateral-amount
+> data artifact; PCR authoritative"*
+
+⚠️ **SO THIS IS A CONSUMER-SIDE DEFECT.** `syrupusdc.js` `_renderBufferCell` colours purely on
+`buffer_pp < 0` and prints **`-80.1pp 🔴`** with title *"Below init level — delegate discretion to
+call."* The analyzer graded 40% of the book unreliable; the page prints it as a finding. **Same
+shape as the STRCx peg: the verdict is published and nothing joins it to the display.**
+
+**The cross-check is genuinely independent**, which is why the artifact conclusion is safe:
+`unrealizedLosses()` is read **on-chain from the pool contract**, not from Maple's API. Maple's own
+front end is a third reading and shows these loans at 123–206%, so **Maple's UI and API disagree**
+— the fault is in that API field, not in our pipeline.
+
+**Reproduced the producer's rule from the feed and it matches to the dollar:** pool
+`unrealized_losses == 0` · loan not impaired/called/in-default · Set A (not at-par) →
+**10 loans, $372,550,000**, exactly the producer's flag.
+
+**Plan.** ⚠️ **No heuristic needed — read the producer's verdict instead of re-deriving a colour.**
+
+```
+1  _renderBufferCell: consult corroboration before colouring. Uncorroborated below-100
+   rows render as unverifiable WITH THE REASON, not as red distress. The number still
+   shows — this is assert-vs-qualify, not hide-vs-show.
+2  Exclude those rows from "Tightest loan" and "Buffer health / distance to par", which
+   currently compute off artifact values. State how many were excluded.
+3  Rewrite the footnote (syrupusdc.js ~line 1103) — see item 13.
+4  PegTracker handoff: the per-loan record carries no artifact marker, so every consumer
+   must reconstruct the rule. Ask them to stamp it on the loan. ALSO: the `usd_anomaly`
+   threshold is `raw < required * 0.05`, tuned to the near-zero at-par case; the four
+   $25M loans sit at ~6.2% of required and fall just outside it.
+```
+
+**Status.** confirmed · **plan settled · NOT BUILT — awaiting the user's go-ahead**
 
 ## 13 · syrupUSDC — the stated root cause does not match the symptom
 
@@ -168,9 +266,27 @@ BTC-collateralised.** The wrong-to-right ratios are not constant (**3.0x, 2.0x, 
 not a decimal bug. Looks more like **returning collateral from only some wallets per loan** —
 Maple lists **48 collateral wallets**.
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED and stronger than stated.** The footnote at `syrupusdc.js:1103` reads
+*"Maple GraphQL returns a broken `currentAssetAmount` for **at-par stablecoin/RWA positions**."*
+Of the 11 affected loans: **9 BTC, 1 ETH, 1 USTB** — and the only at-par one is the **$5** dust
+position. ⚠️ **The stated cause explains $5 of $372,550,005.**
+
+⚠️ **One correction to the analyst:** they said all ten are BTC-collateralised. One is ETH
+($10M, 3,809.55 ETH).
+
+**Where the wrong cause came from:** the `usd_anomaly` detector in the analyzer was built for the
+at-par case — its own comment says *"Observed on some at-par USTB/USDC loans"* — and the footnote
+inherited that origin story. ⚠️ **This is the "a rule written at the site of the bug inherits that
+bug's scope" pattern**, same as the sync script's missing-source comment. The detector's threshold
+was tuned to near-zero readings; the crypto cases sit above it and pass through unflagged.
+
+**Plan.** Rewrite the footnote to state what is actually true: Maple's per-loan
+`currentAssetAmount` is understated by a VARIABLE factor (3.0×, 2.0×, 16.9× observed — so not a
+decimal error), affecting crypto-collateralised loans, and the pool's own on-chain
+`unrealizedLosses` contradicts the per-loan reads. ⚠️ **Do not restate the at-par explanation** —
+a wrong explanation closes the question.
+
+**Status.** confirmed · plan settled · NOT BUILT
 
 ## 14 · syrupUSDC — Liquidity Layer, two visible math errors
 
@@ -192,3 +308,38 @@ implies **1.01%**. Two fields — **`free_usdc`** and **`free_liquidity`** — b
 **Check.** _pending_
 **Plan.** _pending_
 **Status.** unverified
+
+---
+
+# Elsewhere — open items not from the analyst's list
+
+These predate this backlog and are not blocking it. Recorded so a fresh session does not
+rediscover them.
+
+**Waiting on riskAnalyst** (two intent questions, raised 2026-09-13, unanswered):
+- **Axis 4** — all 22 `*_axis_basis.json` publish `underlying_score` and it renders, while spec §4
+  says axis 4 carries no score fleet-wide. Recorded as superseded-by-observation; they own whether
+  that was the plan or drift.
+- **Axis 6** — 19 of 21 issuer blocks publish no score. The frame reads `issuer_score` and would
+  render it. Their editorial choice to confirm, not our defect to fix.
+
+**Waiting on PegTracker** (two handoffs at `status: ready`, unworked):
+- `hastra-prime-heloc-is-a-facility-name-2026-09-12`
+- `exit-ladder-bracket-lost-on-quote-failure-2026-09-11`
+
+**Standing backlog, surfaced by the manifest check on every sync:**
+`check_feeds.py` prints §4.0 conformance — **8 of 26 published assets carry every baseline
+element**. Seven assets are wholly off the six-axis frame (bmnr, mstr, strc, strcx, usdd, ousd,
+cusd) and **coverage-history is the most common gap fleet-wide**. ⚠️ The check is DATA-SIDE: it
+sees whether an element has data behind it, never whether a renderer draws it.
+
+**A live consumer-side stopgap that should be retired when upstream lands:**
+`CommonRenderer.sanitizeQuoteDetail` strips the venue word from `quote_detail` because the feed
+said "outside NYSE regular session" and STRC is Nasdaq-listed (10-Q cover, accession
+0001050446-26-000044, "NYSE" appears zero times in 508,121 chars). PegTracker fixed the analyzer;
+⚠️ **remove the strip only once the new string is visible IN THE PAYLOAD** — a source read is not a
+payload read.
+
+**STRCx axis 5** is a genuine absence: no security_analyst walk exists for it, and the page says so
+correctly. Not a gap to close on our side.
+
