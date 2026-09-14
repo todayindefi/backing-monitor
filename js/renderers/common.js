@@ -5445,12 +5445,25 @@ const CommonRenderer = {
                 ? 'Exit mark — ' + this._escapeAttr(em.measured_leg)
                 : 'Exit mark');
 
-        // ⚠️ TWO CONVENTIONS NOW SHARE ONE COLUMN. PegTracker quotes slippage
-        // against $1 nominal par; liquidity/1 quotes marginal impact against its
-        // own smallest rung, with the price bias held out. Same header, same
-        // colour thresholds, different question — so the producer's own
-        // statement of it renders under the table head rather than being left
-        // for the reader to assume. First sentence visible, full text on hover.
+        // ⚠️ TWO CONVENTIONS SHARE ONE COLUMN — and this comment used to describe
+        // one of them WRONGLY. It said "PegTracker quotes slippage against $1
+        // nominal par". PegTracker's own declared string says ALL-IN COST against
+        // NOTIONAL — `(output_usd - size) / size`, where size is the USD notional,
+        // converted to tokens at the asset's mark. ⚠️ Par and notional COINCIDE on
+        // a $1-pegged asset, which is why the wrong description survived: it was
+        // written from the assets where the two are the same number.
+        //
+        // ⚠️ PegTracker (2026-09-14) reports the same failure mode one level up,
+        // in the relationship BETWEEN the conventions: riskAnalyst read the gap as
+        // sign inversions, it was then described as a constant offset, and it is
+        // actually MULTIPLICATIVE — offset = (output/size) x (1/spot_rate - 1),
+        // verified on syzUSD's eight rungs to within 0.08bps, decaying 216.90 bps
+        // at $1K to 95.25 at $500K. It only looks constant while fills sit near
+        // par. ⚠️ Everyone who got it wrong sampled where the curve was flat.
+        //
+        // So: DO NOT describe either convention in terms of the other, and do not
+        // convert between them here. Render the producer's own declaration and let
+        // the difference stay visible. First sentence shown, full text on hover.
         // ⚠️ TWO PRODUCERS, TWO FIELD NAMES, ONE FACT. DexTracker declares
         // `slippage_convention`; PegTracker now declares `slippage_bps_basis`,
         // naming whether the column is PRICE IMPACT (base spread EXCLUDED) or
