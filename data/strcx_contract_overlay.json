@@ -1,0 +1,26 @@
+{
+ "schema_version": "contract-overlay/1",
+ "producer": "riskanalyst",
+ "asset": "strcx",
+ "as_of": "2026-09-14T00:00:00Z",
+ "contract": {
+  "structural_score": 6.0,
+  "structural_score_source": "riskAnalyst:authored",
+  "structural_score_generated_at": "2026-09-14T00:00:00Z",
+  "structural_score_basis": "\u26a0\ufe0f AUTHORED 2026-09-14 \u2014 this asset had a live dashboard page and NO axis-5 route. The 6.0 is carried from the 2026-08-18 assessment and is NOT re-derived here; this overlay gives it a transport and a checkable basis it has never had. \u2705 WHAT ARGUES UP: a mature Backed xStock \u2014 rebasing ERC-20, whitelist-gated mint/burn, a product-specific prospectus annex (Final Terms Nr. 134, ISIN CH1500008482) and NAMED custodians with LEIs (Maerki Baumann 529900FMZSRFHZA8OU51, InCore Bank 529900V0KW3BY148IT37). \u26a0\ufe0f WHAT HOLDS IT AT 6.0: a SINGLE ISSUER TRUST POINT. Backed admin holds mint/burn AND the multiplier-update authority, so balances and accrual both depend on one party's process. There is no continuous on-chain PoR \u2014 attestation is at the xStocks-FAMILY level, not per token \u2014 and custody is off-chain. \u26a0\ufe0f AND THE ISSUER MAY TERMINATE THE PRODUCT: the Final Terms grant an Issuer Call Option to 'terminate and redeem all but not part' of a Product, so a holder can be cashed out at the issuer's election. \u26a0\ufe0f NOT REMOVED BY THE WRAPPER: Strategy's underlying credit risk sits BENEATH this score and is priced on strc.md, not here.",
+  "code_facts": [
+   "Ethereum contract 0x1aad217b8f78dba5e6693460e8470f8b1a3977f3, 18 decimals, rebasing ERC-20.",
+   "owner() = 0x49754062e35f7591b93cc4f9915965be89643a65 \u2014 VERIFIED ON-CHAIN by riskAnalyst 2026-09-14 via eth_call (publicnode). \u26a0\ufe0f Three other endpoints failed first (llamarpc empty, ankr auth-gated, cloudflare internal error); the failures were the ENDPOINTS, not the contract.",
+   "minter() = 0x0a934bc9c64309c9654451f23d8331c2dad34c2a \u2014 VERIFIED ON-CHAIN 2026-09-14, same call. \u2705 owner() and minter() return DIFFERENT addresses, which is the discriminator: a contract answering every getter with one address would not be evidence of anything.",
+   "\u26a0\ufe0f These two were carried in the report TRUNCATED as '0x4975\u20263a65' and '0x0A93\u20264C2a'. A truncated address is uncheckable and head+tail is exactly what a forger preserves \u2014 full values recorded here.",
+   "rebasing multiplier() is ISSUER-WRITTEN, not formula-derived. balanceOf and totalSupply return multiplier-adjusted figures, so an on-chain COUNT is already scaled by an issuer decision. Measured 2026-09-13: 1.0413 (2026-05-27) -> 1.08089, +3.959pp over 109 days = 1.105 pp/month against a tracked ~0.96 \u2014 running AHEAD, monitored risk not materialised.",
+   "Primary mint/burn is whitelist-gated to KYC'd, accredited NON-US institutions. Retail and US persons have no primary path; redemption 3.0 is deliberately NOT routed as an axis score because a gate renders misleadingly as a gradient."
+  ],
+  "cross_axis": [
+   "\u26a0\ufe0f NOT priced here: Strategy's dividend-service capacity is the UNDERLYING's risk and belongs to strc.md. A holder is exposed to both entities; this axis prices only the wrapper's contract surface.",
+   "\u26a0\ufe0f The issuer ENTITY question is open and is priced on axis 6, not here: the issuer of record is Backed Assets (JE) Limited, JERSEY (Final Terms Nr. 134), while this desk's prose long said 'Backed Assets (JVB) AG, Swiss DLT-regulated'. Both custodians ARE Swiss, which is plausibly the origin of the error \u2014 a true fact about custody attached to the wrong entity."
+  ],
+  "coverage_note": "\u26a0\ufe0f\u26a0\ufe0f READER-FACING SCOPE LIMIT \u2014 THE AUTHORITY HALF OF THIS AXIS IS NOT WALKED. Axis 5 is co-produced: this overlay is riskAnalyst's score plus the code/audit half, and security_analyst's hand-walk supplies the authority half. THERE IS NO security_analyst WALK FOR strcx. So owner() and minter() are VERIFIED AS ADDRESSES and NOT established as authority: what those roles can do, whether either sits behind a multisig or timelock, and what quorum or delay applies are ALL UNREAD. \u26a0\ufe0f Do not read '6.0' as resting on a walked authority surface. Closing this needs a security_analyst walk of the Ethereum contract plus the four other chains.",
+  "routing_note": "\u26a0\ufe0f THIS FILE IS FOR STRCx ONLY and must not render under strc or mstr. Written 2026-09-14 because strcx was a REGISTERED slug with a live page and no axis-5 route. \u26a0\ufe0f 102 other reports carry a structural_score with no overlay and are NOT a backlog: an overlay's only consumers are backing-monitor's sync and riskAnalyst's own check_score_surfaces.py, which reads it FROM backing-monitor. No dashboard page means no consumer, so writing one would produce prose nothing reads. Registration is the trigger, not a list."
+ }
+}
