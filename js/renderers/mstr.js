@@ -1040,11 +1040,23 @@ var MSTRRenderer = {
             atmRow('MSTR ATM volume', atm.mstr_atm_count_usd, 'Common equity sales — dilutive when below mNAV parity') +
             atmRow('STRC ATM volume', atm.strc_atm_count_usd, 'Preferred issuance — adds to perpetual dividend obligation') +
             atmRow('Convertible buybacks', atm.buyback_count_usd, 'Liability management — reduces 2027–2032 maturity wall') +
-            '<tr>' +
-                '<td class="font-medium">BTC purchased</td>' +
-                '<td class="text-right font-mono">' + MSTRRenderer._fmtNum(atm.btc_purchased_count) + ' BTC</td>' +
-                '<td class="text-xs text-slate-500">Net new treasury accumulation (rolling 90d)</td>' +
-            '</tr>';
+            // ⚠️ THE LABEL SAID "purchased" AND THE NUMBER WAS NEGATIVE. This field is
+            // a NET over the window, so a monetization week makes it negative and the
+            // row read "BTC purchased  -1,793 BTC". The note said "net accumulation",
+            // which is technically true and does not rescue a row whose label asserts
+            // the opposite of its sign. Label follows the sign.
+            (function () {
+                var n = atm.btc_purchased_count;
+                var label = (n != null && n < 0) ? 'BTC sold (net)' :
+                            (n === 0) ? 'BTC purchased (net)' : 'BTC purchased';
+                var shown = (n != null && n < 0) ? Math.abs(n) : n;
+                return '<tr>' +
+                    '<td class="font-medium">' + label + '</td>' +
+                    '<td class="text-right font-mono">' + MSTRRenderer._fmtNum(shown) + ' BTC</td>' +
+                    '<td class="text-xs text-slate-500">Net change in treasury over the rolling 90d window' +
+                        ((n === 0) ? ' — flat, not unreported' : '') + '</td>' +
+                '</tr>';
+            })();
 
         // Right half — maturity wall: sum cash-likely (deep_otm) face.
         var cashLikelySum = wall.reduce(function (acc, t) {
@@ -1066,7 +1078,14 @@ var MSTRRenderer = {
                             '<tbody>' + atmRows + '</tbody>' +
                         '</table>' +
                     '</div>' +
-                    '<div class="text-xs text-slate-500 mt-2 italic">Source: ' + (atm.source || 'strategy_events.json aggregation') + '</div>' +
+                    // ⚠️ A ROLLING WINDOW IS ONLY AS CURRENT AS ITS LAST POLL, and this
+                    // panel named its source without naming its date. On 2026-09-14 the
+                    // EDGAR poll last ran at 10:50 UTC and Strategy filed later that
+                    // morning, so this 90d aggregation silently excluded the newest 8-K
+                    // while reading as live. strc.js already surfaces the poll date in
+                    // its event log; this panel aggregates the same stream and did not.
+                    '<div class="text-xs text-slate-500 mt-2 italic">Source: ' + (atm.source || 'strategy_events.json aggregation') +
+                        '<span id="mstr-atm-poll-stamp"></span></div>' +
                 '</div>' +
                 // RIGHT — Maturity wall
                 '<div>' +
@@ -1269,11 +1288,34 @@ var MSTRRenderer = {
             var hist = results[0];
             var events = results[1];
             var series = (hist && Array.isArray(hist.series)) ? hist.series : [];
+            MSTRRenderer._fillAtmPollStamp(events);
             MSTRRenderer._paintMnavChart(series);
             MSTRRenderer._paintPerShareNavChart(series, tradfi, mv, events);
             MSTRRenderer._paintRunwayChart(series);
             MSTRRenderer._paintRateTrajectoryChart(series);
         });
+    },
+
+    // Stamps the ATM cadence panel with the EDGAR poll behind it. Absent rather
+    // than guessed if the stream did not load — a window with no stated asof is
+    // better than one with an invented one.
+    _fillAtmPollStamp: function (events) {
+        var el = document.getElementById('mstr-atm-poll-stamp');
+        if (!el || !events) return;
+        var health = events.edgar_health || {};
+        var lastPoll = health.last_successful_fetch_utc || events.last_edgar_poll_utc;
+        if (!lastPoll) return;
+        var txt = String(lastPoll).replace('T', ' ').replace(/\+00:00$|Z$/, ' UTC');
+        var stale = '';
+        var t = Date.parse(lastPoll);
+        if (!isNaN(t)) {
+            var hrs = (Date.now() - t) / 3600000;
+            if (hrs >= 12) {
+                stale = ' <span class="text-amber-700">— ' + Math.round(hrs) + 'h since the last poll; ' +
+                        'filings made after it are not in this window</span>';
+            }
+        }
+        el.innerHTML = ' · EDGAR last polled <span class="font-mono">' + txt + '</span>' + stale;
     },
 
     _paintMnavChart: function (series) {
