@@ -538,11 +538,19 @@ var SaturnRenderer = {
             var scLabel = (scState === 'ok') ? 'Self-consistency ✓' : 'Self-consistency drift';
             var scExtra = (sc.delta_bps != null) ? sc.delta_bps.toFixed(3) + ' bps' : '';
 
+            // ⚠️ THE BUFFER PILL SHOWS A LEVEL AND NOT A MOVE. On 2026-09-14 it read
+            // "1.04% on-chain buffer" — the same quantity the Backing tile renders as
+            // "1.0% on-chain verifiable" — while the series had held ~1.50-1.54% for
+            // days and stepped to 1.02% in a SINGLE observation on 09-13. A number at
+            // the bottom of its own 30-day range, rendered bare, reads as steady state.
+            // Filled from the history the NAV chart already fetches, so it cannot
+            // disagree with the chart and cannot go stale.
             badgeRow =
                 '<div class="flex flex-wrap items-center gap-2 mt-3">' +
                     SaturnRenderer._statusPill(bufPctTxt, bufState) +
                     SaturnRenderer._statusPill(scLabel, scState, scExtra) +
-                '</div>';
+                '</div>' +
+                '<div id="saturn-buffer-context" class="text-xs text-slate-500 mt-2 leading-relaxed"></div>';
         }
 
         return '<div class="panel">' +
@@ -1237,6 +1245,42 @@ var SaturnRenderer = {
             });
     },
 
+    // Buffer-ratio context. States the range and the last step; makes no claim
+    // about cause. A step is a fact about the series — two adjacent observations
+    // differing by more than a tenth of their own level — not an interpretation.
+    _fillBufferContext: function(windowed) {
+        var el = document.getElementById('saturn-buffer-context');
+        if (!el) return;
+        var pts = (windowed || []).filter(function(e) { return e && e.buffer_ratio != null; });
+        if (pts.length < 5) return;
+        var vals = pts.map(function(e) { return e.buffer_ratio * 100; });
+        var sorted = vals.slice().sort(function(a, b) { return a - b; });
+        var cur = vals[vals.length - 1];
+        var lo = sorted[0], hi = sorted[sorted.length - 1], med = sorted[Math.floor(sorted.length / 2)];
+        var below = vals.filter(function(v) { return v <= cur; }).length;
+        var pct = below / vals.length * 100;
+
+        // Most recent step: scan back for the last adjacent pair differing >10% relative.
+        var stepTxt = '';
+        for (var i = vals.length - 1; i > 0; i--) {
+            var a = vals[i - 1], b = vals[i];
+            if (a > 0 && Math.abs(b - a) / a > 0.10) {
+                var ts = (pts[i].timestamp || '').slice(0, 10);
+                stepTxt = ' It held <span class="font-mono">' + a.toFixed(2) + '%</span> and moved to ' +
+                    '<span class="font-mono">' + b.toFixed(2) + '%</span> in a single observation on ' +
+                    '<span class="font-mono">' + ts + '</span> — a step, not a drift.';
+                break;
+            }
+        }
+        el.innerHTML =
+            'Over the ' + vals.length + ' observations plotted above the buffer ranged ' +
+            '<span class="font-mono">' + lo.toFixed(2) + '%–' + hi.toFixed(2) + '%</span> (median ' +
+            '<span class="font-mono">' + med.toFixed(2) + '%</span>); today sits at the ' +
+            '<strong>' + pct.toFixed(0) + 'th percentile</strong> of that range.' + stepTxt +
+            ' ⚠️ This is the same quantity the Backing tile shows as on-chain verifiable — when it ' +
+            'falls, a larger share of the reserve rests on the oracle-marked off-chain claim.';
+    },
+
     _drawSusdatNavChart: function(ctx, entries) {
         var cutoff = Date.now() - 30 * 24 * 3600 * 1000;
         var windowed = entries.filter(function(e) {
@@ -1257,6 +1301,8 @@ var SaturnRenderer = {
         // Decline stats for the methodology note, computed from the SAME windowed
         // array this chart plots — so the sentence and the line above it cannot
         // disagree, and neither can go stale the way a hardcoded count would.
+        SaturnRenderer._fillBufferContext(windowed);
+
         var statsEl = document.getElementById('saturn-nav-decline-stats');
         if (statsEl) {
             var drops = [];
