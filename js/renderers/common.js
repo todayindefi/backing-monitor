@@ -4206,7 +4206,15 @@ const CommonRenderer = {
             typeof bAuth.backing_score === 'number' &&
             bAuth.backing_score_applies_when === 'collateral_ratio_declared_underivable' &&
             bAuth.collateral_ratio_basis;
-        this._renderAxisHead('backing', 2, 'Backing', 'live reserves & collateral ratio',
+        // ⚠️ THE LABEL MOVES WITH THE VALUE (spec §3). "live reserves & collateral ratio"
+        // is wrong on an asset whose producer has DECLARED that no per-token ratio is
+        // derivable — it promises two things the section then cannot show. Keyed off the
+        // declaration, not off emptiness, so it says the right thing for a stated reason
+        // rather than whenever data happens to be missing.
+        this._renderAxisHead('backing', 2, 'Backing',
+            (bAuth.backing_score_applies_when === 'collateral_ratio_declared_underivable'
+                ? 'what backs it · no per-token ratio derivable'
+                : 'live reserves & collateral ratio'),
             (backingAuthored
                 ? '<span class="axis-rating r-warn" title="' +
                   this._escapeAttr(this._mdPlain(String(bAuth.backing_score_basis || ''))) +

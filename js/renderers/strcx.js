@@ -91,6 +91,7 @@ var STRCxRenderer = {
         // on an asset whose peg IS measured. app.js runs renderAxisSections() before
         // this, so overwriting axis-peg-body here is the last write and wins.
         STRCxRenderer._renderPegVsNav(wrapper);
+        STRCxRenderer._renderBacking(wrapper);
 
         var link = document.getElementById('header-companion-link');
         if (link) {
@@ -361,6 +362,108 @@ var STRCxRenderer = {
                 var slot = document.getElementById('strcx-peg-hist');
                 if (slot) slot.textContent = 'history unavailable';
             });
+    },
+
+    // ============================================================
+    // Axis 2 · What backs this token.
+    //
+    // ⚠️ THE CHIP CLAIMED MORE THAN THE SECTION DELIVERED. Axis 2 carried an
+    // "Authored 4/10" and riskAnalyst's basis paragraph, and then NOTHING — the three
+    // common backing panels (CR history, breakdown table, allocation pie) are all
+    // suppressed here, correctly, because this asset has no collateral ratio. Correct
+    // for STRC, which that suppression was written for; on STRCx it left a backing score
+    // with no backing content under it.
+    //
+    // Against spec §4.0 the shape was precise: the COVERAGE absence is declared (the
+    // producer's basis explains that Backed attests at the xStocks-family level, not per
+    // token), while the BREAKDOWN and COVERAGE-HISTORY absences were declared nowhere —
+    // so a reader could not tell missing from inapplicable from unbuilt.
+    //
+    // ⚠️ NOTHING HERE RE-OPENS THE 4.0. This panel says what the token is a claim on and
+    // why the usual furniture is absent; the score and its reasoning stay the producer's,
+    // rendered in the head above.
+    _renderBacking: function (wrapper) {
+        var slot = document.getElementById('backing-extra-panels');
+        if (!slot || !wrapper) return;
+        var fmtN = function (v) { return (typeof STRCRenderer !== 'undefined')
+            ? STRCRenderer._fmtNum(v, 0) : String(v); };
+        var fmtM = function (v) { return (typeof STRCRenderer !== 'undefined')
+            ? STRCRenderer._fmtMoneyShort(v) : ('$' + v); };
+
+        var supply = wrapper.total_supply_all_chains;
+        var supplyUsd = wrapper.total_supply_usd;
+        var mult = wrapper.multiplier;
+        var pc = wrapper.per_chain || {};
+        var eth = (pc.ethereum || {}).total_supply;
+        var holders = wrapper.top_holders_ethereum || [];
+        var held = holders.reduce(function (a, h) { return a + (h && h.balance ? h.balance : 0); }, 0);
+
+        var tile = function (label, value, sub) {
+            return '<div class="summary-card">' +
+                '<div class="card-label">' + label + '</div>' +
+                '<div class="card-value">' + value + '</div>' +
+                '<div class="text-xs text-slate-400 mt-1">' + sub + '</div>' +
+            '</div>';
+        };
+
+        // ⚠️ Concentration is a BACKING fact and was only visible on axis 1's venue note.
+        // Two addresses against the chain holding most of the supply.
+        var conc = '';
+        if (holders.length && eth) {
+            conc = holders.map(function (h) {
+                return '<tr>' +
+                    '<td class="font-medium">' + CommonRenderer._escapeAttr(String(h.label || '—')) + '</td>' +
+                    '<td class="text-right font-mono">' + fmtN(h.balance) + '</td>' +
+                    '<td class="text-right font-mono">' +
+                        (h.share_of_eth_supply != null
+                            ? (h.share_of_eth_supply * 100).toFixed(1) + '%' : '—') + '</td>' +
+                '</tr>';
+            }).join('');
+            conc =
+                '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-5 mb-2">' +
+                    'Holder concentration (Ethereum)</div>' +
+                '<div class="data-table-scroll"><table class="data-table">' +
+                    '<thead><tr><th>Holder</th><th class="text-right">STRCx</th>' +
+                    '<th class="text-right">% of ETH supply</th></tr></thead>' +
+                    '<tbody>' + conc + '</tbody></table></div>' +
+                '<div class="text-xs text-slate-500 mt-2 leading-relaxed">' +
+                    'These two hold ' + fmtN(held) + ' of Ethereum’s ' + fmtN(eth) + ' STRCx (' +
+                    (held / eth * 100).toFixed(1) + '%), on the chain carrying the largest share of ' +
+                    'supply. Neither is float: one is Apyx’s treasury backing apxUSD, the other ' +
+                    'Backed’s issuance inventory. That is why exit depth is scored on Solana — ' +
+                    'see axis 3.' +
+                '</div>';
+        }
+
+        slot.innerHTML =
+            '<div class="panel">' +
+                '<div class="panel-title">What backs this token ' +
+                    '<span class="text-xs font-normal text-slate-500">— a claim on real STRC shares</span></div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
+                    tile('Wrapped supply', fmtN(supply) + ' STRCx',
+                         '≈ ' + fmtM(supplyUsd) + ' at the current mark') +
+                    tile('One token is', '1 STRC share',
+                         'scaled by multiplier ' + (mult != null ? mult.toFixed(6) : '—')) +
+                    tile('Held by', 'Backed Finance',
+                         'off-chain qualified custodian') +
+                '</div>' +
+                '<div class="text-xs text-slate-500 leading-relaxed mt-4">' +
+                    '<strong>Single-asset backing, so there is no composition to chart.</strong> ' +
+                    'Every STRCx is a claim on one STRC share; a breakdown table or allocation ' +
+                    'pie here would be a single row and a single slice. The usual axis-2 ' +
+                    'furniture is absent because it would say nothing, not because it is missing.' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 leading-relaxed mt-3">' +
+                    '<strong>And no coverage history, for the same reason there is no coverage ' +
+                    'figure.</strong> The basis above sets out why a per-token ratio is not ' +
+                    'derivable — Backed attests at the xStocks-family level rather than per ' +
+                    'token. With no ratio there is nothing to track over time, so the coverage ' +
+                    'chart is inapplicable here rather than absent. ' +
+                    '<span class="italic">What would change that is per-token proof of reserve, ' +
+                    'which Backed does not publish.</span>' +
+                '</div>' +
+                conc +
+            '</div>';
     },
 
     // \u26a0\ufe0f The STRC panels are NOT repeated here. Everything about the preferred
