@@ -84,6 +84,21 @@ failing.
 Paraphrasing produced *"against $1 nominal par"* for a convention that is actually all-in against
 notional — wrong, and wrong in a way nobody could see.
 
+**R2b — ⚠️ …but never let a basis string be the only place a number appears.** Added 2026-09-14,
+hours after R2, because riskAnalyst found the hole in it. `apxusd` `surplus_deficit_basis` carries a
+frozen worked example — *"recovers 99.22%, not the published 98.88%"* — against live values of
+100.66% and 101.05%. **We render it verbatim, so both stale figures are visible text on the page,
+with our formatting lending them authority.**
+
+⚠️ **Verbatim rendering does not merely fail to catch a stale string; it faithfully propagates
+it.** And a reader checking the basis against the payload finds neither number, which reads as the
+basis having drifted rather than the example being old — **worse than no example at all.**
+
+**So: pair any basis string with the live value it describes, so a frozen example is visibly
+historical.** The RULE in a basis string is the durable part; a worked example inside it is
+decoration that ages. Upstream fix is to derive the figures or drop them; the consumer-side
+guard is to never render the string alone.
+
 **R3 — Compute context from the same array the chart plots.**
 Then the prose and the picture cannot disagree, and no figure can go stale. Used for the sUSDat NAV
 declines, the buffer range, and the redemption classifier.
