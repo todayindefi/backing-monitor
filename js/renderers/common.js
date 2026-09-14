@@ -4945,14 +4945,30 @@ const CommonRenderer = {
                 label: isPct ? 'Deviation' : (isSelfNav ? 'NAV' : 'Market price'),
                 data: series,
                 borderColor: '#6366f1',
-                backgroundColor: 'rgba(99, 102, 241, 0.08)',
-                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2
+                backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                // ⚠️ THINNER THAN THE REFERENCE, DELIBERATELY. On an hourly series this line
+                // is dense and noisy; at equal weight it crosses the reference constantly and
+                // buries it. The market series is the subject but the reference is the
+                // BASELINE a reader measures against, so the baseline wins the visual weight.
+                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 1.4, order: 2
             }].concat(hasTheo ? [{
+                // ⚠️ THE REFERENCE LINE IS THE POINT OF THIS CHART AND IT WAS THE FAINTEST
+                // THING ON IT — 1.5px of slate-400 dashes under a filled indigo area, on a
+                // pair of series that sit within a few tenths of a percent of each other.
+                // The gap between these two lines IS the premium, so a reader who cannot see
+                // the reference cannot read the chart at all.
+                //
+                // ⚠️ Deliberately still NEUTRAL, not a new hue. This dashboard spends red,
+                // amber and green on risk states; a coloured reference line would read as a
+                // verdict on the gap rather than as the baseline it is. Heavier, darker and a
+                // longer dash instead — slate-500 at 2.5px reads on both themes, where
+                // slate-600 would sink into the dark background.
                 label: 'NAV / theoretical',
                 data: theoSeries,
-                borderColor: '#94a3b8',
-                borderDash: [4, 4],
-                fill: false, tension: 0.3, pointRadius: 0, borderWidth: 1.5
+                borderColor: '#475569',
+                borderDash: [8, 4],
+                // order below the market series so it is drawn LAST and sits on top
+                fill: false, tension: 0.3, pointRadius: 0, borderWidth: 3, order: 1
             }] : []) },
             options: {
                 responsive: true, maintainAspectRatio: false,

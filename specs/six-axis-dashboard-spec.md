@@ -249,6 +249,97 @@ for, and it remains the higher-yield check.
 
 ---
 
+## 4.1 ⚠️ AXIS 1 STANDARD LAYOUT — tiles, then a price chart
+
+User decision 2026-09-14, after the STRCx and STRC builds. **Every axis-1 section renders the same
+two things in the same order**, so a reader moving between assets is reading the same instrument.
+
+```
+┌ row of key tiles ───────────────────────────────────────────────────────────┐
+│  Market price   │  Reference      │  Premium/discount │  Cross-source check  │
+│  $98.19         │  $98.47         │  −27.9 bps        │  −79.5 bps           │
+│  source · basis │  what it IS     │  + 7-day range    │  (omit if only one   │
+│                 │                 │                   │   source exists)     │
+└─────────────────────────────────────────────────────────────────────────────┘
+  short prose: what the reference is, and any caveat that changes how to read it
+┌ chart ──────────────────────────────────────────────────────────────────────┐
+│  30-DAY window · PRICE on the y-axis · two lines:                           │
+│    market price  (thin, coloured, filled)                                   │
+│    reference     (heavy dashed, neutral, drawn on top)                      │
+│  caption: what is plotted · window vs total points · source composition      │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+**PRICE, NOT PREMIUM, ON THE AXIS.** A premium/discount series asks a reader to hold a ratio in
+their head; two price lines show the same thing directly — ⚠️ **the gap between the lines IS the
+premium.** The tiles carry the ratio for anyone who wants the number.
+
+**THIRTY DAYS.** Measured 2026-09-14 across every rendered peg chart: the median span was already
+**29 days** and 11 of 19 assets sat exactly there, because the history files retain ~30 days. The
+window standardises what retention already imposed. `CommonRenderer.PEG_CHART_WINDOW_DAYS = 30`.
+
+⚠️ **CLIPPING MUST BE STATED.** Eight assets retain longer (crvUSD 535d, usds 347d, yzUSD 173d,
+syzUSD/usde/susde ~90d, susds 67d, strcx 108d). `_renderPegChart` returns
+`{shown, total, windowDays, clipped, firstShown, firstAvailable}` and **a caller that does not say
+so is the defect** — a chart whose window is invisible reads as "this is all there is".
+
+⚠️ **THE REFERENCE LINE OUTWEIGHS THE MARKET LINE.** Market 1.4px coloured; reference 3px dashed
+`#475569`, drawn on top. On an hourly series the market line is dense and noisy, and at equal weight
+it crosses the reference constantly and buries it — the baseline a reader measures against has to
+survive the thing being measured. ⚠️ **The reference stays NEUTRAL:** this dashboard spends red,
+amber and green on risk states, so a coloured baseline reads as a verdict on the gap.
+
+### Data contract — what a producer emits for this to work
+
+**The standard path** (apyUSD, syrupUSDC/T, hastra-prime), snapshot `peg` block:
+
+```
+peg.market_price            the traded price
+peg.nav                     the reference — the thing it should equal
+peg.premium_discount_pct    signed, percent
+peg.source                  who quoted the market price
+peg.history_ref             file holding the series (or omit to use <slug>_backing_history.json)
+peg.history_field           which field in that file is the market price
+```
+
+per history entry, in `entries[]`:
+
+```
+timestamp
+peg_market_price            plotted as "Market price"
+peg_theoretical_price       plotted as "NAV / theoretical" — REQUIRED for the reference line
+peg_premium_discount_pct    optional; the tiles can use it
+```
+
+⚠️ **`peg_theoretical_price` MUST VARY.** The reference line is drawn only when it is present on
+≥90% of points AND takes more than one distinct value — a constant would be a par line, and a
+flat line at today's NAV drawn across history reads as a discount that never happened (the sUSDe
+case in §4). For a fixed par, pass `parLevel` instead and the chart draws a labelled par line.
+
+**The shared-feed path** (STRCx, and any asset reading another's feed via `data_source`):
+⚠️ **do NOT add a top-level `peg` block to a feed that several views read.** `hasAxisBlocks()` is
+literally `!!data.peg`, so it unhides the six-axis frame on every view of that file, and one block
+cannot carry two assets' references — STRC's is a $100 par, STRCx's is the STRC share price. Emit
+the pair per history row instead and render a bespoke panel:
+
+```
+<prefix>_market_price_usd        the mark
+<prefix>_underlying_<x>_usd      the reference USED AT THAT INSTANT, stored beside it
+<prefix>_price_source            which venue
+<prefix>_reconstructed           true where the point is a stand-in, not an observation
+```
+
+⚠️ **STORE THE PAIR, NOT JUST THE MARK.** STRCx's feed carries two STRC references ~18 bps apart;
+a stored mark with no stored reference leaves a future reader to pick one, and the premium's SIGN
+flips depending on which. Every row's ratio must be self-contained.
+
+⚠️ **AND LABEL RECONSTRUCTIONS.** Where history is backfilled from a different source than the live
+path, the point carries a flag and the panel says so — PegTracker's own utility puts it exactly
+right: *"reconstructs, but does not pretend to recover"*. A reconstructed series rendered as
+observation is the worst outcome available on this axis.
+
+---
+
 ## Axis 1 — Peg / Stability
 
 **REQUIRED** · the deviation figure, signed · what it is measured AGAINST (par or NAV — say which)
