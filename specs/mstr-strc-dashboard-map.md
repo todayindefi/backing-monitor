@@ -74,7 +74,29 @@ downstream_exposure         Apyx + Saturn STRC holdings — feeds the shared-ups
 
 # 2. Panels, and what each reads
 
-`mstr.js` render functions, in page order:
+## `?asset=strc` — credit-holder lens (`strc.js`), in page order
+
+```
+_renderHeadlineBanner            tradfi              STRC price vs par, rate, status
+_renderStrcInstrument            tradfi              rate mechanics + secondary chart
+_renderStrcDividendObligation    data                dividend obligation, STRC-only runway, rate ceiling
+STRC_FRAMEWORK_CARD              dcf                 ⚠️ shared with MSTR — see §4
+_renderStrcxHandoffCard          wrapper_strcx       handoff to ?asset=strcx, not the wrapper's own view
+_renderDownstreamExposure        downstream_exposure Apyx + Saturn STRC holdings
+_renderDependencyStrategyFunding tradfi, dcf         mNAV + issuer funding regime
+Strategy Event Log               strategy_events     ⚠️ shared with MSTR — see §4
+_renderFreshness                 data                feed timestamp + 8-K age
+```
+
+⚠️ **`_renderPegVsPar` and `_renderCommonBtcCoverageLine` exist in `strc.js` but are NOT in the
+page assembly** — do not assume a function in this file is rendered. Check the `html +=` chain in
+`render()`.
+
+⚠️ **Issuer-side analysis deliberately does NOT live here** — capital structure, the full cash
+waterfall and per-share BTC NAV are the MSTR lens. The two pages are complements, not duplicates,
+and a figure appearing on only one is usually intentional.
+
+## `?asset=mstr` — equity-holder lens (`mstr.js`), in page order
 
 ```
 _renderHeadlineBanner          tradfi, mv          mNAV, per-share NAV basic/diluted, share count
@@ -158,6 +180,31 @@ automatic check would have.
 ⚠️ **And the backing analyzer re-running does not help** — it re-reads `strategy_events.json`. On
 2026-09-14 `strc_backing.json` re-ran at 13:51 and still carried the 09-08 DCS figure because the
 poll behind it had not moved. **Watch the poll, not the backing run.**
+
+---
+
+# 5b. ⚠️ Status as of 2026-09-14 22:xx — NOT current with the latest 8-K
+
+```
+new 8-K            0001193125-26-389858   period 09-08 -> 09-13
+EDGAR poll         2026-09-14T10:50:44Z   has not advanced; filing NOT ingested
+newest in feed     0001193125-26-384402
+
+DCS remaining      shows $1.19B (09-08)   actual $1.05B (09-13)   ⚠️ $140M stale
+USD reserve        shows $5.10B (09-07)   flat again -> RIGHT BY VALUE, stale by date
+share_count        as of 2026-08-30
+```
+
+⚠️ **The $140M gap is the 1,420,467-share / $139.3M STRC repurchase in that filing.** Both lenses
+show it, because both read the same block.
+
+✅ **Every one of those figures now renders its own date**, which is the only thing this repo can
+do about it — the fix for the staleness itself is a PegTracker poll, not a render change. Before
+2026-09-14 all three rendered bare.
+
+⚠️ **The reserve is the dangerous one, not the DCS figure.** It is correct this week only because
+the reserve was flat, so a reader has no way to tell a live figure from a frozen one — which is
+why it now carries `(2026-09-07)` in both places it appears.
 
 ---
 
