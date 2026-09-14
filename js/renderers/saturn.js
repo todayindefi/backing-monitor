@@ -1261,16 +1261,58 @@ var SaturnRenderer = {
         var pct = below / vals.length * 100;
 
         // Most recent step: scan back for the last adjacent pair differing >10% relative.
-        var stepTxt = '';
+        // ⚠️ AND CLASSIFY IT FROM THE DATA RATHER THAN ASSERTING IT. A buffer drop with
+        // share_supply falling in the same observation and NAV/share NOT falling is a
+        // REDEMPTION paid out of the buffer; a drop with shares unchanged is a mark or
+        // transfer and must not be called a redemption. The renderer checks its own
+        // claim against the series instead of inheriting one.
+        var stepTxt = '', capTxt = '';
         for (var i = vals.length - 1; i > 0; i--) {
             var a = vals[i - 1], b = vals[i];
-            if (a > 0 && Math.abs(b - a) / a > 0.10) {
-                var ts = (pts[i].timestamp || '').slice(0, 10);
-                stepTxt = ' It held <span class="font-mono">' + a.toFixed(2) + '%</span> and moved to ' +
-                    '<span class="font-mono">' + b.toFixed(2) + '%</span> in a single observation on ' +
-                    '<span class="font-mono">' + ts + '</span> — a step, not a drift.';
-                break;
+            if (!(a > 0 && Math.abs(b - a) / a > 0.10)) continue;
+            var prev = pts[i - 1], now = pts[i];
+            var ts = (now.timestamp || '').slice(0, 10);
+            var dBuf = (prev.onchain_buffer_usd != null && now.onchain_buffer_usd != null)
+                ? prev.onchain_buffer_usd - now.onchain_buffer_usd : null;
+            var dSh = (prev.share_supply != null && now.share_supply != null)
+                ? prev.share_supply - now.share_supply : null;
+            var navHeld = (prev.nav_per_share != null && now.nav_per_share != null)
+                ? now.nav_per_share >= prev.nav_per_share : false;
+            var isRedemption = (dBuf > 0 && dSh > 0 && navHeld);
+
+            stepTxt = ' It held <span class="font-mono">' + a.toFixed(2) + '%</span> and moved to ' +
+                '<span class="font-mono">' + b.toFixed(2) + '%</span> in a single observation on ' +
+                '<span class="font-mono">' + ts + '</span> — a step, not a drift.';
+
+            if (isRedemption && prev.share_supply > 0) {
+                stepTxt += ' <strong>Shares fell ' +
+                    CommonRenderer.formatPercent(dSh / prev.share_supply * 100, 2) +
+                    ' in the same hour while NAV/share did not — a redemption paid out of the buffer</strong>, ' +
+                    'not a mark change.';
+
+                // Exit-capacity arithmetic, from the post-step recovery.
+                var curBuf = pts[pts.length - 1].onchain_buffer_usd;
+                var t0 = Date.parse(now.timestamp), t1 = Date.parse(pts[pts.length - 1].timestamp);
+                var hrs = (t1 - t0) / 3600000;
+                var gained = curBuf - now.onchain_buffer_usd;
+                var perDay = (hrs > 1 && gained > 0) ? gained / hrs * 24 : null;
+                capTxt =
+                    '<div class="mt-2">⚠️ <strong>Read this as exit capacity, not solvency.</strong> ' +
+                    'Backing is intact and NAV is above par; what the buffer measures is the pocket a ' +
+                    'redeemer is paid from. At <span class="font-mono">' +
+                    CommonRenderer.formatCurrency(curBuf) + '</span> it is ' +
+                    '<strong>' + (curBuf / dBuf).toFixed(1) + '×</strong> the one redemption observed above (' +
+                    CommonRenderer.formatCurrency(dBuf) + ')' +
+                    (perDay
+                        ? ', and it has refilled at about <span class="font-mono">' +
+                          CommonRenderer.formatCurrency(perDay) + '/day</span> since — roughly <strong>' +
+                          Math.round(dBuf / perDay) + ' days</strong> to replace that single exit.'
+                        : '.') +
+                    ' ⚠️ One observation is not a distribution: this says how deep the pocket is ' +
+                    'against the only withdrawal we have measured, not how large the next one will be.' +
+                    '</div>';
             }
+            break;
         }
         el.innerHTML =
             'Over the ' + vals.length + ' observations plotted above the buffer ranged ' +
@@ -1278,7 +1320,7 @@ var SaturnRenderer = {
             '<span class="font-mono">' + med.toFixed(2) + '%</span>); today sits at the ' +
             '<strong>' + pct.toFixed(0) + 'th percentile</strong> of that range.' + stepTxt +
             ' ⚠️ This is the same quantity the Backing tile shows as on-chain verifiable — when it ' +
-            'falls, a larger share of the reserve rests on the oracle-marked off-chain claim.';
+            'falls, a larger share of the reserve rests on the oracle-marked off-chain claim.' + capTxt;
     },
 
     _drawSusdatNavChart: function(ctx, entries) {
