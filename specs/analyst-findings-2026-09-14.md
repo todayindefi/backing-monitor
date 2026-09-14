@@ -7,12 +7,12 @@ status: WORKING BACKLOG. Items 12-15 FIXED 2026-09-14; items 1-11 UNVERIFIED.
 
 # ▶ START HERE — resume context
 
-**Items 12, 13, 14, 15, 5, 8 and 7 are BUILT, rendered and verified.** Triage bands S1–S6 are
-closed. ⚠️ **Five of the seven claims needed correcting before they were safe to act on, and item
+**Items 12, 13, 14, 15, 5, 8, 7 and 9 are BUILT, rendered and verified.** Triage bands S1–S7 are
+closed. ⚠️ **Five of the eight claims needed correcting before they were safe to act on, and item
 5's stated cause was REFUTED outright — read each item's Check, not just its Claim.**
 
-**Immediate next action: item 9 (Wolf & Co table self-contradiction), triage S7.** Items 1–4, 6,
-10 and 11 are still `unverified` — nothing has been checked on any of them.
+**Immediate next action: items 1, 2, 3 (liquidity venues missing / not wired), triage S8.** Items
+4, 6, 10 and 11 are also still `unverified` — nothing has been checked on any of them.
 
 ⚠️ **Item 5 is the cautionary one.** The analyst read a published `fair_value_basis` field and
 reported exactly what it said; the field is hardcoded and contradicts the numbers beside it. Two
@@ -85,8 +85,8 @@ S3  syrupUSDC free liquidity: 3 values           item 15        ✅ FIXED 2026-0
 S4  apxUSD slippage measured against $1.00       item 5         ⚠️ CAUSE REFUTED · fixed 2026-09-14
 S5  sUSDat NAV monotonicity claim is wrong       item 8         ✅ FIXED 2026-09-14
 S6  sUSDat backing tile hides its own caveat     item 7         ✅ FIXED 2026-09-14
-S7  Wolf table self-contradiction                item 9         ← NEXT
-S8  liquidity venues missing / not wired         items 1, 2, 3
+S7  Wolf table self-contradiction                item 9         ✅ FIXED 2026-09-14
+S8  liquidity venues missing / not wired         items 1, 2, 3  ← NEXT
 S9  apyUSD <-> sUSDat link absent from deps      item 4
 S10 apxUSD reserve denominator (POL in/out)      item 6
 S11 STRCx supply basis + unlocatable supply      items 10, 11
@@ -325,9 +325,70 @@ sentence and the line above it cannot disagree, and no count can go stale:
 **March through July 2026**, and our own **Issuer axis text says "published through July 2026."**
 Real gap is **~45 days**.
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED, and it is the worst kind of wrong number: an accusation about a named
+audit firm and issuer, derived from our own stale file.**
+
+`data/apyx_wolf_attestations.json` holds **two reports — March and April 2026.** The renderer
+computes the pill from the newest row's `signed_date` (2026-05-18), which on 2026-09-14 is
+**119 days**, and prints **"Stale — 119d since April 2026."** The arithmetic is right; the premise
+is not.
+
+⚠️ **The file is MANUALLY MAINTAINED IN THIS REPO** — not synced from PegTracker, absent from the
+sync allowlist, committed exactly once (`0a9851c3a`) from a riskAnalyst handoff dated 2026-05-20
+covering March + April. **It was never extended.**
+
+Three in-repo places say otherwise, all sourced to primary documents:
+
+```
+apxusd_issuer.json / apyusd_issuer.json structure[]
+  "March, April, May, June and July 2026 opinions all published; July signed
+   2026-08-12, an ~12-day lag, so the cadence is current and August is not yet late."
+apxusd_issuer.json summary_source
+  "the Wolf & Company July 2026 opinion and its attached Monthly Securities Balance
+   Attestation ... [verified 2026-09-10]"
+apyx.js:990  references "both 7/20 and 7/31 in Apyx's July 2026 Wolf attestation"
+```
+
+⚠️ **The two files do not actually contradict each other — the RENDERER invented the conflict.**
+The attestation JSON never claimed to be complete; it is a list. The renderer inferred *"latest
+published"* from *"latest enumerated"* and printed the difference as a finding about someone
+else's conduct. **A second inferred claim rode along:** *"The largest reserve component (Cash &
+Equivalents) has no CPA-firm coverage for any date after 2026-03-31"* — an assertion about
+examinations we had not looked at.
+
+⚠️ **This is the [[feedback-do-not-invent-facts-in-user-facing-copy]] rule's exact subject matter**
+— attestation cadences and audit firms — reached this time not by writing an unsourced sentence but
+by letting a stale file speak as a current one.
+
+**Built.** ✅ The file now declares its own scope, and the renderer respects it:
+
+```json
+"enumeration": {
+  "complete_through": "2026-04", "known_published_through": "2026-07",
+  "is_complete_record": false, "known_published_source": "<citation to the issuer axis>",
+  "note": "THIS FILE IS A PARTIAL RECORD AND IS MANUALLY MAINTAINED ... Do not read the
+           newest row as the issuer's latest examination ..." }
+```
+
+Pill: `Stale — 119d since April 2026` → **`Partial record — published through July 2026`**.
+The scope-regression warning now stops at what is established. And a **visible** notice — not a
+tooltip, because these dashboards are embedded elsewhere:
+
+> *"ⓘ **Partial record.** This table lists the opinions enumerated in the dashboard's own static
+> file (complete through April 2026), which is maintained by hand and is not a feed. **Wolf &
+> Company opinions are published through July 2026** and the later ones are not listed here. The
+> absence of a row is a gap in this file — it is not evidence that an examination was missed."*
+
+⚠️ **Deliberately NOT done: I did not add May/June/July rows.** I do not hold those PDFs, and
+inventing balances, signed dates or scope pills for an audit firm's opinions is precisely what the
+house rule forbids. A real lapse still pages — `is_complete_record: true` restores the staleness
+verdict.
+
+**Plan.** Asked riskAnalyst (live, they hold the PDFs) for the three missing periods. When they
+land: append them and move `complete_through`.
+
+**Status.** confirmed · **FIXED** (the false verdict removed; the enumeration gap stays declared
+until riskAnalyst supplies the reports)
 
 ## 10 · STRCx — supply basis differs from CoinGecko
 

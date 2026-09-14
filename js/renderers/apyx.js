@@ -1170,6 +1170,17 @@ var ApyxRenderer = {
             });
     },
 
+    // "2026-07" -> "July 2026". Returns the input unchanged if it is not a
+    // YYYY-MM, so a hand-edited value never renders as "undefined NaN".
+    _periodLabel: function(ym) {
+        var m = /^(\d{4})-(\d{2})$/.exec(String(ym || ''));
+        if (!m) return String(ym || '');
+        var names = ['January','February','March','April','May','June',
+                     'July','August','September','October','November','December'];
+        var idx = parseInt(m[2], 10) - 1;
+        return (names[idx] ? names[idx] + ' ' + m[1] : String(ym));
+    },
+
     _renderWolfSectionHtml: function(wolf) {
         // Phase-1 fallback when the static JSON is missing — link tile only.
         if (!wolf) {
@@ -1201,11 +1212,36 @@ var ApyxRenderer = {
                 (wolf.issuer_entity ? ' · Issuer entity: <span class="font-medium">' + wolf.issuer_entity + '</span>' : '') +
             '</div>';
 
-        // Latest-report freshness pill — CRIT if no report in 45+ days.
+        // ⚠️ THIS PILL ACCUSED AN AUDIT FIRM OF A CADENCE IT DID NOT MISS.
+        // It read "Stale — 119d since April 2026", computed correctly from the
+        // newest row in this file. But the file is MANUALLY MAINTAINED, was
+        // seeded 2026-05-20 from a riskAnalyst handoff covering March + April,
+        // and was never extended — while our own issuer axis records the May,
+        // June and July 2026 opinions as published, the July one signed
+        // 2026-08-12 on a ~12-day lag, with the PDF read directly on 2026-09-10.
+        //
+        // ⚠️ THE ENUMERATION NEVER CLAIMED TO BE COMPLETE; the renderer inferred
+        // "latest published" from "latest enumerated" and printed the difference
+        // as a finding about someone else's conduct. On a panel naming a firm and
+        // an issuer, that is the costliest direction to be wrong in.
+        // `enumeration` now declares the file's own scope, so a real lapse still
+        // pages and a stale FILE does not masquerade as one.
+        var enumInfo = wolf.enumeration || {};
+        var recordIncomplete = enumInfo.is_complete_record === false ||
+            (enumInfo.known_published_through && enumInfo.complete_through &&
+             enumInfo.known_published_through > enumInfo.complete_through);
+
         var latest = reports[0] || null;
         var freshState = 'unknown';
         var freshLabel = 'No reports';
-        if (latest && latest.signed_date) {
+        if (recordIncomplete) {
+            // Not a verdict — a statement about what is listed below.
+            freshState = 'unknown';
+            freshLabel = 'Partial record' +
+                (enumInfo.known_published_through
+                    ? ' — published through ' + ApyxRenderer._periodLabel(enumInfo.known_published_through)
+                    : '');
+        } else if (latest && latest.signed_date) {
             var ageDays = (Date.now() - new Date(latest.signed_date).getTime()) / 86400000;
             if (ageDays <= 35)      { freshState = 'ok';       freshLabel = 'Latest: ' + latest.period; }
             else if (ageDays <= 45) { freshState = 'warn';     freshLabel = 'Latest: ' + latest.period + ' (' + Math.round(ageDays) + 'd ago)'; }
@@ -1298,9 +1334,14 @@ var ApyxRenderer = {
                     '<strong>⚠ Scope regression:</strong> ' +
                     latest.period + ' narrowed to securities only — cash, stablecoin, and dividends-in-motion ' +
                     '(covered in ' + reports[1].period + ') all dropped out. ' +
-                    'The largest reserve component (Cash &amp; Equivalents) has no CPA-firm coverage for any date after ' +
-                    snapshotDate(reports[1]) + '. ' +
-                    'Watch the next report for scope re-inclusion.' +
+                    (recordIncomplete
+                        ? 'Whether later examinations restored that scope is NOT established here — ' +
+                          'the opinions after ' + latest.period + ' are not enumerated in this file, ' +
+                          'so no claim is made about coverage of the largest reserve component ' +
+                          '(Cash &amp; Equivalents) beyond ' + snapshotDate(reports[1]) + '.'
+                        : 'The largest reserve component (Cash &amp; Equivalents) has no CPA-firm coverage for any date after ' +
+                          snapshotDate(reports[1]) + '. ' +
+                          'Watch the next report for scope re-inclusion.') +
                 '</div>';
         }
 
@@ -1320,9 +1361,35 @@ var ApyxRenderer = {
                 '</div>' +
             '</div>';
 
+        // ⚠️ The notice is VISIBLE TEXT, not a tooltip. A reader who takes the
+        // newest row as "the latest examination" is reading the table the way it
+        // invites, so the correction has to sit where the table is read — and
+        // these dashboards are embedded elsewhere, where hover does not exist.
+        var partialNotice = '';
+        if (recordIncomplete) {
+            var through = enumInfo.known_published_through
+                ? ApyxRenderer._periodLabel(enumInfo.known_published_through) : null;
+            partialNotice =
+                '<div class="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">' +
+                    'ⓘ <strong>Partial record.</strong> This table lists the opinions enumerated in ' +
+                    'the dashboard\'s own static file' +
+                    (enumInfo.complete_through
+                        ? ' (complete through ' + ApyxRenderer._periodLabel(enumInfo.complete_through) + ')'
+                        : '') +
+                    ', which is maintained by hand and is not a feed. ' +
+                    (through
+                        ? '<strong>Wolf &amp; Company opinions are published through ' + through +
+                          '</strong> and the later ones are not listed here. '
+                        : '') +
+                    'The absence of a row is a gap in this file — it is not evidence that an ' +
+                    'examination was missed.' +
+                '</div>';
+        }
+
         return headerRow +
             auditorLine +
             tableBlock +
+            partialNotice +
             breakoutBlock +
             scopeWarning;
     },
