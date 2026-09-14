@@ -78,15 +78,31 @@ var STRCxRenderer = {
         // `total_2pct_depth` (and band_score), never `total_tvl`, so the head stays
         // on riskAnalyst's authored 2.5/10 rather than inventing a measured band —
         // the trap this file's collateral_ratio comment above was written about.
-        if (!data.liquidity && wrapper.jupiter_liquidity_usd != null) {
-            data.liquidity = {
-                total_tvl: wrapper.jupiter_liquidity_usd,
-                pools_note: 'Pool TVL is Jupiter\'s reported pool liquidity for the Solana float ' +
+        // ⚠️ THE FIRST VERSION OF THIS GUARD READ `if (!data.liquidity)` AND NEVER
+        // FIRED. mergeAxisOverlays runs BEFORE preRender (app.js:351) and has
+        // already built data.liquidity from strcx_axis_basis.json, so the object
+        // exists by the time we get here — it just has no measured fields in it.
+        // Verified by rendering, after the standalone test passed: fetching the
+        // raw JSON and calling preRender on it skips the merge, so the guard fired
+        // there and not on the page. A test that bypasses the pipeline can only
+        // tell you about the pipeline it bypassed.
+        //
+        // FILL A GAP, NEVER REPLACE: the overlay owns liquidity_score and its
+        // basis, and clobbering the object would drop riskAnalyst's authored score
+        // — the per-axis overlay contract is merge-within-a-shared-vocabulary, not
+        // last-writer-wins. Only set what is absent.
+        if (wrapper.jupiter_liquidity_usd != null) {
+            if (!data.liquidity) data.liquidity = {};
+            if (data.liquidity.total_tvl == null) {
+                data.liquidity.total_tvl = wrapper.jupiter_liquidity_usd;
+            }
+            if (!data.liquidity.pools_note) {
+                data.liquidity.pools_note = 'Pool TVL is Jupiter\'s reported pool liquidity for the Solana float ' +
                     '(price API `liquidity`), the only venue measurement published for this wrapper. ' +
                     '2% depth, 24h volume and an exit ladder are not measured for STRCx — those ' +
                     'fields are absent, not zero, and the axis score beside them is authored rather ' +
-                    'than derived.'
-            };
+                    'than derived.';
+            }
         }
     },
 

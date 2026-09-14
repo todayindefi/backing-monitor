@@ -2625,12 +2625,53 @@ var ApyxRenderer = {
             var crossPools = pools.filter(function(p) {
                 return p.pair && p.pair.indexOf('apxUSD') >= 0 && p.pair.indexOf('USDC') < 0;
             });
+            // ⚠️ THE LADDER ON THIS PAGE CONTRADICTS THIS SECTION'S SUBTOTAL, and
+            // until the exit-mark ladder started rendering (it was being reported
+            // as absent — see common.js _unwrapLadderQuotes) nothing on the page
+            // exposed that. Enumerated apxUSD/USDC depth is ~$5.7K, while the
+            // KyberSwap ladder fills $100K at under 1 bp. Both are measurements;
+            // only one can be the capacity of the retail exit path.
+            //
+            // The router is the harder evidence: it QUOTED the fill. So the honest
+            // reading is that the pool list is incomplete — it enumerates Curve and
+            // PancakeSwap and the route is finding depth elsewhere (the analyst
+            // reports a Uniswap V4 apxUSD/USDC pool carrying most of the volume,
+            // which we cannot confirm in-repo and so do not name here).
+            //
+            // Computed from the two rendered figures, never hardcoded, and shown
+            // only when the gap is real — so it disappears the moment the
+            // enumeration catches up rather than needing an edit.
+            var ladderQuotes = (liq.quotes && (liq.quotes['apxUSD_to_USDC'] || liq.quotes)) || {};
+            var maxFilled = 0, maxFilledBps = null;
+            Object.keys(ladderQuotes).forEach(function(k) {
+                var sz = Number(k); var q = ladderQuotes[k];
+                if (isNaN(sz) || !q || q.error) return;
+                if (sz > maxFilled) {
+                    maxFilled = sz;
+                    maxFilledBps = (q.slippage_pct != null) ? q.slippage_pct * 100 : q.slippage_bps;
+                }
+            });
+            var primaryDepth = primaryPools.reduce(function(a, p) { return a + (p.depth_usd || 0); }, 0);
+            var enumGap = (maxFilled > 0 && primaryDepth > 0 && maxFilled > primaryDepth * 2)
+                ? '<div class="risk-flag risk-info mt-2">' +
+                      'ⓘ <strong>This subtotal and the exit ladder on this page disagree.</strong> ' +
+                      'The enumerated apxUSD→USDC venues total ' + CommonRenderer.formatCurrency(primaryDepth) +
+                      ', while the KyberSwap ladder above quotes a filled ' +
+                      CommonRenderer.formatCurrency(maxFilled) +
+                      (maxFilledBps != null ? ' at ' + Math.abs(maxFilledBps).toFixed(1) + ' bps' : '') +
+                      '. <strong>A router that quotes a fill is the harder evidence</strong>, so treat this ' +
+                      'list as incomplete rather than the ladder as optimistic — the route is reaching ' +
+                      'depth this enumeration does not contain. The venue behind it is not identified in ' +
+                      'our feed, so it is not named here.' +
+                  '</div>'
+                : '';
+
             sectionsHtml =
                 sectionHtml(
                     'Primary exit (→ USDC)',
                     primaryPools,
                     'Direct apxUSD-to-USDC venues — the actual retail exit path to dollars.'
-                ) +
+                ) + enumGap +
                 sectionHtml(
                     'Cross-asset (apyUSD ↔ apxUSD)',
                     crossPools,

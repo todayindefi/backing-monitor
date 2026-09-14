@@ -7,12 +7,13 @@ status: WORKING BACKLOG. Items 12-15 FIXED 2026-09-14; items 1-11 UNVERIFIED.
 
 # ▶ START HERE — resume context
 
-**Items 12, 13, 14, 15, 5, 8, 7 and 9 are BUILT, rendered and verified.** Triage bands S1–S7 are
-closed. ⚠️ **Five of the eight claims needed correcting before they were safe to act on, and item
-5's stated cause was REFUTED outright — read each item's Check, not just its Claim.**
+**Items 12, 13, 14, 15, 5, 8, 7, 9, 1 and 3 are BUILT, rendered and verified; item 2 is confirmed
+but deferred upstream.** Triage bands S1–S8 are closed. ⚠️ **Six of the eleven claims needed
+correcting before they were safe to act on, and item 5's stated cause was REFUTED outright — read
+each item's Check, not just its Claim.**
 
-**Immediate next action: items 1, 2, 3 (liquidity venues missing / not wired), triage S8.** Items
-4, 6, 10 and 11 are also still `unverified` — nothing has been checked on any of them.
+**Immediate next action: item 4 (apyUSD ↔ sUSDat link absent from Dependencies), triage S9.**
+Items 6, 10 and 11 are also still `unverified` — nothing has been checked on any of them.
 
 ⚠️ **Item 5 is the cautionary one.** The analyst read a published `fair_value_basis` field and
 reported exactly what it said; the field is hardcoded and contradicts the numbers beside it. Two
@@ -86,8 +87,8 @@ S4  apxUSD slippage measured against $1.00       item 5         ⚠️ CAUSE REF
 S5  sUSDat NAV monotonicity claim is wrong       item 8         ✅ FIXED 2026-09-14
 S6  sUSDat backing tile hides its own caveat     item 7         ✅ FIXED 2026-09-14
 S7  Wolf table self-contradiction                item 9         ✅ FIXED 2026-09-14
-S8  liquidity venues missing / not wired         items 1, 2, 3  ← NEXT
-S9  apyUSD <-> sUSDat link absent from deps      item 4
+S8  liquidity venues missing / not wired         items 1, 2, 3  ✅ 3 FIXED · 1 partial · 2 upstream
+S9  apyUSD <-> sUSDat link absent from deps      item 4         ← NEXT
 S10 apxUSD reserve denominator (POL in/out)      item 6
 S11 STRCx supply basis + unlocatable supply      items 10, 11
 ```
@@ -100,18 +101,53 @@ S11 STRCx supply basis + unlocatable supply      items 10, 11
 pool doing **$220K/day**, and **100% of Kyber quotes routed through it**. Real capacity is
 **over $100K at under 10bps**.
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED from our own feed — and the contradiction is now visible on one page.**
+
+```
+liquidity.pools   apxUSD/USDC Curve  depth_usd 5,748    ← only direct-exit venue enumerated
+exit_mark.quotes  apxUSD→USDC $100,000 filled ~1-2 bps  ← same file, same run
+```
+
+A $100K fill at ~1 bp cannot come out of $5.7K of depth. ⚠️ **Until item 5's fix the ladder was
+rendering as "No exit-mark RFQ ladder in this snapshot", so nothing on the page exposed it** — the
+dashboard presented *"primary exit ~$5,749 across 1 pool"* as the asset's exit capacity with its
+own refutation sitting unrendered in the feed.
+
+⚠️ **The analyst's UniV4 venue is NOT confirmable in-repo** — no feed we hold names it. Not
+rendered; the page says the venue "is not identified in our feed" rather than naming one.
+
+**Built.** ✅ A computed note under the Primary-exit subtotal, derived from the two rendered
+figures and shown only while the gap exists:
+
+> *"ⓘ **This subtotal and the exit ladder on this page disagree.** The enumerated apxUSD→USDC
+> venues total $5.7K, while the KyberSwap ladder above quotes a filled $100.0K at 2.1 bps.
+> **A router that quotes a fill is the harder evidence**, so treat this list as incomplete rather
+> than the ladder as optimistic…"*
+
+**Status.** confirmed · **renderer part FIXED** · enumeration is upstream —
+`apyx-pool-enumeration-misses-the-routed-venue-2026-09-14`
+
+
 
 ## 2 · apyUSD — dominant venue missing from the pool list
 
 **Claim.** UniV4 **apyUSD/apxUSD** is the dominant venue (**~76% of volume, ~$299K/day**) and is
 not in the pool list.
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ⚠️ **PARTLY CONFIRMED — the absence is real, the venue is not confirmable here.**
+`apyusd_backing.json` `liquidity.pools` carries Curve + PancakeSwap apyUSD/apxUSD and nothing else.
+Whether UniV4 is the dominant venue at ~76% of volume is **not answerable from any feed we hold**,
+and 24h volume is `null` fleet-wide on these two assets, so we cannot even state a denominator.
+
+⚠️ **Not rendered as a finding.** Same reasoning as item 1: naming a venue we cannot see is the
+[[feedback-do-not-invent-facts-in-user-facing-copy]] trap.
+
+**Plan.** Upstream, in the same handoff as item 1. The clean fix is to enumerate pools **from the
+route the KyberSwap quote returns**, so the pool list and the ladder can never disagree again.
+
+**Status.** partly confirmed · deferred to upstream
+
+
 
 ## 3 · STRCx — liquidity axis n/a on every field
 
@@ -119,9 +155,37 @@ not in the pool list.
 deepest of the four. ⚠️ **`jupiter_liquidity_usd` is already in `strc_backing.json`, just not
 wired to the axis.**
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED — every field read `n/a` while a measurement sat in the feed.**
+`strc_backing.json` publishes **no `liquidity` block at all**; the one venue figure,
+`wrapper_strcx.jupiter_liquidity_usd` (**$442,632**, the analyst's $354K has moved), appeared only
+inside a prose sentence that ends *"Exit depth is scored on axis 3, on its own measurement"* —
+pointing the reader at an empty panel.
+
+⚠️ **Read the producer before wiring it.** `strc_backing_analyzer.py` takes it from Jupiter's
+price-v3 `liquidity` field: **pool liquidity on the Solana float.** It is NOT a 2% depth, NOT a 24h
+volume and NOT an exit ladder. ⚠️ **The analyst's "$2.4M/day, Kraken listed" are in no feed we
+hold** — wiring those would be inventing them.
+
+**Built.** ✅ `strcx.js` `preRender` fills **Pool TVL only** ($442.6K) with a note naming the
+source, leaving the other three as the declared absences they are.
+
+⚠️⚠️ **TWO TRAPS, BOTH CAUGHT BY RENDERING RATHER THAN READING.**
+**(a)** The first guard read `if (!data.liquidity)` and **never fired** — `mergeAxisOverlays` runs
+BEFORE `preRender` (app.js:351) and has already built `data.liquidity` from the axis-basis overlay.
+⚠️ **My standalone test passed** because fetching the raw JSON and calling `preRender` on it skips
+the merge entirely. **A test that bypasses the pipeline only tells you about the pipeline it
+bypassed.** Now fills a gap and never replaces, so the overlay's authored score survives.
+**(b)** My first instrumentation reported *"liquidity seen by section: null"* and I nearly chased
+that — the variable was simply **never assigned**, because `hasAxisBlocks` had returned false in
+that contrived object. **A probe's initial value can masquerade as its finding.**
+
+✅ Verified the axis score is untouched: `liquidityRating` reads `total_2pct_depth`, never
+`total_tvl`, so the head still reads riskAnalyst's **Authored 2.5/10** rather than inventing a
+measured band.
+
+**Status.** confirmed · **FIXED**
+
+
 
 ## 4 · Missing link — apyUSD <-> sUSDat pools not in any Dependencies panel
 
