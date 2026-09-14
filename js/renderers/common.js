@@ -1812,9 +1812,51 @@ const CommonRenderer = {
                     ' \u24d8</span>';
             }
 
+            // ⚠️ MIN AND MAX WITHOUT THE SPOT'S POSITION LET A HEADLINE SIT AT THE
+            // EDGE OF ITS OWN RANGE AND READ AS STEADY STATE. apxUSD on 2026-09-14
+            // published 101.05% — the MAXIMUM of its last 48 readings, against a
+            // median of 100.25% and a crossing back above par only three days
+            // earlier. The panel showed Min, Max and Range and never said which
+            // end today was standing on.
+            //
+            // ⚠️ THE FAVOURABLE DIRECTION IS THE ONE THAT DOES NOT GET CAUGHT.
+            // The same defect in the other direction was found this morning on
+            // sUSDat — a buffer at the 8th percentile rendering as normal — and
+            // that one at least looks alarming enough to check. Nobody re-checks
+            // good news, so a peak rendered as a level survives longer.
+            //
+            // Generic on purpose: any asset with a CR history gets it, and it
+            // stays quiet where the series is flat, because a position inside a
+            // 0.02pp band is noise rather than information.
+            var curCR = null;
+            for (var ci = crValues.length - 1; ci >= 0; ci--) {
+                if (typeof crValues[ci] === 'number' && !isNaN(crValues[ci])) { curCR = crValues[ci]; break; }
+            }
+            var posNote = '';
+            if (curCR != null && (maxCR - minCR) >= 0.05) {
+                var atOrBelow = crValues.filter(function(v) { return v <= curCR; }).length;
+                var pctile = atOrBelow / crValues.length * 100;
+                // ⚠️ ROUNDING MANUFACTURED A FALSE SUPERLATIVE. apxUSD at 101.05%
+                // against a window max of 101.52% first rendered as "the 100th
+                // percentile", which reads as the top of the range when it is not
+                // — the same class of overstatement this note exists to prevent.
+                // 100th and 0th are reserved for the actual extremes.
+                var edge;
+                if (curCR >= maxCR) edge = 'the HIGHEST reading in this window';
+                else if (curCR <= minCR) edge = 'the LOWEST reading in this window';
+                else edge = 'the ' + Math.min(99, Math.max(1, Math.round(pctile))) + 'th percentile of this window';
+                var edgeCls = (curCR >= maxCR || pctile >= 90) ? 'text-amber-700'
+                            : (curCR <= minCR || pctile <= 10) ? 'text-amber-700' : 'text-slate-500';
+                posNote = '<span class="' + edgeCls + '" title="' + escapeAttr(
+                    'Today\u2019s published ratio against the same window this Min/Max covers. ' +
+                    'A headline sitting at either edge of its own range is not a steady state, ' +
+                    'in either direction.') + '">Today ' + curCR.toFixed(2) + '% \u2014 ' + edge + ' \u24d8</span>';
+            }
+
             statsEl.innerHTML = '<span>Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
                 '<span>Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
                 '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>' +
+                posNote +
                 (spanLabel ? '<span class="text-slate-400">' + spanLabel + '</span>' : '') +
                 stepNote +
                 (missingReadCount > 0 ? '<span class="text-slate-400">' + missingReadCount + ' observations unavailable (missing/incomplete reads)</span>' : '') +
