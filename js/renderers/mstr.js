@@ -260,6 +260,41 @@ var MSTRRenderer = {
             ? '<div class="text-[11px] opacity-80 mt-2 leading-snug">≡ ' + bookSign + MSTRRenderer._fmtPct(pdBookFrac, 1) + ' vs book equity (' + MSTRRenderer._fmtMoney(bookPerShare, 2) + '/sh ' + (mv.share_count_diluted != null ? 'diluted' : 'basic') + ')</div>'
             : '';
 
+        // ⚠️ THE DENOMINATOR OF EVERY PER-SHARE FIGURE ON THIS PAGE HAD NO DATE.
+        // The basic count is not a filing figure — it is a 10-Q cover anchor CARRIED
+        // FORWARD across each weekly 8-K ATM table, and it includes shares that have
+        // not settled. All of that is published (share_count_as_of, _basis, _anchor,
+        // _carried_forward, _includes_unsettled_atm_shares, _third_party_check) and
+        // none of it rendered, so a 15-day-old constructed number read as a current
+        // reported one. This is precisely the figure a new 8-K advances, which is
+        // what makes its age the thing worth showing.
+        var scCheck = mv.share_count_third_party_check || {};
+        var shareCountProvenance = '';
+        if (mv.share_count_as_of || mv.share_count_carried_forward != null) {
+            var scBits = [];
+            if (mv.share_count_basic != null) {
+                scBits.push('basic <span class="font-mono">' + MSTRRenderer._fmtNum(mv.share_count_basic) + '</span>');
+            }
+            if (mv.share_count_carried_forward != null && mv.share_count_anchor != null) {
+                scBits.push('= <span class="font-mono">' + MSTRRenderer._fmtNum(mv.share_count_anchor) + '</span> 10-Q anchor' +
+                    (mv.share_count_anchor_as_of ? ' (' + mv.share_count_anchor_as_of + ')' : '') +
+                    ' + <span class="font-mono">' + MSTRRenderer._fmtNum(mv.share_count_carried_forward) + '</span> carried forward' +
+                    (mv.share_count_atm_weeks_added != null ? ' over ' + mv.share_count_atm_weeks_added + ' weekly 8-K ATM tables' : ''));
+            }
+            shareCountProvenance =
+                '<div class="text-[11px] text-slate-500 mt-1 leading-snug">' +
+                    scBits.join(' ') +
+                    (mv.share_count_as_of ? ' · as of <span class="font-mono">' + mv.share_count_as_of + '</span>' : '') +
+                    '. Constructed, not a single reported figure.' +
+                    (mv.share_count_includes_unsettled_atm_shares === true
+                        ? ' <span class="text-amber-700">Includes ATM shares not yet settled.</span>' : '') +
+                    ((scCheck.status && scCheck.third_party_share_count != null)
+                        ? ' Third-party cross-check <strong>' + scCheck.status + '</strong> (' +
+                          MSTRRenderer._fmtNum(scCheck.third_party_share_count) + ', ' +
+                          (scCheck.third_party_source || 'external') + ').' : '') +
+                '</div>';
+        }
+
         function navRow(value, anchorLabel) {
             var txt = (value != null) ? MSTRRenderer._fmtMoney(value, 2) : '—';
             return '<div class="flex items-baseline gap-2 mt-1">' +
@@ -289,6 +324,7 @@ var MSTRRenderer = {
                     navRow(navPsBasic, 'gross BTC (basic)') +
                     navRow(bookPerShare, 'equity book') +
                     '<div class="text-xs text-slate-500 mt-1">' + shareCountLabel + '</div>' +
+                    shareCountProvenance +
                 '</div>' +
             '</div>' +
         '</div>';

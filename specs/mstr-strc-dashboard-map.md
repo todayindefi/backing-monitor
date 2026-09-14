@@ -1,0 +1,153 @@
+---
+title: MSTR / STRC dashboard — panel → field → source map
+repo: backing-monitor
+status: LIVING. Written 2026-09-14 because "what does a new 8-K touch?" took an hour of grepping.
+---
+
+# Why this file exists
+
+`?asset=mstr` and `?asset=strc` are **two lenses on one feed**. `assets.json` gives mstr
+`data_source: "strc"` — same JSON, equity-holder framing versus credit-holder framing.
+
+⚠️ **Nothing here is on the six-axis frame.** These are TradFi-extended monitors; `check_feeds.py`
+lists both among the seven assets wholly off it. Do not look for peg/backing/liquidity axes.
+
+⚠️ **This map exists because the panels were being learned one defect at a time.** On 2026-09-14 a
+new 8-K arrived and answering *"does it render automatically, and what needs updating?"* required
+reading nine render functions and three JSON files. Three separate staleness defects were found in
+the process, all of the same shape: **a published `as_of` that never reached the reader.**
+
+---
+
+# 1. Data sources — all three are SYNCED COPIES
+
+```
+data/strc_backing.json           byte-identical copy of PegTracker's
+data/strc_backing_history.json   time series for the charts
+data/strategy_events.json        EDGAR 8-K monitor output
+```
+
+⚠️ **We produce none of it and must never hand-edit it** — `sync_and_push.sh` overwrites `data/`
+and a hand-entered figure is gone within the hour. When a filing lands, the correct action here is
+**nothing**: PegTracker's EDGAR poll ingests it and the panels move on their own.
+
+**The one thing we own is whether the page tells the truth about how old the number is.**
+
+## Blocks inside `strc_backing.json`
+
+```
+tradfi                      market-derived: STRC price, mNAV inputs, quote detail
+mstr_view                   equity lens: share count, balance sheet, capital structure, ATM cadence
+mstr_view.digital_credit_framework   the 06-29 8-K standing programs (reserve, DCS, buyback, BTC)
+wrapper_strcx               the on-chain wrapper — belongs to ?asset=strcx, not here
+downstream_exposure         Apyx + Saturn STRC holdings — feeds the shared-upstream table elsewhere
+```
+
+---
+
+# 2. Panels, and what each reads
+
+`mstr.js` render functions, in page order:
+
+```
+_renderHeadlineBanner          tradfi, mv          mNAV, per-share NAV basic/diluted, share count
+_renderMnavRegime              tradfi, dcf         regime bands, issuance-accretion signal
+_renderBalanceSheet            mv.balance_sheet    cash, converts, preferred notional, BTC
+_renderCapitalStructure        mv.capital_structure senior → junior → common stack
+_renderCashServiceWaterfall    data                preferred service + rate-ceiling overlay
+_renderPerShareNavTrajectory   tradfi, mv, history per-share BTC NAV series
+_renderDilutionMaturityWall    mv.atm_cadence_90d  ATM cadence + convertible maturity wall
+MSTR_FRAMEWORK_CARD            dcf                 ⚠️ thin wrapper — see §4
+Strategy Event Log             strategy_events     ⚠️ borrowed from strc.js — see §4
+_renderFreshness               data                feed timestamp
+```
+
+---
+
+# 3. ⚠️ Freshness — the table that answers "what does a new 8-K touch?"
+
+Measured 2026-09-14:
+
+```
+block                 as_of        age    advanced by            stamp rendered?
+share_count           2026-08-30    15d   weekly 8-K ATM table   ✅ added 2026-09-14
+share_count_anchor    2026-07-24    52d   10-Q/10-K cover        ✅ added 2026-09-14
+balance_sheet         2026-08-09    36d   periodic 8-K + 10-Q    ✅ pre-existing
+capital_structure     2026-08-09    36d   periodic 8-K + 10-Q    ⚠️ NOT rendered
+usd_reserve_policy    2026-09-07     7d   weekly 8-K             ✅ (+ 2nd instance 09-14)
+dcs_repurchase        2026-09-08     6d   weekly 8-K             ✅ fixed 2026-09-14
+atm_cadence_90d       rolling       n/a   EDGAR poll             ✅ added 2026-09-14
+```
+
+⚠️ **A weekly 8-K advances `share_count`, `usd_reserve_policy`, `dcs_repurchase_program` and
+`atm_cadence_90d`. It does NOT advance `balance_sheet` or `capital_structure`** — those move on
+periodic filings, which is why they legitimately sit 36 days old and why their stamps matter more,
+not less.
+
+## The three defects this audit found, all one shape
+
+```
+dcs stamp gated on `dcs.as_of`   the payload has remaining_as_of / executed_as_of / … and no
+                                 plain as_of, so the guard was ALWAYS false. A fix keyed to a
+                                 field that does not exist reads as a fix that keeps passing.
+atm_cadence_90d undated          a rolling window is only as current as its last poll; it named
+                                 its source and not its date while silently excluding a filing.
+share_count undated              the denominator of every per-share figure on the page, and it
+                                 is CONSTRUCTED: 10-Q anchor + shares carried forward across 5
+                                 weekly ATM tables, including unsettled shares.
+```
+
+⚠️ **`capital_structure.as_of` is the one still unrendered.** Left recorded rather than fixed so
+the next pass has something falsifiable to check.
+
+---
+
+# 4. Dependencies and shared code — the traps
+
+⚠️ **`MSTR_FRAMEWORK_CARD` and `STRC_FRAMEWORK_CARD` are both thin wrappers around
+`renderDigitalCreditFrameworkCard(dcf, lens)`, which lives in `strc.js`.** A fix there lands on
+BOTH dashboards. I briefly believed MSTR had its own copy and nearly fixed the same bug twice.
+
+⚠️ **The Strategy Event Log on MSTR is `strc.js`'s** — `STRCRenderer._loadStrategyEventLog('mstr-event-log-panel')`.
+It already carries an EDGAR health footer (last poll + consecutive failures). **It needs no
+maintenance when a filing lands; it is the component that self-heals.**
+
+⚠️ **`mstr.js` depends on `strc.js` being loaded first** (it calls `renderDigitalCreditFrameworkCard`
+and `STRCRenderer.*` directly). Script order in `index.html` is load-bearing.
+
+---
+
+# 5. ⚠️ The staleness failure mode no check catches
+
+On 2026-09-14 the EDGAR poll ran at **10:50 UTC** and Strategy filed **later that morning**. The
+poll was three hours old — fresh by any threshold — and still predated the filing.
+
+**So an age-based warning cannot catch this.** What works is rendering the poll timestamp so a
+reader who knows a filing exists can compare. That is exactly how riskAnalyst caught it, and no
+automatic check would have.
+
+⚠️ **And the backing analyzer re-running does not help** — it re-reads `strategy_events.json`. On
+2026-09-14 `strc_backing.json` re-ran at 13:51 and still carried the 09-08 DCS figure because the
+poll behind it had not moved. **Watch the poll, not the backing run.**
+
+---
+
+# 6. What to do when a filing lands
+
+```
+1. Nothing, at first. PegTracker's poll ingests it; the panels move on their own.
+2. Check the poll advanced:  strategy_events.json last_edgar_poll_utc
+3. Check the block advanced: the §3 table's as_of fields
+4. If the poll has not moved by the next day, that is a PegTracker finding, not a render bug.
+```
+
+⚠️ **Do not derive a rate from two prints.** Weekly 8-K periods are not equal-length — 2026-09-14's
+was 6 days against the prior 8. riskAnalyst measured spend down 21% on calendar days and roughly
+flat on trading days; **no rate is published and the direction is not established.**
+
+⚠️ **Flat is a state, not a non-event.** The USD reserve rose every week 05-25 → 08-31 and then
+went flat twice; BTC has been unchanged three weeks with both ATMs at zero. Render those as
+standing states — `atm_cadence_90d` zero rows now read *"flat, not unreported"* for this reason.
+
+⚠️ **Sign-aware labels.** `btc_purchased_count` is a NET over the window and goes negative on a
+monetization week; it rendered as *"BTC purchased −1,793 BTC"* until 2026-09-14.
