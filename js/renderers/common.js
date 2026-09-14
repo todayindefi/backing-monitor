@@ -4865,7 +4865,19 @@ const CommonRenderer = {
     // earlier points stop being drawn — so the function returns what it showed and what
     // existed, and a caller that does not say so is the defect. A chart whose window is
     // invisible reads as "this is all there is".
-    PEG_CHART_WINDOW_DAYS: 30,
+    // ⚠️ 7 DAYS, WITH A POINT FLOOR — user decision 2026-09-14: 30 days is unreadable on
+    // mobile. It also aligns the chart with the tiles, which already quote a 7-DAY range,
+    // so the panel had been showing a month beside a week-long figure.
+    //
+    // ⚠️ THE FLOOR EXISTS BECAUSE SAMPLING IS NOT UNIFORM ACROSS THE FLEET, and measuring
+    // that is what stopped a flat 7d from wrecking four pages. Most assets sample hourly
+    // (~170 points a week); crvUSD, usds, yzUSD and syzUSD sample DAILY and get 8. An
+    // 8-point line is not a chart. So: take 7 days when it carries enough points, else
+    // widen to 30, else draw everything — and the caption states the window ACTUALLY used,
+    // never the one requested.
+    PEG_CHART_WINDOW_DAYS: 7,
+    PEG_CHART_FALLBACK_DAYS: 30,
+    PEG_CHART_MIN_POINTS: 24,
     _renderPegChart(data, history, canvasId, zeroLabel, windowDays, parLevel) {
         var ctx = document.getElementById(canvasId || 'peg-chart');
         if (!ctx) return null;
@@ -4874,20 +4886,29 @@ const CommonRenderer = {
         var all = history.entries.filter(function(e) { return e[field] != null; });
         var win = (windowDays === null) ? null
             : (typeof windowDays === 'number' ? windowDays : this.PEG_CHART_WINDOW_DAYS);
-        var entries = all;
+        var entries = all, usedWindow = null;
         if (win) {
-            var cutoff = Date.now() - win * 24 * 3600 * 1000;
-            var kept = all.filter(function(e) {
-                var t = Date.parse(e.timestamp);
-                return isNaN(t) ? true : t >= cutoff;
-            });
+            var self2 = this;
+            var slice = function(days) {
+                var cutoff = Date.now() - days * 24 * 3600 * 1000;
+                return all.filter(function(e) {
+                    var t = Date.parse(e.timestamp);
+                    return isNaN(t) ? true : t >= cutoff;
+                });
+            };
+            var kept = slice(win);
+            // Widen once if the requested window is too sparse to read as a line.
+            if (kept.length < this.PEG_CHART_MIN_POINTS && this.PEG_CHART_FALLBACK_DAYS > win) {
+                var wider = slice(this.PEG_CHART_FALLBACK_DAYS);
+                if (wider.length > kept.length) { kept = wider; win = this.PEG_CHART_FALLBACK_DAYS; }
+            }
             // ⚠️ Never clip to nothing: a stale feed whose newest point predates the window
             // would render an empty chart, which reads as "no data" rather than "no recent
             // data". Fall back to the full series and let the caller say the window missed.
-            if (kept.length >= 2) entries = kept;
+            if (kept.length >= 2) { entries = kept; usedWindow = win; }
         }
         var _shown = { shown: entries.length, total: all.length,
-                       windowDays: win, clipped: entries.length < all.length,
+                       windowDays: usedWindow, clipped: entries.length < all.length,
                        firstShown: entries.length ? entries[0].timestamp : null,
                        firstAvailable: all.length ? all[0].timestamp : null };
         var labels = entries.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });

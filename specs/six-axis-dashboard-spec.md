@@ -263,7 +263,7 @@ two things in the same order**, so a reader moving between assets is reading the
 └─────────────────────────────────────────────────────────────────────────────┘
   short prose: what the reference is, and any caveat that changes how to read it
 ┌ chart ──────────────────────────────────────────────────────────────────────┐
-│  30-DAY window · PRICE on the y-axis · two lines:                           │
+│  7-DAY window (widens if too sparse) · PRICE on the y-axis · two lines:     │
 │    market price  (thin, coloured, filled)                                   │
 │    reference     (heavy dashed, neutral, drawn on top)                      │
 │  caption: what is plotted · window vs total points · source composition      │
@@ -274,9 +274,16 @@ two things in the same order**, so a reader moving between assets is reading the
 their head; two price lines show the same thing directly — ⚠️ **the gap between the lines IS the
 premium.** The tiles carry the ratio for anyone who wants the number.
 
-**THIRTY DAYS.** Measured 2026-09-14 across every rendered peg chart: the median span was already
-**29 days** and 11 of 19 assets sat exactly there, because the history files retain ~30 days. The
-window standardises what retention already imposed. `CommonRenderer.PEG_CHART_WINDOW_DAYS = 30`.
+**SEVEN DAYS, WITH A POINT FLOOR.** ⚠️ Revised from 30 the same day it was written — 30 days is
+unreadable on mobile, and the tiles beside the chart already quote a **7-day** range, so the panel
+was showing a month next to a week-long figure. `PEG_CHART_WINDOW_DAYS = 7`.
+
+⚠️ **THE FLOOR IS NOT A REFINEMENT, IT IS WHAT STOPS 7 DAYS WRECKING FOUR PAGES.** Sampling is not
+uniform: most assets are hourly (~170 points a week) but **crvUSD, usds, yzUSD and syzUSD sample
+DAILY and get 8 points in 7 days.** An 8-point line is not a chart. So the window widens once when
+the slice is too sparse — `PEG_CHART_MIN_POINTS = 24`, `PEG_CHART_FALLBACK_DAYS = 30` — and the
+caption states the window **actually used**, never the one requested. Measured, not assumed:
+strcx draws 7d/213pts, crvUSD falls back to 30d/31pts.
 
 ⚠️ **CLIPPING MUST BE STATED.** Eight assets retain longer (crvUSD 535d, usds 347d, yzUSD 173d,
 syzUSD/usde/susde ~90d, susds 67d, strcx 108d). `_renderPegChart` returns
