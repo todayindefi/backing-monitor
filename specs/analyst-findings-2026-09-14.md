@@ -981,10 +981,36 @@ choice made before the distance-to-par framing landed, and it never got revisite
 ⚠️ **Item 12's fix made this more visible, not less:** with the ten artifact reads excluded, this
 loan is now *"Tightest verifiable loan"* — the headline of the block.
 
-**Not fixed.** Out of scope for every item on this list, and it is an editorial call about what
-red means on this page, not a defect. Recorded for the owner. Options, cheapest first: colour the
-Set A cell on distance-to-par and keep buffer-to-init as the number; or keep the colour and
-reword the panel line so the two agree.
+**✅ FIXED 2026-09-14 — owner ruled: init is not the health threshold.** The colour moved to the
+column its threshold is actually defined against. `Cur` now carries the producer's crit/warn bands
+(100% / 120%); `Buf` shows the number in neutral slate with a tooltip saying it measures distance
+from origination.
+
+```
+before   $50.0M BTC  125%  124.9%  -0.1pp 🔴   red, "delegate discretion to call"
+after    $50.0M BTC  125%  124.8%  -0.2pp      Cur green, Buf neutral
+```
+
+⚠️ **And checking Maple's docs made the ruling stronger than the reasoning behind it.** Maple
+defines **three** per-loan levels in each loan's term sheet:
+
+```
+Initial Collateral Level   "the level the borrower must restore TO after a Margin Call"
+Margin Call Level          "triggers a margin call; borrower must cure within 24 hours"
+Liquidation Level          "if reached at any point, Maple has full rights to liquidate"
+```
+
+**Init is the RESTORE TARGET — not a trigger at all.** Colouring on it was worse than "using the
+wrong line"; it was using a line that fires in the opposite direction.
+
+⚠️⚠️ **But par is not the trigger either.** Maple states margin call and liquidation levels are
+*"always set conservatively above 100%"*, and they are **per-loan term-sheet parameters that are
+NOT in our feed.** So our bands are a proxy and neither colour is Maple's verdict. The table now
+says so, and names what is missing: *"a loan shown green here may already sit below its own
+margin-call level."*
+
+**Blast radius:** syrupUSDT's two 126% loans previously rendered amber on `Buf +1.0pp`; both are
+now green on `Cur 125.8%`, which is the correct reading of a loan 25.8pp above par.
 
 ## B · Four dead locals in `_renderLBH_buffer`
 

@@ -2047,13 +2047,51 @@ var SyrupUSDCRenderer = {
         var hasCollateral = !!(summary && summary.data_source && summary.data_source !== 'unavailable')
             || rows.some(function(l) { return l && l.collateral; });
         var sorted = rows.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).slice(0, 10);
-        var rowsHtml = sorted.map(function(l) { return SyrupUSDCRenderer._renderLoanRow(l, hasCollateral, poolUL); }).join('');
+        // ⚠️ PAR IS THE HEALTH THRESHOLD, INIT IS NOT — init is simply the level the
+        // loan was originated at. The producer publishes the real bands; read them
+        // rather than colouring on distance-from-origination.
+        var saHealth = (summary && summary.set_a_collateral_health) || {};
+        var parBands = {
+            crit: (saHealth.crit_level_pct != null) ? saHealth.crit_level_pct : 100,
+            warn: (saHealth.warn_level_pct != null) ? saHealth.warn_level_pct : 120
+        };
+        var rowsHtml = sorted.map(function(l) {
+            return SyrupUSDCRenderer._renderLoanRow(l, hasCollateral, poolUL, parBands);
+        }).join('');
 
         var collateralHeaders = hasCollateral ?
             ('<th class="cursor-pointer" data-sort="collat">Collateral</th>' +
              '<th class="text-right cursor-pointer" data-sort="init">Init</th>' +
              '<th class="text-right cursor-pointer" data-sort="cur">Cur</th>' +
              '<th class="text-right cursor-pointer" data-sort="buf">Buf</th>') : '';
+
+        // ⚠️ NEITHER COLUMN IS THE PROTOCOL'S THRESHOLD, AND THE PAGE SHOULD SAY SO.
+        // Maple's borrower docs define THREE per-loan levels, all set in the loan's
+        // term sheet: Initial Collateral Level ("the collateralization level the
+        // borrower must restore to after a Margin Call"), Margin Call Level ("the
+        // collateralization threshold at which a margin call is triggered; the
+        // borrower is notified and must cure within 24 hours"), and Liquidation
+        // Level ("if reached at any point, Maple has full rights to liquidate").
+        // ⚠️ Init is the RESTORE TARGET, not a trigger — which is a stronger reason
+        // not to colour on it than "it is where the loan started".
+        // ⚠️ AND PAR IS NOT THE TRIGGER EITHER: Maple states margin call and
+        // liquidation levels are "always set conservatively above 100%". The real
+        // levels are per-loan term-sheet parameters and are NOT in this feed, so
+        // the bands below are a proxy and neither colour is Maple's verdict.
+        var thresholdNote =
+            '<div class="text-xs text-slate-500 mt-2 leading-relaxed">' +
+                'Colour is distance to par, using the producer\'s ' +
+                parBands.crit + '% / ' + parBands.warn + '% bands. ' +
+                '<strong>Those are a proxy, not Maple\'s trigger.</strong> Maple sets three levels per ' +
+                'loan in its term sheet — an <em>initial</em> level (the level a borrower must restore ' +
+                '<em>to</em> after a margin call), a <em>margin call</em> level (24h to cure), and a ' +
+                '<em>liquidation</em> level — and states that the latter two sit ' +
+                '<strong>above 100%</strong>. ⚠️ <strong>Those per-loan levels are not published in this ' +
+                'feed</strong>, so a loan shown green here may already sit below its own margin-call ' +
+                'level, and Init is the restore target rather than a trigger. ' +
+                '<a href="https://docs.maple.finance/maple-for-borrowers/borrower-faq" target="_blank" ' +
+                'rel="noopener noreferrer" class="text-blue-600 hover:underline">Maple borrower FAQ ↗</a>' +
+            '</div>';
 
         return '<div class="text-sm font-semibold text-slate-700 mb-2 mt-2">Top loans (sortable)</div>' +
             '<div class="overflow-x-auto"><table class="data-table" id="syrup-loans-table"><thead><tr>' +
@@ -2063,10 +2101,11 @@ var SyrupUSDCRenderer = {
                 '<th class="text-right cursor-pointer" data-sort="days">Days</th>' +
                 '<th class="cursor-pointer" data-sort="status">S</th>' +
                 collateralHeaders +
-            '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+            '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
+            thresholdNote;
     },
 
-    _renderLoanRow: function(loan, hasCollateral, poolUL) {
+    _renderLoanRow: function(loan, hasCollateral, poolUL, parBands) {
         var addr = loan.borrower || '';
         var firmTag = loan.firm ? '<span class="text-xs text-slate-500 ml-1">' + loan.firm + '</span>' : '';
         var borrowerCell = '<span class="font-mono text-xs" title="' + addr + '">' + SyrupUSDCRenderer._truncAddr(addr) + '</span>' +
@@ -2149,9 +2188,29 @@ var SyrupUSDCRenderer = {
             var initLevel = c.init_level_pct;
             var curLevel = c.current_level_pct;
             var initText = (initLevel != null) ? CommonRenderer.formatPercent(initLevel, 0) : '—';
+            // ⚠️ THE HEALTH COLOUR MOVES TO THE COLUMN THE THRESHOLD APPLIES TO.
+            // It used to sit on Buf, which measures distance from the loan's
+            // ORIGINATION level — so a $50M loan funded at 125% and sitting at
+            // 124.9% rendered red ("delegate discretion to call") while being
+            // 24.9pp above par, and a 126% loan rendered amber. Meanwhile the
+            // panel four lines up said in words that init is not the health
+            // threshold. Cur is the number the producer's crit/warn bands are
+            // defined against, so it is the one that carries the colour.
+            var bands = parBands || { crit: 100, warn: 120 };
             var curText;
             if (curLevel != null && isUncorroborated) {
                 curText = '<span class="text-slate-400" title="' + SYRUP_UNCORROBORATED_TITLE + '">' +
+                    CommonRenderer.formatPercent(curLevel, 1) + '</span>';
+            } else if (curLevel != null && !c.is_at_par) {
+                var curCls = (curLevel < bands.crit) ? 'text-red-600 font-semibold' :
+                             (curLevel < bands.warn) ? 'text-amber-600 font-semibold' :
+                                                       'text-green-600';
+                var curTitle = (curLevel < bands.crit)
+                    ? 'Below ' + bands.crit + '% — collateral worth less than principal'
+                    : (curLevel < bands.warn)
+                        ? 'In the ' + bands.crit + '\u2013' + bands.warn + '% thin-buffer band'
+                        : 'At or above ' + bands.warn + '% collateralization';
+                curText = '<span class="' + curCls + '" title="' + curTitle + '">' +
                     CommonRenderer.formatPercent(curLevel, 1) + '</span>';
             } else if (curLevel != null) {
                 curText = CommonRenderer.formatPercent(curLevel, 1);
@@ -2280,10 +2339,19 @@ var SyrupUSDCRenderer = {
             }
             return '<td class="text-right font-mono text-slate-500" title="At par by design">' + label + ' <span class="text-xs">at-par</span></td>';
         }
-        // Set A
-        if (buf < 0) return '<td class="text-right font-mono text-red-600 font-semibold" title="Below init level — delegate discretion to call">' + label + ' 🔴</td>';
-        if (buf < 5) return '<td class="text-right font-mono text-amber-600 font-semibold" title="Approaching init level">' + label + ' ⚠</td>';
-        return '<td class="text-right font-mono text-green-600">' + label + '</td>';
+        // Set A — ⚠️ NO HEALTH COLOUR HERE ANY MORE. buffer_pp is distance from the
+        // level the loan was ORIGINATED at, which is not a solvency threshold: a
+        // loan funded at 167% and sitting at 150% is -16.7pp and perfectly healthy,
+        // while this cell used to paint it red. The crit/warn bands are defined
+        // against par and now colour the Cur column, where they belong.
+        // The number stays — it is real and it is what the "below their funding-time
+        // init level" line in Buffer health counts — it just no longer asserts
+        // distress on its own.
+        return '<td class="text-right font-mono text-slate-500" title="' +
+            'Distance from the level this loan was originated at (' +
+            (coll.init_level_pct != null ? coll.init_level_pct.toFixed(0) + '%' : 'its init level') +
+            '). Informational: init is where the loan started, not a health threshold. ' +
+            'Health is measured against par and is coloured in the Cur column.">' + label + '</td>';
     },
 
     _attachLoanTableSort: function() {
