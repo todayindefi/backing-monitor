@@ -57,6 +57,10 @@ var SYRUP_STRATEGY_IMPL_INFO = {
 // the sleeve renders as DORMANT in its own muted sub-block; at-or-above it
 // rounds back into the main strategy table. PegTracker fires a risk flag
 // at the same threshold so activation is also visible in §Risk Flags.
+// Shown on every collateral cell whose below-par read the pool's own on-chain
+// credit alarm contradicts. Wording is the producer's verdict, not ours.
+var SYRUP_UNCORROBORATED_TITLE = 'Reads below par in Maple GraphQL but uncorroborated: pool unrealizedLosses = 0 and the loan is not impaired, called or in default. Treated as a collateral-amount data artifact \u2014 the number is shown, not asserted.';
+
 var SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD = 100000;
 
 // Static facts for §6 audit roll-up — sourced from the public risk report.
@@ -135,9 +139,47 @@ var SyrupUSDCRenderer = {
         return asset && !SyrupUSDCRenderer._isLoanAsset(asset);
     },
     _isLoanAsset: function(asset) {
-        // Crypto-overcollat collateral assets — anything else (PYUSD, USTB,
-        // USDC, USDT, sUSDS, etc.) reads as liquidity-layer.
+        // LAST-RESORT name heuristic — crypto-overcollat collateral assets;
+        // anything else (PYUSD, USTB, USDC, USDT, sUSDS, etc.) reads as
+        // liquidity-layer. It is a closed list, so every collateral asset
+        // Maple adds is silently misfiled as liquidity until someone edits it:
+        // WBTC and USDtb are both loan collateral and both missing here.
+        // Prefer _isLoanAssetIn() with a map harvested from position_type.
         return ['BTC', 'cbBTC', 'ETH', 'XRP', 'HYPE'].indexOf(asset) >= 0;
+    },
+
+    // Asset -> position_type, harvested from the loans[] rows, which carry the
+    // analyzer's authoritative `position_type`. The by_asset / family rollups
+    // carry no position_type of their own, so without this they fall back to
+    // the closed name list above — which is how a $25M WBTC LOAN ended up
+    // counted inside the liquidity layer: a "parked reserve $25.0M" sleeve
+    // header whose only member row was PYUSD $1.5K, a "top asset WBTC 131.6%
+    // of layer" that divided by a total correctly excluding it, and a
+    // cross-pool liquidity table summing to 132%.
+    // Cross-check that this map is right, not just different: with it, the
+    // per-class row sums reconcile EXACTLY to the producer's published
+    // aum_loans_usd / aum_liquidity_usd. The name heuristic does not.
+    // Accepts one or more loan_book objects (the family view has two pools).
+    _assetPositionTypes: function(/* lb, lb, ... */) {
+        var map = {};
+        Array.prototype.forEach.call(arguments, function(lb) {
+            ((lb && lb.loans) || []).forEach(function(l) {
+                var a = l.collateral && l.collateral.asset;
+                if (!a || !l.position_type) return;
+                // An asset seen as both types is left unresolved, so the
+                // caller falls back rather than picking a side.
+                if (map[a] && map[a] !== l.position_type) map[a] = 'mixed';
+                else if (!map[a]) map[a] = l.position_type;
+            });
+        });
+        return map;
+    },
+
+    _isLoanAssetIn: function(asset, typeMap) {
+        var t = typeMap && typeMap[asset];
+        if (t === 'loan') return true;
+        if (t === 'liquidity') return false;
+        return SyrupUSDCRenderer._isLoanAsset(asset);
     },
 
     // Human-readable relative age: <60s "Just now", <60min "N minutes ago",
@@ -792,9 +834,16 @@ var SyrupUSDCRenderer = {
                 var label = loans === 1 ? '1 loan' : loans + ' loans';
                 return '<span class="font-mono text-xs">' + label + ' / ' + CommonRenderer.formatCurrency(principal || 0) + '</span>';
             }
-            var loanAssets = assetRollup.filter(function(r) { return SyrupUSDCRenderer._isLoanAsset(r.asset); })
+            // Classify off position_type harvested from BOTH pools' loan rows;
+            // the family rollup itself carries none. Row sums then reconcile to
+            // combined.aum_loans_usd / aum_liquidity_usd, which is what makes
+            // the "% of class" column add to 100 instead of 132.
+            var famTypes = SyrupUSDCRenderer._assetPositionTypes(
+                ((data || {}).asset_specific || {}).loan_book,
+                ((siblingData || {}).asset_specific || {}).loan_book);
+            var loanAssets = assetRollup.filter(function(r) { return SyrupUSDCRenderer._isLoanAssetIn(r.asset, famTypes); })
                 .sort(function(a, b) { return (b.combined_principal_usd || 0) - (a.combined_principal_usd || 0); });
-            var liqAssets = assetRollup.filter(function(r) { return !SyrupUSDCRenderer._isLoanAsset(r.asset); })
+            var liqAssets = assetRollup.filter(function(r) { return !SyrupUSDCRenderer._isLoanAssetIn(r.asset, famTypes); })
                 .sort(function(a, b) { return (b.combined_principal_usd || 0) - (a.combined_principal_usd || 0); });
 
             function renderAssetTable(rows, classTotal, headerLabel) {
@@ -1098,9 +1147,44 @@ var SyrupUSDCRenderer = {
         var ulFragment = (ul === 0 || ul == null) ?
             ' <span class="font-mono">unrealizedLosses</span> (the on-chain credit alarm) stayed at 0 throughout — the apparent dips were aggregation glitches, not real undercollateralization.' :
             '';
+
+        // Second, distinct Maple GraphQL failure mode, and the one that used to
+        // render as red distress: a per-loan `currentAssetAmount` returned
+        // understated, so a healthy crypto-collateralised loan prices below par.
+        // Described from the live feed rather than hardcoded — the counts and
+        // the factor range go stale the moment the upstream data moves, and the
+        // sentence disappears entirely on a pool with no such reads.
+        var uncorrFragment = '';
+        var uncorrRows = ((specific.loan_book || {}).loans || [])
+            .filter(SyrupUSDCRenderer._isLoan)
+            .filter(function(l) { return SyrupUSDCRenderer._collateralUncorroborated(l, ul); });
+        if (uncorrRows.length > 0) {
+            var uncorrUsdTotal = uncorrRows.reduce(function(a, l) { return a + (l.principal || 0); }, 0);
+            var factors = uncorrRows.map(function(l) {
+                var c = l.collateral;
+                return (c.init_level_pct > 0 && c.current_level_pct > 0) ? (c.init_level_pct / c.current_level_pct) : null;
+            }).filter(function(f) { return f != null; });
+            var factorText = '';
+            if (factors.length > 1) {
+                var lo = Math.min.apply(null, factors), hi = Math.max.apply(null, factors);
+                factorText = ' The understatement is not a constant factor (roughly ' + lo.toFixed(1) + '× to ' +
+                    hi.toFixed(1) + '× against each loan\'s funding-time init level), so it is not a decimal-scale error.';
+            }
+            var assetSet = {};
+            uncorrRows.forEach(function(l) { if (l.collateral.asset) assetSet[l.collateral.asset] = 1; });
+            uncorrFragment =
+                ' A second, distinct read fails the other way: on <strong>' + uncorrRows.length + ' loan' +
+                (uncorrRows.length === 1 ? '' : 's') + '</strong> (' + CommonRenderer.formatCurrency(uncorrUsdTotal) +
+                ', collateralised in ' + Object.keys(assetSet).sort().join('/') + ') Maple GraphQL returns an understated ' +
+                '<span class="font-mono">currentAssetAmount</span>, so the loan prices below par while nothing else about it ' +
+                'is distressed — it is not impaired, called or in default, and the pool\'s own on-chain ' +
+                '<span class="font-mono">unrealizedLosses</span> is 0.' + factorText +
+                ' Those cells read <span class="text-slate-400">unverified</span> in the loan table and are excluded from ' +
+                'the buffer-health figures; the number is shown, not asserted.';
+        }
         var noteLine = '<div id="syrup-data-anomaly-note" class="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-400 leading-relaxed scroll-mt-4">' +
             '<strong class="text-slate-500">Note:</strong> Window narrowed to 7d to focus on the post-anomaly clean window. Maple\'s <span class="font-mono">aumTimeSeries</span> has documented aggregation inconsistencies (most recently seen Apr 3–20, 2026 with day-over-day swings of $300–500M on a $1B+ book).' + ulFragment +
-            ' Treat day-to-day swings &gt;10pp as data-quality variance unless cross-validated against <span class="font-mono">unrealizedLosses</span>. Loan-level cells flagged with <span class="text-amber-500 font-semibold">?</span> share this root cause — Maple GraphQL returns a broken <span class="font-mono">currentAssetAmount</span> for at-par stablecoin/RWA positions, leaving current-value and buffer cells unverifiable.' +
+            ' Treat day-to-day swings &gt;10pp as data-quality variance unless cross-validated against <span class="font-mono">unrealizedLosses</span>. Loan-level cells flagged with <span class="text-amber-500 font-semibold">?</span> share this root cause — Maple GraphQL returns no usable <span class="font-mono">currentAssetAmount</span> for those at-par stablecoin/RWA positions, leaving their current-value and buffer cells blank.' + uncorrFragment +
         '</div>';
         caption.innerHTML = sourceLine + initLine + noteLine;
 
@@ -1448,14 +1532,18 @@ var SyrupUSDCRenderer = {
 
         var allLoans = lb.loans || [];
         var loanRows = allLoans.filter(SyrupUSDCRenderer._isLoan);
+        // The pool's on-chain credit alarm — the independent cross-check the
+        // corroboration gate runs against. Read from the pool contract, not
+        // from the same Maple GraphQL feed the per-loan reads come from.
+        var poolUL = (specific.vault_state || {}).unrealized_losses;
 
         return '<div class="panel">' +
             '<div class="panel-title">Loan Book <span class="text-xs font-normal text-slate-500">(third-party credit)</span></div>' +
             disclaimer +
             this._renderLBH_status(specific, lb, loanRows) +
-            this._renderLBH_buffer(lb) +
+            this._renderLBH_buffer(lb, poolUL) +
             this._renderLBH_byAssetLoans(lb) +
-            this._renderTopLoansTable(lb, loanRows) +
+            this._renderTopLoansTable(lb, loanRows, poolUL) +
         '</div>';
     },
 
@@ -1551,8 +1639,9 @@ var SyrupUSDCRenderer = {
         // collateral; stablecoin/RWA = liquidity layer). Sums exactly to
         // principal_liquidity_usd, so sleeve subtotals stay correct even when
         // member rows are dropped by the top-25 truncation.
+        var assetTypes = SyrupUSDCRenderer._assetPositionTypes(lb);
         var byAssetLiq = (cs.by_asset || []).filter(function(a) {
-            return !SyrupUSDCRenderer._isLoanAsset(a.asset);
+            return !SyrupUSDCRenderer._isLoanAssetIn(a.asset, assetTypes);
         });
 
         // Accumulate sleeve subtotals from by_asset, members from loans[].
@@ -1755,7 +1844,7 @@ var SyrupUSDCRenderer = {
 
     // §2 sub-block B — Buffer health (NEW). Reads PegTracker companion fields.
     // Graceful-degrades to a placeholder when those fields aren't shipped yet.
-    _renderLBH_buffer: function(lb) {
+    _renderLBH_buffer: function(lb, poolUL) {
         var cs = lb.collateral_summary;
         if (!cs) return '';  // Collateral Mix sub-block handles the unavailable case below.
 
@@ -1771,22 +1860,29 @@ var SyrupUSDCRenderer = {
             '</div>';
         }
 
-        var totalActive = lb.active_loan_count || 0;
+        // `above` / `aboveUsd` / `belowPct` / `abovePct` used to be computed
+        // here and were never read; dropped so the below-init figures have a
+        // single source (the filtered pass below when it applies).
         var below = cs.loans_below_init_count || 0;
-        var above = Math.max(0, totalActive - below);
-        var totalPrincipal = (cs.set_a_overcollateralized && cs.set_a_overcollateralized.principal_usd || 0) +
-                             (cs.set_b_at_par && cs.set_b_at_par.principal_usd || 0);
-        if (totalPrincipal === 0 && lb.loans) {
-            totalPrincipal = lb.loans.reduce(function(s, l) { return s + (l.principal || 0); }, 0);
-        }
         var belowUsd = cs.principal_below_init_usd || 0;
-        var aboveUsd = Math.max(0, totalPrincipal - belowUsd);
-        var belowPct = totalPrincipal > 0 ? (belowUsd / totalPrincipal * 100) : 0;
-        var abovePct = totalPrincipal > 0 ? (aboveUsd / totalPrincipal * 100) : 0;
-        var wab = cs.weighted_avg_buffer_pp != null ? cs.weighted_avg_buffer_pp : 0;
-        var wabSign = wab >= 0 ? '+' : '';
 
-        var t = cs.tightest_loan;
+        // The published tightest_loan / weighted_avg_buffer_pp / below-init
+        // tally are computed over every read including the ones the pool's own
+        // on-chain alarm contradicts — on syrupUSDC that puts an artifact loan
+        // in the headline. Recompute all three from one filtered pass so they
+        // stay consistent with each other, and say what was dropped. `stats`
+        // is null when nothing is excluded, in which case the published fields
+        // render unchanged.
+        var stats = SyrupUSDCRenderer._bufferStatsExUncorroborated(lb, poolUL);
+        var wab = stats ? (stats.weighted_avg_buffer_pp != null ? stats.weighted_avg_buffer_pp : 0)
+                        : (cs.weighted_avg_buffer_pp != null ? cs.weighted_avg_buffer_pp : 0);
+        var wabSign = wab >= 0 ? '+' : '';
+        if (stats) {
+            below = stats.below_init_count;
+            belowUsd = stats.below_init_usd;
+        }
+
+        var t = stats ? stats.tightest : cs.tightest_loan;
         var tightestBlock = '';
         if (t) {
             var tSign = t.buffer_pp >= 0 ? '+' : '';
@@ -1796,7 +1892,7 @@ var SyrupUSDCRenderer = {
                          t.points_above_par <= 5 ? 'text-amber-600 font-semibold' : 'text-slate-700';
             tightestBlock =
                 '<div class="text-sm mt-2">' +
-                    'Tightest loan: <span class="font-mono">' + CommonRenderer.formatCurrency(t.principal_usd) + ' ' + t.asset + '</span> @ ' +
+                    (stats ? 'Tightest verifiable loan: ' : 'Tightest loan: ') + '<span class="font-mono">' + CommonRenderer.formatCurrency(t.principal_usd) + ' ' + t.asset + '</span> @ ' +
                     CommonRenderer.formatPercent(t.current_level_pct, 1) +
                     ' (init ' + CommonRenderer.formatPercent(t.init_level_pct, 0) + ', ' + tSign + t.buffer_pp.toFixed(1) + 'pp)' +
                     ' — only <span class="' + papCls + '">' + pap + 'pp above par</span>' +
@@ -1846,10 +1942,37 @@ var SyrupUSDCRenderer = {
             }
         }
 
+        // Deliberately carries no share-of-book percentage: the producer already
+        // publishes one on its risk flag (39.6% of the total book) and a second
+        // denominator on the same page is the defect this pass exists to remove.
+        // The excluded/kept dollar pair gives the magnitude without a third basis.
+        var exclusionNote = '';
+        if (stats) {
+            // When the Set A block above is present it already states the excluded
+            // magnitude, from the producer's own published split — so point at it
+            // instead of restating a separately-derived pair that could drift.
+            var exN = stats.excluded_count;
+            var whichExcluded = h ?
+                'the uncorroborated read' + (exN === 1 ? '' : 's') + ' listed above' :
+                '<strong>' + exN + ' loan' + (exN === 1 ? '' : 's') + '</strong> (' +
+                    CommonRenderer.formatCurrency(stats.excluded_usd) + ') that Maple GraphQL prices below par ' +
+                    'while the pool\'s own on-chain <span class="font-mono">unrealizedLosses</span> is 0 ' +
+                    'and none is impaired, called or in default';
+            exclusionNote =
+                '<div class="text-xs text-slate-500 mt-2">' +
+                    'Figures above exclude ' + whichExcluded + ', and are computed over the ' + stats.kept_count +
+                    ' corroborated read' + (stats.kept_count === 1 ? '' : 's') + ' (' +
+                    CommonRenderer.formatCurrency(stats.kept_usd) + '). Those rows are marked ' +
+                    '<span class="text-slate-400">unverified</span> in the loan table — the number is still shown, ' +
+                    'it is just not treated as a finding.' +
+                '</div>';
+        }
+
         return '<div class="mb-4 p-3 rounded-lg" style="background:#f8fafc;border:1px solid #e2e8f0">' +
             '<div class="text-sm font-semibold text-slate-700 mb-2">Buffer health <span class="text-xs font-normal text-slate-500">(distance to par)</span></div>' +
             setABlock +
             tightestBlock +
+            exclusionNote +
             (below > 0 ?
                 '<div class="text-xs text-slate-400 mt-2">' +
                     below + ' loan' + (below === 1 ? '' : 's') + ' below their funding-time init level (' +
@@ -1872,8 +1995,12 @@ var SyrupUSDCRenderer = {
         }
 
         var byAsset = cs.by_asset || [];
+        // The `init_level_pct_max > 105` escape hatch used to be the only reason
+        // WBTC appeared here at all; position_type now answers it directly, and
+        // the hatch stays as the fallback for rollup rows with no visible loan.
+        var loanTypes = SyrupUSDCRenderer._assetPositionTypes(lb);
         var loanAssets = byAsset.filter(function(r) {
-            return SyrupUSDCRenderer._isLoanAsset(r.asset) || (r.init_level_pct_max || 0) > 105;
+            return SyrupUSDCRenderer._isLoanAssetIn(r.asset, loanTypes) || (r.init_level_pct_max || 0) > 105;
         });
         if (loanAssets.length === 0) return '';
 
@@ -1912,7 +2039,7 @@ var SyrupUSDCRenderer = {
     // single-table version mixed third-party credit with pool-owned
     // liquidity positions; liquidity positions now render as their own
     // table inside the §2b Liquidity Layer panel.
-    _renderTopLoansTable: function(lb, loanRows) {
+    _renderTopLoansTable: function(lb, loanRows, poolUL) {
         var rows = loanRows || (lb.loans || []).filter(SyrupUSDCRenderer._isLoan);
         if (rows.length === 0) return '';
 
@@ -1920,7 +2047,7 @@ var SyrupUSDCRenderer = {
         var hasCollateral = !!(summary && summary.data_source && summary.data_source !== 'unavailable')
             || rows.some(function(l) { return l && l.collateral; });
         var sorted = rows.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).slice(0, 10);
-        var rowsHtml = sorted.map(function(l) { return SyrupUSDCRenderer._renderLoanRow(l, hasCollateral); }).join('');
+        var rowsHtml = sorted.map(function(l) { return SyrupUSDCRenderer._renderLoanRow(l, hasCollateral, poolUL); }).join('');
 
         var collateralHeaders = hasCollateral ?
             ('<th class="cursor-pointer" data-sort="collat">Collateral</th>' +
@@ -1939,7 +2066,7 @@ var SyrupUSDCRenderer = {
             '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
     },
 
-    _renderLoanRow: function(loan, hasCollateral) {
+    _renderLoanRow: function(loan, hasCollateral, poolUL) {
         var addr = loan.borrower || '';
         var firmTag = loan.firm ? '<span class="text-xs text-slate-500 ml-1">' + loan.firm + '</span>' : '';
         var borrowerCell = '<span class="font-mono text-xs" title="' + addr + '">' + SyrupUSDCRenderer._truncAddr(addr) + '</span>' +
@@ -1985,6 +2112,9 @@ var SyrupUSDCRenderer = {
             var asset = c.asset || null;
             var collatUsd = c.usd;
             var isAnomaly = c.usd_source === 'data_anomaly';
+            // Second, distinct failure mode: the read is present but the pool's
+            // on-chain alarm contradicts it (see _collateralUncorroborated).
+            var isUncorroborated = SyrupUSDCRenderer._collateralUncorroborated(loan, poolUL);
             // Distinguish data_anomaly cells (Maple GraphQL returns broken
             // currentAssetAmount) from genuinely-unavailable: same — but with
             // a ? glyph + tooltip so readers know it's a data-quality issue,
@@ -2020,7 +2150,10 @@ var SyrupUSDCRenderer = {
             var curLevel = c.current_level_pct;
             var initText = (initLevel != null) ? CommonRenderer.formatPercent(initLevel, 0) : '—';
             var curText;
-            if (curLevel != null) {
+            if (curLevel != null && isUncorroborated) {
+                curText = '<span class="text-slate-400" title="' + SYRUP_UNCORROBORATED_TITLE + '">' +
+                    CommonRenderer.formatPercent(curLevel, 1) + '</span>';
+            } else if (curLevel != null) {
                 curText = CommonRenderer.formatPercent(curLevel, 1);
             } else if (isAnomaly) {
                 curText = '<span' + anomalyAttrs + '>—</span>' + anomalyGlyph;
@@ -2032,7 +2165,7 @@ var SyrupUSDCRenderer = {
                 '<td>' + collatCellText + '</td>' +
                 '<td class="text-right font-mono text-slate-500">' + initText + '</td>' +
                 '<td class="text-right font-mono">' + curText + '</td>' +
-                SyrupUSDCRenderer._renderBufferCell(c);
+                SyrupUSDCRenderer._renderBufferCell(c, isUncorroborated);
 
             sortAttrs.collat = asset || '';
             sortAttrs.init = (initLevel != null) ? initLevel : '';
@@ -2054,8 +2187,72 @@ var SyrupUSDCRenderer = {
         '</tr>';
     },
 
+    // ----- Collateral-read corroboration ----------------------------------
+    // Maple's per-loan GraphQL `currentAssetAmount` is understated on some
+    // crypto-collateralised loans, which makes `current_level_pct` read below
+    // par on loans that are not in distress. The producer already grades this:
+    // a below-par read only counts as a finding when the pool's on-chain
+    // `unrealizedLosses` is > 0 or the loan is impaired/called/defaulted. It
+    // publishes the verdict in aggregate (set_a_collateral_health
+    // .crit_corroborated_* vs .crit_uncorroborated_*) but stamps nothing on
+    // the loan record, so every consumer has to reconstruct the rule per row.
+    // Handoff filed upstream to stamp it; this reconstruction reproduces the
+    // published aggregate exactly (syrupUSDC 2026-09-14: 10 loans / $372.55M).
+    // Conservative by design: an unknown or live alarm leaves the read asserted.
+    _collateralUncorroborated: function(loan, poolUL) {
+        var c = loan && loan.collateral;
+        if (!c || c.current_level_pct == null) return false;
+        if (c.current_level_pct >= 100) return false;
+        if (poolUL == null || poolUL > 0) return false;
+        if (loan.is_impaired || loan.is_called || loan.is_in_default) return false;
+        return true;
+    },
+
+    // Buffer-health aggregates recomputed over the reads that survive the
+    // corroboration gate, so the tightest loan, the weighted-average buffer
+    // and the below-init tally are consistent with each other BY CONSTRUCTION
+    // rather than by re-checking. Returns null when nothing is excluded, so a
+    // pool with no suspect reads (syrupUSDT today) keeps rendering the
+    // producer's published fields verbatim. Same formula as the producer:
+    // principal-weighted over loans-only rows carrying a buffer_pp.
+    _bufferStatsExUncorroborated: function(lb, poolUL) {
+        var kept = [], excl = [];
+        (lb.loans || []).filter(SyrupUSDCRenderer._isLoan).forEach(function(l) {
+            if (!l.collateral || l.collateral.buffer_pp == null) return;
+            (SyrupUSDCRenderer._collateralUncorroborated(l, poolUL) ? excl : kept).push(l);
+        });
+        if (excl.length === 0) return null;
+        function sumP(rows) { return rows.reduce(function(s, l) { return s + (l.principal || 0); }, 0); }
+        var keptUsd = sumP(kept);
+        var belowInit = kept.filter(function(l) { return l.collateral.buffer_pp < 0; });
+        var tightest = null;
+        kept.forEach(function(l) {
+            if (l.collateral.current_level_pct == null) return;
+            if (!tightest || l.collateral.current_level_pct < tightest.collateral.current_level_pct) tightest = l;
+        });
+        return {
+            excluded_count: excl.length,
+            excluded_usd: sumP(excl),
+            kept_count: kept.length,
+            kept_usd: keptUsd,
+            weighted_avg_buffer_pp: keptUsd > 0 ? kept.reduce(function(s, l) {
+                return s + (l.principal || 0) * l.collateral.buffer_pp;
+            }, 0) / keptUsd : null,
+            below_init_count: belowInit.length,
+            below_init_usd: sumP(belowInit),
+            tightest: tightest ? {
+                principal_usd: tightest.principal,
+                asset: tightest.collateral.asset,
+                init_level_pct: tightest.collateral.init_level_pct,
+                current_level_pct: tightest.collateral.current_level_pct,
+                buffer_pp: tightest.collateral.buffer_pp,
+                points_above_par: tightest.collateral.current_level_pct - 100
+            } : null
+        };
+    },
+
     // Per-Set buffer-color decision rule (master spec §3).
-    _renderBufferCell: function(coll) {
+    _renderBufferCell: function(coll, uncorroborated) {
         var buf = coll && coll.buffer_pp;
         if (buf === null || buf === undefined) {
             // Distinguish data_anomaly (collateral state unverifiable) from
@@ -2067,6 +2264,14 @@ var SyrupUSDCRenderer = {
         }
         var sign = buf >= 0 ? '+' : '';
         var label = sign + buf.toFixed(1) + 'pp';
+
+        // Below-par read the pool's own on-chain alarm contradicts: show the
+        // number, but qualified rather than asserted as distress. The verdict
+        // is the producer's, not a heuristic invented here.
+        if (uncorroborated) {
+            return '<td class="text-right font-mono text-slate-400" title="' + SYRUP_UNCORROBORATED_TITLE + '">' +
+                label + ' <a href="#syrup-data-anomaly-note" class="text-slate-400 text-xs no-underline hover:underline cursor-help">unverified</a></td>';
+        }
 
         if (coll.is_at_par) {
             // Set B: gray "at-par" tag unless asset has depegged below par
@@ -2388,8 +2593,30 @@ var SyrupUSDCRenderer = {
         // empty state), queue depth, and request-id strip. Do not render
         // current_cycle_* / cycle_duration_seconds — permanently null for Syrup.
         if (wq) {
-            var freeUsd = (s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency) ? s.collateral_ratio_alt.value :
-                          (specific.vault_state && specific.vault_state.free_usdc) || null;
+            // Two DIFFERENT measures live here and were both being labelled
+            // "Free <underlying>", which is how one page showed $7.1M and $9.5M
+            // for the same words:
+            //   vault_state.free_usdc      = usdc.balanceOf(pool) — idle in the
+            //                                pool contract, the instant-exit float
+            //   vault_state.free_liquidity = total_assets - principal_out — that
+            //                                float PLUS accrued interest still
+            //                                inside the strategies
+            // summary.collateral_ratio_alt carries free_liquidity together with
+            // the producer's own label and note; use them rather than a label
+            // invented here, and name the pool balance alongside so a reader can
+            // reconcile this card with the Free-<underlying> row in Backing.
+            var cra = s.collateral_ratio_alt;
+            var craIsCurrency = !!(cra && cra.is_currency);
+            var poolBalance = (specific.vault_state && specific.vault_state.free_usdc);
+            var freeUsd = craIsCurrency ? cra.value : (poolBalance || null);
+            var freeLabel = (craIsCurrency && cra.label) ? cra.label : ('Free ' + underlying);
+            var freeNote = (craIsCurrency && cra.note) ? cra.note : '';
+            var freeSubtext = SyrupUSDCRenderer._freeLiquidityPct(s) != null ?
+                CommonRenderer.formatPercent(SyrupUSDCRenderer._freeLiquidityPct(s), 1) + ' of pool assets' : '';
+            if (craIsCurrency && poolBalance != null && poolBalance !== cra.value) {
+                freeSubtext += (freeSubtext ? ' · ' : '') + 'pool ' + underlying + ' balance ' +
+                    CommonRenderer.formatCurrency(poolBalance);
+            }
             var freePct = SyrupUSDCRenderer._freeLiquidityPct(s);
             var queueEmpty = wq.is_empty === true;
             var depthUsd = (wq.queue_depth_usdc_est === null || wq.queue_depth_usdc_est === undefined) ? (queueEmpty ? 0 : null) : wq.queue_depth_usdc_est;
@@ -2430,7 +2657,11 @@ var SyrupUSDCRenderer = {
             }
 
             html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
-                '<div class="summary-card"><div class="card-label">Free ' + underlying + '</div><div class="card-value positive">' + CommonRenderer.formatCurrency(freeUsd) + '</div><div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(freePct, 1) + ' of supply</div></div>' +
+                '<div class="summary-card"><div class="card-label"' +
+                    (freeNote ? ' title="' + freeNote.replace(/"/g, '&quot;') + '"' : '') + '>' + freeLabel +
+                    (freeNote ? ' <span class="text-slate-400 cursor-help">ⓘ</span>' : '') + '</div>' +
+                    '<div class="card-value positive">' + CommonRenderer.formatCurrency(freeUsd) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' + freeSubtext + '</div></div>' +
                 lastFillCard +
                 headCard +
                 '<div class="summary-card"><div class="card-label">' + (queueEmpty ? 'Request IDs' : 'Queue depth') + '</div>' +
@@ -2454,8 +2685,17 @@ var SyrupUSDCRenderer = {
         var paymentInterval = lb.weighted_avg_payment_interval_days;
         if (paymentInterval == null) paymentInterval = lb.weighted_avg_remaining_days_to_due;
         var freePctText = freePct2 != null ? freePct2.toFixed(1) + '%' : '?';
-        var freeUsdText = freeUsd2 != null ?
-            (freeUsd2 >= 1e6 ? '$' + (freeUsd2 / 1e6).toFixed(0) + 'M' : '$' + (freeUsd2 / 1e3).toFixed(0) + 'K') : '?';
+        // Was hand-rounded to whole millions, which printed free liquidity of
+        // $9.47M as "$9M" — understating the anchor it is the anchor for.
+        var freeUsdText = freeUsd2 != null ? CommonRenderer.formatCurrency(freeUsd2) : '?';
+        // The anchor figure is free_liquidity, which per the producer is the pool
+        // balance PLUS accrued interest sitting in the strategies. Name the split
+        // instead of letting one number stand for both — the instantly-available
+        // float is the smaller of the two.
+        var poolBal = (specific.vault_state || {}).free_usdc;
+        var freeSplitFragment = (freeUsd2 != null && poolBal != null && poolBal !== freeUsd2) ?
+            ' — <span class="font-mono">' + CommonRenderer.formatCurrency(poolBal) + '</span> of that is the pool\'s own ' +
+            underlying + ' balance, the remainder accrued interest booked in the strategies' : '';
         var intervalText = paymentInterval != null ? paymentInterval.toFixed(0) + '-day' : 'multi-week';
         var monthlyInflow = lb.payment_ladder && lb.payment_ladder.totals && lb.payment_ladder.totals.expected_inflow_30d_usd;
         var inflowFragment = (monthlyInflow != null) ?
@@ -2463,7 +2703,7 @@ var SyrupUSDCRenderer = {
 
         html += '<div class="text-sm font-semibold text-slate-700 mt-4 mb-1">Stress anchor</div>' +
             '<p class="text-sm text-slate-700">' +
-                'Free liquidity (<span class="font-semibold">' + freePctText + '</span>, ' + freeUsdText + ') covers redemptions to ~<span class="font-semibold">' + freeUsdText + '</span> before queueing. ' +
+                'Free liquidity (<span class="font-semibold">' + freePctText + '</span>, ' + freeUsdText + ') covers redemptions to ~<span class="font-semibold">' + freeUsdText + '</span> before queueing' + freeSplitFragment + '. ' +
                 'Above that, exits depend on incoming loan repayments' + inflowFragment + '. ' +
                 'Avg loan payment interval <span class="font-semibold">' + intervalText + '</span>; the pool has 24h notice + 48h grace to call a delinquent loan.' +
             '</p>';

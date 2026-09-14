@@ -2,17 +2,23 @@
 title: Analyst findings — 2026-09-14
 repo: backing-monitor
 source: user's analyst, relayed 2026-09-14
-status: WORKING BACKLOG. Each item is UNVERIFIED until checked here.
+status: WORKING BACKLOG. Items 12-15 FIXED 2026-09-14; items 1-11 UNVERIFIED.
 ---
 
 # ▶ START HERE — resume context
 
-**Immediate next action: BUILD the fix for items 12/13 (syrupUSDC collateral column).** It is fully
-investigated, the plan is settled, and the user was asked to approve the build. ⚠️ **Nothing has
-been built yet.** Everything below item 13's **Plan** is ready to implement as written.
+**Items 12, 13, 14 and 15 are BUILT, rendered and verified** (`js/renderers/syrupusdc.js`). The
+S1–S3 block of the triage is closed. ⚠️ **Three of the claims below needed correcting before they
+were safe to act on — read each item's Check, not just its Claim.**
 
-**The four other syrupUSDC items (14, 15) are in the same renderer** and are cheap to do in the same
-pass once you are in that file.
+**Immediate next action: item 5 (apxUSD slippage measured against $1.00).** It is the next entry
+in the triage (S4) and nothing has been checked on it yet. Items 1–11 are all still `unverified`.
+
+**One new defect surfaced by rendering the fix** — recorded at the bottom under *Found while
+building*, not fixed, because it is outside every item on this list and is an editorial call:
+a $50.0M BTC loan at **124.9%** collateralisation renders **red 🔴** on buffer-to-init while the
+same panel says *"init is not the health threshold."* My change promoted that loan to the
+headline, so the contradiction is now more visible than it was.
 
 ## What a fresh session needs to know
 
@@ -68,10 +74,10 @@ attached, on 40% of a $930M book. The math errors (S3, S4) are next because they
 self-contradicting. Everything else is a gap or a framing problem.
 
 ```
-S1  syrupUSDC collateral column corrupt          items 12, 13
-S2  syrupUSDC Liquidity Layer math               item 14
-S3  syrupUSDC free liquidity: 3 values           item 15
-S4  apxUSD slippage measured against $1.00       item 5
+S1  syrupUSDC collateral column corrupt          items 12, 13   ✅ FIXED 2026-09-14
+S2  syrupUSDC Liquidity Layer math               item 14        ✅ FIXED 2026-09-14
+S3  syrupUSDC free liquidity: 3 values           item 15        ✅ FIXED 2026-09-14
+S4  apxUSD slippage measured against $1.00       item 5         ← NEXT
 S5  sUSDat NAV monotonicity claim is wrong       item 8
 S6  sUSDat backing tile hides its own caveat     item 7
 S7  Wolf table self-contradiction                item 9
@@ -257,7 +263,38 @@ front end is a third reading and shows these loans at 123–206%, so **Maple's U
    $25M loans sit at ~6.2% of required and fall just outside it.
 ```
 
-**Status.** confirmed · **plan settled · NOT BUILT — awaiting the user's go-ahead**
+**Built.** ✅ `js/renderers/syrupusdc.js`. Three pieces, none of them a heuristic:
+
+```
+_collateralUncorroborated(loan, poolUL)   reconstructs the producer's gate per row
+_bufferStatsExUncorroborated(lb, poolUL)  one filtered pass → tightest + wtd-avg + below-init
+_renderBufferCell(coll, uncorroborated)   qualified cell, not red distress
+```
+
+⚠️ **The reconstruction is conservative**: an unknown or live `unrealizedLosses` leaves the read
+asserted. Only a pool that actively contradicts its own loan rows gets the softer treatment.
+
+What the page says now, read back from the DOM:
+
+```
+Tightest verifiable loan: $50.0M BTC @ 124.9% (init 125%, -0.1pp) — only 24.9pp above par
+Figures above exclude the uncorroborated reads listed above, and are computed over the
+16 corroborated reads ($524.7M).
+$200.0M row:  BTC $125.8M  143%  62.9%  -80.1pp unverified      ← was  -80.1pp 🔴
+```
+
+⚠️ **The exclusion note deliberately carries no share-of-book percentage.** The producer already
+publishes one on its risk flag (39.6% of book). A second denominator on the same page is the
+defect this pass exists to remove — the first draft printed *"41.5% of the reads on this book"*
+and was caught by reading the rendered page, not the diff.
+
+**Blast radius — `syrupUSDT` uses the same renderer and has ZERO uncorroborated reads.** Verified
+unchanged after the change: no `unverified` cells, no exclusion note, still *"Tightest loan"* (not
+*"verifiable"*), still the producer's published `$40.0M BTC @ 126.0%`. ⚠️ **That is the check that
+could have gone red** — a gate that fired on `poolUL == null` would have rewritten that pool too.
+
+**Status.** confirmed · **FIXED** · handoff for step 4 written to
+`~/PegTracker/handoffs/inbox/syrup-loan-artifact-marker-not-stamped-2026-09-14.md` (uncommitted)
 
 ## 13 · syrupUSDC — the stated root cause does not match the symptom
 
@@ -280,13 +317,42 @@ inherited that origin story. ⚠️ **This is the "a rule written at the site of
 bug's scope" pattern**, same as the sync script's missing-source comment. The detector's threshold
 was tuned to near-zero readings; the crypto cases sit above it and pass through unflagged.
 
-**Plan.** Rewrite the footnote to state what is actually true: Maple's per-loan
-`currentAssetAmount` is understated by a VARIABLE factor (3.0×, 2.0×, 16.9× observed — so not a
-decimal error), affecting crypto-collateralised loans, and the pool's own on-chain
-`unrealizedLosses` contradicts the per-loan reads. ⚠️ **Do not restate the at-par explanation** —
-a wrong explanation closes the question.
+**⚠️ CORRECTION — the plan above was wrong, and so was my own Check.** *"Do not restate the at-par
+explanation"* would have deleted a true sentence. Read the producer before rewriting:
 
-**Status.** confirmed · plan settled · NOT BUILT
+```
+$ python3 -c "...usd_source in ('data_anomaly','unavailable')..."
+  data_anomaly  liquidity  USDC  at_par=True  cat=stablecoin   ×5
+  data_anomaly  liquidity  PYUSD at_par=True  cat=stablecoin
+```
+
+**All six `data_anomaly` rows — the ONLY rows that carry the `?` glyph — are at-par
+stablecoin/RWA positions.** The footnote sentence about them is accurate. The `?` marks rows where
+Maple returns *no usable* value at all, and those really are the at-par sleeve.
+
+⚠️ **So this was never one wrong sentence. It is two different failure modes and only one of them
+was described.** The ten below-par reads are `usd_source: chainlink` and carry no `?` at all —
+which is exactly why they rendered as confident red instead of as a data-quality caveat. **The
+footnote did not misexplain them; it never mentioned them.**
+
+**Built.** ✅ Kept the at-par sentence (tightened *"broken"* → *"no usable … leaving their cells
+blank"*, which is what actually happens) and added the second mode. Generated from the live feed,
+not hardcoded — it disappears entirely on a pool with no such reads, and the range cannot go stale:
+
+> *"A second, distinct read fails the other way: on **10 loans** ($372.6M, collateralised in
+> BTC/ETH) Maple GraphQL returns an understated `currentAssetAmount`, so the loan prices below par
+> while nothing else about it is distressed — it is not impaired, called or in default, and the
+> pool's own on-chain `unrealizedLosses` is 0. The understatement is not a constant factor
+> (roughly **1.5× to 16.1×** against each loan's funding-time init level), so it is not a
+> decimal-scale error. Those cells read `unverified` in the loan table and are excluded from the
+> buffer-health figures; the number is shown, not asserted."*
+
+⚠️ **The factor range is computed against OUR OWN feed (init ÷ current), not against Maple's front
+end.** The analyst's 3.0×/2.0×/16.9× came from comparing to Maple's UI, which this session cannot
+read. Same conclusion — not constant, therefore not a decimal error — reached from a source that
+is in the repo.
+
+**Status.** confirmed with a correction · **FIXED**
 
 ## 14 · syrupUSDC — Liquidity Layer, two visible math errors
 
@@ -295,9 +361,58 @@ the **$25M WBTC position never renders**. *"Top asset WBTC 131.6% of layer"* —
 divides $25M WBTC by a **$19.0M total that excludes the WBTC**. Should be **~57%**. Same bug in
 the cross-pool liquidity table: **89.3 + 32.4 + 10.7 = 132%**.
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED — all three symptoms, and they are ONE bug with one line behind it.**
+
+```js
+_isLoanAsset: function(asset) {
+    return ['BTC', 'cbBTC', 'ETH', 'XRP', 'HYPE'].indexOf(asset) >= 0;   // WBTC is not here
+}
+```
+
+A closed name list. The per-loan rows stopped needing it when the analyzer shipped
+`position_type` — `_isLoan` / `_isLiquidity` read that field and fall back to the list only for
+older snapshots. ⚠️ **But the `by_asset` and family rollups carry no `position_type`, so they were
+still being classified by name.** The $25M WBTC loan therefore renders in the loan table (correct,
+`position_type: "loan"`) **and** lands in the liquidity sleeve subtotals (wrong). One position,
+counted on both sides of the split.
+
+⚠️ **One correction to the analyst: the WBTC position does render — as a loan, which is what it
+is.** The symptom is not a missing row, it is a phantom $25M in a sleeve whose only member is
+PYUSD $1.5K. Naming it "never renders" would have sent a fix at the liquidity table.
+
+⚠️ **And the bug is wider than WBTC: `USDtb` is loan collateral in both pools and is also missing
+from the list.** Small ($9,210 combined) and therefore invisible — which is the point. Every
+collateral asset Maple adds is silently misfiled until someone edits that array.
+
+Arithmetic reproduced exactly: 25,000,000 ÷ 19,001,505 = **131.57%**; and on the family table
+69.0 ÷ 77.25 = **89.3%**, 25.0 ÷ 77.25 = **32.4%**, 8.25 ÷ 77.25 = **10.7%** → **132.4%**.
+
+**Built.** ✅ `_assetPositionTypes(lb, ...)` harvests asset → `position_type` from the loan rows
+that carry it; `_isLoanAssetIn(asset, map)` consults it and falls back to the name list only for a
+rollup row with no visible loan. Applied at all three rollup call sites (liquidity layer, family
+cross-pool, loans-by-asset). The name list stays, now commented as last-resort.
+
+⚠️ **This is not "a different classifier gives a different answer" — it is checkable against the
+producer**, and that check is an independent discriminator, not the same rule re-applied:
+
+```
+                    renderer sum      producer published        result
+syrupusdc  liq       19,001,505   principal_liquidity_usd       MATCH
+syrupusdc  loans    922,266,968   principal_loans_only_usd      MATCH
+syrupusdt  liq       58,250,015   principal_liquidity_usd       MATCH
+syrupusdt  loans    277,052,552   principal_loans_only_usd      MATCH
+family     liq       77,251,520   combined.aum_liquidity_usd    MATCH
+family     loans  1,199,319,521   combined.aum_loans_usd        MATCH
+```
+
+**Six exact reconciliations. The name heuristic matched none of them.** The producer's own AUM
+split had encoded the right answer the whole time.
+
+Rendered: *"top asset **USDC 100.0%** of layer"*; liquidity class now **89.3 + 10.7 = 100.0%**;
+loans class gains WBTC (2.1%) and USDtb; the phantom parked-reserve sleeve is gone (PYUSD $1.5K
+falls under the $100k display threshold and is acknowledged in the dust tail line).
+
+**Status.** confirmed with a correction · **FIXED**
 
 ## 15 · syrupUSDC — free liquidity has three values on one page
 
@@ -305,9 +420,84 @@ the cross-pool liquidity table: **89.3 + 32.4 + 10.7 = 132%**.
 implies **1.01%**. Two fields — **`free_usdc`** and **`free_liquidity`** — both labelled
 *"Free USDC."* Same on USDT (**$9.89M vs $10.59M**).
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED as a labelling defect — NOT three values, and neither number is wrong.**
+Read the producer (`~/PegTracker/syrupusdt_backing_analyzer.py`):
+
+```python
+free_usdc      = usdc.balanceOf(POOL) / 10**USDC_DEC      # idle in the pool contract
+free_liquidity = total_assets - principal_out             # "USDC + accrued interest in strategies"
+```
+
+Two different measurements, both correct. Today: **$7,091,843** and **$9,473,965**; the
+$2,382,122 gap is interest accrued into `total_assets` but not into any position's principal.
+Verified: 950,742,439.20 − 941,268,473.84 = 9,473,965.36 exactly. The "third value" is not a third
+value — `deployment_ratio_pct` 99.0 is the complement of `free_liquidity_pct` 1.0, the same
+measure.
+
+⚠️⚠️ **And the producer had already published the correct label, which the renderer was throwing
+away:**
+
+```json
+"collateral_ratio_alt": {
+  "label": "Free Liquidity", "value": 9473965.36, "is_currency": true,
+  "note": "Pool USDC + accrued interest in strategies (not in active loans)"
+}
+```
+
+The renderer took `.value` and hardcoded `'Free ' + underlying` over the top of `.label`, dropping
+`.note` entirely. ⚠️ **A published-but-unrendered case where rendering the published field would
+have prevented the defect outright.**
+
+**Built.** ✅ Card now reads the producer's `label` and `note`, names the other measure beside it,
+and states the right basis:
+
+```
+was:  Free USDC        $9.5M    1.0% of supply
+now:  Free Liquidity ⓘ $9.5M    1.0% of pool assets · pool USDC balance $7.1M
+```
+
+Stress anchor now splits the figure instead of letting one number stand for both — *"covers
+redemptions to ~$9.5M before queueing — **$7.1M of that is the pool's own USDC balance**, the
+remainder accrued interest booked in the strategies."*
+
+⚠️ **Also fixed in passing: the stress anchor hand-rounded to whole millions**, printing free
+liquidity of $9.47M as *"$9M"* — understating the very anchor it exists to state. Now uses
+`formatCurrency`.
+
+syrupUSDT renders the same shape correctly: *"Free Liquidity $11.5M · 3.3% of pool assets · pool
+USDT balance $10.8M."*
+
+**Status.** confirmed with a correction · **FIXED**
+
+---
+
+# Found while building — not on the analyst's list
+
+## A · A 124.9%-collateralised loan renders red
+
+`_renderBufferCell` colours Set A rows on **buffer-to-init**: `buf < 0` → red 🔴, title
+*"Below init level — delegate discretion to call."* The $50.0M BTC loan sits at **124.9%** against
+a **125%** init level — a **-0.08pp** buffer, and **24.9pp above par**.
+
+⚠️ **The same panel, four lines above, says the opposite in words:** *"init is not the health
+threshold, see distance-to-par above"* — and the Set A tiers it leads with are measured against
+par, not init. So the table contradicts the panel's own stated framing.
+
+Both the number and the tooltip are **true**; nothing here is a wrong figure. It is an emphasis
+choice made before the distance-to-par framing landed, and it never got revisited.
+
+⚠️ **Item 12's fix made this more visible, not less:** with the ten artifact reads excluded, this
+loan is now *"Tightest verifiable loan"* — the headline of the block.
+
+**Not fixed.** Out of scope for every item on this list, and it is an editorial call about what
+red means on this page, not a defect. Recorded for the owner. Options, cheapest first: colour the
+Set A cell on distance-to-par and keep buffer-to-init as the number; or keep the colour and
+reword the panel line so the two agree.
+
+## B · Four dead locals in `_renderLBH_buffer`
+
+`above` / `aboveUsd` / `belowPct` / `abovePct` were computed and never read. Removed — they sat
+directly above the new filtered pass and would have read as its source.
 
 ---
 
@@ -323,7 +513,13 @@ rediscover them.
 - **Axis 6** — 19 of 21 issuer blocks publish no score. The frame reads `issuer_score` and would
   render it. Their editorial choice to confirm, not our defect to fix.
 
-**Waiting on PegTracker** (two handoffs at `status: ready`, unworked):
+**Waiting on PegTracker** (three handoffs at `status: ready`, unworked):
+- `syrup-loan-artifact-marker-not-stamped-2026-09-14` — written this session, uncommitted. Asks
+  them to stamp the corroboration verdict on the loan record so consumers stop reconstructing it,
+  and flags that the `usd_anomaly` threshold (`raw < required * 0.05`) misses the four $25M loans
+  at ~6.2% of required. ⚠️ **Until it lands, `_collateralUncorroborated()` in `syrupusdc.js` is a
+  reconstruction of THEIR rule** — if they change the gate and we don't, the page goes stale
+  silently. Both helpers carry a comment pointing at the handoff.
 - `hastra-prime-heloc-is-a-facility-name-2026-09-12`
 - `exit-ladder-bracket-lost-on-quote-failure-2026-09-11`
 
