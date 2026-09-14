@@ -12,8 +12,8 @@ but deferred upstream.** Triage bands S1–S8 are closed. ⚠️ **Six of the el
 correcting before they were safe to act on, and item 5's stated cause was REFUTED outright — read
 each item's Check, not just its Claim.**
 
-**Immediate next action: item 4 (apyUSD ↔ sUSDat link absent from Dependencies), triage S9.**
-Items 6, 10 and 11 are also still `unverified` — nothing has been checked on any of them.
+**Immediate next action: item 6 (apxUSD reserve denominator, POL in or out), triage S10.** Items
+10 and 11 are also still `unverified` — nothing has been checked on either.
 
 ⚠️ **Item 5 is the cautionary one.** The analyst read a published `fair_value_basis` field and
 reported exactly what it said; the field is hardcoded and contradicts the numbers beside it. Two
@@ -88,8 +88,8 @@ S5  sUSDat NAV monotonicity claim is wrong       item 8         ✅ FIXED 2026-0
 S6  sUSDat backing tile hides its own caveat     item 7         ✅ FIXED 2026-09-14
 S7  Wolf table self-contradiction                item 9         ✅ FIXED 2026-09-14
 S8  liquidity venues missing / not wired         items 1, 2, 3  ✅ 3 FIXED · 1 partial · 2 upstream
-S9  apyUSD <-> sUSDat link absent from deps      item 4         ← NEXT
-S10 apxUSD reserve denominator (POL in/out)      item 6
+S9  apyUSD <-> sUSDat link absent from deps      item 4         ✅ FIXED 2026-09-14 (via shared upstream)
+S10 apxUSD reserve denominator (POL in/out)      item 6         ← NEXT
 S11 STRCx supply basis + unlocatable supply      items 10, 11
 ```
 
@@ -193,9 +193,51 @@ measured band.
 Apyx and Saturn stacks, and contagion-relevant: **apyUSD holders can be the ones who drain
 sUSDat's $36K ceiling.** Absent from both Dependencies panels.
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ⚠️ **The ABSENCE is confirmed. The VENUE is not confirmable here, and a much larger link
+is — one that was already measured and rendered on exactly one page.**
+
+**What is true:** neither panel names the other. All four Apyx/Saturn feeds carry
+`downstream: []` and `downstream_tracked: false`.
+
+⚠️ **What I could not confirm:** no `apyUSD/sUSDat` pool exists in ANY feed we hold — grepping every
+`"pair"` across `data/` returns only `apyUSD/apxUSD`. The **$21.5K/day** and the **$36K ceiling**
+are likewise absent; sUSDat's published figures are `total_tvl` **$63,292** and a 2% depth
+**bracketed between $10K and $100K**. ⚠️ **Third unconfirmable UniV4 claim in this backlog**
+(items 1, 2, 4) — all plausible, none in our data. Not rendered.
+
+✅ **What IS measured, and is a bigger channel than a DEX pool:** `strc_backing.json`
+`downstream_exposure` quantifies both stacks against the same collateral —
+
+```
+apyx    $170.2M STRC   54.8% of its reserves   attested
+saturn  $ 70.4M STRC   99.0% of its reserves   oracle-marked, unverified
+                       combined $240.6M
+```
+
+⚠️ **$240.6M of shared collateral versus a $21.5K/day pool.** The analyst reached for a *price*
+transmission channel; the *value* channel is four orders of magnitude larger, published, and
+**rendered on exactly one page — the STRC dashboard, which a reader of these two is least likely
+to be on.**
+
+**Built.** ✅ `common.js` `loadCommonModeExposure` adds a **"Shared upstream — who else holds this
+collateral"** table to the Dependencies panel, marking which row is the page you are on:
+
+> *"STRC is not this asset's exposure alone. A move in the STRC mark reaches every stack below at
+> once, so these are correlated by construction rather than independent — and a stress on one is
+> not diversified by the other."*
+
+⚠️ **Keyed on the dependency rows the page ALREADY renders** (any upstream linking to
+`?asset=strc`), not on a slug list — it extends itself if another asset starts naming the same
+upstream. Verified silent on USG, **including no wasted fetch** (0 requests for
+`strc_backing.json` on a non-family page).
+
+⚠️ **Deliberately one-hop.** apyUSD's direct upstream is apxUSD, so apyUSD does NOT get the table —
+its STRC exposure is inherited, and the panel answers *"what this asset depends on."* The table
+renders on apxUSD, one click away through the row apyUSD already shows. Two-hop traversal would
+mean fetching every intermediate on every page to discover a link that is one click away.
+
+**Status.** ⚠️ **absence confirmed · venue unconfirmable (not rendered) · a larger measured link
+FIXED**
 
 ## 5 · apxUSD — slippage measured against $1.00 while the peg panel says 0.9770
 

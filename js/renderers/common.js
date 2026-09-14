@@ -4479,6 +4479,7 @@ const CommonRenderer = {
         var depChip = this.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies');
         this._renderAxisHead('dependencies', 4, 'Dependencies', upSub + ' \u00b7 ' + downSub, depChip, data.dependencies);
         this._renderDependenciesSection(data);
+        this.loadCommonModeExposure(data);
 
         // 5 · Contract & Admin — MEASURED. Split from Issuer because they fail
         // independently and the evidence is of different kinds. USDat is the
@@ -6101,7 +6102,83 @@ const CommonRenderer = {
             upBlock +
             '<div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 mt-6">Downstream — what depends on this asset</div>' +
             downBlock +
+            // ⚠️ AN UPSTREAM SHARED WITH ANOTHER STACK IS A DEPENDENCY THIS PANEL
+            // HAS NO ROW FOR. apxUSD lists STRCx at 68% of reserves and sUSDat
+            // lists STRC at ~99% of backing; neither page says the other exists.
+            // The common-mode exposure is already MEASURED — strc_backing.json's
+            // `downstream_exposure` carries both legs and their combined total —
+            // and it renders on exactly one page, the one a reader of these two is
+            // least likely to be on. Filled asynchronously; absent if the fetch
+            // fails, because a silent gap beats a half-drawn claim.
+            '<div id="axis-deps-common-mode"></div>' +
         '</div>';
+    },
+
+    // Shared upstream / common-mode exposure. Keyed on the dependency rows this
+    // page ALREADY renders — any upstream linking to ?asset=strc gets the STRC
+    // family's other legs — so it extends itself if another asset starts naming
+    // the same upstream, rather than matching on a list of slugs that has to be
+    // edited. Silent no-op everywhere else.
+    loadCommonModeExposure(data) {
+        var host = document.getElementById('axis-deps-common-mode');
+        if (!host) return;
+        var up = ((data || {}).dependencies || {}).upstream || [];
+        var sharesStrc = up.some(function(d) {
+            return d && typeof d.link === 'string' && /[?&]asset=strc(?:$|&)/.test(d.link);
+        });
+        if (!sharesStrc) return;
+        var self = this;
+        var mySlug = data.view_slug || data.asset_slug || '';
+        fetch('data/strc_backing.json?nocache=' + Math.floor(Date.now() / 600000))
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(strc) {
+                var dx = strc && strc.downstream_exposure;
+                if (!dx) return;
+                var legs = [];
+                Object.keys(dx).forEach(function(k) {
+                    var v = dx[k];
+                    if (!v || typeof v !== 'object') return;
+                    var usd = (v.strc_bucket_usd != null) ? v.strc_bucket_usd : v.strc_raw_usd;
+                    if (usd == null) return;
+                    legs.push({ name: k, usd: usd, share: v.strc_share_of_reserves,
+                                verifiable: v.verifiable, src: v.source_file });
+                });
+                if (legs.length < 2) return;   // "shared" needs at least two holders
+                legs.sort(function(a, b) { return b.usd - a.usd; });
+                var total = dx.portfolio_total_strc_family_usd;
+                var rows = legs.map(function(l) {
+                    var mine = mySlug && l.src && l.src.indexOf(mySlug) === 0;
+                    return '<tr' + (mine ? ' class="bg-slate-50"' : '') + '>' +
+                        '<td class="font-medium">' + self._escapeAttr(l.name) +
+                            (mine ? ' <span class="text-xs text-slate-500">(this stack)</span>' : '') + '</td>' +
+                        '<td class="text-right font-mono">' + self.formatCurrency(l.usd) + '</td>' +
+                        '<td class="text-right font-mono">' +
+                            (l.share != null ? self.formatPercent(l.share * 100, 1) : '—') + '</td>' +
+                        '<td class="text-xs text-slate-500">' +
+                            (l.verifiable === 'oracle_unverified' ? 'oracle-marked, unverified' : 'attested') + '</td>' +
+                    '</tr>';
+                }).join('');
+                host.innerHTML =
+                    '<div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 mt-6">' +
+                        'Shared upstream — who else holds this collateral</div>' +
+                    '<div class="text-xs text-slate-500 mb-2 leading-relaxed">' +
+                        'STRC is not this asset\'s exposure alone. A move in the STRC mark reaches every ' +
+                        'stack below at once, so these are correlated by construction rather than ' +
+                        'independent — and a stress on one is not diversified by the other.' +
+                    '</div>' +
+                    '<div class="data-table-scroll"><table class="data-table"><thead><tr>' +
+                        '<th>Stack</th><th class="text-right">STRC held</th>' +
+                        '<th class="text-right">Share of its reserves</th><th>Basis</th>' +
+                    '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+                    (total != null
+                        ? '<div class="text-xs text-slate-500 mt-2">Combined STRC-family exposure ' +
+                          '<span class="font-mono font-semibold">' + self.formatCurrency(total) + '</span>. ' +
+                          'Source: <span class="font-mono">strc_backing.json</span> ' +
+                          '<span class="font-mono">downstream_exposure</span>, measured from each stack\'s own feed. ' +
+                          '<a href="?asset=strc" class="text-blue-600 hover:underline">STRC dashboard →</a></div>'
+                        : '');
+            })
+            .catch(function() { /* leave absent */ });
     },
 
     _renderIssuerSection(data) {
