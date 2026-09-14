@@ -7,12 +7,12 @@ status: WORKING BACKLOG. Items 12-15 FIXED 2026-09-14; items 1-11 UNVERIFIED.
 
 # ▶ START HERE — resume context
 
-**Items 12, 13, 14, 15 and 5 are BUILT, rendered and verified.** Triage bands S1–S4 are closed.
-⚠️ **Four of the five claims needed correcting before they were safe to act on, and item 5's
-stated cause was REFUTED outright — read each item's Check, not just its Claim.**
+**Items 12, 13, 14, 15, 5, 8 and 7 are BUILT, rendered and verified.** Triage bands S1–S6 are
+closed. ⚠️ **Five of the seven claims needed correcting before they were safe to act on, and item
+5's stated cause was REFUTED outright — read each item's Check, not just its Claim.**
 
-**Immediate next action: item 8 (sUSDat NAV monotonicity), triage S5.** Items 1–4 and 6–11 are
-still `unverified` — nothing has been checked on any of them.
+**Immediate next action: item 9 (Wolf & Co table self-contradiction), triage S7.** Items 1–4, 6,
+10 and 11 are still `unverified` — nothing has been checked on any of them.
 
 ⚠️ **Item 5 is the cautionary one.** The analyst read a published `fair_value_basis` field and
 reported exactly what it said; the field is hardcoded and contradicts the numbers beside it. Two
@@ -83,9 +83,9 @@ S1  syrupUSDC collateral column corrupt          items 12, 13   ✅ FIXED 2026-0
 S2  syrupUSDC Liquidity Layer math               item 14        ✅ FIXED 2026-09-14
 S3  syrupUSDC free liquidity: 3 values           item 15        ✅ FIXED 2026-09-14
 S4  apxUSD slippage measured against $1.00       item 5         ⚠️ CAUSE REFUTED · fixed 2026-09-14
-S5  sUSDat NAV monotonicity claim is wrong       item 8         ← NEXT
-S6  sUSDat backing tile hides its own caveat     item 7
-S7  Wolf table self-contradiction                item 9
+S5  sUSDat NAV monotonicity claim is wrong       item 8         ✅ FIXED 2026-09-14
+S6  sUSDat backing tile hides its own caveat     item 7         ✅ FIXED 2026-09-14
+S7  Wolf table self-contradiction                item 9         ← NEXT
 S8  liquidity venues missing / not wired         items 1, 2, 3
 S9  apyUSD <-> sUSDat link absent from deps      item 4
 S10 apxUSD reserve denominator (POL in/out)      item 6
@@ -237,9 +237,38 @@ own dashboard says **86.3%** excluding it. ⚠️ **Both defensible.**
 oracle-unverified.** The basis note says so; the tile does not. Suggested: a badge on the tile —
 **102.56% / 1% verifiable**.
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED in substance, with one correction: the tile DOES carry the caveat — in a
+`title` attribute.** Read off the live DOM, the Backing tile's value span holds the producer's
+`collateral_ratio_basis` verbatim:
+
+> *"ATTESTED, NOT MEASURED: 99.0% of the reserve is an OFF-CHAIN STRC claim marked by oracle
+> (breakdown tags it `oracle_unverified`); only 1.0% is on-chain USDat this repo can verify."*
+
+⚠️ **So this is not an absent qualifier, it is a hover-only one — which is worse than it sounds.**
+A `title` does not exist on touch, does not appear in a screenshot, is not in the text a reader
+skims, and **is invisible in tidr's embeds of these dashboards.** The visible tile read
+`102.57% · surplus +$1.8M · Watch 6/10` — three reassuring figures with the disqualifier one
+hover away.
+
+The data was fully published and only partly rendered: `on_chain_pct: 1.0`, `off_chain_pct: 99.0`,
+and per-item `detail.verifiable` of `onchain` / `oracle_unverified`.
+
+**Built.** ✅ `_backingSubText` in `common.js` now appends `· 1.0% on-chain verifiable`, following
+the existing `supply_scope` precedent in the same function. Tile now reads:
+
+```
+Backing  102.57% ⓘ  surplus +$1.8M · 1.0% on-chain verifiable   Watch · 6/10
+```
+
+⚠️ **Keyed on the PUBLISHED `on_chain_pct` / `off_chain_pct`, not on a name list** — it appears for
+any feed that starts declaring them and stays absent for the ~20 that do not. Measured: **sUSDat is
+the only asset publishing them today**, so blast radius is one page. Verified on USDat (same
+renderer family): tile unchanged at `surplus +$0 · ethereum-only scope`.
+
+⚠️ **One inconsistency left for upstream, not worth a render change:** `surplus_deficit_basis`
+prose says *"~97% of the reserve"* while `off_chain_pct` and the breakdown both say **99.0%**.
+
+**Status.** confirmed with a correction · **FIXED**
 
 ## 8 · sUSDat — the NAV monotonicity claim is false
 
@@ -249,9 +278,46 @@ Analyst checked one: **10 Sep 09:44 -> 10:43** — `share_supply` and `onchain_b
 unchanged, `total_assets` **-$75,836**, entirely in `offchain_strc_usd_implied`. ⚠️ **So it is
 neither a loss event nor vesting — NAV is mark-to-market on an oracle-marked claim.**
 
-**Check.** _pending_
-**Plan.** _pending_
-**Status.** unverified
+**Check.** ✅ **CONFIRMED, to the cent, and the real count is far worse than "9 this week."**
+The analyst's specific observation reproduces exactly:
+
+```
+10 Sep 09:44 -> 10:43
+  share_supply               72,088,708.039867 -> 72,088,708.039867   UNCHANGED
+  onchain_buffer_usd          2,542,834.04     ->  2,542,834.04       UNCHANGED
+  total_assets_usd           73,394,842.99     -> 73,319,006.89        -75,836.10
+  offchain_strc_usd_implied  70,852,008.95     -> 70,776,172.85        -75,836.10  ← all of it
+```
+
+**Across the full 30-day history: 48 declines in 659 transitions (7.3%)**, median −10.0 bps,
+largest −73.4 bps. ⚠️ **`offchain_strc_usd_implied` moved in 48 of 48.** On the panel's own logic
+that is **48 STRC loss events in a month** — while NAV is **+4.91% net** over the same window.
+
+⚠️⚠️ **AND THE DECISIVE CONTRAST: the same sentence is TRUE for its sibling.** `usdai.js:1054`
+says *"NAV should rise monotonically as loan interest accrues — a drop between cycles is a
+loan-loss signal."* Measured on sUSDai: **0 declines in 743 observations.** Its assets accrue loan
+interest with no mark-to-market leg, so monotonicity holds by construction.
+
+**So the wording was carried from an asset where it is true to one where it cannot be**, because
+sUSDat's reserve is ~99% an oracle-marked off-chain claim. ⚠️ **This is item 13's pattern inverted
+— not a rule inheriting a bug's scope, but a rule inheriting a scope where it was CORRECT.**
+⚠️ **Do not "re-sync" these two paragraphs: `usdai.js` is right as written.** A comment in
+`saturn.js` now says so, because the next person to notice they differ will be tempted.
+
+**Built.** ✅ `saturn.js`. The claim is replaced by what the data supports, and the evidence is
+computed in `_drawSusdatNavChart` from the **same windowed array the chart plots** — so the
+sentence and the line above it cannot disagree, and no count can go stale:
+
+> *"NAV is not monotonic here, and a decline does not imply a loss event. ~99% of the reserve is an
+> off-chain STRC claim carried at an oracle mark, so NAV is marked to that price between cycles and
+> falls whenever the mark falls. **Over the 659 transitions plotted above, 48 are declines (median
+> −10.0 bps, largest −73.4 bps) while NAV is +4.91% net across the window.** Vesting sets the
+> upward drift; the mark sets the noise around it — read a decline by size and persistence, not by
+> direction, because a single hourly tick is ordinary mark movement."*
+
+✅ The injected figures were computed independently in JS and match the Python analysis exactly.
+
+**Status.** confirmed · **FIXED**
 
 ## 9 · Wolf & Co table contradicts itself
 

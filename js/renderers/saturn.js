@@ -1187,8 +1187,24 @@ var SaturnRenderer = {
 
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
-                'NAV must monotonically rise under ERC-4626 vesting — a drop between cycles implies an ' +
-                'STRC loss event. 30-day vesting design intentionally delays yield landing, so a fresh ' +
+                // ⚠️ THIS SENTENCE USED TO READ "NAV must monotonically rise under
+                // ERC-4626 vesting — a drop between cycles implies an STRC loss
+                // event." IT IS FALSE HERE, and measurably so: 48 declines in the
+                // 30-day window as of 2026-09-14, median −10 bps, and the off-chain
+                // mark moved in every one of them. On the old sentence's logic that
+                // is 48 STRC loss events in a month.
+                // ⚠️ The claim is TRUE for its sibling — sUSDai's NAV has 0 declines
+                // in 743 observations, because its assets are accruing loan interest
+                // with no mark-to-market leg. The wording was carried across to an
+                // asset whose reserve is ~99% an oracle-marked off-chain claim. Do
+                // not re-sync these two paragraphs; usdai.js is correct as written.
+                '<span class="text-amber-700">NAV is not monotonic here, and a decline does not imply a loss ' +
+                'event.</span> ~99% of the reserve is an off-chain STRC claim carried at an oracle mark, so NAV ' +
+                'is marked to that price between cycles and falls whenever the mark falls. ' +
+                '<span id="saturn-nav-decline-stats"></span>' +
+                'Vesting sets the upward drift; the mark sets the noise around it — read a decline by size and ' +
+                'persistence, not by direction, because a single hourly tick is ordinary mark movement. ' +
+                '30-day vesting design intentionally delays yield landing, so a fresh ' +
                 'sUSDat position accrues with a lag for its first 30 days. Implied APY is computed from ' +
                 'the NAV slope over the trailing window; the 11% headline target is a Saturn-disclosed ' +
                 'design number, not a guarantee. sUSDat NAV is denominated in USDat (the vault\'s underlying), ' +
@@ -1237,6 +1253,29 @@ var SaturnRenderer = {
             return new Date(ts);
         });
         var navSeries = windowed.map(function(e) { return e.nav_per_share; });
+
+        // Decline stats for the methodology note, computed from the SAME windowed
+        // array this chart plots — so the sentence and the line above it cannot
+        // disagree, and neither can go stale the way a hardcoded count would.
+        var statsEl = document.getElementById('saturn-nav-decline-stats');
+        if (statsEl) {
+            var drops = [];
+            for (var di = 1; di < windowed.length; di++) {
+                var prev = windowed[di - 1].nav_per_share, cur = windowed[di].nav_per_share;
+                if (cur < prev && prev > 0) drops.push((cur / prev - 1) * 1e4);
+            }
+            if (drops.length === 0) {
+                statsEl.innerHTML = 'No decline appears in the plotted window. ';
+            } else {
+                drops.sort(function(a, b) { return a - b; });
+                var med = drops[Math.floor(drops.length / 2)];
+                var net = (navSeries[navSeries.length - 1] / navSeries[0] - 1) * 100;
+                statsEl.innerHTML = 'Over the ' + (windowed.length - 1) + ' transitions plotted above, <strong>' +
+                    drops.length + '</strong> are declines (median ' + med.toFixed(1) + ' bps, largest ' +
+                    drops[0].toFixed(1) + ' bps) while NAV is <strong>' + (net >= 0 ? '+' : '') +
+                    net.toFixed(2) + '%</strong> net across the window. ';
+            }
+        }
 
         // 11% APY target line — extrapolated from the first NAV sample.
         var navStart = windowed[0].nav_per_share;

@@ -3978,6 +3978,25 @@ const CommonRenderer = {
         if (scope) {
             base += ' \u00b7 ' + String(scope).replace(/_/g, '-') + ' scope';
         }
+
+        // ⚠️ THE BIGGEST NUMBER ON THE PAGE, WITH ITS QUALIFIER ONLY ON HOVER.
+        // sUSDat's tile reads "102.57% · surplus +$1.8M · Watch 6/10" while the
+        // producer's own basis says "ATTESTED, NOT MEASURED: 99.0% of the reserve
+        // is an OFF-CHAIN STRC claim marked by oracle … only 1.0% is on-chain
+        // USDat this repo can verify." That text IS on the tile — in a title=""
+        // attribute. ⚠️ A title does not exist on touch, in a screenshot, or in
+        // tidr's embeds of these dashboards, and it is not in the text a reader
+        // skims. The qualifier has to survive being looked at, not hovered.
+        //
+        // Keyed on the PUBLISHED on_chain_pct / off_chain_pct, so it appears for
+        // any feed that starts declaring them and stays absent for the ~20 that
+        // do not — the opposite of a name list that has to be edited to stay
+        // right. Today sUSDat is the only asset publishing them.
+        var onPct = b.on_chain_pct;
+        var offPct = b.off_chain_pct;
+        if (typeof onPct === 'number' && typeof offPct === 'number' && offPct > 0) {
+            base += ' \u00b7 ' + this.formatPercent(onPct, onPct < 10 ? 1 : 0) + ' on-chain verifiable';
+        }
         return base;
     },
 
