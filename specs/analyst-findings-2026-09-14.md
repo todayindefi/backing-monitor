@@ -1031,18 +1031,18 @@ rediscover them.
 - **Axis 6** — 19 of 21 issuer blocks publish no score. The frame reads `issuer_score` and would
   render it. Their editorial choice to confirm, not our defect to fix.
 
-**Waiting on PegTracker** (four handoffs at `status: ready`, unworked):
-- `apyx-fair-value-basis-hardcoded-2026-09-14` — written this session, uncommitted. apxUSD's
-  `fair_value` / `fair_value_basis` are literals that overwrite the branch that computed them, and
-  the apyx pair is the only one of nine off the fleet ladder shape (pair-nested, `slippage_pct`).
-- `syrup-loan-artifact-marker-not-stamped-2026-09-14` — written this session, uncommitted. Asks
-  them to stamp the corroboration verdict on the loan record so consumers stop reconstructing it,
-  and flags that the `usd_anomaly` threshold (`raw < required * 0.05`) misses the four $25M loans
-  at ~6.2% of required. ⚠️ **Until it lands, `_collateralUncorroborated()` in `syrupusdc.js` is a
-  reconstruction of THEIR rule** — if they change the gate and we don't, the page goes stale
-  silently. Both helpers carry a comment pointing at the handoff.
-- `hastra-prime-heloc-is-a-facility-name-2026-09-12`
-- `exit-ladder-bracket-lost-on-quote-failure-2026-09-11`
+**PegTracker — ALL FOUR axis-2/infra handoffs WORKED 2026-09-14** (`b086595`), same day they were
+raised. STRCx basis settled, syrup `read_corroborated` + `read_corroboration_basis` added to both
+analyzers, hastra-prime adopted as already-resolved, exit ladder given 24h bracket memory.
+⚠️ **Their commits have not reached our `data/` yet** — two follow-ups are queued on that landing:
+
+```
+when read_corroborated lands   DELETE _collateralUncorroborated() + _bufferStatsExUncorroborated()
+when the STRCx re-run lands    drop the superseded-basis caveat on the unlocatable-supply callout
+```
+
+**Held, not waiting** (axis 3 migrating to DexTracker):
+- `apyx-fair-value-basis-hardcoded-2026-09-14` · `apyx-pool-enumeration-…-2026-09-14`
 
 **Standing backlog, surfaced by the manifest check on every sync:**
 `check_feeds.py` prints §4.0 conformance — **8 of 26 published assets carry every baseline
