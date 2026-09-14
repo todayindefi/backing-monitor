@@ -168,18 +168,62 @@ and `STRCRenderer.*` directly). Script order in `index.html` is load-bearing.
 
 ---
 
-# 5. ⚠️ The staleness failure mode no check catches
+# 5. ⚠️ TWO staleness failure modes ran concurrently, and only one is uncatchable
 
-On 2026-09-14 the EDGAR poll ran at **10:50 UTC** and Strategy filed **later that morning**. The
-poll was three hours old — fresh by any threshold — and still predated the filing.
+**This section was written on 2026-09-14 describing only the first, and was wrong by omission.**
+Corrected the same day after PegTracker's parser fix exposed the second.
 
-**So an age-based warning cannot catch this.** What works is rendering the poll timestamp so a
-reader who knows a filing exists can compare. That is exactly how riskAnalyst caught it, and no
-automatic check would have.
+```
+mode A  CADENCE        the filing has not been polled yet
+mode B  PARSE FAILURE  the filing WAS polled; one section of it did not parse
+```
 
-⚠️ **And the backing analyzer re-running does not help** — it re-reads `strategy_events.json`. On
-2026-09-14 `strc_backing.json` re-ran at 13:51 and still carried the 09-08 DCS figure because the
-poll behind it had not moved. **Watch the poll, not the backing run.**
+**What actually happened, reconstructed from the artifacts:**
+
+```
+09-08 filing   polled ~6 days earlier
+               SECURITY_REPURCHASE parsed  -> DCS remaining $1.19B as of 09-08   ✅
+               btc_update PARSE_FAILURE    -> BTC/ATM data missing for SIX DAYS  ⚠️
+09-14 filing   not polled until 14:44 (6-hourly cadence)
+               -> the $1.05B DCS figure could not arrive before then             ⚠️ mode A
+```
+
+⚠️ **So the DCS figure was genuinely cadence-limited and the BTC figure was genuinely broken, at
+the same time, in the same feed.** Diagnosing one does not diagnose the other.
+
+## The discriminating-check rule
+
+The check used to diagnose this was *"is the newest accession present in `strategy_events.json`?"*
+It was absent, mtime was hours old, and the conclusion drawn was "cadence".
+
+⚠️⚠️ **That check cannot distinguish mode A from mode B — both produce an absent newest
+accession.** It is consistent with the cadence hypothesis and equally consistent with the parse
+hypothesis, so it is evidence for neither.
+
+**A check that cannot discriminate between two hypotheses cannot support choosing one.**
+
+```
+non-discriminating   is the NEWEST accession present?        absent under both modes
+discriminating       is the PREVIOUS filing's data COMPLETE?  one line, and it was never run
+```
+
+⚠️ **Both parties reached for the non-discriminating check** — riskAnalyst ran it, and this repo
+adopted the conclusion and wrote it into this spec without testing it. The PARSE_FAILURE on the
+09-08 filing was visible in the feed the whole time and was read as a "known prior" rather than as
+a live finding.
+
+**Mode A is genuinely uncatchable by an age threshold** — the poll ran three hours before the
+filing, fresh by any cutoff. Rendering the poll timestamp so a human can compare against a filing
+date they know about is the only thing that works, and that is why it ships.
+
+⚠️ **Mode B is very catchable, and now is:** the MSTR ATM panel counts `PARSE_FAILURE` events
+inside its own window and declares the totals incomplete. It self-retired when the parser was
+fixed. **Check for it by asking whether a polled filing's sections are complete, never by asking
+whether the newest one arrived.**
+
+⚠️ **And the backing analyzer re-running does not help with mode A** — it re-reads
+`strategy_events.json`. `strc_backing.json` re-ran at 13:51 and still carried the 09-08 DCS figure
+because the poll behind it had not moved. **Watch the poll, not the backing run.**
 
 ---
 
