@@ -19,6 +19,33 @@ the process, all of the same shape: **a published `as_of` that never reached the
 
 ---
 
+# 0. ⚠️ THREE lenses share this feed — and one of them is NOT this spec's job
+
+```
+?asset=strc    credit-holder lens    strc.js    data_source: strc   ← this spec
+?asset=mstr    equity-holder lens    mstr.js    data_source: strc   ← this spec
+?asset=strcx   the on-chain wrapper  strcx.js   data_source: strc   → six-axis spec
+```
+
+**STRCx is a crypto asset and lives on the six-axis frame**, via `strcx_axis_basis.json`, which
+publishes `peg` / `backing` / `liquidity` / `dependencies` overlays. Read
+`specs/six-axis-dashboard-spec.md` for it — not this file. ⚠️ **The base feed carries no `peg`
+block, so it is the OVERLAY that puts STRCx on the frame**; a conformance check reading
+`strc_backing.json` alone will report it as off-frame and be wrong about the rendered page.
+
+**Two things about STRCx belong here anyway, because they are properties of THIS feed:**
+
+⚠️ **The multiplier makes one feed mean different things in different lenses.** STRCx's supply and
+CoinGecko price are BOTH pre-scaled; one *scaled* STRCx is one STRC share. Valuing a pre-scaled
+count at the scaled mark understates by the multiplier — **I did exactly that on 2026-09-14 and
+had to reverse it.** Do not carry an MSTR-lens price assumption onto the wrapper.
+
+⚠️ **`strcx.js` `preRender` runs AFTER `mergeAxisOverlays`** (app.js:351), so `data.liquidity`
+already exists by then and must be filled field-by-field, never replaced — replacing it drops
+riskAnalyst's authored axis score.
+
+---
+
 # 1. Data sources — all three are SYNCED COPIES
 
 ```
@@ -73,7 +100,7 @@ block                 as_of        age    advanced by            stamp rendered?
 share_count           2026-08-30    15d   weekly 8-K ATM table   ✅ added 2026-09-14
 share_count_anchor    2026-07-24    52d   10-Q/10-K cover        ✅ added 2026-09-14
 balance_sheet         2026-08-09    36d   periodic 8-K + 10-Q    ✅ pre-existing
-capital_structure     2026-08-09    36d   periodic 8-K + 10-Q    ⚠️ NOT rendered
+capital_structure     2026-08-09    36d   periodic 8-K + 10-Q    ✅ added 2026-09-14
 usd_reserve_policy    2026-09-07     7d   weekly 8-K             ✅ (+ 2nd instance 09-14)
 dcs_repurchase        2026-09-08     6d   weekly 8-K             ✅ fixed 2026-09-14
 atm_cadence_90d       rolling       n/a   EDGAR poll             ✅ added 2026-09-14
@@ -97,8 +124,10 @@ share_count undated              the denominator of every per-share figure on th
                                  weekly ATM tables, including unsettled shares.
 ```
 
-⚠️ **`capital_structure.as_of` is the one still unrendered.** Left recorded rather than fixed so
-the next pass has something falsifiable to check.
+✅ **`capital_structure.as_of` was the one still unrendered and is now fixed** — found missing on
+BMNR first and then here, same field, both dashboards. It moves on periodic filings rather than
+weekly 8-Ks, so it is legitimately the oldest block on the page, **which makes its date more
+load-bearing than the weekly ones, not less.**
 
 ---
 

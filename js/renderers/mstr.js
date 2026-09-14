@@ -464,6 +464,15 @@ var MSTRRenderer = {
                 '<td class="text-right font-mono">100.0%</td>' +
             '</tr>';
 
+        // ⚠️ Same field, same gap, found on BMNR first: capital_structure carries an
+        // as_of and neither dashboard rendered it. It moves on periodic filings, not
+        // weekly 8-Ks, so it is legitimately the oldest block on the page — which
+        // makes its date more load-bearing than the weekly ones, not less.
+        var capStamp = cap.as_of
+            ? '<div class="text-xs text-slate-500 mt-2">As of <span class="font-mono">' + cap.as_of +
+              '</span> — advances on periodic filings (10-Q/10-K), not the weekly 8-K.</div>'
+            : '';
+
         return '<div class="panel">' +
             '<div class="panel-title">Capital structure stack <span class="text-xs font-normal text-slate-500">— senior → junior → common</span></div>' +
             '<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">' +
@@ -482,6 +491,7 @@ var MSTRRenderer = {
                 'For the STRC instrument-native view (rate mechanics, STRCx wrapper, downstream exposure), see the ' +
                 '<a href="?asset=strc" class="text-blue-500 hover:underline">STRC dashboard →</a>' +
             '</div>' +
+            capStamp +
         '</div>';
     },
 

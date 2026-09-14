@@ -555,10 +555,34 @@ var BMNRRenderer = {
                 ) +
             '</div>';
 
+        // ⚠️ THIS PANEL'S ATM FIGURES COME FROM A BLOCK THIS DASHBOARD NEVER RENDERS.
+        // `capital_structure` carries the authorised/drawn ATM figures and its own
+        // as_of — 2026-02-28, ~198 days on 2026-09-14 — and nothing on the page
+        // showed either. `firepower` republishes the same fields with NO as_of of
+        // its own, so a half-year-old capital structure drove a "runway in weeks"
+        // figure that read as current.
+        // ⚠️ AND ONE INPUT IS AN ESTIMATE: atm_drawn_post_10q_est_usd (the `_est_`
+        // is in the field name) feeds atm_remaining_usd and therefore the runway.
+        // A runway built on an estimate must not render as a measurement.
+        var capAsOf = (data.capital_structure || {}).as_of;
+        var fpEst = fp.atm_drawn_post_10q_est_usd;
+        var fpBasis = (capAsOf || fpEst != null)
+            ? '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
+                  'ATM authorised / drawn / remaining come from <span class="font-mono">capital_structure</span>' +
+                  (capAsOf ? ', as of <span class="font-mono">' + capAsOf + '</span>' : '') + '. ' +
+                  (fpEst != null
+                      ? '⚠️ <span class="text-amber-700">Drawn-since-10-Q is an <strong>estimate</strong></span> ' +
+                        '(<span class="font-mono">' + BMNRRenderer._fmtMoneyShort(fpEst) + '</span>), so remaining ' +
+                        'and every runway figure above inherit it — they are projections, not measurements.'
+                      : '') +
+              '</div>'
+            : '';
+
         return '<div class="panel">' +
             '<div class="panel-title">Firepower &amp; runway <span class="text-xs font-normal text-slate-500">— how fast can BMNR keep accumulating?</span></div>' +
             grid +
             capCaption +
+            fpBasis +
         '</div>';
     },
 
