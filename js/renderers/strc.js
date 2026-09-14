@@ -272,7 +272,23 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
 
     var dcsDetail = '<span class="font-mono font-semibold">' + fmt(dcs.authorized_usd) + '</span> authorized · ' +
         '<strong>' + (dcs.initial_priority || 'STRC') + ' = initial priority</strong> (if accretive) · BTC-funded · ' +
-        'executed <span class="font-mono font-semibold">' + fmt(dcs.executed_usd != null ? dcs.executed_usd : 0) + '</span>' +
+        // ⚠️ `executed_usd` CAN VANISH BETWEEN RUNS, AND `|| 0` TURNED THAT INTO A
+        // WRONG NUMBER. The 2026-09-14 8-K parse dropped the field entirely (it was
+        // $810M the run before), and this line rendered "executed $0" beside
+        // "$1.05B remaining of $2.00B authorized" — a self-contradiction on one row.
+        // A missing field is not zero. Prefer the published figure; where it is
+        // absent and both authorized and remaining ARE published, show the
+        // difference and SAY it is derived; otherwise show nothing.
+        'executed ' + (function () {
+            if (dcs.executed_usd != null) {
+                return '<span class="font-mono font-semibold">' + fmt(dcs.executed_usd) + '</span>';
+            }
+            if (dcs.authorized_usd != null && dcs.remaining_usd != null) {
+                return '<span class="font-mono font-semibold">' + fmt(dcs.authorized_usd - dcs.remaining_usd) + '</span>' +
+                    '<span class="text-slate-500"> (derived: authorized − remaining; the feed published no executed figure this run)</span>';
+            }
+            return '<span class="text-slate-400">not published this run</span>';
+        })() +
         (dcs.used_pct != null ? ' (<strong>' + dcs.used_pct.toFixed(1) + '% used</strong>)' : '') +
         (dcs.shares_repurchased != null ? ' · <span class="font-mono">' + dcs.shares_repurchased.toLocaleString('en-US') + ' sh' +
             (dcs.average_price_usd != null ? ' @ ~$' + dcs.average_price_usd.toFixed(2) : '') + '</span>' : '') +
