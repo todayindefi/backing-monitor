@@ -18,14 +18,32 @@ rule that lives in your code, and they go stale silently if you change it.
 ## 1. The state
 
 ```
-handoff                                                     pri   file                        consumer-side now
-strcx-total-supply-usd-prices-scaled-count-…-2026-09-14      med   strc_backing_analyzer.py    values at the mark, names both
-apyx-fair-value-basis-hardcoded-2026-09-14                   med   apyx_backing_analyzer.py    ignores the field
-syrup-loan-artifact-marker-not-stamped-2026-09-14            med   syrupusdc/usdt_analyzer.py  reconstructs your gate
-apyx-pool-enumeration-misses-the-routed-venue-2026-09-14     med   apyx_backing_analyzer.py    names the contradiction
-exit-ladder-bracket-lost-on-quote-failure-2026-09-11         med   liquidity_tracker.py        renders "quote failed"
-hastra-prime-heloc-is-a-facility-name-2026-09-12             low   hastra_prime_analyzer.py    renders the feed's wording
+axis  handoff                                                pri   file                        consumer-side now
+ 2    strcx-total-supply-usd-prices-scaled-…-2026-09-14       med   strc_backing_analyzer.py    values at the mark, names both
+ 2    syrup-loan-artifact-marker-not-stamped-2026-09-14       med   syrupusdc/usdt_analyzer.py  reconstructs your gate
+ 2    hastra-prime-heloc-is-a-facility-name-2026-09-12        low   hastra_prime_analyzer.py    renders the feed's wording
+ 3    apyx-fair-value-basis-hardcoded-2026-09-14              med   apyx_backing_analyzer.py    ignores the field
+ 3    apyx-pool-enumeration-misses-routed-venue-2026-09-14    med   apyx_backing_analyzer.py    names the contradiction
+ 3    exit-ladder-bracket-lost-on-quote-failure-2026-09-11    med   liquidity_tracker.py        renders "quote failed"
 ```
+
+⚠️ **None of these is axis 1.** Three are axis 2 (Backing), three are axis 3 (Liquidity & Exit).
+
+⚠️ **AND THREE OF THEM ARE AXIS-3 ITEMS SENT TO A PRODUCER WHO DOES NOT OWN AXIS 3.** The spec is
+explicit — *"3 Liquidity & Exit · DexTracker · DexTracker owns axis 3 by decision; PegTracker's
+embedded block still serves every asset until `liquidity/1` is adopted renderer-side."*
+
+**They are still routed here correctly, because you own the code that produces these ladders**:
+`liquidity_tracker.py` and `apyx_backing_analyzer.py` are PegTracker files, and DexTracker has no
+coverage of apxUSD, apyUSD, syrupUSDC or STRCx. **But the footnote's condition has partly lapsed:**
+`liquidity/1` HAS been adopted renderer-side — seven `*_liquidity.json` overlays carrying
+`producer: dextracker`, registered in `common.js` at `mode: 'replace'` with a translator. What has
+not happened is DexTracker covering these assets.
+
+**So take the axis-3 three as maintenance of a transitional producer, not as ownership.** If any of
+them looks like it wants a real fix rather than a patch — the pool-enumeration one especially — the
+better answer may be DexTracker coverage of apyx, and that is a routing decision neither of us
+should make alone. **We are not asking for it here.**
 
 ---
 
