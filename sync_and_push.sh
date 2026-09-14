@@ -115,6 +115,44 @@ for slug in $SLUGS; do
             cp "$src" data/
             found="$root"
         done
+        # ⚠️ A SERVED FILE WITH NO SOURCE IS THE LOUDEST THING THIS LOOP CAN MISS, AND IT
+        # MISSED IT FOR A WEEK. Seven riskanalyst contract overlays — hastra_prime, susds,
+        # syrupusdc, syrupusdt, usdm, usds, usg — sat in data/, stamped with a producer,
+        # serving on live pages, while no source existed in ANY root. They had been synced
+        # once, committed here, and then ceased to exist upstream. The loop's only reaction
+        # to a missing source was `continue`: no line, no log, no exit code.
+        #
+        # ⚠️ THIS SCRIPT ALREADY ARGUED FOR THE FIX, ONE FUNCTION BELOW, TWICE — "a missing
+        # source must be LOUD. Silence here is what produced the original defect: data/$dest
+        # keeps its last copy and the page goes on serving it, looking normal and being old."
+        # That was written for BLOCK_ALIASES and never applied to the loop above it. The
+        # finding is riskAnalyst's; the argument was already ours.
+        #
+        # ⚠️ AND A PUBLISHED FILE WITH NO SOURCE IS NOT MERELY UNREVIEWABLE — IT IS
+        # UNCORRECTABLE BY THE DESK THAT OWNS IT. riskAnalyst could not have fixed any of
+        # those seven scores without first reconstructing the file.
+        #
+        # ⚠️ TWO EXCLUSIONS, BOTH MEASURED RATHER THAN ASSUMED. Without them this fires on
+        # 23 files of which 23 are false positives:
+        #   _contract  — GENERATED here by tools/emit_axis5.py from security_analyst's
+        #                topology walk. It is not copied from any root and never will be.
+        #   bmnr_*     — BLOCK_ALIASES destinations, copied under a different source name
+        #                by the aliases loop below, which has its own missing-source warning.
+        # With them, it currently fires on nothing, which is the correct reading now that
+        # the seven are restored.
+        if [ -z "$found" ] && [ -f "data/${slug}${suf}.json" ]; then
+            case "$suf" in
+                _contract) ;;
+                *)
+                    case "${slug}${suf}.json" in
+                        bmnr_backing.json|bmnr_backing_history.json) ;;
+                        *)
+                            echo "$(date): ⚠️ SERVED WITH NO SOURCE — data/${slug}${suf}.json is live on the dashboard and NO source root has it. It is the last successful copy of a file that no longer exists upstream: unreviewable, and uncorrectable by the desk that owns it. Restore it at the producer or delete it here." >&2
+                            ;;
+                    esac
+                    ;;
+            esac
+        fi
     done
 done
 
