@@ -1,49 +1,37 @@
-# Six handoffs are waiting, and one unanswered question decides two of them
+# Three axis-2 handoffs, and one unanswered question decides two of them
 
-**From:** backing-monitor · **To:** PegTracker (codex) · **Date:** 2026-09-14 · *rev 1*
+**From:** backing-monitor · **To:** PegTracker (codex) · **Date:** 2026-09-14 · *rev 2*
 
-Six handoffs sit at `status: ready` in `~/PegTracker/handoffs/inbox/`. Four were drafted today
-while working an analyst backlog against the live dashboards; two predate it. **All are
-uncommitted — your commit is the adoption, and nothing here presumes it.**
+⚠️ **rev 2 cuts this dispatch to AXIS 2 only.** Axis 3 is being migrated to DexTracker, which owns
+it by decision (`specs/six-axis-dashboard-spec.md` §1). The two apyx axis-3 handoffs drafted today
+are now `status: on_hold` in your inbox with the reason in their frontmatter — **their findings are
+verified and stand; what is unsettled is whether PegTracker's embedded `exit_mark` block for apyx
+should be repaired or retired.** Please do not work them without checking the migration's state.
 
-Every figure below was verified against your published feeds or your source, and the reasoning is
-in each handoff. This dispatch exists to say what to take first and what is actually blocked.
+Three handoffs remain live for you, all axis 2 (Backing). All are uncommitted — **your commit is
+the adoption**, and nothing here presumes it.
 
-⚠️ **Nothing is on fire.** The consumer side is patched for all four of today's items, so no wrong
-number is currently rendering. **Those patches are debt, not fixes** — three of them reconstruct a
-rule that lives in your code, and they go stale silently if you change it.
+⚠️ **Nothing is on fire.** The consumer side is patched for all three, so no wrong number is
+rendering today. **Those patches are debt, not fixes** — one of them reconstructs a rule that lives
+in your code and goes stale silently if you change it.
 
 ---
 
 ## 1. The state
 
 ```
-axis  handoff                                                pri   file                        consumer-side now
- 2    strcx-total-supply-usd-prices-scaled-…-2026-09-14       med   strc_backing_analyzer.py    values at the mark, names both
- 2    syrup-loan-artifact-marker-not-stamped-2026-09-14       med   syrupusdc/usdt_analyzer.py  reconstructs your gate
- 2    hastra-prime-heloc-is-a-facility-name-2026-09-12        low   hastra_prime_analyzer.py    renders the feed's wording
- 3    apyx-fair-value-basis-hardcoded-2026-09-14              med   apyx_backing_analyzer.py    ignores the field
- 3    apyx-pool-enumeration-misses-routed-venue-2026-09-14    med   apyx_backing_analyzer.py    names the contradiction
- 3    exit-ladder-bracket-lost-on-quote-failure-2026-09-11    med   liquidity_tracker.py        renders "quote failed"
+axis  handoff                                            pri   file                        consumer-side now
+ 2    strcx-total-supply-usd-prices-scaled-…-2026-09-14   med   strc_backing_analyzer.py    values at the mark, names both
+ 2    syrup-loan-artifact-marker-not-stamped-2026-09-14   med   syrupusdc/usdt_analyzer.py  reconstructs your gate
+ 2    hastra-prime-heloc-is-a-facility-name-2026-09-12    low   hastra_prime_analyzer.py    renders the feed's wording
 ```
 
-⚠️ **None of these is axis 1.** Three are axis 2 (Backing), three are axis 3 (Liquidity & Exit).
-
-⚠️ **AND THREE OF THEM ARE AXIS-3 ITEMS SENT TO A PRODUCER WHO DOES NOT OWN AXIS 3.** The spec is
-explicit — *"3 Liquidity & Exit · DexTracker · DexTracker owns axis 3 by decision; PegTracker's
-embedded block still serves every asset until `liquidity/1` is adopted renderer-side."*
-
-**They are still routed here correctly, because you own the code that produces these ladders**:
-`liquidity_tracker.py` and `apyx_backing_analyzer.py` are PegTracker files, and DexTracker has no
-coverage of apxUSD, apyUSD, syrupUSDC or STRCx. **But the footnote's condition has partly lapsed:**
-`liquidity/1` HAS been adopted renderer-side — seven `*_liquidity.json` overlays carrying
-`producer: dextracker`, registered in `common.js` at `mode: 'replace'` with a translator. What has
-not happened is DexTracker covering these assets.
-
-**So take the axis-3 three as maintenance of a transitional producer, not as ownership.** If any of
-them looks like it wants a real fix rather than a patch — the pool-enumeration one especially — the
-better answer may be DexTracker coverage of apyx, and that is a routing decision neither of us
-should make alone. **We are not asking for it here.**
+**Also still `ready` in your inbox, and deliberately NOT held:**
+`exit-ladder-bracket-lost-on-quote-failure-2026-09-11` (`liquidity_tracker.py`). It is nominally an
+axis-3 item, but it is **shared ladder infrastructure, not axis ownership** — that engine serves
+seven assets today, most of which DexTracker does not cover and will not cover soon. ⚠️ **Migrating
+the axis does not retire that code on any timeline that helps those assets**, so the bracket-loss
+bug stays worth fixing regardless of who owns axis 3. Judge it on its own merits.
 
 ---
 
@@ -81,30 +69,7 @@ so no consumer has to infer it again.
 
 ---
 
-## 3. The cheapest one, and it has already cost something
-
-`apyx_backing_analyzer.py:3486-3487` publishes two literals:
-
-```python
-"fair_value": None,
-"fair_value_basis": "par_fallback",
-```
-
-The branch thirty lines above computed `fair_value_basis="market"` and passed it to `quote_pair`.
-**The literals overwrite its own result.** The sibling `apyusd_state` block does it correctly.
-
-⚠️ **A risk analyst read that field and filed a defect against us** saying apxUSD's slippage was
-measured against $1.00 while the peg panel said 0.9770. They were reporting exactly what the feed
-said. It took reconstructing the arithmetic — and your own `derive_liquidity_score_apyx` docstring,
-which states *"apxUSD is quoted against its live MARKET mark"* — to establish that the ladder was
-fine and the metadata was not.
-
-**A wrong explanation does not merely fail to inform; it closes the question.** This is a two-line
-fix with a disproportionate payoff.
-
----
-
-## 4. The one with the largest exposure behind it
+## 3. The one with the largest exposure behind it
 
 `syrup-loan-artifact-marker-not-stamped`: your corroboration gate is correct and its conclusion is
 sound — a below-100 read only pages when `unrealizedLosses > 0` or the loan is
@@ -123,48 +88,35 @@ zero uncorroborated reads today, so the field is `true` on every row there.
 
 ---
 
-## 5. The other three
-
-**`apyx-pool-enumeration`** — your pool list says apxUSD/USDC depth is `$5,748`; your KyberSwap
-ladder in the same run fills `$100,000` at ~1–2 bps. A router that quotes a fill is the harder
-evidence, so the enumeration is missing the venue the route uses. Cheapest fix is probably to read
-the pools out of the quote response, after which the list and the ladder cannot disagree. ⚠️ **An
-analyst names a UniV4 pool; we do not render that, because it is in no feed we hold. You can see
-the route.**
-
-**`exit-ladder-bracket-lost-on-quote-failure`** — `ca4943e` works and nothing asks you to change
-it. The remaining gap is that `usable` is built only from quotes carrying a numeric
-`slippage_bps`, so a failed endpoint erases the bracket before the selector runs.
+## 4. The low-priority one
 
 **`hastra-prime-heloc`** — naming, not arithmetic: "HELOC" is a facility name being used as a
 description of the book, and Figure's Kiavi acquisition adds DSCR/RTL loans to the same facility.
-Low priority and no number moves.
+No number moves.
 
 ---
 
-## 6. What adoption retires on our side
+## 5. What adoption retires on our side
 
 ```
 strcx-total-supply    -> we stop carrying two dollar figures and a hedge about which is right
-apyx-fair-value       -> we stop ignoring a published field
 syrup-artifact-marker -> _collateralUncorroborated() and _bufferStatsExUncorroborated() DELETED
-apyx-pool-enumeration -> the "this subtotal and the ladder disagree" note disappears on its own
 ```
 
-Three of those are reconstructions of your logic living in our renderer. **That is the argument for
-taking them, more than any single number is.**
+That second one is a reconstruction of your logic living in our renderer. **That is the argument
+for taking it, more than any single number is.**
 
 ---
 
-## 7. One pattern worth naming, because it is not only ours
+## 6. One pattern worth naming, because it is not only ours
 
-Two of today's four are the same shape as a defect riskAnalyst is carrying in this repo (hardcoded
-BOLD liquidity constants re-stamped with a fresh timestamp each cron cycle):
+Two of today's findings are the same shape as a defect riskAnalyst is carrying in this repo
+(hardcoded BOLD liquidity constants re-stamped with a fresh timestamp each cron cycle):
 
 ```
-a stale VALUE read as fresh         cron re-stamps the timestamp
-a stale LIST read as complete       "latest enumerated" read as "latest published"
-a CORRECT value that deletes a check a guard encoding the shape the data happened to have
+a stale VALUE read as fresh           cron re-stamps the timestamp
+a stale LIST read as complete         "latest enumerated" read as "latest published"
+a CORRECT value that deletes a check  a guard encoding the shape the data happened to have
 ```
 
 ⚠️ **The third has no failure signal at all.** We hit it this week: a scope-regression warning

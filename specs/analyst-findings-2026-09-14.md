@@ -17,9 +17,17 @@ recorded as received and several are wrong in ways that would have sent a fix at
 **What is left, and it is all someone else's to land:**
 
 ```
-PegTracker   5 handoffs at status: ready, all uncommitted (their commit = adoption)
+PegTracker   4 handoffs at status: ready (3 axis-2 + the shared ladder engine), all uncommitted
+DexTracker   axis 3 migration STARTED 2026-09-14 — DISPATCH-dextracker-axis3-migration-2026-09-14
 riskAnalyst  owes the sUSDat surplus_deficit_basis "~97%" vs off_chain_pct 99.0% adjudication
 ```
+
+⚠️ **AXIS 3 IS MIGRATING TO DEXTRACKER (user decision, 2026-09-14).** The two apyx axis-3 handoffs
+drafted during this backlog are now `status: on_hold` — their findings stand, but repairing a
+producer being wound down for the axis is the wrong direction. ⚠️ **Item 5's and item 1's fixes are
+renderer-side and unaffected**, but anyone re-opening those items should read the migration
+dispatch first. The measured target is **8 assets, not 21** — most uncovered assets have no
+secondary venue — and the **Curve route adapter alone unblocks 4 of them**.
 
 ⚠️ **The one open QUESTION that changes a rendered number:** whether CoinGecko's STRCx cross-chain
 aggregate is on the scaled or pre-scaled basis. It decides which of two upstream figures is wrong
