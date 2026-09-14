@@ -58,6 +58,36 @@ var STRCxRenderer = {
         // — on the asset whose whole point is that it is multi-chain. STRCRenderer
         // sets its own; the copy that became this file did not bring that line.
         if (!data.chain) data.chain = 'Ethereum · Solana · BNB · Arbitrum · Mantle';
+
+        // ⚠️ AXIS 3 READ n/a ON EVERY FIELD WHILE A MEASUREMENT SAT IN THE FEED.
+        // strc_backing.json publishes no `liquidity` block at all, so the shared
+        // Liquidity & Exit card printed "2% depth n/a · Max ≤25 bps n/a · Pool TVL
+        // n/a · 24h volume n/a" — and the wrapper panel's own prose ends "Exit
+        // depth is scored on axis 3, on its own measurement", pointing the reader
+        // at an empty panel. The one venue measurement we hold,
+        // wrapper_strcx.jupiter_liquidity_usd, appeared only inside that sentence.
+        //
+        // ⚠️ WIRED TO Pool TVL AND NOTHING ELSE, DELIBERATELY. Read the producer
+        // before mapping it: strc_backing_analyzer.py takes it from Jupiter's
+        // price-v3 `liquidity` field for the token — pool liquidity on the Solana
+        // float. It is NOT a 2% depth, NOT a 24h volume and NOT an exit ladder, so
+        // those three stay absent rather than borrowing this number. A wrong
+        // number is worse than a declared absence; three of them worse still.
+        //
+        // ⚠️ Safe against the axis score by construction: liquidityRating() reads
+        // `total_2pct_depth` (and band_score), never `total_tvl`, so the head stays
+        // on riskAnalyst's authored 2.5/10 rather than inventing a measured band —
+        // the trap this file's collateral_ratio comment above was written about.
+        if (!data.liquidity && wrapper.jupiter_liquidity_usd != null) {
+            data.liquidity = {
+                total_tvl: wrapper.jupiter_liquidity_usd,
+                pools_note: 'Pool TVL is Jupiter\'s reported pool liquidity for the Solana float ' +
+                    '(price API `liquidity`), the only venue measurement published for this wrapper. ' +
+                    '2% depth, 24h volume and an exit ladder are not measured for STRCx — those ' +
+                    'fields are absent, not zero, and the axis score beside them is authored rather ' +
+                    'than derived.'
+            };
+        }
     },
 
     render: function (data) {

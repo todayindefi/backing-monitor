@@ -384,8 +384,52 @@ inventing balances, signed dates or scope pills for an audit firm's opinions is 
 house rule forbids. A real lapse still pages — `is_complete_record: true` restores the staleness
 verdict.
 
-**Plan.** Asked riskAnalyst (live, they hold the PDFs) for the three missing periods. When they
-land: append them and move `complete_through`.
+**⚠️ FOLLOW-UP, SAME DAY — riskAnalyst supplied the reports AND corrected me. I OVER-RETRACTED.**
+
+I pulled two claims off that panel. **Only one of them was false.**
+
+```
+"Stale — 119d since April 2026"                          FALSE  — Mar..Jul all published
+"Cash & Equivalents has no CPA-firm coverage for any
+ date after 2026-03-31"                                  ⚠️ TRUE — and still true
+```
+
+⚠️ **April, May, June AND July are all `securities_only`**, each carrying the identical criteria
+clause *"limited to … Marketable Preferred Equity Securities (STRC, SATA) / On-Chain Tokenized
+Securities (STRCx)"*. Cash, stablecoin and dividends-in-motion appear in March and in nothing
+after. **My conservative render was suppressing a true and continuing finding about ~43.6% of the
+reserve — the cost of over-correcting is a silence that reads as an all-clear.**
+
+⚠️ **The two claims rested on DIFFERENT evidence and I retracted the second on the first one's
+momentum.** Finding one error in a panel is not evidence about its neighbours.
+
+⚠️ **One premise of mine was also wrong:** I said riskAnalyst "hold the PDFs". They did not — their
+2026-09-10 note came from the docs page with only July transcribed. **They fetched and read all
+five today.**
+
+**Built (second pass).** ✅ All five reports now in the file, `is_complete_record: true`. Pill:
+`Partial record` → **`Latest: July 2026`** (signed 2026-08-12, 33 days — correctly not stale). The
+scope-regression warning is restored and **derived from the `scope` fields** rather than asserted,
+so it retires itself when a full-scope report lands:
+
+> *"⚠ Scope regression: narrowed to securities only in April 2026 … and **every examination since
+> has kept that scope (4 consecutive reports through July 2026)**. The largest reserve component
+> (Cash & Equivalents) has no CPA-firm coverage for any date after 2026-03-31. **SATA has been
+> examined at $0 since 2026-06-17**, so the examined securities leg is now STRC plus its own
+> on-chain wrapper (STRCx) and nothing else — a single-issuer leg."*
+
+⚠️⚠️ **AND FILLING IN THE DATA WOULD HAVE SILENTLY DROPPED THE WARNING.** The guard read
+`reports[1].scope === 'full_balance'` — true only while April and March were the whole file. With
+May/June/July added, `reports[1]` became securities-only and the block stopped rendering. **Adding
+correct data would have retired a live finding as a side effect.** Caught by rendering the page,
+not by reading the diff. A regression is *"latest is narrow and some earlier report was wide"*, not
+*"the last two rows differ"*.
+
+**Still open (riskAnalyst's notes, not built):** the opinion letter says *"Monthly **Asset** Balance
+Attestation Report"* while the attached document is the *"Monthly **Securities** Balance
+Attestation"* — **in all four post-March reports**, not the July one-off their report records. They
+suggest `opinion_letter_title` / `report_title` fields rather than one `scope` string. Left for
+when it changes a rendered label.
 
 **Status.** confirmed · **FIXED** (the false verdict removed; the enumeration gap stays declared
 until riskAnalyst supplies the reports)

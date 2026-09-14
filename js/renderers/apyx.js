@@ -1323,25 +1323,66 @@ var ApyxRenderer = {
             }
         }
 
-        // Scope-regression warning — only render when the latest scope is narrower
-        // than the prior one. Avoids false positives if scope re-expands.
+        // ⚠️ I REMOVED THIS CLAIM AND I WAS WRONG TO. Finding the staleness pill
+        // false, I retracted the cash-coverage sentence beside it on the same
+        // momentum — but the two rested on DIFFERENT evidence and only one was
+        // wrong. riskAnalyst read all five opinion PDFs on 2026-09-14: April, May,
+        // June and July all carry the identical "limited to … Marketable Preferred
+        // Equity Securities (STRC, SATA) / On-Chain Tokenized Securities (STRCx)"
+        // criteria clause. Cash, stablecoin and dividends-in-motion appear in March
+        // and in nothing after it. ⚠️ The conservative render was suppressing a TRUE
+        // and CONTINUING finding about ~43.6% of the reserve — the cost of
+        // over-correcting is a silence that reads as an all-clear.
+        //
+        // Now DERIVED from the scope fields rather than asserted, so it retires
+        // itself the moment a full_balance report lands instead of needing an edit.
+        var lastFull = null, lastFullIdx = -1;
+        for (var li = 0; li < reports.length; li++) {
+            if (reports[li].scope === 'full_balance') { lastFull = reports[li]; lastFullIdx = li; break; }
+        }
+        var firstNarrow = (lastFullIdx > 0) ? reports[lastFullIdx - 1] : null;
+        var narrowRunLength = (lastFullIdx > 0) ? lastFullIdx : 0;
+
+        // SATA reaching zero and staying there: the examined leg collapsing to a
+        // single issuer. Read off the balances, oldest first.
+        var sataZeroFrom = null;
+        var chron = reports.slice().reverse();
+        for (var ci = 0; ci < chron.length; ci++) {
+            var bal = chron[ci].balances || {};
+            var ds = Object.keys(bal).sort();
+            for (var dj = 0; dj < ds.length; dj++) {
+                var sata = bal[ds[dj]].SATA;
+                if (sata == null) continue;
+                if (sata === 0 && sataZeroFrom === null) sataZeroFrom = ds[dj];
+                else if (sata > 0) sataZeroFrom = null;  // reset: only a standing run counts
+            }
+        }
+
+        // Scope-regression warning. ⚠️ THE GUARD USED TO REQUIRE THE NARROWING TO
+        // SIT BETWEEN THE TWO NEWEST ROWS (`reports[1].scope === 'full_balance'`).
+        // That held only while April and March were the entire file — adding May,
+        // June and July would have made reports[1] securities_only and DROPPED THE
+        // WARNING ENTIRELY, retiring a live finding as a side effect of filling in
+        // data. A regression is "latest is narrow and some earlier report was
+        // wide", not "the last two rows differ".
         var scopeWarning = '';
-        if (reports.length >= 2 &&
-            latest && latest.scope === 'securities_only' &&
-            reports[1] && reports[1].scope === 'full_balance') {
+        if (latest && latest.scope === 'securities_only' && lastFull && firstNarrow) {
             scopeWarning =
                 '<div class="risk-flag risk-warning mt-3">' +
                     '<strong>⚠ Scope regression:</strong> ' +
-                    latest.period + ' narrowed to securities only — cash, stablecoin, and dividends-in-motion ' +
-                    '(covered in ' + reports[1].period + ') all dropped out. ' +
-                    (recordIncomplete
-                        ? 'Whether later examinations restored that scope is NOT established here — ' +
-                          'the opinions after ' + latest.period + ' are not enumerated in this file, ' +
-                          'so no claim is made about coverage of the largest reserve component ' +
-                          '(Cash &amp; Equivalents) beyond ' + snapshotDate(reports[1]) + '.'
-                        : 'The largest reserve component (Cash &amp; Equivalents) has no CPA-firm coverage for any date after ' +
-                          snapshotDate(reports[1]) + '. ' +
-                          'Watch the next report for scope re-inclusion.') +
+                    'narrowed to securities only in ' + firstNarrow.period + ' — cash, stablecoin and ' +
+                    'dividends-in-motion (covered in ' + lastFull.period + ') all dropped out' +
+                    (narrowRunLength > 1
+                        ? ', and <strong>every examination since has kept that scope (' +
+                          narrowRunLength + ' consecutive reports through ' + latest.period + ')</strong>'
+                        : '') +
+                    '. The largest reserve component (Cash &amp; Equivalents) has no CPA-firm coverage ' +
+                    'for any date after ' + snapshotDate(lastFull) + '.' +
+                    (sataZeroFrom
+                        ? ' <strong>SATA has been examined at $0 since ' + sataZeroFrom + '</strong>, so the ' +
+                          'examined securities leg is now STRC plus its own on-chain wrapper (STRCx) and ' +
+                          'nothing else — a single-issuer leg.'
+                        : '') +
                 '</div>';
         }
 
