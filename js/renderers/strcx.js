@@ -521,29 +521,24 @@ var STRCxRenderer = {
         // page whose Risk Flags panel reads "No risk flags". Promoted to a visible
         // callout — but NOT injected into data.risk_flags, which would dress a
         // renderer's inference as a producer's finding.
-        // ⚠️ THE PUBLISHED RESIDUAL IS ON A SUPERSEDED BASIS AND UNDERSTATES.
-        // It is `cg_aggregate - known_onchain`, which only works if both are the
-        // same unit. PegTracker established 2026-09-14 that the CG aggregate is
-        // PRE-SCALED while the on-chain legs are SCALED, so the subtraction is
-        // cross-unit. Converting the aggregate first makes the gap LARGER, not
-        // smaller. Their corrected figure has not reached this feed yet, so the
-        // published number is shown with the direction of its error stated rather
-        // than replaced by our own arithmetic.
+        // ✅ RESOLVED 2026-09-14/15. PegTracker settled the basis and corrected the
+        // residual: `total_supply_basis` and `implied_other_chains_supply_basis` are
+        // now both published as `prescaled_shares`, and the figure moved from
+        // 629,032 (the cross-unit subtraction) to 802,969 on a consistent basis.
+        // The superseded-basis caveat this repo carried overnight is retired — the
+        // producer states the unit, so the renderer reads it instead of arguing.
         var unlocatableFlag = '', residualBasisNote = '';
         var otherSupply = wrapper.implied_other_chains_supply;
         if (otherSupply != null && supply > 0 && otherSupply / supply > 0.05) {
             var otherUsd = (wrapper.coingecko_price_usd != null)
                 ? otherSupply * wrapper.coingecko_price_usd : null;
-            var m = wrapper.multiplier;
-            if (m && m > 1 && supply > 0) {
-                var rescaled = supply * m - (supply - otherSupply);
-                residualBasisNote =
-                    ' ⚠️ <strong>This figure is on a superseded basis and understates.</strong> It subtracts ' +
-                    'SCALED on-chain supplies from a PRE-SCALED CoinGecko aggregate. Converting the aggregate ' +
-                    'first gives roughly <span class="font-mono">' + fmtN(rescaled) + '</span> (' +
-                    (rescaled / (supply * m) * 100).toFixed(1) + '%). PegTracker settled the basis on ' +
-                    '2026-09-14 and their corrected figure has not reached this feed yet, so the published ' +
-                    'number is shown with the direction of its error rather than replaced by our arithmetic.';
+            // Render the producer's declared unit rather than inferring one.
+            var basisUnit = wrapper.implied_other_chains_supply_basis || wrapper.total_supply_basis;
+            if (basisUnit) {
+                residualBasisNote = ' Counted in <span class="font-mono">' +
+                    String(basisUnit).replace(/_/g, ' ') + '</span>, the same unit as the supply above — ' +
+                    'the aggregate and the on-chain legs are on one basis, so the residual is a like-for-like ' +
+                    'subtraction rather than a unit artifact.';
             }
             unlocatableFlag =
                 '<div class="risk-flag risk-warning mt-3">' +

@@ -138,6 +138,11 @@ var SyrupUSDCRenderer = {
         var asset = loan.collateral && loan.collateral.asset;
         return asset && !SyrupUSDCRenderer._isLoanAsset(asset);
     },
+    _escapeAttrSafe: function(v) {
+        return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    },
+
     _isLoanAsset: function(asset) {
         // LAST-RESORT name heuristic — crypto-overcollat collateral assets;
         // anything else (PYUSD, USTB, USDC, USDT, sUSDS, etc.) reads as
@@ -2199,7 +2204,8 @@ var SyrupUSDCRenderer = {
             var bands = parBands || { crit: 100, warn: 120 };
             var curText;
             if (curLevel != null && isUncorroborated) {
-                curText = '<span class="text-slate-400" title="' + SYRUP_UNCORROBORATED_TITLE + '">' +
+                curText = '<span class="text-slate-400" title="' +
+                    SyrupUSDCRenderer._escapeAttrSafe(SyrupUSDCRenderer._uncorroboratedTitle(c)) + '">' +
                     CommonRenderer.formatPercent(curLevel, 1) + '</span>';
             } else if (curLevel != null && !c.is_at_par) {
                 var curCls = (curLevel < bands.crit) ? 'text-red-600 font-semibold' :
@@ -2258,13 +2264,34 @@ var SyrupUSDCRenderer = {
     // Handoff filed upstream to stamp it; this reconstruction reproduces the
     // published aggregate exactly (syrupUSDC 2026-09-14: 10 loans / $372.55M).
     // Conservative by design: an unknown or live alarm leaves the read asserted.
+    // ✅ NOW READS THE PRODUCER'S OWN VERDICT. PegTracker stamped
+    // `read_corroborated` + `read_corroboration_basis` on every loan record
+    // (2026-09-14, from this repo's handoff), so the rule no longer has to be
+    // rebuilt from three separate fields on the consumer side.
+    // ⚠️ The reconstruction stays as a FALLBACK for snapshots predating the
+    // field — deleting it would blank the qualification on any older payload —
+    // but it is no longer what runs. Verified equivalent before switching:
+    // the published field flags 10 rows on syrupUSDC and 0 on syrupUSDT,
+    // matching the reconstruction exactly.
     _collateralUncorroborated: function(loan, poolUL) {
         var c = loan && loan.collateral;
-        if (!c || c.current_level_pct == null) return false;
+        if (!c) return false;
+        if (typeof c.read_corroborated === 'boolean') return c.read_corroborated === false;
+        // ---- fallback: pre-2026-09-14 payloads with no stamped verdict ----
+        if (c.current_level_pct == null) return false;
         if (c.current_level_pct >= 100) return false;
         if (poolUL == null || poolUL > 0) return false;
         if (loan.is_impaired || loan.is_called || loan.is_in_default) return false;
         return true;
+    },
+
+    // Prefer the producer's own reason string over ours (design rule R2).
+    _uncorroboratedTitle: function(coll) {
+        var basis = coll && coll.read_corroboration_basis;
+        return basis
+            ? 'Reads below par in Maple GraphQL but uncorroborated — ' + basis +
+              '. Treated as a collateral-amount data artifact; the number is shown, not asserted.'
+            : SYRUP_UNCORROBORATED_TITLE;
     },
 
     // Buffer-health aggregates recomputed over the reads that survive the
@@ -2328,7 +2355,8 @@ var SyrupUSDCRenderer = {
         // number, but qualified rather than asserted as distress. The verdict
         // is the producer's, not a heuristic invented here.
         if (uncorroborated) {
-            return '<td class="text-right font-mono text-slate-400" title="' + SYRUP_UNCORROBORATED_TITLE + '">' +
+            return '<td class="text-right font-mono text-slate-400" title="' +
+                SyrupUSDCRenderer._escapeAttrSafe(SyrupUSDCRenderer._uncorroboratedTitle(coll)) + '">' +
                 label + ' <a href="#syrup-data-anomaly-note" class="text-slate-400 text-xs no-underline hover:underline cursor-help">unverified</a></td>';
         }
 
