@@ -1,7 +1,8 @@
 ---
 title: BOLD dashboard — six-axis plan and custom blocks
 repo: backing-monitor
-status: PLAN. Written 2026-09-15. Nothing built. Axis ownership is split — see §0.
+status: PLAN rev 2. Written 2026-09-15, corrected the same day against riskAnalyst's field
+  spec. ⚠️ rev 1 asserted two data gaps that do not exist — see §0.5. Nothing built.
 ---
 
 # 0. ⚠️ Who this question is for — both of us, split by axis
@@ -30,6 +31,40 @@ in §3 marked `[riskAnalyst]`; do not ask them how the page should be laid out.*
 owns axis 3 and has zero BOLD files; PegTracker has the analyzer but not the depth. This is the
 same gap as `DISPATCH-dextracker-axis3-migration-2026-09-14` and should be resolved there, not by
 quietly having PegTracker do it.
+
+---
+
+# 0.5 ⚠️ REV 1 WAS WRONG ABOUT THE DATA, AND SO WAS THE FIELD SPEC — IN OPPOSITE DIRECTIONS
+
+**Both documents claimed a gap. Neither gap exists. Both were LOOKUP failures, not data failures.**
+
+```
+rev 1 claimed   "DexTracker has ZERO BOLD coverage"
+actually        ~/DexTracker/data/liquidity/bold_liquidity.json — schema liquidity/1,
+                bracketed depth, 7 rungs, venues, exclusions, as_of 2026-09-15T00:43Z
+why missed      I listed data/*bold* and not data/liquidity/*bold*
+                ⚠️ MY OWN MEMORY RECORDS THAT EXACT SUBDIR AS A TRAP and I walked into it
+
+field spec      "the redemption fee ladder is NOT YET PRODUCED — three eth_calls,
+   claimed       asked of PegTracker, never built"
+actually        it IS built — by DEXTRACKER, inside primary_exit.fee_ladder:
+                $100k 1.04% · $1M 3.65% · $2M 6.55% · $10M 29.76%
+why missed      it was asked of PegTracker, so PegTracker was where it was looked for
+```
+
+⚠️⚠️ **THE RULE THIS YIELDS: in a multi-producer estate, "not produced" almost always means "not
+produced by the producer I asked."** Before declaring a data gap, check **all three** producers and
+their subdirectories. **Two experienced sessions made the same class of error on the same asset
+within an hour of each other, in opposite directions.**
+
+✅ **Consequence: there is NO data gap for BOLD. Axes 1–5 are fully sourced today.** This is a
+registration and render job, exactly as the field spec concluded — it was just righter than its own
+evidence.
+
+⚠️ **And it inverts the axis-3 story in rev 1.** BOLD is not an asset DexTracker has failed to
+cover; **it is one of the few where DexTracker produced FIRST.** BOLD would be DexTracker-native
+from day one rather than inheriting PegTracker's transitional block — which makes it the **cleanest
+possible test case for the axis-3 migration**, not a casualty of it.
 
 ---
 
@@ -107,33 +142,51 @@ show.** `alert_thresholds.shutdown_time_nonzero: "critical"` already says how to
 **`reconciliation_gap_pct`** (debt vs supply) is a **data-integrity** reading, not a solvency one —
 render it as such, with `alert_thresholds.abs_reconciliation_gap_pct_gt: 0.1` as the band.
 
-## Axis 3 — Liquidity & Exit · ⚠️ DexTracker (no coverage) — ROUTING QUESTION
+## Axis 3 — Liquidity & Exit · DexTracker ✅ ALREADY PRODUCED
 
 ```
-have    NOTHING. No liquidity block, no depth, no ladder.
+have  DexTracker data/liquidity/bold_liquidity.json (schema liquidity/1, as_of 2026-09-15T00:43Z)
+      depth.status "bracketed" · depth_usd $1,000,000 (is_floor false) · 7 rungs
+      execution_envelope: turnover_observed, tested through $20M, output NOT monotonic
+      quote_stability (4 samples) · venues · enumeration · excluded_liquidity
+      primary_exit: Liquity V2 redemption via CollateralRegistry, size_dependent, WITH fee_ladder
 ```
 
-⚠️⚠️ **BOLD has TWO exits and conflating them would be the defect here** — the same split that
-syrupUSDC needed:
+⚠️ **BOLD has TWO exits and conflating them is the defect to avoid** — the same split syrupUSDC
+needed:
 
 ```
-PROTOCOL exit    redemption against troves at the redemption rate. Always open, size-unbounded,
-                 price-bounded by redemption_floor. Constraint is COST, not size.
-SECONDARY exit   Curve/Uniswap. Constraint is SIZE. riskAnalyst's §III hand-run ladder measured
-                 $100k at -0.048% (a gain) through $6M at +0.94%, with a cliff by $7M.
+PROTOCOL   permissionless redemption. Always open, size-UNBOUNDED, but COST-bound and the
+           cost is steeply size-dependent.
+SECONDARY  Curve/Uniswap. SIZE-bound. 2% crossing bracketed $1M–$10M, lower bound published.
 ```
 
-**`[riskAnalyst]`** ⚠️ **Their §III warning must survive into whatever gets built:** Convex,
-StakeDAO, Yearn and Beefy "BOLD-USDC" entries are **LP-token wrappers over the same Curve pool**,
-and the three liquity-v2 "BOLD" DefiLlama entries are **Stability Pools, not tradeable depth**.
-**Double-counting those overstates BOLD liquidity ~3×.**
+⚠️⚠️ **THE MOST IMPORTANT SINGLE THING ON THIS DASHBOARD — and rev 1 got it backwards.**
+`redemption_floor` (0.9908) is the **SPOT** rate: it describes a trade of **size zero**. The real
+cost at size, from `primary_exit.fee_ladder`:
 
-⚠️ **CUSTOM — Stability Pool coverage belongs on this axis, not axis 2.** It is pre-funded loss
-absorption: the BOLD that will be burned against liquidated collateral before anyone else is
-touched. **wstETH at 31.75% is already flagged** by the producer against its own
-`stability_pool_coverage_pct_lt: 35`. **A branch whose pool cannot absorb its own liquidations
-falls back to redistribution across other troves — that is the contagion path and it is
-per-branch.**
+```
+$100k   1.04%        $1M   3.65%        $2M   6.55%        $10M   29.76%
+```
+
+**rev 1 proposed drawing `redemption_floor` on the peg chart as a bound.** ⚠️ **That render would be
+actively misleading** — a reader would take 0.9908 as their floor at size and be wrong by orders of
+magnitude. riskAnalyst caught this and they are right. ✅ **The floor may only be rendered WITH the
+ladder beside it, labelled SPOT.** A drawn line without the ladder is the single worst thing this
+page could do.
+
+✅ **`excluded_liquidity` already handles the double-count** riskAnalyst warned about — Convex,
+StakeDAO, Yearn and Beefy named as LP wrappers over the same Curve pool, with the reason string.
+**Render the exclusions, do not re-derive them.**
+
+⚠️ **CUSTOM — Stability Pool coverage belongs on THIS axis, not axis 2.** It is pre-funded loss
+absorption: BOLD burned against liquidated collateral before anyone else is touched. **wstETH at
+31.75% is already flagged** by the producer against its own `stability_pool_coverage_pct_lt: 35`.
+A branch whose pool cannot absorb its own liquidations falls back to redistribution across other
+troves — **the contagion path, and it is per-branch.**
+
+⚠️ `execution_envelope.output_monotonic_within_tested_range: false` — **turnover observed.** That is
+a declared limit on the measurement and must survive to the page.
 
 ## Axis 4 — Dependencies · riskAnalyst
 
@@ -200,22 +253,40 @@ changes upstream, the page moves with it.**
 
 ---
 
-# 5. Order of work
+# 5. Order of work — revised
+
+**No data collection. Registration, one decision, then render.**
 
 ```
-1  PegTracker emits `peg` (+ backing, liquidity, dependencies, issuer stubs)   UNBLOCKS EVERYTHING
-2  register bold in assets.json + add cp lines to sync_and_push.sh             ⚠️ see below
-3  render axes 1/2 from what already exists — branch table is the headline
-4  axis 3 routing decision (DexTracker coverage vs PegTracker interim)
-5  riskAnalyst axes 4 + 6 · security_analyst axis 5
+0  ⚠️ TELL riskAnalyst BEFORE registering. Their checker reads our assets.json, so adding
+   `bold` expands their audit scope. Courtesy, and it is their coverage commitment.
+
+1  Register `bold` in data/assets.json.
+   ⚠️ AND add cp lines to sync_and_push.sh — it is an explicit allowlist. A new asset's
+   JSONs silently never reach the dashboard until they are added. Symptom: "data in
+   PegTracker, nothing on the dashboard." Blocked Ethena until 4975b236.
+   ⚠️ THREE producers, THREE paths — bold_backing.json + bold_peg_history.json +
+   bold_backing_history.json (PegTracker), bold_liquidity.json (DexTracker,
+   data/liquidity/ SUBDIR — the one rev 1 missed), topology (security_analyst).
+
+2  ⚠️ DECIDE BESPOKE vs GENERIC BEFORE ANYTHING ELSE. This gates step 4 and the overlay.
+   riskAnalyst reports 8 of 22 existing overlays orphaned by bespoke renderers that skip
+   the generic path. I have NOT verified the count — 12 of 22 assets with overlays have a
+   bespoke renderer, and whether each skips the overlay path is per-renderer. ⚠️ The count
+   does not change the advice: settle the path first, then author.
+   MY RECOMMENDATION: start GENERIC. BOLD's axis blocks are standard once emitted, and the
+   custom content is tables that hang under axes. Bespoke is where this week's defects
+   clustered.
+
+3  PegTracker emits the axis blocks. ⚠️ ONLY `peg` is strictly blocking —
+   hasAxisBlocks() gates the whole frame on data.peg. Everything else can follow.
+
+4  Render axes 1/2/3 from data that already exists. Branch table is the headline.
+
+5  security_analyst axis 5 walk; riskAnalyst axes 4 + 6.
+
+6  bold_contract_overlay.json LAST — after step 2 is settled, per riskAnalyst's caution.
 ```
-
-⚠️ **Step 2 has a known trap:** `sync_and_push.sh` is an explicit `cp` allowlist. A new asset's
-JSONs **silently never reach the dashboard** until its lines are added — symptom is "data in
-PegTracker, nothing on the dashboard". It blocked Ethena until `4975b236`.
-
-⚠️ **And registering the slug changes riskAnalyst's audit scope** — their checker reads our
-`assets.json`, so adding `bold` puts it in their coverage. **Tell them before, not after.**
 
 ---
 
