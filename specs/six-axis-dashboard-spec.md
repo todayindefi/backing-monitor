@@ -24,7 +24,7 @@ cites an asset, that asset is the evidence.
 2 Backing             PegTracker        reserves, coverage, first-loss position
 3 Liquidity & Exit    DexTracker*       venue depth AND primary redemption
 4 Dependencies        riskAnalyst       what fails INTO this asset from outside
-5 Contract & Admin    security_analyst  who can act ON it from inside
+5 Smart Contract & Admin  security_analyst + riskAnalyst  how code can fail, and who can act ON it
 6 Issuer              riskAnalyst       editorial: who you are trusting
 ```
 
@@ -449,22 +449,46 @@ asset SHOULD publish `underlying_score` rather than omit it.
 **The surviving half of the original rule still binds:** whatever the answer, it is fleet-wide.
 An asset that omits the score while 22 carry one redefines what its blank means.
 
-## Axis 5 — Contract & Admin
+## Axis 5 — Smart Contract & Admin
 
-**REQUIRED** · per authority layer: what it controls, the keys, the delay, the topology · ⚠️ an
-explicit NOT-ESTABLISHED list · the method (hand-walk vs generated) · the walk's `observed_at`.
+Axis 5 answers two independent questions: **can the deployed system lose funds or break while every
+authorized actor is honest**, and **what can a compromised or malicious authority do, how quickly,
+and with what reach**. The axis is one authored judgment over two NON-OFFSETTING halves:
+smart-contract/code risk and administrative/access-control risk. Strength in one half cannot erase a
+critical weakness in the other.
 
-⚠️ **THREE STATES IN THE DELAY COLUMN, never two:** a real duration, an explicit `none`, and
-`not measured`. `timelock: unresolved` means NOT MEASURED — rendering it blank converts an unknown
-into an implied clean bill, which is exactly what security_analyst's own coverage audit found.
+**REQUIRED — code half** · deployed-code age and operating history · audit engagements, dates,
+firms and deployed scope · formal-verification scope · unresolved/accepted findings · bounty
+provider, cap, exclusions and effective coverage · prior incidents and disclosed root causes ·
+upgrade/remediation options · unreviewed components · explicit evidence limits.
+
+**REQUIRED — authority half** · per AUTHORITY PATH, not merely per layer: controller state ·
+actionable reach and its bound · value-at-risk scope · execution delay · enforced delay floor ·
+reaction window, if distinct · changeability · terminal kind · independent canceller · topology.
+Also required: an explicit NOT-ESTABLISHED list, method (hand-walk vs generated), and `observed_at`.
+
+The producer seam remains: security_analyst supplies objective authority observations;
+riskAnalyst supplies code-risk judgment, evidence limits, cross-axis treatment and the combined
+`structural_score`. See `specs/axis5-contract-admin-spec.md` for the normative schema and renderer
+precedence.
+
+⚠️ **FOUR DELAY STATES, never two:** `not-applicable`, explicit `none`, a real duration, and
+`unresolved`. `none` means an ACTIVE, ACTIONABLE path executes without delay. An absent or renounced
+controller is `not-applicable`, never `none`. `unresolved` means NOT MEASURED — rendering it blank
+converts an unknown into an implied clean bill.
 
 ⚠️ **A CONFIGURED DELAY IS NOT AN ENFORCED ONE.** If `timelock_floor: none` — the MINIMUM_DELAY
 getter reverts — the delay is reducible and the column says `48h · no floor`. Their audit found
 this on 14 of 14 hand-walked timelock rows.
 
-⚠️ **Audit quality does not lift an authority finding.** Strong audits under a key that can
-rewrite the mark in one transaction is the case this axis exists to catch. If the score comes from
-a code/audit rubric, the basis must say what it does and does not cover.
+⚠️ **CONTROLLER EXISTENCE → REACH → DELAY.** Minimum delay is computed only over active,
+actionable paths and is always qualified by reach/scope. Never let an inert `timelock: none` row
+outrank an actual authority finding; never combine core and bounded-pool paths into an unqualified
+minimum. A reaction window is not an execution timelock.
+
+⚠️ **Audit quality does not lift an authority finding, and absent authority does not erase code
+risk.** Measured absence improves the admin half; immutability can separately worsen remediation in
+the code half. Record both rather than mechanically cancelling them.
 
 **UNRATED** · "Not assessed — an absence of data, not a finding that control is unconstrained,
 nor that it is constrained."
