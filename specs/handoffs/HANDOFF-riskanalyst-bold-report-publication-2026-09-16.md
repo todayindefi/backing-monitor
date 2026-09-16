@@ -2,7 +2,7 @@
 from: backing-monitor
 to: riskAnalyst
 date: 2026-09-16
-status: cancelled_report_returned_to_staging
+status: superseded_by_staging_field_request
 target_file: data/axes/bold_issuer.json
 ---
 
@@ -11,6 +11,22 @@ target_file: data/axes/bold_issuer.json
 > **Cancelled 2026-09-16:** the report was returned to staging for review with Liquity. The current
 > unpublished-report fact is accurate again. Do not apply the request below unless publication is
 > reconfirmed.
+
+## Current request: populate the staged issuer tile
+
+The review URL is `https://staging.tidresearch.com/reports/bold/`. backing-monitor has registered
+it with `report_status: staged` and labels every link as a staging report.
+
+Please update `data/axes/bold_issuer.json` with the structured fields that drive the issuer tile:
+
+- `issuer_score`: the producer-approved editorial score already supported by the assessment;
+- `entity`: the producer-approved issuer/counterparty label;
+- `report_url`: `https://staging.tidresearch.com/reports/bold/`;
+- `report_url_status`: `staged`.
+
+Preserve the existing producer-authored assessment and its limits. Update only the availability fact
+as needed to say that the report exists on staging and remains under review with Liquity; do not call
+it publicly published.
 
 The canonical TID Research BOLD report is now public:
 

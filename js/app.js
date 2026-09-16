@@ -38,10 +38,11 @@ function isPublished(a) { return !!a && a.published === true; }
 // already landed. Keep SYNC_OFFSET_MIN ahead of the cron minute in
 // sync_and_push.sh if that ever moves.
 var SYNC_OFFSET_MIN = 10;
+var DATA_CACHE_REV = '20260916b';
 function dataUrl(path) {
     var hour = Math.floor((Date.now() - SYNC_OFFSET_MIN * 60000) / 3600000);
     var sep = path.indexOf('?') >= 0 ? '&' : '?';
-    return path + sep + 'v=' + hour;
+    return path + sep + 'v=' + hour + '&r=' + DATA_CACHE_REV;
 }
 
 // Asset-specific renderers registry. Keys are matched against
@@ -368,7 +369,8 @@ async function renderAsset(slug) {
             data.issuer = data.issuer || {};
             if (assetMeta.report_url && !data.issuer.report_url) {
                 data.issuer.report_url = assetMeta.report_url;
-                data.issuer.report_url_status = data.issuer.report_url_status || 'published';
+                data.issuer.report_url_status = data.issuer.report_url_status ||
+                    assetMeta.report_status || 'published';
                 data.issuer.report_url_source = 'assets.json registry';
             }
             // ⚠️ "A report exists but is not published" is NOT the same state as
@@ -444,6 +446,8 @@ async function renderAsset(slug) {
         if (reportLink) {
             if (assetMeta && assetMeta.report_url) {
                 reportLink.href = assetMeta.report_url;
+                reportLink.textContent = assetMeta.report_status === 'staged'
+                    ? 'Staging report ↗' : 'Full report ↗';
                 reportLink.classList.remove('hidden');
             } else {
                 reportLink.classList.add('hidden');

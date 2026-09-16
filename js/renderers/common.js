@@ -1470,7 +1470,13 @@ const CommonRenderer = {
     _reportUrlUsable(issuer) {
         if (!issuer || !issuer.report_url) return false;
         var st = issuer.report_url_status;
-        return (st == null || st === 'published');
+        return (st == null || st === 'published' || st === 'staged');
+    },
+
+    _reportLinkLabel(issuer, longForm) {
+        var staged = issuer && issuer.report_url_status === 'staged';
+        if (longForm) return staged ? 'Read the staged risk report →' : 'Read the full risk report →';
+        return staged ? 'Staging report →' : 'Report →';
     },
 
     // ------ Feed staleness ------
@@ -3404,7 +3410,8 @@ const CommonRenderer = {
                 // "unverified" when it could not be checked. Say which, rather
                 // than leaving a gap the reader has to interpret.
                 chip: this._reportUrlUsable(issuer)
-                    ? '<a href="' + issuer.report_url + '" target="_blank" rel="noopener noreferrer" class="axis-rating r-na">Report →</a>'
+                    ? '<a href="' + issuer.report_url + '" target="_blank" rel="noopener noreferrer" class="axis-rating r-na">' +
+                        this._reportLinkLabel(issuer, false) + '</a>'
                     : this._reportChipHtml(issuer)
             }
         ];
@@ -6292,7 +6299,7 @@ const CommonRenderer = {
         var reportLink = this._reportUrlUsable(issuer)
             ? '<a href="' + issuer.report_url + '" target="_blank" rel="noopener noreferrer" ' +
                 'class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700">' +
-                'Read the full risk report →</a>'
+                this._reportLinkLabel(issuer, true) + '</a>'
             // ⚠️ Three states, not two. "No report linked" was being shown for a
             // report that EXISTS and is deliberately withheld, which reads as
             // "nobody has written one". A status without a URL is the withheld
