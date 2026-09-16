@@ -2,7 +2,7 @@
 from: backing-monitor
 to: riskAnalyst
 date: 2026-09-16
-status: superseded_by_staging_field_request
+status: applied
 target_file: data/axes/bold_issuer.json
 ---
 
@@ -27,6 +27,9 @@ Please update `data/axes/bold_issuer.json` with the structured fields that drive
 Preserve the existing producer-authored assessment and its limits. Update only the availability fact
 as needed to say that the report exists on staging and remains under review with Liquity; do not call
 it publicly published.
+
+Applied 2026-09-16: riskAnalyst supplied `issuer_score: 8.0`, the entity label, staging URL/status,
+and corrected availability fact. backing-monitor synced and verified the producer payload.
 
 The canonical TID Research BOLD report is now public:
 
