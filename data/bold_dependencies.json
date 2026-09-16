@@ -6,22 +6,10 @@
   "dependencies": {
     "upstream": [
       {
-        "name": "WETH / ETH",
-        "metric": "WETH collateral branch",
+        "name": "Permanently closed collateral set: WETH / wstETH / rETH",
+        "metric": "3 collateral branches; getToken(0..2) = WETH / wstETH / rETH and getToken(3) = address(0)",
         "source": "CollateralRegistry on-chain read, 2026-09-14",
-        "note": "Direct ETH market and network exposure. WETH does not add a liquid-staking protocol dependency, but remains correlated with both LST branches."
-      },
-      {
-        "name": "wstETH / Lido",
-        "metric": "wstETH collateral branch",
-        "source": "CollateralRegistry and deployed immutable PriceFeed configuration, verified 2026-09-14",
-        "note": "Imports Lido staking, withdrawal and exchange-rate risk in addition to ETH market risk."
-      },
-      {
-        "name": "rETH / Rocket Pool",
-        "metric": "rETH collateral branch",
-        "source": "CollateralRegistry and deployed immutable PriceFeed configuration, verified 2026-09-14",
-        "note": "Imports Rocket Pool staking, withdrawal and exchange-rate risk in addition to ETH market risk. Its oracle uses the lower of market price and the protocol exchange rate."
+        "note": "The set cannot be extended by any administrator. WETH is direct ETH exposure; wstETH imports Lido risk and rETH imports Rocket Pool risk. All three remain correlated ETH-beta rather than independent collateral classes."
       },
       {
         "name": "Chainlink ETH/USD and LST rate feeds",
@@ -39,6 +27,6 @@
       }
     ],
     "downstream_tracked": true,
-    "note": "The dependency chain is short and enumerable, but not absent. The collateral set is permanently closed to WETH, wstETH and rETH: the registry returns those three branches and then address(0), and no administrator can add another collateral. That fixed set does not remove Chainlink, Lido, Rocket Pool, ETH or the material downstream sBOLD wrapper. Live BOLD is identified by 0x6440f144b7e50D6a8439336510312d2F54beB01D, not by the case-colliding ticker."
+    "note": "The dependency chain is short and enumerable, but not absent. The immutable collateral set prevents governance from adding new backing counterparties; it does not remove Chainlink, Lido, Rocket Pool, ETH or the material downstream sBOLD wrapper. Live BOLD is identified by 0x6440f144b7e50D6a8439336510312d2F54beB01D, not by the case-colliding ticker."
   }
 }
