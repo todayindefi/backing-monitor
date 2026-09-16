@@ -13,7 +13,7 @@ var BOLDRenderer = {
         var liq = data.liquidity || {}, exit = liq.primary_exit || {};
 
         var pegSlot = document.getElementById('peg-extra-panels');
-        if (pegSlot) pegSlot.innerHTML = this._redemptionPanel(s, exit);
+        if (pegSlot) pegSlot.innerHTML = this._redemptionPanel(s, exit, data.peg || {});
 
         var backingSlot = document.getElementById('backing-extra-panels');
         if (backingSlot) backingSlot.innerHTML = this._branchPanel(branches, t) + this._reconciliationPanel(s, t);
@@ -24,16 +24,22 @@ var BOLDRenderer = {
         var dependencySlot = document.getElementById('dependencies-extra-panels');
         if (dependencySlot) dependencySlot.innerHTML = this._sBoldPanel(a.sbold || {});
     },
-    _redemptionPanel: function(s, exit) {
+    _redemptionPanel: function(s, exit, peg) {
         var rows = Array.isArray(exit.fee_ladder) ? exit.fee_ladder : [];
+        var floor = s.redemption_floor == null ? null : Number(s.redemption_floor);
+        var market = peg.market_price == null ? null : Number(peg.market_price);
+        var floorGapBps = floor && market != null ? (market - floor) / floor * 10000 : null;
+        var floorGapText = floorGapBps == null ? 'not measured' :
+            Math.abs(floorGapBps).toFixed(1) + ' bps ' + (floorGapBps >= 0 ? 'above' : 'below');
         var table = rows.length ? '<table class="data-table"><thead><tr><th>Redemption size</th><th class="text-right">Effective fee</th></tr></thead><tbody>' +
             rows.map(function(r) { return '<tr><td>' + BOLDRenderer._money(r.size_usd) + '</td><td class="text-right font-mono">' + BOLDRenderer._pct(r.effective_redemption_fee_pct, 2) + '</td></tr>'; }).join('') +
             '</tbody></table>' : '<p class="text-sm text-amber-700">No size-dependent redemption ladder is published.</p>';
         return this._panel('Redemption mechanics — spot is not size execution',
-            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">' +
+            '<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">' +
             '<div class="summary-card"><div class="card-label">Base rate</div><div class="card-value">' + this._pct(s.base_rate_pct, 3) + '</div></div>' +
             '<div class="summary-card"><div class="card-label">Spot redemption fee</div><div class="card-value">' + this._pct(s.redemption_rate_pct, 3) + '</div></div>' +
-            '<div class="summary-card"><div class="card-label">Spot implied floor</div><div class="card-value">$' + (s.redemption_floor == null ? '—' : Number(s.redemption_floor).toFixed(4)) + '</div></div></div>' +
+            '<div class="summary-card"><div class="card-label">Spot implied floor</div><div class="card-value">$' + (floor == null ? '—' : floor.toFixed(4)) + '</div></div>' +
+            '<div class="summary-card"><div class="card-label">Market vs spot floor</div><div class="card-value">' + floorGapText + '</div><div class="text-xs text-slate-400">mechanism-relative position</div></div></div>' +
             '<p class="text-sm text-slate-500 mb-3">The implied floor is the size-zero rate. It is not an executable floor for a large holder; protocol redemption cost rises with size.</p>' + table);
     },
     _branchPanel: function(branches, t) {

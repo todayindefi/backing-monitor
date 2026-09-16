@@ -280,7 +280,8 @@ var SyrupUSDCRenderer = {
         var pctText = hasCommon ? CommonRenderer.pegPctText(pct, 3) :
                  (pct == null ? '—' : (pct >= 0 ? '+' : '') + pct.toFixed(3) + '%');
         var statusLabel = hasCommon ? CommonRenderer.pegStatusLabel(st) :
-                 (st === 'ok' ? 'Healthy' : st === 'warn' ? 'Watch' : st === 'critical' ? 'Stress' : '—');
+                 (st === 'ok' ? 'Near reference' : st === 'warn' ? 'Moderate deviation' :
+                  st === 'critical' ? 'Material deviation' : '—');
 
         var metricRow =
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +

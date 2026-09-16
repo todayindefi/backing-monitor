@@ -1005,9 +1005,13 @@ const CommonRenderer = {
 
     // ------ Peg / NAV-spread shared helpers ------
     // Threshold mirrors the Layer-3 alerter:
-    //   <0.25% → Healthy (ok)
-    //   <0.50% → Watch   (warn)
-    //   ≥0.50% → Stress  (critical)
+    //   <0.25% → Near reference      (ok)
+    //   <0.50% → Moderate deviation  (warn)
+    //   ≥0.50% → Material deviation  (critical)
+    //
+    // These labels describe PRICE DISTANCE only. "Stress" was retired here
+    // because a deviation alone cannot establish that the peg mechanism is
+    // stressed; that requires the mechanism-relative and authored lenses.
     // Absolute value — premium and discount of equal magnitude get the same severity.
     pegStatusClass(pctValue) {
         if (pctValue == null) return 'unknown';
@@ -1018,9 +1022,9 @@ const CommonRenderer = {
     },
 
     pegStatusLabel(state) {
-        if (state === 'ok') return 'Healthy';
-        if (state === 'warn') return 'Watch';
-        if (state === 'critical') return 'Stress';
+        if (state === 'ok') return 'Near reference';
+        if (state === 'warn') return 'Moderate deviation';
+        if (state === 'critical') return 'Material deviation';
         return '—';
     },
 
