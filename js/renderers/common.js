@@ -1038,6 +1038,41 @@ const CommonRenderer = {
         return 'text-slate-500';
     },
 
+    // The latest observation and the rolling score answer different questions.
+    // Keep both in the scan surface, with their horizons on the face, so a current
+    // depeg cannot sit under an apparently contradictory "Healthy" rolling band.
+    _pegCurrentChipHtml(data) {
+        var pct = data && data.peg ? data.peg.premium_discount_pct : null;
+        var state = this.pegStatusClass(pct);
+        var label = this.pegStatusLabel(state);
+        var cls = state === 'ok' ? 'r-ok' : (state === 'warn' ? 'r-warn' :
+            (state === 'critical' ? 'r-crit' : 'r-na'));
+        var title = pct == null
+            ? 'No current premium/discount observation is published.'
+            : 'Latest premium/discount: ' + this.pegPctText(pct, 3) + '.';
+        return '<span class="axis-rating ' + cls + '" title="' +
+            this._escapeAttr(title) + '">Current · ' + label + '</span>';
+    },
+
+    _pegBandChipHtml(data, history) {
+        var rating = this.pegRating(data, history);
+        if (rating == null) {
+            return this._ratingChipHtml(null, this._pegUnratedReason(data),
+                this.pegRatingBasisNote(data, history));
+        }
+        var b = this._pegDevBasis(data, history, 7);
+        var c = this._ratingChip(rating);
+        var rolling = b.basis === '7d';
+        var sparse = rolling && b.n < 24;
+        var face = (rolling ? '7d band' : 'Current band') + ' · ' + (rating * 2) + '/10' +
+            (sparse ? ' · sparse' : '');
+        var title = this._ratingChipBasis(rating) + ' — ' +
+            this.pegRatingBasisNote(data, history) +
+            (rolling ? ' Observations in the 7-day window: ' + b.n + '.' : '');
+        return '<span class="axis-rating ' + c.cls + '" title="' +
+            this._escapeAttr(title) + '">' + face + (sparse ? ' ⚠️' : '') + '</span>';
+    },
+
     // ±25 / ±50 / ±100 bps reference bands for peg/spread charts.
     pegBandAnnotations() {
         return {
@@ -2224,7 +2259,23 @@ const CommonRenderer = {
             return out;
         }
         out.value = avg; out.basis = '7d';
-        out.n = history.entries.length;
+        // Count the actual points in the scored window, not the entire retained
+        // history. BOLD retains 58 points but only 8 fall in its current 7-day
+        // window; reporting 58 would hide the sparse basis of the score.
+        var last = history.entries[history.entries.length - 1];
+        var cutoff = null;
+        if (last && last.timestamp) {
+            var lt = new Date(last.timestamp.endsWith('Z') ? last.timestamp :
+                last.timestamp + 'Z').getTime();
+            cutoff = lt - days * 86400000;
+        }
+        out.n = history.entries.filter(function(e) {
+            if (!e || e[declared] == null) return false;
+            if (cutoff == null || !e.timestamp) return true;
+            var et = new Date(e.timestamp.endsWith('Z') ? e.timestamp :
+                e.timestamp + 'Z').getTime();
+            return !isNaN(et) && et >= cutoff;
+        }).length;
         if (out.degenerate) {
             out.note = '⚠️ The 7-day average is computed from "' + declared + '" against the ' +
                 'current NAV, so for a NAV-tracking asset it measures NAV ACCRUAL over the week ' +
@@ -3321,10 +3372,7 @@ const CommonRenderer = {
                 label: 'Peg',
                 valueHtml: '<span class="' + pegCls + '">' + this.pegPctText(pegPct, 2) + ' ' + pegArrow + '</span>',
                 sub: 'premium / discount',
-                chip: this._ratingChipHtml(this.pegRating(data, history), null,
-                          this.pegRatingBasisNote(data, history)) +
-                      this._divergenceChipHtml(this.pegRating(data, history),
-                          this._authoredAxisScore(data.peg, ['peg_mechanism_score', 'volatility_score']))
+                chip: this._pegCurrentChipHtml(data) + this._pegBandChipHtml(data, history)
             },
             {
                 label: 'Backing',
@@ -4251,10 +4299,7 @@ const CommonRenderer = {
             // only says why the chip is empty, which needs no such decision. tidr's
             // framing: a silent refusal and an explained refusal are different defects,
             // and only one of them misleads.
-            this._ratingChipHtml(this.pegRating(data, history),
-                this._pegUnratedReason(data), this.pegRatingBasisNote(data, history)) +
-            this._divergenceChipHtml(this.pegRating(data, history),
-                this._authoredAxisScore(data.peg, ['peg_mechanism_score', 'volatility_score'])), data.peg);
+            this._pegCurrentChipHtml(data) + this._pegBandChipHtml(data, history), data.peg);
         this._renderPegSection(data, history);
 
         // ⚠️ 2 is BACKING and 3 is LIQUIDITY — swapped from the original frame.
