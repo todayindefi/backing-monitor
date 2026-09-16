@@ -3437,7 +3437,12 @@ const CommonRenderer = {
                 // delays are not guaranteed.
                 valueHtml: '<span title="' + this._escapeAttr(this._delayTooltip(data)) + '">' +
                            this._contractValueHtml(data) + '</span>',
-                sub: this._contractSubText(data),
+                // The actionable-path count belongs in the full axis header and
+                // table, where each inactive layer and active path is explained.
+                // Repeating it in this compact tile made the headline read like
+                // a second chip. Legacy walks keep their delay-basis subtitle.
+                sub: ((data.contract || {}).authority_summary || {}).schema === 'actionable-path/1'
+                    ? '' : this._contractSubText(data),
                 chip: (typeof (data.contract || {}).structural_score === 'number'
                     ? '<span class="axis-rating r-warn" title="' + this._escapeAttr(
                           this._mdPlain(String((data.contract || {}).structural_score_basis || ''))) + '">Structural ' +
