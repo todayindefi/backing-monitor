@@ -932,6 +932,14 @@ def _manifest_row(slug):
                         return True
         return False
     peg = d.get('peg') or {}
+    # Axis 3/4 commonly arrive through adopted overlay files rather than the base
+    # backing payload. The manifest must inspect the same published artifacts the
+    # browser loads; otherwise a staged asset appears complete until promotion,
+    # then reports false gaps despite rendering both axes.
+    liq_doc = load(os.path.join(DATA, f'{view}_liquidity.json')) or {}
+    dep_doc = load(os.path.join(DATA, f'{view}_dependencies.json')) or {}
+    liq = liq_doc.get('liquidity') or liq_doc
+    dep = dep_doc.get('dependencies') or d.get('dependencies') or {}
     con = (load(os.path.join(DATA, f'{view}_contract.json')) or {}).get('contract') or {}
     iss = ((load(os.path.join(DATA, f'{view}_issuer.json')) or {}).get('issuer')
            or d.get('issuer') or {})
@@ -942,9 +950,11 @@ def _manifest_row(slug):
         '2 coverage':   _cov_present(),
         '2 cov hist':   has('collateral_ratio', 'coverage_pct', 'cr'),
         '2 breakdown':  _comp_present(),
-        '3 liquidity':  bool(d.get('liquidity')) or bool(sp.get('liquidity')) or
+        '3 liquidity':  bool(d.get('liquidity')) or bool(liq.get('depth')) or
+                        bool(liq.get('venues')) or bool(liq.get('primary_exit')) or
+                        bool(sp.get('liquidity')) or
                         bool(sp.get('slippage_tiers')) or bool(sp.get('secondary')),
-        '4 upstream':   bool((d.get('dependencies') or {}).get('upstream')),
+        '4 upstream':   bool(dep.get('upstream')),
         '5 authority':  bool(con.get('layers')),
         '6 issuer':     bool(iss.get('summary') or iss.get('facts')),
     }

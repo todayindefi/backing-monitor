@@ -53,6 +53,7 @@ var ASSET_RENDERERS = {
     frax:      typeof FRAXRenderer      !== 'undefined' ? FRAXRenderer      : null,
     crvusd:    typeof CrvUSDRenderer    !== 'undefined' ? CrvUSDRenderer    : null,
     usg:       typeof USGRenderer       !== 'undefined' ? USGRenderer       : null,
+    bold:      typeof BOLDRenderer      !== 'undefined' ? BOLDRenderer      : null,
     usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
     syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
     syrupusdt: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,

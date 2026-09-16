@@ -1,8 +1,8 @@
 ---
 title: BOLD dashboard — six-axis plan and custom blocks
 repo: backing-monitor
-status: PLAN rev 2. Written 2026-09-15, corrected the same day against riskAnalyst's field
-  spec. ⚠️ rev 1 asserted two data gaps that do not exist — see §0.5. Nothing built.
+status: LIVE rev 4. BOLD is registered and published; all producer blocks and the asset renderer
+  are integrated. Promoted 2026-09-16 after staged review.
 ---
 
 # 0. ⚠️ Who this question is for — both of us, split by axis
@@ -302,3 +302,78 @@ double-count riskAnalyst identified is excluded at the source.
 ⚠️ **No redemption-cost estimate derived here.** The floor and the rate are published; the cost of
 a given redemption size depends on trove ordering, which this repo cannot see. **Render the bound,
 not a simulation.**
+
+---
+
+# 7. Execution-ready audit — 2026-09-16
+
+This section supersedes stale sequencing statements above without erasing the history that explains
+them.
+
+## Current evidence
+
+```
+PegTracker  bold_backing.json          refreshed 2026-09-15T23:37:46Z
+            bold_backing_history.json  present
+            bold_peg_history.json      57 points; latest 2026-09-15T23:18:39Z
+            gap: no top-level peg or backing block
+
+DexTracker  data/liquidity/bold_liquidity.json
+            liquidity/1; refreshed 2026-09-15T23:45:22Z
+            bracketed secondary depth + redemption fee_ladder already present
+
+security    topology/assets/bold.yaml
+            completed hand-walk; observed_at 2026-09-14; five authority layers
+
+riskAnalyst assets/bold.md + specs/bold-dashboard-field-spec.md
+            six judgments exist; no bold_* overlay files yet
+
+dashboard   bold is not registered; no renderer exists
+```
+
+⚠️ The earlier instruction to add per-file `cp` lines is obsolete. `sync_and_push.sh` now computes
+registered slugs × known suffixes and searches all producer roots. Registration in `data/assets.json`
+is the transport change; no BOLD-specific copy lines should be added.
+
+## Handoffs created
+
+1. PegTracker: `bold-standard-axis-blocks-2026-09-16` — emit standard `peg` and `backing` blocks
+   from fields already collected. No new RPC/API collection.
+2. riskAnalyst: `HANDOFF_backingmonitor_bold_axis_overlays_2026-09-16.md` — publish
+   `bold_axis_basis.json`, `bold_dependencies.json`, `bold_contract_overlay.json`, and
+   `bold_issuer.json` from the existing report and completed authority walk.
+
+No DexTracker or security_analyst handoff is open.
+
+## Build sequence
+
+1. Complete and verify both producer handoffs before registration. Read emitted JSON; completion
+   messages alone are not acceptance.
+2. Register `bold` as staged in `data/assets.json`, with the live BOLD contract address and no report
+   URL unless a public report actually exists. Registration automatically wires the sync suffixes.
+3. Run the sync locally and confirm base feed, histories, liquidity overlay, generated contract
+   walk, and risk overlays all land under `data/bold_*`.
+4. Add `js/renderers/bold.js` and register it in the page and renderer routing. Keep the common
+   six-axis baseline; custom panels go only into matching `*-extra-panels` slots.
+5. Render custom panels: spot floor plus fee ladder (axis 1); branches and reconciliation (axis 2);
+   two exits, Stability Pools, exclusions and measurement limits (axis 3); closed collateral/oracles
+   and sBOLD (axis 4); measured immutable absences and the bounded allocator (axis 5); producer prose
+   and report availability (axis 6).
+6. Read every alert band from `asset_specific.alert_thresholds`; add no BOLD-specific numeric
+   thresholds to JavaScript.
+7. Validate with `check_feeds.py`, syntax checks, DOM inspection, mobile layout, and a
+   published-vs-DOM field diff. Keep the asset staged until every baseline element renders or
+   declares its absence.
+8. Promote only after user review. Add a report link only when its production target is verified.
+
+## Acceptance gates
+
+- Resolve live BOLD by `0x6440…B01D` and visibly distinguish legacy `Bold`.
+- Axis 1 shows market vs $1 history and never presents the spot redemption floor as a
+  size-independent executable floor.
+- Axis 2 cannot hide a weak branch behind aggregate CR.
+- Axis 3 shows both exits, preserves bracket/turnover caveats, and excludes LP wrappers and
+  Stability Pools from venue liquidity.
+- Axis 5 renders verified absence as measured absence, not as unassessed.
+- Every figure has value, basis, clock, and scope; every missing baseline element declares why.
+- No producer file is silently ignored, stale beyond policy, or attributed to the wrong producer.
