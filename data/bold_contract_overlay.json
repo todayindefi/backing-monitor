@@ -1,0 +1,27 @@
+{
+  "schema_version": "contract-overlay/1",
+  "producer": "riskanalyst",
+  "asset": "bold",
+  "as_of": "2026-09-14T00:00:00Z",
+  "contract": {
+    "structural_score": 8.5,
+    "structural_score_source": "riskAnalyst:authored",
+    "structural_score_generated_at": "2026-09-14T00:00:00Z",
+    "structural_score_basis": "Axis 5 = CONTRACT & ADMIN, with this overlay supplying only the code/audit/judgment half. BOLD's core is ownerless and non-upgradeable, with a permanently closed collateral and mint-authority set, no pause, no parameter or oracle setter, and no core administrative path found in the completed walk. Immutability also removes remediation: a bug cannot be patched, and the prior deployment's Stability Pool defect required full redeployment. The score remains 8.5 rather than 9+ because renunciation is established by the Ownable construction plus owner() == address(0), while the OwnershipTransferred event was not read; LQTY voter concentration and majority cost are unmeasured; and Chainlink feed governance lies outside the walk while feed failure can permanently retire a branch. Governance is not absent: its undelayed authority is bounded to weekly BOLD initiative allocation and cannot reach core administration.",
+    "code_facts": [
+      "Live BOLD 0x6440f144b7e50D6a8439336510312d2F54beB01D returned owner() = address(0), and its EIP-1967 implementation slot was zero. The live contract must be resolved by address because legacy `Bold` differs only by ticker case.",
+      "CollateralRegistry totalCollaterals() = 3; getToken(0..2) returned WETH / wstETH / rETH and getToken(3) returned address(0). The collateral set and authorized mint branches are permanently closed.",
+      "The registry's owner() and governance() selectors reverted while baseRate() answered on the same address, and fabricated selector 0xdeadbeef reverted as a negative control. This distinguishes absent selectors from a failed endpoint.",
+      "shutdownTime() was zero on all three TroveManagers on 2026-09-14. This establishes that no branch had shut down by that observation; it is live set-once state, not a timeless guarantee.",
+      "The liquity/bold repository documents approximately 26 accepted, unfixed issues. A February 2025 Stability Pool defect in base code survived six audit firms plus formal verification; no funds were lost, but remediation required abandoning the first deployment, and the root cause was not published in the assessed record.",
+      "The standing Cantina bounty capped critical awards at 125,000 BOLD in the assessed report. Audit and bounty coverage do not offset an immutable defect or an authority path."
+    ],
+    "authority_note": "This overlay does not restate topology. The completed hand-walk supplies the authority half: five authority layers, 30 contracts and three branches. Its measured absences in core administration do not mean `no governance`. The LQTY-weighted allocator at 0x807def5e7d057df05c796f4bc75c3fe82bd6eee1 is a live, undelayed authority over the allocator's BOLD balance, bounded away from branches, oracles, parameters, code and the authorized-contract set.",
+    "cross_axis": [
+      "The LQTY allocator runs 604,800-second epochs with a 518,400-second voting cutoff. An allocation made in an epoch cannot be claimed inside that epoch; increases close after day 6, while reductions and vetos remain possible, and payout is earliest in the following epoch. This is a measured reaction window, not a timelock and not proof that any veto-capable holder monitors it.",
+      "LQTY voter concentration, the cost of a majority and the monitoring behavior of veto-capable holders were not measured. No conclusion about governance capture cost follows from the bounded allocator surface.",
+      "sBOLD reintroduces owner and pause authority around a material downstream holding. That wrapper surface is cross-referenced in Dependencies and must not be attributed to immutable core BOLD or priced twice.",
+      "Chainlink feed governance and permanent branch-retirement behavior are priced on Dependencies, not duplicated as core BOLD administration."
+    ]
+  }
+}

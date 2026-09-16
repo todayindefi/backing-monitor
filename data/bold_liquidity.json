@@ -1,0 +1,555 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "bold",
+ "as_of": "2026-09-15T23:45:22Z",
+ "producer": "dextracker",
+ "note": "Axis 3 (Liquidity & Exit), single producer. This payload contains measured exit evidence only and does not author a risk score. Pool TVL, wrapper TVL, and Stability Pool deposits are not substituted for executable depth.",
+ "depth": {
+  "status": "bracketed",
+  "depth_usd": 1000000.0,
+  "is_floor": false,
+  "threshold_bps": -200.0,
+  "size_response": "size_responsive",
+  "marginal_cost_monotonic_within_tested_range": true,
+  "tested_through_input_usd": 20000000.0,
+  "rung_set": {
+   "grid": "decade",
+   "start_usd": 1000.0,
+   "cap": 10,
+   "published_rungs": 7,
+   "decade_rungs": 5,
+   "envelope_probes": 2,
+   "termination": "crossed_threshold",
+   "termination_note": "Ascending the decade grid stopped at the first rung past the threshold. A SHORT LADDER IS THE ANSWER, NOT A GAP: continuing upward buys nothing once the crossing is bracketed.",
+   "spec": "riskAnalyst liquidity-ladder-spec.md \u00a77 (178e54a)"
+  },
+  "slippage_convention": "Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. The dated external mid sizes the input notional and is NOT the impact reference.",
+  "basis": "The -200bps crossing is BRACKETED between 1,000,000 (clears at -14.75bps) and 10,000,000 (-5397.71bps). Published figure is the last rung that cleared, so true depth sits inside the bracket and above what is shown.",
+  "bracket": {
+   "last_clearing_size_usd": 1000000.0,
+   "last_clearing_marginal_impact_bps": -14.745916700000805,
+   "first_crossing_size_usd": 10000000.0,
+   "first_crossing_marginal_impact_bps": -5397.707885332001,
+   "width_usd": 9000000.0,
+   "monotonic_in_bracket": true,
+   "threshold_bps": -200.0
+  },
+  "quote": {
+   "method": "KyberSwap GET /api/v1/routes exact-input BOLD -> USDC; the router discovers and split-optimises Curve, Uniswap V3/V4, and any other executable venues at each size",
+   "venue": "kyberswap_routed",
+   "chain": "ethereum",
+   "token_in": {
+    "symbol": "BOLD",
+    "address": "0x6440f144b7e50D6a8439336510312d2F54beB01D",
+    "decimals": 18
+   },
+   "baseline_size_usd": 100.0,
+   "quoted_as_of": "2026-09-15T23:45:09Z",
+   "token_out": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6
+   },
+   "resolution": "Both tokens are exact addresses. Returned route venues are enumerated from router responses, never selected by ticker or guessed pool keys.",
+   "failure_reporting": {
+    "note": "A failed rung carries `failure_kind` and `http_status`. `no_route_found` is a finding ABOUT THE ASSET; every other kind is our instrument failing, and the two must not be read as the same claim.",
+    "retried_kinds": [
+     "upstream_unavailable",
+     "upstream_rate_limited",
+     "transport_timeout",
+     "transport_error"
+    ],
+    "never_retried": [
+     "no_route_found",
+     "chain_not_mapped",
+     "invalid_request"
+    ]
+   },
+   "retry_policy": {
+    "attempts_per_size": 4,
+    "backoff_schedule_seconds": [
+     2.0,
+     4.0,
+     8.0
+    ],
+    "between_rung_delay_seconds": 1.0,
+    "failure_semantics": "A transient upstream failure becomes quote_failed only after all attempts fail. no_route_found is not retried because it is a venue finding. Failures are never interpolated or treated as zero liquidity."
+   },
+   "venue_enumeration": {
+    "method": "union of address-keyed router routes returned across tested sizes",
+    "venues": [
+     {
+      "venue": "axima-v2/uniswapv3",
+      "status": "quoted"
+     },
+     {
+      "venue": "curve",
+      "status": "quoted"
+     },
+     {
+      "venue": "curve-stable-ng",
+      "status": "quoted"
+     },
+     {
+      "venue": "curve-stable-plain",
+      "status": "quoted"
+     },
+     {
+      "venue": "ekubo-v3",
+      "status": "quoted"
+     },
+     {
+      "venue": "tamaswap-v2",
+      "status": "quoted"
+     },
+     {
+      "venue": "uniswap",
+      "status": "quoted"
+     },
+     {
+      "venue": "uniswap-v4",
+      "status": "quoted"
+     },
+     {
+      "venue": "uniswap-v4-euler-v2",
+      "status": "quoted"
+     },
+     {
+      "venue": "uniswapv3",
+      "status": "quoted"
+     }
+    ],
+    "legacy_token_excluded": "0xb01dd87B29d187F3E3a4Bf6cdAebfb97F3D9aB98",
+    "unmeasured": []
+   }
+  },
+  "anchor": {
+   "fair_value": 1.0,
+   "fair_value_basis": "par_input_sizing_only",
+   "fair_value_source": "producer_declared_input_sizing",
+   "fair_value_as_of": "2026-09-15T23:45:02Z",
+   "fair_value_choice": "marginal_baseline",
+   "fair_value_choice_mode": "producer_method",
+   "market_price_cross_check": null,
+   "self_referential": false
+  },
+  "rungs": [
+   {
+    "size_usd": 1000.0,
+    "status": "ok",
+    "amount_in_tokens": 1000.0,
+    "amount_out_tokens": 995.363473,
+    "slippage_bps": -46.365269999999455,
+    "route_venues": [
+     "axima-v2/uniswapv3",
+     "curve",
+     "curve-stable-ng",
+     "uniswapv3"
+    ],
+    "route_leg_count": 1,
+    "gas_usd": "0.14374850460890654",
+    "router_price_in": 0.9955845645740928,
+    "router_price_out": 0.9994119338453302,
+    "slippage_bps_debiased": 0.0,
+    "price_bias_bps": -46.365269999999455,
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 10000.0,
+    "status": "ok",
+    "amount_in_tokens": 10000.0,
+    "amount_out_tokens": 9951.719304,
+    "slippage_bps": -48.28069599999929,
+    "route_venues": [
+     "axima-v2/uniswapv3",
+     "curve",
+     "curve-stable-ng",
+     "uniswap-v4",
+     "uniswapv3"
+    ],
+    "route_leg_count": 3,
+    "gas_usd": "0.2208367531756033",
+    "router_price_in": 0.9955845645740928,
+    "router_price_out": 0.9994119338453303,
+    "slippage_bps_debiased": -1.915425999999833,
+    "price_bias_bps": -46.365269999999455,
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 100000.0,
+    "status": "ok",
+    "amount_in_tokens": 100000.0,
+    "amount_out_tokens": 99504.901691,
+    "slippage_bps": -49.50983089999972,
+    "route_venues": [
+     "curve-stable-ng",
+     "uniswap-v4",
+     "uniswapv3"
+    ],
+    "route_leg_count": 4,
+    "gas_usd": "0.13623960020991327",
+    "router_price_in": 0.9949356637111011,
+    "router_price_out": 1.0000052902576924,
+    "slippage_bps_debiased": -3.144560900000265,
+    "price_bias_bps": -46.365269999999455,
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 1000000.0,
+    "status": "ok",
+    "amount_in_tokens": 1000000.0,
+    "amount_out_tokens": 993888.88133,
+    "slippage_bps": -61.11118670000026,
+    "route_venues": [
+     "curve-stable-ng",
+     "curve-stable-plain",
+     "uniswap-v4",
+     "uniswapv3"
+    ],
+    "route_leg_count": 4,
+    "gas_usd": "0.19539833682117216",
+    "router_price_in": 0.9949356637111012,
+    "router_price_out": 0.9993535258658806,
+    "slippage_bps_debiased": -14.745916700000805,
+    "price_bias_bps": -46.365269999999455,
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 10000000.0,
+    "status": "ok",
+    "amount_in_tokens": 10000000.0,
+    "amount_out_tokens": 4555926.844668,
+    "slippage_bps": -5444.073155332,
+    "route_venues": [
+     "curve",
+     "curve-stable-ng",
+     "curve-stable-plain",
+     "ekubo-v3",
+     "uniswap",
+     "uniswap-v4",
+     "uniswap-v4-euler-v2",
+     "uniswapv3"
+    ],
+    "route_leg_count": 19,
+    "gas_usd": "0.6727717409608768",
+    "router_price_in": 0.9949356637111012,
+    "router_price_out": 1.0000052902576924,
+    "slippage_bps_debiased": -5397.707885332001,
+    "price_bias_bps": -46.365269999999455,
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 8000000.0,
+    "status": "ok",
+    "amount_in_tokens": 8000000.0,
+    "amount_out_tokens": 4402263.579021,
+    "slippage_bps": -4497.170526223749,
+    "route_venues": [
+     "curve",
+     "curve-stable-ng",
+     "curve-stable-plain",
+     "ekubo-v3",
+     "uniswap",
+     "uniswap-v4",
+     "uniswap-v4-euler-v2",
+     "uniswapv3"
+    ],
+    "route_leg_count": 19,
+    "gas_usd": "0.700768274383654",
+    "router_price_in": 0.9949785439977601,
+    "router_price_out": 0.9994119338453301,
+    "slippage_bps_debiased": -4450.80525622375,
+    "price_bias_bps": -46.365269999999455,
+    "rung_kind": "envelope_probe"
+   },
+   {
+    "size_usd": 20000000.0,
+    "status": "ok",
+    "amount_in_tokens": 20000000.0,
+    "amount_out_tokens": 4545833.286943,
+    "slippage_bps": -7727.0833565285,
+    "route_venues": [
+     "axima-v2/uniswapv3",
+     "curve",
+     "curve-stable-ng",
+     "curve-stable-plain",
+     "ekubo-v3",
+     "tamaswap-v2",
+     "uniswap-v4",
+     "uniswapv3"
+    ],
+    "route_leg_count": 19,
+    "gas_usd": "0.5398271615059921",
+    "router_price_in": 0.9955845645740928,
+    "router_price_out": 0.9994119338453303,
+    "slippage_bps_debiased": -7680.718086528501,
+    "price_bias_bps": -46.365269999999455,
+    "rung_kind": "envelope_probe"
+   }
+  ],
+  "preflight": {
+   "passed": true,
+   "blocking_failures": [],
+   "warnings": [],
+   "findings": [
+    {
+     "check": "failure_is_not_a_wall",
+     "passed": true,
+     "blocking": false,
+     "detail": "No failed rungs.",
+     "evidence": {}
+    },
+    {
+     "check": "quote_economically_plausible",
+     "passed": true,
+     "blocking": false,
+     "detail": "Quote is -46.4bps against the reference rate.",
+     "evidence": {
+      "loss_bps": -46.365269999999455
+     }
+    }
+   ]
+  },
+  "execution_envelope": {
+   "status": "turnover_observed",
+   "tested_through_input_usd": 20000000.0,
+   "output_monotonic_within_tested_range": false,
+   "monotonicity_guard": {
+    "method": "lp_risk_engine.truncate_at_non_monotonic",
+    "truncated": true,
+    "kept_through_input_usd": 10000000.0,
+    "first_rejected_input_usd": 20000000.0
+   },
+   "observed_peak": {
+    "input_size_usd": 10000000.0,
+    "output_value_usd": 4555926.844668
+   },
+   "basis": "Peak is the maximum successful routed output among tested rungs, not a claim that the exact global maximum was located."
+  },
+  "bracket_refinement_guard": {
+   "eligible": true,
+   "basis": "monotonic_successful_rungs_inside_bracket"
+  },
+  "quote_stability": {
+   "sample_size_usd": 4420000.0,
+   "requested_samples": 2,
+   "successful_samples": 2,
+   "samples": [
+    {
+     "phase": "before_refinement",
+     "sample": 1,
+     "status": "ok",
+     "output_value_usd": 4201256.79703,
+     "failure_kind": null,
+     "http_status": null
+    },
+    {
+     "phase": "before_refinement",
+     "sample": 2,
+     "status": "ok",
+     "output_value_usd": 4201229.445392,
+     "failure_kind": null,
+     "http_status": null
+    }
+   ],
+   "output_spread_usd": 27.35163800045848,
+   "output_spread_bps": 0.06510367815270454,
+   "precision_floor_usd": 27.35163800045848,
+   "basis": "Same-size routed output spread across samples immediately before and after refinement. The published bracket must not be narrower than this observed spread."
+  },
+  "refinement": {
+   "status": "refusal_non_monotonic",
+   "stopped_on": null,
+   "probe_count": 8,
+   "precision_target": "<=1% of bracket midpoint"
+  }
+ },
+ "primary_exit": {
+  "venue": "Liquity V2 BOLD redemption",
+  "contract": "0xf949982B91C8c61e952B3bA942cbbfaef5386684",
+  "contract_role": "CollateralRegistry",
+  "method": "getEffectiveRedemptionFeeInBold(uint256)",
+  "measured_as_of": "2026-09-15T23:45:22Z",
+  "at_nav": false,
+  "gated": false,
+  "gated_basis": "Permissionless protocol redemption with a size-dependent fee.",
+  "cadence": "continuous_protocol_call",
+  "capacity_usd": null,
+  "capacity_basis": "No single capacity scalar: effective cost depends on requested size and live collateral branches.",
+  "size_dependent": true,
+  "fee_ladder": [
+   {
+    "size_usd": 100000.0,
+    "status": "ok",
+    "effective_redemption_fee_pct": 1.122258207769552,
+    "effective_redemption_fee_bps": 112.2258207769552
+   },
+   {
+    "size_usd": 1000000.0,
+    "status": "ok",
+    "effective_redemption_fee_pct": 3.564426654190585,
+    "effective_redemption_fee_bps": 356.44266541905847
+   },
+   {
+    "size_usd": 2000000.0,
+    "status": "ok",
+    "effective_redemption_fee_pct": 6.277947150213954,
+    "effective_redemption_fee_bps": 627.7947150213954
+   },
+   {
+    "size_usd": 10000000.0,
+    "status": "ok",
+    "effective_redemption_fee_pct": 27.986111118400913,
+    "effective_redemption_fee_bps": 2798.6111118400913
+   }
+  ]
+ },
+ "enumeration": {
+  "source": "Aggregator-enumerated Ethereum venue set, resolved by the live BOLD contract address and deduplicated by underlying swap pool",
+  "as_of": "2026-09-14T10:32:23Z",
+  "venue_count": 20,
+  "chain_count": 1,
+  "chain_count_is_floor": false,
+  "completeness": "Twenty Ethereum pools were enumerated. The seven named venues are listed individually; thirteen further pools jointly represented less than $30K TVL and are summarized as one row. LP-token wrappers and Liquity Stability Pools are excluded from swap liquidity."
+ },
+ "venues": [
+  {
+   "name": "BOLD/USDC",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xEFc6516323FbD28e80B85A497B65A86243a54B3E",
+   "tvl_usd": 9880000.0,
+   "counter_side": {
+    "symbol": "USDC",
+    "amount": 3488620.0
+   },
+   "depth_role": "Primary executable venue; quoted by get_dy."
+  },
+  {
+   "name": "BOLD/USDC",
+   "project": "uniswap",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "uniswap-v4",
+   "pool_id": "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893",
+   "fee": 500,
+   "tick_spacing": 10,
+   "hooks": "0x0000000000000000000000000000000000000000",
+   "tvl_usd": 2850000.0,
+   "counter_side": {
+    "symbol": "USDC",
+    "amount": 332091.0
+   },
+   "depth_role": "Primary executable venue; TVL materially overstates counter-side exit inventory."
+  },
+  {
+   "name": "BOLD/USDC",
+   "project": "uniswap",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "uniswap-v3",
+   "pool_id": "0x1e4dbb639ebbf725fd243a6190df5440ee38740e",
+   "fee": 500,
+   "tvl_usd": 1410000.0,
+   "counter_side": {
+    "symbol": "USDC",
+    "amount": 625823.0
+   },
+   "depth_role": "Primary executable venue; quoted by QuoterV2."
+  },
+  {
+   "name": "BOLD/LUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve",
+   "pool_id": "0x7ED17e037B7d88A8270c89B3aFA9C38e5218F12b",
+   "tvl_usd": 642000.0,
+   "counter_side": {
+    "symbol": "LUSD",
+    "amount": 183744.0
+   },
+   "depth_role": "Secondary route component."
+  },
+  {
+   "name": "BOLD/avUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve",
+   "pool_id": "0xc3b723b0dAE2Df9668F876236a1922f72Bcb438d",
+   "tvl_usd": 417000.0,
+   "counter_side": {
+    "symbol": "avUSD",
+    "amount": 153881.0
+   },
+   "depth_role": "Secondary route component."
+  },
+  {
+   "name": "BOLD/ETH",
+   "project": "uniswap",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "uniswap-v4",
+   "pool_id": "0x695a5fbc\u202629d75e",
+   "fee": 3000,
+   "tick_spacing": 60,
+   "tvl_usd": 403000.0,
+   "counter_side": {
+    "symbol": "ETH",
+    "value_cap_usd_approx": 95000.0
+   },
+   "depth_role": "Secondary route component; pool identifier retained as source-truncated and never used as a quote key."
+  },
+  {
+   "name": "BOLD/waEthUSDT/USDaf",
+   "project": "balancer",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "balancer-v3",
+   "pool_id": "0x38ebe0c5\u202691d6b",
+   "tvl_usd": 282000.0,
+   "counter_side": null,
+   "depth_role": "Enumerated but not quoted; identifier retained as source-truncated and never used as a quote key."
+  },
+  {
+   "name": "Thirteen further BOLD pools",
+   "project": "multiple",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "various",
+   "pool_id": "multiple",
+   "pool_count": 13,
+   "tvl_usd": 30000.0,
+   "tvl_is_upper_bound": true,
+   "depth_role": "Immaterial aggregate context; not individually keyed or counted as additional inventory."
+  }
+ ],
+ "total_tvl_usd": 15914000.0,
+ "swap_tvl_usd": 15914000.0,
+ "excluded_liquidity": {
+  "lp_wrappers": [
+   "Convex",
+   "StakeDAO",
+   "Yearn",
+   "Beefy"
+  ],
+  "lp_wrapper_reason": "These entries wrap the same Curve BOLD/USDC LP token and would double-count underlying liquidity.",
+  "non_swap_entries": [
+   "Liquity V2 Stability Pools"
+  ],
+  "non_swap_reason": "Stability Pool deposits are protocol backstop inventory, not permissionless executable swap depth."
+ },
+ "axis_binding_constraint": {
+  "leg": "secondary_market_depth",
+  "basis": "The protocol redemption fee is higher than AMM execution cost at every comparable measured size; the canonical marginal AMM crossing therefore binds the measured exit axis.",
+  "risk_score": null
+ },
+ "consumer_status": {
+  "registered_in_backing_monitor_assets": false,
+  "basis": "The handoff reports that bold is not registered in backing-monitor/data/assets.json. This DexTracker payload is transport-ready but requires consumer-side slug registration before it is judged or rendered."
+ },
+ "refresh_cadence": "daily"
+}
