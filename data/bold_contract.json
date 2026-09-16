@@ -3,9 +3,9 @@
   "asset": "bold",
   "producer": "security_analyst",
   "as_of": "2026-09-14",
-  "generated_at": "2026-09-16T09:08:04Z",
+  "generated_at": "2026-09-16T10:01:25Z",
   "contract": {
-    "headline": "No timelock established on any measured authority layer.",
+    "headline": "No core admin path",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
     "method": "hand-walk",
     "observed_at": "2026-09-14",
@@ -28,14 +28,30 @@
         "paths": [
           {
             "holder": "0x0000000000000000000000000000000000000000",
-            "name": "renounced ownership on BOLD, three AddressesRegistry contracts, and Governance",
+            "name": "no proxy or upgrade controller on the walked core",
             "name_verified": true,
-            "via": "owner",
-            "terminal": "renounced",
+            "via": "zero EIP-1967 slots and no upgrade entry point",
+            "terminal": "no-controller",
             "timelock": "none",
-            "reach": "full",
-            "terminal_address": "0x0000000000000000000000000000000000000000",
-            "hand_walk": "owner() returned zero on BOLD, all three AddressesRegistry deployments, and Governance. The EIP-1967 implementation slot was zero on every one of the 30 walked contracts. On each contract where owner() or governance() reverted, a named functional getter on that same contract answered at the pinned block; canonical deployed sources contain no upgrade entry point."
+            "control_state": "absent",
+            "actionable": false,
+            "execution_delay": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "no actionable upgrade controller exists",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "none",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "immutable",
+            "terminal_kind": "no-controller",
+            "terminal_address": null,
+            "holder_kind": null,
+            "independent_canceller": "not-applicable",
+            "delay_floor": "not-applicable",
+            "hand_walk": "The EIP-1967 implementation slot was zero on every one of the 30 walked contracts, and canonical deployed sources contain no upgrade entry point. Separately, owner() returned zero on BOLD, all three AddressesRegistry deployments, and Governance. On each contract where owner() or governance() reverted, a named functional getter on that same contract answered at the pinned block."
           }
         ]
       },
@@ -61,8 +77,24 @@
             "via": "onlyOwner on setBranchAddresses and setCollateralRegistry",
             "terminal": "renounced",
             "timelock": "none",
-            "reach": "full",
+            "control_state": "renounced",
+            "actionable": false,
+            "execution_delay": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "the owner-gated mutation path terminates at the zero address",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "none",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "immutable",
+            "terminal_kind": "zero-address",
             "terminal_address": "0x0000000000000000000000000000000000000000",
+            "holder_kind": null,
+            "independent_canceller": "not-applicable",
+            "delay_floor": "not-applicable",
             "hand_walk": "Pair simulation discriminated the gate: setBranchAddresses with four fresh addresses succeeded under eth_call from address(0), while the identical call from 0x000000000000000000000000000000000000dEaD reverted \"Ownable: caller is not the owner\". No real transaction can originate from address(0)."
           },
           {
@@ -72,8 +104,24 @@
             "via": "onlyOwner on setAddresses",
             "terminal": "renounced",
             "timelock": "none",
-            "reach": "full",
+            "control_state": "renounced",
+            "actionable": false,
+            "execution_delay": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "the owner-gated mutation path terminates at the zero address",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "none",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "immutable",
+            "terminal_kind": "zero-address",
             "terminal_address": "0x0000000000000000000000000000000000000000",
+            "holder_kind": null,
+            "independent_canceller": "not-applicable",
+            "delay_floor": "not-applicable",
             "hand_walk": "Each branch registry returned owner() = address(0) while collToken() returned its expected WETH, wstETH, or rETH address. Pair simulation of setAddresses on the WETH registry succeeded from address(0) and reverted from 0x000000000000000000000000000000000000dEaD."
           }
         ]
@@ -101,8 +149,24 @@
             "via": "fixed allowlist populated before BOLD ownership renouncement",
             "terminal": "renounced",
             "timelock": "none",
-            "reach": "bounded",
+            "control_state": "renounced",
+            "actionable": false,
+            "execution_delay": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "the allowlist mutation path terminates at the zero address",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "none",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "immutable",
+            "terminal_kind": "zero-address",
             "terminal_address": "0x0000000000000000000000000000000000000000",
+            "holder_kind": null,
+            "independent_canceller": "not-applicable",
+            "delay_floor": "not-applicable",
             "hand_walk": "Mint is restricted to the three BorrowerOperations and three ActivePool contracts; burn to CollateralRegistry plus the three BorrowerOperations, TroveManager, and StabilityPool contracts; pool transfers to the StabilityPool set. The only setter is onlyOwner and BOLD owner() is zero. The authorized contracts themselves have no owner/governance role or upgrade slot and enforce fixed caller and accounting paths in deployed source."
           }
         ]
@@ -129,8 +193,24 @@
             "via": "constructor-only oracle configuration",
             "terminal": "no-controller",
             "timelock": "none",
-            "reach": "bounded",
-            "terminal_address": "0x0000000000000000000000000000000000000000",
+            "control_state": "absent",
+            "actionable": false,
+            "execution_delay": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "oracle configuration is constructor-fixed and exposes no mutation route",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "none",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "fixed-at-construction",
+            "terminal_kind": "no-controller",
+            "terminal_address": null,
+            "holder_kind": null,
+            "independent_canceller": "not-applicable",
+            "delay_floor": "not-applicable",
             "hand_walk": "All three PriceFeeds answered lastGoodPrice() while owner() and governance() reverted. Their EIP-1967 implementation slots were zero. Live oracle struct getters returned ETH/USD staleness 86400 seconds on every branch, stETH/USD 86400 seconds, and rETH/ETH 172800 seconds. The three feeds behind those thresholds are ETH/USD 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419, stETH/USD 0xCfE54B5cD566aB89272946F602D76Ea879CAb4a8 and rETH/ETH 0x536218f9E9Eb48863970252233c8F271f554C2d0, recorded so the threshold claim is checkable from this file rather than only from its evidence. Canonical deployed sources expose no setter; oracle addresses, thresholds, and BorrowerOperations are constructor state."
           }
         ]
@@ -159,13 +239,67 @@
             "terminal": "token-weighted-dao",
             "holder_kind": "contract",
             "timelock": "none",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "epoch-gated",
+              "basis": "Allocation increases close after day 6; the preceding-epoch snapshot rule makes payout no earlier than the following epoch, while vetoes remain available through epoch end.",
+              "minimum_window_seconds": 86400,
+              "maximum_window_seconds": 604800,
+              "epoch_duration_seconds": 604800,
+              "increase_cutoff_offset_seconds": 518400,
+              "effective_epoch_offset": 1,
+              "veto_allowed_until": "epoch-end"
+            },
             "reach": "bounded",
+            "reach_bound": "May allocate only BOLD held by Governance under the initiative-voting rules and cannot invoke a core-protocol administrative function.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "immutable",
+            "terminal_kind": "DAO",
             "terminal_address": "0x807def5e7d057df05c796f4bc75c3fe82bd6eee1",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
             "hand_walk": "Governance returned EPOCH_DURATION() = 604800 and owner() = zero. Initial-initiative registration was the sole onlyOwner function and renounced ownership in deployment. Thereafter registration, allocation, unregistration, and claiming are permissionless subject to the LQTY voting rules. A malicious voting majority can redirect all BOLD available to Governance to an initiative it controls, without an execution timelock. claimForInitiative caps payment at the lower of computed entitlement and BOLD balanceOf(Governance); no Governance function calls a core admin path. ActivePool's fixed interest split sends the non-Stability-Pool portion to this same immutable address. ⚠️ timelock none describes the CALL, and the VALUE PATH is epoch structured, which is a measured bound rather than a hedge. Read live: EPOCH_DURATION 604800, EPOCH_VOTING_CUTOFF 518400, epoch 71. Deployed source asserts a claim is only ever for the preceding epoch (forEpoch == epoch() - 1), so an allocation made in one epoch cannot pay out inside it. Past the cutoff — 518400s of a 604800s epoch, so the final day — an existing allocation cannot be INCREASED and a new initiative is capped at zero, while reductions and vetos stay open to the epoch boundary. So a hostile majority allocation is visible on chain for the remainder of its epoch, is vetoable throughout that remainder, and pays at the earliest in the following epoch."
           }
         ]
       }
     ],
+    "authority_summary": {
+      "schema": "actionable-path/1",
+      "state": "active-bounded-only",
+      "headline": "No core admin path",
+      "total_layers": 5,
+      "total_paths": 6,
+      "inactive_layers": 4,
+      "unresolved_layers": 0,
+      "active_paths": 1,
+      "active_core_paths": 0,
+      "active_bounded_paths": 1,
+      "undelayed_core_paths": 0,
+      "undelayed_bounded_paths": 1,
+      "active": [
+        {
+          "authority_layer": "governance",
+          "target_name": "Protocol Initiative Liquidity allocation",
+          "name": "Governance / interest router",
+          "reach": "bounded",
+          "reach_bound": "May allocate only BOLD held by Governance under the initiative-voting rules and cannot invoke a core-protocol administrative function.",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "epoch-gated",
+            "basis": "Allocation increases close after day 6; the preceding-epoch snapshot rule makes payout no earlier than the following epoch, while vetoes remain available through epoch end.",
+            "minimum_window_seconds": 86400,
+            "maximum_window_seconds": 604800,
+            "epoch_duration_seconds": 604800,
+            "increase_cutoff_offset_seconds": 518400,
+            "effective_epoch_offset": 1,
+            "veto_allowed_until": "epoch-end"
+          }
+        }
+      ]
+    },
     "unresolved": [
       "ownership renouncement EVENT not read on any contract. owner() returns zero on BOLD, the three branch registries and Governance, and the deployed contracts are Ownable — whose owner can only reach zero through renounceOwnership, since the constructor sets it to the deployer. The topology therefore rests on that construction plus the reverting sender-pair, NOT on an observed OwnershipTransferred(prev, 0x0) log. Verification was attempted and the endpoint available refused every historical block, so the event is unread rather than absent.",
       "Chainlink feed governance and node-operator security were not walked. The branch feeds are constructor-fixed and the price contracts hold no administrator, but whoever controls the aggregators behind those three addresses is outside this walk, and a failed feed retires a branch permanently.",

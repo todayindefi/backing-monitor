@@ -3429,7 +3429,7 @@ const CommonRenderer = {
                 // is the one carrying the finding — susdai's code is not the issue,
                 // PAUSE_ADMIN and STRATEGY_ADMIN acting with no delay on a $463M
                 // vault is. Same length as 'Liquidity & Exit', so no layout risk.
-                label: 'Contract & Admin',
+                label: 'Smart Contract & Admin',
                 // ⚠️ The per-layer detail moves into the tooltip rather than the
                 // face: the face carries ONE measurement, the tooltip carries
                 // what it is a minimum over — including that a delayed layer with
@@ -3442,7 +3442,8 @@ const CommonRenderer = {
                     ? '<span class="axis-rating r-warn" title="' + this._escapeAttr(
                           this._mdPlain(String((data.contract || {}).structural_score_basis || ''))) + '">Structural ' +
                       data.contract.structural_score + '/10</span>'
-                    : '<span class="axis-rating r-na" title="No contract_score exists for any asset in the risk feed. The material is rendered in the axis below; the score is not yet authored.">Not scored yet</span>')
+                    : '<span class="axis-rating r-na" title="No contract_score exists for any asset in the risk feed. The material is rendered in the axis below; the score is not yet authored.">Not scored yet</span>') +
+                    this._contractActionChipHtml(data)
             },
             {
                 label: this._escapeAttr(this._issuerAxisInfo(issuer).label),
@@ -3491,7 +3492,7 @@ const CommonRenderer = {
         var _reportUrl = (data && data.issuer && data.issuer.report_url) || null;
         var liveNote = '<div class="axis-band-note col-span-full text-sm text-slate-500 mt-3 leading-relaxed">' +
             'Peg, Backing and Liquidity are <strong>live measurements</strong>, recomputed ' +
-            'each refresh from on-chain and venue data. Contract &amp; Admin and Issuer are ' +
+            'each refresh from on-chain and venue data. Smart Contract &amp; Admin and Issuer are ' +
             '<strong>authored assessments</strong>. Live readings can differ from the scores ' +
             'in the published report \u2014 they answer different questions, and an asset can ' +
             'perform well on a mechanism that is structurally weak.' +
@@ -3935,6 +3936,27 @@ const CommonRenderer = {
 
     _delayTooltip(data) {
         var c = data.contract || {};
+        var a = c.authority_summary;
+        if (a && a.schema === 'actionable-path/1') {
+            var lines = ['Controller existence and reach are evaluated before delay.'];
+            (a.active || []).forEach(function(r) {
+                var s = '• ' + (r.authority_layer || 'authority') + ': active ' +
+                    (r.reach || 'unresolved') + ' reach · execution delay ' +
+                    (r.execution_delay || 'unresolved');
+                if (r.reach_bound) s += ' · ' + r.reach_bound;
+                if (r.reaction_window && r.reaction_window.type && r.reaction_window.type !== 'none') {
+                    s += ' · ' + String(r.reaction_window.type).replace(/-/g, ' ') +
+                        ' reaction window (not a timelock)';
+                }
+                lines.push(s);
+            });
+            if (a.inactive_layers) lines.push('• ' + a.inactive_layers +
+                ' layer' + (a.inactive_layers === 1 ? '' : 's') +
+                ': absent/renounced — delay not applicable');
+            if (a.unresolved_layers) lines.push('• ' + a.unresolved_layers +
+                ' layer' + (a.unresolved_layers === 1 ? '' : 's') + ': unresolved');
+            return lines.join('\n');
+        }
         var layers = Array.isArray(c.layers) ? c.layers : [];
         if (!layers.length) return 'No admin layers published.';
         var lines = layers.map(function(l) {
@@ -3953,6 +3975,13 @@ const CommonRenderer = {
     },
 
     _contractValueHtml(data) {
+        var a = data.contract && data.contract.authority_summary;
+        if (a && a.schema === 'actionable-path/1') {
+            var cls = a.state === 'active-core-undelayed' ? 'text-red-600' :
+                (a.state === 'active-core-delayed' ? 'text-amber-700' :
+                    (a.state === 'unresolved' ? 'text-slate-500' : 'text-green-700'));
+            return '<span class="' + cls + '">' + this._escapeAttr(a.headline) + '</span>';
+        }
         var d = this._delaySummary(data);
         if (!d) return '<span class="text-slate-400">—</span>';
         if (!d.established) return '<span class="text-amber-700">not established</span>';
@@ -3966,6 +3995,22 @@ const CommonRenderer = {
     // between assets, since every hand-walked asset in the book currently has at
     // least one undelayed path and so shares the same 0h value.
     _contractSubText(data) {
+        var a = data.contract && data.contract.authority_summary;
+        if (a && a.schema === 'actionable-path/1') {
+            var inactive = Number(a.inactive_layers || 0);
+            var active = Number(a.active_paths || 0);
+            var activeRows = Array.isArray(a.active) ? a.active : [];
+            var allocator = activeRows.length && activeRows.every(function(r) {
+                return r.value_at_risk_scope === 'bounded-pool' &&
+                    /allocat/i.test(String(r.target_name || '') + ' ' + String(r.reach_bound || ''));
+            });
+            var parts = [];
+            if (inactive) parts.push(inactive + ' immutable/renounced layer' + (inactive === 1 ? '' : 's'));
+            if (active) parts.push(active + ' active bounded ' + (allocator ? 'allocator' : 'path') +
+                                   (active === 1 ? '' : 's'));
+            if (a.unresolved_layers) parts.push(a.unresolved_layers + ' unresolved');
+            return parts.join(' · ') || 'structured authority paths';
+        }
         var d = this._delaySummary(data);
         var c = data.contract || {};
         if (!d) return 'admin authority & delay';
@@ -4148,6 +4193,28 @@ const CommonRenderer = {
         if (info.ageHours != null) parts.push('Age ' + Number(info.ageHours).toFixed(1) + 'h');
         if (info.source) parts.push('Source: ' + info.source);
         return parts.join(' · ');
+    },
+
+    _contractActionChipHtml(data) {
+        var a = data.contract && data.contract.authority_summary;
+        if (!a || a.schema !== 'actionable-path/1' || !Array.isArray(a.active) || !a.active.length) return '';
+        var undelayedBounded = a.active.filter(function(r) {
+            return r.reach === 'bounded' && r.execution_delay === 'none';
+        });
+        if (!undelayedBounded.length) return '';
+        var r = undelayedBounded[0], rw = r.reaction_window || {};
+        var tip = r.reach_bound || 'Active authority with bounded reach.';
+        if (rw.type && rw.type !== 'none') {
+            tip += ' Reaction window: ' + String(rw.type).replace(/-/g, ' ') + '.';
+            if (rw.minimum_window_seconds != null && rw.maximum_window_seconds != null) {
+                tip += ' Window ' + Math.round(rw.minimum_window_seconds / 3600) + '–' +
+                    Math.round(rw.maximum_window_seconds / 3600) + ' hours.';
+            }
+            if (rw.basis) tip += ' ' + rw.basis;
+            tip += ' This is a reaction window, not an execution timelock.';
+        }
+        return '<span class="axis-rating r-warn" title="' + this._escapeAttr(tip) +
+            '">Allocator · no execution timelock</span>';
     },
 
     _issuerBadgeHtml(issuer) {
@@ -4594,13 +4661,13 @@ const CommonRenderer = {
         // path. The number is set by the authority half." Rendering it without
         // that basis would be the halo this axis exists to catch.
         var cScore = (data.contract || {}).structural_score;
-        this._renderAxisHead('contract', 5, 'Contract & Admin',
-            'admin authority, delay, upgrade & pause surface',
+        this._renderAxisHead('contract', 5, 'Smart Contract & Admin',
+            this._contractSubText(data),
             (typeof cScore === 'number'
                 ? '<span class="axis-rating r-warn" title="' + this._escapeAttr(
                       this._mdPlain(String((data.contract || {}).structural_score_basis || ''))) + '">Structural ' +
                   cScore + '/10</span>'
-                : this._ratingChipHtml(null)),
+                : this._ratingChipHtml(null)) + this._contractActionChipHtml(data),
             data.contract || (data.asset_specific || {}).control || (data.asset_specific || {}).governance);
         (function(self) {
             var head = document.getElementById('axis-contract-head');
@@ -6705,7 +6772,7 @@ const CommonRenderer = {
         // being true. Their `authority_note` says what is and is not established,
         // in their words, and it moves when their assessment moves.
         return '<div class="panel topology-walk">' +
-            '<div class="panel-title">Contract &amp; Admin \u2014 no topology walk filed</div>' +
+            '<div class="panel-title">Smart Contract &amp; Admin \u2014 no topology walk filed</div>' +
             '<div class="tw-flag">' + esc(note) + '</div>' +
             (c.no_structural_score_note
                 ? '<div class="tw-sub">' + esc(c.no_structural_score_note) + '</div>' : '') +
@@ -6766,6 +6833,43 @@ const CommonRenderer = {
         var layers = Array.isArray(c.layers) ? c.layers : [];
         var layerRows = layers.map(function(l) {
             var tl = String(l.timelock == null ? '' : l.timelock);
+            var allPaths = l.paths || [];
+            var schemaPaths = allPaths.filter(function(p) {
+                return p && p.control_state != null && p.execution_delay != null && p.reach != null;
+            });
+            var newSchema = allPaths.length > 0 && schemaPaths.length === allPaths.length;
+            if (newSchema) {
+                var active = schemaPaths.filter(function(p) { return p.actionable === true; });
+                var unresolvedPath = schemaPaths.some(function(p) {
+                    return p.actionable === 'unresolved' || p.control_state === 'unresolved' ||
+                        p.reach === 'unresolved' || p.execution_delay === 'unresolved';
+                });
+                var delayText, delayClass, reachText;
+                if (!active.length && unresolvedPath) {
+                    delayText = '⚠️ unresolved'; delayClass = 'tw-unknown'; reachText = 'unresolved';
+                } else if (!active.length) {
+                    delayText = 'not applicable'; delayClass = 'tw-ok'; reachText = 'none';
+                } else {
+                    var delays = active.map(function(p) { return p.execution_delay; });
+                    var noDelay = delays.indexOf('none') !== -1;
+                    var full = active.some(function(p) {
+                        return p.reach === 'full' || p.value_at_risk_scope === 'core';
+                    });
+                    delayText = noDelay ? 'no execution delay' : delays.join(', ');
+                    delayClass = noDelay ? (full ? 'tw-bad' : 'tw-unknown') : 'tw-ok';
+                    reachText = Array.from(new Set(active.map(function(p) {
+                        return p.reach + (p.value_at_risk_scope ? ' · ' + p.value_at_risk_scope : '');
+                    }))).join(', ');
+                }
+                return '<tr>' +
+                    '<td>' + esc(l.authority_layer || '—') + '</td>' +
+                    '<td>' + ((l.keys || []).map(esc).join(', ') || '—') + '</td>' +
+                    '<td class="' + delayClass + '">' + delayText + '</td>' +
+                    '<td>' + esc(l.topology || '—') + '</td>' +
+                    '<td>' + esc(reachText) + '</td>' +
+                '</tr>' + CommonRenderer._roleAdminRowHtml(l, esc) +
+                         CommonRenderer._divergentPathRows(l, esc);
+            }
             // ⚠️ "unresolved" is NOT "none" and must not render as a clean cell.
             // Their coverage audit exists because `timelock: unresolved` was read
             // as "no timelock" — it means NOT MEASURED. An unmeasured field shown

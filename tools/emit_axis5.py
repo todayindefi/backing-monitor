@@ -227,6 +227,88 @@ def derive_headline(layers):
             + (tail or ' The rows present are unmeasured.'))
 
 
+def derive_actionable_summary(layers):
+    """Summarise only the new per-path authority schema.
+
+    Returns None for legacy walks so they retain the legacy headline and delay
+    renderer. Mixing old `timelock: none` with new `execution_delay: none` would
+    recreate the exact absent-controller/undelayed-controller collision this
+    schema removes.
+    """
+    paths = []
+    inactive_layers = 0
+    unresolved_layers = 0
+    for layer in layers or []:
+        lp = layer.get('paths') or []
+        if not lp or not all('control_state' in p and 'execution_delay' in p and
+                            'reach' in p for p in lp):
+            return None
+        paths.extend((layer, p) for p in lp)
+        states = [p.get('actionable') for p in lp]
+        if any(v is True for v in states):
+            continue
+        if any(v == 'unresolved' or p.get('control_state') == 'unresolved' or
+               p.get('reach') == 'unresolved' for p, v in zip(lp, states)):
+            unresolved_layers += 1
+        else:
+            inactive_layers += 1
+
+    active = [(l, p) for l, p in paths if p.get('actionable') is True]
+    unresolved = [(l, p) for l, p in paths if p.get('actionable') == 'unresolved' or
+                  p.get('control_state') == 'unresolved' or p.get('reach') == 'unresolved']
+    core = [(l, p) for l, p in active
+            if p.get('reach') == 'full' or p.get('value_at_risk_scope') == 'core']
+    bounded = [(l, p) for l, p in active if p.get('reach') == 'bounded']
+    undelayed_core = [(l, p) for l, p in core if p.get('execution_delay') == 'none']
+    delayed_core = [(l, p) for l, p in core
+                    if p.get('execution_delay') not in ('none', 'unresolved', 'not-applicable')]
+    undelayed_bounded = [(l, p) for l, p in bounded if p.get('execution_delay') == 'none']
+
+    if undelayed_core:
+        headline = 'Active undelayed core authority'
+        state = 'active-core-undelayed'
+    elif delayed_core:
+        headline = 'Active delayed core authority'
+        state = 'active-core-delayed'
+    elif bounded:
+        headline = 'No core admin path'
+        state = 'active-bounded-only'
+    elif unresolved:
+        headline = 'Authority unresolved'
+        state = 'unresolved'
+    else:
+        headline = 'No active authority path'
+        state = 'inactive'
+
+    active_rows = []
+    for layer, path in active:
+        active_rows.append({
+            'authority_layer': layer.get('authority_layer'),
+            'target_name': layer.get('target_name'),
+            'name': path.get('name'),
+            'reach': path.get('reach'),
+            'reach_bound': path.get('reach_bound'),
+            'value_at_risk_scope': path.get('value_at_risk_scope'),
+            'execution_delay': path.get('execution_delay'),
+            'reaction_window': path.get('reaction_window'),
+        })
+    return {
+        'schema': 'actionable-path/1',
+        'state': state,
+        'headline': headline,
+        'total_layers': len(layers or []),
+        'total_paths': len(paths),
+        'inactive_layers': inactive_layers,
+        'unresolved_layers': unresolved_layers,
+        'active_paths': len(active),
+        'active_core_paths': len(core),
+        'active_bounded_paths': len(bounded),
+        'undelayed_core_paths': len(undelayed_core),
+        'undelayed_bounded_paths': len(undelayed_bounded),
+        'active': active_rows,
+    }
+
+
 def registered_slugs(repo_root):
     """Underscored slugs from the dashboard's own registry."""
     with open(os.path.join(repo_root, 'data/assets.json'), encoding='utf-8') as fh:
@@ -259,6 +341,7 @@ def emit(slug):
         raise SystemExit(f'{path} declares no observed_at — refusing to stamp a run time in its place')
 
     layers = doc.get('layers') or []
+    authority_summary = derive_actionable_summary(layers)
     return {
         'schema_version': 'contract/1',
         'asset': slug,
@@ -267,7 +350,7 @@ def emit(slug):
         'as_of': str(observed),
         'generated_at': yamldt.datetime.now(yamldt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
         'contract': {
-            'headline': derive_headline(layers),
+            'headline': authority_summary['headline'] if authority_summary else derive_headline(layers),
             'headline_basis': 'Derived from the layer rows below, not authored here, '
                               'so it changes when the walk changes.',
             # ⚠️ `method` is DERIVED, and the note that used to sit here was a fixed
@@ -280,6 +363,7 @@ def emit(slug):
             'observed_at': str(observed),
             'source_file': f'security_analyst/topology/assets/{fn}',
             'layers': layers,
+            **({'authority_summary': authority_summary} if authority_summary else {}),
             # verbatim — carries its own attribution
             'unresolved': doc.get('unmeasured') or [],
             # ⚠️ CROSS-ASSET, CARRIED PER-ASSET. The fact — one timelock, one

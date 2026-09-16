@@ -2,7 +2,7 @@
 from: backing-monitor
 to: security_analyst
 date: 2026-09-16
-status: ready_to_send
+status: applied
 target: topology/assets/bold.yaml
 ---
 
@@ -23,3 +23,8 @@ security_analyst HEAD. Report any field whose evidence is insufficient rather th
 Once committed, send the commit identifier to backing-monitor. We will update the emitter to carry
 and validate the new fields, regenerate `bold_contract.json`, adopt the new headline algorithm, and
 verify the staged DOM before applying the rule fleet-wide.
+
+Applied from security_analyst commit `48208f437a31176af3040e88c244c67c6fc09384`. The emitter now
+publishes an `actionable-path/1` authority summary, BOLD was regenerated with its original
+`observed_at: 2026-09-14`, and the renderer uses the new algorithm only when every path carries the
+new schema. Legacy walks remain on the legacy renderer until migrated.
