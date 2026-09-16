@@ -2,11 +2,15 @@
 from: backing-monitor
 to: riskAnalyst
 date: 2026-09-16
-status: ready_to_send
+status: cancelled_report_returned_to_staging
 target_file: data/axes/bold_issuer.json
 ---
 
 # BOLD issuer overlay: replace obsolete unpublished-report fact
+
+> **Cancelled 2026-09-16:** the report was returned to staging for review with Liquity. The current
+> unpublished-report fact is accurate again. Do not apply the request below unless publication is
+> reconfirmed.
 
 The canonical TID Research BOLD report is now public:
 

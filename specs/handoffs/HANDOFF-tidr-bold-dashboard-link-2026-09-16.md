@@ -2,7 +2,7 @@
 from: backing-monitor
 to: tidr
 date: 2026-09-16
-status: completed
+status: report_returned_to_staging
 subject: BOLD (Liquity V2) six-axis dashboard link
 ---
 
@@ -40,6 +40,7 @@ not be summarized as an executable floor for redemptions of arbitrary size.
 
 ## Report coordination
 
-The production report is published at `https://tidresearch.com/reports/bold/` and its backlink to
-the dashboard asset route was verified on 2026-09-16. backing-monitor has registered that canonical
-report URL for the reciprocal dashboard link.
+The report briefly published at `https://tidresearch.com/reports/bold/`, then returned to staging
+for review with Liquity on 2026-09-16. backing-monitor removed the reciprocal report link and
+restored BOLD's report state to unavailable. The dashboard remains public. Resend the same canonical
+report URL after approval and republication so the reciprocal link can be restored and reverified.
