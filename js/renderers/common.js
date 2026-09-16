@@ -3496,11 +3496,9 @@ const CommonRenderer = {
         // than a dangling arrow to nothing.
         var _reportUrl = (data && data.issuer && data.issuer.report_url) || null;
         var liveNote = '<div class="axis-band-note col-span-full text-sm text-slate-500 mt-3 leading-relaxed">' +
-            'Peg, Backing and Liquidity are <strong>live measurements</strong>, recomputed ' +
-            'each refresh from on-chain and venue data. Smart Contract &amp; Admin and Issuer are ' +
-            '<strong>authored assessments</strong>. Live readings can differ from the scores ' +
-            'in the published report \u2014 they answer different questions, and an asset can ' +
-            'perform well on a mechanism that is structurally weak.' +
+            '<strong>Live:</strong> Peg, Backing and Liquidity. ' +
+            '<strong>Authored:</strong> Smart Contract &amp; Admin and Issuer. ' +
+            'They measure different things.' +
             (_reportUrl
                 ? ' <a href="' + this._escapeAttr(_reportUrl) + '" target="_blank" ' +
                   'rel="noopener noreferrer" class="text-blue-600 hover:underline whitespace-nowrap">' +
@@ -6067,21 +6065,22 @@ const CommonRenderer = {
             var note = d.note
                 ? '<div class="dep-card-note' +
                       (d.circular === true ? ' dep-card-note-warn' : '') + '">' +
-                      d.note + '</div>'
+                      CommonRenderer._escapeAttr(String(d.note)) + '</div>'
                 : '';
             var circChip = (d.circular === true && !d.note)
                 ? '<div class="dep-card-note dep-card-note-warn">⚠️ Circular: this dependency\'s own backing includes the asset above.</div>'
                 : '';
+            var context = (d.source || note)
+                ? '<details class="dep-card-details"><summary class="dep-card-link">Source &amp; context</summary>' +
+                    (d.source ? '<div class="dep-card-source">' +
+                        CommonRenderer._escapeAttr(String(d.source)) + '</div>' : '') +
+                    note + '</details>'
+                : circChip;
             var inner =
-                '<div class="dep-card-name">' + (d.name || '—') + '</div>' +
-                (d.metric ? '<div class="dep-card-metric">' + d.metric + '</div>' : '') +
-                // `source` says where the row's claim comes from — "onchain
-                // issuer-set value" and "issuer disclosures" are very different
-                // warrants for the same-looking row, and it was published and
-                // dropped here exactly like `note` was.
-                (d.source ? '<div class="dep-card-source">' +
-                    CommonRenderer._escapeAttr(String(d.source)) + '</div>' : '') +
-                note + circChip;
+                '<div class="dep-card-name">' + CommonRenderer._escapeAttr(String(d.name || '—')) + '</div>' +
+                (d.metric ? '<div class="dep-card-metric">' + CommonRenderer._escapeAttr(String(d.metric)) + '</div>' : '') +
+                context;
+            var destination = '<div class="dep-card-link text-slate-400">No dashboard</div>';
             if (d.link && d.link_type === 'internal') {
                 // An internal link is only a link if the target is registered.
                 // Feeds name dependencies this dashboard may not serve, and an
@@ -6091,18 +6090,14 @@ const CommonRenderer = {
                 var known = !m || !Array.isArray(CommonRenderer.KNOWN_ASSET_SLUGS) ||
                             CommonRenderer.KNOWN_ASSET_SLUGS.indexOf(m[1]) !== -1;
                 if (known) {
-                    return '<a href="' + d.link + '" class="dep-card">' + inner +
-                        '<div class="dep-card-link">Open dashboard →</div></a>';
+                    destination = '<a href="' + CommonRenderer._escapeAttr(String(d.link)) +
+                        '" class="dep-card-link">Open dashboard →</a>';
                 }
-                return '<div class="dep-card">' + inner +
-                    '<div class="dep-card-link text-slate-400">No dashboard</div></div>';
+            } else if (d.link && d.link_type === 'external') {
+                destination = '<a href="' + CommonRenderer._escapeAttr(String(d.link)) +
+                    '" target="_blank" rel="noopener noreferrer" class="dep-card-link">External ↗</a>';
             }
-            if (d.link && d.link_type === 'external') {
-                return '<a href="' + d.link + '" target="_blank" rel="noopener noreferrer" class="dep-card">' + inner +
-                    '<div class="dep-card-link">External ↗</div></a>';
-            }
-            return '<div class="dep-card">' + inner +
-                '<div class="dep-card-link text-slate-400">No dashboard</div></div>';
+            return '<div class="dep-card">' + inner + destination + '</div>';
         }
 
         var upBlock = up.length
@@ -6145,7 +6140,9 @@ const CommonRenderer = {
         // rows with no stated basis, which is the same defect as an undeclared
         // denominator. Sits under the grid it describes, not above it.
         if (dep.note) {
-            upBlock += '<div class="dep-block-note">' + dep.note + '</div>';
+            upBlock += '<details class="dep-block-note"><summary class="dep-card-link">' +
+                'About this dependency set</summary><div>' +
+                this._escapeAttr(String(dep.note)) + '</div></details>';
         }
 
         // ⚠️ THE LEGS DO NOT PARTITION. yzUSD's 16 upstream shares sum to 108.53%,
@@ -6538,9 +6535,8 @@ const CommonRenderer = {
         // condition, so the collapse survives as a safety valve for genuinely long
         // prose (reusd-re's 1,159-character summary still collapses) while an
         // orienting paragraph renders where it can be read.
-        var SUMMARY_COLLAPSE_CHARS = 900;
-        var collapseSummary = summary && facts.length >= 3 &&
-            summary.length > SUMMARY_COLLAPSE_CHARS;
+        var SUMMARY_COLLAPSE_CHARS = 240;
+        var collapseSummary = summary && summary.length > SUMMARY_COLLAPSE_CHARS;
         var srcHtml = summary
             ? (issuer.summary_source
                   ? '<div class="issuer-summary-src">Source: ' +
@@ -6551,12 +6547,13 @@ const CommonRenderer = {
         // Markdown in the summary too — same reason as facts[] above. The <summary>
         // TOGGLE keeps _escapeAttr: it is a one-line control, not prose.
         var summaryHtml = !summary ? ''
-            : collapseSummary && rest
-                ? '<div class="issuer-lead">' + this._mdInlineHtml(lead) + '</div>' +
+            : collapseSummary
+                ? (issuer.entity ? '<div class="issuer-lead">' +
+                    this._escapeAttr(String(issuer.entity)) + '</div>' : '') +
                   '<details class="issuer-summary-details"><summary class="issuer-summary-toggle">' +
                   'Full issuer assessment' +
                   (issuer.entity ? ' \u2014 ' + this._escapeAttr(String(issuer.entity)) : '') +
-                  '</summary><div class="issuer-summary">' + this._mdInlineHtml(rest) +
+                  '</summary><div class="issuer-summary">' + this._mdInlineHtml(summary) +
                   srcHtml + '</div></details>'
                 : '<div class="issuer-summary">' + this._mdInlineHtml(summary) + srcHtml + '</div>';
 
@@ -6697,14 +6694,14 @@ const CommonRenderer = {
         if (r.claims_remeasured != null) bits.push(esc(r.claims_remeasured) + ' claims re-measured');
         if (r.reviewed_by) bits.push('reviewed by ' + esc(this._producerLabel(r.reviewed_by)));
         if (r.reviewed_at) bits.push(esc(r.reviewed_at));
-        return '<div class="walk-review">' +
-            '<div class="wr-head">\u26a0\ufe0f ' + bits.join(' \u00b7 ') + '</div>' +
+        return '<details class="walk-review">' +
+            '<summary class="wr-head">Review provenance \u2014 ' + bits.join(' \u00b7 ') + '</summary>' +
             (r.authored_by
                 ? '<div class="wr-line"><span class="wr-key">Authored by:</span> ' +
                   esc(r.authored_by) + ' \u2014 not by the reviewing repo</div>'
                 : '') +
             (r.note ? '<div class="wr-line">' + esc(r.note) + '</div>' : '') +
-        '</div>';
+        '</details>';
     },
 
     // ⚠️ SHARED AUTHORITY, RENDERED STRUCTURALLY AND WITHOUT A CONCLUSION.
