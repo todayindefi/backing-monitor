@@ -567,18 +567,51 @@ them apart.
 
 ## 6.1 Length
 
+⚠️ **THE DASHBOARD IS A SCANNABLE DECISION SURFACE, NOT THE REPORT.** Its closed/default state
+must give the reader the important result, status and immediate consequence in large or otherwise
+prominent type. Long analysis belongs in the linked report. Supporting evidence that is still
+needed to understand or audit the dashboard belongs behind a labelled disclosure.
+
+The default-visible hierarchy is:
+
+1. **Headline:** the axis result or finding, not a category label by itself.
+2. **Short summary:** at most the minimum context needed to interpret that result.
+3. **Structured evidence:** compact metrics, chips, warnings and tables that can be scanned.
+4. **Disclosure:** sources, methodology, provenance, qualifications and longer explanations.
+5. **Report:** extended argument, narrative history and full risk analysis.
+
+**Default-visible prose target:** no individual prose block over roughly 240 characters. This is a
+review trigger, not permission to cut a producer's text at 240 characters. When a block exceeds it,
+either replace its face with a producer-backed structured headline/field or collapse the complete
+text. New dashboards and any material dashboard update must run this review across the whole
+rendered page, not only the panel being changed.
+
 ⚠️ **COLLAPSE, NEVER TRUNCATE.** Cutting to the first N characters means the renderer choosing
 which of a producer's warnings a reader sees — and a length-based cut on reUSD's issuer summary
 lands immediately before "holders have NO direct claim on the §114 trust assets".
 
-- Collapse behind a labelled toggle that says what it opens.
+- Collapse behind a labelled native disclosure (`details`/`summary`) that says what it opens, such
+  as **Source & context**, **Review provenance**, **Liquidity exclusions** or **Full issuer
+  assessment**. Do not use an unlabeled chevron or "More".
+- Keep the decision-changing result visible. Never fold a material warning, an unresolved state,
+  the active authority's reach/delay, or the fact that a figure is stale, partial or unmeasured.
 - Keep the SCOPES visible on the summary line: "4 items: ethereum asset-permission · … · forceNAVUpdate path".
+- Keep entity/dependency names and their primary metric visible; fold their source and explanatory
+  note. Make the destination link separate from the disclosure so nested interactive elements are
+  avoided.
 - A first-sentence lead is fine because it is MECHANICAL. ⚠️ It only works if producers write
-  claim-first; say so in the field's documentation.
+  claim-first; say so in the field's documentation. Prefer a structured entity/headline field over
+  extracting a lead when one exists.
 - Provenance and methodology boilerplate belong in tooltips, not above the fold.
+- Do not collapse a compact structured table merely because it contains many characters. The rule
+  targets paragraph walls; a table that supports comparison may remain open.
+- The closed state must remain comprehensible without opening every disclosure or following the
+  report link. Folding is progressive disclosure, not a way to hide the axis's conclusion.
 
 **Targets, from the reUSD pass:** axis 5 went 7,556 → 698 visible chars, axis 6 1,400+ → 249, with
-nothing deleted.
+nothing deleted. The BOLD pass then established the page-wide pattern: no default-visible prose
+block over 220 characters, while dependency context, liquidity exclusions, review provenance and
+the full issuer assessment remained available intact in explicitly named disclosures.
 
 ## 6.2 Marker discipline
 
@@ -956,6 +989,12 @@ NOT FINISHED                          FINISHED
 [ ] Every axis: a figure OR a stated unrated reason. No bare dashes.
 [ ] Every tile: not blank while its axis has a finding; label matches the value shown.
 [ ] Every panel renders INSIDE its axis section. No duplicates across the page.
+[ ] Default view is scan-first: result, short context and material warnings visible; supporting
+    paragraphs are in labelled disclosures; no prose was truncated or discarded.
+[ ] Page-wide prose audit completed after this change. Investigate every default-visible prose
+    block over ~240 characters, including shared frame copy and panels outside the changed axis.
+[ ] Every disclosure has a specific label, retains its complete source text when opened, and does
+    not hide a decision-changing warning or unresolved state.
 [ ] Every published field either renders or is deliberately not rendered
     (run the published-vs-DOM diff; "published but unrendered" is this repo's
      most repeated defect).

@@ -121,6 +121,15 @@ Twice on 2026-09-14 the same defect sat in the neighbouring field: the undated `
 stamped one, and the sUSDat buffer pill beside the tile I had just fixed for hiding its caveat.
 **The second instance arrives with the credibility of having just been fixed.**
 
+**R8 — Keep the closed dashboard scannable; preserve depth through disclosure.**
+The default view carries the decision-changing result, its shortest necessary context, material
+warnings and compact structured evidence. Sources, provenance, methodology and long explanations
+go behind specifically labelled native disclosures; extended analysis belongs in the report.
+Never truncate producer text, and never use folding to hide a warning or unresolved state. Treat
+any default-visible prose block over roughly 240 characters as a review trigger, then audit the
+whole rendered page after a material dashboard update. The normative hierarchy and acceptance
+checks are in `specs/six-axis-dashboard-spec.md` §6.1 and §9.
+
 ---
 
 # 4. Applying it to the sUSDat gap
