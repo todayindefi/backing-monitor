@@ -1067,14 +1067,12 @@ const CommonRenderer = {
         var b = this._pegDevBasis(data, history, 7);
         var c = this._ratingChip(rating);
         var rolling = b.basis === '7d';
-        var sparse = rolling && b.n < 24;
-        var face = (rolling ? '7d band' : 'Current band') + ' · ' + (rating * 2) + '/10' +
-            (sparse ? ' · sparse' : '');
+        var face = (rolling ? '7d band' : 'Current band') + ' · ' + (rating * 2) + '/10';
         var title = this._ratingChipBasis(rating) + ' — ' +
             this.pegRatingBasisNote(data, history) +
             (rolling ? ' Observations in the 7-day window: ' + b.n + '.' : '');
         return '<span class="axis-rating ' + c.cls + '" title="' +
-            this._escapeAttr(title) + '">' + face + (sparse ? ' ⚠️' : '') + '</span>';
+            this._escapeAttr(title) + '">' + face + '</span>';
     },
 
     // ±25 / ±50 / ±100 bps reference bands for peg/spread charts.
