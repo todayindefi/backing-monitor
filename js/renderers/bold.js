@@ -131,23 +131,17 @@ var BOLDRenderer = {
     _axis3PreviewPanel: function(liq, s) {
         var evidence = this._thresholdEvidence(liq, 50);
         var rows = this._marketRungs(liq);
-        var wanted = [100000, 1000000, 5000000];
-        var selected = wanted.map(function(size) {
-            return rows.filter(function(r) { return r.size_usd === size; })[0];
-        }).filter(Boolean);
-        if (!selected.length) selected = rows.slice(0, 3);
         var fees = (((liq || {}).primary_exit || {}).fee_ladder || []);
-        var feeBySize = {};
-        fees.forEach(function(f) { feeBySize[f.size_usd] = f; });
-        var tableRows = selected.map(function(r) {
-            var totalCost = (typeof r.amount_out_tokens === 'number' && r.size_usd > 0)
-                ? (1 - r.amount_out_tokens / r.size_usd) * 100 : null;
-            var redemption = feeBySize[r.size_usd];
+        var tableRows = rows.map(function(r) {
+            var venues = Array.isArray(r.route_venues) ? r.route_venues.length : null;
             return '<tr><td class="font-semibold">' + BOLDRenderer._money(r.size_usd) + '</td>' +
                 '<td class="text-right font-mono">' + BOLDRenderer._pct(Math.abs(r.slippage_bps_debiased) / 100, 2) + '</td>' +
-                '<td class="text-right font-mono">' + BOLDRenderer._pct(totalCost, 2) + '</td>' +
-                '<td class="text-right font-mono">' + (redemption
-                    ? BOLDRenderer._pct(redemption.effective_redemption_fee_pct, 2) : '—') + '</td></tr>';
+                '<td class="text-right font-mono">' + BOLDRenderer._money(r.amount_out_tokens) + '</td>' +
+                '<td class="text-right">' + (venues == null ? '—' : venues + (venues === 1 ? ' venue' : ' venues')) + '</td></tr>';
+        }).join('');
+        var redemptionRows = fees.map(function(f) {
+            return '<tr><td class="font-semibold">' + BOLDRenderer._money(f.size_usd) + '</td>' +
+                '<td class="text-right font-mono">' + BOLDRenderer._pct(f.effective_redemption_fee_pct, 2) + '</td></tr>';
         }).join('');
         var headline = evidence.lower ? '≥' + this._money(evidence.lower.size_usd) : 'unmeasured';
         var bracket = evidence.lower && evidence.upper
@@ -159,8 +153,12 @@ var BOLDRenderer = {
             '<div class="summary-card"><div class="card-label">50 bp depth</div><div class="card-value">' + headline + '</div><div class="text-xs text-slate-500">measured floor</div></div>' +
             '<div class="summary-card"><div class="card-label">Current bracket</div><div class="card-value">' + bracket + '</div><div class="text-xs text-slate-500">targeted solver not yet enabled</div></div>' +
             '<div class="summary-card"><div class="card-label">Quoted at</div><div class="card-value text-base">' + this._e(asOf) + '</div><div class="text-xs text-slate-500">routed BOLD → USDC</div></div></div>' +
-            '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Sell size</th><th class="text-right">Additional impact</th><th class="text-right">Total discount vs $1</th><th class="text-right">Redemption fee</th></tr></thead><tbody>' + tableRows + '</tbody></table></div>' +
-            '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Stress and methodology</summary><div class="mt-2">The current broad ladder only proves that the 50 bp crossing lies between ' + bracket + '. The existing 200 bp result remains a severe-stress measure and is not used as this preview\'s headline. Additional impact is debiased from the smallest successful quote; total discount shows expected output against $1.</div></details>');
+            '<div class="text-sm font-semibold text-slate-700 mb-2">Market depth ladder</div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Sell size</th><th class="text-right">Additional impact</th><th class="text-right">Net output</th><th class="text-right">Route</th></tr></thead><tbody>' + tableRows + '</tbody></table></div>' +
+            '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Stress and methodology</summary><div class="mt-2">The current broad ladder only proves that the 50 bp crossing lies between ' + bracket + '. The existing 200 bp result remains a severe-stress measure and is not used as this preview\'s headline. Additional impact is measured relative to the smallest successful routed quote.</div></details>') +
+            this._panel('Protocol redemption — separate exit route',
+                '<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><div class="summary-card mb-3"><div class="card-label">Access</div><div class="card-value">permissionless</div><div class="text-xs text-slate-500">continuous protocol call · fee rises with size</div></div><p class="text-sm text-slate-500">BOLD is exchanged for a protocol-selected mix of WETH, wstETH and rETH. This is not the same settlement as a market sale to USDC.</p></div>' +
+                '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Redemption size</th><th class="text-right">Effective fee</th></tr></thead><tbody>' + redemptionRows + '</tbody></table></div></div>');
     },
     _stabilityPanel: function(branches, t) {
         var floor = Number(t.stability_pool_coverage_pct_lt || 0);
