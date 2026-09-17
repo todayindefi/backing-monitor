@@ -3,7 +3,7 @@
   "asset": "USDe",
   "asset_slug": "usde",
   "chain": "ethereum",
-  "timestamp": "2026-09-17T04:49:42Z",
+  "timestamp": "2026-09-17T05:47:51Z",
   "summary": {
     "total_supply": 4729573118.64,
     "supply_unit": "USD",
@@ -109,24 +109,84 @@
     "peg_mechanism_score_source": "risk-feed@2026-09-16T01:45:02Z",
     "peg_mechanism_score_status": "ok",
     "peg_mechanism_score_generated_at": "2026-09-16T01:45:02Z",
-    "peg_mechanism_score_age_hours": 27.08
+    "peg_mechanism_score_age_hours": 28.05
   },
   "liquidity": {
-    "as_of": "2026-09-17T04:49:42Z",
+    "as_of": "2026-09-17T05:09:31Z",
     "total_tvl": null,
-    "total_2pct_depth": null,
-    "total_2pct_depth_is_floor": null,
-    "two_pct_depth_status": "no_quotes",
+    "total_2pct_depth": 5000000.0,
+    "total_2pct_depth_is_floor": true,
+    "two_pct_depth_status": "ladder_exhausted",
+    "two_pct_depth_size_responsive": true,
+    "two_pct_depth_unresponsive_note": null,
+    "two_pct_depth_basis": "A FLOOR, not a measurement. The deepest rung quoted ($5,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
     "volume_24h": null,
-    "measured_chain": null,
-    "measured_venue": null,
-    "scope": "\u26a0\ufe0f MEASURED VENUE NOT ESTABLISHED \u2014 this analyzer does not record which chain or venue the ladder was quoted on. The figure is real; its scope is not stated, so do not read it as a global total.",
+    "measured_chain": "ethereum",
+    "measured_venue": "kyberswap aggregator on ethereum",
+    "scope": "Routed across every venue kyberswap reaches on ethereum, selling into USDC. \u26a0\ufe0f ONE CHAIN \u2014 depth on other chains is not included and is not implied to be zero.",
     "exit_mark": {
-      "source": null,
+      "source": "kyberswap",
       "sell_into": "USDC",
-      "fair_value": 0.9993590884700285,
+      "fair_value": 0.99944533,
       "fair_value_basis": "market",
-      "quotes": {},
+      "quotes": {
+        "1000": {
+          "output_usd": 1000.46,
+          "attempts": 1,
+          "provider": "kyberswap",
+          "fill_ratio": 1.00046,
+          "slippage_bps": 0.0
+        },
+        "10000": {
+          "output_usd": 10004.55,
+          "attempts": 1,
+          "provider": "kyberswap",
+          "fill_ratio": 1.000455,
+          "slippage_bps": 0.0
+        },
+        "50000": {
+          "output_usd": 50022.57,
+          "attempts": 1,
+          "provider": "kyberswap",
+          "fill_ratio": 1.000451,
+          "slippage_bps": -0.1
+        },
+        "100000": {
+          "output_usd": 100044.4,
+          "attempts": 1,
+          "provider": "kyberswap",
+          "fill_ratio": 1.000444,
+          "slippage_bps": -0.1
+        },
+        "250000": {
+          "output_usd": 250104.43,
+          "attempts": 1,
+          "provider": "kyberswap",
+          "fill_ratio": 1.000418,
+          "slippage_bps": -0.4
+        },
+        "500000": {
+          "output_usd": 500191.26,
+          "attempts": 1,
+          "provider": "kyberswap",
+          "fill_ratio": 1.000383,
+          "slippage_bps": -0.7
+        },
+        "2000000": {
+          "output_usd": 2000348.64,
+          "attempts": 1,
+          "provider": "kyberswap",
+          "fill_ratio": 1.000174,
+          "slippage_bps": -2.8
+        },
+        "5000000": {
+          "output_usd": 4977306.37,
+          "attempts": 1,
+          "provider": "kyberswap",
+          "fill_ratio": 0.995461,
+          "slippage_bps": -49.9
+        }
+      },
       "slippage_bps_basis": "PRICE IMPACT against this venue's own smallest quoted rung, which EXCLUDES that rung's own spread \u2014 it is not the holder's all-in cost. The all-in figure is fill_ratio (output_usd / size). Impact is measured this way deliberately, so peg discount and source lag do not leak into it."
     },
     "derived_score": null,
@@ -136,7 +196,7 @@
     "liquidity_score_source": "risk-feed@2026-09-16T01:45:02Z",
     "liquidity_score_status": "ok",
     "liquidity_score_generated_at": "2026-09-16T01:45:02Z",
-    "liquidity_score_age_hours": 27.08
+    "liquidity_score_age_hours": 28.05
   },
   "backing": {
     "collateral_ratio": 102.0175,
@@ -166,7 +226,7 @@
     "backing_score_source": "risk-feed@2026-09-16T01:45:02Z",
     "backing_score_status": "ok",
     "backing_score_generated_at": "2026-09-16T01:45:02Z",
-    "backing_score_age_hours": 27.08
+    "backing_score_age_hours": 28.05
   },
   "dependencies": {
     "upstream": [
@@ -203,7 +263,7 @@
     "issuer_score_source": "risk-feed@2026-09-16T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-09-16T01:45:02Z",
-    "issuer_score_age_hours": 27.08,
+    "issuer_score_age_hours": 28.05,
     "attestation_age_days": 55.2
   }
 }
