@@ -285,6 +285,20 @@ def dex_pools(synth_addresses: set, price: Optional[float]) -> Tuple[List[Dict[s
 
 
 def kyber_quotes(price: float) -> List[Dict[str, Any]]:
+    def route_summary(route):
+        legs = []
+        def walk(value):
+            if isinstance(value, list):
+                for item in value: walk(item)
+            elif isinstance(value, dict):
+                if value.get("exchange") or value.get("pool"):
+                    legs.append({"exchange": value.get("exchange"), "pool": value.get("pool"),
+                                 "token_in": value.get("tokenIn"), "token_out": value.get("tokenOut")})
+                else:
+                    for item in value.values(): walk(item)
+        walk(route)
+        return {"leg_count": len(legs), "exchanges": sorted({x["exchange"] for x in legs if x.get("exchange")}),
+                "pools": sorted({x["pool"] for x in legs if x.get("pool")}), "legs": legs}
     out = []
     sizes = [1000, 10000, 50000, 100000, 1000000]
     for chain, cfg in CHAINS.items():
@@ -305,7 +319,7 @@ def kyber_quotes(price: float) -> List[Dict[str, Any]]:
                 avg = amount_out / (amount_in / 1e18)
                 row.update({"status": "ok", "proceeds_usdc": amount_out, "average_execution_price": avg,
                             "price_impact_pct": (avg / price - 1) * 100,
-                            "route": data.get("route"), "router": "KyberSwap", "source": url})
+                            "route": route_summary(data.get("route")), "router": "KyberSwap", "source": url})
             except Exception as exc:
                 row.update({"status": "quote_failed", "reason": f"{type(exc).__name__}: {exc}"})
             out.append(row)
@@ -352,6 +366,14 @@ def write_history(snapshot: Dict[str, Any]) -> None:
     except Exception:
         history = []
     s, a = snapshot["summary"], snapshot["asset_specific"]
+    def compact_quotes(rows):
+        return [{k: q.get(k) for k in ("chain", "size_usd", "status", "proceeds_usdc",
+                "average_execution_price", "price_impact_pct", "quoted_as_of", "reason")}
+                for q in rows]
+    for old in history:
+        if isinstance(old, dict):
+            old["execution_100k"] = compact_quotes(old.get("execution_100k") or [])
+            old["execution_1m"] = compact_quotes(old.get("execution_1m") or [])
     history.append({"timestamp": snapshot["timestamp"], "market_price": s.get("market_price"),
                     "total_supply": s.get("total_supply"), "supply_by_chain": {c["chain"]: c.get("total_supply") for c in a["chains"]},
                     "cdp_debt": s.get("cdp_debt"), "cdp_collateral_usd": s.get("cdp_collateral_usd"),
@@ -359,8 +381,8 @@ def write_history(snapshot: Dict[str, Any]) -> None:
                     "amo_msusd_claim": s.get("amo_msusd_claim"), "third_party_supply": s.get("third_party_supply"),
                     "real_exit_liquidity_usd": s.get("real_exit_liquidity_usd"),
                     "pool_weights": {p["pool_address"]: p.get("msusd_pool_weight_pct") for p in a["dex_pools"]},
-                    "execution_100k": [q for q in a["quotes"] if q["size_usd"] == 100000],
-                    "execution_1m": [q for q in a["quotes"] if q["size_usd"] == 1000000],
+                    "execution_100k": compact_quotes([q for q in a["quotes"] if q["size_usd"] == 100000]),
+                    "execution_1m": compact_quotes([q for q in a["quotes"] if q["size_usd"] == 1000000]),
                     "implementations": {c["chain"]: c.get("implementation") for c in a["chains"]}})
     cutoff = time.time() - 180 * 86400
     history = [h for h in history if datetime.fromisoformat(h["timestamp"].replace("Z", "+00:00")).timestamp() >= cutoff]
@@ -428,6 +450,17 @@ def run(skip_quotes=False) -> Dict[str, Any]:
     claim = amo.get("amo_msusd_claim") if amo else None
     third_party = max(total_supply - claim, 0) if total_supply is not None and claim is not None else None
     real_exit = sum(p.get("paired_asset_value_usd") or 0 for p in pools if p.get("pair_class") == "external")
+    chain_exit = {}
+    for pool in pools:
+        if pool.get("pair_class") != "external":
+            pool["real_exit_share_pct"] = 0
+            continue
+        value = pool.get("paired_asset_value_usd") or 0
+        pool["real_exit_share_pct"] = value / real_exit * 100 if real_exit else None
+        chain_exit[pool["chain"]] = chain_exit.get(pool["chain"], 0) + value
+    chain_concentration = [{"chain": chain, "paired_asset_value_usd": value,
+                            "real_exit_share_pct": value / real_exit * 100 if real_exit else None}
+                           for chain, value in sorted(chain_exit.items(), key=lambda row: row[1], reverse=True)]
     summary = {"market_price": market.get("price_usd"), "premium_discount_pct": (market["price_usd"] - 1) * 100 if market.get("price_usd") is not None else None,
                "total_supply": total_supply, "cdp_debt": cdp_debt, "cdp_collateral_usd": collateral,
                "cdp_backed_share_pct": cdp_debt / total_supply * 100 if total_supply and cdp_debt is not None else None,
@@ -450,6 +483,9 @@ def run(skip_quotes=False) -> Dict[str, Any]:
                 "asset_specific": {"type": "metronome-msusd", "identity": {"coingecko_id": CG_ID, "tokens": {k: v["token"] for k, v in CHAINS.items()},
                     "excluded_collision": {"mainstreet_msusd": "0x4ba01f22827018b4772cd326c7627fb4956a7c00", "mento": "usdm"}},
                     "market": market, "chains": chain_rows, "amo": amo, "dex_pools": pools, "quotes": quotes,
+                    "liquidity_concentration": {"by_chain": chain_concentration,
+                        "largest_pool": max((p for p in pools if p.get("pair_class") == "external"),
+                                            key=lambda p: p.get("paired_asset_value_usd") or 0, default=None)},
                     "methodology": {"external_backing_excludes": ["msUSD", "vamsUSD", "msUSD LP tokens", "all dynamically discovered Metronome synthetic tokens"],
                                     "gross": "All msUSD supply versus external CDP collateral and real paired-side exit assets.",
                                     "net_of_amo": "Supply less the AMO's vamsUSD-denominated claim versus the same external assets; protocol-owned LP claims cannot withdraw assets pools no longer hold."}},
