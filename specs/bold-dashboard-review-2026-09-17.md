@@ -135,11 +135,17 @@ thing not rendered.**
 # 5. Order
 
 ```
-1  ours        R5: absent threshold = absent check, not a zero comparison     small
-2  ours        render depth.basis under the depth card                        small
-3  DexTracker  handoff: bracket vs its own $8M rung · is_floor vs basis ·
-               refinement vs meets_precision_obligation                       theirs
+1  ours        R5: absent threshold = absent check              ✅ DONE 1319c3adf
+2  ours        render depth.basis under the depth card          ✅ DONE 1319c3adf
+3  DexTracker  handoff filed 2026-09-17, uncommitted:
+               bold-depth-block-three-internal-contradictions-2026-09-17.md
 ```
+
+⚠️ **The R5 guard was TESTED, not just shipped.** It is silent on the live feed, because all three
+thresholds are published today — so it was verified by stripping them from a live payload and
+re-rendering: the "Not checked" notices appear, the reconciliation card goes neutral, and **no warn
+cell is coloured**. Without that step a guard that never fires and a guard that does not work look
+identical.
 
 ⚠️ **Do NOT "fix" the bracket here by recomputing from the rungs.** It would be right today and
 would silently diverge the moment DexTracker changes its refinement rule. **Render what they
