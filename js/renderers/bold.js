@@ -6,6 +6,62 @@ var BOLDRenderer = {
     _panel: function(title, body) {
         return '<div class="panel"><div class="panel-title">' + title + '</div>' + body + '</div>';
     },
+    _axis3PreviewEnabled: function() {
+        return new URLSearchParams(window.location.search).get('axis3') === 'preview';
+    },
+    _marketRungs: function(liq) {
+        return (((liq || {}).depth || {}).rungs || []).filter(function(r) {
+            return r && r.status === 'ok' && typeof r.size_usd === 'number' &&
+                typeof r.slippage_bps_debiased === 'number';
+        }).sort(function(a, b) { return a.size_usd - b.size_usd; });
+    },
+    _thresholdEvidence: function(liq, thresholdBps) {
+        var rows = this._marketRungs(liq), lower = null, upper = null;
+        rows.forEach(function(r) {
+            if (r.slippage_bps_debiased >= -thresholdBps && (!lower || r.size_usd > lower.size_usd)) lower = r;
+            if (r.slippage_bps_debiased < -thresholdBps && (!upper || r.size_usd < upper.size_usd)) upper = r;
+        });
+        return { lower: lower, upper: upper };
+    },
+    _applyAxis3PreviewTile: function(liq) {
+        var evidence = this._thresholdEvidence(liq, 50);
+        var cards = Array.prototype.slice.call(document.querySelectorAll('#summary-cards .summary-card'));
+        var card = cards.filter(function(c) {
+            var label = c.querySelector('.card-label');
+            return label && label.textContent.trim() === 'Liquidity & Exit';
+        })[0];
+        if (card) {
+            var value = card.querySelector('.card-value');
+            var sub = value && value.nextElementSibling;
+            var chip = card.querySelector('.axis-rating');
+            if (value) value.textContent = evidence.lower ? '≥' + this._money(evidence.lower.size_usd) : 'unmeasured';
+            if (sub) sub.textContent = '50 bp depth floor' +
+                (evidence.upper ? ' · crossing below ' + this._money(evidence.upper.size_usd) : '');
+            if (chip) {
+                chip.className = 'axis-rating r-na';
+                chip.textContent = 'Preview · measured range';
+                chip.title = 'Preview only. No liquidity score is inferred from a coarse 50 bp bracket.';
+            }
+        }
+        var head = document.getElementById('axis-liquidity-head');
+        if (head) {
+            var rating = head.querySelector('.axis-rating');
+            if (rating) {
+                rating.className = 'axis-rating r-na';
+                rating.textContent = 'Preview · 50 bp depth';
+                rating.title = 'Preview only. The current feed brackets but does not yet solve the 50 bp crossing.';
+            }
+            var axisSub = head.querySelector('.axis-sub');
+            if (axisSub) axisSub.textContent = 'usable market exit & primary redemption';
+            Array.prototype.slice.call(head.querySelectorAll('.depth-scope, .axis-basis-note')).forEach(function(el) {
+                el.remove();
+            });
+            var note = document.createElement('div');
+            note.className = 'axis-basis-note';
+            note.innerHTML = '<div class="text-[11px] text-slate-500">Preview uses 50 bp marginal sell depth; the existing 2% measure remains folded as severe-stress evidence.</div>';
+            head.appendChild(note);
+        }
+    },
     render: function(data) {
         if (data.view_slug !== 'bold') return;
         var a = data.asset_specific || {}, s = data.summary || {};
@@ -19,7 +75,14 @@ var BOLDRenderer = {
         if (backingSlot) backingSlot.innerHTML = this._branchPanel(branches, t) + this._reconciliationPanel(s, t);
 
         var liquiditySlot = document.getElementById('liquidity-extra-panels');
-        if (liquiditySlot) liquiditySlot.innerHTML = this._exitPanel(liq, s) + this._stabilityPanel(branches, t);
+        if (this._axis3PreviewEnabled()) {
+            this._applyAxis3PreviewTile(liq);
+            var liquidityBody = document.getElementById('axis-liquidity-body');
+            if (liquidityBody) liquidityBody.innerHTML = this._axis3PreviewPanel(liq, s);
+            if (liquiditySlot) liquiditySlot.innerHTML = this._stabilityPanel(branches, t);
+        } else if (liquiditySlot) {
+            liquiditySlot.innerHTML = this._exitPanel(liq, s) + this._stabilityPanel(branches, t);
+        }
 
         var dependencySlot = document.getElementById('dependencies-extra-panels');
         if (dependencySlot) dependencySlot.innerHTML = this._sBoldPanel(a.sbold || {});
@@ -64,6 +127,40 @@ var BOLDRenderer = {
     _exitPanel: function(liq, s) {
         var d = liq.depth || {}, ex = liq.primary_exit || {}, excluded = liq.excluded_liquidity || {};
         return this._panel('Two exits: size-bound market vs cost-bound protocol', '<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="summary-card"><div class="card-label">Secondary market</div><div class="card-value">' + this._money(d.depth_usd) + '</div><div class="text-xs text-slate-500">' + this._e(d.status || 'unmeasured') + ' at ' + this._e(d.threshold_bps) + ' bps; tested through ' + this._money(d.tested_through_input_usd) + '</div></div><div class="summary-card"><div class="card-label">Protocol redemption</div><div class="card-value">permissionless</div><div class="text-xs text-slate-500">Size-unbounded, fee rises with size; spot fee ' + this._pct(s.redemption_rate_pct, 3) + '</div></div></div><details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Liquidity exclusions</summary><div class="mt-2">Excluded from swap depth: ' + this._e((excluded.lp_wrappers || []).join(', ') || 'none declared') + '. ' + this._e(excluded.lp_wrapper_reason || '') + ' ' + this._e(excluded.non_swap_reason || '') + '</div></details>');
+    },
+    _axis3PreviewPanel: function(liq, s) {
+        var evidence = this._thresholdEvidence(liq, 50);
+        var rows = this._marketRungs(liq);
+        var wanted = [100000, 1000000, 5000000];
+        var selected = wanted.map(function(size) {
+            return rows.filter(function(r) { return r.size_usd === size; })[0];
+        }).filter(Boolean);
+        if (!selected.length) selected = rows.slice(0, 3);
+        var fees = (((liq || {}).primary_exit || {}).fee_ladder || []);
+        var feeBySize = {};
+        fees.forEach(function(f) { feeBySize[f.size_usd] = f; });
+        var tableRows = selected.map(function(r) {
+            var totalCost = (typeof r.amount_out_tokens === 'number' && r.size_usd > 0)
+                ? (1 - r.amount_out_tokens / r.size_usd) * 100 : null;
+            var redemption = feeBySize[r.size_usd];
+            return '<tr><td class="font-semibold">' + BOLDRenderer._money(r.size_usd) + '</td>' +
+                '<td class="text-right font-mono">' + BOLDRenderer._pct(Math.abs(r.slippage_bps_debiased) / 100, 2) + '</td>' +
+                '<td class="text-right font-mono">' + BOLDRenderer._pct(totalCost, 2) + '</td>' +
+                '<td class="text-right font-mono">' + (redemption
+                    ? BOLDRenderer._pct(redemption.effective_redemption_fee_pct, 2) : '—') + '</td></tr>';
+        }).join('');
+        var headline = evidence.lower ? '≥' + this._money(evidence.lower.size_usd) : 'unmeasured';
+        var bracket = evidence.lower && evidence.upper
+            ? this._money(evidence.lower.size_usd) + '–' + this._money(evidence.upper.size_usd)
+            : 'not located';
+        var asOf = ((liq.depth || {}).quote || {}).quoted_as_of || liq.as_of || 'time not published';
+        return this._panel('Usable market exit — Axis 3 preview',
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">' +
+            '<div class="summary-card"><div class="card-label">50 bp depth</div><div class="card-value">' + headline + '</div><div class="text-xs text-slate-500">measured floor</div></div>' +
+            '<div class="summary-card"><div class="card-label">Current bracket</div><div class="card-value">' + bracket + '</div><div class="text-xs text-slate-500">targeted solver not yet enabled</div></div>' +
+            '<div class="summary-card"><div class="card-label">Quoted at</div><div class="card-value text-base">' + this._e(asOf) + '</div><div class="text-xs text-slate-500">routed BOLD → USDC</div></div></div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Sell size</th><th class="text-right">Additional impact</th><th class="text-right">Total discount vs $1</th><th class="text-right">Redemption fee</th></tr></thead><tbody>' + tableRows + '</tbody></table></div>' +
+            '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Stress and methodology</summary><div class="mt-2">The current broad ladder only proves that the 50 bp crossing lies between ' + bracket + '. The existing 200 bp result remains a severe-stress measure and is not used as this preview\'s headline. Additional impact is debiased from the smallest successful quote; total discount shows expected output against $1.</div></details>');
     },
     _stabilityPanel: function(branches, t) {
         var floor = Number(t.stability_pool_coverage_pct_lt || 0);
