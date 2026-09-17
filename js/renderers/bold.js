@@ -107,10 +107,20 @@ var BOLDRenderer = {
     },
     _branchPanel: function(branches, t) {
         if (!branches.length) return this._panel('Independent branch health', '<p class="text-sm text-amber-700">Branch state is not published.</p>');
-        var headroom = Number(t.branch_cr_less_than_ccr_plus_pp || 0), spFloor = Number(t.stability_pool_coverage_pct_lt || 0);
+        // ⚠️ `Number(x || 0)` HERE DID NOT MISLABEL, IT DISABLED THE CHECK. A missing
+        // branch_cr_less_than_ccr_plus_pp collapsed headroom to 0, so every branch
+        // passed; a missing stability_pool_coverage_pct_lt collapsed the floor to 0,
+        // so NO branch could ever be below it — wstETH's live 31.75% warning would
+        // have vanished silently. Invisible at review time because both thresholds
+        // are published today. An absent threshold is an ABSENT CHECK, not a zero.
+        var headroom = (typeof t.branch_cr_less_than_ccr_plus_pp === 'number') ? t.branch_cr_less_than_ccr_plus_pp : null;
+        var spFloor  = (typeof t.stability_pool_coverage_pct_lt === 'number') ? t.stability_pool_coverage_pct_lt : null;
+        var missing = [];
+        if (headroom === null) missing.push('CR headroom');
+        if (spFloor === null) missing.push('Stability Pool floor');
         var rows = branches.map(function(b) {
-            var crWarn = b.collateral_ratio_pct < b.ccr_pct + headroom;
-            var spWarn = b.stability_pool_coverage_pct < spFloor;
+            var crWarn = headroom !== null && b.collateral_ratio_pct < b.ccr_pct + headroom;
+            var spWarn = spFloor !== null && b.stability_pool_coverage_pct < spFloor;
             var shutdown = Number(b.shutdown_time || 0) !== 0;
             return '<tr><td class="font-semibold">' + BOLDRenderer._e(b.symbol) + '</td><td class="text-right">' + BOLDRenderer._money(b.debt_bold) + '</td>' +
                 '<td class="text-right font-mono ' + (crWarn ? 'text-amber-700 font-semibold' : '') + '">' + BOLDRenderer._pct(b.collateral_ratio_pct, 1) + '</td>' +
@@ -118,15 +128,18 @@ var BOLDRenderer = {
                 '<td class="text-right font-mono ' + (spWarn ? 'text-amber-700 font-semibold' : '') + '">' + BOLDRenderer._pct(b.stability_pool_coverage_pct, 1) + '</td>' +
                 '<td class="text-right">' + Number(b.troves || 0) + '</td><td class="text-right ' + (shutdown ? 'text-red-700 font-semibold' : 'text-green-700') + '">' + (shutdown ? BOLDRenderer._e(b.shutdown_time) : 'active') + '</td></tr>';
         }).join('');
-        return this._panel('Independent branch health', '<p class="text-sm text-slate-500 mb-3">Aggregate CR can hide an individual branch nearing its own floor. MCR / CCR / SCR and warning bands come from producer fields.</p><div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Branch</th><th class="text-right">Debt</th><th class="text-right">CR</th><th class="text-right">MCR / CCR / SCR</th><th class="text-right">SP coverage</th><th class="text-right">Troves</th><th class="text-right">State</th></tr></thead><tbody>' + rows + '</tbody></table></div>');
+        return this._panel('Independent branch health', '<p class="text-sm text-slate-500 mb-3">Aggregate CR can hide an individual branch nearing its own floor. MCR / CCR / SCR and warning bands come from producer fields.</p>' + (missing.length ? '<p class="text-sm text-amber-700 mb-3">\u26a0\ufe0f Not checked: <strong>' + missing.join(' and ') + '</strong> \u2014 the producer published no such threshold in <span class="font-mono">alert_thresholds</span>, so no band is applied. An unbanded column is UNCHECKED, not clear.</p>' : '') + '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Branch</th><th class="text-right">Debt</th><th class="text-right">CR</th><th class="text-right">MCR / CCR / SCR</th><th class="text-right">SP coverage</th><th class="text-right">Troves</th><th class="text-right">State</th></tr></thead><tbody>' + rows + '</tbody></table></div>');
     },
     _reconciliationPanel: function(s, t) {
-        var limit = Number(t.abs_reconciliation_gap_pct_gt || 0), gap = Math.abs(Number(s.reconciliation_gap_pct || 0));
-        return this._panel('Supply ↔ branch-debt reconciliation', '<div class="grid grid-cols-1 md:grid-cols-3 gap-3"><div class="summary-card"><div class="card-label">Token supply</div><div class="card-value">' + this._money(s.total_supply) + '</div></div><div class="summary-card"><div class="card-label">Summed branch debt</div><div class="card-value">' + this._money(s.total_debt) + '</div></div><div class="summary-card"><div class="card-label">Gap</div><div class="card-value ' + (gap > limit ? 'text-red-700' : 'text-green-700') + '">' + this._pct(s.reconciliation_gap_pct, 4) + '</div><div class="text-xs text-slate-400">alert above ' + this._pct(limit, 2) + '</div></div></div><p class="text-xs text-slate-400 mt-3">This is a data-integrity invariant, not a solvency ratio.</p>');
+        // ⚠️ Same idiom, opposite failure: a missing limit collapsed to 0, so EVERY
+        // gap exceeded it and the panel alarmed permanently. Absent = unchecked.
+        var limit = (typeof t.abs_reconciliation_gap_pct_gt === 'number') ? t.abs_reconciliation_gap_pct_gt : null;
+        var gap = Math.abs(Number(s.reconciliation_gap_pct || 0));
+        return this._panel('Supply ↔ branch-debt reconciliation', '<div class="grid grid-cols-1 md:grid-cols-3 gap-3"><div class="summary-card"><div class="card-label">Token supply</div><div class="card-value">' + this._money(s.total_supply) + '</div></div><div class="summary-card"><div class="card-label">Summed branch debt</div><div class="card-value">' + this._money(s.total_debt) + '</div></div><div class="summary-card"><div class="card-label">Gap</div><div class="card-value ' + (limit === null ? 'text-slate-600' : (gap > limit ? 'text-red-700' : 'text-green-700')) + '">' + this._pct(s.reconciliation_gap_pct, 4) + '</div><div class="text-xs ' + (limit === null ? 'text-amber-700' : 'text-slate-400') + '">' + (limit === null ? '\u26a0\ufe0f no alert threshold published \u2014 unbanded, not clear' : 'alert above ' + this._pct(limit, 2)) + '</div></div></div><p class="text-xs text-slate-400 mt-3">This is a data-integrity invariant, not a solvency ratio.</p>');
     },
     _exitPanel: function(liq, s) {
         var d = liq.depth || {}, ex = liq.primary_exit || {}, excluded = liq.excluded_liquidity || {};
-        return this._panel('Two exits: size-bound market vs cost-bound protocol', '<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="summary-card"><div class="card-label">Secondary market</div><div class="card-value">' + this._money(d.depth_usd) + '</div><div class="text-xs text-slate-500">' + this._e(d.status || 'unmeasured') + ' at ' + this._e(d.threshold_bps) + ' bps; tested through ' + this._money(d.tested_through_input_usd) + '</div></div><div class="summary-card"><div class="card-label">Protocol redemption</div><div class="card-value">permissionless</div><div class="text-xs text-slate-500">Size-unbounded, fee rises with size; spot fee ' + this._pct(s.redemption_rate_pct, 3) + '</div></div></div><details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Liquidity exclusions</summary><div class="mt-2">Excluded from swap depth: ' + this._e((excluded.lp_wrappers || []).join(', ') || 'none declared') + '. ' + this._e(excluded.lp_wrapper_reason || '') + ' ' + this._e(excluded.non_swap_reason || '') + '</div></details>');
+        return this._panel('Two exits: size-bound market vs cost-bound protocol', '<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="summary-card"><div class="card-label">Secondary market</div><div class="card-value">' + this._money(d.depth_usd) + '</div><div class="text-xs text-slate-500">' + this._e(d.status || 'unmeasured') + ' at ' + this._e(d.threshold_bps) + ' bps; tested through ' + this._money(d.tested_through_input_usd) + '</div>' + (d.is_floor === true ? '<div class="text-[11px] text-amber-700">lower bound \u2014 the crossing is above this</div>' : '') + '</div><div class="summary-card"><div class="card-label">Protocol redemption</div><div class="card-value">permissionless</div><div class="text-xs text-slate-500">Size-unbounded, fee rises with size; spot fee ' + this._pct(s.redemption_rate_pct, 3) + '</div></div></div>' + (d.basis ? '<p class="text-xs text-slate-500 mt-3 leading-relaxed">' + this._e(d.basis) + '</p>' : '') + '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Liquidity exclusions</summary><div class="mt-2">Excluded from swap depth: ' + this._e((excluded.lp_wrappers || []).join(', ') || 'none declared') + '. ' + this._e(excluded.lp_wrapper_reason || '') + ' ' + this._e(excluded.non_swap_reason || '') + '</div></details>');
     },
     _axis3PreviewPanel: function(liq, s) {
         var evidence = this._thresholdEvidence(liq, 50);
