@@ -55,6 +55,7 @@ var ASSET_RENDERERS = {
     crvusd:    typeof CrvUSDRenderer    !== 'undefined' ? CrvUSDRenderer    : null,
     usg:       typeof USGRenderer       !== 'undefined' ? USGRenderer       : null,
     bold:      typeof BOLDRenderer      !== 'undefined' ? BOLDRenderer      : null,
+    'msusd-metronome': typeof MsUSDMetronomeRenderer !== 'undefined' ? MsUSDMetronomeRenderer : null,
     usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
     syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
     syrupusdt: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
@@ -587,7 +588,7 @@ async function renderAsset(slug) {
         // Asset-specific renderer
         var renderer = findAssetRenderer(data);
         if (renderer) {
-            renderer.render(data);
+            renderer.render(data, history);
         } else {
             document.getElementById('asset-specific-panels').innerHTML = '';
         }

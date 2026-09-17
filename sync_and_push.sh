@@ -14,6 +14,14 @@ if [ "$BRANCH" != "main" ]; then
     exit 1
 fi
 
+# Metronome msUSD is produced in this repository because its four-chain RPC
+# snapshot, last-good preservation, history and dashboard are one atomic
+# monitor. A failed attempt is loud but must not prevent the sync from serving
+# the prior successful snapshot.
+if ! PYTHONPYCACHEPREFIX=/tmp/backing-monitor-pycache python3 msusd_metronome_backing_analyzer.py; then
+    echo "$(date): ERROR Metronome msUSD analyzer failed; retaining the last published snapshot" >&2
+fi
+
 # Sync backing data from PegTracker
 # ============================================================================
 # ⚠️ WAS 76 HAND-TYPED cp LINES. A new analyzer output silently never reached the
@@ -145,7 +153,7 @@ for slug in $SLUGS; do
                 _contract) ;;
                 *)
                     case "${slug}${suf}.json" in
-                        bmnr_backing.json|bmnr_backing_history.json) ;;
+                        bmnr_backing.json|bmnr_backing_history.json|msusd_metronome_backing.json|msusd_metronome_backing_history.json) ;;
                         *)
                             echo "$(date): ⚠️ SERVED WITH NO SOURCE — data/${slug}${suf}.json is live on the dashboard and NO source root has it. It is the last successful copy of a file that no longer exists upstream: unreviewable, and uncorrectable by the desk that owns it. Restore it at the producer or delete it here." >&2
                             ;;
