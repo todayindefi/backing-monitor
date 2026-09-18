@@ -3,20 +3,25 @@
   "asset": "sUSDS",
   "asset_slug": "susds",
   "chain": "ethereum",
-  "timestamp": "2026-09-18T08:52:19Z",
+  "timestamp": "2026-09-18T09:50:52Z",
   "summary": {
-    "total_supply": 3947516541.16,
+    "total_supply": 3947512454.63,
     "supply_unit": "shares",
-    "total_assets_usds": 4381446745.12,
-    "nav": 1.109924860209,
+    "total_assets_usds": 4381459486.06,
+    "nav": 1.109929236807,
     "price": 1.11,
     "paused": null
   },
   "risk_flags": [
     {
+      "severity": "info",
+      "code": "susds_usds_peg_assumed_par",
+      "message": "USDS market price unavailable; sUSDS NAV is priced against $1.00 par. A USDS depeg would not be reflected in the theoretical price this run."
+    },
+    {
       "code": "RISK_FEED_STALE",
       "severity": "warning",
-      "age_hours": 55.12,
+      "age_hours": 56.1,
       "message": "sUSDS issuer_score is from a STALE risk-feed \u2014 generated 2026-09-16T01:45:02Z (2+ days old, threshold 48h). Value shown is last known good, not confirmed current.",
       "risk_feed_key": [
         "susds",
@@ -28,23 +33,23 @@
   ],
   "vault_status": null,
   "backing": {
-    "collateral_ratio": 99.999966,
+    "collateral_ratio": 99.999988,
     "collateral_ratio_scale": "percent",
     "collateral_ratio_note": "Sub-0.001% residuals between these two independent reads reflect accrual/read timing precision, not a coverage gap.",
     "collateral_ratio_basis": "USDS balanceOf(sUSDS) / sUSDS totalAssets(). Two independent reads: the numerator is a token balance, the denominator is derived from the chi accumulator. 100% means the vault holds what its shares can claim.",
-    "total_backing": 4381445271.0,
-    "surplus_deficit": -1474.12,
+    "total_backing": 4381458955.37,
+    "surplus_deficit": -530.68,
     "breakdown": [
       {
         "label": "USDS held by vault",
-        "value": 4381445271.0,
+        "value": 4381458955.37,
         "pct": 100
       }
     ],
     "integrity": {
-      "total_assets_reported": 4381446745.12,
-      "usds_held": 4381445271.0,
-      "divergence_pct": -3.4e-05,
+      "total_assets_reported": 4381459486.06,
+      "usds_held": 4381458955.37,
+      "divergence_pct": -1.2e-05,
       "status": "ok",
       "direction": "held_below_reported",
       "note": "Signed (held - totalAssets) / totalAssets. A small NEGATIVE value is the expected state: interest accrues via chi continuously but is drawn from the vow periodically, so reported assets run slightly ahead of the balance."
@@ -53,14 +58,14 @@
     "backing_score_source": "risk-feed@2026-09-16T01:45:02Z",
     "backing_score_status": "stale",
     "backing_score_generated_at": "2026-09-16T01:45:02Z",
-    "backing_score_age_hours": 55.12
+    "backing_score_age_hours": 56.1
   },
   "dependencies": {
     "upstream": [
       {
         "name": "USDS",
         "metric": "67.1% of USDS supply",
-        "value": 4381446745.12,
+        "value": 4381459486.06,
         "source": "onchain",
         "link": "?asset=usds",
         "link_type": "internal",
@@ -148,7 +153,7 @@
       "into": "USDS",
       "gated": false,
       "gated_basis": "measured:erc4626_redeem_simulated",
-      "as_of": "2026-09-18T08:52:19Z",
+      "as_of": "2026-09-18T09:50:52Z",
       "probe": {
         "control_address": "0x000000000000000000000000000000000000dEaD",
         "vault": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
@@ -157,7 +162,7 @@
         "asset": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
         "positive_control_ok": true,
         "asset_matches_expected": true,
-        "preview_redeem_1e18": 1.1099248751461113,
+        "preview_redeem_1e18": 1.1099292517444295,
         "control_balance": 14310433653522276,
         "control_max_redeem": 14310433653522276,
         "max_redeem_uncapped": true,
@@ -181,35 +186,35 @@
     "liquidity_score_source": "risk-feed@2026-09-16T01:45:02Z",
     "liquidity_score_status": "stale",
     "liquidity_score_generated_at": "2026-09-16T01:45:02Z",
-    "liquidity_score_age_hours": 55.12
+    "liquidity_score_age_hours": 56.1
   },
   "asset_specific": {
     "type": "susds",
     "vault_state": {
-      "total_supply_shares": 3947516541.159998,
-      "total_assets_usds": 4381446745.119511,
-      "nav_usds_per_share": 1.109924860209,
+      "total_supply_shares": 3947512454.632919,
+      "total_assets_usds": 4381459486.057651,
+      "nav_usds_per_share": 1.109929236807,
       "asset": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
       "ssr_raw": 1000000001121484774769253326,
-      "chi_raw": 1109924486779858762323476868,
-      "rho": 1789721219
+      "chi_raw": 1109929102372188711487188711,
+      "rho": 1789724927
     },
     "yield": {
       "headline_apy_pct": 3.6,
       "headline_source": "onchain_ssr",
-      "realized_apy_24h_pct": 3.5997,
-      "realized_apy_7d_pct": 3.5999,
+      "realized_apy_24h_pct": 3.6002,
+      "realized_apy_7d_pct": 3.6,
       "nav_history_ref": "susds_backing_history.json"
     },
     "peg": {
       "market_price": 1.11,
       "market_price_source": "coingecko:susds",
       "premium_discount_is_measured": true,
-      "theoretical_price_assumes_usds_par": false,
-      "nav_usds_per_share": 1.109924860209,
-      "usds_peg_price": 0.99985143,
-      "theoretical_price": 1.10975996,
-      "premium_discount_pct": 0.0216,
+      "theoretical_price_assumes_usds_par": true,
+      "nav_usds_per_share": 1.109929236807,
+      "usds_peg_price": null,
+      "theoretical_price": 1.10992924,
+      "premium_discount_pct": 0.0064,
       "source": "coingecko:susds + onchain_nav"
     },
     "history_ref": "susds_backing_history.json",
@@ -253,8 +258,8 @@
   },
   "peg": {
     "market_price": 1.11,
-    "nav": 1.10975996,
-    "premium_discount_pct": 0.0216,
+    "nav": 1.10992924,
+    "premium_discount_pct": 0.0064,
     "source": "coingecko:susds + onchain_nav",
     "history_ref": "susds_backing_history.json",
     "history_field": "market_price",
@@ -262,7 +267,7 @@
     "volatility_score_source": "risk-feed@2026-09-16T01:45:02Z",
     "volatility_score_status": "stale",
     "volatility_score_generated_at": "2026-09-16T01:45:02Z",
-    "volatility_score_age_hours": 55.12
+    "volatility_score_age_hours": 56.1
   },
   "issuer": {
     "report_url": "https://tidresearch.com/reports/susds",
@@ -272,6 +277,6 @@
     "issuer_score_source": "risk-feed@2026-09-16T01:45:02Z",
     "issuer_score_status": "stale",
     "issuer_score_generated_at": "2026-09-16T01:45:02Z",
-    "issuer_score_age_hours": 55.12
+    "issuer_score_age_hours": 56.1
   }
 }
