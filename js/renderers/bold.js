@@ -6,9 +6,6 @@ var BOLDRenderer = {
     _panel: function(title, body) {
         return '<div class="panel"><div class="panel-title">' + title + '</div>' + body + '</div>';
     },
-    _axis3PreviewEnabled: function() {
-        return new URLSearchParams(window.location.search).get('axis3') === 'preview';
-    },
     _marketRungs: function(liq) {
         return (((liq || {}).depth || {}).rungs || []).filter(function(r) {
             return r && r.status === 'ok' && typeof r.size_usd === 'number' &&
@@ -23,7 +20,7 @@ var BOLDRenderer = {
         });
         return { lower: lower, upper: upper };
     },
-    _applyAxis3PreviewTile: function(liq) {
+    _applyAxis3Headline: function(liq) {
         var evidence = this._thresholdEvidence(liq, 50);
         var cards = Array.prototype.slice.call(document.querySelectorAll('#summary-cards .summary-card'));
         var card = cards.filter(function(c) {
@@ -33,23 +30,15 @@ var BOLDRenderer = {
         if (card) {
             var value = card.querySelector('.card-value');
             var sub = value && value.nextElementSibling;
-            var chip = card.querySelector('.axis-rating');
             if (value) value.textContent = evidence.lower ? '≥' + this._money(evidence.lower.size_usd) : 'unmeasured';
-            if (sub) sub.textContent = '50 bp depth floor' +
+            if (sub) sub.textContent = '0.5% depth floor' +
                 (evidence.upper ? ' · crossing below ' + this._money(evidence.upper.size_usd) : '');
-            if (chip) {
-                chip.className = 'axis-rating r-na';
-                chip.textContent = 'Preview · measured range';
-                chip.title = 'Preview only. No liquidity score is inferred from a coarse 50 bp bracket.';
-            }
         }
         var head = document.getElementById('axis-liquidity-head');
         if (head) {
             var rating = head.querySelector('.axis-rating');
             if (rating) {
-                rating.className = 'axis-rating r-na';
-                rating.textContent = 'Preview · 50 bp depth';
-                rating.title = 'Preview only. The current feed brackets but does not yet solve the 50 bp crossing.';
+                rating.title = 'Liquidity rating with the headline expressed as executable depth inside 0.5% incremental impact.';
             }
             var axisSub = head.querySelector('.axis-sub');
             if (axisSub) axisSub.textContent = 'usable market exit & primary redemption';
@@ -58,7 +47,7 @@ var BOLDRenderer = {
             });
             var note = document.createElement('div');
             note.className = 'axis-basis-note';
-            note.innerHTML = '<div class="text-[11px] text-slate-500">Preview uses 50 bp marginal sell depth; the existing 2% measure remains folded as severe-stress evidence.</div>';
+            note.innerHTML = '<div class="text-[11px] text-slate-500">Headline uses 0.5% marginal sell depth; the 2% crossing remains folded as severe-stress evidence.</div>';
             head.appendChild(note);
         }
     },
@@ -75,14 +64,10 @@ var BOLDRenderer = {
         if (backingSlot) backingSlot.innerHTML = this._branchPanel(branches, t) + this._reconciliationPanel(s, t);
 
         var liquiditySlot = document.getElementById('liquidity-extra-panels');
-        if (this._axis3PreviewEnabled()) {
-            this._applyAxis3PreviewTile(liq);
-            var liquidityBody = document.getElementById('axis-liquidity-body');
-            if (liquidityBody) liquidityBody.innerHTML = this._axis3PreviewPanel(liq, s);
-            if (liquiditySlot) liquiditySlot.innerHTML = this._stabilityPanel(branches, t);
-        } else if (liquiditySlot) {
-            liquiditySlot.innerHTML = this._exitPanel(liq, s) + this._stabilityPanel(branches, t);
-        }
+        this._applyAxis3Headline(liq);
+        var liquidityBody = document.getElementById('axis-liquidity-body');
+        if (liquidityBody) liquidityBody.innerHTML = this._axis3Panel(liq, s);
+        if (liquiditySlot) liquiditySlot.innerHTML = this._stabilityPanel(branches, t);
 
         var dependencySlot = document.getElementById('dependencies-extra-panels');
         if (dependencySlot) dependencySlot.innerHTML = this._sBoldPanel(a.sbold || {});
@@ -141,7 +126,7 @@ var BOLDRenderer = {
         var d = liq.depth || {}, ex = liq.primary_exit || {}, excluded = liq.excluded_liquidity || {};
         return this._panel('Two exits: size-bound market vs cost-bound protocol', '<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="summary-card"><div class="card-label">Secondary market</div><div class="card-value">' + this._money(d.depth_usd) + '</div><div class="text-xs text-slate-500">' + this._e(d.status || 'unmeasured') + ' at ' + this._e(d.threshold_bps) + ' bps; tested through ' + this._money(d.tested_through_input_usd) + '</div>' + (d.is_floor === true ? '<div class="text-[11px] text-amber-700">lower bound \u2014 the crossing is above this</div>' : '') + '</div><div class="summary-card"><div class="card-label">Protocol redemption</div><div class="card-value">permissionless</div><div class="text-xs text-slate-500">Size-unbounded, fee rises with size; spot fee ' + this._pct(s.redemption_rate_pct, 3) + '</div></div></div>' + (d.basis ? '<p class="text-xs text-slate-500 mt-3 leading-relaxed">' + this._e(d.basis) + '</p>' : '') + '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Liquidity exclusions</summary><div class="mt-2">Excluded from swap depth: ' + this._e((excluded.lp_wrappers || []).join(', ') || 'none declared') + '. ' + this._e(excluded.lp_wrapper_reason || '') + ' ' + this._e(excluded.non_swap_reason || '') + '</div></details>');
     },
-    _axis3PreviewPanel: function(liq, s) {
+    _axis3Panel: function(liq, s) {
         var evidence = this._thresholdEvidence(liq, 50);
         var rows = this._marketRungs(liq);
         var fees = (((liq || {}).primary_exit || {}).fee_ladder || []);
@@ -161,14 +146,14 @@ var BOLDRenderer = {
             ? this._money(evidence.lower.size_usd) + '–' + this._money(evidence.upper.size_usd)
             : 'not located';
         var asOf = ((liq.depth || {}).quote || {}).quoted_as_of || liq.as_of || 'time not published';
-        return this._panel('Usable market exit — Axis 3 preview',
+        return this._panel('Usable market exit',
             '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">' +
-            '<div class="summary-card"><div class="card-label">50 bp depth</div><div class="card-value">' + headline + '</div><div class="text-xs text-slate-500">measured floor</div></div>' +
+            '<div class="summary-card"><div class="card-label">0.5% depth</div><div class="card-value">' + headline + '</div><div class="text-xs text-slate-500">measured floor</div></div>' +
             '<div class="summary-card"><div class="card-label">Current bracket</div><div class="card-value">' + bracket + '</div><div class="text-xs text-slate-500">targeted solver not yet enabled</div></div>' +
             '<div class="summary-card"><div class="card-label">Quoted at</div><div class="card-value text-base">' + this._e(asOf) + '</div><div class="text-xs text-slate-500">routed BOLD → USDC</div></div></div>' +
             '<div class="text-sm font-semibold text-slate-700 mb-2">Market depth ladder</div>' +
             '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Sell size</th><th class="text-right">Additional impact</th><th class="text-right">Net output</th><th class="text-right">Route</th></tr></thead><tbody>' + tableRows + '</tbody></table></div>' +
-            '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Stress and methodology</summary><div class="mt-2">The current broad ladder only proves that the 50 bp crossing lies between ' + bracket + '. The existing 200 bp result remains a severe-stress measure and is not used as this preview\'s headline. Additional impact is measured relative to the smallest successful routed quote.</div></details>') +
+            '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Stress and methodology</summary><div class="mt-2">The current broad ladder only proves that the 0.5% crossing lies between ' + bracket + '. The 2% result remains a severe-stress measure and is not used as the headline. Additional impact is measured relative to the smallest successful routed quote.</div></details>') +
             this._panel('Protocol redemption — separate exit route',
                 '<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><div class="summary-card mb-3"><div class="card-label">Access</div><div class="card-value">permissionless</div><div class="text-xs text-slate-500">continuous protocol call · fee rises with size</div></div><p class="text-sm text-slate-500">BOLD is exchanged for a protocol-selected mix of WETH, wstETH and rETH. This is not the same settlement as a market sale to USDC.</p></div>' +
                 '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Redemption size</th><th class="text-right">Effective fee</th></tr></thead><tbody>' + redemptionRows + '</tbody></table></div></div>');
