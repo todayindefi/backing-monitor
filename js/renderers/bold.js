@@ -122,10 +122,12 @@ var BOLDRenderer = {
         var gap = Math.abs(Number(s.reconciliation_gap_pct || 0));
         return this._panel('Supply ↔ branch-debt reconciliation', '<div class="grid grid-cols-1 md:grid-cols-3 gap-3"><div class="summary-card"><div class="card-label">Token supply</div><div class="card-value">' + this._money(s.total_supply) + '</div></div><div class="summary-card"><div class="card-label">Summed branch debt</div><div class="card-value">' + this._money(s.total_debt) + '</div></div><div class="summary-card"><div class="card-label">Gap</div><div class="card-value ' + (limit === null ? 'text-slate-600' : (gap > limit ? 'text-red-700' : 'text-green-700')) + '">' + this._pct(s.reconciliation_gap_pct, 4) + '</div><div class="text-xs ' + (limit === null ? 'text-amber-700' : 'text-slate-400') + '">' + (limit === null ? '\u26a0\ufe0f no alert threshold published \u2014 unbanded, not clear' : 'alert above ' + this._pct(limit, 2)) + '</div></div></div><p class="text-xs text-slate-400 mt-3">This is a data-integrity invariant, not a solvency ratio.</p>');
     },
-    _exitPanel: function(liq, s) {
-        var d = liq.depth || {}, ex = liq.primary_exit || {}, excluded = liq.excluded_liquidity || {};
-        return this._panel('Two exits: size-bound market vs cost-bound protocol', '<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div class="summary-card"><div class="card-label">Secondary market</div><div class="card-value">' + this._money(d.depth_usd) + '</div><div class="text-xs text-slate-500">' + this._e(d.status || 'unmeasured') + ' at ' + this._e(d.threshold_bps) + ' bps; tested through ' + this._money(d.tested_through_input_usd) + '</div>' + (d.is_floor === true ? '<div class="text-[11px] text-amber-700">lower bound \u2014 the crossing is above this</div>' : '') + '</div><div class="summary-card"><div class="card-label">Protocol redemption</div><div class="card-value">permissionless</div><div class="text-xs text-slate-500">Size-unbounded, fee rises with size; spot fee ' + this._pct(s.redemption_rate_pct, 3) + '</div></div></div>' + (d.basis ? '<p class="text-xs text-slate-500 mt-3 leading-relaxed">' + this._e(d.basis) + '</p>' : '') + '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Liquidity exclusions</summary><div class="mt-2">Excluded from swap depth: ' + this._e((excluded.lp_wrappers || []).join(', ') || 'none declared') + '. ' + this._e(excluded.lp_wrapper_reason || '') + ' ' + this._e(excluded.non_swap_reason || '') + '</div></details>');
-    },
+    // ⚠️ _exitPanel REMOVED 2026-09-19. It was superseded by _axis3Panel but left
+    // defined and uncalled, and it still carried two fixes made on 2026-09-17 — so
+    // the file looked fixed while the live page had the defect back. Dead code that
+    // contains a fix is worse than dead code: it answers a grep. Its two caveats are
+    // now inside _axis3Panel above.
+
     _axis3Panel: function(liq, s) {
         var evidence = this._thresholdEvidence(liq, 50);
         var rows = this._marketRungs(liq);
@@ -153,14 +155,31 @@ var BOLDRenderer = {
             '<div class="summary-card"><div class="card-label">Quoted at</div><div class="card-value text-base">' + this._e(asOf) + '</div><div class="text-xs text-slate-500">routed BOLD → USDC</div></div></div>' +
             '<div class="text-sm font-semibold text-slate-700 mb-2">Market depth ladder</div>' +
             '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Sell size</th><th class="text-right">Additional impact</th><th class="text-right">Net output</th><th class="text-right">Route</th></tr></thead><tbody>' + tableRows + '</tbody></table></div>' +
+            // ⚠️ RESTORED FROM _exitPanel, WHICH THIS PANEL REPLACED. Both the
+            // is_floor caveat and the producer's own depth.basis were fixed into
+            // _exitPanel on 2026-09-17; _axis3Panel superseded it and did not carry
+            // them, so the fixes survived in code that no longer renders. DexTracker
+            // has since flipped is_floor to true, which is exactly when the caveat
+            // matters — and it was reaching nobody.
+            ((liq.depth || {}).is_floor === true
+                ? '<p class="text-xs text-amber-700 mt-3">⚠️ The depth figure above is a <strong>lower bound</strong> — a size that cleared, not the crossing itself. The true crossing is above it.</p>' : '') +
+            ((liq.depth || {}).basis
+                ? '<p class="text-xs text-slate-500 mt-2 leading-relaxed"><strong>Producer basis for the 2% figure</strong> (a different threshold from the 0.5% headline above): ' +
+                  this._e(liq.depth.basis) + '</p>' : '') +
             '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Stress and methodology</summary><div class="mt-2">The current broad ladder only proves that the 0.5% crossing lies between ' + bracket + '. The 2% result remains a severe-stress measure and is not used as the headline. Additional impact is measured relative to the smallest successful routed quote.</div></details>') +
             this._panel('Protocol redemption — separate exit route',
                 '<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><div class="summary-card mb-3"><div class="card-label">Access</div><div class="card-value">permissionless</div><div class="text-xs text-slate-500">continuous protocol call · fee rises with size</div></div><p class="text-sm text-slate-500">BOLD is exchanged for a protocol-selected mix of WETH, wstETH and rETH. This is not the same settlement as a market sale to USDC.</p></div>' +
                 '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Redemption size</th><th class="text-right">Effective fee</th></tr></thead><tbody>' + redemptionRows + '</tbody></table></div></div>');
     },
     _stabilityPanel: function(branches, t) {
-        var floor = Number(t.stability_pool_coverage_pct_lt || 0);
-        return this._panel('Stability Pool loss-absorption coverage', '<p class="text-sm text-slate-500 mb-3">Pre-funded BOLD available to absorb branch liquidations before redistribution to surviving troves.</p><div class="grid grid-cols-1 md:grid-cols-3 gap-3">' + branches.map(function(b) { var low=b.stability_pool_coverage_pct < floor; return '<div class="summary-card"><div class="card-label">' + BOLDRenderer._e(b.symbol) + '</div><div class="card-value ' + (low ? 'text-amber-700' : 'text-green-700') + '">' + BOLDRenderer._pct(b.stability_pool_coverage_pct,1) + '</div><div class="text-xs text-slate-400">warning below ' + BOLDRenderer._pct(floor,0) + '</div></div>'; }).join('') + '</div>');
+        // ⚠️ THE SITE I MISSED ON 2026-09-17. I fixed this exact `|| 0` idiom in
+        // _branchPanel and _reconciliationPanel and left it here — a THIRD consumer
+        // of the same threshold. With it absent, floor becomes 0, no pool is ever
+        // low, and the card reads "warning below 0%": an unfired check wearing a
+        // visibly wrong label. R7 — the fix is not done when the reported instance
+        // is closed.
+        var floor = (typeof t.stability_pool_coverage_pct_lt === 'number') ? t.stability_pool_coverage_pct_lt : null;
+        return this._panel('Stability Pool loss-absorption coverage', '<p class="text-sm text-slate-500 mb-3">Pre-funded BOLD available to absorb branch liquidations before redistribution to surviving troves.</p><div class="grid grid-cols-1 md:grid-cols-3 gap-3">' + branches.map(function(b) { var low = floor !== null && b.stability_pool_coverage_pct < floor; return '<div class="summary-card"><div class="card-label">' + BOLDRenderer._e(b.symbol) + '</div><div class="card-value ' + (floor === null ? 'text-slate-600' : (low ? 'text-amber-700' : 'text-green-700')) + '">' + BOLDRenderer._pct(b.stability_pool_coverage_pct,1) + '</div><div class="text-xs ' + (floor === null ? 'text-amber-700' : 'text-slate-400') + '">' + (floor === null ? '\u26a0\ufe0f no floor published \u2014 unbanded, not clear' : 'warning below ' + BOLDRenderer._pct(floor,0)) + '</div></div>'; }).join('') + '</div>');
     },
     _sBoldPanel: function(s) {
         if (!s.address) return this._panel('sBOLD downstream wrapper', '<p class="text-sm text-amber-700">sBOLD state is not published.</p>');
