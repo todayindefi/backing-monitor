@@ -3241,12 +3241,34 @@ const CommonRenderer = {
         return '';
     },
 
+    // ⚠️ ONE GATE, TWO READERS — it was written out twice and they disagreed.
+    //
+    // `_authoredBackingRating` tested the three conditions below; the axis band's chip
+    // tested the same three PLUS `collateral_ratio == null`. So the moment a ratio was
+    // present the two answered differently: the rating accepted the authored score and
+    // the chip did not, and the chip fell through to rendering that same authored score
+    // as a COMPUTED BAND — "Watch · 6/10" over an authored 5.5, provenance stripped and
+    // the number changed by the 1-5 round-trip.
+    //
+    // ⚠️ THE DECLARATION IS THE DISCRIMINATOR, NOT THE FIELD'S ABSENCE, and the producer
+    // says so: riskAnalyst's `backing_score_applies_when_note` warns that a
+    // collateral_ratio arriving LATER must not be read as superseding the declaration
+    // without first checking whether it is the blend — because the blend is exactly the
+    // figure the declaration exists to refuse. `collateral_ratio == null` tested the
+    // symptom the declaration was written to make unnecessary.
+    //
+    // Counted before changing it: two assets declare underivable (reusd-re, reusde-re)
+    // and neither publishes a ratio, so nothing on the dashboard moves today. This is a
+    // guard for the case the producer explicitly predicted.
+    _backingAuthoredDeclared(b) {
+        return !!(b && typeof b.backing_score === 'number' &&
+            b.backing_score_applies_when === 'collateral_ratio_declared_underivable' &&
+            b.collateral_ratio_basis);
+    },
+
     _authoredBackingRating(data) {
         var b = data.backing || {};
-        if (typeof b.backing_score !== 'number') return null;
-        if (b.backing_score_applies_when !== 'collateral_ratio_declared_underivable') return null;
-        // The declaration itself. Without it, stay unrated.
-        if (!b.collateral_ratio_basis) return null;
+        if (!this._backingAuthoredDeclared(b)) return null;
         // Scores are /10; the axis bands are 1-5.
         return Math.max(1, Math.min(5, Math.round(b.backing_score / 2)));
     },
@@ -3582,10 +3604,10 @@ const CommonRenderer = {
                 sub: this._backingSubText(data),
                 chip: (function(self) {
                     var b = data.backing || {};
-                    var authored = b.collateral_ratio == null &&
-                        typeof b.backing_score === 'number' &&
-                        b.backing_score_applies_when === 'collateral_ratio_declared_underivable' &&
-                        b.collateral_ratio_basis;
+                    // ⚠️ The SHARED gate — see _backingAuthoredDeclared. This used to
+                    // carry its own copy with an extra `collateral_ratio == null`, which
+                    // is how an authored 5.5 came to render as a computed "Watch · 6/10".
+                    var authored = self._backingAuthoredDeclared(b);
                     // ⚠️ Say it is authored. A fallback rendered identically to a
                     // computed band would let a judgement pass as a measurement,
                     // which is the very thing the producer's rule guards against.
