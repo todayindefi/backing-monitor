@@ -3252,6 +3252,21 @@ const CommonRenderer = {
     },
 
     backingRating(data) {
+        // ⚠️ FIXING THE TILE AND LEAVING THE SCORE IS HALF A FIX, AND THE SCORE IS WHAT
+        // THE TOP ROW COMPARES ACROSS ASSETS. Caught by running the branch above against
+        // three feed shapes: with the blended 110.7% present the VALUE rendered correctly
+        // as the zero-buffer figure while the chip still computed band 4 from the blend —
+        // a number the producer publishes with `blended_ratio_is_arithmetic_only: true`
+        // because it averages two tranches with opposite failure modes, and whose CDP half
+        // is not claimable by DUSD holders at all.
+        //
+        // Where the buffer is zero by construction, NO single ratio can be read at face
+        // value: the blend flatters, and the honest 100.00% means the opposite of what a
+        // band would score it. So the computed band is withheld and only an AUTHORED score
+        // may fill — same rule `supply_capped` applies on axis 3, and the same reason.
+        if (data.backing && data.backing.zero_buffer_by_construction === true) {
+            return this._authoredBackingRating(data);
+        }
         var sum = data.summary || {};
         var fromBacking = data.backing && data.backing.collateral_ratio != null;
         var cr = fromBacking ? data.backing.collateral_ratio : sum.collateral_ratio;
@@ -4209,7 +4224,54 @@ const CommonRenderer = {
         return parts.join(' \u00b7 ');
     },
 
+    // ⚠️ 100% IS THE MOST DANGEROUS NUMBER THIS TILE CAN RENDER, AND ONLY ON SOME ASSETS.
+    //
+    // DUSD (Alto)'s stability module holds 722,604.611770924639631386 frxUSD against
+    // exactly that many DUSD — identical to the wei. Its coverage ratio is 100.0000%
+    // and the tile's own rule paints `cr >= 100` GREEN. A reader scanning the top row
+    // sees a green 100% and reads FULLY BACKED. What it means is that every cent of
+    // frxUSD impairment is a cent of DUSD impairment with nothing in between.
+    //
+    // ⚠️ THE NUMBER AND THE FACT POINT IN OPPOSITE DIRECTIONS. That is not a ratio with
+    // a caveat — it is a ratio that misleads unless the caveat is attached to it, so a
+    // footnote does not fix it. Same treatment as `supply_capped` on axis 3: REPLACE the
+    // label and restyle the value, never annotate underneath.
+    //
+    // ⚠️ AND IT IS BY CONSTRUCTION, NOT BY POLICY — `FixedPriceStrategy` returns exactly
+    // 1e18 and `feeStrategy` is `address(0)`, so the 1:1 is the MECHANISM and cannot be
+    // widened into a cushion by a parameter change. A risk someone could decide to reduce
+    // versus a design property. riskAnalyst's words, and if one sentence survives editing
+    // it should be that one.
+    //
+    // ⚠️ A BOOLEAN, NOT A BASIS STRING. The producer published
+    // `zero_buffer_by_construction` specifically so this branch does not have to read
+    // prose to decide — the same discipline as `capacity_usd === 0` on the exit gate.
+    // ZERO existing assets carry it; counted across data/ before adding the branch.
+    _zeroBufferBacking(b) {
+        if (!b || b.zero_buffer_by_construction !== true) return null;
+        // The segment the producer declares carries no cushion. Selected on the
+        // published `buffer_pct`, not on which is largest and not by reading `name`.
+        // Ambiguity means no figure rather than a guessed one.
+        var segs = Array.isArray(b.segments) ? b.segments : [];
+        var zero = segs.filter(function (s) { return s && s.buffer_pct === 0; });
+        return { seg: zero.length === 1 ? zero[0] : null, note: b.zero_buffer_note || null };
+    },
+
     _backingValueHtml(data) {
+        // ⚠️ FIRST, ahead of the whole cr cascade below — deliberately. It has to catch
+        // BOTH shapes: a feed that publishes no single ratio (the tile would fall through
+        // to a dash) and one that publishes the blended 110.7% (which would render green
+        // and is arithmetic over two tranches with opposite failure modes — the CDP
+        // tranche's 188% is not claimable by DUSD holders generally).
+        var zb = this._zeroBufferBacking(data.backing);
+        if (zb) {
+            var pct = zb.seg && typeof zb.seg.ratio_pct === 'number' ? zb.seg.ratio_pct : null;
+            var tip = this._escapeAttr(this._mdPlain(String(zb.note || '')));
+            // ⚠️ AMBER, NEVER GREEN. Green on >=100 is the entire defect.
+            return '<span class="text-amber-700"' + (tip ? ' title="' + tip + '"' : '') + '>' +
+                   (pct != null ? this.formatPercent(pct, 2) : 'no cushion') +
+                   '</span><span class="text-amber-700 text-xs"> · 0 buffer</span>';
+        }
         var cr = (data.backing && data.backing.collateral_ratio != null)
             ? data.backing.collateral_ratio : (data.summary && data.summary.collateral_ratio);
         // No CR, but a measured partial coverage figure — show what IS known.
@@ -4271,6 +4333,19 @@ const CommonRenderer = {
 
     _backingSubText(data) {
         var b = data.backing || {};
+        // ⚠️ THE LABEL MOVES WITH THE VALUE — the rule this file states three times
+        // elsewhere. "collateral ratio" under a zero-buffer figure is precisely the
+        // reading that makes 100% mean "fully backed". The scope is named too, because
+        // the figure covers 88% of supply rather than all of it.
+        var zbSub = this._zeroBufferBacking(b);
+        if (zbSub) {
+            var nm = zbSub.seg && zbSub.seg.name ? String(zbSub.seg.name) : null;
+            // The producer's own segment label already carries its share of supply
+            // ("Universal Stability Module (frxUSD) — 88% of supply"), so it is used
+            // rather than a share this renderer would have to compute.
+            return (nm ? nm.replace(/\s+/g, ' ') : 'zero-buffer tranche') +
+                   ' · zero buffer by construction';
+        }
         // ⚠️ A null CR is not always "nothing to show". thUSD's is deliberately
         // null because TOTAL backing is unobservable — but on-chain coverage IS
         // measured, is flagged critical, and was sitting six inches below a blank
