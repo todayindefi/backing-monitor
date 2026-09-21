@@ -631,6 +631,74 @@ const CommonRenderer = {
             };
         }
         this._adaptLadder(d, block);
+        this._adaptVenues(block);
+    },
+
+    // ⚠️ SEVEN ASSETS PUBLISHED A VENUE ENUMERATION AND NOT ONE OF THEM RENDERED IT.
+    //
+    // The pools table reads `liq.pools`; liquidity/1 calls the same thing `venues`.
+    // NO liquidity/1 payload carries `pools` — checked all eight — so on a `replace`
+    // axis the table was empty for every one of bold, usg, usdm, syzusd, reusd-re,
+    // reusde-re and dusd-alto. The render manifest requires a venue breakdown
+    // wherever more than one venue exists; it could not fire. Same
+    // published-but-unrendered class the spec calls this repo's most repeated defect.
+    //
+    // ⚠️ THE ROW COUNT IS NOT THE VENUE COUNT, AND ON DUSD THAT IS THE WHOLE POINT.
+    // Four Ethereum pools hold Alto DUSD and ONE is live: the other three are a $99
+    // dust twin and two dead Uniswap pools, one of which `liquidity()=0` since block
+    // 25,329,865 while `slot0` still prints ~1.0000. Four rows with four TVL figures
+    // would read as four venues of liquidity.
+    //
+    // ⚠️ AND THE STATUS IS NOT DERIVED. There is no `live` boolean on a venue, and the
+    // only other signal is TVL magnitude — $3.3M against $99.75 — which is resolution
+    // by magnitude, the thing this codebase has been bitten by in both directions
+    // (see normalizeCollateralRatio). Parsing `depth_role` for the word "Excluded"
+    // would be the prose-parsing this file just refused to do for exit gates. So the
+    // producer's own sentence is RENDERED VERBATIM in its own column, and the live
+    // count comes from `enumeration.live_venue_count`, which is a published field.
+    _adaptVenues(block) {
+        var vs = Array.isArray(block.venues) ? block.venues : null;
+        if (!vs || !vs.length) return;
+        if (Array.isArray(block.pools) && block.pools.length) return;   // producer's own wins
+        block.pools = vs.map(function(v) {
+            var p = {
+                // ⚠️ `name` FIRST. The table's Venue column resolves
+                // `venue || project || name`, so mapping straight through would have
+                // put `project` in front and printed "curve" on all four DUSD rows
+                // instead of "DUSD/frxUSD". syzUSD names its venues `symbol` instead.
+                venue: v.name || v.symbol || null,
+                pair: v.project || null,
+                chain: v.chain || null
+            };
+            if (typeof v.tvl_usd === 'number') p.tvl_usd = v.tvl_usd;
+            // ⚠️ AN UPPER BOUND MUST NOT RENDER AS A MEASUREMENT. bold's venues carry
+            // `tvl_is_upper_bound`, and printing that figure in a TVL column exactly
+            // like usg's measured one states a precision the producer disclaimed.
+            if (v.tvl_is_upper_bound === true) p.tvl_is_upper_bound = true;
+            // ⚠️ volume_24h_usd, not volume_24h — the pools table reads the second
+            // spelling. The same two-spelling split already bit the tile's volume
+            // figure, one layer up.
+            if (typeof v.volume_24h_usd === 'number') p.volume_24h = v.volume_24h_usd;
+            else if (typeof v.volume_24h === 'number') p.volume_24h = v.volume_24h;
+            if (typeof v.balance_ratio === 'number') p.balance_ratio = v.balance_ratio;
+            if (v.depth_role) p.role = String(v.depth_role);
+            if (v.pool_id) p.pool_id = v.pool_id;
+            return p;
+        });
+
+        // ⚠️ The count and the completeness statement are PUBLISHED FIELDS, not a
+        // reading of the rows. `live_venue_count` exists only on dusd-alto today, so
+        // the line is conditional rather than assumed — an absent count must not
+        // become "0 live".
+        var e = block.enumeration || {};
+        var bits = [];
+        if (typeof e.live_venue_count === 'number' && typeof e.venue_count === 'number') {
+            bits.push(e.live_venue_count + ' of ' + e.venue_count +
+                      ' enumerated venue' + (e.venue_count === 1 ? '' : 's') +
+                      (e.live_venue_count === 1 ? ' is' : ' are') + ' live');
+        }
+        if (e.completeness) bits.push(String(e.completeness));
+        if (bits.length && !block.pools_note) block.pools_note = bits.join(' — ');
     },
 
     // liquidity/1 `depth.rungs` -> the `exit_mark.quotes` map the ladder table
@@ -6016,8 +6084,16 @@ const CommonRenderer = {
         }});
         if (anyPool('chain')) cols.push({ th: 'Chain', cls: 'text-xs text-slate-400',
             get: function(p) { return p.chain || ''; }});
+        // ⚠️ `≤` WHERE THE PRODUCER SAID UPPER BOUND. bold publishes
+        // `tvl_is_upper_bound` on its venues; rendering that identically to usg's
+        // measured TVL would assert a precision the producer explicitly disclaimed —
+        // the same rule the depth tile applies with its floor marker.
         if (anyPool('tvl_usd')) cols.push({ th: 'TVL (USD)', cls: 'text-right font-mono',
-            get: function(p) { return p.tvl_usd != null ? CommonRenderer.formatCurrencyExact(p.tvl_usd) : '—'; }});
+            get: function(p) {
+                if (p.tvl_usd == null) return '—';
+                return (p.tvl_is_upper_bound === true ? '≤' : '') +
+                       CommonRenderer.formatCurrencyExact(p.tvl_usd);
+            }});
         if (anyPool('depth_usd')) cols.push({ th: 'Depth (USD)', cls: 'text-right font-mono',
             get: function(p) { return p.depth_usd != null ? CommonRenderer.formatCurrencyExact(p.depth_usd) : '—'; }});
         if (anyPool('volume_24h')) cols.push({ th: '24h Vol', cls: 'text-right font-mono',
@@ -6029,6 +6105,13 @@ const CommonRenderer = {
             }});
         if (anyPool('balance_ratio')) cols.push({ th: 'Balance', cls: 'text-right font-mono',
             get: function(p) { return (p.balance_ratio * 100).toFixed(1) + '%'; }});
+        // ⚠️ THE ONLY HONEST WAY TO SAY "THIS ROW IS NOT LIQUIDITY". A dead pool and
+        // the one live venue are otherwise two rows that differ by a TVL magnitude,
+        // and DUSD's dead Uniswap pool still prints a ~1.0000 slot0 price that must
+        // never be quoted. The producer wrote a sentence for each; it is rendered
+        // verbatim rather than reduced to a status we would have had to infer.
+        if (anyPool('role')) cols.push({ th: 'Role', cls: 'text-xs text-slate-500',
+            get: function(p) { return p.role ? CommonRenderer._escapeAttr(p.role) : '—'; }});
 
         var poolRows = pools.map(function(p) {
             return '<tr>' + cols.map(function(c) {
