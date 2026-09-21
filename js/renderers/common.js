@@ -5320,11 +5320,31 @@ const CommonRenderer = {
               this._escapeAttr(peg.note) + '</div>'
             : '';
 
+        // ⚠️ A ONE-POINT CHART THAT DOES NOT SAY WHY READS AS A BROKEN FEED.
+        //
+        // The manifest requires the history element be rendered OR its absence
+        // declared. The existing "No peg history is published" note only fires on
+        // ZERO entries; DUSD (Alto) has one, deliberately — PegTracker refused to
+        // derive the ten-month archive until riskAnalyst's method handoff landed,
+        // because one trap in that block range would have published a ~99.5% false
+        // depeg. They declared that refusal in `history_coverage`, and nothing read
+        // it, so the page would have drawn a single dot on an empty plot with no
+        // explanation for an asset whose whole story is ten months of behaviour.
+        //
+        // ⚠️ The producer's sentence, not a count I infer. "Forward-only from
+        // 2026-09-21" is a statement about why the series starts where it does;
+        // counting the entries would only tell a reader that it is short.
+        var histCoverage = (typeof peg.history_coverage === 'string' && peg.history_coverage.trim())
+            ? '<div class="text-xs text-amber-700 mb-3" style="line-height:1.45;">⚠️ ' +
+              this._escapeAttr(peg.history_coverage.trim()) + '</div>'
+            : '';
+
         body.innerHTML =
             '<div class="panel">' +
                 '<div class="panel-title">Peg Performance</div>' +
                 metricRow +
                 pegNote +
+                histCoverage +
                 chartBlock +
             '</div>';
 
@@ -6665,6 +6685,20 @@ const CommonRenderer = {
                 (titleChip ? ' <span class="ml-2 align-middle">' + titleChip + '</span>' : '') +
             '</div>' +
             depBasis +
+            // ⚠️ AXIS 4 CARRIES NO SCORE FLEET-WIDE, AND UNTIL NOW NOTHING SAID WHY.
+            //
+            // A reader comparing axis 4's "View links →" against five numbered chips
+            // has no way to tell a deliberate abstention from a producer who has not
+            // got to it. riskAnalyst published the reason on DUSD — "NO SCORE IS
+            // PUBLISHED ON THIS AXIS BY DELIBERATE CHOICE", because one asset scoring
+            // it would redefine what every other page's blank means — and it reached
+            // no pixel. Theirs, not composed: only they can say their abstention is
+            // deliberate, and the fleet-wide convention is the one thing a renderer
+            // must not assert on their behalf.
+            ((typeof dep.coverage_note === 'string' && dep.coverage_note.trim())
+                ? '<div class="dep-block-note" style="line-height:1.45;">' +
+                  this._mdInlineHtml(dep.coverage_note.trim()) + '</div>'
+                : '') +
             '<div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Upstream — what this asset depends on</div>' +
             upBlock +
             '<div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 mt-6">Downstream — what depends on this asset</div>' +
@@ -6946,9 +6980,29 @@ const CommonRenderer = {
                   srcHtml + '</div></details>'
                 : '<div class="issuer-summary">' + this._mdInlineHtml(summary) + srcHtml + '</div>';
 
+        // ⚠️ `regulator` WAS PUBLISHED BY THREE ASSETS AND RENDERED BY NONE — and on
+        // DUSD (Alto) it is an ABSENCE, which is the case that must not be silent:
+        // "None — no regulated entity, licence or jurisdiction is disclosed". The
+        // manifest's axis-6 requirement is WHO the issuer is; `entity` answers the
+        // name and this answers whether anyone supervises them. A page that shows
+        // "Alto Foundation" and nothing else lets a reader supply their own
+        // assumption about oversight.
+        //
+        // ⚠️ RENDERED AS THE PRODUCER'S FIELD, WITH NO FRAMING ADDED. The label is
+        // "Regulator" because that is the field name; reusd-re's value is "BVI
+        // Financial Services Commission" and writing "Regulated by" around it would
+        // be this renderer asserting a supervisory relationship it has not checked.
+        // The value carries its own negation where there is one.
+        var regulatorHtml = (typeof issuer.regulator === 'string' && issuer.regulator.trim())
+            ? '<div class="text-xs text-slate-500 mb-3" style="line-height:1.45;">' +
+              '<span class="font-semibold">Regulator:</span> ' +
+              this._escapeAttr(issuer.regulator.trim()) + '</div>'
+            : '';
+
         return '<div class="panel">' +
             '<div class="panel-title">' + this._escapeAttr(info.label) + '</div>' +
             '<div class="flex flex-wrap items-center gap-2 mb-3">' + chips + '</div>' +
+            regulatorHtml +
             summaryHtml +
             factsHtml +
             // ⚠️ The methodology sentence is identical on every asset and says
@@ -7167,6 +7221,32 @@ const CommonRenderer = {
             '<div class="tw-flag">' + esc(note) + '</div>' +
             (c.no_structural_score_note
                 ? '<div class="tw-sub">' + esc(c.no_structural_score_note) + '</div>' : '') +
+            // ⚠️ `coverage_note` WAS NEVER READ ON THIS PATH, AND IT IS THE AXIS-5
+            // NOT-ESTABLISHED DECLARATION THE MANIFEST REQUIRES.
+            //
+            // The headline above reads `authority_note || no_walk_note || <generic>`.
+            // Neither of the two assets that take this path publishes either field:
+            // dusd-alto and strcx both put the declaration in `coverage_note`, which
+            // only the WALKED path (_topologyWalkHtml) renders. So both pages fell
+            // through to my generic sentence — true, but far weaker than what was
+            // published. strcx has been discarding a 1,287-char reader-facing scope
+            // limit this whole time, and DUSD's names both of its specific gaps:
+            // who can DRIVE EmergencyController 0x3c822f14, and the unresearched
+            // signer identities with no cross-protocol overlap sweep.
+            //
+            // ⚠️ COLLAPSED, NOT PROMOTED TO THE HEADLINE — same treatment and same
+            // reason as the walked path. These notes open with their own label
+            // ("READER-FACING SCOPE LIMIT.", "THE AUTHORITY HALF..."), so a
+            // first-sentence split yields the label, and judging which sentence is
+            // "label-like" is the prose-parsing this renderer does not do. The
+            // generic line stays as the face because it is accurate; the producer's
+            // full statement is one click away instead of absent.
+            (c.coverage_note
+                ? '<details class="tw-scope" open><summary class="tw-code-toggle">' +
+                  '⚠️ What this score does NOT establish — the producer’s ' +
+                  'scope limit</summary><div class="tw-sub">' +
+                  self._mdInlineHtml(c.coverage_note) + '</div></details>'
+                : '') +
             // ⚠️ Their explicit gaps, rendered as prominently as the score.
             // The producer states the DIRECTION — every open question here can
             // only push the score down — so a reader cannot mistake the gap for
