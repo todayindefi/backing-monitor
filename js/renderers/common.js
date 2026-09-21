@@ -2365,6 +2365,28 @@ const CommonRenderer = {
         var lq = data.liquidity || {};
         if (lq.two_pct_depth_status === 'not_size_responsive' ||
             lq.two_pct_depth_size_responsive === false) return null;
+        // ⚠️ AND REFUSE A FIGURE THAT IS NOT A CROSSING AT ALL. `supply_capped`
+        // means the producer measured the crossing, found it ABOVE the float that
+        // can reach the market, and published the FLOAT in `depth_usd` instead.
+        // DUSD (Alto): the -200bps crossing sits at $2.51M against $821,855 of
+        // total supply, so `depth_usd` is $23,935 of reachable float — the other
+        // 797,920 sit inside the Curve pool being quoted.
+        //
+        // The band is absolute — [2M, 1M, 500K, 100K] — so that float rates 1/5
+        // Critical, which is a grading of the asset's SIZE dressed as a grading of
+        // its book. The same payload says every unit that can be sold clears at a
+        // PREMIUM (+17.27 bps for the entire float). A 1/5 is not a conservative
+        // reading of that; it is a different question answered wrongly.
+        //
+        // ⚠️ ZERO existing assets carry this status — counted across all 22 feeds
+        // with a liquidity block and all 8 liquidity/1 overlays in data/ before
+        // adding the branch. Nothing on the dashboard is re-graded by it.
+        //
+        // Withholding the band also UNBLOCKS the authored path: `_authoredLiquidity`
+        // fills only where the band is genuinely absent, so a producer's measured
+        // judgement can now land here. Under the old behaviour the computed 1/5
+        // outranked it permanently.
+        if (lq.two_pct_depth_status === 'supply_capped') return null;
         var th = this._axisThresholds(data).liquidity.depth_usd;
         return this._rate(data.liquidity ? data.liquidity.total_2pct_depth : null, th, 'high');
     },
@@ -2564,6 +2586,29 @@ const CommonRenderer = {
         '</tr>';
     },
 
+    // ⚠️ GATED IS TWO DIFFERENT FACTS AND ONE WORD FOR BOTH IS A FALSE CLAIM.
+    //
+    // Caught by RUNNING the gate copy over the corpus, not by reading it. "Not an
+    // exit a holder can take" is exactly right for DUSD (Alto) and usg — capacity
+    // zero, no holder route at any size — and FALSE for reusde-re, whose quarterly
+    // window a holder genuinely can take: 72 claims, 1,077,727 tokens, $1,500,075
+    // settled, filled to the announced ceiling and rationed pro rata. That is
+    // restricted access, not a closed door, and calling it closed would have been
+    // this renderer asserting something the producer's own payload refutes.
+    //
+    // ⚠️ THE DISCRIMINATOR IS PUBLISHED, NOT PARSED. `capacity_usd === 0` is the
+    // producer saying there is no holder capacity at all — DexTracker and usg both
+    // spell out in `capacity_basis` that the zero is redemption capacity rather
+    // than empty reserves. tsm_rh publishes no capacity figure but declares
+    // `mechanism: "none_for_holders"`, which is the same statement. Anything that
+    // publishes real capacity is restricted. Reading the gate PROSE for words like
+    // "no" would be inferring a state that is already a field.
+    _exitClosedToHolders(pe) {
+        if (!pe || typeof pe !== 'object') return false;
+        if (pe.mechanism === 'none_for_holders') return true;
+        return pe.capacity_usd === 0;
+    },
+
     _exitScopeHtml(liq) {
         liq = liq || {};
         var pe = liq.primary_exit;
@@ -2574,6 +2619,42 @@ const CommonRenderer = {
             return ' · <span class="text-amber-700" title="The score is venue depth only. The payload represents no redemption leg at all, so the scope of this rating is unknown rather than known-narrow.">exit leg undeclared</span>';
         }
         var basis = pe.gated_basis;
+        // ⚠️ "UNPROBED" AND "CLOSED" ARE OPPOSITE FACTS AND THIS SAID THE FIRST.
+        //
+        // A `gated: true` with a declared reason is a MEASURED finding: the leg was
+        // walked and there is no holder route through it. It fell through to the
+        // final branch and rendered "exit unprobed (declared)" — telling the reader
+        // the gap is in our measurement when the gap is in the asset. tsm_rh
+        // carries that today ("the issuer provides no holder redemption mechanism")
+        // and DUSD (Alto) would join it: one Safe holds SWAPPER_ROLE and originated
+        // all 16 lifetime swaps across all three modules.
+        //
+        // ⚠️ ABOVE THE `measured` SHORT-CIRCUIT, BECAUSE THAT CHECK CONFLATES TWO
+        // STATES. It returns '' for any basis beginning "measured", which is right
+        // for susds/syzusd/usdm — measured and OPEN, nothing to qualify — and wrong
+        // for usg, whose basis reads "measured_protocol_design: USG is borrower-
+        // minted CDP debt… the protocol exposes no holder redemption". usg
+        // publishes `gate`, `capacity_usd: 0`, `capacity_basis` and `note` saying
+        // so, its venue is null so the panel's exit line never fires either, and
+        // NONE of it reached the page. Measured-and-open and measured-and-closed
+        // are not the same qualification.
+        //
+        // ⚠️ Reason accepted from `gate` as well as `gated_basis`. reusde-re
+        // declares its gate in `gate` and nothing in `gated_basis`, so requiring
+        // the latter would keep calling a documented quarterly window "asserted,
+        // basis undeclared" — penalising the field name rather than the disclosure.
+        //
+        // ⚠️ ONE DIRECTION ONLY, and it is the same asymmetry the `gated: false`
+        // suppression on the panel's venue line is built on: saying an exit is
+        // CLOSED cannot overstate how easily a holder leaves. `gated: false` stays
+        // withheld pending the usdm dispute.
+        if (pe.gated === true && (basis || pe.gate)) {
+            return ' · <span class="text-amber-700" title="' + this._escapeAttr(
+                    [pe.gate, pe.gated_basis, pe.capacity_basis, pe.note].filter(Boolean).join(' — ')) +
+                '">' + (this._exitClosedToHolders(pe)
+                    ? 'no holder exit through this leg (measured)'
+                    : 'holder exit restricted (measured)') + '</span>';
+        }
         if (typeof basis === 'string' && basis.indexOf('measured') === 0) return '';
         // ⚠️ A boolean gated with no basis is an ASSERTION, not an unprobed leg.
         // susds publishes gated: false and no basis at all — calling that
@@ -2882,6 +2963,27 @@ const CommonRenderer = {
         }
         if (st === 'not_size_responsive' || liq.two_pct_depth_size_responsive === false) {
             return wrap('no depth curve \u2014 this figure bounds nothing', 'text-amber-700');
+        }
+        // \u26a0\ufe0f THIS FIGURE IS A FLOAT, NOT A CROSSING, AND THE FALLBACK BELOW SAID SO
+        // IN GREY. `if (st) return wrap(st.replace(/_/g,' '), 'text-slate-500')`
+        // renders "supply capped" in the BENIGN class with the basis on hover only
+        // \u2014 the same styling as "crossing solved", which is the opposite kind of
+        // fact. The reader sees a dollar figure under a "2% depth" label and a
+        // neutral grey word beneath it.
+        //
+        // Named explicitly, in amber, with the crossing quoted where the producer
+        // published one, so the two numbers cannot be confused for each other.
+        if (st === 'supply_capped') {
+            // \u26a0\ufe0f Read, never derived. DexTracker publishes the real crossing in a
+            // SEPARATE object precisely so the float in `depth_usd` is not mistaken
+            // for it; recomputing it from the rungs would be deriving what the
+            // producer measured and bisected.
+            var cross = liq.depth && liq.depth.curve_crossing_above_supply;
+            var crossTxt = (cross && typeof cross.depth_usd === 'number')
+                ? ' \u2014 the 2% crossing sits above it at ' +
+                  (cross.is_floor === true ? '\u2265' : '') + this.formatCurrency(cross.depth_usd)
+                : '';
+            return wrap('reachable float, not a depth crossing' + crossTxt, 'text-amber-700');
         }
         if (st === 'quote_failed') {
             return wrap('floor \u2014 the deeper rung returned a broken route', 'text-amber-700');
@@ -3314,6 +3416,10 @@ const CommonRenderer = {
         // bracketed $25M.
         var dUnresponsive = dStatus === 'not_size_responsive' ||
                             liq.two_pct_depth_size_responsive === false;
+        // ⚠️ THE LABEL MOVES WITH THE VALUE — and under `supply_capped` the value
+        // stops being a 2% depth. See the sub-line below: the prefix is REPLACED,
+        // not extended, which is the rule the `exitAsValue` case already follows.
+        var dSupplyCapped = dStatus === 'supply_capped';
         var dFloor = !dUnresponsive &&
                      (liq.total_2pct_depth_is_floor === true ||
                       dStatus === 'ladder_exhausted' || dStatus === 'quote_failed');
@@ -3361,7 +3467,18 @@ const CommonRenderer = {
                 ? 'of tranche per ' +
                   this._escapeAttr(String(liq.primary_exit.cadence || 'period').replace(/ly$/, '')) +
                   ' — primary exit, capped · venue depth not measured'
-                : '2% depth' + dWord + ' · ' + this._volumeSubHtml(liq) + exitScope);
+                // ⚠️ Same replacement, second case. A `supply_capped` figure under
+                // a "2% depth" label is the reUSDe mislabel in the other direction:
+                // there the value was a redemption cap, here it is the float that
+                // can reach the market, and NEITHER is a crossing. The tooltip
+                // carries the producer's own basis; `_depthQualifierHtml` renders
+                // the crossing that does sit above it.
+                : (dSupplyCapped
+                    ? '<span class="text-amber-700" title="' +
+                          this._escapeAttr(String(liq.two_pct_depth_basis || '')) +
+                      '">float that can reach the market — not a 2% depth</span> · ' +
+                      this._volumeSubHtml(liq) + exitScope
+                    : '2% depth' + dWord + ' · ' + this._volumeSubHtml(liq) + exitScope));
         // Say WHY it is unrated, or an honest blank reads as a missing feed.
         if (this._depthContradictedByLadder(data)) {
             liqSub = '<span class="text-amber-700">depth exceeds the 2% crossing in its own ladder</span>';
@@ -5732,13 +5849,75 @@ const CommonRenderer = {
         // rather than pool depth. Generic: any such asset has this shape and
         // total_2pct_depth: null stays correct for all of them.
         var pe = liq.primary_exit;
+        // \u26a0\ufe0f A NAMED VENUE WITH THE GATE SUPPRESSED READS AS AN AVAILABLE EXIT,
+        // AND THAT IS THE WORST THING THIS PANEL CAN DO.
+        //
+        // The suppression below is right about `gated: false` and was applied in
+        // BOTH directions, so a measured, closed, capacity-zero leg rendered as
+        // "Primary exit: <venue>" with nothing after it. DUSD (Alto) is the case
+        // that forced this: `venue: "Alto Universal Stability Module (frxUSD)"`,
+        // `gated: true`, `capacity_usd: 0`, and a `gate` reading "No holder
+        // redemption. Only the Alto treasury Safe can swap DUSD to frxUSD at par."
+        // The page would have named the module and said none of the rest.
+        //
+        // \u26a0\ufe0f AND IT FIRES WITHOUT A VENUE. usg and tsm_rh both publish `venue:
+        // null` with `gated: true` and a full gate/capacity_basis/note, so the
+        // whole block was skipped by the `pe.venue || pe.into` guard \u2014 the
+        // articulate "there is no holder exit by design" reached nothing at all.
+        // A gate is a fact about the asset whether or not a venue is named.
+        //
+        // \u26a0\ufe0f Same one-direction rule as _exitScopeHtml: `gated: true` only.
+        // Rendering "closed" cannot overstate a holder's options; rendering the
+        // disputed `gated: false` as open can, and still does not render.
+        var gateHtml = '';
+        if (pe && pe.gated === true) {
+            // \u26a0\ufe0f Producer text, not ours. `gate` is a sentence written by whoever
+            // walked the leg; paraphrasing it here would be this repo naming a
+            // mechanism it did not measure.
+            var gateWhy = pe.gate || pe.gated_basis;
+            // \u26a0\ufe0f `capacity_usd: 0` NEEDS ITS BASIS OR IT READS AS EMPTY RESERVES.
+            // DexTracker says it outright \u2014 "Zero HOLDER redemption capacity, not
+            // zero reserves" \u2014 and usg says the same in its own words. A bare "$0"
+            // beside a fully-reserved module is a solvency claim we did not make.
+            var capTxt = (pe.capacity_usd === 0)
+                ? ' <span class="font-semibold">Capacity $0.</span>' : '';
+            // \u26a0\ufe0f CLOSED vs RESTRICTED \u2014 see _exitClosedToHolders. reusde-re's
+            // window has been taken, so "not an exit a holder can take" is false
+            // there; the producer's own terms follow either way.
+            var closed = this._exitClosedToHolders(pe);
+            gateHtml =
+                '<div class="text-xs text-amber-700 mt-1" style="line-height:1.45;">' +
+                    '\u26a0\ufe0f <span class="font-semibold">Gated \u2014 ' +
+                    (closed ? 'not an exit a holder can take.'
+                            : 'restricted, not open on demand.') + '</span>' +
+                    capTxt +
+                    (gateWhy ? ' ' + this._escapeAttr(String(gateWhy)) : '') +
+                    (pe.capacity_basis ? ' ' + this._escapeAttr(String(pe.capacity_basis)) : '') +
+                    (pe.note ? ' ' + this._escapeAttr(String(pe.note)) : '') +
+                '</div>';
+        }
         var exitLine = '';
-        if (pe && (pe.venue || pe.into)) {
+        if (pe && (pe.venue || pe.into || gateHtml)) {
             exitLine =
                 '<div class="text-sm text-slate-700 dark:text-slate-200 mt-3">' +
                     '<span class="font-semibold">Primary exit:</span> ' +
-                    this._escapeAttr(pe.venue || 'venue not named') +
+                    // \u26a0\ufe0f Not "venue not named" when the reason it is unnamed is that
+                    // there IS none. usg's venue is null BY DESIGN and the gate line
+                    // below says why; "venue not named" would read as a gap in the
+                    // feed rather than as the finding.
+                    // ⚠️ "none for holders" only where the gate is CLOSED. A
+                    // restricted-but-real window with an unnamed venue is an
+                    // unnamed venue, not an absent exit. No asset has that shape
+                    // today (usg and tsm_rh are the two venue-less gates, both
+                    // closed) — the branch is here so the first one does not
+                    // inherit the wrong word.
+                    (pe.venue
+                        ? this._escapeAttr(pe.venue)
+                        : ((gateHtml && this._exitClosedToHolders(pe))
+                            ? '<span class="text-slate-500">none for holders</span>'
+                            : 'venue not named')) +
                     (pe.into ? ' \u2192 ' + this._escapeAttr(pe.into) : '') +
+                    gateHtml +
                     // ⚠️ pe.gated is DELIBERATELY NOT RENDERED. usdm publishes
                     // gated:false while riskAnalyst's report says the redemption
                     // path is gated to allowlisted strategies. One is wrong and

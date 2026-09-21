@@ -1,16 +1,23 @@
 ---
 title: DUSD (Alto) dashboard — plan and resume context
 repo: backing-monitor
-status: PLAN rev 2. Written 2026-09-21, updated same day with riskAnalyst's answers to all six
-  questions. NOTHING BUILT. ⚠️ A GO/NO-GO IS OPEN WITH THE USER — see §7.
+status: PLAN rev 3. Written 2026-09-21; rev 2 added riskAnalyst's answers to all six questions;
+  rev 3 records the FIRST CODE SHIPPED — four axis-3 renderer fixes in common.js (§8) — and
+  corrects two stale claims rev 2 carried. STILL NO DUSD PAGE: the asset is NOT registered and
+  PegTracker has published no backing feed. ⚠️ THE GO/NO-GO IS STILL OPEN — see §7.
 ---
 
 # 0 ▶ START HERE
 
 **Task:** build a six-axis dashboard for **DUSD (Alto)**, slug **`dusd-alto`**.
 
-**State: nothing built. Not registered.** Three of four producers have already delivered; this is
-**mostly a render job**, same shape as BOLD.
+**State: not registered, no page. But the renderer work is DONE** — see §8. Three of four
+producers have already delivered; this is **mostly a render job**, same shape as BOLD.
+
+⚠️ **§8 SHIPPED WHILE §7 IS STILL OPEN, AND THAT IS DELIBERATE.** The four fixes are generic
+axis-3 corrections that DUSD forced out into the open; they stand on their own and one of them
+corrected a live usg page. **None of it registers the slug or creates a DUSD page.** Building the
+frame correctly is not the same decision as pointing it at this asset.
 
 ✅ **All six questions ANSWERED by riskAnalyst 2026-09-21 — see §4.** ⚠️ **The only thing blocking
 is a GO/NO-GO with the user: §7.**
@@ -72,6 +79,19 @@ PegTracker    ✅ DUSD_Alto LIVE in data/peg_tracker_latest_usd.json
 DexTracker    ✅ data/liquidity/dusd_alto_liquidity.json · liquidity/1 · 2026-09-21T01:35:43Z
                  depth · primary_exit · downstream_route_legs · regimes · venues ·
                  excluded_liquidity · axis_binding_constraint · consumer_status
+              ✅ liquidity/1 IS ALREADY ADOPTED by common.js — ADOPTED_OVERLAY_SCHEMAS,
+                 mode `replace`, payload `flat`, since 2026-09-03. No adoption work needed.
+              ⚠️ IT CARRIES max_age_days: 7 AND REPLACE SUPPRESSES THE BASE FEED. Past the
+                 horizon the overlay is refused and axis 3 falls back to the base block —
+                 which for DUSD has NO depth at all. DexTracker declares
+                 `refresh_cadence: "daily"` but liquidity_payload.py is on no cron and is
+                 an assembler that cannot compute depth; every payload is hand-run. Assume
+                 this file goes stale unless someone re-runs it.
+              ⚠️ REPLACE ALSO DELETES WHAT IS NOT MAPPED. `_adaptSchema` translates six
+                 fields plus the ladder and bracket. `venues[]`, `enumeration`, `regimes`,
+                 `downstream_route_legs` and `excluded_liquidity` reach `data.liquidity`
+                 and render NOWHERE — including the +17.27bps whole-float exit that §3
+                 says to lead with. That is the bespoke-panel question, still open.
 
 riskAnalyst   ✅ assets/dusd-alto.md (356 lines, full assessment, revised 2026-09-21)
                  peg 5.5 · backing 5.5 · underlying 4.5 · liquidity 5.5 · structural 5.0 ·
@@ -267,20 +287,33 @@ to test any of it. **That is why the profile is flat: nothing is broken and noth
 
 ```
 0  register dusd-alto in data/assets.json
-   ⚠️ AND add cp lines to sync_and_push.sh — explicit allowlist; a new asset's JSONs
-   SILENTLY never arrive until added. Blocked Ethena until 4975b236.
-   ⚠️ THREE paths: PegTracker (peg + backing when it exists), DexTracker
-   data/liquidity/dusd_alto_liquidity.json (SUBDIR), security_analyst topology if commissioned.
+   ✅ THAT IS THE WHOLE OF STEP 0. **rev 2's "add cp lines to sync_and_push.sh" IS STALE
+   AND WAS WRONG WHEN WRITTEN.** The script is no longer an explicit cp allowlist: it is
+   SUFFIXES × SLUGS, where SLUGS is read from assets.json (dashes → underscores) and the
+   suffixes are searched across THREE source roots —
+       /home/danger/PegTracker/data
+       /home/danger/DexTracker/data/liquidity
+       /home/danger/riskAnalyst/data/axes
+   `_liquidity` × `dusd_alto` already resolves to DexTracker's file. **Registering the slug
+   wires the entire file set with zero edits to the sync.** Verified by reading the script,
+   not inferred from the Ethena history that produced the old warning.
    ⚠️ Registering expands riskAnalyst's audit scope — their checker reads our assets.json.
    TELL THEM BEFORE, not after.
+   ⚠️ COPYING IS PUBLISHING. The same script commits and pushes data/ to a public site
+   minutes later; there is no review step between a producer writing a file and a reader
+   seeing it. Registering is what starts that, so it waits on §7.
 
 ⚠️ **BEFORE ANY SCORING WIRE-UP: `axis_thresholds` are DESCENDING.** `cutoffs[0]` is the 5/5
 floor. **A reversed array does not error — it silently scores 5/5.** (riskAnalyst, 2026-09-21.)
 
-1  decide BESPOKE vs GENERIC.
-   ⚠️ RECOMMENDATION: GENERIC. Small asset, mostly standard blocks, and bespoke is where
-   this estate's defects cluster. BOLD went bespoke and was fine, but BOLD had a 3-branch
-   table with no generic equivalent; DUSD's custom content is thinner.
+1  ✅ DECIDED 2026-09-21: GENERIC, no dusd.js. Done — see §8.
+   The deciding argument was NOT "less code". Three of the four defects generic would have
+   shipped (§8 A, B, C) live in code that runs BEFORE any asset renderer: the axis-3 score
+   is computed in common.js and a bespoke file can only reach into the DOM and overwrite
+   the card text afterwards, which is what bold.js:_applyAxis3Headline actually does. A
+   bespoke file would have been the more expensive route to a less correct page, and would
+   have left the same landmine armed for the next asset — as it was for usg, which had been
+   silently carrying two of them.
 
 2  PegTracker: emit the `peg` axis block.
    ⚠️ ONLY `peg` is strictly blocking — hasAxisBlocks() gates the WHOLE frame on data.peg.
@@ -298,6 +331,10 @@ floor. **A reversed array does not error — it silently scores 5/5.** (riskAnal
 ---
 
 # 6. What I would NOT build
+
+✅ **The first two are now ENFORCED IN CODE, not left as intentions — see §8 A and D.** A rule that
+lives only in a plan file is a rule the next renderer breaks. The rest still bind on whoever builds
+the page.
 
 ⚠️ **No `primary_exit` redemption route.** It is gated with capacity 0. **Rendering it as an exit
 would be the single worst thing this page could do** — the direct analogue of BOLD's spot
@@ -342,3 +379,128 @@ not a free action.
 
 ⚠️ **riskAnalyst was explicit: "Nothing here is an authorisation to build."** Their user asked them
 to plan and brief; **the decision to render is between this repo and its user.**
+
+---
+
+# 8. ✅ SHIPPED 2026-09-21 — four axis-3 fixes in js/renderers/common.js
+
+**What this is:** the four defects a generic render of DUSD would have shipped, found by dry-running
+the real `dusd_alto_liquidity.json` through common.js's read paths. **All four are generic** — DUSD
+is the forcing case, not the beneficiary. **No DUSD page exists; nothing here registers the slug.**
+
+```
+A  primary_exit rendered as a NAMED VENUE with the gate suppressed   _renderLiquiditySection
+B  "exit unprobed (declared)" on a measured, closed leg              _exitScopeHtml
+C  1/5 Critical computed from a figure that is not depth             liquidityRating
+D  that figure printed under a "2% depth" label                      renderAxisBand + qualifier
+```
+
+## A · the gate renders, in ONE direction only
+
+`pe.gated` was suppressed in **both** directions. The suppression is right about `gated: false` —
+usdm publishes `false` while riskAnalyst says the path is allowlisted, and asserting "open to any
+holder" is the dangerous direction. Applied to `gated: true` it produced **"Primary exit: Alto
+Universal Stability Module (frxUSD)"** and nothing else, on a leg with capacity 0 that no holder has
+ever used. **`gated: false` still does not render. The usdm dispute is untouched.**
+
+⚠️ **It also fires with no venue.** usg and tsm_rh publish `venue: null` + `gated: true` + a full
+gate/capacity_basis/note, and the whole block was skipped by a `pe.venue || pe.into` guard. **A gate
+is a fact about the asset whether or not a venue is named.**
+
+⚠️ **`capacity_usd: 0` ships with its basis.** A bare "$0" beside a fully-reserved module is a
+solvency claim we did not make; DexTracker and usg both say so in their own words.
+
+## B · closed ≠ unprobed, and it sits ABOVE the `measured` short-circuit
+
+`_exitScopeHtml` returned `''` for any `gated_basis` starting `"measured"`. Correct for
+susds/syzusd/usdm — measured and **open**, nothing to qualify — and wrong for usg, whose basis reads
+`measured_protocol_design: … the protocol exposes no holder redemption`. **Measured-and-open and
+measured-and-closed are not the same qualification.** Reason is accepted from `gate` as well as
+`gated_basis`, so reusde-re is not penalised for the field name it used.
+
+## C · refuse to rate a float as depth — and that UNBLOCKS the authored path
+
+`supply_capped` means the producer measured the crossing, found it above the reachable float, and
+published **the float**. The band is absolute `[2M, 1M, 500K, 100K]`, so $23,935 rated **1/5
+Critical** — a grading of the asset's *size* dressed as a grading of its book, on a payload whose own
+numbers say the entire float exits at **+17.27 bps**.
+
+✅ **Counted before committing: ZERO of the 22 feeds with a liquidity block and ZERO of the 8
+`liquidity/1` overlays carry `supply_capped`. Nothing is re-graded.**
+
+✅ **The band is now withheld, so `_authoredLiquidity` can fill it.** Under the old behaviour the
+computed 1/5 outranked riskAnalyst's 5.5/10 **permanently** — "the computed band always wins".
+
+⚠️ **Accepted cost:** `_depthShareHtml` refuses to divide a number it will not rate, so DUSD loses
+its "2.9% of supply" line. Owner's call 2026-09-21: **respect the rule.** Running it showed the
+existing copy would have read **"≈ 2.9% of supply would clear at 2% depth"** — flatly false here,
+where the 2% crossing is at $2.5M. The rule was protecting against exactly this.
+
+## D · the label moves with the value
+
+Sub-line prefix **replaced**, never extended — the rule the `exitAsValue` case already follows —
+with *"float that can reach the market — not a 2% depth"*, producer basis on hover. The qualifier
+was falling to a grey catch-all (`text-slate-500`, the same style as "crossing solved", which is the
+opposite kind of fact); it is now amber and names the real crossing, **read** from
+`depth.curve_crossing_above_supply` rather than recomputed from the rungs.
+
+## ⚠️ The near-miss, and it was caught by RUNNING, not reading
+
+The first cut of A/B said **"not an exit a holder can take"** on every `gated: true`. **False for
+reusde-re**, whose quarterly window a holder genuinely can take: 72 claims, 1,077,727 tokens,
+$1,500,075 settled, filled to the ceiling and rationed pro rata. **I would have shipped an invented
+fact onto a page** — the copy read as considered and was wrong about the one asset that disproves it.
+
+✅ Split into **closed** vs **restricted** on a PUBLISHED discriminator — `_exitClosedToHolders`:
+`capacity_usd === 0` or `mechanism: "none_for_holders"`. **Not parsed from the gate prose.** Reading
+the sentence for words like "no" would be inferring a state that is already a field.
+
+## Verification — and it could have come out otherwise
+
+Probe: `common.js` loaded in node against a stubbed DOM, each registered asset's data rebuilt through
+the **real** `mergeAxisOverlays`, then the **real** `renderAxisBand` and `_renderLiquiditySection`
+run and diffed against the pre-edit file from git.
+*(⚠️ `const CommonRenderer` is a lexical binding — it never lands on a vm sandbox object. An export
+epilogue is appended to the source.)*
+
+```
+29 assets probed (2 legacy skipped: mstr, bmnr — no axis blocks, correct)
+ 3 changed:  dusd-alto (target) · usg (published, user approved) · reusde-re (staged)
+26 unchanged — INCLUDING usdm, susds, syzusd, bold, the gated:false / measured-open cases
+```
+
+**Pre-edit run reproduced all four defects verbatim**, including `Primary exit: Alto Universal
+Stability Module (frxUSD)` with nothing after it — §6's forbidden render, confirmed by execution
+rather than by reading.
+
+**usg, the collateral fix (approved by the user before shipping):** it publishes `gated: true`,
+`capacity_usd: 0`, a gate sentence and a capacity_basis, and **because its venue is null, none of it
+reached the page.** It now reads *"Primary exit: none for holders — ⚠️ Gated … Capacity $0 …"*.
+
+⚠️ **One false alarm, dismissed by checking:** the ladder shows `$1.0K → 0.0 bps` where the payload's
+`slippage_bps` is 17.88. **Not a defect** — DexTracker also publishes `slippage_bps_debiased: 0.0`
+and the renderer correctly prefers it, per its own documented usdm rule. My first read of the rung
+sample was truncated before that field.
+
+## ⚠️ Known gap, reported not fixed
+
+DUSD's liquidity chip now reads **"Not rated" with an EMPTY tooltip**. The *why* is on the tile
+sub-line, which is how the other withheld cases carry it, and one existing asset
+(msusd-metronome) already renders exactly this — so it is the established pattern, not a
+regression. **But the backing axis has `backingUnratedReason` and liquidity has no equivalent.**
+Closing it touches another published page and is outside the A–D scope; it is a separate change.
+
+⚠️ **This resolves itself the moment riskAnalyst publishes `dusd_alto_axis_basis.json`** — they have
+NO overlay file for dusd today (`~/riskAnalyst/data/axes/` has nothing), which is why every axis
+would currently fall to auto-rating. With the band withheld, their authored 5.5/10 will land as
+"Authored 5.5/10" instead of being outranked.
+
+## What is still blocking a DUSD page
+
+```
+1  §7 GO/NO-GO — unanswered. Registering is publishing.
+2  PegTracker: NO dusd_alto_backing.json. renderAsset throws without it and
+   hasAxisBlocks gates the whole six-axis frame on data.peg. THE ENTIRE CRITICAL PATH.
+   Renderer work is hours; this handoff is the schedule.
+3  riskAnalyst: no axis_basis / issuer / contract_overlay for dusd-alto.
+```
