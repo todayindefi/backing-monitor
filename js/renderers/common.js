@@ -4333,6 +4333,28 @@ const CommonRenderer = {
                     this.formatPercent(ap, 2) + '</span>' +
                     (below ? '<span class="text-amber-700 text-xs"> \u26a0\ufe0f</span>' : '');
             }
+            // ⚠️ A DASH IS NOT A RENDER OF "NON-DERIVABLE" — AND THE PRODUCER SAID WHY.
+            //
+            // The manifest's axis-2 row is "coverage figure, OR non-derivable + basis",
+            // under a governing rule that every element is rendered or its absence is
+            // DECLARED. A bare em-dash declares nothing: it reads as a feed that failed,
+            // which is the opposite of a producer who deliberately refused a figure.
+            //
+            // DUSD (Alto) surfaced it. PegTracker publishes `collateral_ratio: null` with
+            // a basis saying no single safety ratio exists for the asset — the 100%
+            // tranche has zero buffer and the CDP collateral is isolated and not
+            // generally claimable — and the tile rendered "—". reusde-re and susdai
+            // publish a basis too and have been showing a dash all along.
+            //
+            // ⚠️ Gated on the BASIS EXISTING, so it never turns a merely-empty feed into
+            // a claim that somebody decided something. bmnr, cusd and strc publish no
+            // basis and keep their dash, which for them is the honest render.
+            var crBasis = data.backing && data.backing.collateral_ratio_basis;
+            if (crBasis) {
+                return '<span class="text-slate-500" title="' +
+                    this._escapeAttr(this._mdPlain(String(crBasis))) +
+                    '">not derivable</span>';
+            }
             return '—';
         }
         var cls = cr >= 100 ? 'text-green-600' : 'text-red-600';
@@ -4386,6 +4408,14 @@ const CommonRenderer = {
                 (b.attachment_point_norm_pct != null
                     ? ' \u00b7 ' + b.attachment_point_norm_pct + '% norm' : '') +
                 ' \u2014 no collateral ratio derivable';
+        }
+        // ⚠️ The label moves with the value here too — "collateral ratio" under the
+        // words "not derivable" is a caption for a number that is not there. Says what
+        // the state IS (declared, with a basis) rather than naming the absent quantity.
+        if (b.collateral_ratio == null && (data.summary && data.summary.collateral_ratio) == null &&
+            b.on_chain_coverage_display_pct == null &&
+            typeof b.attachment_point_pct !== 'number' && b.collateral_ratio_basis) {
+            return 'no single ratio — declared underivable';
         }
         var sd = (b.surplus_deficit != null)
             ? b.surplus_deficit : (data.summary && data.summary.surplus_deficit);
