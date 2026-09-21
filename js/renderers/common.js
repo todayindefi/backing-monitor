@@ -4987,6 +4987,7 @@ const CommonRenderer = {
         // axis 6's "Issuer".
         var depChip = this.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies');
         this._renderAxisHead('dependencies', 4, 'Dependencies', upSub + ' \u00b7 ' + downSub, depChip, data.dependencies);
+        this._renderCdpMarketsSection(data);
         this._renderDependenciesSection(data);
         this.loadCommonModeExposure(data);
 
@@ -6484,6 +6485,77 @@ const CommonRenderer = {
             statRow + this.exitCapacityHtml(liq) + exitLine + ladderBlock +
             this._depthShareHtml(data) + poolBlock + poolsNote + chainBlock +
         '</div>';
+    },
+
+    // ⚠️ SIX ISOLATED MARKETS, EACH WITH ITS OWN ORACLE, PUBLISHED AND RENDERING
+    // NOWHERE. The last item from DUSD's published-vs-DOM diff.
+    //
+    // The minted-side breakdown shows the 88/12 split, which is the partition. It says
+    // nothing about the 12%: that tranche is SIX separate AltoMintMarkets with
+    // independent collateral, independent ratios from 128% to 255%, and each priced by
+    // its OWN Alto oracle. "CDP ~188%" is an average over six books that cannot
+    // cross-subsidise — isolation is the design, so the aggregate is the least
+    // informative view of it.
+    //
+    // ⚠️ `axis-backing-body` is empty for every asset today (checked: bold, usg, usdai
+    // all render 0 chars there — backing content lives in the main grid). Filling it
+    // only where `backing.cdp.markets[]` exists is data-gated and additive; no existing
+    // page changes. One asset publishes this field.
+    //
+    // ⚠️ THE ORACLE COLUMN IS THE POINT, not decoration. riskAnalyst's coverage_note
+    // says these oracles "were read but not audited", and the collateral column is
+    // therefore valued the way ALTO values it, not independently. A ratio table without
+    // that attribution invites a reader to treat 255% as verified headroom.
+    _renderCdpMarketsSection(data) {
+        var body = document.getElementById('axis-backing-body');
+        if (!body) return;
+        var cdp = (data.backing || {}).cdp;
+        var mkts = cdp && Array.isArray(cdp.markets) ? cdp.markets : null;
+        if (!mkts || !mkts.length) return;
+        var self = this;
+        var esc = function (x) { return self._escapeAttr(String(x == null ? '—' : x)); };
+        // Descending by debt: the reader's question is which book carries the exposure.
+        var rows = mkts.slice().sort(function (a, b) {
+            return (b.debt || 0) - (a.debt || 0);
+        }).map(function (m) {
+            // ⚠️ `ratio` is a MULTIPLE here (1.2763…), declared by cdp.ratio_scale.
+            // Rendering it as a percent without the ×100 is the scale bug this repo
+            // has normalizeCollateralRatio for; rendering it as "1.28" beside other
+            // assets' "128%" is the other half of the same confusion.
+            var pct = typeof m.ratio === 'number' ? m.ratio * 100 : null;
+            // Thin, not healthy: these are liquidatable books, and the reader cannot
+            // tell 128% from 255% by colour unless the colour means something.
+            var cls = pct == null ? '' : (pct < 130 ? 'text-amber-700' : 'text-slate-700');
+            return '<tr>' +
+                '<td class="font-medium">' + esc(m.collateral) + '</td>' +
+                '<td class="text-right font-mono">' + (typeof m.debt === 'number'
+                    ? self.formatCurrencyExact(m.debt) : '—') + '</td>' +
+                '<td class="text-right font-mono">' + (typeof m.coll_value === 'number'
+                    ? self.formatCurrencyExact(m.coll_value) : '—') + '</td>' +
+                '<td class="text-right font-mono ' + cls + '">' +
+                    (pct == null ? '—' : pct.toFixed(1) + '%') + '</td>' +
+                '<td class="text-xs text-slate-500">' + esc(m.oracle) + '</td>' +
+            '</tr>';
+        }).join('');
+        body.innerHTML =
+            '<div class="panel">' +
+                '<div class="panel-title">CDP mint markets — the 12% tranche, ' +
+                    mkts.length + ' isolated books</div>' +
+                // ⚠️ The producer's own basis, which says what the aggregate hides.
+                (cdp.ratio_basis
+                    ? '<div class="text-xs text-slate-500 mb-3" style="line-height:1.45;">' +
+                      esc(cdp.ratio_basis) + '</div>' : '') +
+                '<div class="data-table-scroll"><table class="data-table"><thead><tr>' +
+                    '<th>Collateral</th><th class="text-right">DUSD debt</th>' +
+                    '<th class="text-right">Collateral value</th>' +
+                    '<th class="text-right">Ratio</th><th>Priced by</th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+                '<div class="text-xs text-amber-700 mt-2" style="line-height:1.45;">' +
+                    '⚠️ Isolated per collateral: a surplus in one book is NOT available to ' +
+                    'cover a shortfall in another, and none of it is a general claim for ' +
+                    'DUSD holders — it backs each market’s own borrowers.' +
+                '</div>' +
+            '</div>';
     },
 
     _renderDependenciesSection(data) {
