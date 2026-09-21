@@ -4536,7 +4536,35 @@ const CommonRenderer = {
         if (info.inheritedFrom) parts.push(info.label + ' score inherited from ' + info.inheritedFrom);
         if (info.status && info.status !== 'ok') parts.push('Status: ' + info.status.replace(/_/g, ' '));
         if (info.generatedAt) parts.push('Generated ' + this.formatDate(info.generatedAt));
-        if (info.ageHours != null) parts.push('Age ' + Number(info.ageHours).toFixed(1) + 'h');
+        // ⚠️ AGE IS DERIVED AT READ TIME, NEVER READ FROM THE STORED FIELD — the same rule
+        // the market-price tile applies 700 lines up, which was written after this fleet
+        // published `price_age_hours: 0.012` identically across four unrelated assets.
+        // This site kept reading the stored value, and it is worse here than there.
+        //
+        // ⚠️ THE PUBLISHED NUMBERS DISPROVE THEMSELVES. Every authored score in the fleet
+        // carries the SAME `*_generated_at` — 2026-09-20T01:45:04Z, one risk-feed run —
+        // while the stored ages range from 30.20h to 31.27h across assets. One generation
+        // instant cannot have many ages: those values are each ANALYZER RUN's age, stamped
+        // onto a field named for the score's. crvUSD stamps 30.86 on its backing, liquidity,
+        // peg-mechanism AND issuer scores alike.
+        //
+        // And it does not converge — `generated_at` has not moved in 31 hours, so a stored
+        // age only refreshes when a producer re-runs, while a reader's page can sit cached
+        // for an hour on top of an hourly sync. usds already reads 30.20 against a true
+        // 31.77. The right input is sitting in the same object.
+        //
+        // Stored value kept ONLY as a fallback where no `generated_at` exists, so a producer
+        // publishing an age and nothing else still says something rather than nothing.
+        var ageH = null;
+        if (info.generatedAt) {
+            var t = Date.parse(info.generatedAt);   // ISO with Z — parsed as UTC, not local
+            if (!isNaN(t)) ageH = (Date.now() - t) / 3600000;
+        }
+        if (ageH == null && info.ageHours != null) ageH = Number(info.ageHours);
+        if (ageH != null && isFinite(ageH) && ageH >= 0) {
+            parts.push('Age ' + ageH.toFixed(1) + 'h' +
+                (info.generatedAt ? '' : ' (as published)'));
+        }
         if (info.source) parts.push('Source: ' + info.source);
         return parts.join(' · ');
     },
