@@ -58,17 +58,40 @@ function strcBtcMonetizationState(btc) {
         ? btc.btc_drawn
         : ((btc.observed_btc_count != null && btc.baseline_btc_count != null)
             ? Math.max(0, btc.baseline_btc_count - btc.observed_btc_count) : null);
-    // `btc_drawn` may be cumulative from an older baseline. Prefer the explicit
-    // current-period flag when the analyzer supplies it, and only infer state
-    // from the draw for older payloads that do not have `executed`.
-    var currentWeekLive = (typeof btc.executed === 'boolean')
-        ? btc.executed
+    // ⚠️ `executed` IS A HISTORICAL FLAG AND THIS READ IT AS CURRENT-PERIOD STATE.
+    //
+    // The comment here called it "the explicit current-period flag". It never was.
+    // PegTracker confirmed 2026-09-22: `executed` and `at_scale` record that the leg
+    // has EVER executed / EVER been at scale — first print 2026-07-06, at scale by
+    // 2026-08-10 — and they never go back to false. So `currentWeekLive` was true
+    // permanently once the programme had run once.
+    //
+    // ⚠️ WHAT THAT PUT ON THREE PUBLISHED PAGES: the caption's live branch reads
+    // "BTC monetization is LIVE in the current reporting period … The current payload
+    // reports an active BTC-sale leg", and the framework row renders a `live` pill.
+    // There has been no BTC SALE since 2026-08-10, and in the 09-21 filing week
+    // Strategy was a net BUYER. The pages asserted an active monetization programme
+    // that was not running.
+    //
+    // ⚠️ THE FALLBACK DELIBERATELY DOES NOT READ `executed`. For a payload predating
+    // `currently_active` we infer from the DRAW, which is at least a current-period
+    // quantity. Falling back to a field we now know means something else would be
+    // knowingly asserting the wrong meaning wherever the new field is missing.
+    var currentWeekLive = (typeof btc.currently_active === 'boolean')
+        ? btc.currently_active
         : (inferredDraw != null && inferredDraw > 0);
-    var historicalLive = currentWeekLive || btc.dividend_service_executed === true || !!btc.first_print;
+    // Historical is what `executed` / `at_scale` were always for.
+    var historicalLive = currentWeekLive ||
+        btc.executed === true || btc.at_scale === true ||
+        btc.dividend_service_executed === true || !!btc.first_print;
     return {
         currentWeekLive: currentWeekLive,
         historicalLive: historicalLive,
-        btcDrawn: inferredDraw
+        btcDrawn: inferredDraw,
+        // Carried so the caption can be specific about WHEN rather than vague about
+        // whether — the producer publishes both.
+        lastSaleDate: btc.last_btc_sale_filing_date || null,
+        sales28d: (typeof btc.btc_sales_last_28d === 'number') ? btc.btc_sales_last_28d : null
     };
 }
 
@@ -88,9 +111,23 @@ function strcBtcMonetizationCaption(btc) {
             'The current payload reports an active BTC-sale leg; amounts and use of proceeds should follow the latest filing fields as they become available.';
     }
     if (state.historicalLive) {
-        return '<span class="font-semibold">BTC monetization has historical execution, but no current-period sale is reported.</span> ' +
-            'Reported holdings are <span class="font-mono">' + holdingsTxt + '</span>. ' +
-            'This is an idle-period status, not a claim that holdings were unchanged.';
+        // ⚠️ Name the date rather than saying "no current-period sale". The producer
+        // publishes `last_btc_sale_filing_date` and `btc_sales_last_28d`; "idle" with
+        // a date a reader can check is a different statement from "idle" alone, and
+        // the vaguer one is what let the live branch go unquestioned.
+        var since = state.lastSaleDate
+            ? ' Last reported BTC sale: <span class="font-mono">' +
+              CommonRenderer._escapeAttr(String(state.lastSaleDate)) + '</span>.'
+            : '';
+        var win = (state.sales28d === 0)
+            ? ' No BTC sales in the last 28 days.'
+            : (state.sales28d != null
+                ? ' BTC sales in the last 28 days: <span class="font-mono">' + state.sales28d + '</span>.'
+                : '');
+        return '<span class="font-semibold">BTC monetization has executed historically, but is NOT running now.</span> ' +
+            'Reported holdings are <span class="font-mono">' + holdingsTxt + '</span>.' + since + win +
+            ' This is an idle-period status, not a claim that holdings were unchanged — ' +
+            'the stack can move through purchases while the sale leg is idle.';
     }
     return '<span class="font-semibold">BTC monetization is authorized but no execution is reported.</span> ' +
         'Reported holdings are <span class="font-mono">' + holdingsTxt + '</span>.';

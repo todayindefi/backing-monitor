@@ -345,7 +345,16 @@ var MSTRRenderer = {
         var btcm = (dcf && dcf.btc_monetization_program) || {};
         var btcState = (typeof strcBtcMonetizationState === 'function')
             ? strcBtcMonetizationState(btcm)
-            : { currentWeekLive: btcm.executed === true, historicalLive: btcm.dividend_service_executed === true || !!btcm.first_print, btcDrawn: null };
+            // ⚠️ Mirrors strcBtcMonetizationState's corrected read — see the note there.
+            // `executed` is HISTORICAL (confirmed by PegTracker 2026-09-22) and this
+            // fallback used it as current-period state, so when strc.js was absent the
+            // MSTR page made the same false "LIVE" claim by a second route.
+            : { currentWeekLive: btcm.currently_active === true,
+                historicalLive: btcm.currently_active === true || btcm.executed === true ||
+                    btcm.at_scale === true || btcm.dividend_service_executed === true || !!btcm.first_print,
+                btcDrawn: null,
+                lastSaleDate: btcm.last_btc_sale_filing_date || null,
+                sales28d: (typeof btcm.btc_sales_last_28d === 'number') ? btcm.btc_sales_last_28d : null };
         var monetizationLive = btcState.currentWeekLive;
         var monetizationHistorical = btcState.historicalLive;
 
