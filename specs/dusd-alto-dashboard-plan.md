@@ -1,8 +1,8 @@
 ---
 title: DUSD (Alto) dashboard — plan and resume context
 repo: backing-monitor
-status: PLAN. Written 2026-09-21. NOTHING BUILT. Order agreed with the user; two questions
-  out to riskAnalyst. ⚠️ Read §0 before anything else.
+status: PLAN rev 2. Written 2026-09-21, updated same day with riskAnalyst's answers to all six
+  questions. NOTHING BUILT. ⚠️ A GO/NO-GO IS OPEN WITH THE USER — see §7.
 ---
 
 # 0 ▶ START HERE
@@ -12,8 +12,8 @@ status: PLAN. Written 2026-09-21. NOTHING BUILT. Order agreed with the user; two
 **State: nothing built. Not registered.** Three of four producers have already delivered; this is
 **mostly a render job**, same shape as BOLD.
 
-**Blocking on:** riskAnalyst answers to **Q4** (axis-5 basis) and **Q3/Q5** below. ⚠️ **Q1 turned
-out to be already answered in DexTracker's data — see §3.**
+✅ **All six questions ANSWERED by riskAnalyst 2026-09-21 — see §4.** ⚠️ **The only thing blocking
+is a GO/NO-GO with the user: §7.**
 
 ⚠️ **Before declaring any data gap, check ALL FOUR producers and their subdirectories.** On BOLD
 both this repo and riskAnalyst claimed a gap that did not exist, in opposite directions, because
@@ -120,37 +120,146 @@ sellable; the rest sits in the Curve pool as treasury LP.** **The binding constr
 reachability, not book depth** — and rendering $23,935 as "depth" without that basis would be the
 BOLD `depth_usd`-as-crossing mistake repeated.
 
-## The honest exit chain — three constraints, all in the data
+## ✅ The holder's exit — ALL THREE LEGS MEASURED (corrected 2026-09-21)
+
+⚠️⚠️ **rev 1 SAID HOPS 2–3 WERE CITED, NOT MEASURED. THAT WAS A SUPERSEDED LINE and would have
+shipped as a caveat that no longer applied.** riskAnalyst's `verification_scope` said it on
+09-20; DexTracker measured the full path on 09-21 at block 26,022,595; they have corrected the
+field and it now states what it previously said. **A stale caveat is worse than a wrong number —
+it reads as rigour.**
 
 ```
-1  holder redemption   GATED       capacity 0, treasury Safe only
-2  secondary market    $23,935     reachable float; everything sellable clears inside 200bps
-3  frxUSD -> USDC      VOLATILE    custodian USDC pocket moved 59,195 -> 72,836 in TEN MINUTES
-                                   ("moves by tens of percent intra-hour")
+leg 1   DUSD -> frxUSD    Curve 0x104d6a1b97A6CEf88D905d7b865A378d90be932A
+                          MEASURED · +17.9 bps @1k · +9.3 bps @500k  ⚠️ a PREMIUM, not a cost
+leg 2   frxUSD -> USDC    Frax ERC-4626 custodian 0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c
+                          1:1, ZERO fee, previewRedeem(1000e18) = 1000.000000
+                          ⚠️ HARD-CAPPED BY REVERT, not by price:
+                             redeem(100,000) -> ERC4626ExceededMaxRedeem(max 32,919.582897)
+                          ✅ redeem() is NOT permissioned — a holder hits only
+                             ERC20InsufficientAllowance, a normal approve step
+leg 2'  past the pocket   frxUSD -> crvUSD -> USDC · ~1 bp per hop · MEASURED
 ```
 
-⚠️ **Hops 2–3 are cited from `assets/frxusd.md`, NOT re-measured** (riskAnalyst's own scope note).
-✅ **Render per-leg measured/cited status. Do not blend three legs into one number.**
+✅ **Net: the dollar exit is 0.00 bps worse than the frxUSD exit at every size the float can
+produce, and at most 3.7 bps worse anywhere on the curve.** All legs are in DexTracker's
+`downstream_route_legs` with addresses — **no prose needed for any of it.**
+
+## ⚠️ `primary_exit` is a CONTRADICTION, not a field
+
+`at_nav: true` **and** `gated: true` — **the at-NAV exit exists and no holder can take it.**
+PERMISSIONED since inception; treasury Safe `0xA1148A1b94262540994Cf9Aa431A13ad39764228` is the
+sole `SWAPPER_ROLE` holder and originated **all 16 lifetime swaps across all three modules. Zero
+third-party swaps ever.**
+
+✅ **riskAnalyst's render guidance, adopted:** label it *"at-NAV redemption exists — for one
+address"* and make the three-leg market path **THE** exit. ⚠️ **Equal visual weight would let a
+reader assume the first is available.**
+
+## ⚠️⚠️ SPLIT THE FLOAT — the $23,935 is not third-party float
+
+```
+23,935 DUSD   DexTracker's supply_capped figure (supply less pool)   ✅ correct as published
+              ├─ 18,556  inside the two AltoBorrowMarkets
+              ├─  4,434  fee timelocks
+              └─    945  GENUINELY THIRD PARTY, ~110 addresses, largest holding 238
+```
+
+**Both numbers are legitimate** — a borrow market can in principle be drained to holders, so
+DexTracker's cap is right. ⚠️ **But what a non-Alto party could sell TODAY is ~945 DUSD — three
+orders of magnitude below the 2% crossing, not two.** **tidresearch conflated exactly these two
+and riskAnalyst had it wrong in the canonical before they were caught.**
+
+✅ **And the fact worth leading with: THE ENTIRE FLOAT SELLS AT A PREMIUM.** All 23,935 DUSD
+returns **23,976.70 USDC, +17.27 bps**. **There is no size at which a holder of this asset pays to
+leave.** The 2% crossing bisects to 2,515,625–2,531,250 DUSD — **3.06× the entire supply.**
 
 ---
 
-# 4. Open questions — sent to riskAnalyst 2026-09-21, unanswered
+# 4. ✅ ANSWERED by riskAnalyst 2026-09-21 — all six
+
+## Q3 · Backing — TWO SEGMENTS, separate bases. "Not a close call."
 
 ```
-Q2  supply_capped depth on an $822K asset — is the useful statement the depth, the ratio,
-    or "exit is constrained by supply, not by book"?           [render follows their answer]
-Q3  the 88/12 hybrid on ONE backing axis — one blended CR, or two segments with separate
-    bases? ⚠️ I lean TWO: a blend hides that 88% is a treasury promise and 12% is
-    collateral. What field should carry the split?             ⚠️ BLOCKING the backing ask
-Q4  axis 5 — no security_analyst walk exists, but their §I–§V enumerates 21 SetMinterStatus,
-    19 minters ever / 17 live, 828 timelock events, minDelay 3600s. ⚠️ A 1-hour timelock on
-    a 17-minter token is a FINDING, not an absence. Does their enumeration stand as the
-    axis-5 basis, or commission a walk?                        ⚠️ BLOCKING
-Q5  the collision — does any FEED carry the resolved address as data, or prose only?
-    Prefer producers stamp it over parsing a sentence.
-Q6  all six scores land 4.5–5.5. Flat profiles hide the binding constraint. Which axis do
-    they consider binding — for what the page LEADS with, not for the score?
+USM segment   722,605 DUSD  vs  722,604.611770924639631386 frxUSD
+              EXACTLY 1:1 TO THE WEI · FixedPriceStrategy returns 1e18 · feeStrategy address(0)
+              ⚠️ ZERO BUFFER. Every cent of frxUSD impairment is a cent of DUSD impairment.
+
+CDP segment    99,251 DUSD  vs  ~$186,806 WETH/wstETH/rETH/sUSDe/syrupUSDC/frxUSD
+              ~188% · liquidatable · isolated per collateral
+              ⚠️ NOT claimable by DUSD holders generally — it backs those markets' own borrowers
 ```
+
+⚠️ **No insurance fund or surplus buffer anywhere in the system.** **If a blended ratio (110.7%)
+is published at all, label it ARITHMETIC-ONLY and never as a safety margin** — a blend hides that
+the two halves have opposite failure modes.
+
+### Field shape for the PegTracker handoff — asked once, as requested
+
+```
+usm.minted · usm.underlying_balance · usm.ratio · usm.fee_bps · usm.access_mode
+usm.is_frozen · usm.is_seized · usm.exposure_cap
+cdp.total_debt · cdp.collateral_value_usd · cdp.ratio
+cdp.markets[] { collateral, debt, coll_value, ratio, oracle }
+totals.supply · totals.minted_sum
+```
+
+⚠️ **`totals.supply` and `totals.minted_sum` MUST BE EQUAL** — sum of `minterConfig.minted` over
+live minters == `totalSupply` to the wei. **A divergence IS the finding.**
+⚠️ **Do NOT ask for a single `collateral_ratio`.** That is the whole point of Q3.
+⚠️ **`Usm.seize()` transfers the module's ENTIRE underlying to `stableTokenTreasury` while leaving
+the DUSD outstanding — `is_seized` is a SOLVENCY field, not a status flag.** Worth its own
+threshold.
+
+## Q4 · Axis 5 — their enumeration MAY stand as the basis, with limits named
+
+✅ **Stands for:** minter/burner set (21 `SetMinterStatus`, 50 `SetMinterCeiling`, 21
+`SetBurnerStatus`; 19 minters ever, 17 live), ownership history (3 transfers), full timelock role
+history (828 events, all deployer EOAs revoked), minDelay 3,600s with its change history, pauser
+set, OFT peers never set, three Safes' identical seven owners at 4-of-7. **A negative control was
+run** — `0x…dEaD` false on every role.
+
+⚠️ **It is NOT a security_analyst authority walk and MUST NOT be labelled one.** Two declared gaps:
+
+```
+1  EmergencyController 0x3c822f14a90955bf35278b42ba509feecad3a305 holds pause rights on the
+   token AND SWAP_FREEZER_ROLE on the USM — who can DRIVE it was not walked. §IX item 6, open.
+2  The seven signer identities are unresearched; no cross-protocol signer-overlap sweep run.
+```
+
+✅ **The 1-hour timelock is the largest single deduction on the axis** — the dock is for the lack
+of a **reaction window**, and 3,600s is functionally none. **A 4-of-7 quorum does not offset it.**
+
+## Q5 · The collision is DATA, not prose — and it is multi-chain
+
+```
+PegTracker   contract_address            0x63d74d22E689C715a04F2C13962b1f77F443d35b
+             market_price_pool_address   0x104d6a1b97A6CEf88D905d7b865A378d90be932A
+DexTracker   depth.quote.token_in.address · depth.supply_check.token   — same address
+```
+
+⚠️ **Wider than the four Ethereum tokens in the report.** DexTracker's control run queried
+DefiLlama BY TICKER: **42 rows, 38 of them other assets** — a makina "DUSD" at $1.97M, dTRINITY,
+Dialectic, plus Solana and DefiChain. **Measured, not asserted.**
+
+## Q6 · The binding axis is DEPENDENCIES (4.5) — and the flat profile IS the answer
+
+**Not because it is lowest (issuer ties it) but because it explains the others:**
+
+```
+92.5% of collateral value is frxUSD
+frxUSD is ALSO the Curve pool's quote asset
+the zero-cost dollar leg runs through a Frax custodian — an UPGRADEABLE PROXY whose
+  ProxyAdmin owner is the same 24h Frax Timelock, and whose own owner() is the same
+  4-of-7 Frax Safe that controls frxUSD
+```
+
+⚠️⚠️ **The reserve, the exit venue's quote asset, and the dollar leg do not merely correlate
+through one asset's price — they correlate through ONE ISSUER'S FOUR KEYS.** **DUSD cannot be
+worth more than frxUSD, and it cannot exit faster than Frax allows.**
+
+✅ **If the page says one thing, say this: _structurally sound, functionally untested_ — and both
+halves are load-bearing.** With **~945 DUSD in third-party hands** there is almost no holder base
+to test any of it. **That is why the profile is flat: nothing is broken and nothing is proven.**
 
 ---
 
@@ -164,6 +273,9 @@ Q6  all six scores land 4.5–5.5. Flat profiles hide the binding constraint. Wh
    data/liquidity/dusd_alto_liquidity.json (SUBDIR), security_analyst topology if commissioned.
    ⚠️ Registering expands riskAnalyst's audit scope — their checker reads our assets.json.
    TELL THEM BEFORE, not after.
+
+⚠️ **BEFORE ANY SCORING WIRE-UP: `axis_thresholds` are DESCENDING.** `cutoffs[0]` is the 5/5
+floor. **A reversed array does not error — it silently scores 5/5.** (riskAnalyst, 2026-09-21.)
 
 1  decide BESPOKE vs GENERIC.
    ⚠️ RECOMMENDATION: GENERIC. Small asset, mostly standard blocks, and bespoke is where
@@ -202,3 +314,31 @@ supply.
 
 ⚠️ **No precision the asset does not support.** 116 holders, $822K. **A number carried to four
 decimals on a book this thin is a claim about resolution that the asset cannot honour.**
+
+---
+
+# 7. ⚠️ OPEN WITH THE USER — a go/no-go, not a detail
+
+**Raised by riskAnalyst 2026-09-21, and it is the right question to ask before building:**
+
+```
+DUSD is UNHELD — no position.
+The owner DECLINED promoting the tidresearch page to production on 2026-09-20.
+⚠️ That is a DECISION, not a deferral.
+```
+
+**So a dashboard would be the ONLY live surface for an asset with no position and no public page.**
+
+⚠️ **This is the mirror of the defect our own pre-commit hook warns about** — an overlay with
+transport and no consumer. **Here it would be a consumer with no upstream demand.**
+
+✅ **It may be exactly what is wanted** — riskAnalyst calls it a credible watch candidate, and a
+$822K asset with 945 DUSD of third-party float, a gated at-NAV exit and a 1-hour timelock is
+genuinely interesting to watch. **But it should be a decision, not a side effect of the plan
+existing.**
+
+**Confirm before step 0.** Registering the slug also expands riskAnalyst's audit scope, so it is
+not a free action.
+
+⚠️ **riskAnalyst was explicit: "Nothing here is an authorisation to build."** Their user asked them
+to plan and brief; **the decision to render is between this repo and its user.**
