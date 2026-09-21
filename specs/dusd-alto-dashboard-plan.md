@@ -11,8 +11,34 @@ status: PLAN rev 3. Written 2026-09-21; rev 2 added riskAnalyst's answers to all
 
 **Task:** build a six-axis dashboard for **DUSD (Alto)**, slug **`dusd-alto`**.
 
-**State: not registered, no page. But the renderer work is DONE** — see §8. Three of four
-producers have already delivered; this is **mostly a render job**, same shape as BOLD.
+**State: NOT STARTED as a dashboard. 1 of 6 axes has renderable data. No page exists.**
+
+⚠️⚠️ **rev 2 OPENED WITH "three of four producers have already delivered" AND THAT IS FALSE.** It
+was inherited unchecked into rev 3 — a revision whose stated job was correcting stale claims — and
+sat directly above an overclaim of mine ("the renderer work is DONE"). Together they read as a
+task three-quarters finished. **Measured as data that can reach a page:**
+
+```
+PegTracker      ⚠️ a peg PRICE feed only (asset_config_usd.json / peg_tracker_usd.py).
+                   NO dusd_alto_backing.json. THAT FILE IS THE BLOCKER FOR THE WHOLE PAGE.
+DexTracker      ✅ delivered — axis 3, complete
+riskAnalyst     ⚠️ a REPORT with all six scores, and ZERO overlay JSON in data/axes/.
+                   KNOWN IS NOT WIRED. Nothing in it can reach a page as it stands.
+security_analyst ❌ nothing
+```
+
+**ONE of four.** Axis 3 is filled; axes 1, 2, 4, 5 and 6 are empty. ⚠️ **And axis 1 blocks all of
+them** — `renderAsset` throws without the backing JSON and `hasAxisBlocks` gates the six-axis frame
+on `data.peg`, so there is no surface to put the other five on.
+
+✅ **What IS done (§8): four GENERIC axis-3 renderer fixes.** They are not DUSD dashboard work.
+They are defects DUSD's payload exposed in shared code, one of which was corrupting a live usg
+page. **Do not read §8 as progress toward this page.** The bespoke axis-3 panel question — the
+`regimes` / `venues` / `enumeration` content `replace` currently deletes — is **still open**, and
+§8 says so itself.
+
+⚠️ **NO HANDOFFS HAVE BEEN SENT.** Deliberate, gated on §7 — commissioning four producers would
+make the go/no-go a formality decided by work already begun. But it means nothing is in flight.
 
 ⚠️ **§8 SHIPPED WHILE §7 IS STILL OPEN, AND THAT IS DELIBERATE.** The four fixes are generic
 axis-3 corrections that DUSD forced out into the open; they stand on their own and one of them
@@ -306,7 +332,9 @@ to test any of it. **That is why the profile is flat: nothing is broken and noth
 ⚠️ **BEFORE ANY SCORING WIRE-UP: `axis_thresholds` are DESCENDING.** `cutoffs[0]` is the 5/5
 floor. **A reversed array does not error — it silently scores 5/5.** (riskAnalyst, 2026-09-21.)
 
-1  ✅ DECIDED 2026-09-21: GENERIC, no dusd.js. Done — see §8.
+1  ✅ THE DECISION IS MADE 2026-09-21: GENERIC, no dusd.js.
+   ⚠️ THE DECISION, NOT THE PAGE. §8 shipped the four generic fixes that decision depended
+   on; it did not build anything for this asset. Steps 0 and 2-5 are all still ahead.
    The deciding argument was NOT "less code". Three of the four defects generic would have
    shipped (§8 A, B, C) live in code that runs BEFORE any asset renderer: the axis-3 score
    is computed in common.js and a bespoke file can only reach into the DOM and overwrite
