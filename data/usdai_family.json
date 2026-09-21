@@ -1,14 +1,22 @@
 {
   "schema_version": 1,
-  "as_of": "2026-09-21T16:51:45Z",
-  "timestamp": "2026-09-21T16:51:45Z",
-  "block_number": 507504642,
+  "as_of": "2026-09-21T17:50:07Z",
+  "timestamp": "2026-09-21T17:50:07Z",
+  "block_number": 507518482,
   "issuer": "Permian Labs",
   "risk_flags": [
     {
       "severity": "info",
       "code": "USDAI_MINT_PATH_UNDELAYED",
       "message": "USDai mint authority is grantable with no delay: OPS_SAFE holds DEFAULT_ADMIN on arbitrum, base, ethereum, plasma and DEFAULT_ADMIN administers BRIDGE_ADMIN_ROLE. The 48h timelock governs upgrades only and holds no role on the token."
+    },
+    {
+      "severity": "info",
+      "message": "USDai implementation changed to 0xe6Ee2cD3E4F2b3844689aA1Be176E4DfF744A6F9 (acknowledged 0x0ab74Df531c0D8f1c46643E404B3d14723bbc212) \u2014 ProxyAdmin owner is still the 48h timelock, so this can only have been executed through it. Verify, then clear with --acknowledge-governance."
+    },
+    {
+      "severity": "info",
+      "message": "sUSDai implementation changed to 0xeF07186D90cA00107C4FC73A6fBFCb5ec3d3860D (acknowledged 0x88A233B8746dA5dfd9c5e82C8A9f9F91b737198B) \u2014 ProxyAdmin owner is still the 48h timelock, so this can only have been executed through it. Verify, then clear with --acknowledge-governance."
     }
   ],
   "governance": {
@@ -98,7 +106,7 @@
     },
     "proxies": {
       "usdai": {
-        "implementation": "0x0ab74Df531c0D8f1c46643E404B3d14723bbc212",
+        "implementation": "0xe6Ee2cD3E4F2b3844689aA1Be176E4DfF744A6F9",
         "implementation_acknowledged": "0x0ab74Df531c0D8f1c46643E404B3d14723bbc212",
         "implementation_acknowledged_at": "2026-08-18T00:00:00Z",
         "proxy_admin_slot": "0x2DDf39c731377adcfA7F2a056AC60a8a81aAdC3C",
@@ -108,7 +116,7 @@
         "proxy_admin_owner_ok": true
       },
       "susdai": {
-        "implementation": "0x88A233B8746dA5dfd9c5e82C8A9f9F91b737198B",
+        "implementation": "0xeF07186D90cA00107C4FC73A6fBFCb5ec3d3860D",
         "implementation_acknowledged": "0x88A233B8746dA5dfd9c5e82C8A9f9F91b737198B",
         "implementation_acknowledged_at": "2026-08-18T00:00:00Z",
         "proxy_admin_slot": "0x0b3296b6f50611B28d466a6D5A49754dAd4D8d9F",
@@ -133,43 +141,43 @@
     }
   },
   "totals": {
-    "usdai_supply_usd": 327676349.48,
-    "susdai_total_assets_usd": 500516109.6,
-    "combined_aum_usd": 603260773.73,
+    "usdai_supply_usd": 327673441.47,
+    "susdai_total_assets_usd": 500519978.24,
+    "combined_aum_usd": 603264968.06,
     "comment": "combined_aum = usdai_supply + susdai_total_assets - idle_usdai_in_susdai - deposit_timelock_escrow (escrow is USDai minted into the credit pipeline; counting it and the USDai supply both would double-count)."
   },
   "credit_exposure": {
-    "drawn_loans_usd": 275584424.25,
+    "drawn_loans_usd": 275591526.59,
     "committed_undrawn_escrow_usd": 0.0,
-    "total_loan_destined_usd": 275584424.25
+    "total_loan_destined_usd": 275591526.59
   },
   "tokens": [
     {
       "slug": "usdai",
       "name": "USDai",
-      "supply_usd": 327676349.48,
+      "supply_usd": 327673441.47,
       "coverage_ratio": 1.000000004
     },
     {
       "slug": "susdai",
       "name": "sUSDai",
-      "total_assets_usd": 500516109.6,
-      "nav_per_share": 1.113799,
-      "buffer_ratio": 0.449399
+      "total_assets_usd": 500519978.24,
+      "nav_per_share": 1.113808,
+      "buffer_ratio": 0.44939
     }
   ],
   "api_usd_ai": {
     "url": "https://api.usd.ai/usdai/dashboard/tvl",
     "raw": {
-      "tvl": 601765434.1436608,
-      "usdaiTvl": 101249295.61858064,
-      "sUsdaiTvl": 500516138.52508014,
-      "mintedUsdai": 601765434.1436608,
-      "stablecoinReserves": 327676350.79106,
+      "tvl": 601765735.5516925,
+      "usdaiTvl": 101245779.5589254,
+      "sUsdaiTvl": 500519955.9927671,
+      "mintedUsdai": 601765735.5516925,
+      "stablecoinReserves": 327673442.78406,
       "loansReserves": 272340412.8856761,
-      "updatedAt": "2026-09-21T16:29:59.000Z"
+      "updatedAt": "2026-09-21T17:29:59.000Z"
     },
-    "updated_at": "2026-09-21T16:29:59.000Z",
+    "updated_at": "2026-09-21T17:29:59.000Z",
     "stale": false,
     "note": "Undocumented public aggregate; cross-check only, never source-of-truth. May be cross-chain while on-chain reads are Arbitrum-only."
   }
