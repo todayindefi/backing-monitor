@@ -1,0 +1,47 @@
+{
+ "schema_version": "dependencies/1",
+ "producer": "riskanalyst",
+ "asset": "dusd-alto",
+ "as_of": "2026-09-21T05:30:00Z",
+ "dependencies": {
+  "upstream": [
+   {
+    "name": "frxUSD \u2014 92.5% of all collateral value, AND the exit venue's quote asset",
+    "metric": "722,605 frxUSD in the stability module + 37,270 frxUSD posted in the frxUSD mint market = 759,875 of ~$909,388 total collateral value",
+    "source": "riskAnalyst on-chain reads at block 26,017,854, re-confirmed 26,020,013 (2026-09-21)",
+    "note": "\u26a0\ufe0f THIS IS THE ASSET'S BINDING DEPENDENCY AND IT IS NOT MERELY A PRICE CORRELATION. frxUSD is the reserve, it is the Curve pool's quote asset, and as of 2026-09-21 the zero-cost dollar leg runs through a Frax contract. A frxUSD stress event impairs the backing and the exit simultaneously, and there is no leg that survives it independently. DUSD cannot be worth more than frxUSD. The frxUSD mint market at 128% adds leverage on the same asset rather than diversifying it."
+   },
+   {
+    "name": "\u26a0\ufe0f One issuer's four keys reach the reserve, the quote asset and the dollar leg",
+    "metric": "Frax Safe 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937, 4-of-7, seven EOAs; Timelock 0xb898Ad2976b4d8f2E21521C9db16b7497825E503 delay 86,400s / MINIMUM_DELAY 7,200s",
+    "source": "riskAnalyst live reads 2026-09-21; frxUSD ProxyAdmin 0x0b2c3df006b2bd43CbCC60075e7A0bf314474Ed6; custodian 0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c ProxyAdmin 0x1a4563f238fa693ba9771cdba5ee8280a114ed7e",
+    "note": "\u26a0\ufe0f THE ACTUAL FINDING, and it is stronger than the concentration figure above. frxUSD's mint/freeze/pause execute with NO delay; its upgrades sit behind the 24h Timelock the same Safe administers (2h floor, so the Safe can lower its own gate). The frxUSD\u2192USDC custodian that makes DUSD's dollar exit free is an UPGRADEABLE PROXY whose ProxyAdmin owner is that same Timelock and whose own owner() is that same Safe. So the reserve, the venue's quote asset and the dollar leg correlate through ONE ISSUER'S FOUR KEYS, not through one asset's price. Losing the custodian costs 0.86\u20132.4 bps, not the exit \u2014 this is a governance concentration, not an imminent liquidity risk."
+   },
+   {
+    "name": "Frax frxUSD\u2192USDC redemption custodian \u2014 free, and Frax's inventory rather than DUSD's property",
+    "metric": "ERC-4626, asset() = USDC, previewRedeem(1000e18) = 1000.000000 (1:1, zero fee); USDC pocket read 59,195.58 \u2192 72,836.03 \u2192 32,919.58 across 2026-09-21",
+    "source": "riskAnalyst live reads + redeem() simulation, 2026-09-21; DexTracker ladder at block 26,022,595",
+    "note": "\u26a0\ufe0f redeem() is NOT permissioned \u2014 a real holder reverts only on ERC20InsufficientAllowance, a normal approve step \u2014 but it IS HARD-CAPPED AT THE POCKET BY A REVERT, NOT BY A WORSE PRICE: redeem(100,000) reverts ERC4626ExceededMaxRedeem(shares 99,999.99, max 32,919.582897). A cliff, not graceful degradation. The pocket swung 23% in ten minutes and closed the day barely above the 23,935 float. Past it the crvUSD route costs ~1bp/hop, so the cost verdict is unaffected."
+   },
+   {
+    "name": "Curve StableSwap-NG DUSD/frxUSD \u2014 the only live venue; three others enumerated and dead",
+    "metric": "0x104d6a1b97A6CEf88D905d7b865A378d90be932A, A=1000, fee 0.01%, ~$3.29M; 62% of LP is the Alto treasury's, never burned",
+    "source": "DexTracker enumeration 2026-09-21 \u2014 2,457 Curve pools across all 9 Ethereum registries, UniV3 13 counters \u00d7 4 tiers, UniV2/Sushi, Balancer, GeckoTerminal incl. v4 index, DefiLlama by address, holder census, router discovery",
+    "note": "\u26a0\ufe0f DUSD HAD A DIRECT USDC VENUE AND LOST IT. UniV3 DUSD/USDC 0.01% 0x206239406abccF730493e4b133b30DF546f9ff43 carried real liquidity from 2025-12-11 until liquidity() hit zero at block 25,329,865 (2026-06-16 11:44 UTC, located by bisection). It is DEAD, not missing, and its slot0() still returns a plausible ~1.0000 \u2014 do not read it. So the frxUSD-only exit is a three-month-old concentration, not the original design. Also dead: 0x78b8f4abaeac80f5c8c932a0d42ba0f14b6820bc (UniV3 DUSD/frxUSD) and 0x35364a18efDe0169D214E7c72f4Ee0e4C522bA63 (a $99.75 stable-ng dust twin). Third-party LP is 100% emissions-motivated: Convex 67.8% of the gauge, two Yearn voters 32.2%."
+   },
+   {
+    "name": "CDP collateral set \u2014 wstETH, WETH, rETH, mETH, tBTC, sUSDe, syrupUSDC, frxUSD",
+    "metric": "~$186,806 backing 99,251 DUSD across 14 isolated mint markets; 188% aggregate",
+    "source": "riskAnalyst per-market balanceOf + each market's own Alto oracle, block 26,017,854",
+    "note": "Standard LST/LSD and yield-bearing-stable exposure, over-collateralized and isolated per collateral so one bad asset cannot cascade. sUSDe ($6) and syrupUSDC ($4) are authorized but effectively unused. Oracles are AltoMultiChainlinkLendingOracle and ERC4626RatioChainlinkOracle* \u2014 not independently audited by riskAnalyst this pass."
+   },
+   {
+    "name": "ALTO / ARO emissions \u2014 the demand side",
+    "metric": "borrow, supply and mint are rewarded with Alto Reward Options",
+    "source": "docs.alto.money, read 2026-09-20",
+    "note": "DUSD demand is incentive-driven rather than transactional. 24h volume was $2,116 on 2026-09-20 and $200.86 on 2026-09-21 against an ~$823K market cap."
+   }
+  ],
+  "coverage_note": "\u26a0\ufe0f NO SCORE IS PUBLISHED ON THIS AXIS BY DELIBERATE CHOICE. riskAnalyst's internal underlying_score for dusd-alto is 4.5 and is the lowest of its six axes alongside issuer \u2014 but axis 4 is unrated fleet-wide, and one asset scoring it would redefine what a blank means on every other page. The internal report is the place that number lives. \u26a0\ufe0f Not verified this pass: the Alto market oracles were read but not audited, and the custodian's USDC pocket was read at single blocks with no history."
+ }
+}

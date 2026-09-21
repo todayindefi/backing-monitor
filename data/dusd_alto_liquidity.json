@@ -388,7 +388,11 @@
     "DefiChain DUSD pairs"
    ]
   },
-  "completeness": "Four Ethereum pools hold Alto DUSD; one is live. Every DefiLlama row matching by address is the same Curve pool or a wrapper of it (Convex, StakeDAO, Yearn)."
+  "completeness": "Four Ethereum pools hold Alto DUSD; one is live. Every DefiLlama row matching by address is the same Curve pool or a wrapper of it (Convex, StakeDAO, Yearn).",
+  "excluded_venue_count": 3,
+  "unestablished_venue_count": 0,
+  "live_venue_count_is_floor": false,
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it."
  },
  "venues": [
   {
@@ -423,7 +427,11 @@
     "symbol": "frxUSD",
     "amount": 2502131.2876217645
    },
-   "depth_role": "The only live venue; hop 1 of every route. Its frxUSD side (2.502M) is the binding inventory for the whole DUSD->USDC exit."
+   "depth_role": "The only live venue; hop 1 of every route. Its frxUSD side (2.502M) is the binding inventory for the whole DUSD->USDC exit.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Quoted live at Ethereum block 26,022,595: get_dy answers at every rung and the pool holds 2,502,131 frxUSD against 797,920 DUSD."
   },
   {
    "name": "DUSD/frxUSD (dust twin)",
@@ -434,7 +442,11 @@
    "pool_id": "0x35364a18efDe0169D214E7c72f4Ee0e4C522bA63",
    "tvl_usd": 99.75,
    "volume_24h_usd": 0.0,
-   "depth_role": "Excluded: $99.75 total, 44 DUSD."
+   "depth_role": "Excluded: $99.75 total, 44 DUSD.",
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Holds 44.01 DUSD and 55.65 frxUSD, $99.75 total, at block 26,022,595. Quotable but immaterial at any holder size."
   },
   {
    "name": "DUSD/USDC 0.01%",
@@ -445,7 +457,11 @@
    "pool_id": "0x206239406abccF730493e4b133b30DF546f9ff43",
    "tvl_usd": 30.77,
    "volume_24h_usd": 0.0,
-   "depth_role": "Excluded: DEAD. liquidity()=0 since block 25,329,865 (2026-06-16, per riskAnalyst bisection); slot0 still reports ~1.0000 and must not be quoted."
+   "depth_role": "Excluded: DEAD. liquidity()=0 since block 25,329,865 (2026-06-16, per riskAnalyst bisection); slot0 still reports ~1.0000 and must not be quoted.",
+   "is_live": false,
+   "exclusion_reason": "dead_zero_liquidity",
+   "exclusion_reason_note": "The pool exists and answers calls but holds no liquidity -- `liquidity()` is 0. \u26a0\ufe0f A dead Uniswap V3 pool's `slot0` still returns a plausible price, so this is the case that must never be quoted.",
+   "liveness_basis": "liquidity() == 0, read directly at block 26,022,595; zero since block 25,329,865 (2026-06-16) per riskAnalyst's bisection. Holds 28.68 DUSD / 1.99 USDC of dust and its slot0 still returns ~1.0000, which is why it must never be quoted."
   },
   {
    "name": "DUSD/frxUSD 0.01%",
@@ -456,7 +472,11 @@
    "pool_id": "0x78b8f4abaeac80f5c8c932a0d42ba0f14b6820bc",
    "tvl_usd": 3.83,
    "volume_24h_usd": 0.0,
-   "depth_role": "Excluded: liquidity()=0, 2.55 DUSD dust. Not previously known to riskAnalyst."
+   "depth_role": "Excluded: liquidity()=0, 2.55 DUSD dust. Not previously known to riskAnalyst.",
+   "is_live": false,
+   "exclusion_reason": "dead_zero_liquidity",
+   "exclusion_reason_note": "The pool exists and answers calls but holds no liquidity -- `liquidity()` is 0. \u26a0\ufe0f A dead Uniswap V3 pool's `slot0` still returns a plausible price, so this is the case that must never be quoted.",
+   "liveness_basis": "liquidity() == 0, read directly at block 26,022,595; holds 2.55 DUSD and 1.28 frxUSD."
   }
  ],
  "downstream_route_legs": {
@@ -1000,5 +1020,6 @@
   "registered_in_backing_monitor_assets": false,
   "basis": "Originated 2026-09-21 for riskAnalyst's dusd-alto-usd-exit-ladder handoff. No consumer registration asserted."
  },
- "refresh_cadence": "daily"
+ "refresh_cadence": "daily",
+ "payload_revised_at": "2026-09-21T08:42:28Z"
 }

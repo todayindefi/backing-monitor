@@ -1,0 +1,53 @@
+{
+ "schema_version": "backing-overlay/1",
+ "producer": "riskanalyst",
+ "asset": "dusd-alto",
+ "as_of": "2026-09-21T05:30:00Z",
+ "backing": {
+  "segments": [
+   {
+    "name": "Universal Stability Module (frxUSD) \u2014 88% of supply",
+    "module": "0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91",
+    "debt_dusd": 722604.6117709246,
+    "collateral": "722,604.611770924639631386 frxUSD",
+    "collateral_usd": 722582.0,
+    "ratio_pct": 100.0,
+    "ratio_label": "1:1 to the wei",
+    "buffer_pct": 0.0,
+    "mechanism": "treasury-operated, permissioned"
+   },
+   {
+    "name": "CDP mint markets \u2014 12% of supply",
+    "module": "14 isolated AltoMintMarket proxies",
+    "debt_dusd": 99250.55,
+    "collateral": "WETH, wstETH, rETH, mETH, tBTC, sUSDe, syrupUSDC, frxUSD",
+    "collateral_usd": 186806.0,
+    "ratio_pct": 188.0,
+    "ratio_label": "over-collateralized, liquidatable, isolated per collateral",
+    "buffer_pct": 88.0,
+    "mechanism": "user debt"
+   }
+  ],
+  "zero_buffer_by_construction": true,
+  "zero_buffer_note": "\u26a0\ufe0f THE 88% TRANCHE HAS ZERO BUFFER, AND 1.0000 IS WHY THIS FIELD EXISTS. The USM holds 722,604.611770924639631386 frxUSD against exactly that many DUSD \u2014 identical to the wei, re-confirmed unchanged at block 26,020,013. A coverage figure of 100% READS AS FULLY BACKED; what it means here is that every cent of frxUSD impairment is a cent of DUSD impairment with nothing in between. \u26a0\ufe0f THE NUMBER AND THE FACT POINT IN OPPOSITE DIRECTIONS, so this is not a ratio with a caveat \u2014 it is a ratio that misleads without the caveat attached to it. \u26a0\ufe0f AND IT IS BY CONSTRUCTION, NOT BY POLICY: FixedPriceStrategy returns exactly 1e18 and feeStrategy is address(0), so the 1:1 is the MECHANISM and cannot be widened into a cushion by a parameter change. That distinction is the difference between a risk someone could decide to reduce and a design property. Do not render a bare 1.0000 or a bare 100% in a headline position for this asset.",
+  "no_backstop": true,
+  "no_backstop_note": "\u26a0\ufe0f THERE IS NO INSURANCE FUND, SURPLUS BUFFER, RESERVE FUND OR BACKSTOP ANYWHERE IN THE DUSD SYSTEM. This is an ABSENCE and no ratio can express one \u2014 a field reporting 110.7% is silent about the thing that would absorb a shortfall, because there is nothing to report. Enumerated rather than assumed: the token has no surplus accounting, the USM's _accruedFees is 0 with feeStrategy unset, and no separate reserve contract appears in the minter set, the timelock's role table or the holder census.",
+  "blended_ratio_pct": 110.7,
+  "blended_ratio_is_arithmetic_only": true,
+  "blended_ratio_note": "\u26a0\ufe0f 110.7% IS ARITHMETIC, NOT A SAFETY MARGIN, AND SHOULD NOT BE PUBLISHED WITHOUT THAT LABEL. It blends two tranches with opposite failure modes. The CDP tranche's 188% is NOT claimable by DUSD holders generally \u2014 it backs those markets' own borrowers, and a borrower's surplus collateral is not available to absorb a USM shortfall. So the aggregate cannot be read as 'DUSD is 110.7% covered'. If a single figure must appear, the honest one is the USM's 100.00% on 88% of supply, rendered with the zero-buffer note above.",
+  "verifiability": "exact_onchain_no_attestation",
+  "verifiability_note": "\u2705 THE GENUINE STRENGTH ON THIS AXIS, and it is unusual. Reserves need no attestation and no trust in the issuer: the USM's collateral is one balanceOf call, and the sum of minterConfig(m).minted over the live minter set equals totalSupply() TO THE WEI (821,855.160989103709962351) \u2014 so there is no unattributed float and anyone can reproduce the entire backing position from chain state. audited_reserves is false in the internal report because there ARE no attestations, not because they are missing \u2014 none are needed. A divergence between minted_sum and totalSupply would itself be the finding and is worth a threshold.",
+  "concentration_pct": 92.5,
+  "concentration_note": "\u26a0\ufe0f 92.5% OF ALL COLLATERAL VALUE IS A SINGLE ASSET \u2014 759,875 frxUSD across the USM (722,605) and the frxUSD mint market (37,270). The mint market at 128% is LEVERED frxUSD, not diversification: frxUSD posted to mint DUSD whose dominant reserve is already frxUSD. See dependencies/1 for why this is not merely a price correlation \u2014 the reserve, the exit venue's quote asset and the dollar leg reach through one issuer's four keys.",
+  "is_seized_is_a_solvency_field": true,
+  "is_seized_note": "\u26a0\ufe0f Usm.seize() (LIQUIDATOR_ROLE, held by the 3,600-second timelock) transfers the module's ENTIRE UNDERLYING_ASSET balance to stableTokenTreasury and LEAVES THE DUSD OUTSTANDING \u2014 722,605 frxUSD, 88% of all backing, in one call, to a Safe the same signers control, with burnAfterSeize an optional follow-up at the same role's discretion. So is_seized flipping is an 88%-of-backing event, NOT a maintenance state, and it should escalate rather than render as a status chip. Currently false; getIsFrozen() also false.",
+  "collateral_ratio_basis": "\u26a0\ufe0f NO SINGLE COLLATERAL RATIO IS DERIVABLE FOR THIS ASSET, AND THAT IS A PROPERTY OF THE ASSET RATHER THAN A GAP IN THE FEED. DUSD is two mechanisms under one ticker and every available single figure is either flattering or actively inverted:\n  \u2022 The BLEND, 110.7%, flatters. It averages a 100.00% tranche carrying 88% of supply with a ~188% tranche carrying 12%, and the two have OPPOSITE failure modes. Worse, the CDP tranche's cushion is not claimable by DUSD holders at all \u2014 it backs those markets' own borrowers \u2014 so the aggregate cannot be read as 'DUSD is 110.7% covered'. Published here as blended_ratio_pct only with blended_ratio_is_arithmetic_only: true.\n  \u2022 The DOMINANT TRANCHE'S figure, 100.00%, means the OPPOSITE of what it reads. It is 1:1 to the wei by construction (FixedPriceStrategy returns exactly 1e18, feeStrategy is address(0)), so 100% denotes ZERO absorption rather than full coverage. See zero_buffer_by_construction.\n  \u2022 The CDP tranche's ~188% describes 12% of supply and would misrepresent the asset if promoted to the headline.\nSo the declaration is deliberate: any single ratio published at face value on this asset misinforms, in one direction or the other. The two segments with separate bases are the honest rendering, and the authored backing_score is the only figure that can carry a two-sided judgement. \u26a0\ufe0f This is NOT a failed fetch, a feed outage or an absent field \u2014 the underlying quantities are all present, exact and independently verifiable on chain (see verifiability_note). What is undefined is their COMBINATION, not their measurement.",
+  "backing_score": 5.5,
+  "backing_score_source": "riskAnalyst:authored",
+  "backing_score_generated_at": "2026-09-21T05:30:00Z",
+  "backing_score_applies_when": "collateral_ratio_declared_underivable",
+  "backing_score_applies_when_note": "\u26a0\ufe0f MUST NOT fire on a merely-absent collateral_ratio. This producer declares the ratio underivable in collateral_ratio_basis, for the asset-specific reason stated there. A bare null can also mean a failed fetch or a feed outage, and promoting an authored score over a measured one on the strength of an absence would let a transport failure look like a judgement. Here the quantities are all measured and exact; it is their combination into one figure that is undefined. \u26a0\ufe0f If PegTracker's backing analyzer later emits a single collateral_ratio for this asset, DO NOT treat that as superseding this declaration \u2014 check first whether it is the blend, which is the figure this field exists to refuse.",
+  "backing_score_basis": "\u26a0\ufe0f AUTHORED 2026-09-21. 5.5 is a genuine two-sided judgement rather than a midpoint. \u2705 WHAT ARGUES UP, and it is stronger than most assets on this dashboard: the backing is EXACTLY and INDEPENDENTLY verifiable with no attestation dependency and no issuer trust \u2014 one balanceOf for 88% of it, and minted_sum == totalSupply to the wei so nothing is unaccounted. The CDP tranche is real, over-collateralized at ~188%, liquidatable and isolated per collateral so one bad asset cannot cascade. \u26a0\ufe0f WHAT HOLDS IT AT 5.5: the 88% tranche has ZERO buffer by construction, there is NO backstop of any kind anywhere in the system, 92.5% of collateral value is a single third-party stablecoin scored 5.5 itself, and the CDP tranche's cushion is not available to DUSD holders generally. \u26a0\ufe0f AND THE AGGREGATE 110.7% IS A BLEND THAT FLATTERS: it is arithmetic over two tranches with opposite failure modes. 5.5 rather than higher because verifiability is not solvency \u2014 being able to prove there is no cushion is not the same as having one. 5.5 rather than lower because the reserve is a third party's fully-held stablecoin, NOT the protocol's own token: this is not the msUSD/AMO shape where the reserve was self-referential, and it should not be scored as though it were.",
+  "coverage_note": "Derived from riskAnalyst assets/dusd-alto.md \u00a7I at block 26,017,854, re-confirmed 26,020,013. Collateral valued using each market's OWN Alto oracle, so the collateral column is valued the way Alto values it \u2014 ETH $2,574.04, wstETH $3,203.15, rETH $3,017.10, frxUSD $0.999968, sUSDe $1.2487, syrupUSDC $1.1838. \u26a0\ufe0f NOT VERIFIED: those oracles were read but not audited; two dust markets (mETH, tBTC) carry collateral too small to value meaningfully and are excluded from the CDP collateral_usd; and the source of the treasury's frxUSD \u2014 whether Frax-supplied, purchased or raised \u2014 is untraced, which determines whose capital the 88% reserve is."
+ }
+}

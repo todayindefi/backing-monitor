@@ -438,7 +438,12 @@
   "venue_count": 20,
   "chain_count": 1,
   "chain_count_is_floor": false,
-  "completeness": "Twenty Ethereum pools were enumerated. The seven named venues are listed individually; thirteen further pools jointly represented less than $30K TVL and are summarized as one row. LP-token wrappers and Liquity Stability Pools are excluded from swap liquidity."
+  "completeness": "Twenty Ethereum pools were enumerated. The seven named venues are listed individually; thirteen further pools jointly represented less than $30K TVL and are summarized as one row. LP-token wrappers and Liquity Stability Pools are excluded from swap liquidity.",
+  "live_venue_count": 6,
+  "excluded_venue_count": 0,
+  "unestablished_venue_count": 2,
+  "live_venue_count_is_floor": true,
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 2 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
  },
  "venues": [
   {
@@ -453,7 +458,11 @@
     "symbol": "USDC",
     "amount": 3488620.0
    },
-   "depth_role": "Primary executable venue; quoted by get_dy."
+   "depth_role": "Primary executable venue; quoted by get_dy.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Carried in this payload's own routed ladder; the venue answered quotes at measurement time. Liveness is inherited from that role, not re-read on-chain in this migration."
   },
   {
    "name": "BOLD/USDC",
@@ -470,7 +479,11 @@
     "symbol": "USDC",
     "amount": 332091.0
    },
-   "depth_role": "Primary executable venue; TVL materially overstates counter-side exit inventory."
+   "depth_role": "Primary executable venue; TVL materially overstates counter-side exit inventory.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Carried in this payload's own routed ladder; the venue answered quotes at measurement time. Liveness is inherited from that role, not re-read on-chain in this migration."
   },
   {
    "name": "BOLD/USDC",
@@ -485,7 +498,11 @@
     "symbol": "USDC",
     "amount": 625823.0
    },
-   "depth_role": "Primary executable venue; quoted by QuoterV2."
+   "depth_role": "Primary executable venue; quoted by QuoterV2.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Carried in this payload's own routed ladder; the venue answered quotes at measurement time. Liveness is inherited from that role, not re-read on-chain in this migration."
   },
   {
    "name": "BOLD/LUSD",
@@ -499,7 +516,11 @@
     "symbol": "LUSD",
     "amount": 183744.0
    },
-   "depth_role": "Secondary route component."
+   "depth_role": "Secondary route component.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Carried in this payload's own routed ladder; the venue answered quotes at measurement time. Liveness is inherited from that role, not re-read on-chain in this migration."
   },
   {
    "name": "BOLD/avUSD",
@@ -513,7 +534,11 @@
     "symbol": "avUSD",
     "amount": 153881.0
    },
-   "depth_role": "Secondary route component."
+   "depth_role": "Secondary route component.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Carried in this payload's own routed ladder; the venue answered quotes at measurement time. Liveness is inherited from that role, not re-read on-chain in this migration."
   },
   {
    "name": "BOLD/ETH",
@@ -529,7 +554,11 @@
     "symbol": "ETH",
     "value_cap_usd_approx": 95000.0
    },
-   "depth_role": "Secondary route component; pool identifier retained as source-truncated and never used as a quote key."
+   "depth_role": "Secondary route component; pool identifier retained as source-truncated and never used as a quote key.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Carried in this payload's own routed ladder; the venue answered quotes at measurement time. Liveness is inherited from that role, not re-read on-chain in this migration."
   },
   {
    "name": "BOLD/waEthUSDT/USDaf",
@@ -540,7 +569,11 @@
    "pool_id": "0x38ebe0c5\u202691d6b",
    "tvl_usd": 282000.0,
    "counter_side": null,
-   "depth_role": "Enumerated but not quoted; identifier retained as source-truncated and never used as a quote key."
+   "depth_role": "Enumerated but not quoted; identifier retained as source-truncated and never used as a quote key.",
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   },
   {
    "name": "Thirteen further BOLD pools",
@@ -552,7 +585,11 @@
    "pool_count": 13,
    "tvl_usd": 30000.0,
    "tvl_is_upper_bound": true,
-   "depth_role": "Immaterial aggregate context; not individually keyed or counted as additional inventory."
+   "depth_role": "Immaterial aggregate context; not individually keyed or counted as additional inventory.",
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   }
  ],
  "total_tvl_usd": 15914000.0,
@@ -579,5 +616,6 @@
   "registered_in_backing_monitor_assets": false,
   "basis": "The handoff reports that bold is not registered in backing-monitor/data/assets.json. This DexTracker payload is transport-ready but requires consumer-side slug registration before it is judged or rendered."
  },
- "refresh_cadence": "daily"
+ "refresh_cadence": "daily",
+ "payload_revised_at": "2026-09-21T08:42:28Z"
 }

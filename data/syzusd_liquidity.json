@@ -8,9 +8,14 @@
   "status": "unmeasured",
   "depth_usd": null,
   "is_floor": null,
-  "basis": "Depth withheld: the anchor is missing, undated, or came from the router being measured. A depth figure whose basis cannot be checked is not a measurement.",
+  "basis": "NEVER MEASURED, not stale. No depth has ever been quoted for this asset: syzusd is deliberately absent from liquidity_refresh.ASSETS, which admits only assets with a demonstrated quote path. This payload is an ENUMERATION record -- `rungs` is empty and `depth_usd` is null -- and `as_of` dates the venue enumeration, not a measurement. \u26a0\ufe0f A consumer adopting this block in `replace` mode would suppress a live ladder from another producer with a number that does not exist; refusing it is correct until it is measured.",
   "anchor": null,
-  "rungs": []
+  "rungs": [],
+  "never_measured": true,
+  "superseded_basis": {
+   "text": "Depth withheld: the anchor is missing, undated, or came from the router being measured. A depth figure whose basis cannot be checked is not a measurement.",
+   "why_replaced": "Blamed a missing or undated anchor. PegTracker's syzusd anchor is present, dated 2026-09-21T07:18:40Z, with an explicit reviewed pool_mark choice -- so that reason had stopped being true."
+  }
  },
  "primary_exit": {
   "gated": null,
@@ -77,7 +82,12 @@
     "Monad",
     "Sei"
    ]
-  }
+  },
+  "live_venue_count": 0,
+  "excluded_venue_count": 0,
+  "unestablished_venue_count": 11,
+  "live_venue_count_is_floor": true,
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 11 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
  },
  "venues": [
   {
@@ -93,7 +103,11 @@
    "enrichment": {
     "source": null,
     "note": "not covered by a DexTracker pool resolution"
-   }
+   },
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   },
   {
    "pool_id": "c51e151e-44ad-4f25-9911-102bd00811dc",
@@ -108,7 +122,11 @@
    "enrichment": {
     "source": null,
     "note": "not covered by a DexTracker pool resolution"
-   }
+   },
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   },
   {
    "pool_id": "20ccc2e5-0eca-4d9d-abd0-313908f51b31",
@@ -123,7 +141,11 @@
    "enrichment": {
     "source": null,
     "note": "not covered by a DexTracker pool resolution"
-   }
+   },
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   },
   {
    "pool_id": "148af5a0-747c-426d-91a4-5c5acf46f4e9",
@@ -138,7 +160,11 @@
    "enrichment": {
     "source": null,
     "note": "not covered by a DexTracker pool resolution"
-   }
+   },
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   },
   {
    "pool_id": "570ddae7-acae-4277-905b-278cd994b08d",
@@ -153,7 +179,11 @@
    "enrichment": {
     "source": null,
     "note": "not covered by a DexTracker pool resolution"
-   }
+   },
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   },
   {
    "pool_id": "8ee86f6f-318b-45c5-aad2-e003be777062",
@@ -168,7 +198,11 @@
    "enrichment": {
     "source": null,
     "note": "not covered by a DexTracker pool resolution"
-   }
+   },
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   },
   {
    "pool_id": "5bb0941e-6df0-4453-91dc-117093747229",
@@ -184,7 +218,11 @@
    "enrichment": {
     "source": null,
     "note": "not covered by a DexTracker pool resolution"
-   }
+   },
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   },
   {
    "pool_id": "ab1d4259-65c3-4a01-bd36-7e7df82b8c2e",
@@ -199,7 +237,11 @@
    "enrichment": {
     "source": null,
     "note": "not covered by a DexTracker pool resolution"
-   }
+   },
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   },
   {
    "pool_id": "82b88360-3c2a-4845-a17e-fb5d73ce42af",
@@ -215,7 +257,11 @@
    "enrichment": {
     "source": null,
     "note": "not covered by a DexTracker pool resolution"
-   }
+   },
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   },
   {
    "pool_id": "e2175e8e-13d8-5113-8fea-2965a79f892f",
@@ -231,7 +277,11 @@
    "enrichment": {
     "source": null,
     "note": "not covered by a DexTracker pool resolution"
-   }
+   },
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   },
   {
    "pool_id": "103162b0-ffde-5b8e-8a0e-b9fd8f14261d",
@@ -246,9 +296,14 @@
    "enrichment": {
     "source": null,
     "note": "not covered by a DexTracker pool resolution"
-   }
+   },
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
   }
  ],
  "total_tvl_usd": 60384678.0,
- "swap_tvl_usd": 625407.0
+ "swap_tvl_usd": 625407.0,
+ "payload_revised_at": "2026-09-21T08:46:09Z"
 }
