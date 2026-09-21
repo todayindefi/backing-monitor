@@ -649,13 +649,25 @@ const CommonRenderer = {
     // 25,329,865 while `slot0` still prints ~1.0000. Four rows with four TVL figures
     // would read as four venues of liquidity.
     //
-    // ⚠️ AND THE STATUS IS NOT DERIVED. There is no `live` boolean on a venue, and the
-    // only other signal is TVL magnitude — $3.3M against $99.75 — which is resolution
-    // by magnitude, the thing this codebase has been bitten by in both directions
-    // (see normalizeCollateralRatio). Parsing `depth_role` for the word "Excluded"
-    // would be the prose-parsing this file just refused to do for exit gates. So the
-    // producer's own sentence is RENDERED VERBATIM in its own column, and the live
-    // count comes from `enumeration.live_venue_count`, which is a published field.
+    // ✅ THE VERDICT IS NOW A STRUCTURED FIELD — `venues[].is_live`, shipped by
+    // DexTracker 2026-09-21 after riskAnalyst raised it. The previous note here said
+    // rendering `depth_role` verbatim was the least-bad available choice because the
+    // live/dead verdict existed only inside that prose; that is no longer true and the
+    // note is deleted rather than left to age. `depth_role` is still rendered — it is a
+    // sibling, not a replacement, and "slot0 still reports ~1.0000 and must not be
+    // quoted" is a warning no enum carries.
+    //
+    // ⚠️ `is_live` IS TRI-STATE AND BOTH SHORTCUTS ARE WRONG. `null` means the verdict
+    // was never established on-chain — enumerated from a feed and not resolved. That is
+    // UNKNOWN, not dead. `if (v.is_live)` renders unknown as dead (the harsh error);
+    // `if (v.is_live !== false)` renders it as live (the flattering one). It gets its
+    // own column state. Live today: syzUSD is 11 of 11 unknown, bold 2 of 8, reUSD 2 of 6.
+    //
+    // ⚠️ AND `venue_count` IS NOT THE ROW COUNT. bold enumerated 20 venues and publishes
+    // 8 rows, one of them an aggregate of 13 pools. The old line here read
+    // "live_venue_count of venue_count", which on bold said "6 of 20 ... are live" —
+    // comparing a confirmed-live count against an enumeration total, with 6 itself a
+    // FLOOR because 2 rows are unresolved. Never compare the two.
     _adaptVenues(block) {
         var vs = Array.isArray(block.venues) ? block.venues : null;
         if (!vs || !vs.length) return;
@@ -683,6 +695,14 @@ const CommonRenderer = {
             if (typeof v.balance_ratio === 'number') p.balance_ratio = v.balance_ratio;
             if (v.depth_role) p.role = String(v.depth_role);
             if (v.pool_id) p.pool_id = v.pool_id;
+            // Tri-state, carried as-is. `has_liveness` distinguishes "the producer
+            // published null" from "this payload predates the field", which must not
+            // render the same way: the first is an unresolved venue, the second is a
+            // schema gap.
+            if ('is_live' in v) { p.is_live = v.is_live; p.has_liveness = true; }
+            if (v.exclusion_reason) p.exclusion_reason = String(v.exclusion_reason);
+            if (v.exclusion_reason_note) p.exclusion_reason_note = String(v.exclusion_reason_note);
+            if (v.liveness_basis) p.liveness_basis = String(v.liveness_basis);
             return p;
         });
 
@@ -692,10 +712,21 @@ const CommonRenderer = {
         // become "0 live".
         var e = block.enumeration || {};
         var bits = [];
-        if (typeof e.live_venue_count === 'number' && typeof e.venue_count === 'number') {
-            bits.push(e.live_venue_count + ' of ' + e.venue_count +
-                      ' enumerated venue' + (e.venue_count === 1 ? '' : 's') +
-                      (e.live_venue_count === 1 ? ' is' : ' are') + ' live');
+        if (typeof e.live_venue_count === 'number') {
+            // ⚠️ "CONFIRMED live", and a FLOOR when anything is unresolved. syzUSD
+            // publishes live_venue_count 0 with unestablished_venue_count 11 — that is
+            // "never checked", NOT "nowhere to sell", and a bare "0 live" states the
+            // second. The floor flag and the unresolved count are both published.
+            var n = e.live_venue_count;
+            var line = n + ' venue' + (n === 1 ? '' : 's') + ' confirmed live';
+            if (e.live_venue_count_is_floor === true) {
+                line += ' — a FLOOR, not a total';
+                if (typeof e.unestablished_venue_count === 'number') {
+                    line += ': ' + e.unestablished_venue_count + ' never resolved on-chain' +
+                            (n === 0 ? ', so this is "not checked" rather than "nowhere to sell"' : '');
+                }
+            }
+            bits.push(line);
         }
         if (e.completeness) bits.push(String(e.completeness));
         if (bits.length && !block.pools_note) block.pools_note = bits.join(' — ');
@@ -6252,11 +6283,35 @@ const CommonRenderer = {
             }});
         if (anyPool('balance_ratio')) cols.push({ th: 'Balance', cls: 'text-right font-mono',
             get: function(p) { return (p.balance_ratio * 100).toFixed(1) + '%'; }});
-        // ⚠️ THE ONLY HONEST WAY TO SAY "THIS ROW IS NOT LIQUIDITY". A dead pool and
-        // the one live venue are otherwise two rows that differ by a TVL magnitude,
-        // and DUSD's dead Uniswap pool still prints a ~1.0000 slot0 price that must
-        // never be quoted. The producer wrote a sentence for each; it is rendered
-        // verbatim rather than reduced to a status we would have had to infer.
+        // ⚠️ TRI-STATE, AND THE THIRD STATE IS THE WHOLE REASON THIS IS NOT A BOOLEAN.
+        // true = quoted live on-chain. false = excluded, with a closed-enum reason.
+        // null = the verdict was NEVER ESTABLISHED, which is neither — it must not
+        // render as liquidity and must not render as dead. Amber, and it says so.
+        if (anyPool('has_liveness')) cols.push({ th: 'Status', cls: 'text-xs',
+            get: function(p) {
+                var esc = CommonRenderer._escapeAttr;
+                var tip = [p.liveness_basis, p.exclusion_reason_note].filter(Boolean).join(' — ');
+                var t = tip ? ' title="' + esc(tip) + '"' : '';
+                if (p.is_live === true) {
+                    return '<span class="text-green-600"' + t + '>live</span>';
+                }
+                if (p.is_live === false) {
+                    // The producer's enum, underscores opened out — not re-worded.
+                    // Re-phrasing a closed enum is how a consumer starts asserting a
+                    // reason the producer did not publish.
+                    return '<span class="text-slate-400"' + t + '>excluded' +
+                        (p.exclusion_reason
+                            ? ' · ' + esc(String(p.exclusion_reason).replace(/_/g, ' '))
+                            : '') + '</span>';
+                }
+                return '<span class="text-amber-700" title="' + esc(tip ||
+                    'This venue was enumerated but its liveness was never resolved on-chain. ' +
+                    'Unknown — not confirmed live, and not established as dead.') +
+                    '">unverified</span>';
+            }});
+        // ⚠️ KEPT ALONGSIDE `is_live`, AT THE PRODUCER'S REQUEST AND ON MERIT. The enum
+        // says a pool is dead; only this sentence says "slot0 still reports ~1.0000 and
+        // must not be quoted", which is the part that stops someone quoting it.
         if (anyPool('role')) cols.push({ th: 'Role', cls: 'text-xs text-slate-500',
             get: function(p) { return p.role ? CommonRenderer._escapeAttr(p.role) : '—'; }});
 
