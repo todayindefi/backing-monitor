@@ -1,8 +1,9 @@
 ---
 title: fxUSD and fxSAVE dashboards — plan
 repo: backing-monitor
-status: PLAN rev 1, 2026-09-22. NOTHING BUILT, NOTHING REGISTERED.
-  ⚠️ A SCOPE GO/NO-GO IS OPEN WITH riskAnalyst's USER — see §6.
+status: PLAN rev 2, 2026-09-22. NOTHING BUILT, NOTHING REGISTERED.
+  ⚠️ rev 1 CARRIED FOUR WRONG SCORES AND A WRONG RENDER INSTRUCTION — corrected in §2 and §1.
+  ⚠️ A SCOPE GO/NO-GO IS STILL OPEN WITH riskAnalyst's USER — see §6.
 ---
 
 # 0 ▶ START HERE
@@ -44,11 +45,21 @@ redeem(address,uint256,uint256) on the PoolManager, simulated 2026-09-22:
 ⚠️ getRedeemFeeRatio() returns a LIVE 0.5% — a designed feature, refused, not a vestige
 ```
 
-⚠️⚠️ **RENDER IT AS "NOT CALLABLE". NEVER "removed", "disabled" or "broken".** riskAnalyst
-established the refusal and the live fee; they did **not** establish the condition that would
-re-enable it. **A state gate that is off because the system is healthy and an admin switch look
-identical from outside.** security_analyst has that question. "Not callable now, on both pools" is
-measured; "never used" is not.
+⚠️⚠️ **REV 1 SAID RENDER THIS AS "NOT CALLABLE". THAT IS NOW WRONG AND WOULD MISLEAD.**
+
+**The condition is established, and it is not discretionary.** `isRedeemAllowed()` lives on
+PoolConfiguration and gates on **Curve EMA fxUSD < $0.998**. Live EMA is **0.99883**, so
+**redemption is closed BECAUSE THE PEG IS HOLDING.** There is no admin switch. rev 1 recorded that
+a healthy state-gate and an admin switch look identical from outside — true when written, and
+security_analyst has since separated them.
+
+✅ **RENDER IT AS "OPENS BELOW $0.998".** Not "gated", not "not callable", not "refused" — all of
+those imply a discretion that does not exist. ⚠️ `capacity_usd: 0` remains correct **today**, but
+the reason field must carry the BAND, not the refusal.
+
+⚠️ **AND IT IS NOT A HOLDER'S FLOOR.** It is an arbitrage that caps downside near $0.998. The
+distinction survives into the caption: a reader must not take "redemption opens at $0.998" as
+"I can redeem at $0.998".
 
 ✅ **A holder's only exit today is the DEX**, and the Liquidity axis was never scored on a
 redemption floor — fortunate, because there isn't one.
@@ -82,11 +93,34 @@ riskAnalyst's internal frontmatter uses a different vocabulary from the six-axis
 tidresearch on 2026-09-22 and it is authoritative. Deriving our own would put different numbers on
 our page than on theirs.**
 
+⚠️⚠️ **REV 1 PUBLISHED THE PRE-CORRECTION NUMBERS. FOUR WERE WRONG.** Corrected by riskAnalyst
+2026-09-22 (internal `20ec428`, tidresearch has the same). **These are the live ones:**
+
 ```
             Stability  Backing  Liquidity&Exit  Dependencies  Contract&Admin  Issuer   overall
-fxUSD          5.0       5.0         4.5            5.0            6.0         5.5      5.0
-fxSAVE         5.0       4.5         4.0            4.5            5.0         5.5      4.5
+fxUSD          5.5       5.0         4.5            5.0            4.0         5.5      4.5
+fxSAVE         5.0       4.5         3.5            4.5            4.0         5.5      4.5
 ```
+
+```
+superseded (rev 1):  fxUSD  Stability 5.0 · Contract 6.0 · overall 5.0
+                     fxSAVE Liquidity 4.0 · Contract 5.0
+```
+
+**🔴 Contract & Admin 6.0 → 4.0 (fxUSD) and 5.0 → 4.0 (fxSAVE).** The 6.0 rested on a timelock
+enumeration treated as the system's power set. security_analyst found **four undelayed paths
+beside the 72h delay** — including `updatePriceOracle(address)`, **unvalidated**, at three keys on
+every pool and at **ONE key (the deployer EOA) on the WBTC pool carrying 89.7% of all fxUSD debt**.
+⚠️ **THE DELAY PROTECTS THE CODE, NOT THE MARKS.**
+
+⚠️ **AND THIS REVERSES §4's ANSWER TO THE SHARED-ADMIN QUESTION.** rev 1 recorded that the 1.0 gap
+between the two was "the three extra contracts, nothing else". **They are now LEVEL at 4.0** —
+fxUSD lost two notches on a surface fxSAVE shares, so the wrapper penalty is absorbed. The
+shared-admin callout matters MORE now, not less: two pages showing 4.0 and 4.0 for one control
+surface is precisely the duplication that reads as independent confirmation.
+
+**Liquidity 4.0 → 4.5 (fxUSD), 4.0 → 3.5 (fxSAVE).** Their ladder spec gained §2.6 today: axis 3
+is scored on a **PROFILE, not a crossing** — see §2.1 below.
 
 ⚠️⚠️ **THREE RULES THAT ARE NOT OURS TO REINTERPRET:**
 
@@ -102,6 +136,32 @@ fxSAVE         5.0       4.5         4.0            4.5            5.0         5
    fxSP has no collateral ratio, but it has *backing*: a claim on the Stability Pool, itself
    fxUSD-backed by wstETH/WBTC against leveraged positions. Half a notch under fxUSD's 5.0 because
    **fxSP redeems ~2.4% below par for reasons not yet separated (fee vs absorbed losses)**.
+
+## 2.1 ⚠️ AXIS 3 IS SCORED ON A PROFILE, AND OUR TILE IS A SINGLE NUMBER
+
+riskAnalyst's ladder spec §2.6, added 2026-09-22: **a lone crossing hides curve shape.** fxUSD's
+profile, which IS the basis of the 4.5:
+
+```
+$100k    0.20 bps        0.5% crossing   $3.72M – $3.74M
+$1M      2.37 bps        2%   crossing   $4.25M – $4.30M
+                         ceiling         $4,648,576
+```
+
+The 0.5% crossing is **~2× the entire free float**, so unlocked fxUSD exits cheaply — but the
+**ceiling binds a fxSAVE unwind**, which is why the two assets moved in OPPOSITE directions on the
+same measurement (fxUSD 4.0 → 4.5, fxSAVE 4.0 → 3.5).
+
+⚠️⚠️ **THIS IS A FRAME-LEVEL PROBLEM, NOT AN fxUSD ONE.** Our axis-3 tile renders exactly one
+figure (`total_2pct_depth`). The rungs render in the ladder table below it, so the profile IS on
+the page — but the tile is what a reader scans, and riskAnalyst says a single number is now "the
+thing to avoid", having been misled by one themselves.
+
+**Not a unilateral change.** Re-shaping the axis-3 headline touches every asset on the dashboard.
+Options, for a decision rather than a patch: keep the crossing and add the ceiling beside it;
+render a two-point summary (cheap-size bps + ceiling); or leave the tile and strengthen the
+ladder's prominence. ⚠️ Whatever is chosen, **the ceiling must appear for fxUSD** — it is the
+binding quantity for fxSAVE and it is not the crossing.
 
 ⚠️ **My own first instinct got 2 of these 3 wrong** — I proposed redemption as its own axis-3
 figure and axis 2 as declared-underivable. Recorded so the next reader does not re-derive them.
@@ -146,7 +206,8 @@ tidresearch   ✅ reports for BOTH, already carrying `axis_frame: six`
               ⚠️ production: false on both (same state as bold) — so NO production link;
                  bold's precedent is report_status "staged" + a staging URL
 
-security_analyst  ❌ nothing — and they hold the one open question that matters (§1)
+security_analyst  ✅ ANSWERED the open question — four undelayed paths (§2), and the redemption
+                 gate separated into a price band, not a discretion (§1). Four scores moved on it.
 
 us            ❌ neither slug registered
 ```
@@ -168,10 +229,15 @@ us            ❌ neither slug registered
 > fxUSD and fxSAVE are governed by the same ProxyAdmin and the same 72-hour timelock. A single
 > control failure reaches both; they are not independent legs.
 
-⚠️ **The Contract & Admin gap (6.0 vs 5.0) is THREE EXTRA CONTRACTS, not the unmatched impl.** The
-admin surface is byte-identical. fxSAVE is fxUSD's governance risk **plus a wrapper stack** — an
-EIP-1167 custody vault, a gauge, and the Stability Pool, none visible through the ERC-4626
-interface. One notch for three contracts.
+⚠️⚠️ **SUPERSEDED — THERE IS NO LONGER A GAP.** rev 1 recorded that the 6.0 vs 5.0 difference was
+"three extra contracts, nothing else". **Both are now 4.0**: fxUSD lost two notches to the
+undelayed oracle paths (§2), on a surface fxSAVE shares, so the wrapper penalty is absorbed into
+the larger finding. The wrapper stack is still real — an EIP-1167 custody vault, a gauge and the
+Stability Pool, none visible through the ERC-4626 interface — it is simply no longer what separates
+the two scores, because nothing does.
+
+✅ **The callout matters MORE at equal scores, not less.** Two pages each showing 4.0 for ONE
+control surface is exactly the duplication that reads as two independent confirmations.
 
 ---
 
