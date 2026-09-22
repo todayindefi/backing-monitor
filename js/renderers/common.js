@@ -1875,8 +1875,28 @@ const CommonRenderer = {
         // runs, which is why the alt series was the only correct one on the chart.
         var crScaleSummary = opts.cr_scale_summary || null;
         var crScaleSlug = opts.asset_slug || null;
+        // ⚠️ A HISTORY ROW THAT DECLARES ITS OWN SCALE MUST NOT BE RESOLVED BY THE
+        // SNAPSHOT'S. This was about to multiply a chart by 100.
+        //
+        // PegTracker's new shared backing_history_writer NORMALISES history rows to
+        // percent and stamps `collateral_ratio_scale` on each row — while the SNAPSHOT
+        // block still declares `multiple` (fxUSD's backing.collateral_ratio is 1.5182).
+        // Resolving rows by the snapshot's declaration would have taken a
+        // already-percent 151.35 and multiplied it again: **15,135%** on the chart, the
+        // moment their next cron landed. Verified by simulating both states before and
+        // after their normalisation.
+        //
+        // ⚠️ Same rule the tile and the rating already follow — never inherit a scale
+        // across blocks — applied one level down, to the row rather than the block. The
+        // row is the most local declaration there is, so it wins.
+        //
+        // Fallback is unchanged for every feed whose rows carry no scale of their own
+        // (all of them until today), so usdm keeps resolving from `summary`, which is
+        // the only reason its 1.2785 history renders correctly at all.
         var rawCRValues = historyData.entries.map(function(e) {
-            return CommonRenderer.normalizeCollateralRatio(e.collateral_ratio, crScaleSlug, crScaleSummary);
+            var rowScale = (e && typeof e.collateral_ratio_scale === 'string')
+                ? { collateral_ratio_scale: e.collateral_ratio_scale } : crScaleSummary;
+            return CommonRenderer.normalizeCollateralRatio(e.collateral_ratio, crScaleSlug, rowScale);
         });
         var rawAltCRValues = historyData.entries.map(function(e) { return e.collateral_ratio_alt; });
         var rawAltHasData = !opts.omit_alt && rawAltCRValues.some(function(v) {
