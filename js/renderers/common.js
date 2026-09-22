@@ -1120,7 +1120,31 @@ const CommonRenderer = {
         if (value === null || value === undefined) return value;
         var declared = summary && summary.collateral_ratio_scale;
         if (declared === 'percent') return value;
-        if (declared === 'ratio') return value * 100;
+        // ⚠️ `multiple` IS PEGTRACKER'S WORD FOR `ratio`, AND NOT KNOWING IT RENDERED
+        // 151% AS 1.51%.
+        //
+        // fxUSD declares `collateral_ratio_scale: "multiple"` and publishes
+        // 1.513516. That fell to the "unrecognised declaration" branch below, which
+        // returns the value untouched — i.e. treats it as already-percent — so the
+        // backing tile read **1.51%** and the axis rated **Critical 1/5** on an asset
+        // collateralised at 151.4%. Caught before fxusd was registered; no reader saw it.
+        //
+        // ⚠️ THE DECLARATION WAS CORRECT AND THE CONSUMER'S VOCABULARY WAS NOT. This is
+        // not a producer error to push back on — `multiple` and `ratio` mean the same
+        // thing and theirs is arguably the better word. Three spellings are live today:
+        //   percent   21 assets
+        //   ratio     usdm
+        //   multiple  dusd_alto, fxusd   <- newer, and previously unknown here
+        // ⚠️ Accepting a synonym entrenches the divergence, so this is a stopgap, not a
+        // resolution: the producers should converge on one spelling. Until they do,
+        // dropping either word silently mis-scales by 100x.
+        if (declared === 'ratio' || declared === 'multiple') return value * 100;
+        // ⚠️ An unrecognised declaration still falls through untouched, and that stays
+        // deliberate for the reason stated above: it renders alarmingly LOW, which gets
+        // investigated. The dangerous direction is a distressed feed rendered healthy.
+        // But note this branch is indistinguishable from `percent` by construction — it
+        // told us nothing about fxUSD for as long as `multiple` was unknown. After this
+        // change ZERO live assets reach it; if one ever does, that silence is the cost.
         if (declared) return value;  // unrecognised declaration: trust it as-is
         if (assetSlug && CommonRenderer.RAW_CR_ASSETS.indexOf(assetSlug) !== -1) {
             return value * 100;
@@ -4383,6 +4407,8 @@ const CommonRenderer = {
     },
 
     _backingValueHtml(data) {
+        // Which block the value came from — decides whose scale declaration applies.
+        var fromBacking = !!(data.backing && data.backing.collateral_ratio != null);
         // ⚠️ FIRST, ahead of the whole cr cascade below — deliberately. It has to catch
         // BOTH shapes: a feed that publishes no single ratio (the tile would fall through
         // to a dash) and one that publishes the blended 110.7% (which would render green
@@ -4460,6 +4486,23 @@ const CommonRenderer = {
             }
             return '—';
         }
+        // ⚠️ THE VALUE PATH DID NOT NORMALISE AND THE RATING PATH DID. fxUSD is the
+        // first asset whose BACKING block carries a raw ratio, and it split the two:
+        // backingRating resolved 1.513516 -> 151.35% and rated it Healthy, while this
+        // function rendered the same field as **1.51%** in red. One tile, two scales,
+        // and the number a reader sees was the wrong one.
+        //
+        // It worked until now only because every backing block to date has been
+        // percent — usdm's is 91.24 with `scale: "percent"` (its 1.2762 `ratio` lives
+        // on SUMMARY and is a different quantity). So the absence of a normalise here
+        // was invisible rather than correct.
+        //
+        // ⚠️ Same resolution as backingRating, deliberately: scale comes from the block
+        // the VALUE came from, never inherited across blocks. Guessing a backing
+        // value's scale from summary's declaration is the mis-scaling the helper exists
+        // to prevent.
+        cr = CommonRenderer.normalizeCollateralRatio(
+            cr, data.asset_slug, fromBacking ? (data.backing || {}) : (data.summary || {}));
         var cls = cr >= 100 ? 'text-green-600' : 'text-red-600';
         var basis = this._backingBasis(data);
         // ⚠️ Never round ACROSS a rating boundary. susds is 99.999993 — seven
