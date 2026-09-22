@@ -378,7 +378,7 @@ var MSTRRenderer = {
                 '<div class="text-sm">' + caption + '</div>' +
             '</div>' +
             '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
-                strcMnavWatchCaption(tradfi) +
+                strcMnavWatchCaption(tradfi, dcf) +
             '</div>' +
             ((monetizationLive || monetizationHistorical) ?
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +

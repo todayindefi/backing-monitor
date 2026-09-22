@@ -133,18 +133,49 @@ function strcBtcMonetizationCaption(btc) {
         'Reported holdings are <span class="font-mono">' + holdingsTxt + '</span>.';
 }
 
-function strcMnavWatchCaption(tradfi) {
+function strcMnavWatchCaption(tradfi, dcf) {
     tradfi = tradfi || {};
+    dcf = dcf || {};
     var mnav = tradfi.mnav || {};
     var watch = mnav.rearm_watch || {};
     var val = (mnav.value != null) ? mnav.value.toFixed(4) : '—';
+    var money = function (v) {
+        return (v != null && typeof STRCRenderer !== 'undefined')
+            ? STRCRenderer._fmtMoneyShort(v) : null;
+    };
+
+    // ⚠️ TWO SERIES FOR ONE QUANTITY. `rearm_watch.reserve_trajectory` is the gate's
+    // input; `digital_credit_framework.usd_reserve_policy` is the same payload's
+    // current USD Reserve figure. They are maintained independently, and the
+    // trajectory has been a frozen literal since 2026-08-11 (last entry as_of
+    // 2026-08-09, $4.65B) while the policy block tracked the weekly 8-K to
+    // 2026-09-21 ($5.04B, first decline in the series). Rendering the trajectory
+    // alone put two values for one quantity, six weeks apart, on one page.
+    // We do NOT recompute the leg from the fresher series — the rule's window and
+    // threshold are the producer's, not ours. We name the lag and decline to
+    // attribute the watch's inactivity to a leg whose input is stale.
     var reserveTrail = Array.isArray(watch.reserve_trajectory) ? watch.reserve_trajectory : [];
     var latestReserve = reserveTrail.length ? reserveTrail[reserveTrail.length - 1] : null;
-    var reserveTxt = latestReserve && latestReserve.cash_and_equivalents_usd != null && typeof STRCRenderer !== 'undefined'
-        ? STRCRenderer._fmtMoneyShort(latestReserve.cash_and_equivalents_usd)
-        : null;
-    var reserveAsOf = latestReserve && latestReserve.as_of;
+    var gateTxt = latestReserve ? money(latestReserve.cash_and_equivalents_usd) : null;
+    var gateAsOf = latestReserve && latestReserve.as_of;
+
+    var policy = dcf.usd_reserve_policy || {};
+    var liveTxt = money(policy.balance_usd);
+    var liveAsOf = policy.as_of;
+
+    // Structural staleness test: is the gate's input older than this payload's own
+    // current reserve as_of? Date comparison, never magnitude — the direction of
+    // the reserve is exactly the thing in dispute.
+    var lagDays = null;
+    if (gateAsOf && liveAsOf && /^\d{4}-\d{2}-\d{2}$/.test(gateAsOf) && /^\d{4}-\d{2}-\d{2}$/.test(liveAsOf)) {
+        var dg = Date.parse(gateAsOf + 'T00:00:00Z');
+        var dl = Date.parse(liveAsOf + 'T00:00:00Z');
+        if (!isNaN(dg) && !isNaN(dl) && dl > dg) lagDays = Math.round((dl - dg) / 86400000);
+    }
+    var gateStale = lagDays != null && lagDays >= 7;
+
     var printCount = watch.sub_1_0_weekly_prints != null ? watch.sub_1_0_weekly_prints : null;
+    var printsNeeded = watch.required_sub_1_0_weekly_prints != null ? watch.required_sub_1_0_weekly_prints : null;
     var watchState = watch.state || (watch.armed === false ? 'watch_not_armed' : null);
     var stateTxt = watchState ? ' <span class="font-mono">' + watchState + '</span>.' : '.';
     var thresholdSide = 'at';
@@ -153,9 +184,39 @@ function strcMnavWatchCaption(tradfi) {
     var thresholdTxt = (mnav.value != null)
         ? 'mNAV is near the 1.0 line at ' + val + ' (' + thresholdSide + ' 1.0).'
         : 'mNAV is near the 1.0 line.';
-    var reserveClause = reserveTxt
-        ? ' Reserve built to ' + reserveTxt + (reserveAsOf ? ' as of ' + reserveAsOf : '') + ', so the reserve drawdown leg is not satisfied.'
-        : ' Reserve drawdown is not satisfied.';
+
+    // Leg 1 — persistence. Published booleans + counters only.
+    var persistenceClause = '';
+    if (watch.persistence_leg_satisfied === false && printCount != null && printsNeeded != null) {
+        persistenceClause = ' Sustained-sub-1.0 leg: <span class="font-mono">' + printCount +
+            '</span> of <span class="font-mono">' + printsNeeded + '</span> required weekly prints — not satisfied.';
+    } else if (watch.persistence_leg_satisfied === true) {
+        persistenceClause = ' Sustained-sub-1.0 leg: satisfied.';
+    }
+
+    // Leg 2 — reserve. When the gate input lags, render the lag instead of the
+    // conclusion; the published leg status is still reported, but not used to
+    // explain why the watch is inactive.
+    var reserveClause;
+    if (gateStale) {
+        reserveClause = ' <span class="font-semibold">⚠️ The reserve leg is reading a stale series.</span>' +
+            ' Its trajectory ends ' + (gateTxt ? 'at ' + gateTxt + ' ' : '') + 'as of <span class="font-mono">' +
+            gateAsOf + '</span>, while this payload\'s current USD Reserve is ' +
+            (liveTxt ? '<span class="font-mono">' + liveTxt + '</span> ' : '') +
+            'as of <span class="font-mono">' + liveAsOf + '</span> — <span class="font-mono">' + lagDays +
+            '</span> days behind. The producer still publishes this leg as ' +
+            (watch.reserve_flat_to_down_leg_satisfied === false ? 'not satisfied' : 'satisfied') +
+            ', but that status rests on the stale trajectory, so it is not a reason the watch is inactive.' +
+            ' Treat the reserve leg as unverified here and read the USD Reserve policy panel for the current figure.';
+    } else if (watch.reserve_flat_to_down_leg_satisfied === false) {
+        reserveClause = ' Flat-to-declining reserve leg: not satisfied' +
+            (gateTxt ? ' (trajectory at ' + gateTxt + (gateAsOf ? ' as of ' + gateAsOf : '') + ')' : '') + '.';
+    } else if (watch.reserve_flat_to_down_leg_satisfied === true) {
+        reserveClause = ' Flat-to-declining reserve leg: satisfied' +
+            (gateTxt ? ' (trajectory at ' + gateTxt + (gateAsOf ? ' as of ' + gateAsOf : '') + ')' : '') + '.';
+    } else {
+        reserveClause = '';
+    }
 
     return '<span class="font-semibold">' + thresholdTxt + '</span> ' +
         // ⚠️ `> 0`, NOT `!= null`. sub_1_0_weekly_prints is 0 today and 0 is not
@@ -164,7 +225,7 @@ function strcMnavWatchCaption(tradfi) {
         (printCount != null && printCount > 0
             ? 'This is sub-1.0 weekly print #' + printCount + '; ' : '') +
         'no discount-regime break alert because the re-arm rule requires sustained sub-1.0 mNAV plus a flat-to-declining reserve.' +
-        reserveClause + stateTxt +
+        persistenceClause + reserveClause + stateTxt +
         // ⚠️ REMOVED: " The ~0.98 print is held down partly by the record cash
         // deduction, not equity weakness; MSTR rose this week." Authored prose with
         // no producer and no as_of, asserting a ~0.98 mNAV print. The live value is
@@ -806,7 +867,7 @@ var STRCRenderer = {
                 '<div class="text-sm">' + caption + '</div>' +
             '</div>' +
             '<div class="mt-3 p-3 rounded border border-slate-300 bg-slate-50 dark:bg-slate-800/40 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' +
-                strcMnavWatchCaption(tradfi) +
+                strcMnavWatchCaption(tradfi, dcf) +
             '</div>' +
             ((monetizationLive || monetizationHistorical) ?
             '<div class="mt-3 p-3 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/10 dark:border-amber-700/50 text-xs text-amber-800 dark:text-amber-200 leading-relaxed">' +
