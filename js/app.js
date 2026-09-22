@@ -529,6 +529,35 @@ async function renderAsset(slug) {
             if (data.asset_specific.chart_y_min !== undefined) chartOpts.y_min = data.asset_specific.chart_y_min;
             if (data.asset_specific.chart_y_max !== undefined) chartOpts.y_max = data.asset_specific.chart_y_max;
         }
+        // ⚠️ THE PRODUCER NAMES ITS OWN ALT SERIES AND WE WERE SUBSTITUTING A DEFAULT.
+        //
+        // `summary.collateral_ratio_alt.label` is published by four assets and read by
+        // none. renderCRChart fell back to 'CR (gross)', which is right for exactly ONE
+        // of them, by coincidence:
+        //
+        //   ousd   "CR (gross)"           -> rendered "CR (gross)"   matched by luck
+        //   usdd   "Independent CR"       -> rendered "CR (gross)"   wrong
+        //   frax   "External-only CR"     -> rendered "CR (gross)"   wrong
+        //   usdm   "Stable-Only Coverage" -> rendered "CR (gross)"   wrong
+        //
+        // ⚠️ And the substitution INVERTS the meaning rather than blurring it. frax's
+        // alt is EXTERNAL-ONLY, a narrower measure, rendered under a word meaning more
+        // inclusive. usdm's is the STABLE-ONLY series — the conservative figure the axis
+        // is actually rated on — labelled as the gross one, while the system-wide line
+        // beside it reads plain "CR". A reader would take the two lines backwards.
+        //
+        // ⚠️ Placed AFTER the asset_specific block rather than inside it: usdm has no
+        // alt series in its feed at all — usdm.js SYNTHESISES it in preRender and sets
+        // the label there — and `data.asset_specific` is optional, so reading this
+        // inside that guard would both miss usdm and risk throwing where it is absent.
+        //
+        // asset_specific.chart_alt_dataset_label still wins; this is the fallback.
+        if (chartOpts.alt_dataset_label == null) {
+            var altMeta = data.summary && data.summary.collateral_ratio_alt;
+            if (altMeta && typeof altMeta.label === 'string' && altMeta.label.trim()) {
+                chartOpts.alt_dataset_label = altMeta.label.trim();
+            }
+        }
         // The alt CR is a USD value (e.g. Free Liquidity), not a percentage —
         // don't plot it on a % axis.
         if (data.summary && data.summary.collateral_ratio_alt && data.summary.collateral_ratio_alt.is_currency) {
