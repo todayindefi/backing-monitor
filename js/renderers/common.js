@@ -725,6 +725,39 @@ const CommonRenderer = {
         var vs = Array.isArray(block.venues) ? block.venues : null;
         if (!vs || !vs.length) return;
         if (Array.isArray(block.pools) && block.pools.length) return;   // producer's own wins
+        // ⚠️ DUST IS COLLAPSED, NOT DELETED — 23 of fxUSD's 37 venues are dust.
+        //
+        // A 37-row table where 60% of rows hold under $1,000 is not a venue breakdown,
+        // it is a haystack: the $10.0M USDC pool that IS the asset's exit sits at the
+        // same visual weight as a $1 MIM pair. Owner decision 2026-09-22, and it
+        // applies to every asset rather than to fxUSD alone.
+        //
+        // ⚠️ BUT THE COUNT AND THE REASON STILL RENDER. DexTracker enumerates these
+        // deliberately so the holder census reconciles, and their `known_answer_check`
+        // exists precisely to prove a pool was SURFACED AND EXCLUDED rather than
+        // missed. Dropping them silently would discard that distinction and make a
+        // thorough enumeration indistinguishable from a lazy one.
+        //
+        // ⚠️ THE DISCRIMINATOR IS THE PRODUCER'S CLOSED ENUM, NEVER TVL MAGNITUDE.
+        // `exclusion_reason === 'dust_below_threshold'` is their judgement, already
+        // made and published. Picking a dollar floor here would be this renderer
+        // deciding what counts as immaterial — resolution by magnitude, which is what
+        // normalizeCollateralRatio exists to refuse.
+        //
+        // ⚠️ `dead_zero_liquidity` IS NOT COLLAPSED, and the difference matters. Dust
+        // is immaterial; DEAD is a warning. DUSD's dead Uniswap pool carries "slot0
+        // still reports ~1.0000 and must not be quoted" — a reader who cannot see that
+        // row could quote a price from a pool with zero liquidity.
+        var dust = vs.filter(function(v) {
+            return v && v.exclusion_reason === 'dust_below_threshold';
+        });
+        var dustTvl = dust.reduce(function(t, v) {
+            return t + (typeof v.tvl_usd === 'number' ? v.tvl_usd : 0);
+        }, 0);
+        vs = vs.filter(function(v) {
+            return !v || v.exclusion_reason !== 'dust_below_threshold';
+        });
+        if (!vs.length) { vs = dust; dust = []; }   // never render an empty table
         block.pools = vs.map(function(v) {
             var p = {
                 // ⚠️ `name` FIRST. The table's Venue column resolves
@@ -780,6 +813,13 @@ const CommonRenderer = {
                 }
             }
             bits.push(line);
+        }
+        // The collapsed rows, stated rather than vanished.
+        if (dust.length) {
+            bits.push(dust.length + ' further venue' + (dust.length === 1 ? '' : 's') +
+                ' enumerated and excluded as dust below the producer\u2019s threshold' +
+                (dustTvl > 0 ? ', ' + CommonRenderer.formatCurrencyExact(dustTvl) + ' between them' : '') +
+                ' \u2014 not omitted, and not a gap in the enumeration');
         }
         if (e.completeness) bits.push(String(e.completeness));
         if (bits.length && !block.pools_note) block.pools_note = bits.join(' — ');
