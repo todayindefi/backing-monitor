@@ -2,14 +2,14 @@
   "schema_version": "issuer/1",
   "producer": "riskanalyst",
   "asset": "bold",
-  "as_of": "2026-09-14T00:00:00Z",
+  "as_of": "2026-09-22T09:50:50Z",
   "issuer": {
     "issuer_score": 8.0,
     "issuer_score_source": "riskAnalyst:authored",
     "issuer_score_generated_at": "2026-09-14T00:00:00Z",
     "entity": "Liquity (immutable protocol, no issuer counterparty)",
-    "report_url": "https://staging.tidresearch.com/reports/bold/",
-    "report_url_status": "staged",
+    "report_url": "https://tidresearch.com/reports/bold",
+    "report_url_status": "published",
     "summary": "Effectively **no issuer counterparty** — and unusually, this is verified rather than asserted: owner renounced to `address(0)`, no proxies on any core contract, `setBranchAddresses` reverts on the Ownable check for every possible caller, mint authority permanently closed to three branches, collateral set permanently frozen, no pause, no parameter setter, no upgrade path. Governance controls only the routing of 25% of interest revenue and the docs state it has no other powers. This removes essentially the entire admin-key risk class. Held to 8.0 rather than higher by track record (§III.4): a critical bug in **base code** survived six audit firms plus formal verification, surfaced three weeks post-launch, **its root cause was never published**, and immutability meant the only remediation was full redeployment plus manual migration — leaving 220,899 BOLD permanently stranded. The $125k critical bounty cap (0.16% of TVL) is weak insurance against a repeat.",
     "facts": [
       "Checked on live BOLD 0x6440f144b7e50D6a8439336510312d2F54beB01D: owner() = address(0) and the EIP-1967 implementation slot is zero. The legacy 0xb01dd87B29d187F3E3a4Bf6cdAebfb97F3D9aB98 token is a different deployment whose symbol differs only by case.",
@@ -18,9 +18,9 @@
       "No issuer does NOT mean no organization or team: Liquity AG and protocol contributors exist, and Liquity AG grants the BUSL license. It also does not mean no Chainlink, Lido, Rocket Pool, sBOLD-wrapper or LQTY-governance dependency.",
       "Governance is not absent. The LQTY allocator can direct the bounded weekly initiative allocation from its own BOLD balance, but the completed walk found no path from that allocator into core branches, oracles, parameters, code or authorized contracts.",
       "The verified absence is bounded to the core contracts and selectors walked as of 2026-09-14. The OwnershipTransferred renunciation event was not read, Chainlink feed governance was outside the walk, and LQTY voter concentration and majority cost were not measured.",
-      "The BOLD assessment exists at the staging report URL and remains under review with Liquity. It is not publicly published."
+      "The BOLD assessment is PUBLISHED at https://tidresearch.com/reports/bold (promoted from staging 2026-09-22, tidresearch commit 2951ab3). Overall 6.5."
     ],
     "summary_source": "Verbatim editorial conclusion from the internal BOLD assessment's Issuer scoring rationale; its 220,899 legacy-BOLD figure is the conclusion's dated wording and is not a current-balance claim. Attributed facts come from the same assessment, the BOLD dashboard field specification and the completed authority walk. [verified 2026-09-14]",
-    "producer_note": "Axis 6's authored 8.0 score is transported through this issuer/1 overlay rather than axis-basis/1. The supplied report URL is staging-only and must not be represented as a publicly published report while Liquity review remains open."
+    "producer_note": "Axis 6's authored 8.0 score is transported through this issuer/1 overlay rather than axis-basis/1. ⚠️ PROMOTED 2026-09-22: report_url now points to production and report_url_status is \"published\". It previously carried a staging URL, which SURVIVED backing-monitor fixing their own header link — app.js:371 gives the overlay precedence whenever it supplies a report_url, so a stale URL here cannot be overridden downstream. This file is the only place that link can be corrected."
   }
 }
