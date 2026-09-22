@@ -536,7 +536,20 @@ async function renderAsset(slug) {
         }
         // The chart resolves CR scale exactly as the summary tile does; without
         // the summary it cannot, and a raw-ratio feed plots 100x low.
-        chartOpts.cr_scale_summary = data.summary || null;
+        // ⚠️ THIRD CALL SITE OF THE SAME SCALE BUG. The tile and the rating each
+        // resolved CR scale independently and disagreed (fixed in dedb98a96); the
+        // CHART is the third, and it reads `summary` alone.
+        //
+        // fxUSD has NO summary block — its ratio and its `collateral_ratio_scale:
+        // "multiple"` both live on `backing`. So this passed null, normalize fell to
+        // its percent default, and a 151.35% asset would have plotted as a flat line
+        // at 1.51% the moment its history landed. Caught before that history exists.
+        //
+        // ⚠️ Summary still WINS where present, and that is not laziness: usdm's
+        // history stores 1.2785, which is the SUMMARY's ratio scale, not its backing
+        // block's percent. Preferring backing would break the one asset the old code
+        // got right. Fall back only when there is no summary at all.
+        chartOpts.cr_scale_summary = data.summary || data.backing || null;
         // The producer's own window beats one derived from the file. See
         // renderCRChart — a full-file range read as "30d" is the defect this
         // block was added upstream to close.
