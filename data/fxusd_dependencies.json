@@ -1,0 +1,58 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "fxusd",
+  "as_of": "2026-09-22T10:31:09Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "WBTC (BitGo) — 89.7% of all debt",
+        "metric": "1,292.12 WBTC collateral against 76,591,690 fxUSD debt; pool CR 143.8%",
+        "source": "PoolManager pools on-chain, 2026-09-22",
+        "note": "⚠️ THE FRAMING \"backed by wstETH and WBTC\" IMPLIES A BALANCE THAT DOES NOT EXIST. The WBTC leg carries nearly all the debt at the LOWER ratio, and it is the CUSTODIAL one — an off-chain counterparty sits under 90% of the book."
+      },
+      {
+        "name": "wstETH (Lido) — 10.3% of debt",
+        "metric": "6,661.71 wstETH against 8,786,912 fxUSD debt; pool CR 257.1%",
+        "source": "PoolManager pools on-chain, 2026-09-22",
+        "note": "Comfortably collateralised, but a small share of the book."
+      },
+      {
+        "name": "Collateral price oracles",
+        "metric": "wstETH 0x0C5C61025f047cB7e3e85852dC8eAFd7b9a4Abfb · WBTC 0xb3c90e64EB6f456A5F5C17Aa99b6aecA6f4a6390",
+        "source": "pool.priceOracle() on-chain, 2026-09-22",
+        "note": "⚠️ REPOINTABLE UNDELAYED at three keys on every pool and at ONE key on the WBTC pool. Also carries OZ M-06's pre-fix formula: both are non-upgradeable and predate the fix marked resolved. ⚠️ The deployment manifest names a DIFFERENT oracle (PriceOracle#StETHPriceOracle 0x3716352d…) that no pool reads — a manifest is a deployment record, not a wiring record."
+      },
+      {
+        "name": "Curve USDC/fxUSD 0x5018BE882DccE5E3F2f3B0913AE2096B9b3fB61f",
+        "metric": "$10.0M TVL, USDC side $4.0M; the only direct USDC venue of 33 pools holding fxUSD",
+        "source": "Curve stable-ng + DexTracker enumeration, 2026-09-22",
+        "note": "⚠️ Doubles as a peg mechanism: isRedeemAllowed() reads this pool's EMA price, so the redemption gate and the exit venue are the SAME dependency."
+      }
+    ],
+    "downstream": [
+      {
+        "name": "fxSAVE",
+        "metric": "ERC-4626 over fxSP; 90.55% of fxUSD supply sits inside that pool",
+        "note": "⚠️ NOT an independent leg — shares fxUSD's ProxyAdmin and timelock exactly."
+      },
+      {
+        "name": "USG",
+        "metric": "18.8% of USG's collateral book across two markets",
+        "note": "The reason this file exists; closed usg.md axis 4 from a range to a point."
+      },
+      {
+        "name": "reUSD (Resupply) and msUSD (Metronome)",
+        "metric": "Curve pool legs",
+        "note": "fxUSD is 95.6% of the msUSD/fxUSD pool — that is msUSD's problem, not fxUSD's."
+      }
+    ],
+    "downstream_tracked": [
+      "fxsave",
+      "usg",
+      "reusd-resupply",
+      "msusd-metronome"
+    ],
+    "note": "⚠️ THE DEPENDENCY THAT MATTERS IS NOT A TOKEN. 90.55% of fxUSD supply is locked inside the f(x) Stability Pool, so the free float is ~2.2% — and fxSAVE redemption converts that locked supply into float on demand. The contingent seller pool is the whole book against a $4.65M realisable ceiling. ⚠️ TRANSPORT BUT NO CONSUMER AS OF 2026-09-22 — backing-monitor has no dashboard page for this asset yet; they are building one and requested these overlays. Nothing renders this file today, so it cannot yet reach a reader."
+  }
+}

@@ -1,0 +1,2085 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "fxusd",
+ "as_of": "2026-09-22T09:19:18Z",
+ "producer": "dextracker",
+ "note": "Axis 3 (Liquidity & Exit), single producer. Measured exit evidence only; no risk score. f(x) Protocol's fxUSD 0x085780639CC2cACd35E474e71f4d000e2405d8f6 -- NOT fxSAVE (0x7743e50F..., an ERC-4626 share at ~1.12). Protocol redemption is measured as REFUSED (riskAnalyst 2026-09-22), so this DEX ladder is the ONLY exit for fxUSD and for fxSAVE, which redeems into it.",
+ "depth": {
+  "status": "bracketed",
+  "depth_usd": 4199218.75,
+  "depth_usd_semantics": "lower_bound_of_bracket: a size that cleared the threshold, never the crossing itself. Read `bracket` for the located range and `bracket.meets_precision_obligation` for whether it is within 1% of midpoint; a false there with a wide bracket means depth_usd may understate the crossing by the bracket's width.",
+  "is_floor": true,
+  "threshold_bps": -200.0,
+  "size_response": "size_responsive",
+  "marginal_cost_monotonic_within_tested_range": true,
+  "tested_through_input_usd": 20000000.0,
+  "baseline_rung": {
+   "size_usd": 100.0,
+   "slippage_bps": -4.384699999999686,
+   "amount_out_tokens": 99.956153
+  },
+  "rung_set": {
+   "grid": "decade",
+   "start_usd": 1000.0,
+   "cap": 10,
+   "published_rungs": 7,
+   "decade_rungs": 5,
+   "envelope_probes": 2,
+   "termination": "crossed_threshold",
+   "termination_note": "Ascending the decade grid stopped at the first rung past the threshold. A SHORT LADDER IS THE ANSWER, NOT A GAP: continuing upward buys nothing once the crossing is bracketed.",
+   "spec": "riskAnalyst liquidity-ladder-spec.md \u00a77 (178e54a)"
+  },
+  "slippage_convention": "Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. The dated external mid sizes the input notional and is NOT the impact reference.",
+  "basis": "The -200bps crossing is BRACKETED between $4,199,218.75 and $4,234,375.00. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor.",
+  "bracket": {
+   "last_clearing_size_usd": 4199218.75,
+   "last_clearing_marginal_impact_bps": -198.506691209378,
+   "first_crossing_size_usd": 4234375.0,
+   "first_crossing_marginal_impact_bps": -209.07653056885687,
+   "width_usd": 35156.25,
+   "monotonic_in_bracket": true,
+   "threshold_bps": -200.0,
+   "meets_precision_obligation": true
+  },
+  "quote": {
+   "method": "KyberSwap GET /api/v1/routes exact-input fxUSD -> USDC; single-hop through Curve USDC/fxUSD to ~$4M, then the router splits through msUSD/alUSD/reUSD and their own onward USDC legs, all priced end-to-end",
+   "venue": "kyberswap_routed",
+   "chain": "ethereum",
+   "token_in": {
+    "symbol": "fxUSD",
+    "address": "0x085780639CC2cACd35E474e71f4d000e2405d8f6",
+    "decimals": 18
+   },
+   "baseline_size_usd": 100.0,
+   "quoted_as_of": "2026-09-22T09:17:02Z",
+   "token_out": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6
+   },
+   "resolution": "Both tokens are exact addresses. Returned route venues are enumerated from router responses, never selected by ticker or guessed pool keys.",
+   "failure_reporting": {
+    "note": "A failed rung carries `failure_kind` and `http_status`. `no_route_found` is a finding ABOUT THE ASSET; every other kind is our instrument failing, and the two must not be read as the same claim.",
+    "retried_kinds": [
+     "upstream_unavailable",
+     "upstream_rate_limited",
+     "transport_timeout",
+     "transport_error"
+    ],
+    "never_retried": [
+     "no_route_found",
+     "chain_not_mapped",
+     "invalid_request"
+    ]
+   },
+   "retry_policy": {
+    "attempts_per_size": 4,
+    "backoff_schedule_seconds": [
+     2.0,
+     4.0,
+     8.0
+    ],
+    "between_rung_delay_seconds": 1.0,
+    "failure_semantics": "A transient upstream failure becomes quote_failed only after all attempts fail. no_route_found is not retried because it is a venue finding. Failures are never interpolated or treated as zero liquidity."
+   },
+   "venue_enumeration": {
+    "method": "union of address-keyed router routes returned across tested sizes",
+    "venues": [
+     {
+      "venue": "curve",
+      "status": "quoted"
+     },
+     {
+      "venue": "curve-stable-ng",
+      "status": "quoted"
+     },
+     {
+      "venue": "curve-stable-plain",
+      "status": "quoted"
+     },
+     {
+      "venue": "curve-twocrypto-ng",
+      "status": "quoted"
+     },
+     {
+      "venue": "ekubo",
+      "status": "quoted"
+     },
+     {
+      "venue": "ekubo-v3",
+      "status": "quoted"
+     },
+     {
+      "venue": "fluid-dex-t1",
+      "status": "quoted"
+     },
+     {
+      "venue": "frxusd",
+      "status": "quoted"
+     },
+     {
+      "venue": "metric-propamm/uniswapv3",
+      "status": "quoted"
+     },
+     {
+      "venue": "pmm-10/uniswapv3",
+      "status": "quoted"
+     },
+     {
+      "venue": "traderjoe-v21",
+      "status": "quoted"
+     },
+     {
+      "venue": "uniswap-v4",
+      "status": "quoted"
+     },
+     {
+      "venue": "uniswap-v4-angstrom",
+      "status": "quoted"
+     },
+     {
+      "venue": "uniswap-v4-stable-stable",
+      "status": "quoted"
+     },
+     {
+      "venue": "uniswapv3",
+      "status": "quoted"
+     }
+    ],
+    "legacy_token_excluded": null,
+    "unmeasured": []
+   }
+  },
+  "anchor": {
+   "fair_value": 1.0,
+   "fair_value_basis": "par_input_sizing_only",
+   "fair_value_source": "producer_declared_input_sizing",
+   "fair_value_as_of": "2026-09-22T09:16:29Z",
+   "fair_value_choice": "marginal_baseline",
+   "fair_value_choice_mode": "producer_method",
+   "market_price_cross_check": null,
+   "self_referential": false
+  },
+  "rungs": [
+   {
+    "size_usd": 1000.0,
+    "status": "ok",
+    "amount_in_tokens": 1000.0,
+    "amount_out_tokens": 999.624087,
+    "slippage_bps": -3.7591299999995,
+    "route_venues": [
+     "curve-stable-ng",
+     "uniswapv3"
+    ],
+    "route_leg_count": 1,
+    "gas_usd": "0.155467532162238",
+    "router_price_in": 0.9992046669017658,
+    "router_price_out": 0.9980458369970261,
+    "slippage_bps_debiased": 0.6255700000001863,
+    "price_bias_bps": -4.384699999999686,
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 10000.0,
+    "status": "ok",
+    "amount_in_tokens": 10000.0,
+    "amount_out_tokens": 9995.594746,
+    "slippage_bps": -4.40525399999947,
+    "route_venues": [
+     "curve-stable-ng"
+    ],
+    "route_leg_count": 1,
+    "gas_usd": "0.10204319504633941",
+    "router_price_in": 0.9992046669017658,
+    "router_price_out": 0.9991504631092818,
+    "slippage_bps_debiased": -0.020553999999783912,
+    "price_bias_bps": -4.384699999999686,
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 100000.0,
+    "status": "ok",
+    "amount_in_tokens": 100000.0,
+    "amount_out_tokens": 99954.365384,
+    "slippage_bps": -4.563461600000096,
+    "route_venues": [
+     "curve-stable-ng",
+     "frxusd",
+     "uniswapv3"
+    ],
+    "route_leg_count": 3,
+    "gas_usd": "0.25503408430680574",
+    "router_price_in": 0.9978475933275197,
+    "router_price_out": 0.9981825411598554,
+    "slippage_bps_debiased": -0.17876160000040997,
+    "price_bias_bps": -4.384699999999686,
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 1000000.0,
+    "status": "ok",
+    "amount_in_tokens": 1000000.0,
+    "amount_out_tokens": 999316.985781,
+    "slippage_bps": -6.830142189999666,
+    "route_venues": [
+     "curve-stable-ng",
+     "fluid-dex-t1",
+     "uniswapv3"
+    ],
+    "route_leg_count": 3,
+    "gas_usd": "0.3359199537576574",
+    "router_price_in": 0.998972081917072,
+    "router_price_out": 0.9993074107760251,
+    "slippage_bps_debiased": -2.44544218999998,
+    "price_bias_bps": -4.384699999999686,
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 10000000.0,
+    "status": "ok",
+    "amount_in_tokens": 10000000.0,
+    "amount_out_tokens": 4521211.634514,
+    "slippage_bps": -5478.788365486001,
+    "route_venues": [
+     "curve",
+     "curve-stable-ng",
+     "curve-twocrypto-ng",
+     "ekubo",
+     "frxusd",
+     "metric-propamm/uniswapv3",
+     "uniswap-v4",
+     "uniswap-v4-angstrom",
+     "uniswap-v4-stable-stable"
+    ],
+    "route_leg_count": 11,
+    "gas_usd": "1.2874205651572979",
+    "router_price_in": 0.9994400337687622,
+    "router_price_out": 0.9997152989627635,
+    "slippage_bps_debiased": -5474.403665486001,
+    "price_bias_bps": -4.384699999999686,
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 5000000.0,
+    "status": "ok",
+    "amount_in_tokens": 5000000.0,
+    "amount_out_tokens": 4535114.058311,
+    "slippage_bps": -929.7718833780011,
+    "route_venues": [
+     "curve",
+     "curve-stable-ng",
+     "curve-stable-plain",
+     "frxusd",
+     "traderjoe-v21",
+     "uniswap-v4",
+     "uniswap-v4-stable-stable"
+    ],
+    "route_leg_count": 15,
+    "gas_usd": "0.8253458362917553",
+    "router_price_in": 0.9994400337687622,
+    "router_price_out": 1.0010452361151896,
+    "slippage_bps_debiased": -925.3871833780014,
+    "price_bias_bps": -4.384699999999686,
+    "rung_kind": "envelope_probe",
+    "excluded_from_bracket": true,
+    "exclusion_reason": "Execution-envelope probe only. The crossing bracket is classified from the ascending decade grid; this post-crossing probe measures proceeds turnover and is not a refinement rung."
+   },
+   {
+    "size_usd": 20000000.0,
+    "status": "ok",
+    "amount_in_tokens": 20000000.0,
+    "amount_out_tokens": 4523494.479324,
+    "slippage_bps": -7738.252760338,
+    "route_venues": [
+     "curve",
+     "curve-stable-ng",
+     "curve-twocrypto-ng",
+     "ekubo-v3",
+     "frxusd",
+     "pmm-10/uniswapv3",
+     "traderjoe-v21",
+     "uniswap-v4",
+     "uniswap-v4-angstrom",
+     "uniswap-v4-stable-stable"
+    ],
+    "route_leg_count": 15,
+    "gas_usd": "1.7605287274853336",
+    "router_price_in": 0.9992046669017658,
+    "router_price_out": 1.0010452361151896,
+    "slippage_bps_debiased": -7733.868060338001,
+    "price_bias_bps": -4.384699999999686,
+    "rung_kind": "envelope_probe",
+    "excluded_from_bracket": true,
+    "exclusion_reason": "Execution-envelope probe only. The crossing bracket is classified from the ascending decade grid; this post-crossing probe measures proceeds turnover and is not a refinement rung."
+   }
+  ],
+  "preflight": {
+   "passed": true,
+   "blocking_failures": [],
+   "warnings": [],
+   "findings": [
+    {
+     "check": "failure_is_not_a_wall",
+     "passed": true,
+     "blocking": false,
+     "detail": "No failed rungs.",
+     "evidence": {}
+    },
+    {
+     "check": "quote_economically_plausible",
+     "passed": true,
+     "blocking": false,
+     "detail": "Quote is -3.8bps against the reference rate.",
+     "evidence": {
+      "loss_bps": -3.7591299999995
+     }
+    },
+    {
+     "check": "depth_against_supply",
+     "passed": true,
+     "blocking": false,
+     "detail": "Depth is 5.3% of chain supply.",
+     "evidence": {
+      "ratio": 0.05279291665343057
+     }
+    }
+   ]
+  },
+  "execution_envelope": {
+   "status": "turnover_observed",
+   "tested_through_input_usd": 20000000.0,
+   "output_monotonic_within_tested_range": false,
+   "monotonicity_guard": {
+    "method": "lp_risk_engine.truncate_at_non_monotonic",
+    "truncated": true,
+    "kept_through_input_usd": 5000000.0,
+    "first_rejected_input_usd": 10000000.0
+   },
+   "observed_peak": {
+    "input_size_usd": 5000000.0,
+    "output_value_usd": 4535114.058311
+   },
+   "basis": "Peak is the maximum successful routed output among tested rungs, not a claim that the exact global maximum was located."
+  },
+  "bracket_refinement_guard": {
+   "eligible": true,
+   "basis": "monotonic_successful_rungs_inside_bracket"
+  },
+  "quote_stability": {
+   "sample_size_usd": 4500000.0,
+   "requested_samples": 4,
+   "successful_samples": 4,
+   "samples": [
+    {
+     "phase": "before_refinement",
+     "sample": 1,
+     "status": "ok",
+     "output_value_usd": 4320166.798688,
+     "failure_kind": null,
+     "http_status": null
+    },
+    {
+     "phase": "before_refinement",
+     "sample": 2,
+     "status": "ok",
+     "output_value_usd": 4320166.131476,
+     "failure_kind": null,
+     "http_status": null
+    },
+    {
+     "phase": "after_refinement",
+     "sample": 1,
+     "status": "ok",
+     "output_value_usd": 4320166.798688,
+     "failure_kind": null,
+     "http_status": null
+    },
+    {
+     "phase": "after_refinement",
+     "sample": 2,
+     "status": "ok",
+     "output_value_usd": 4320166.131476,
+     "failure_kind": null,
+     "http_status": null
+    }
+   ],
+   "output_spread_usd": 0.6672120001167059,
+   "output_spread_bps": 0.0015444127107357697,
+   "precision_floor_usd": 0.6672120001167059,
+   "basis": "Same-size routed output spread across samples immediately before and after refinement. The published bracket must not be narrower than this observed spread."
+  },
+  "refinement": {
+   "status": "salvaged_from_probes",
+   "stopped_on": "validation_non_reproduction",
+   "probe_count": 8,
+   "precision_target": "<=1% of bracket midpoint",
+   "validation_cooldown_seconds": 8.0,
+   "salvage": {
+    "basis": "Re-quoting the refined bracket ends did not reproduce the search: clearing end -220.89222039144207 bps, crossing end -203.53148038081193 bps against a -200 bps threshold. A bracket whose ends do not straddle the threshold on re-quote is an artefact of the search, not a measurement. The FIRST crossing was salvaged from the search's own probes and both ends re-quoted; they straddle.",
+    "probes_considered": 8,
+    "tightened_after_salvage": false,
+    "validation_requotes": 2,
+    "wobble_above_crossing": [],
+    "wobble_note": null
+   }
+  },
+  "asset_category": "stable",
+  "primary_threshold_bps": -50.0,
+  "primary_threshold_basis": "stable asset: 0.5% marginal is the headline (spec \u00a77.8); the 2% bracket is retained for cross-corpus comparison",
+  "bracket_50bps": {
+   "threshold_bps": -50.0,
+   "convention": "marginal",
+   "status": "bracketed",
+   "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
+   "refinement": {
+    "status": "refined",
+    "stopped_on": "precision_obligation_met",
+    "probe_count": 8
+   },
+   "bracket": {
+    "last_clearing_size_usd": 3601562.5,
+    "last_clearing_marginal_impact_bps": -48.11082294039038,
+    "first_crossing_size_usd": 3636718.75,
+    "first_crossing_marginal_impact_bps": -52.07146179144972,
+    "width_usd": 35156.25,
+    "monotonic_in_bracket": true,
+    "threshold_bps": -50.0,
+    "meets_precision_obligation": true
+   },
+   "depth_usd": 3601562.5,
+   "is_floor": true,
+   "basis": "The -50bps marginal crossing is BRACKETED between $3,601,562.50 and $3,636,718.75, both ends re-quoted. `depth_usd` is the lower bound.",
+   "note": "Primary figure for a STABLE asset per spec \u00a77.8; the 2% bracket above is retained for comparison across the corpus. Widths are independent: this one may be wider than the 2% bracket where it coincides with a router split boundary (\u00a77.7)."
+  },
+  "supply_check": {
+   "status": "passed",
+   "token": "0x085780639CC2cACd35E474e71f4d000e2405d8f6",
+   "total_supply_units": 85481693.22976191,
+   "total_supply_usd": 85481693.22976191,
+   "non_float_holders": {
+    "curve USDC/fxUSD pool 0x5018BE88": 5940364.275224454
+   },
+   "float_units": 79541328.95453747,
+   "float_usd": 79541328.95453747,
+   "read_as_of": "2026-09-22T09:19:17Z"
+  }
+ },
+ "primary_exit": {
+  "venue": "f(x) PoolManager redeem()",
+  "contract": "0x250893CA4Ba5d05626C785e8da758026928FCD24",
+  "at_nav": true,
+  "gated": true,
+  "gated_basis": "riskAnalyst measured 2026-09-22: redeem(address,uint256,uint256) reverts ErrorRedeemNotAllowed() from a holder of 77.1M fxUSD on both the wstETH and WBTC pools, against a clean negative control. NOT re-derived here.",
+  "gate": "Redemption disabled at the protocol level for holders.",
+  "cadence": null,
+  "capacity_usd": 0,
+  "capacity_basis": "Zero holder redemption capacity while ErrorRedeemNotAllowed holds. This is primary-redemption capacity, not secondary-market depth.",
+  "note": "With the protocol exit refused, the secondary ladder in `depth` is the whole exit. A normal payload scores the worse of two operands; here there is one."
+ },
+ "enumeration": {
+  "source": "DexTracker sweep by TOKEN ADDRESS at Ethereum blocks 26,031,534-26,031,636 (2026-09-22T07:27Z-07:48Z): DefiLlama yields (underlyingTokens), Curve API all 9 Ethereum registries, Uniswap V3 factory getPool x 13 counters x 4 fee tiers (one timed-out call retried and answered), Uniswap V2 + SushiSwap V2 factories, GeckoTerminal token pools (indexes v2/v3/v4/curve/fluid), Balancer v2/v3 API, Blockscout top-50 holder census, KyberSwap route discovery $100-$20M",
+  "as_of": "2026-09-22T07:47:59Z",
+  "pinned_block": 26031636,
+  "venue_count": 37,
+  "chain_count": 1,
+  "chain_count_is_floor": true,
+  "chain_count_note": "Ethereum only by address; DefiLlama lists nothing on another chain.",
+  "queried_ok": {
+   "defillama_yields": true,
+   "curve_api": true,
+   "uniswap_v3_factory": true,
+   "v2_factories": true,
+   "geckoterminal_token_pools": true,
+   "balancer_api": true,
+   "blockscout_holders": true
+  },
+  "univ3_retry": {
+   "queried_ok": true,
+   "pool": "0x0000000000000000000000000000000000000000",
+   "exists": false
+  },
+  "curve_registries_swept": {
+   "main": 49,
+   "crypto": 8,
+   "factory": 381,
+   "factory-crypto": 401,
+   "factory-crvusd": 29,
+   "factory-tricrypto": 125,
+   "factory-twocrypto": 408,
+   "factory-stable-ng": 1060,
+   "factory-eywa": 0
+  },
+  "curve_pools_holding_fxusd": 33,
+  "not_swept_directly": [
+   "Uniswap V4 (no factory; covered via GeckoTerminal's v4 index and router discovery -- the router DID use one v4 pool for 800K fxUSD at $20M)",
+   "CoW/limit-order books (the router's pmm-10 and kyberswap-limit-order legs appeared at $10M+ for onward stablecoin hops only)"
+  ],
+  "material_correction_to_riskanalyst_list": [
+   "ETH/fxUSD twocrypto (0xb2ee8f96..., $129K) -- the router's dumping ground past the plateau; it is why the $10M/$20M rungs read -50%+ rather than exhausting",
+   "fxUSD/USDC/USDaf/BOLD 4-pool ($29K, direct USDC)",
+   "Fluid DEX fxUSD/USDC ($24K)",
+   "a Uniswap v4 pool used at $20M",
+   "~20 dust Curve pools"
+  ],
+  "completeness": "33 Curve pools hold fxUSD (32 stable-ng + 1 twocrypto). No UniV3, UniV2, Sushi or Balancer pool exists. Everything DefiLlama lists by address is one of these pools or a wrapper of it (Convex, Beefy, f(x)'s own gauges).",
+  "live_venue_count": 10,
+  "excluded_venue_count": 23,
+  "unestablished_venue_count": 4,
+  "live_venue_count_is_floor": true,
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 4 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
+ },
+ "venues": [
+  {
+   "name": "USDC/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x5018BE882DccE5E3F2f3B0913AE2096B9b3fB61f",
+   "tvl_usd": 10003543,
+   "volume_24h_usd": null,
+   "depth_role": "THE exit. Single-hop route for every size through ~$4M; its USDC side (4,166,489 at the pinned block) is the binding inventory. Alone it crosses 2% at [$4,112,500 - $4,150,000].",
+   "balances": [
+    {
+     "symbol": "USDC",
+     "amount": 4171443.818098
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 5832240.45140354
+    }
+   ],
+   "underlying_tokens": [
+    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "params": {
+    "A": 1200,
+    "fee": "stable-ng"
+   },
+   "counter_side": {
+    "symbol": "USDC",
+    "amount": 4166489.49889
+   },
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Quoted directly via get_dy at block 26031636 and by the router at every rung; USDC 4,166,489 / fxUSD 5,837,210 read on-chain."
+  },
+  {
+   "name": "reUSD/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xb0ef04ACE97d350E24Efa5139d2590D26a61A8Dc",
+   "tvl_usd": 1386670,
+   "volume_24h_usd": null,
+   "depth_role": "Exits into reUSD, which then needs its own hop; the router did NOT route through it at any tested size up to $20M.",
+   "balances": [
+    {
+     "symbol": "reUSD",
+     "amount": 1070144.6266135764
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 327813.3193041166
+    }
+   ],
+   "underlying_tokens": [
+    "0x57aB1E0003F623289CD798B1824Be09a793e4Bec",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: holds real inventory per the Curve API but the router never selected it, and it was not quoted directly. Unknown, not dead."
+  },
+  {
+   "name": "USDnr/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x3204d754a3003cEc155e2D8F44b3b48eD60b7Cc6",
+   "tvl_usd": 711164,
+   "volume_24h_usd": null,
+   "depth_role": "Exits into USDnr; never selected by the router; 24h volume 0 per GeckoTerminal.",
+   "balances": [
+    {
+     "symbol": "USDnr",
+     "amount": 370815.9101547839
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 340713.64427485457
+    }
+   ],
+   "underlying_tokens": [
+    "0x82957d600963Ae0C529c3819Ac7C349c4D49269B",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: not quoted directly and never routed through. Unknown, not dead."
+  },
+  {
+   "name": "msUSD/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x138Bb0f3208bd729a561F3786DDb97BBc69e6628",
+   "tvl_usd": 429769,
+   "volume_24h_usd": null,
+   "depth_role": "Second venue the router opens above ~$4.1M: fxUSD -> msUSD -> frxUSD -> Frax custodian -> USDC, priced end-to-end. Its 449K msUSD bounds what it adds.",
+   "balances": [
+    {
+     "symbol": "msUSD",
+     "amount": 449527.5200311368
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 29888.34698402939
+    }
+   ],
+   "underlying_tokens": [
+    "0xab5eB14c09D416F0aC63661E57EDB7AEcDb9BEfA",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Appeared in KyberSwap's returned route at one or more tested sizes (fxUSD taken directly), so it answered a quote at measurement time."
+  },
+  {
+   "name": "fxUSD/frxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x851907CAC684797eee43669798D78004e269Cb5E",
+   "tvl_usd": 163256,
+   "volume_24h_usd": null,
+   "depth_role": "Routed at large sizes; frxUSD then exits 1:1 through the Frax custodian pocket (255K USDC at the pinned block).",
+   "balances": [
+    {
+     "symbol": "fxUSD",
+     "amount": 95396.1893826647
+    },
+    {
+     "symbol": "frxUSD",
+     "amount": 67867.93516642525
+    }
+   ],
+   "underlying_tokens": [
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6",
+    "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29"
+   ],
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Appeared in KyberSwap's returned route at one or more tested sizes (fxUSD taken directly), so it answered a quote at measurement time."
+  },
+  {
+   "name": "alUSD/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x27cB9629aE3Ee05cb266B99cA4124EC999303c9D",
+   "tvl_usd": 153083,
+   "volume_24h_usd": null,
+   "depth_role": "Routed above ~$4.35M; alUSD then needs its own USDC hop. 134K alUSD bounds it.",
+   "balances": [
+    {
+     "symbol": "alUSD",
+     "amount": 134069.11204252028
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 25018.359056109635
+    }
+   ],
+   "underlying_tokens": [
+    "0xBC6DA0FE9aD5f3b0d58160288917AA56653660E9",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Appeared in KyberSwap's returned route at one or more tested sizes (fxUSD taken directly), so it answered a quote at measurement time."
+  },
+  {
+   "name": "ETH/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-twocrypto-ng",
+   "pool_id": "0xb2ee8f9622c5a480928836c0575df7d150f72d98",
+   "tvl_usd": 128608,
+   "volume_24h_usd": null,
+   "depth_role": "NOT in riskAnalyst's stable-ng list. The router dumps into it only past the plateau ($10M+ in): selling fxUSD for ETH is where the -50% rungs come from, not a dollar exit.",
+   "balances": [
+    {
+     "symbol": "WETH",
+     "amount": 23.35570747358279
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 64832.17908510553
+    }
+   ],
+   "underlying_tokens": [
+    "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Appeared in KyberSwap's returned route at one or more tested sizes (fxUSD taken directly), so it answered a quote at measurement time."
+  },
+  {
+   "name": "GHO/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x74345504Eaea3D9408fC69Ae7EB2d14095643c5b",
+   "tvl_usd": 112243,
+   "volume_24h_usd": null,
+   "depth_role": "Routed at large sizes; 79K GHO bounds it.",
+   "balances": [
+    {
+     "symbol": "GHO",
+     "amount": 76800.19458596803
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 35505.29832286864
+    }
+   ],
+   "underlying_tokens": [
+    "0x40D16FC0246aD3160Ccc09B8D0D3A2cD28aE6C2f",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Appeared in KyberSwap's returned route at one or more tested sizes (fxUSD taken directly), so it answered a quote at measurement time."
+  },
+  {
+   "name": "eUSD/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x16b54e3aC8e3ba088333985035b869847e36E770",
+   "tvl_usd": 42194,
+   "volume_24h_usd": null,
+   "depth_role": "Routed at large sizes; 21K eUSD bounds it.",
+   "balances": [
+    {
+     "symbol": "eUSD",
+     "amount": 20547.52191414062
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 21645.32692507162
+    }
+   ],
+   "underlying_tokens": [
+    "0xA0d69E286B938e21CBf7E51D71F6A4c8918f482F",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Appeared in KyberSwap's returned route at one or more tested sizes (fxUSD taken directly), so it answered a quote at measurement time."
+  },
+  {
+   "name": "fxUSD/USDC/USDaf/BOLD (DeFi Stable Avengers)",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x8b878afe454e31cf0a79c6d7cf2f077dd286c12f",
+   "tvl_usd": 29381,
+   "volume_24h_usd": null,
+   "depth_role": "NOT in riskAnalyst's list. Holds USDC directly (4,214 at the pinned block); routed at $20M for its BOLD and USDC legs.",
+   "balances": [
+    {
+     "symbol": "fxUSD",
+     "amount": 4384.604096216746
+    },
+    {
+     "symbol": "USDC",
+     "amount": 4213.044531
+    },
+    {
+     "symbol": "USDaf",
+     "amount": 15282.145466173346
+    },
+    {
+     "symbol": "BOLD",
+     "amount": 5688.7168540104
+    }
+   ],
+   "underlying_tokens": [
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6",
+    "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "0x9Cf12ccd6020b6888e4D4C4e4c7AcA33c1eB91f8",
+    "0x6440f144b7e50D6a8439336510312d2F54beB01D"
+   ],
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Appeared in KyberSwap's returned route at one or more tested sizes (fxUSD taken directly), so it answered a quote at measurement time."
+  },
+  {
+   "name": "fxUSD/? (Uniswap v4)",
+   "project": "uniswap",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "uniswap-v4",
+   "pool_id": "0x1a4f035d39315eac018ba15757599bdb6d605a0524d31b895187dd87fdb58ddb",
+   "tvl_usd": null,
+   "volume_24h_usd": null,
+   "depth_role": "A v4 pool the router used for 800K fxUSD at $20M. v4 pools hold funds in the PoolManager singleton so a balanceOf(pool) read is meaningless; enumerated only via the router and GeckoTerminal's v4 index.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Appeared in KyberSwap's returned route at one or more tested sizes (fxUSD taken directly), so it answered a quote at measurement time."
+  },
+  {
+   "name": "fxUSD/USDC (Fluid DEX)",
+   "project": "fluid",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "fluid-dex-t1",
+   "pool_id": "0x0c88c9713520e9546252b09e57faa46e9854743a",
+   "tvl_usd": 24373,
+   "volume_24h_usd": null,
+   "depth_role": "Routed at $5M+ per the router's venue list; $24K reserve per GeckoTerminal. Immaterial.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Appeared in the router's venue list at $5M and above."
+  },
+  {
+   "name": "Dola/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x189B4e49B5cAf33565095097b4B960F14032C7D0",
+   "tvl_usd": 971.74,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "DOLA",
+     "amount": 604.0897797875481
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 369.22859572605546
+    }
+   ],
+   "underlying_tokens": [
+    "0x865377367054516e17014CcdED1e7d814EDC9ce4",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $972 at enumeration; not quoted."
+  },
+  {
+   "name": "mkUSD/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xcA554E2e2948a211D4650Fe0F4E271f01f9cB5F1",
+   "tvl_usd": 522.94,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "mkUSD",
+     "amount": 274.73123329526766
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 248.4130890441596
+    }
+   ],
+   "underlying_tokens": [
+    "0x4591DBfF62656E7859Afe5e45f6f47D3669fBB28",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $523 at enumeration; not quoted."
+  },
+  {
+   "name": "pyUSD/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xd6982da59F1D26476E259559508f4135135cf9b8",
+   "tvl_usd": 328.39,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "PYUSD",
+     "amount": 1.75776722e-10
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 152.6355538483781
+    }
+   ],
+   "underlying_tokens": [
+    "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $328 at enumeration; not quoted."
+  },
+  {
+   "name": "USDN/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xB6aF437ceEa0DBeA524115eFC905F0F44fd1eBAF",
+   "tvl_usd": 284.17,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "fxUSD",
+     "amount": 140.08987642723343
+    },
+    {
+     "symbol": "USDN",
+     "amount": 144.22520318013537
+    }
+   ],
+   "underlying_tokens": [
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6",
+    "0xde17a000BA631c5d7c2Bd9FB692EFeA52D90DEE2"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $284 at enumeration; not quoted."
+  },
+  {
+   "name": "fxUSD/rUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x2116BFaD62b383043230501f6a124c6EA60CcfA5",
+   "tvl_usd": 47.81,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "fxUSD",
+     "amount": 25.445878095032302
+    },
+    {
+     "symbol": "rUSD",
+     "amount": 22.3678960421823
+    }
+   ],
+   "underlying_tokens": [
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6",
+    "0x65D72AA8DA931F047169112fcf34f52DbaAE7D18"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $48 at enumeration; not quoted."
+  },
+  {
+   "name": "OUSD/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xe2C27FD0e83DA0348d58402dFB9C7D8B3773fd76",
+   "tvl_usd": 33.33,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "OUSD",
+     "amount": 18.832271063876487
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 14.506993939407451
+    }
+   ],
+   "underlying_tokens": [
+    "0x2A8e1E676Ec238d8A992307B495b45B3fEAa5e86",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $33 at enumeration; not quoted."
+  },
+  {
+   "name": "crvUSD/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x8fFC7b89412eFD0D17EDEa2018F6634eA4C2FCb2",
+   "tvl_usd": 32.59,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "crvUSD",
+     "amount": 14.150383909152035
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 18.442858398735645
+    }
+   ],
+   "underlying_tokens": [
+    "0xf939E0A03FB07F59A73314E73794Be0E57ac1b4E",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $33 at enumeration; not quoted."
+  },
+  {
+   "name": "USD0/FXUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x74c204520c9e88aA3EB9d61788ABA11Be1e0193F",
+   "tvl_usd": 30.78,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "USD0",
+     "amount": 18.412501072297257
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 12.388296285993457
+    }
+   ],
+   "underlying_tokens": [
+    "0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $31 at enumeration; not quoted."
+  },
+  {
+   "name": "Frax/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x1EE81c56e42EC34039D993d12410d437DdeA341E",
+   "tvl_usd": 25.43,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "FRAX",
+     "amount": 21.25159432490851
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 4.349644693418827
+    }
+   ],
+   "underlying_tokens": [
+    "0x853d955aCEf822Db058eb8505911ED77F175b99e",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $25 at enumeration; not quoted."
+  },
+  {
+   "name": "zunUSD/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x13eA95Ce68185e334d3747539845A3b7643a8cab",
+   "tvl_usd": 20.29,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "zunUSD",
+     "amount": 3480.5411212713184
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 2.694859199921842
+    }
+   ],
+   "underlying_tokens": [
+    "0x8C0D76C9B18779665475F3E212D9Ca1Ed6A1A0e6",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $20 at enumeration; not quoted."
+  },
+  {
+   "name": "ULTRA/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xF33aB11E5C4e55DAcB13644f0C0A9d1e199A796F",
+   "tvl_usd": 19.6,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "ULTRA",
+     "amount": 5.543408662472972
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 14.031388043188635
+    }
+   ],
+   "underlying_tokens": [
+    "0x35282d87011f87508D457F08252Bc5bFa52E10A0",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $20 at enumeration; not quoted."
+  },
+  {
+   "name": "rev fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x6fC7eA6CA8Cd2759803eb78159C931a8FF5E0557",
+   "tvl_usd": 16.82,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "rgUSD",
+     "amount": 7.833782747629053
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 8.983095916632365
+    }
+   ],
+   "underlying_tokens": [
+    "0x78da5799CF427Fee11e9996982F4150eCe7a99A7",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $17 at enumeration; not quoted."
+  },
+  {
+   "name": "baoUSD/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x1683A79E9Fbc3aF3De761fc798E9b4F617D0F9bA",
+   "tvl_usd": 10.69,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "BaoUSD",
+     "amount": 19.623615491583767
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 0.8074547000153854
+    }
+   ],
+   "underlying_tokens": [
+    "0x7945b0A6674b175695e5d1D08aE1e6F13744Abb0",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $11 at enumeration; not quoted."
+  },
+  {
+   "name": "ynUSDx/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x77145b34807D04fd35D85796CBC81fe65365704A",
+   "tvl_usd": 1.53,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "ynUSDx",
+     "amount": 1.738712256299153
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 0.2600683935856714
+    }
+   ],
+   "underlying_tokens": [
+    "0x3DB228FE836D99Ccb25Ec4dfdC80ED6d2CDdCB4b",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $2 at enumeration; not quoted."
+  },
+  {
+   "name": "MIM/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xD7Bf9bb6Bd088317Effd116E2B70ea3A054cBceb",
+   "tvl_usd": 1.21,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "MIM",
+     "amount": 21.777887679952528
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 0.1372573882325113
+    }
+   ],
+   "underlying_tokens": [
+    "0x99D8a9C45b2ecA8864373A26D1459e3Dff1e17F3",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $1 at enumeration; not quoted."
+  },
+  {
+   "name": "Grai/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x69Cf42F15F9325986154b61A013da6E8feC82CCF",
+   "tvl_usd": 0.37,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "GRAI",
+     "amount": 0.8475313121715023
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 0.04466085322284394
+    }
+   ],
+   "underlying_tokens": [
+    "0x15f74458aE0bFdAA1a96CA1aa779D715Cc1Eefe4",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $0 at enumeration; not quoted."
+  },
+  {
+   "name": "USD0/FXUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x0733b457712bF0B7279bF5782303f65582140645",
+   "tvl_usd": 0,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "USD0",
+     "amount": 0.0
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 0.0
+    }
+   ],
+   "underlying_tokens": [
+    "0x73A15FeD60Bf67631dC6cd7Bc5B6e8da8190aCF5",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $0 at enumeration; not quoted."
+  },
+  {
+   "name": "USD0++/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xE2dFf3650a2749d6F33F8A4123D4Ff407231B8ac",
+   "tvl_usd": 0,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "bUSD0",
+     "amount": 0.0
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 0.0
+    }
+   ],
+   "underlying_tokens": [
+    "0x35D8949372D46B7a3D5A56006AE77B215fc69bC0",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $0 at enumeration; not quoted."
+  },
+  {
+   "name": "fxUSD/USDaf",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xff6dBFBEF3b9c4d39630725bB9077cb47e17a2ff",
+   "tvl_usd": 0,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "fxUSD",
+     "amount": 0.0
+    },
+    {
+     "symbol": "USDaf",
+     "amount": 0.0
+    }
+   ],
+   "underlying_tokens": [
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6",
+    "0x85E30b8b263bC64d94b827ed450F2EdFEE8579dA"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $0 at enumeration; not quoted."
+  },
+  {
+   "name": "fxUSD/Bold",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xe2b1a5D7d3802B011647Ae578E4b1EaE31e48252",
+   "tvl_usd": 0,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "fxUSD",
+     "amount": 0.0
+    },
+    {
+     "symbol": "BOLD",
+     "amount": 0.0
+    }
+   ],
+   "underlying_tokens": [
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6",
+    "0x6440f144b7e50D6a8439336510312d2F54beB01D"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $0 at enumeration; not quoted."
+  },
+  {
+   "name": "litUSD/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x37d7832e07573940464dE4C41818bC8279B8a22f",
+   "tvl_usd": 0,
+   "volume_24h_usd": null,
+   "depth_role": "Excluded: dust.",
+   "balances": [
+    {
+     "symbol": "litUSD",
+     "amount": 0.0
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 0.0
+    }
+   ],
+   "underlying_tokens": [
+    "0x3B5F2810fB2168FfA9C73160F97BF9f2461fFa5c",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "Curve API usdTotal $0 at enumeration; not quoted."
+  },
+  {
+   "name": "fxUSD / USDC 88%",
+   "project": "uniswap",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "uniswap-v4",
+   "pool_id": "0x4cfdefa7016e7ae2f33c211d0701f6869ad8087fcf87b5bf8982466230648bcf",
+   "tvl_usd": 603.0186,
+   "volume_24h_usd": 0.0,
+   "depth_role": "Excluded: dust (GeckoTerminal v4 index).",
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "GeckoTerminal reserve $603; never routed."
+  },
+  {
+   "name": "fxUSD / USDT 88%",
+   "project": "uniswap",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "uniswap-v4",
+   "pool_id": "0xf53ecb55dc75cc07b6ae5108d61051f24a89cc9fde19b062c5e70a8d85fd116d",
+   "tvl_usd": 116.4825,
+   "volume_24h_usd": 0.0,
+   "depth_role": "Excluded: dust (GeckoTerminal v4 index).",
+   "is_live": false,
+   "exclusion_reason": "dust_below_threshold",
+   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+   "liveness_basis": "GeckoTerminal reserve $116; never routed."
+  },
+  {
+   "name": "TrifxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0x52bF165abd26106D810733CC29FAfF68b96DECe8",
+   "tvl_usd": 8990,
+   "volume_24h_usd": null,
+   "depth_role": "Small; never selected by the router at any tested size.",
+   "balances": [
+    {
+     "symbol": "fxUSD",
+     "amount": 2285.7553020252617
+    },
+    {
+     "symbol": "rUSD",
+     "amount": 2504.2193506690296
+    },
+    {
+     "symbol": "btcUSD",
+     "amount": 4206.976823186414
+    }
+   ],
+   "underlying_tokens": [
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6",
+    "0x65D72AA8DA931F047169112fcf34f52DbaAE7D18",
+    "0x9D11ab23d33aD026C466CE3c124928fDb69Ba20E"
+   ],
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: not quoted directly and never routed through. Unknown, not dead."
+  },
+  {
+   "name": "ynRWAx/fxUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xBDf86bD28cB3a8Af5D46cCD2f56131Be6718B1d8",
+   "tvl_usd": 3843,
+   "volume_24h_usd": null,
+   "depth_role": "Small; never selected by the router at any tested size.",
+   "balances": [
+    {
+     "symbol": "ynRWAx",
+     "amount": 4832.510201093947
+    },
+    {
+     "symbol": "fxUSD",
+     "amount": 351.42340424788716
+    }
+   ],
+   "underlying_tokens": [
+    "0x01Ba69727E2860b37bc1a2bd56999c1aFb4C15D8",
+    "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+   ],
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: not quoted directly and never routed through. Unknown, not dead."
+  }
+ ],
+ "cross_checks": {
+  "note": "Block-pinned on-chain reads and repeat draws that validate the router figure. All at the pinned block unless stated.",
+  "pinned_block": 26031636,
+  "pinned_block_time_utc": "2026-09-22T07:47:59Z",
+  "rpc": "https://eth.drpc.org",
+  "single_pool_crossing": {
+   "pool": "0x5018BE882DccE5E3F2f3B0913AE2096B9b3fB61f",
+   "method": "Curve get_dy(1,0,dx) bisected to <=1% of midpoint, deterministic",
+   "total": {
+    "bracket": [
+     4112500.0,
+     4150000.0
+    ],
+    "low_total_bps": -186.64245335440643,
+    "high_total_bps": -222.9593225542159,
+    "low_marginal_bps": -182.6772533544063,
+    "high_marginal_bps": -218.99412255421578
+   },
+   "marginal": {
+    "bracket": [
+     4112500.0,
+     4150000.0
+    ],
+    "low_total_bps": -186.64245335440643,
+    "high_total_bps": -222.9593225542159,
+    "low_marginal_bps": -182.6772533544063,
+    "high_marginal_bps": -218.99412255421578
+   },
+   "baseline_total_bps": -3.965200000000113,
+   "ceiling_usdc": 4164701.2,
+   "pool_usdc": 4166489.49889,
+   "reading": "The primary pool ALONE crosses 2% at [$4,112,500 - $4,150,000]. The router's secondary venues add ~$150K of 2%-clearing capacity (about 3.7%) on top of it."
+  },
+  "router_vs_single_pool": {
+   "identical_through_usd": 4000000,
+   "rows": [
+    {
+     "size": 100,
+     "pool_out": 99.960348,
+     "pool_bps": -3.965200000000113,
+     "router_out": 99.960348,
+     "router_bps": -3.965200000000113,
+     "legs": [
+      "curve-stable-ng"
+     ],
+     "n_legs": 1
+    },
+    {
+     "size": 1000000,
+     "pool_out": 999365.894168,
+     "pool_bps": -6.341058320000759,
+     "router_out": 999365.894168,
+     "router_bps": -6.341058320000759,
+     "legs": [
+      "curve-stable-ng"
+     ],
+     "n_legs": 1
+    },
+    {
+     "size": 3000000,
+     "pool_out": 2993859.209113,
+     "pool_bps": -20.469302956667157,
+     "router_out": 2993859.209113,
+     "router_bps": -20.469302956667157,
+     "legs": [
+      "curve-stable-ng"
+     ],
+     "n_legs": 1
+    },
+    {
+     "size": 3500000,
+     "pool_out": 3487388.364756,
+     "pool_bps": -36.03324355428539,
+     "router_out": 3487388.364756,
+     "router_bps": -36.03324355428539,
+     "legs": [
+      "curve-stable-ng"
+     ],
+     "n_legs": 1
+    },
+    {
+     "size": 4000000,
+     "pool_out": 3953794.22858,
+     "pool_bps": -115.51442854999982,
+     "router_out": 3953794.22858,
+     "router_bps": -115.51442854999982,
+     "legs": [
+      "curve-stable-ng"
+     ],
+     "n_legs": 1
+    },
+    {
+     "size": 4100000,
+     "pool_out": 4027786.578206,
+     "pool_bps": -176.13029705853654,
+     "router_out": 4043925.16333,
+     "router_bps": -136.7678943170736,
+     "legs": [
+      "curve-stable-ng",
+      "frxusd"
+     ],
+     "n_legs": 2
+    },
+    {
+     "size": 4200000,
+     "pool_out": 4081165.831017,
+     "pool_bps": -282.93849757857095,
+     "router_out": 4126759.162141,
+     "router_bps": -174.38294728333358,
+     "legs": [
+      "curve-stable-ng",
+      "frxusd"
+     ],
+     "n_legs": 2
+    },
+    {
+     "size": 4250000,
+     "pool_out": 4099079.403549,
+     "pool_bps": -355.10728576705895,
+     "router_out": 4166849.574785,
+     "router_bps": -195.64805932941186,
+     "legs": [
+      "curve-stable-ng",
+      "frxusd"
+     ],
+     "n_legs": 2
+    },
+    {
+     "size": 4300000,
+     "pool_out": 4112210.225206,
+     "pool_bps": -436.72040649767484,
+     "router_out": 4205931.829834,
+     "router_bps": -218.7631864325579,
+     "legs": [
+      "curve-stable-ng",
+      "frxusd"
+     ],
+     "n_legs": 2
+    },
+    {
+     "size": 4325000,
+     "pool_out": 4117370.323197,
+     "pool_bps": -480.06861688554835,
+     "router_out": 4225048.354877,
+     "router_bps": -231.1020696485555,
+     "legs": [
+      "curve-stable-ng",
+      "frxusd"
+     ],
+     "n_legs": 2
+    },
+    {
+     "size": 4350000,
+     "pool_out": 4121786.290827,
+     "pool_bps": -524.6292164896549,
+     "router_out": 4259413.240613,
+     "router_bps": -208.2454238781617,
+     "legs": [
+      "curve-stable-ng",
+      "curve-stable-plain",
+      "frxusd"
+     ],
+     "n_legs": 3
+    },
+    {
+     "size": 4375000,
+     "pool_out": 4125581.046618,
+     "pool_bps": -570.1004648731423,
+     "router_out": 4279214.109591,
+     "router_bps": -218.939178077715,
+     "legs": [
+      "curve-stable-ng",
+      "curve-stable-plain",
+      "frxusd"
+     ],
+     "n_legs": 3
+    },
+    {
+     "size": 4400000,
+     "pool_out": 4128858.56891,
+     "pool_bps": -616.2305252045452,
+     "router_out": 4298772.999166,
+     "router_bps": -230.06136553181844,
+     "legs": [
+      "curve-stable-ng",
+      "curve-stable-plain",
+      "frxusd"
+     ],
+     "n_legs": 3
+    },
+    {
+     "size": 4450000,
+     "pool_out": 4134192.083137,
+     "pool_bps": -709.6807120516858,
+     "router_out": 4337024.001203,
+     "router_bps": -253.8786489820233,
+     "legs": [
+      "curve-stable-ng",
+      "curve-stable-plain",
+      "frxusd"
+     ],
+     "n_legs": 3
+    },
+    {
+     "size": 4500000,
+     "pool_out": 4138308.160977,
+     "pool_bps": -803.759642273334,
+     "router_out": 4371705.993938,
+     "router_bps": -285.09779124888945,
+     "legs": [
+      "curve-stable-ng",
+      "curve-stable-plain",
+      "frxusd"
+     ],
+     "n_legs": 3
+    },
+    {
+     "size": 4600000,
+     "pool_out": 4144170.886048,
+     "pool_bps": -990.9328564173913,
+     "router_out": 4427964.607551,
+     "router_bps": -373.98998358478264,
+     "legs": [
+      "curve-stable-ng",
+      "curve-stable-plain",
+      "frxusd"
+     ],
+     "n_legs": 3
+    },
+    {
+     "size": 4800000,
+     "pool_out": 4150891.081889,
+     "pool_bps": -1352.3102460645841,
+     "router_out": 4533139.312769,
+     "router_bps": -555.959765064582,
+     "legs": [
+      "curve",
+      "curve-stable-ng",
+      "curve-stable-plain",
+      "frxusd"
+     ],
+     "n_legs": 9
+    },
+    {
+     "size": 5000000,
+     "pool_out": 4154572.175875,
+     "pool_bps": -1690.8556482499991,
+     "router_out": 4635675.770124,
+     "router_bps": -728.6484597520005,
+     "legs": [
+      "curve",
+      "curve-stable-ng",
+      "curve-stable-plain",
+      "fluid-dex-t1",
+      "frxusd"
+     ],
+     "n_legs": 11
+    }
+   ],
+   "basis": "Router output equals single-pool get_dy to the cent at every size through $4.0M (single-hop); divergence begins at $4.1M when the router opens msUSD/frxUSD paths."
+  },
+  "repeat_draws_at_crossing": {
+   "4200000": {
+    "bps": [
+     -174.38,
+     -174.38,
+     -174.38,
+     -174.38
+    ],
+    "spread_bps": 0.0,
+    "router_block": 26031522
+   },
+   "4250000": {
+    "bps": [
+     -195.65,
+     -195.65,
+     -195.65,
+     -195.65
+    ],
+    "spread_bps": 0.0,
+    "router_block": 26031522
+   },
+   "4275000": {
+    "bps": [
+     -206.96,
+     -206.96,
+     -206.96,
+     -206.96
+    ],
+    "spread_bps": 0.0,
+    "router_block": 26031522
+   },
+   "4300000": {
+    "bps": [
+     -218.76,
+     -218.76,
+     -218.76,
+     -218.76
+    ],
+    "spread_bps": 0.0,
+    "router_block": 26031522
+   },
+   "4350000": {
+    "bps": [
+     -208.25,
+     -208.25,
+     -208.25,
+     -208.25
+    ],
+    "spread_bps": 0.0,
+    "router_block": 26031522
+   }
+  },
+  "non_monotonic_zone": {
+   "range_usd": [
+    4300000,
+    4400000
+   ],
+   "observed_total_bps": {
+    "4300000": -218.76,
+    "4325000": -231.1,
+    "4350000": -208.25,
+    "4375000": -218.94,
+    "4400000": -230.06
+   },
+   "reading": "Above the crossing the router's split heuristic adds a third venue discretely, so cost re-approaches the threshold (-208 at $4.35M) without re-clearing it. This is a routing artefact, not additional depth: every tested size >= $4.275M crosses. It is why the engine's first refinement failed validation and was salvaged from the search's own probes."
+  },
+  "usdc_inventory_on_route": {
+   "primary_pool_usdc": 4166489.49889,
+   "frax_custodian_usdc": 255139.416544,
+   "usdc_in_0x4f95c5ba_frxusd": 255139.416544,
+   "usdc_in_0x4dece678_curve-stable-plain": 5737973.41938,
+   "usdc_in_0xc3b19502_curve": 0.080716,
+   "usdc_in_0xde632c3a_fluid-dex-t1": 0.0,
+   "usdc_in_0xf85afbad_metric-propamm/uniswapv3": 60821.583886,
+   "usdc_in_0x08bfa22b_curve-stable-ng": 218375.824096,
+   "usdc_in_0x8b878afe_curve-stable-ng": 4214.370037,
+   "usdc_in_0x2b21c65d_uniswap-v4-stable-stable": 0.0,
+   "usdc_in_0x5d0ed526_uniswap-v4": 0.0,
+   "usdc_in_0xe0554a47_uniswapv3": 3850723.64473,
+   "usdc_in_0x1a4f035d_uniswap-v4": 0.0,
+   "usdc_in_0x6ebb5159_uniswap-v4": 0.0,
+   "usdc_in_pmm_10_0xa_pmm-10/uniswapv3": null
+  },
+  "route_pools_taking_fxusd": {
+   "0x5018be882dcce5e3f2f3b0913ae2096b9b3fb61f": {
+    "exchange": "curve-stable-ng",
+    "pairs": [
+     "0x0857->0xa0b8"
+    ],
+    "max_fxusd_in": 9486563.031825652,
+    "seen_at_sizes": [
+     4500000,
+     5000000,
+     10000000,
+     20000000
+    ]
+   },
+   "0x138bb0f3208bd729a561f3786ddb97bbc69e6628": {
+    "exchange": "curve-stable-ng",
+    "pairs": [
+     "0x0857->0xab5e"
+    ],
+    "max_fxusd_in": 799999.9999999999,
+    "seen_at_sizes": [
+     4500000,
+     5000000,
+     10000000,
+     20000000
+    ]
+   },
+   "0x27cb9629ae3ee05cb266b99ca4124ec999303c9d": {
+    "exchange": "curve-stable-ng",
+    "pairs": [
+     "0x0857->0xbc6d"
+    ],
+    "max_fxusd_in": 799999.9999999999,
+    "seen_at_sizes": [
+     4500000,
+     5000000,
+     10000000,
+     20000000
+    ]
+   },
+   "0x74345504eaea3d9408fc69ae7eb2d14095643c5b": {
+    "exchange": "curve-stable-ng",
+    "pairs": [
+     "0x0857->0x40d1"
+    ],
+    "max_fxusd_in": 300599.8006833637,
+    "seen_at_sizes": [
+     5000000,
+     10000000,
+     20000000
+    ]
+   },
+   "0x851907cac684797eee43669798d78004e269cb5e": {
+    "exchange": "curve-stable-ng",
+    "pairs": [
+     "0x0857->0xcacd"
+    ],
+    "max_fxusd_in": 157391.2145205632,
+    "seen_at_sizes": [
+     10000000,
+     20000000
+    ]
+   },
+   "0xb2ee8f9622c5a480928836c0575df7d150f72d98": {
+    "exchange": "curve-twocrypto-ng",
+    "pairs": [
+     "0x0857->0xc02a"
+    ],
+    "max_fxusd_in": 3314743.9897660124,
+    "seen_at_sizes": [
+     10000000,
+     20000000
+    ]
+   },
+   "0x16b54e3ac8e3ba088333985035b869847e36e770": {
+    "exchange": "curve-stable-ng",
+    "pairs": [
+     "0x0857->0xa0d6"
+    ],
+    "max_fxusd_in": 85750.67360000001,
+    "seen_at_sizes": [
+     10000000,
+     20000000
+    ]
+   },
+   "0x8b878afe454e31cf0a79c6d7cf2f077dd286c12f": {
+    "exchange": "curve-stable-ng",
+    "pairs": [
+     "0x0857->0x6440",
+     "0x0857->0x9cf1",
+     "0x0857->0xa0b8"
+    ],
+    "max_fxusd_in": 2625607.0251792707,
+    "seen_at_sizes": [
+     10000000,
+     20000000
+    ]
+   },
+   "0x189b4e49b5caf33565095097b4b960f14032c7d0": {
+    "exchange": "curve-stable-ng",
+    "pairs": [
+     "0x0857->0x8653"
+    ],
+    "max_fxusd_in": 1657.9698507898465,
+    "seen_at_sizes": [
+     20000000
+    ]
+   },
+   "0x1a4f035d39315eac018ba15757599bdb6d605a0524d31b895187dd87fdb58ddb": {
+    "exchange": "uniswap-v4",
+    "pairs": [
+     "0x0857->0xa0b8"
+    ],
+    "max_fxusd_in": 799999.9999999999,
+    "seen_at_sizes": [
+     20000000
+    ]
+   }
+  },
+  "inventory_reading": "Router proceeds plateau at ~$4.65M USDC: $4.17M is the primary pool's USDC side; the remainder is what the secondary stable pools can absorb on their fxUSD side (msUSD 449K, alUSD 134K, GHO 79K, frxUSD 66K, eUSD 21K) before onward USDC legs that are themselves deep (crvUSD/USDC 5.7M, custodian 255K). The plateau sits inside enumerated inventory; it is not a routing artefact. Past it the router sells fxUSD for ETH."
+ },
+ "excluded_liquidity": {
+  "lp_wrappers": [
+   "Convex",
+   "Beefy",
+   "f(x) gauges (fx-protocol rows on DefiLlama)"
+  ],
+  "lp_wrapper_reason": "Wrap the same Curve LP; DefiLlama lists them as separate rows.",
+  "non_swap_entries": [
+   "f(x) Stability Pool 0x65C9A641... (77.3M fxUSD, 90.6% of supply)",
+   "cbBTC OFT adapter",
+   "f(x) TransparentUpgradeableProxy"
+  ],
+  "non_swap_reason": "Holders that are not venues. The Stability Pool is deliberately NOT counted as non-float for the supply cap: fxSAVE redeems from it on demand, so it is float that has not moved yet."
+ },
+ "axis_binding_constraint": {
+  "leg": "secondary_market_depth",
+  "basis": "Protocol redemption is refused, so the located secondary crossing is the axis, with nothing beneath it. Depth to 2% is ~$4.27M against a $20.1M redeemable stress size (Morpho's 27% of fxSAVE).",
+  "risk_score": null
+ },
+ "consumer_status": {
+  "registered_in_backing_monitor_assets": false,
+  "basis": "Originated 2026-09-22 for riskAnalyst's fxusd-usdc-exit-ladder handoff."
+ },
+ "refresh_cadence": "daily",
+ "payload_revised_at": "2026-09-22T09:19:18Z",
+ "rescore_trigger": {
+  "evaluated_at": "2026-09-22T09:19:17Z",
+  "checks": [
+   {
+    "check": "observed_peak_below_usd",
+    "threshold_usd": 3000000.0,
+    "value_usd": 4535114.058311,
+    "tripped": false,
+    "detail": "Proceeds ceiling $4,535,114 is above the $3,000,000 re-score threshold."
+   },
+   {
+    "check": "counter_balance_below",
+    "holder": "0x5018BE882DccE5E3F2f3B0913AE2096B9b3fB61f",
+    "holder_label": "curve USDC/fxUSD 0x5018BE88",
+    "threshold_units": 3000000.0,
+    "value_units": 4063377.793557,
+    "tripped": false,
+    "detail": "USDC in curve USDC/fxUSD 0x5018BE88 is 4,063,378, above the 3,000,000 re-score threshold."
+   }
+  ],
+  "tripped": false
+ }
+}

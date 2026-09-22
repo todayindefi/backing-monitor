@@ -1,0 +1,874 @@
+{
+  "schema_version": "contract/1",
+  "asset": "fxusd",
+  "producer": "security_analyst",
+  "as_of": "2026-09-22",
+  "generated_at": "2026-09-22T12:34:43Z",
+  "contract": {
+    "headline": "Active undelayed core authority",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-22",
+    "source_file": "security_analyst/topology/assets/fxusd.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-09-22",
+        "walked_by": "hand",
+        "target_name": "fxUSD TransparentUpgradeableProxy",
+        "terminal_name": "f(x) 6-of-9 Safe via 72h TimelockController",
+        "topology": "timelocked",
+        "n": 6,
+        "m": 9,
+        "keys": [
+          "eip1967_admin",
+          "owner",
+          "PROPOSER_ROLE",
+          "CANCELLER_ROLE",
+          "EXECUTOR_ROLE",
+          "TIMELOCK_ADMIN_ROLE"
+        ],
+        "timelock": "72h",
+        "timelock_floor": "72h",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "name": "f(x) Safe A (6 of 9)",
+            "name_verified": true,
+            "via": "PROPOSER_ROLE on TimelockController -> ProxyAdmin.owner -> upgrade",
+            "terminal": "timelock",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "threshold": 6,
+            "owners": 9,
+            "timelock": "72h",
+            "timelock_floor": "72h",
+            "delay_applies": true,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "72h",
+            "delay_floor": "72h",
+            "independent_canceller": false,
+            "reaction_window": {
+              "type": "notice-period",
+              "basis": "CallScheduled is emitted at least getMinDelay() = 259200 seconds before execution; cancel power sits with the same Safe that proposes",
+              "minimum_window_seconds": 259200,
+              "maximum_window_seconds": 259200
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "timelock_roles": {
+              "TIMELOCK_ADMIN": [
+                "0x68863fb8855b04509a835082478d6e3d0be4e61a"
+              ],
+              "PROPOSER": [
+                "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf"
+              ],
+              "CANCELLER": [
+                "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf"
+              ],
+              "EXECUTOR": [
+                "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+                "0x0000000000000000000000000000000000000000"
+              ],
+              "DEFAULT_ADMIN": []
+            },
+            "canceller_independent": false,
+            "hand_walk": "The proxy's EIP-1967 implementation slot holds 0xf729422d68c2cf00574fb5712972454cf402a9b1 (verified FxUSDRegeneracy) and its admin slot holds ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4, whose owner() is TimelockController 0x68863fb8855b04509a835082478d6e3d0be4e61a with getMinDelay() = 259200. Live hasRole over five subjects reproduced the Safe as sole PROPOSER and CANCELLER, the Safe plus address zero as EXECUTOR, the timelock as sole TIMELOCK_ADMIN, and nobody as DEFAULT_ADMIN; getRoleAdmin of every role is TIMELOCK_ADMIN_ROLE, so no grant path exists outside a scheduled operation. Seven RoleGranted and two RoleRevoked events from deployment on 2026-04-06 reconstruct the same table; the deployer EOA and the Safe lost TIMELOCK_ADMIN on 2026-04-20. Pair simulation: ProxyAdmin.upgrade(fxUSD, dEaD) from the timelock reaches \"new implementation is not a contract\", and from the Safe or dEaD reverts \"Ownable: caller is not the owner\". MIN_DELAY() and MINIMUM_DELAY() revert, so there is no constant floor; updateDelay(0) succeeds only with the timelock as sender and reverts \"caller must be timelock\" from the Safe and from dEaD, so a reduction is itself delayed 72h, which is the floor recorded. The Safe has no modules and a zero guard slot. The timelock has scheduled nine operations and executed seven; the two never executed are acceptOwnership() on the two collateral price oracles."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-09-22",
+        "walked_by": "hand",
+        "target_name": "fxUSD mint, burn and legacy unwrap",
+        "terminal_name": "PoolManager (code-bound) and Diamond router (Safe A owned)",
+        "topology": "mixed",
+        "keys": [
+          "mint",
+          "burn",
+          "MIGRATOR_ROLE",
+          "DEFAULT_ADMIN_ROLE",
+          "wrap",
+          "debtCapacity"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "bounded",
+        "impl_upgradeable": true,
+        "mint_cap": true,
+        "role_admin": {
+          "via": "DEFAULT_ADMIN_ROLE",
+          "holder": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+          "kind": "timelock"
+        },
+        "paths": [
+          {
+            "holder": "0x250893ca4ba5d05626c785e8da758026928fcd24",
+            "name": "f(x) PoolManager",
+            "name_verified": true,
+            "via": "onlyPoolManager on mint(address,uint256) and burn(address,uint256); immutable pointer",
+            "terminal": "contract-role-set",
+            "holder_kind": "contract",
+            "terminal_kind": "contract",
+            "terminal_address": "0x250893ca4ba5d05626c785e8da758026928fcd24",
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "mint and burn execute inside user position operations with no scheduling",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "No discretionary mint function exists on the minter: fxUSD is minted only inside operate/borrow accounting against registered pool collateral, capped per pool by debtCapacity (150,000,000 for the wstETH pool and 200,000,000 for the WBTC pool), and burned on repay, redeem, rebalance, liquidate and reduceDebt.",
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "hand_walk": "FxUSDRegeneracy stores poolManager as an immutable and gates mint and burn with onlyPoolManager; live poolManager() on the token is 0x250893ca4ba5d05626c785e8da758026928fcd24 and that proxy's admin slot is the same ProxyAdmin as the token's, so the mint authority is code-bound today and changeable only through the 72h upgrade path. getPoolInfo returned debt capacities of 150,000,000 and 200,000,000 fxUSD against 8,786,911 and 76,591,690 fxUSD of live debt. totalSupply was 85,378,865 fxUSD."
+          },
+          {
+            "holder": "0x33636d49fbefbe798e15e7f356e8dbef543cc708",
+            "name": "f(x) Diamond router (owner: Safe A)",
+            "name_verified": true,
+            "via": "MIGRATOR_ROLE -> unwrap(baseToken, amount, receiver) on legacy v1 markets",
+            "terminal": "safe",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "threshold": 6,
+            "owners": 9,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "the Diamond's owner can change facets and call unwrap without scheduling",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "unwrap burns the caller's own fxUSD and releases legacy fToken; it is bounded by the caller's balance and by the 264 fxUSD of legacy supply.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "hand_walk": "MIGRATOR_ROLE was granted once, on 2025-01-02, to the Diamond and never revoked; live hasRole confirmed it and dEaD did not hold it. The Diamond's owner() is Safe A. DEFAULT_ADMIN_ROLE on fxUSD, which can grant MIGRATOR_ROLE, moved from Safe A to the timelock on 2026-04-20 and live hasRole shows the timelock holding it and Safe A not. getMarkets() returned two legacy v1 markets (wstETH and sfrxETH fTokens) with mintCap set to the maximum uint256, so permissionless wrap of v1 fTokens into fxUSD remains open; legacyTotalSupply() was 264 fxUSD."
+          }
+        ]
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "observed_at": "2026-09-22",
+        "walked_by": "hand",
+        "target_name": "PoolManager global pause and per-pool borrow/redeem status",
+        "terminal_name": "Safe A, Safe C (3 of 4 from the same nine), deployer EOA on the WBTC pool",
+        "topology": "mixed",
+        "keys": [
+          "setPause",
+          "updateBorrowAndRedeemStatus",
+          "EMERGENCY_ROLE"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "role_admin": {
+          "via": "DEFAULT_ADMIN_ROLE",
+          "holder": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+          "kind": "timelock"
+        },
+        "paths": [
+          {
+            "holder": "0xa1d0027ca4c0cb79f9403d06a29470abc7b0a468",
+            "name": "f(x) deployer EOA",
+            "name_verified": true,
+            "via": "EMERGENCY_ROLE on the WBTC long pool -> updateBorrowAndRedeemStatus",
+            "terminal": "eoa",
+            "holder_kind": "EOA",
+            "terminal_kind": "EOA",
+            "terminal_address": "0xa1d0027ca4c0cb79f9403d06a29470abc7b0a468",
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "a single externally owned key calls the pool directly",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "WBTC long pool only; the same key holds no role on the wstETH pool or the PoolManager",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "hand_walk": "The WBTC pool's RoleGranted history shows EMERGENCY_ROLE granted to the deployer at pool deployment and never revoked; live hasRole is true on the WBTC pool and false on the wstETH pool and on the PoolManager for the same key, which is the negative control. The deployer EOA has nonce 1416 and no code."
+          },
+          {
+            "holder": "0x28c921adac4c1072658eb01a28da06b5f651ef62",
+            "name": "f(x) Safe C (3 of 4; all four owners are among Safe A's nine)",
+            "name_verified": true,
+            "via": "EMERGENCY_ROLE on PoolManager and all four pools -> setPause / updateBorrowAndRedeemStatus",
+            "terminal": "safe",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x28c921adac4c1072658eb01a28da06b5f651ef62",
+            "threshold": 3,
+            "owners": 4,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "hand_walk": "getThreshold() = 3 and getOwners() returned four addresses, every one of which is an owner of Safe A. EMERGENCY_ROLE was granted to this Safe on the PoolManager on 2025-04-23 and on each pool at deployment; live hasRole is true on the PoolManager and the WBTC pool. setPause halts every PoolManager entry point including redeem; fxUSD transfers themselves have no pause. PoolManager paused() read false."
+          },
+          {
+            "holder": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "name": "f(x) Safe A (6 of 9)",
+            "name_verified": true,
+            "via": "EMERGENCY_ROLE on PoolManager and all four pools",
+            "terminal": "safe",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "threshold": 6,
+            "owners": 9,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "hand_walk": "The 2026-04-20 hardening added the timelock and Safe C to EMERGENCY_ROLE without revoking Safe A; live hasRole confirms Safe A on the PoolManager and both long pools. The timelock also holds the role, so the delayed route exists alongside the undelayed ones, and the layer records the undelayed worst case."
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "observed_at": "2026-09-22",
+        "walked_by": "hand",
+        "target_name": "pool price-oracle pointer, capacities, ratios, fees, rate provider, redemption band",
+        "terminal_name": "deployer EOA (WBTC pool oracle), Safe A, Safe C, 72h timelock",
+        "topology": "mixed",
+        "keys": [
+          "updatePriceOracle",
+          "updateRateProvider",
+          "updatePoolCapacity",
+          "updateDebtRatioRange",
+          "updateLiquidateRatios",
+          "updateRebalanceRatios",
+          "updateMaxPriceDeviation",
+          "updateCurvePool",
+          "updatePoolFeeRatio",
+          "alloc"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "role_admin": {
+          "via": "DEFAULT_ADMIN_ROLE",
+          "holder": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+          "kind": "timelock"
+        },
+        "paths": [
+          {
+            "holder": "0xa1d0027ca4c0cb79f9403d06a29470abc7b0a468",
+            "name": "f(x) deployer EOA",
+            "name_verified": true,
+            "via": "EMERGENCY_ROLE on the WBTC long pool -> updatePriceOracle(address)",
+            "terminal": "eoa",
+            "holder_kind": "EOA",
+            "terminal_kind": "EOA",
+            "terminal_address": "0xa1d0027ca4c0cb79f9403d06a29470abc7b0a468",
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "a single externally owned key calls the pool directly; the setter stores any address with no validation",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "WBTC long pool only (1,292 WBTC of collateral, 76,591,690 fxUSD of debt at the observed block); within that pool the price pointer decides borrow limits, rebalance and liquidation, so the bound is the pool, not the action.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "hand_walk": "Pair simulation of updatePriceOracle(dEaD) on the WBTC pool: from the deployer EOA it succeeds, from Safe A and the timelock it succeeds, from dEaD it reverts AccessControlUnauthorizedAccount. The identical call on the wstETH pool from the deployer reverts with the deployer's own address in the error, so the key's reach is one pool. BasePool's _updatePriceOracle stores the address without an interface check."
+          },
+          {
+            "holder": "0x28c921adac4c1072658eb01a28da06b5f651ef62",
+            "name": "f(x) Safe C (3 of 4 from Safe A's nine)",
+            "name_verified": true,
+            "via": "EMERGENCY_ROLE on both long pools and both short pools -> updatePriceOracle; ASSET_MANAGER_ROLE on the PoolManager and the stability pool -> manage",
+            "terminal": "safe",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x28c921adac4c1072658eb01a28da06b5f651ef62",
+            "threshold": 3,
+            "owners": 4,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "hand_walk": "Three of these four keys can replace the price oracle of every pool in one undelayed transaction each. Live hasRole for EMERGENCY_ROLE is true on the WBTC pool and the PoolManager; the role history shows the same grant on the wstETH pool and both short pools with no revoke."
+          },
+          {
+            "holder": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "name": "f(x) Safe A (6 of 9)",
+            "name_verified": true,
+            "via": "EMERGENCY_ROLE on all four pools -> updatePriceOracle; ASSET_MANAGER_ROLE on the PoolManager and the stability pool -> manage",
+            "terminal": "safe",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "threshold": 6,
+            "owners": 9,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "hand_walk": "Same role, same pools, at the 6-of-9 threshold. Over the last sixty executed Safe transactions every recovered signer was one of the nine owners, eight of the nine signed at least once, and quorum was met by rotating subsets rather than one fixed six."
+          },
+          {
+            "holder": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+            "name": "f(x) TimelockController (72h)",
+            "name_verified": true,
+            "via": "DEFAULT_ADMIN_ROLE on PoolManager, both pools, PoolConfiguration and FxUSDPriceOracle",
+            "terminal": "timelock",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "threshold": 6,
+            "owners": 9,
+            "timelock": "72h",
+            "timelock_floor": "72h",
+            "delay_applies": true,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "72h",
+            "delay_floor": "72h",
+            "independent_canceller": false,
+            "reaction_window": {
+              "type": "notice-period",
+              "basis": "CallScheduled precedes execution by getMinDelay() = 259200 seconds",
+              "minimum_window_seconds": 259200,
+              "maximum_window_seconds": 259200
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "hand_walk": "The delayed route covers pool capacities, debt-ratio range, rebalance and liquidation ratios, fee ratios, the wstETH rate provider, strategy allocation, pool registration, and the redemption gate's inputs: FxUSDPriceOracle.updateMaxPriceDeviation (live band 0.002 either side of one dollar) and updateCurvePool. PoolConfiguration's EMERGENCY_ROLE, which could repoint that oracle without delay, has never been granted to anyone. Four executed timelock operations so far were capacity and debt-ratio updates."
+          }
+        ]
+      },
+      {
+        "authority_layer": "oracle",
+        "chain": "ethereum",
+        "observed_at": "2026-09-22",
+        "walked_by": "hand",
+        "target_name": "StETHPriceOracle and WBTCPriceOracle (collateral prices), FxUSDPriceOracle (peg gate)",
+        "terminal_name": "Safe A as un-transferred owner; timelock on the peg oracle",
+        "topology": "nofm-multisig",
+        "n": 6,
+        "m": 9,
+        "keys": [
+          "owner",
+          "updateOnchainSpotEncodings",
+          "updateMaxPriceDeviation",
+          "acceptOwnership",
+          "updateCurvePool"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "name": "f(x) Safe A (6 of 9)",
+            "name_verified": true,
+            "via": "Ownable2Step owner on both collateral price oracles",
+            "terminal": "safe",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "threshold": 6,
+            "owners": 9,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "onlyOwner setters execute in the Safe transaction that calls them",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "hand_walk": "owner() on 0x0c5c61025f047cb7e3e85852dc8eafd7b9a4abfb and 0xb3c90e64eb6f456a5f5c17aa99b6aeca6f4a6390 returned Safe A and pendingOwner() returned the timelock on both. acceptOwnership() for both was scheduled through the timelock on 2026-04-20 as its first operation and has no matching CallExecuted, so the handover is pending and the Safe remains the live owner. The owner sets the spot sources behind the min and max prices the pools consume and the deviation that filters them, and the deviation setter has no upper bound in code. The anchor price derives from constructor-fixed Chainlink encodings. The peg oracle behind the redemption gate is a separate proxy whose DEFAULT_ADMIN is the timelock. Both collateral oracles are non-upgradeable and were deployed 2025-03-17."
+          }
+        ]
+      },
+      {
+        "authority_layer": "custody",
+        "chain": "ethereum",
+        "observed_at": "2026-09-22",
+        "walked_by": "hand",
+        "target_name": "pool collateral held by the PoolManager",
+        "terminal_name": "Safe C / Safe A move collateral into a timelock-allocated Aave strategy",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 4,
+        "keys": [
+          "ASSET_MANAGER_ROLE",
+          "manage",
+          "alloc",
+          "kill"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "bounded",
+        "impl_upgradeable": true,
+        "role_admin": {
+          "via": "DEFAULT_ADMIN_ROLE",
+          "holder": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+          "kind": "timelock"
+        },
+        "paths": [
+          {
+            "holder": "0x28c921adac4c1072658eb01a28da06b5f651ef62",
+            "name": "f(x) Safe C (3 of 4 from Safe A's nine)",
+            "name_verified": true,
+            "via": "ASSET_MANAGER_ROLE -> manage(asset, amount) on the PoolManager",
+            "terminal": "safe",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x28c921adac4c1072658eb01a28da06b5f651ef62",
+            "threshold": 3,
+            "owners": 4,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "manage can only transfer an asset into the strategy that DEFAULT_ADMIN (timelock) allocated for it, up to that allocation's capacity; the strategy's deposit, withdraw, kill and execute are onlyOperator where operator is the PoolManager, so the funds remain recallable by the PoolManager and cannot be sent elsewhere by the asset manager.",
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "hand_walk": "allocations(wstETH) on the PoolManager returned strategy 0xfd3a6540e21d0e285f88fbfd904883b23e08f5c8 with capacity 100,000 wstETH against 5,356 wstETH held by the pool; the WBTC allocation is empty. That strategy's operator() is the PoolManager and its totalSupply() was zero, so nothing was deployed at the observed block. Safe A holds the same role; the timelock holds it too, so a delayed route exists beside the undelayed one."
+          }
+        ]
+      }
+    ],
+    "authority_summary": {
+      "schema": "actionable-path/1",
+      "state": "active-core-undelayed",
+      "headline": "Active undelayed core authority",
+      "total_layers": 6,
+      "total_paths": 12,
+      "inactive_layers": 0,
+      "unresolved_layers": 0,
+      "active_paths": 12,
+      "active_core_paths": 9,
+      "active_bounded_paths": 5,
+      "undelayed_core_paths": 7,
+      "undelayed_bounded_paths": 5,
+      "active": [
+        {
+          "authority_layer": "contract-upgrade",
+          "target_name": "fxUSD TransparentUpgradeableProxy",
+          "name": "f(x) Safe A (6 of 9)",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "72h",
+          "reaction_window": {
+            "type": "notice-period",
+            "basis": "CallScheduled is emitted at least getMinDelay() = 259200 seconds before execution; cancel power sits with the same Safe that proposes",
+            "minimum_window_seconds": 259200,
+            "maximum_window_seconds": 259200
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "fxUSD mint, burn and legacy unwrap",
+          "name": "f(x) PoolManager",
+          "reach": "bounded",
+          "reach_bound": "No discretionary mint function exists on the minter: fxUSD is minted only inside operate/borrow accounting against registered pool collateral, capped per pool by debtCapacity (150,000,000 for the wstETH pool and 200,000,000 for the WBTC pool), and burned on repay, redeem, rebalance, liquidate and reduceDebt.",
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "mint and burn execute inside user position operations with no scheduling",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "fxUSD mint, burn and legacy unwrap",
+          "name": "f(x) Diamond router (owner: Safe A)",
+          "reach": "bounded",
+          "reach_bound": "unwrap burns the caller's own fxUSD and releases legacy fToken; it is bounded by the caller's balance and by the 264 fxUSD of legacy supply.",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "the Diamond's owner can change facets and call unwrap without scheduling",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "pause",
+          "target_name": "PoolManager global pause and per-pool borrow/redeem status",
+          "name": "f(x) deployer EOA",
+          "reach": "bounded",
+          "reach_bound": "WBTC long pool only; the same key holds no role on the wstETH pool or the PoolManager",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "a single externally owned key calls the pool directly",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "pause",
+          "target_name": "PoolManager global pause and per-pool borrow/redeem status",
+          "name": "f(x) Safe C (3 of 4; all four owners are among Safe A's nine)",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "pause",
+          "target_name": "PoolManager global pause and per-pool borrow/redeem status",
+          "name": "f(x) Safe A (6 of 9)",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "parameter",
+          "target_name": "pool price-oracle pointer, capacities, ratios, fees, rate provider, redemption band",
+          "name": "f(x) deployer EOA",
+          "reach": "bounded",
+          "reach_bound": "WBTC long pool only (1,292 WBTC of collateral, 76,591,690 fxUSD of debt at the observed block); within that pool the price pointer decides borrow limits, rebalance and liquidation, so the bound is the pool, not the action.",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "a single externally owned key calls the pool directly; the setter stores any address with no validation",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "parameter",
+          "target_name": "pool price-oracle pointer, capacities, ratios, fees, rate provider, redemption band",
+          "name": "f(x) Safe C (3 of 4 from Safe A's nine)",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "parameter",
+          "target_name": "pool price-oracle pointer, capacities, ratios, fees, rate provider, redemption band",
+          "name": "f(x) Safe A (6 of 9)",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "parameter",
+          "target_name": "pool price-oracle pointer, capacities, ratios, fees, rate provider, redemption band",
+          "name": "f(x) TimelockController (72h)",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "72h",
+          "reaction_window": {
+            "type": "notice-period",
+            "basis": "CallScheduled precedes execution by getMinDelay() = 259200 seconds",
+            "minimum_window_seconds": 259200,
+            "maximum_window_seconds": 259200
+          }
+        },
+        {
+          "authority_layer": "oracle",
+          "target_name": "StETHPriceOracle and WBTCPriceOracle (collateral prices), FxUSDPriceOracle (peg gate)",
+          "name": "f(x) Safe A (6 of 9)",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "onlyOwner setters execute in the Safe transaction that calls them",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "custody",
+          "target_name": "pool collateral held by the PoolManager",
+          "name": "f(x) Safe C (3 of 4 from Safe A's nine)",
+          "reach": "bounded",
+          "reach_bound": "manage can only transfer an asset into the strategy that DEFAULT_ADMIN (timelock) allocated for it, up to that allocation's capacity; the strategy's deposit, withdraw, kill and execute are onlyOperator where operator is the PoolManager, so the funds remain recallable by the PoolManager and cannot be sent elsewhere by the asset manager.",
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        }
+      ]
+    },
+    "unresolved": [
+      "Who operates the nine Safe keys and whether any two share a person, device or vendor. Nine distinct EOAs with nine distinct first-funding sources were read; eight of nine signed at least one of the last sixty executed Safe transactions and one has never signed; that is what was measured, and independence of the keys is not asserted from it.",
+      "The Diamond router at 0x33636d49fbefbe798e15e7f356e8dbef543cc708 holds MIGRATOR_ROLE on fxUSD and OPERATOR_ROLE on the PoolManager and is owned by the 6-of-9 Safe, which can change its facets without delay. Its facet set and what OPERATOR_ROLE reaches were not walked.",
+      "Legacy v1 markets remain wrappable into fxUSD with mintCap set to the maximum value; 264 fxUSD of legacy supply exists against 85.4 million total. Administration of the v1 fToken markets and treasuries behind that path was not walked.",
+      "Chainlink aggregator governance behind the USDC/USD, ETH/USD and BTC feeds the oracles read, Curve governance over the fxUSD/USDC pool whose EMA gates redemption, and Aave governance over the strategy destination were not walked.",
+      "The short pools carry the same EMERGENCY_ROLE and TREE_COMPRESS_ROLE holders as the long pools; their internal role model beyond those roles was not enumerated.",
+      "Both collateral price oracles carry the pre-fix formula for the OpenZeppelin medium finding on minimum price deviation, because they were deployed before the audit opened and are not upgradeable; whether a corrected oracle is planned was not established. The deployed PoolManager, pools, stability pool and PoolConfiguration are a later code generation than the audited commit, and no public audit naming that Ethereum rework was located."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "fxsave",
+        "shares": [
+          {
+            "kind": "proxy-admin",
+            "address": "0x9b54b7703551d9d0ced177a78367560a8b2edda4",
+            "roles": [
+              "eip1967_admin"
+            ]
+          },
+          {
+            "kind": "timelock",
+            "address": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+            "delay": "72h",
+            "roles": [
+              "proxy-admin-owner",
+              "DEFAULT_ADMIN_ROLE"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "n": 6,
+            "m": 9,
+            "delay": "72h",
+            "roles": [
+              "PROPOSER_ROLE",
+              "CANCELLER_ROLE",
+              "EXECUTOR_ROLE"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "n": 6,
+            "m": 9,
+            "delay": "none",
+            "roles": [
+              "EMERGENCY_ROLE",
+              "ASSET_MANAGER_ROLE",
+              "oracle-owner"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0x28c921adac4c1072658eb01a28da06b5f651ef62",
+            "n": 3,
+            "m": 4,
+            "delay": "none",
+            "roles": [
+              "EMERGENCY_ROLE",
+              "ASSET_MANAGER_ROLE"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xa0fb1b11cca5871fb0225b64308e249b97804e99",
+            "n": 6,
+            "m": 9,
+            "delay": "none",
+            "roles": [
+              "fxSAVE-DEFAULT_ADMIN_ROLE"
+            ]
+          },
+          {
+            "kind": "contract",
+            "address": "0x33636d49fbefbe798e15e7f356e8dbef543cc708",
+            "roles": [
+              "MIGRATOR_ROLE",
+              "OPERATOR_ROLE",
+              "CLAIM_FOR_ROLE"
+            ]
+          }
+        ]
+      }
+    ],
+    "review": null,
+    "walk_notes": [
+      "Hand-walked 2026-09-22 with read-only Ethereum calls at block 26,031,531,",
+      "plus the full role-event history and the verified sources of every contract",
+      "on the path. No transaction was signed or sent.",
+      "",
+      "fxUSD and fxSAVE are ONE authority surface emitted twice. They share the",
+      "ProxyAdmin, the 72-hour TimelockController, and the 6-of-9 Safe that proposes",
+      "and cancels on it; every key that appears in this file appears in fxSAVE's.",
+      "Two rows side by side are the same people, not two controls.",
+      "",
+      "Result: contract upgrades and every DEFAULT_ADMIN power sit behind a 72-hour",
+      "timelock whose only proposer and canceller is the 6-of-9 Safe. Beside that",
+      "delayed path there are UNDELAYED ones the timelock does not cover: the same",
+      "Safe and a 3-of-4 Safe drawn from the same nine keys can pause the system,",
+      "pause either collateral pool, move pool collateral into the allocated Aave",
+      "strategy, and REPLACE A POOL'S PRICE ORACLE with any address; the deployer's",
+      "single key still holds that same emergency role on the WBTC pool (76.6M fxUSD",
+      "of debt); and both collateral price oracles are still owned by the 6-of-9",
+      "Safe because the scheduled handover to the timelock was never executed.",
+      "",
+      "Redemption at the PoolManager is a state gate, not a switch: it opens only",
+      "while the Curve EMA price of fxUSD is below 0.998, and borrowing closes at",
+      "the same moment. Its parameters sit behind the 72-hour timelock.",
+      "",
+      "What this did NOT establish: who holds the nine keys or whether any two are",
+      "one operator; the facet set of the Diamond router that holds operator and",
+      "migrator roles; v1 legacy-market administration (264 fxUSD of legacy supply",
+      "remains wrappable with no cap); Chainlink, Curve and Aave governance behind",
+      "the price and strategy paths."
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema_version": "backing-overlay/1",
+  "producer": "riskanalyst",
+  "asset": "fxusd",
+  "as_of": "2026-09-22T12:27:06Z",
+  "backing": {
+    "backing_score": 5.0,
+    "backing_score_source": "riskAnalyst:authored",
+    "backing_score_generated_at": "2026-09-22T12:27:06Z",
+    "backing_score_basis": "Overcollateralised at a MEASURED 150.6% aggregate, and the debt side reconciles to totalSupply within 264 fxUSD. ⚠️ Scored at 5.0 rather than with the band because a collateral ratio cannot see two things that decide this asset: the collateral is PLEDGED AGAINST LEVERAGED POSITIONS, so fxUSD's stress and its collateral's stress are one event rather than two; and 89.7% of all debt sits against WBTC at the lower 143.99% pool ratio, which is the CUSTODIAL leg. The wstETH pool's comfortable 208.4% carries only 10.3% of the book. ⚠️ Public material is also version-ambiguous on the collateral set — older sources say stETH-only — so read the live PoolManager, not the docs.",
+    "authored_vs_band_note": "⚠️ NO GATE FIELDS AND NO DECLARATION HERE, DELIBERATELY. This is NOT the collateral_ratio_declared_underivable substitute path — fxUSD's ratio IS derivable and PegTracker emits it, so the measured band is correct as a measurement and must keep the face of the chip. This authored score is a JUDGEMENT that coexists with it, and asserting a false declaration to displace a live measurement would be the opposite of the point.",
+    "coverage_note": "⚠️ 2026-09-22: my first figure here was 155.4% and it was WRONG — I multiplied getTotalRawCollaterals(), which returns stETH-equivalent, by a wstETH market price and double-applied the wrap rate. Caught by PegTracker's analyzer. Corrected to 150.6%."
+  }
+}

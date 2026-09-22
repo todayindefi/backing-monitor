@@ -1,0 +1,29 @@
+{
+  "schema_version": "contract-overlay/1",
+  "producer": "riskanalyst",
+  "asset": "fxusd",
+  "as_of": "2026-09-22T10:31:09Z",
+  "contract": {
+    "structural_score": 4.0,
+    "structural_score_source": "riskAnalyst:authored",
+    "structural_score_generated_at": "2026-09-22T10:31:09Z",
+    "structural_score_basis": "🔴 CUT 6.0 → 4.0 on 2026-09-22. The 6.0 enumerated the TIMELOCK's roles and treated that as the system's power set. It is not: FOUR UNDELAYED PATHS sit beside the 72h delay. The sharpest is updatePriceOracle(address), unvalidated and undelayed, at THREE keys on every pool and at ONE key — the deployer EOA 0xa1d0027ca4c0cb79f9403d06a29470abc7b0a468 — on the WBTC pool carrying 89.7% of all debt. ⚠️ THE DELAY PROTECTS THE CODE AND NOT THE MARKS: the oracle decides what liquidates and whether redemption opens, so changing what the code READS is instant while changing the code takes three days. ✅ What survives: the upgrade path genuinely is a 6-of-9 Safe behind 72h with no bypass, EXECUTOR includes 0x0 so execution cannot be blocked, and updateDelay is reachable only through the timelock itself. Anchor: level with reusd-re 4.0 (\"the delay protects the code and not the supply\"); below yzusd 4.5, which has no independent veto but NO SINGLE-KEY PATH.",
+    "code_facts": [
+      "ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4 (EIP-1967 admin slot) → owner() = TimelockController 0x68863fb8855b04509a835082478D6E3D0bE4E61a, getMinDelay() 259200 = 72h. IDENTICAL to fxSAVE — the two are NOT independent legs.",
+      "PROPOSER and CANCELLER held solely by Gnosis Safe v1.3.0 0x26b2ec4E02ebe2F54583af25b647b1D619e67BbF, threshold 6 of 9, all nine owners EOAs. EXECUTOR also held by 0x0, so a scheduled operation cannot be blocked.",
+      "⚠️ DEFAULT_ADMIN_ROLE (0x00) was NEVER GRANTED and is not the admin role on this OZ v4 TimelockController — TIMELOCK_ADMIN_ROLE 0x5f58e3a2… is. Reading an empty 0x00 as \"admin renounced\" is a true-sounding claim about the wrong role. On OZ v5 the opposite holds.",
+      "Hardening 2026-04-20, tx 0x8449887472c310415b1b17f5daff8ab72511a76616cb257ccc02605f48e027af: TIMELOCK_ADMIN revoked from BOTH external holders in the same action that granted EXECUTOR to 0x0. Granted at deployment 2026-04-06. ⚠️ It ADDED holders earlier and removed them later; it did not replace them.",
+      "updateDelay pair-simulated: reverts from the Safe, reverts from 0x…dEaD, succeeds only from the timelock. So shortening the 72h is itself a 72h-delayed public operation.",
+      "⚠️ Safe 0x28c921adac4c1072658eb01a28da06b5f651ef62 — 3-of-4, owners a subset of the nine — holds EMERGENCY_ROLE on PoolManager, all four pools and fxSP, including updatePriceOracle. It holds ASSET_MANAGER_ROLE on PoolManager and fxSP ONLY; that role is not defined on the pools.",
+      "⚠️ Deployer EOA 0xa1d0027ca4c0cb79f9403d06a29470abc7b0a468 retains EMERGENCY_ROLE on the WBTC long pool. updatePriceOracle(dEaD) succeeds from it and reverts on the wstETH pool as negative control.",
+      "⚠️ Both collateral oracles remain owner() = main Safe. pendingOwner() is the timelock and acceptOwnership() was its first scheduled op on 2026-04-20 — the only one never executed."
+    ],
+    "authority_note": "Documentation reconciliation against AladdinDAO/fx-protocol-contracts deployed_addresses.json: ProxyAdmin, fxUSD, PoolManager and fxSP all AGREE at the measured addresses. TimelockController, the 6-of-9 Safe and fxSAVE are SILENT — absent. Nothing DISAGREES. ⚠️ The silence has a shape: the manifest has no governance entries at all, so a reader can verify from f(x)'s own repo what the ProxyAdmin IS but not who controls it.",
+    "cross_axis": [
+      "⏳ OPEN THREAD, re-check 2026-12-22: PoolManager, both pools, fxSP and PoolConfiguration differ from OpenZeppelin's audited commit 56a47eab by ~1,500 lines. SECBIT's Katana report names two of them but scopes to a different chain. ⚠️ NO PUBLISHED AUDIT COVERS THIS REWORK — a statement about coverage, not about a defect. The audited perimeter is the wrapper; the unaudited perimeter custodies $132.7M, runs liquidations and gates redemption.",
+      "OZ H-02 \"price manipulation via one low-TVL spot source\" ACKNOWLEDGED, NOT RESOLVED. M-06 marked resolved (PR #20, 2025-05-30) while both live oracles were deployed 2025-03-17, are non-upgradeable and carry the pre-fix formula. \"Resolved\" describes a repo, not a deployment.",
+      "Bug bounty PRESENT — self-hosted at docs.aladdin.club/security-bounty, Critical to $500,000, no Immunefi. No stated exclusions, so the privileged-role surface is neither in nor out by its text.",
+      "⚠️ TRANSPORT BUT NO CONSUMER AS OF 2026-09-22 — backing-monitor has no dashboard page for this asset yet; they are building one and requested these overlays. Nothing renders this file today, so it cannot yet reach a reader."
+    ]
+  }
+}
