@@ -577,10 +577,59 @@ const CommonRenderer = {
         if (axis !== 'liquidity' || schema !== 'liquidity/1') return;
         var d = block.depth;
         if (!d || typeof d !== 'object') return;
-        if (typeof d.depth_usd === 'number') block.total_2pct_depth = d.depth_usd;
-        if (typeof d.is_floor === 'boolean') block.total_2pct_depth_is_floor = d.is_floor;
-        if (d.status) block.two_pct_depth_status = d.status;
-        if (d.basis) block.two_pct_depth_basis = d.basis;
+
+        // ⚠️ THE HEADLINE THRESHOLD IS THE PRODUCER'S, NOT 2% BY ASSUMPTION.
+        //
+        // DexTracker publishes `primary_threshold_bps` saying which crossing is the
+        // HEADLINE for this asset: -50 (0.5%) for a stable, -200 (2%) for a volatile.
+        // For a stablecoin a 2% move is already a depeg, so the 2% crossing answers a
+        // question nobody holding it is asking. Owner decision 2026-09-22: follow the
+        // producer's threshold.
+        //
+        // ⚠️ THE CUTOFF BAND IS NOT RECALIBRATED, AND THAT IS DELIBERATE. Cutoffs are
+        // DOLLARS — "can my position exit" — and $500K leaving at 0.5% is genuinely
+        // better than $500K leaving at 2%. Holding the dollars while tightening the
+        // cost bound means the axis now answers a HARDER question, so a score that
+        // drops is the correct response rather than a regression. usg moves 3 -> 2 on
+        // this and nothing else does.
+        //
+        // ⚠️ RECALIBRATING WAS CONSIDERED AND IS NOT ACHIEVABLE. The 0.5%-to-2% ratio
+        // across the five assets carrying both runs 0.208 (reusde_re) to 1.000
+        // (dusd_alto) — 4.8x apart — because each book has a different curve shape
+        // between the thresholds. No single multiplier maps one band onto the other,
+        // so "new cutoffs that preserve relative standing" do not exist. And the
+        // existing cutoffs are hand-picked round numbers, not distribution-fitted, so
+        // there is no statistical meaning to preserve either.
+        //
+        // ⚠️ NAME/CONTENT MISMATCH, ACCEPTED KNOWINGLY. `total_2pct_depth` now carries
+        // whichever crossing is the headline — 0.5% for stables. It has 29 read sites
+        // here plus two bespoke renderers, and renaming them was more risk than the
+        // honesty is worth. `depth_threshold_bps` records what the figure ACTUALLY
+        // measures and the tile label reads it, so no rendered number is unlabelled.
+        // Whoever splits this later: the carrier is the legacy name, the truth is the
+        // threshold field.
+        var b50 = d.bracket_50bps;
+        var useHalf = d.primary_threshold_bps === -50 && b50 && typeof b50 === 'object' &&
+                      typeof b50.depth_usd === 'number';
+        var head = useHalf ? b50 : d;
+
+        if (typeof head.depth_usd === 'number') block.total_2pct_depth = head.depth_usd;
+        if (typeof head.is_floor === 'boolean') block.total_2pct_depth_is_floor = head.is_floor;
+        if (head.status) block.two_pct_depth_status = head.status;
+        if (head.basis) block.two_pct_depth_basis = head.basis;
+        // ⚠️ Absent on a feed that predates the field (PegTracker's embedded blocks,
+        // and the multi-chain payloads DexTracker has not migrated yet). Defaults to
+        // 200 so every existing asset keeps reading "2% depth" exactly as before.
+        block.depth_threshold_bps = typeof d.primary_threshold_bps === 'number'
+            ? Math.abs(d.primary_threshold_bps) : 200;
+        // The 2% block is RETAINED as secondary when the headline is the tighter one —
+        // the producer keeps publishing it and a reader asking "and at 2%?" should not
+        // have to open the payload.
+        if (useHalf && typeof d.depth_usd === 'number') {
+            block.secondary_depth_usd = d.depth_usd;
+            block.secondary_threshold_bps = 200;
+            if (d.status) block.secondary_depth_status = d.status;
+        }
         if (typeof block.total_tvl_usd === 'number' && block.total_tvl == null) {
             block.total_tvl = block.total_tvl_usd;
         }
@@ -617,7 +666,11 @@ const CommonRenderer = {
         // that is PegTracker's encoding on a different path entirely — crvusd,
         // reusd_re and syzusd all publish `two_pct_depth_bracket` as [low, high]
         // in their backing feeds today. Retiring it there would break them.
-        var br = d.bracket;
+        // ⚠️ THE BRACKET MUST FOLLOW THE HEADLINE. Rendering the 2% bracket under a
+        // 0.5% figure would put "crossing between $4.5M and $4.7M" beneath $3.2M —
+        // two thresholds in one sentence, which is worse than either alone.
+        var br = (useHalf && b50.bracket && typeof b50.bracket === 'object')
+            ? b50.bracket : d.bracket;
         if (br && typeof br === 'object' && !Array.isArray(br) &&
             typeof br.last_clearing_size_usd === 'number' &&
             typeof br.first_crossing_size_usd === 'number') {
@@ -2836,7 +2889,8 @@ const CommonRenderer = {
             'which is the holder\u2019s question. This figure is background on how the depth ' +
             'compares with the size of the book; nobody exits as a percentage of supply. ' +
             'Denominator: ' + label + ' ' + this.formatCurrency(denom) + '.') +
-            '">For context: \u2248 ' + txt + ' of ' + label + ' would clear at 2% depth</div>';
+            '">For context: \u2248 ' + txt + ' of ' + label + ' would clear at ' +
+            this._depthLabel(data && data.liquidity) + '</div>';
     },
 
     // ⚠️ A DEPTH MEASURED AGAINST ITS OWN VENUE'S QUOTE, WITH NOTHING SAYING SO.
@@ -3510,6 +3564,24 @@ const CommonRenderer = {
             this._escapeAttr(tip) + '">vol ' + volTxt + ' (indexer)</span>';
     },
 
+    // ⚠️ THE LABEL NAMES THE THRESHOLD THE FIGURE WAS ACTUALLY MEASURED AT.
+    //
+    // The spec's axis-3 row requires "what the depth was measured AGAINST" — it names
+    // no threshold itself, deliberately. The 2% was never a spec decision, it was a
+    // hardcoded string, and it became wrong the day DexTracker started publishing a
+    // 0.5% headline for stable assets.
+    //
+    // Reads `depth_threshold_bps`, set by _adaptSchema from the producer's
+    // `primary_threshold_bps`. Absent -> 200, so every feed that predates the field
+    // keeps saying "2% depth" exactly as before.
+    _depthLabel(liq) {
+        var bps = (liq && typeof liq.depth_threshold_bps === 'number')
+            ? liq.depth_threshold_bps : 200;
+        var pct = bps / 100;
+        // 0.5 not 0.50, 2 not 2.0 — trailing zeros on a label read as precision.
+        return (Math.round(pct * 100) / 100) + '% depth';
+    },
+
     // --- summary band (replaces the legacy 5 CR cards in 5-axis mode) ---
     renderAxisBand(data, history) {
         var container = document.getElementById('summary-cards');
@@ -3614,7 +3686,7 @@ const CommonRenderer = {
                           this._escapeAttr(String(liq.two_pct_depth_basis || '')) +
                       '">float that can reach the market — not a 2% depth</span> · ' +
                       this._volumeSubHtml(liq) + exitScope
-                    : '2% depth' + dWord + ' · ' + this._volumeSubHtml(liq) + exitScope));
+                    : this._depthLabel(liq) + dWord + ' · ' + this._volumeSubHtml(liq) + exitScope));
         // Say WHY it is unrated, or an honest blank reads as a missing feed.
         if (this._depthContradictedByLadder(data)) {
             liqSub = '<span class="text-amber-700">depth exceeds the 2% crossing in its own ladder</span>';
@@ -6438,7 +6510,8 @@ const CommonRenderer = {
 
         var statRow =
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
-                '<div><div class="text-xs text-slate-400 font-medium uppercase">2% depth</div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">' +
+                    CommonRenderer._depthLabel(liq) + '</div>' +
                     // ⚠️ total_2pct_depth_is_floor means the quote ladder was
                     // EXHAUSTED before price moved 2% — the real depth is at
                     // least this, not equal to it. sUSDS publishes it true and
