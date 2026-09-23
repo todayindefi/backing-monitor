@@ -5906,7 +5906,8 @@ const CommonRenderer = {
     //   susdat-shape 3/3 mirror                    -> true
     //   1dp rounding noise (~4% ratio spread)      -> true   (must not be lost)
     //   two-rung mirrored ladder                   -> false  (floor)
-    //   every live ladder in data/ (20 of them)    -> false
+    //   every live ladder in data/ (21 of them)    -> false
+    //   crvUSD: reachable at all (gain rung no longer vetoes)
     RATIO_SPREAD_TOLERANCE: 0.15,
 
     slippageSignIsInverted(rows) {
@@ -5917,7 +5918,17 @@ const CommonRenderer = {
             if (!r || typeof r.bps !== 'number' || typeof r.output !== 'number' ||
                 typeof r.size !== 'number' || !(r.size > 0)) continue;
             var realised = (r.output / r.size - 1) * 10000;
-            if (Math.abs(realised) <= 1) continue;
+            // ⚠️ SIGNED LOSS, NOT `Math.abs(realised) > 1`. The defect this detects
+            // is A LOSS PUBLISHED AS A GAIN, so a rung that FILLED ABOVE PAR has no
+            // cost to mis-sign and can never supply evidence of inversion — but under
+            // an absolute-value predicate it could still VETO detection by "agreeing".
+            // crvUSD is the live case: its $1K rung publishes exactly 0.0 against a
+            // realised GAIN of +1.90 bps, 0 >= 0 agrees with realised >= 0, and the
+            // whole ladder returned false before its $25M/$50M loss rungs were ever
+            // examined. A signed field tested as unsigned — the same class as the
+            // four original sign bugs this detector was built for. Found by the
+            // PegTracker session reproducing a count from the same file.
+            if (!(realised < -1)) continue;
             qualifying++;
             // One rung agreeing in sign ends it — an inversion is systematic or it
             // is not an inversion.
