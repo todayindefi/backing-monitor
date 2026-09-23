@@ -5860,23 +5860,74 @@ const CommonRenderer = {
     //   usdat   7 of 7 mirror -> systematic, a sign bug
     //   susde   1 of 8 mirror -> coincidence, must NOT flag
     //
-    // Returns true only when every qualifying rung mirrors and there are at
-    // least two to compare, so one coincidence can never trip it.
+    // ⚠️ REVISED 2026-09-22 — TWO CONFIRMED WEAKNESSES, BOTH FOUND BY THE PegTracker
+    // SESSION RUNNING ITS OWN DETECTOR OVER THE SAME DATA. Neither was visible from
+    // this side; each rule's blind spot was the other's finding.
+    //
+    //   1. A FLIP-AND-RESCALE ESCAPED. The old rule demanded |published| ~ |realised|
+    //      within 5%, so a ladder that inverted the sign AND changed the scale —
+    //      published +5.0 against a realised -50.0 on every rung — mirrored on ZERO
+    //      rungs and returned false. Reproduced here before changing anything.
+    //      A magnitude tolerance is exactly what a rescaled inversion slips through.
+    //
+    //   2. THE `=== qualifying` DENOMINATOR MOVES. Rungs qualify only at
+    //      |realised| > 1, so a universally-quantified claim over "every qualifying
+    //      rung" gets EASIER to satisfy as rungs drop out — a ladder can approach
+    //      "all rungs mirror" without one value changing sign. Measured on reusd_re
+    //      across 49 minutes and two cron cycles: 9 qualifying rungs -> 5, as $10K
+    //      (-0.04), $50K (-0.11), $100K (-0.17) and $500K (-0.65) all fell inside
+    //      the threshold. With the old floor of 2, a ladder that shrank to two
+    //      coincidentally-mirroring rungs tripped this. Verified: it did.
+    //
+    // THE FIX — a constant RATIO, not a matched magnitude.
+    // A sign inversion is one arithmetic operation applied uniformly, so
+    // |published| / |realised| is FIXED across rungs whatever the scale factor.
+    // A basis difference (price-impact vs all-in-cost) has a ratio that DRIFTS with
+    // size, because the venue's base spread is a shrinking share of the total.
+    // So the ratio's spread across rungs separates the two, where a magnitude
+    // window could only recognise the k = 1 case.
+    //
+    // ⚠️ THIS DELIBERATELY DOES NOT READ `slippage_bps_basis`. Narrowing on a
+    // producer's own label would make the detector trust the field it exists to
+    // distrust — a feed that inverted its sign AND mislabelled its basis would be
+    // exempted by its own second mistake. The arithmetic shape does not ask the
+    // suspect for its alibi.
+    //
+    // FLOOR RAISED 2 -> 3, and the number is set by the real cases rather than by
+    // taste: the two confirmed sign bugs were susdat (3 of 3) and usdat (7 of 7), so
+    // 3 is the smallest floor that preserves every known true positive. The explicit
+    // trade: a genuine inversion on a two-rung ladder is no longer detected. That is
+    // accepted because two points always define a ratio pair and can sit inside any
+    // tolerance by chance, which is the coincidence weakness 2 describes.
+    //
+    // Controls run against this implementation (see also slippageSignWarningHtml):
+    //   flip-and-rescale  +5.0 vs -50.0, 3 rungs   -> true   (old rule: FALSE)
+    //   clean 1:1 inversion                        -> true
+    //   susdat-shape 3/3 mirror                    -> true
+    //   1dp rounding noise (~4% ratio spread)      -> true   (must not be lost)
+    //   two-rung mirrored ladder                   -> false  (floor)
+    //   every live ladder in data/ (20 of them)    -> false
+    RATIO_SPREAD_TOLERANCE: 0.15,
+
     slippageSignIsInverted(rows) {
         if (!Array.isArray(rows)) return false;
-        var qualifying = 0, mirrored = 0;
-        rows.forEach(function(r) {
+        var qualifying = 0, ratios = [];
+        for (var i = 0; i < rows.length; i++) {
+            var r = rows[i];
             if (!r || typeof r.bps !== 'number' || typeof r.output !== 'number' ||
-                typeof r.size !== 'number' || !(r.size > 0)) return;
+                typeof r.size !== 'number' || !(r.size > 0)) continue;
             var realised = (r.output / r.size - 1) * 10000;
-            if (Math.abs(realised) <= 1) return;
+            if (Math.abs(realised) <= 1) continue;
             qualifying++;
-            if ((realised >= 0) !== (r.bps >= 0) &&
-                Math.abs(Math.abs(realised) - Math.abs(r.bps)) <= Math.abs(realised) * 0.05) {
-                mirrored++;
-            }
-        });
-        return qualifying >= 2 && mirrored === qualifying;
+            // One rung agreeing in sign ends it — an inversion is systematic or it
+            // is not an inversion.
+            if ((realised >= 0) === (r.bps >= 0)) return false;
+            ratios.push(Math.abs(r.bps) / Math.abs(realised));
+        }
+        if (qualifying < 3) return false;
+        var mn = Math.min.apply(null, ratios), mx = Math.max.apply(null, ratios);
+        if (!(mx > 0)) return false;
+        return ((mx - mn) / mx) <= CommonRenderer.RATIO_SPREAD_TOLERANCE;
     },
 
     // The per-row marker, shown only where the LADDER was found systematically
