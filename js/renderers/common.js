@@ -5909,10 +5909,25 @@ const CommonRenderer = {
     //   every live ladder in data/ (21 of them)    -> false
     //   crvUSD: reachable at all (gain rung no longer vetoes)
     RATIO_SPREAD_TOLERANCE: 0.15,
+    MIN_QUALIFYING_RUNGS: 3,
 
-    slippageSignIsInverted(rows) {
-        if (!Array.isArray(rows)) return false;
-        var qualifying = 0, ratios = [];
+    // ⚠️ THREE OUTCOMES, NOT TWO. `false` and "could not check" are different
+    // statements and this used to collapse them, which is the vacuous-pass trap:
+    // susds has SEVEN gain rungs and ZERO loss rungs, so there is nothing a
+    // loss-published-as-gain detector could ever find there — yet it reported
+    // `false` and read as "checked, clean". `all()` over an empty list is True.
+    //
+    //   true   inverted — every loss rung disagrees in sign at a constant ratio
+    //   false  CHECKED and clean
+    //   null   ABSTAINED — fewer than MIN_QUALIFYING_RUNGS loss rungs to reason over
+    //
+    // null is falsy, so `x ? warn : ''` at both call sites behaves exactly as
+    // before. The distinction exists so a reader (and the panel) can tell silence
+    // from a clean bill of health.
+    slippageSignCheck(rows) {
+        var out = { verdict: null, qualifying: 0, required: CommonRenderer.MIN_QUALIFYING_RUNGS };
+        if (!Array.isArray(rows)) return out;
+        var qualifying = 0, ratios = [], anyAgreed = false;
         for (var i = 0; i < rows.length; i++) {
             var r = rows[i];
             if (!r || typeof r.bps !== 'number' || typeof r.output !== 'number' ||
@@ -5930,15 +5945,40 @@ const CommonRenderer = {
             // PegTracker session reproducing a count from the same file.
             if (!(realised < -1)) continue;
             qualifying++;
-            // One rung agreeing in sign ends it — an inversion is systematic or it
-            // is not an inversion.
-            if ((realised >= 0) === (r.bps >= 0)) return false;
-            ratios.push(Math.abs(r.bps) / Math.abs(realised));
+            // One rung agreeing in sign means not inverted — an inversion is
+            // systematic or it is not an inversion. ⚠️ Recorded rather than
+            // returned early: the floor has to be applied FIRST, or a single
+            // agreeing rung reports "clean" on a ladder too thin to judge.
+            if ((realised >= 0) === (r.bps >= 0)) anyAgreed = true;
+            else ratios.push(Math.abs(r.bps) / Math.abs(realised));
         }
-        if (qualifying < 3) return false;
+        out.qualifying = qualifying;
+        if (qualifying < CommonRenderer.MIN_QUALIFYING_RUNGS) return out;  // verdict stays null
+        if (anyAgreed) { out.verdict = false; return out; }
         var mn = Math.min.apply(null, ratios), mx = Math.max.apply(null, ratios);
-        if (!(mx > 0)) return false;
-        return ((mx - mn) / mx) <= CommonRenderer.RATIO_SPREAD_TOLERANCE;
+        out.verdict = (mx > 0) && (((mx - mn) / mx) <= CommonRenderer.RATIO_SPREAD_TOLERANCE);
+        return out;
+    },
+
+    // Thin wrapper kept for the two render call sites, which only ever ask
+    // "should a warning be drawn". Returns the tri-state verdict directly.
+    slippageSignIsInverted(rows) {
+        return CommonRenderer.slippageSignCheck(rows).verdict;
+    },
+
+    // The declared absence. House rule in this file: an absence a reader could
+    // mistake for a clean result gets said out loud. Renders nothing when the
+    // ladder WAS checked — silence there is a real verdict, not a gap.
+    slippageSignAbstentionHtml(rows) {
+        var c = CommonRenderer.slippageSignCheck(rows);
+        if (c.verdict !== null) return '';
+        return '<div class="text-[11px] text-slate-500 mb-2" title="' + this._escapeAttr(
+            'The sign-inversion check compares each rung that FILLED BELOW par against its ' +
+            'published bps. Rungs that filled above par are excluded: they carry no cost to ' +
+            'mis-sign. This ladder has ' + c.qualifying + ' such rung(s) and the check needs ' +
+            c.required + ', so no verdict is offered either way. This is not a clean result.') +
+            '">Sign-inversion check: <span class="font-mono">abstained</span> \u2014 ' +
+            c.qualifying + ' of ' + c.required + ' below-par rungs \u24d8</div>';
     },
 
     // The per-row marker, shown only where the LADDER was found systematically
@@ -6323,8 +6363,15 @@ const CommonRenderer = {
         }
 
         if (!sizes.length) return '';
+        // ⚠️ Declared, not inferred from the absence of warnings. A ladder with too
+        // few below-par rungs draws no sign markers for the same reason a clean one
+        // draws none, and a reader cannot tell those apart from the table alone.
+        var abstainLine = CommonRenderer.slippageSignAbstentionHtml(sizes.map(function (sz) {
+            var qa = qOf(sz);
+            return { size: sz, output: qa.output_usd, bps: CommonRenderer._ladderRungBps(qa) };
+        }));
         return '<div class="text-sm font-semibold text-slate-700 mb-2">' + ladderTitle + '</div>' +
-              convLine + unitNote +
+              convLine + abstainLine + unitNote +
               '<div class="data-table-scroll"><table class="data-table">' +
                   '<thead><tr><th>Size sold</th><th class="text-right">Slippage</th><th class="text-right">Net out</th>' +
                       (hasFill ? '<th class="text-right" title="' + this._escapeAttr(
