@@ -3,7 +3,7 @@
   "asset": "thUSD",
   "asset_slug": "thusd",
   "chain": "Ethereum",
-  "timestamp": "2026-09-23T18:39:40Z",
+  "timestamp": "2026-09-23T19:39:28Z",
   "summary": {
     "circulating_supply": 134366400.811522,
     "total_supply": 134366400.811522,
@@ -73,16 +73,16 @@
     },
     {
       "severity": "warning",
-      "message": "Arbitrum Mainnet event scan is 17,586,960 blocks behind head (-16,360 this run, ~1,074 runs to catch up) \u2014 the event feed is not current for this chain"
+      "message": "Arbitrum Mainnet event scan is 17,568,885 blocks behind head (-18,075 this run, ~971 runs to catch up) \u2014 the event feed is not current for this chain"
     }
   ],
   "peg": {
-    "as_of": "2026-09-23T18:43:16Z",
-    "market_price": 0.9974320654445867,
+    "as_of": "2026-09-23T19:42:58Z",
+    "market_price": 0.9974320990401069,
     "nav": 1.0,
     "nav_basis": "phase0_par_assumption",
     "nav_basis_note": "Theo discloses no thUSD NAV oracle, so the reference is a $1.00 assumption. This deviation is market-vs-par, NOT market-vs-redemption.",
-    "premium_discount_pct": -0.256793,
+    "premium_discount_pct": -0.25679,
     "discount_bp_vs_one_dollar": 25.68,
     "headline_venue": "ethereum",
     "source": "geckoterminal_pools_volume_weighted",
@@ -95,38 +95,38 @@
       "independent": true,
       "note": "Quoted convertToAssets vs totalAssets/totalSupply recomputed. Agreement is evidence; divergence would mean the vault's own accounting disagrees with its share price."
     },
-    "history_rows_with_mark": 679,
+    "history_rows_with_mark": 680,
     "history_coverage_pct": 30.9,
-    "history_note": "Peg marks are persisted into thusd_coverage_history.json on 679 of 2200 rows (30.9%). The gate needs 48 rows AND 60% coverage, so no history_field is declared \u2014 a sparse series renders as a broken chart rather than an absent one. TO ESTABLISH IT: the coverage file retains ~90 days of hourly rows and marks began 2026-08-27, so the ratio rises on its own as unmarked rows age out; no code change is needed, only time.",
+    "history_note": "Peg marks are persisted into thusd_coverage_history.json on 680 of 2200 rows (30.9%). The gate needs 48 rows AND 60% coverage, so no history_field is declared \u2014 a sparse series renders as a broken chart rather than an absent one. TO ESTABLISH IT: the coverage file retains ~90 days of hourly rows and marks began 2026-08-27, so the ratio rises on its own as unmarked rows age out; no code change is needed, only time.",
     "peg_mechanism_score": 4.0,
     "peg_mechanism_score_source": "risk-feed@2026-09-23T01:45:02Z",
     "peg_mechanism_score_status": "ok",
     "peg_mechanism_score_generated_at": "2026-09-23T01:45:02Z",
-    "peg_mechanism_score_age_hours": 16.97
+    "peg_mechanism_score_age_hours": 17.97
   },
   "liquidity": {
-    "as_of": "2026-09-23T18:43:16Z",
-    "total_tvl": 5755473.3602,
+    "as_of": "2026-09-23T19:42:58Z",
+    "total_tvl": 5781269.403,
     "volume_24h": 227943.76817600202,
     "pool_count": 22,
     "total_2pct_depth": null,
     "total_2pct_depth_note": "No exit ladder is quoted for thUSD; depth is unmeasured rather than zero. TVL is not depth and is not substituted for it. TO ESTABLISH IT: a KyberSwap or Curve get_dy ladder against the venue thUSD actually trades on, the same shape already used for USDat and sUSDai. The blocker is venue selection rather than tooling \u2014 thUSD's liquidity is split across Ethereum, Arbitrum and Stable, so a single-venue ladder would understate depth and a summed one would assume cross-chain fungibility that the bridge cadence does not guarantee.",
     "exit_mark": {
       "source": "geckoterminal",
-      "fair_value": 0.9974320654445867,
+      "fair_value": 0.9974320990401069,
       "fair_value_basis": "market",
       "quotes": {}
     },
     "venues": [
       {
         "chain": "ethereum",
-        "tvl_usd": 5755473.3602,
+        "tvl_usd": 5781269.403,
         "volume_24h_usd": 227943.76817600202,
         "role": "headline"
       },
       {
         "chain": "arbitrum",
-        "tvl_usd": 33730.69530000002,
+        "tvl_usd": 33743.920500000015,
         "volume_24h_usd": 0.09339469864,
         "role": "oft_mirror_dust",
         "note": "Arbitrum OFT-mirror dust only (~$30K, \u2248$0 volume). Headline peg is `dex_peg` (Ethereum-primary combined). Retained for back-compat."
@@ -139,10 +139,10 @@
     "liquidity_score_source": "risk-feed@2026-09-23T01:45:02Z",
     "liquidity_score_status": "ok",
     "liquidity_score_generated_at": "2026-09-23T01:45:02Z",
-    "liquidity_score_age_hours": 16.97
+    "liquidity_score_age_hours": 17.97
   },
   "backing": {
-    "as_of": "2026-09-23T18:43:16Z",
+    "as_of": "2026-09-23T19:42:58Z",
     "collateral_ratio": null,
     "collateral_ratio_basis": "Deliberately null. Total backing is NOT OBSERVABLE: only the on-chain reserve Safe can be read, and >30% of supply is backed off-chain where this repo has no evidence at all. A ratio computed from the observable part would report 42.84% coverage as though it were the whole answer. Use backing.on_chain_coverage_pct, which measures what can actually be seen, and note it is a FRACTION.",
     "collateral_ratio_note": "Deliberately null. Total backing is not observable: only the on-chain reserve Safe can be read, and the remainder is off-chain and unverifiable here. Use on_chain_coverage_pct, which measures what can actually be seen.",
@@ -209,7 +209,7 @@
     "backing_score_source": "risk-feed@2026-09-23T01:45:02Z",
     "backing_score_status": "ok",
     "backing_score_generated_at": "2026-09-23T01:45:02Z",
-    "backing_score_age_hours": 16.97
+    "backing_score_age_hours": 17.97
   },
   "dependencies": {
     "upstream": [
@@ -336,7 +336,7 @@
         "total_assets_thusd": 22089401.043718,
         "total_supply_sthusd": 21702634.955282,
         "previous_share_price": 1.017821,
-        "previous_timestamp": "2026-09-23T17:39:45Z",
+        "previous_timestamp": "2026-09-23T18:39:58Z",
         "regression": false,
         "regression_bp": 0.0,
         "error": null
@@ -348,10 +348,10 @@
           "arbitrum": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065"
         },
         "anchor_note": "Phase-0 anchor of $1.00. Replace with NAV oracle if Theo discloses one.",
-        "weighted_price_usd": 0.9974320654445867,
+        "weighted_price_usd": 0.9974320990401069,
         "discount_bp_vs_one_dollar": 25.68,
         "alert_threshold_bp": 75.0,
-        "total_tvl_usd": 5755473.3602,
+        "total_tvl_usd": 5781269.403,
         "total_volume_h24_usd": 227943.76817600202,
         "pool_count": 22,
         "pools": [
@@ -361,7 +361,7 @@
             "dex_id": "uniswap-v4-ethereum",
             "pair": "thUSD/USDC",
             "thusd_price_usd": 0.9974702791,
-            "tvl_usd": 5719245.4759,
+            "tvl_usd": 5745017.0409,
             "volume_h24_usd": 227703.650613251,
             "price_change_h24_pct": -0.15
           },
@@ -391,7 +391,7 @@
             "dex_id": "uniswap-v4-arbitrum",
             "pair": "thUSD/USDC",
             "thusd_price_usd": 0.9391215462,
-            "tvl_usd": 2784.6542,
+            "tvl_usd": 2797.8794,
             "volume_h24_usd": 0.09339469864,
             "price_change_h24_pct": 0.0
           },
@@ -401,7 +401,7 @@
             "dex_id": "uniswap-v4-ethereum",
             "pair": "thUSD/USDT",
             "thusd_price_usd": 0.9957051158,
-            "tvl_usd": 2497.189,
+            "tvl_usd": 2508.4416,
             "volume_h24_usd": 240.0241680524,
             "price_change_h24_pct": -0.03
           },
@@ -580,18 +580,18 @@
           "ethereum": {
             "canonical_token": "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3",
             "network_slug": "eth",
-            "weighted_price_usd": 0.997469508714711,
+            "weighted_price_usd": 0.9974695087147158,
             "discount_bp_vs_one_dollar": 25.3,
-            "total_tvl_usd": 5721742.6649,
+            "total_tvl_usd": 5747525.4825,
             "total_volume_h24_usd": 227943.6747813034,
             "pool_count": 2
           },
           "arbitrum": {
             "canonical_token": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
             "network_slug": "arbitrum",
-            "weighted_price_usd": 0.9910805581816047,
-            "discount_bp_vs_one_dollar": 89.19,
-            "total_tvl_usd": 33730.69530000002,
+            "weighted_price_usd": 0.991060193970361,
+            "discount_bp_vs_one_dollar": 89.4,
+            "total_tvl_usd": 33743.920500000015,
             "total_volume_h24_usd": 0.09339469864,
             "pool_count": 20
           }
@@ -601,10 +601,10 @@
         "canonical_token": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065",
         "secondary_note": "Arbitrum OFT-mirror dust only (~$30K, \u2248$0 volume). Headline peg is `dex_peg` (Ethereum-primary combined). Retained for back-compat.",
         "anchor_note": "Phase-0 anchor of $1.00. Replace with NAV oracle if Theo discloses one.",
-        "weighted_price_usd": 0.9910805581816047,
-        "discount_bp_vs_one_dollar": 89.19,
+        "weighted_price_usd": 0.991060193970361,
+        "discount_bp_vs_one_dollar": 89.4,
         "alert_threshold_bp": 75.0,
-        "total_tvl_usd": 33730.69530000002,
+        "total_tvl_usd": 33743.920500000015,
         "total_volume_h24_usd": 0.09339469864,
         "pool_count": 20,
         "pools": [
@@ -634,7 +634,7 @@
             "dex_id": "uniswap-v4-arbitrum",
             "pair": "thUSD/USDC",
             "thusd_price_usd": 0.9391215462,
-            "tvl_usd": 2784.6542,
+            "tvl_usd": 2797.8794,
             "volume_h24_usd": 0.09339469864,
             "price_change_h24_pct": 0.0
           },
@@ -903,34 +903,34 @@
     "events_scan_summary": {
       "chains_scanned": {
         "Ethereum Mainnet": {
-          "head": 26042020,
+          "head": 26042318,
           "from_block": 25956016,
           "scanned_to": 25956015,
           "early_abort": true,
-          "blocks_behind": 86005,
+          "blocks_behind": 86303,
           "blocks_gained_this_run": 0,
           "gap_change_this_run": 298,
           "logs_found": 0,
           "baseline_run": false
         },
         "Arbitrum Mainnet": {
-          "head": 508208670,
-          "from_block": 490591711,
-          "scanned_to": 490621710,
+          "head": 508222095,
+          "from_block": 490621711,
+          "scanned_to": 490653210,
           "early_abort": true,
-          "blocks_behind": 17586960,
-          "blocks_gained_this_run": 30000,
-          "gap_change_this_run": -16360,
+          "blocks_behind": 17568885,
+          "blocks_gained_this_run": 31500,
+          "gap_change_this_run": -18075,
           "logs_found": 0,
           "baseline_run": false
         },
         "Stable Mainnet": {
-          "head": 40481013,
-          "from_block": 40475878,
-          "scanned_to": 40481013,
+          "head": 40486104,
+          "from_block": 40481014,
+          "scanned_to": 40486104,
           "early_abort": false,
           "blocks_behind": 0,
-          "blocks_gained_this_run": 5136,
+          "blocks_gained_this_run": 5091,
           "gap_change_this_run": 0,
           "logs_found": 0,
           "baseline_run": false
@@ -1020,27 +1020,27 @@
       }
     ],
     "reserve_outflow_scan": {
-      "head_block": 26042024,
+      "head_block": 26042322,
       "per_token": {
         "thBILL": {
           "scanned": 0,
           "new_destinations_seen": 0,
-          "from_block": 26041727,
-          "to_block": 26042024,
+          "from_block": 26042025,
+          "to_block": 26042322,
           "baseline_run": false
         },
         "USDC": {
           "scanned": 0,
           "new_destinations_seen": 0,
-          "from_block": 26041727,
-          "to_block": 26042024,
+          "from_block": 26042025,
+          "to_block": 26042322,
           "baseline_run": false
         },
         "USDT": {
           "scanned": 0,
           "new_destinations_seen": 0,
-          "from_block": 26041727,
-          "to_block": 26042024,
+          "from_block": 26042025,
+          "to_block": 26042322,
           "baseline_run": false
         }
       },
@@ -1398,7 +1398,7 @@
     "issuer_score_source": "risk-feed@2026-09-23T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-09-23T01:45:02Z",
-    "issuer_score_age_hours": 16.97,
+    "issuer_score_age_hours": 17.97,
     "facts": [
       "Elite team and hardened admin chain; unlicensed, non-bankruptcy-remote Panama issuer holding ~57% of backing off-chain and unattested. [riskAnalyst assessment]",
       "Issuer: Theo Network, Panama \u2014 unlicensed and NOT bankruptcy-remote. [riskAnalyst assessment]",
