@@ -13,20 +13,21 @@
     "redemption_score_note": "⚠️ usds carries NO redemption_score, unlike the vault shares in this rollout."
   },
   "backing": {
-    "backing_score": 6.5,
+    "backing_score": 6.0,
     "backing_score_source": "riskAnalyst:authored",
-    "backing_score_generated_at": "2026-09-24T00:00:00Z",
+    "backing_score_generated_at": "2026-09-24T03:00:00Z",
     "backing_score_basis": "MEASURES RESERVE COMPOSITION AND ITS CONCENTRATION, plus the surplus buffer — NOT backing-over-supply. ⚠️⚠️ THE DISTINCTION IS NOT ACADEMIC HERE: RE-DIVIDING THE OPERANDS GIVES A NUMBER ON THE OTHER SIDE OF 100. Measured 2026-09-11 from the feed's own fields: total_backing $11,308,022,085.78 over supply $11,275,063,843.76 = 100.2923%, A SURPLUS OF $32,958,242.02. The PUBLISHED collateral_ratio is 99.4895% — A DEFICIT — because it is `100 + (surplus_deficit / supply)` with surplus_deficit −$57,557,885.05. ✅ That reconciles to the published 99.49 EXACTLY, which is what confirms the documented basis rather than assuming it. ⚠️ 80 BASIS POINTS APART AND OPPOSITE IN SIGN. A reader who divides backing by supply gets a surplus where the feed reports a deficit, and both are correct about different questions. ⚠️ Every USDS is minted 1:1 against a debt position, so par coverage is ~100% BY CONSTRUCTION and carries no information — the vow buffer is the signal. HELD AT 7.0: overcollateralized, diversified and on-chain transparent, well above opaque-CDP peers, held down by the ~33% USDC concentration. ⚠️ CUT TO 6.5 ON 2026-09-24, ON ALLOCATOR CONCENTRATION: the largest single Star went 21.66% -> 33.01% of Sky vat debt in seven weeks (Spark, overtaking Grove at 15.34%), so ~48.35% of the book now sits with two allocators scored a five-month-stale 7.0 and a provisional 6.0. Measured both dates from IlkRegistry.list(); Obex flat to within $4M is the control. The prior 7.0 argument -- overcollateralized, diversified, on-chain transparent -- still holds on its own terms and is retained above; it is no longer the whole picture.",
     "backing_score_persistence": "filtered — reserve composition and buffer level, not a spot ratio",
     "backing_score_denominator": "⚠️ ASK WHAT THE RATIO DIVIDES BY BEFORE QUOTING IT. Published CR is surplus-based. To recover the backing-based figure: D' = backing − surplus. Quoting 99.49% as 'backed 99.5 cents on the dollar' is wrong in both magnitude and DIRECTION.",
     "backing_score_correction_2026_09_24": "⚠️ CUT 7.0 -> 6.5 on 2026-09-24, ON ALLOCATOR CONCENTRATION. Measured from IlkRegistry.list() (35 ilks, $11,292,509,572 vat debt) against the same reading on 2026-08-01: Spark 21.66% -> 33.01% and has overtaken Grove, which fell 25.05% -> 15.34%. Obex flat to within $4M across both dates is the control establishing the readings are comparable. ~48.35% of the book now sits with two Stars scored a five-month-stale 7.0 (spark) and a provisional 6.0 (grove). ⚠️ A separately measured reflexive loop -- Spark holds $647,239,420 of sUSDS, Grove lends against sUSDS at up to 96.5% LLTV -- is RECORDED BUT DELIBERATELY NOT LOAD-BEARING for this cut, because whether published backing nets it out is not established. 6.5 stands either way.",
     "backing_score_change": {
-      "from": 7.0,
-      "to": 6.5,
+      "from": 6.5,
+      "to": 6.0,
       "on": "2026-09-24",
       "direction": "cut",
-      "basis": "Allocator concentration: largest Star 21.66% -> 33.01% of Sky vat debt; ~48.35% of the book with two Stars scored stale-7.0 (spark) and provisional-6.0 (grove). Obex flat to within $4M across both dates as the control.",
-      "not_load_bearing": "A separately measured reflexive loop -- Spark holds $647,239,420 sUSDS, Grove lends against sUSDS at up to 96.5% LLTV -- is recorded but did NOT drive this cut, because whether published backing nets it out is unestablished. 6.5 stands either way.",
+      "basis": "Pre-registered trigger fired on riskAnalyst's own read of observatory.data.blockanalitica.com/sky/backed/items/ (as_of 2026-09-24T02:20:16): Spark is 61.2% onchain crypto lending with NO treasury category while holding 33.01% of Sky vat debt. Supersedes the same-day 7.0 -> 6.5 move.",
+      "not_load_bearing": "Grove proved LESS treasury-pure than first relayed (40.8% OTC + onchain lending), so the Grove->Spark rotation is milder than stated and is NOT what this cut rests on; Spark's own composition is. The sUSDS reflexive loop remains recorded and unpriced.",
+      "basis_warning": "Mix% and ilk size are DIFFERENT BASES — BA backed for spark is $2,845,172,669 vs ilk debt $3,728,124,561, 23.7% apart. Never multiply one through the other.",
       "inherited_from": null
     }
   },
@@ -44,7 +45,15 @@
     "underlying_score_generated_at": "2026-09-24T00:00:00Z",
     "underlying_score_basis": "MEASURES CONCENTRATION OF THE COUNTERPARTY SET, NOT ITS QUALITY. ⚠️ AUTHORED 2026-09-06 — this axis did not exist on EITHER surface before that date, so there is no prior published figure it supersedes. Two concentrations, both real and both high-quality: (1) USDC is the single largest dependency at ~33% of backing, and it is the SAME name the peg mechanism depends on through the PSM — so peg strength and dependency concentration are one arrangement read twice, not two independent facts. The March 2023 precedent is the point: DAI followed USDC down through this module. (2) A less-transparent credit sleeve whose composition is drifting toward crypto lending and away from T-bills. Level with Backing deliberately: what this axis records is that the dependencies are CONCENTRATED, not that they are poor.",
     "underlying_score_persistence": "filtered — supply architecture and reserve composition, not a daily balance",
-    "underlying_score_correction_2026_09_24": "⚠️ CUT 7.0 -> 6.5 on 2026-09-24. The axis was ANCHORED for the first time -- usds now declares dependency_protocols: [\"spark\",\"grove\"], checked by scripts/check_dependency_protocols.py -- and could not hold 7.0 above grove's provisional 6.0 with spark five months stale and its economic_score explicitly flagged as never scored on its allocator mandate. axis-4 sets no mechanical bound; this is an authored judgement against two now-visible dependency scores."
+    "underlying_score_correction_2026_09_24": "⚠️ CUT 7.0 -> 6.5 on 2026-09-24. The axis was ANCHORED for the first time -- usds now declares dependency_protocols: [\"spark\",\"grove\"], checked by scripts/check_dependency_protocols.py -- and could not hold 7.0 above grove's provisional 6.0 with spark five months stale and its economic_score explicitly flagged as never scored on its allocator mandate. axis-4 sets no mechanical bound; this is an authored judgement against two now-visible dependency scores.",
+    "underlying_score_change": {
+      "from": 7.0,
+      "to": 6.5,
+      "on": "2026-09-24",
+      "direction": "cut",
+      "basis": "Axis anchored for the first time: usds declares dependency_protocols [spark, grove], checked by scripts/check_dependency_protocols.py. 7.0 could not be held above grove's provisional 6.0 with spark five months stale and its economic_score flagged as never scored on its allocator mandate.",
+      "inherited_from": null
+    }
   },
   "issuer": {
     "issuer_score": 7.0,
