@@ -5006,11 +5006,13 @@ const CommonRenderer = {
         // The authored-score rationale, reachable rather than hovered.
         (function(self) {
             var head = document.getElementById('axis-backing-head');
-            var basis = (data.backing || {}).backing_score_basis;
-            if (!head || !basis) return;
+            var bblk = data.backing || {};
+            var basis = bblk.backing_score_basis;
+            var change = self._scoreChangeHtml(bblk);
+            if (!head || (!basis && !change)) return;
             var el = document.createElement('div');
             el.className = 'axis-basis-note';
-            el.innerHTML = self._scoreBasisHtml('Why this backing score', basis);
+            el.innerHTML = self._scoreBasisHtml('Why this backing score', basis, change);
             head.appendChild(el);
         })(this);
 
@@ -5057,7 +5059,8 @@ const CommonRenderer = {
                         perChain = blk[f + '_per_chain'];
                     }
                 });
-                if (!basis && !perChain) return;
+                var change = self._scoreChangeHtml(blk);
+                if (!basis && !perChain && !change) return;
                 var el = document.createElement('div');
                 el.className = 'axis-basis-note';
                 el.innerHTML =
@@ -5065,7 +5068,7 @@ const CommonRenderer = {
                         ? '<div class="text-xs text-amber-700 mb-1">' +
                           self._mdInlineHtml(perChain) + '</div>'
                         : '') +
-                    (basis ? self._scoreBasisHtml(row[3], basis) : '');
+                    self._scoreBasisHtml(row[3], basis, change);
                 head.appendChild(el);
             });
         })(this);
@@ -5143,8 +5146,10 @@ const CommonRenderer = {
             if (perChain) {
                 parts += '<div class="text-xs text-amber-700 mb-1">' + self._mdInlineHtml(perChain) + '</div>';
             }
-            if (basis) {
-                parts += self._scoreBasisHtml('Why the report scores liquidity differently', basis);
+            var liqChange = self._scoreChangeHtml(liq);
+            if (basis || liqChange) {
+                parts += self._scoreBasisHtml('Why the report scores liquidity differently',
+                                              basis, liqChange);
             }
             if (!parts) return;
             var el = document.createElement('div');
@@ -5221,11 +5226,13 @@ const CommonRenderer = {
             data.contract || (data.asset_specific || {}).control || (data.asset_specific || {}).governance);
         (function(self) {
             var head = document.getElementById('axis-contract-head');
-            var basis = (data.contract || {}).structural_score_basis;
-            if (!head || !basis) return;
+            var cblk = data.contract || {};
+            var basis = cblk.structural_score_basis;
+            var cChange = self._scoreChangeHtml(cblk);
+            if (!head || (!basis && !cChange)) return;
             var el = document.createElement('div');
             el.className = 'axis-basis-note';
-            el.innerHTML = self._scoreBasisHtml('Why this contract score', basis);
+            el.innerHTML = self._scoreBasisHtml('Why this contract score', basis, cChange);
             head.appendChild(el);
         })(this);
         this._renderContractSection(data);
@@ -7110,8 +7117,9 @@ const CommonRenderer = {
         // argument about counterparty concentration is not something a reader
         // hovers for — same rule already applied to backing_score_basis and
         // structural_score_basis, which were tooltip-only until they weren't.
-        var depBasis = (dep.underlying_score_basis && typeof dep.underlying_score_basis === 'string')
-            ? this._scoreBasisHtml('Why this dependencies score', dep.underlying_score_basis) +
+        var depChange = this._scoreChangeHtml(dep);
+        var depBasis = ((dep.underlying_score_basis && typeof dep.underlying_score_basis === 'string') || depChange)
+            ? this._scoreBasisHtml('Why this dependencies score', dep.underlying_score_basis, depChange) +
               (dep.underlying_score_denominator
                   ? '<div class="text-xs text-slate-500 mb-3">Denominator: ' +
                     this._escapeAttr(String(dep.underlying_score_denominator)) + '</div>'
@@ -7544,13 +7552,94 @@ const CommonRenderer = {
                    .replace(/`([^`\n]+)`/g, '$1');
     },
 
-    _scoreBasisHtml(label, text) {
-        if (!text || typeof text !== 'string') return '';
-        var t = text.trim();
-        if (!t) return '';
+    // ⚠️ A SCORE MOVE IS A FACT SEPARATE FROM THE SCORE, AND IT REACHED NO READER.
+    //
+    // riskAnalyst cut usds/susds backing 7.0 -> 6.5 on 2026-09-24. The NUMBER
+    // merged and rendered; the argument FOR THE MOVE did not, because the only
+    // backing prose this renderer reads is `*_score_basis` — which that morning
+    // still closed with "HELD AT 7.0". Measured in the DOM of both pages, not in
+    // the JSON: the superseded sentence was present and "CUT 7.0" appeared
+    // nowhere. The producer fixed the prose; this renders the move itself.
+    //
+    // ⚠️ DELIBERATELY NOT SOLVED BY PROMOTING `*_score_correction*`, and that is
+    // why the typed field exists. That suffix holds two different kinds of thing:
+    // of the 11 in the corpus, 5 are score moves and 6 are the producer's errata
+    // about their OWN repo (one states that a commit message of theirs is false).
+    // Telling them apart means reading prose for "X -> Y", i.e. guessing at
+    // meaning — which is exactly how security_analyst's ⚠️-marked repo
+    // maintenance notes became reader copy (see the marker-rule note further
+    // down). A typed field is discriminable without a heuristic over prose.
+    //
+    // ⚠️ THE MOVE DOES NOT GO ON THE AXIS FACE. `from`/`to` are authored
+    // numbers, so the owner decision that took the authored score off the face
+    // beside a live band covers them too — "7.0 → 6.5" next to a measured band
+    // invites the same reconciliation of two numbers that answer different
+    // questions. It renders INSIDE the authored-argument <details>, the space
+    // that already belongs to the report's view.
+    //
+    // ⚠️ `to` IS CHECKED AGAINST THE LIVE SCORE, NOT TRUSTED. A move saying
+    // "to 6.5" beside a rendered 7.0 means the overlay did not merge, or the
+    // producer moved one field and not the other. The reader is told, because a
+    // move that disagrees with the number it describes is worse than no move.
+    _scoreChangeHtml(block) {
+        if (!block || typeof block !== 'object') return '';
+        var self = this, out = '';
+        Object.keys(block).forEach(function(k) {
+            var m = /^(.+_score)_change$/.exec(k);
+            if (!m) return;
+            var c = block[k];
+            if (!c || typeof c !== 'object' || Array.isArray(c)) return;
+            // from/to are the whole point of the field; without both there is no
+            // move to state and a partial object is not rendered as one.
+            if (typeof c.from !== 'number' || typeof c.to !== 'number') return;
+            var field = m[1], live = block[field];
+            var dir = (typeof c.direction === 'string' && c.direction.trim())
+                ? c.direction.trim() : (c.to < c.from ? 'cut' : c.to > c.from ? 'raise' : 'restated');
+            var cls = c.to < c.from ? 'sc-down' : c.to > c.from ? 'sc-up' : '';
+            // ⚠️ ONE DECIMAL ON BOTH SIDES. Authored scores move in 0.5 steps and
+            // JS prints 7.0 as "7", so an unformatted move reads "7 → 6.5" — two
+            // different precisions in one four-character string, on a page where
+            // every other score carries its decimal.
+            var fmt = function(n) { return (Math.round(n * 10) / 10).toFixed(1); };
+            var mismatch = (typeof live === 'number' && live !== c.to)
+                ? '<div class="sc-warn">⚠️ This move says ' + fmt(c.to) + ' and the rendered ' +
+                  self._escapeAttr(field.replace(/_/g, ' ')) + ' is ' +
+                  fmt(live) + '. One of the two did not land — the move is shown as published, ' +
+                  'not reconciled here.</div>'
+                : '';
+            out += '<div class="score-change">' +
+                '<span class="sc-move ' + cls + '">' + fmt(c.from) + ' → ' + fmt(c.to) + '</span>' +
+                '<span class="sc-meta">' + self._escapeAttr(dir) +
+                    (c.on ? ' · ' + self._escapeAttr(String(c.on)) : '') +
+                    (c.inherited_from
+                        ? ' · inherited from ' + self._escapeAttr(String(c.inherited_from)) : '') +
+                '</span>' +
+                mismatch +
+                (typeof c.basis === 'string' && c.basis.trim()
+                    ? '<div class="sc-basis">' + self._mdInlineHtml(c.basis) + '</div>' : '') +
+                // ⚠️ The producer asked for this one BY NAME: the sUSDS reflexive
+                // loop is measured, unsized, and did not price the cut. Rendering
+                // the move without it invites a reader to assume it did.
+                (typeof c.not_load_bearing === 'string' && c.not_load_bearing.trim()
+                    ? '<div class="sc-nlb">⚠️ Recorded, and explicitly NOT what drove this ' +
+                      'move: ' + self._mdInlineHtml(c.not_load_bearing) + '</div>' : '') +
+            '</div>';
+        });
+        return out;
+    },
+
+    // `leadHtml` is already-escaped HTML (the typed score move) placed ABOVE the
+    // prose: what changed first, then the argument. A caller passing only a basis
+    // string behaves exactly as before, and a block with a move but no basis
+    // still opens — the move is reason enough for the <details> to exist.
+    _scoreBasisHtml(label, text, leadHtml) {
+        var t = (typeof text === 'string') ? text.trim() : '';
+        var lead = (typeof leadHtml === 'string') ? leadHtml : '';
+        if (!t && !lead) return '';
         return '<details class="score-basis"><summary class="score-basis-toggle">' +
             this._escapeAttr(label) + '</summary>' +
-            '<div class="score-basis-body">' + this._mdInlineHtml(t) + '</div></details>';
+            '<div class="score-basis-body">' + lead +
+            (t ? this._mdInlineHtml(t) : '') + '</div></details>';
     },
 
     // ⚠️ HOW FAR THE CHECK WENT, ON THE FACE — because the FINDING is on the
