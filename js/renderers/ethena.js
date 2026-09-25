@@ -265,6 +265,7 @@ var EthenaRenderer = {
         // backing ratio is USDe's coverage including the reserve fund" — was
         // hover-only beside a 102.64% Healthy 5/5 tile, which is exactly the
         // wrapper-shows-its-underlying's-number case.
+        html += anc('panel-peg', EthenaRenderer._renderPegPanel(data, slug));
         html += CommonRenderer.backingBasisPanelHtml(data);
         // Async-filled placeholders (all from ethena_family.json):
         html += '<div id="ethena-custody-panel"></div>';
@@ -288,6 +289,11 @@ var EthenaRenderer = {
         // matches this stream's idiom, so it drops in rather than being rebuilt.
         // withScoreChip because there is no axis head here to carry the score.
         html += CommonRenderer.dependenciesPanelHtml(data, { withScoreChip: true });
+        // ⚠️ AXIS 6 WENT THE SAME WAY AS AXES 1 AND 4 — hidden with nothing put
+        // back. The summary band carried "Issuer 7.0/10" and the facts behind it
+        // (entity, regulator, the written assessment) rendered into a display:none
+        // node. Same shared panel, same one-line drop-in as dependencies above.
+        html += anc('panel-issuer', CommonRenderer.issuerPanelHtml(data));
         html += '<div id="ethena-riskflags-panel"></div>';
         html += '<div id="ethena-family-panel"></div>';
 
@@ -297,6 +303,7 @@ var EthenaRenderer = {
         EthenaRenderer._setupCompanionLink(slug);
 
         // Post-DOM charts / async fills.
+        EthenaRenderer._loadPegHistoryChart(slug);
         if (slug === 'susde') EthenaRenderer._loadSusdeNavChart(slug);
         EthenaRenderer._loadFamily(slug);
     },
@@ -357,7 +364,7 @@ var EthenaRenderer = {
         var inner = document.getElementById('asset-anchor-nav-inner');
         if (!navEl || !inner) return;
 
-        var items = [{ id: 'panel-headline', label: 'Asset' }];
+        var items = [{ id: 'panel-headline', label: 'Asset' }, { id: 'panel-peg', label: 'Peg' }];
         if (slug === 'usde') items.unshift({ id: 'chart-panel', label: 'Coverage' });
         items.push({ id: 'ethena-custody-panel', label: 'Custody' });
         items.push({ id: 'ethena-defi-panel',    label: 'DeFi' });
@@ -365,6 +372,7 @@ var EthenaRenderer = {
         items.push({ id: 'ethena-cex-panel',     label: 'CEX hedge' });
         if (slug === 'susde') items.push({ id: 'panel-vault', label: 'Vault' });
         items.push({ id: 'ethena-attestation-panel', label: 'Attestation' });
+        items.push({ id: 'panel-issuer',              label: 'Issuer' });
         items.push({ id: 'ethena-family-panel',       label: 'Family' });
 
         inner.innerHTML = items.map(function(item) {
@@ -491,6 +499,141 @@ var EthenaRenderer = {
             '<div class="text-xs text-slate-400 mt-2">NAV rises as staking yield accrues; sUSDe→USDe unstaking is subject to a cooldown. ' +
             'Cooldown-queue depth is not exposed in the current feed.</div>' +
         '</div>';
+    },
+
+
+    // ============================================================
+    // §1b Peg Performance — ⚠️ THE AXIS THIS RENDERER HID AND NEVER REPLACED.
+    //
+    // `_suppressCommonPanels` hides `section-peg` along with every other numbered
+    // section, and the reasoning for that is sound and documented above: a lone
+    // numbered axis on a page with no siblings reads as a rendering failure. But
+    // hiding is only half a decision — the other half is putting the content back
+    // in this stream's idiom, which axis 4 got (`dependenciesPanelHtml`) and axis
+    // 1 did not. So both pages carried a peg CARD in the summary band — one
+    // instant price — while `#peg-chart` sat painted inside a display:none node
+    // and ~350 daily observations reaching back to 2025-03-27 reached no reader.
+    //
+    // ⚠️ SERIES CHOICE IS DELIBERATE AND STATED ON THE PAGE. The feed declares
+    // `history_ref: {slug}_backing_history.json` — 2,175 points but only from
+    // 2026-06-27, an hourly slice of the last three months. `{slug}_peg_history.json`
+    // is the LONG record: ~350 daily-downsampled points across eighteen months,
+    // same two quantities, published by the same producer and synced here. This
+    // panel plots the long one BECAUSE a peg chart's job is the record, and names
+    // the file, the span, the downsample rule and the fact that the feed's own
+    // declaration points elsewhere. A reader can see the choice; nothing is
+    // silently substituted.
+    _renderPegPanel: function(data, slug) {
+        var peg = data.peg || {};
+        var fmtP = function(v) { return v != null ? v.toFixed(4) : '—'; };
+        var pct = peg.premium_discount_pct;
+        var pctCls = (pct == null) ? '' :
+            Math.abs(pct) >= 0.5 ? 'text-red-600' : Math.abs(pct) >= 0.1 ? 'text-amber-600' : 'text-green-600';
+        var navLabel = (slug === 'susde') ? 'NAV (USDe/share)' : 'NAV / theoretical';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Peg Performance ' +
+                '<span class="text-xs font-normal text-slate-500">(market vs ' +
+                (slug === 'susde' ? 'vault NAV' : 'par') + ')</span></div>' +
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Market price</div>' +
+                    '<div class="text-lg font-bold font-mono">' + fmtP(peg.market_price) + '</div>' +
+                    (peg.source ? '<div class="text-[11px] text-slate-400 mt-0.5">' +
+                        CommonRenderer._escapeAttr(peg.source) + '</div>' : '') + '</div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">' + navLabel + '</div>' +
+                    '<div class="text-lg font-bold font-mono">' + fmtP(peg.nav) + '</div></div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Premium / discount</div>' +
+                    '<div class="text-lg font-bold font-mono ' + pctCls + '">' +
+                        CommonRenderer.pegPctText(pct, 3) + '</div></div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Observations</div>' +
+                    '<div class="text-lg font-bold font-mono" id="ethena-peg-points">—</div>' +
+                    '<div class="text-[11px] text-slate-400 mt-0.5" id="ethena-peg-span"></div></div>' +
+            '</div>' +
+            '<div class="chart-container"><canvas id="ethena-peg-chart"></canvas></div>' +
+            '<div class="text-[11px] text-slate-400 mt-2" id="ethena-peg-source" style="line-height:1.5;"></div>' +
+        '</div>';
+    },
+
+    // Long-record peg chart. ⚠️ Missing theoretical points are plotted as GAPS,
+    // not interpolated: the envelope publishes `points_missing_theoretical` and a
+    // line drawn through them would invent a NAV the producer does not have.
+    _loadPegHistoryChart: function(slug) {
+        var nocache = Math.floor(Date.now() / 60000);
+        var ref = slug + '_peg_history.json';
+        fetch('data/' + ref + '?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(h) {
+                var ctx = document.getElementById('ethena-peg-chart');
+                var entries = (h && Array.isArray(h.entries)) ? h.entries.filter(function(e) {
+                    return e && e.timestamp && e.peg_market_price != null;
+                }) : [];
+                if (!ctx || typeof Chart === 'undefined' || entries.length < 2) {
+                    var slot = document.getElementById('ethena-peg-source');
+                    if (slot) slot.textContent = 'No peg history series is available for this asset.';
+                    return;
+                }
+                EthenaRenderer._fillPegMeta(h, entries, slug);
+                var labels = entries.map(function(e) {
+                    return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z');
+                });
+                var mkt = entries.map(function(e) { return e.peg_market_price; });
+                var nav = entries.map(function(e) {
+                    return e.peg_theoretical_price != null ? e.peg_theoretical_price : null;
+                });
+                if (window._ethenaPegChart) window._ethenaPegChart.destroy();
+                window._ethenaPegChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: labels, datasets: [
+                        { label: 'Market price', data: mkt, borderColor: '#3b82f6',
+                          backgroundColor: 'transparent', fill: false, tension: 0.25,
+                          pointRadius: 0, borderWidth: 2, spanGaps: false },
+                        { label: (slug === 'susde' ? 'NAV (theoretical)' : 'Theoretical / par'),
+                          data: nav, borderColor: '#94a3b8', backgroundColor: 'transparent',
+                          borderDash: [4, 3], fill: false, tension: 0.25, pointRadius: 0,
+                          borderWidth: 2, spanGaps: false }
+                    ]},
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { intersect: false, mode: 'index' },
+                        scales: {
+                            x: { type: 'time', time: { unit: 'month', displayFormats: { month: 'MMM yy' } },
+                                 grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } },
+                            y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } }
+                        },
+                        plugins: {
+                            legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                            tooltip: { callbacks: { label: function(c) {
+                                return c.dataset.label + ': ' + (c.raw != null ? c.raw.toFixed(4) : 'n/a');
+                            } } }
+                        }
+                    }
+                });
+            })
+            .catch(function() {});
+    },
+
+    // The provenance line under the chart: which file, how many points, what the
+    // downsample rule was, how many carry no theoretical, and ⚠️ that the feed's
+    // own `history_ref` names a different (shorter, denser) series.
+    _fillPegMeta: function(h, entries, slug) {
+        var pts = document.getElementById('ethena-peg-points');
+        var span = document.getElementById('ethena-peg-span');
+        var src = document.getElementById('ethena-peg-source');
+        var first = entries[0].timestamp.slice(0, 10), last = entries[entries.length - 1].timestamp.slice(0, 10);
+        if (pts) pts.textContent = String(entries.length);
+        if (span) span.textContent = first + ' → ' + last;
+        if (!src) return;
+        var missing = h.points_missing_theoretical;
+        src.innerHTML =
+            'Series: <span class="font-mono">' + CommonRenderer._escapeAttr(slug + '_peg_history.json') +
+            '</span>' + (h.downsample ? ' · ' + CommonRenderer._escapeAttr(h.downsample) : '') +
+            (h.generated_at ? ' · generated ' + CommonRenderer._escapeAttr(h.generated_at) : '') +
+            (missing ? ' · ⚠️ ' + missing + ' point' + (missing === 1 ? '' : 's') +
+                ' carry no theoretical price and are drawn as gaps rather than interpolated' : '') +
+            '. ⚠️ The feed declares <span class="font-mono">history_ref: ' +
+            CommonRenderer._escapeAttr(slug + '_backing_history.json') + '</span>, which is a denser ' +
+            'but much shorter slice (hourly, from 2026-06-27). This chart plots the long daily record ' +
+            'instead; the two are the same two quantities at different cadences.';
     },
 
     _loadSusdeNavChart: function(slug) {
