@@ -2704,6 +2704,21 @@ const CommonRenderer = {
         return { score: lq.liquidity_score, basis: String(basis), field: 'liquidity_score' };
     },
 
+    // What a published `band_score` was computed FROM. Returns null for the
+    // ordinary case — a band derived here from `total_2pct_depth` — so only the
+    // assets whose band is NOT a depth reading carry the extra sentence.
+    _liquidityBandBasisNote(data) {
+        var lq = (data && data.liquidity) || {};
+        if (lq.band_score == null) return null;
+        var free = (typeof lq.free_liquidity_pct === 'number')
+            ? lq.free_liquidity_pct.toFixed(2) + '%' : null;
+        return 'This band is the producer\u2019s published band_score' +
+            (free ? ', computed from free liquidity (' + free + ')' : '') +
+            (lq.total_2pct_depth == null
+                ? ' \u2014 NOT from 2% depth, which is unmeasured for this asset'
+                : '') + '.';
+    },
+
     _liquidityChipHtml(data) {
         var band = this.liquidityRating(data);
         // ⚠️ Declaration required ONLY when the authored score would FILL an
@@ -2722,7 +2737,18 @@ const CommonRenderer = {
             // Threshold and tooltip come from the SAME helpers the peg and
             // backing axes use — the gap rule is defined once
             // (AUTHORED_DIVERGENCE_MIN_GAP), not typed into three axes.
-            return this._ratingChipHtml(band, null, this._authoredTooltipNote(band, accepted)) +
+            // ⚠️ THE CHIP SAID "DEPTH" AND THE BAND WAS NOT ONE. Credit vaults
+            // publish an explicit `band_score` computed from FREE LIQUIDITY —
+            // liquidityRating prefers it, correctly — and both syrup pools render
+            // "Stress · 2/10" beside a "2% depth n/a" tile. The number was right
+            // and its provenance was missing, which on this axis is the same
+            // mistake hastra-prime's withheld band was written to avoid: a band
+            // whose basis a reader cannot see invites them to read it as the
+            // measurement the sub-label names.
+            var bandNotes = [this._liquidityBandBasisNote(data),
+                             this._authoredTooltipNote(band, accepted)]
+                .filter(Boolean).join(' ');
+            return this._ratingChipHtml(band, null, bandNotes || null) +
                 this._divergenceChipHtml(band, accepted);
         }
         if (accepted) {
@@ -7601,6 +7627,23 @@ const CommonRenderer = {
             // different precisions in one four-character string, on a page where
             // every other score carries its decimal.
             var fmt = function(n) { return (Math.round(n * 10) / 10).toFixed(1); };
+            var KNOWN_CHANGE_KEYS = ['from', 'to', 'on', 'direction', 'basis',
+                                     'not_load_bearing', 'restore_trigger', 'basis_warning',
+                                     'inherited_from'];
+            var extraKeys = Object.keys(c).filter(function(k) {
+                return KNOWN_CHANGE_KEYS.indexOf(k) < 0 && c[k] != null && c[k] !== '';
+            });
+            var unread = extraKeys.length
+                ? '<div class="sc-unread" title="' + self._escapeAttr(
+                        'The producer published ' + extraKeys.length + ' field' +
+                        (extraKeys.length === 1 ? '' : 's') + ' on this score move that this ' +
+                        'renderer does not read, so ' + (extraKeys.length === 1 ? 'it is' : 'they are') +
+                        ' NOT on the page. The name is shown and the content is not, because an ' +
+                        'unread field may be reader copy or may be the producer\u2019s internal note ' +
+                        'and no renderer-side rule separates them. Adding it to the consumer is the fix.') +
+                  '">\u26a0\ufe0f unread field' + (extraKeys.length === 1 ? '' : 's') + ': ' +
+                  extraKeys.map(function(k) { return self._escapeAttr(k); }).join(', ') + '</div>'
+                : '';
             var mismatch = (typeof live === 'number' && live !== c.to)
                 ? '<div class="sc-warn">⚠️ This move says ' + fmt(c.to) + ' and the rendered ' +
                   self._escapeAttr(field.replace(/_/g, ' ')) + ' is ' +
@@ -7617,12 +7660,40 @@ const CommonRenderer = {
                 mismatch +
                 (typeof c.basis === 'string' && c.basis.trim()
                     ? '<div class="sc-basis">' + self._mdInlineHtml(c.basis) + '</div>' : '') +
+                // ⚠️ A CAVEAT ABOUT THE FIGURES IN THE BASIS BELONGS BESIDE THEM.
+                // usds's cut quotes "Spark is 61.2% onchain crypto lending while
+                // holding 33.01% of Sky vat debt" — two percentages a reader can
+                // multiply, and the producer publishes `basis_warning` saying the
+                // bases are 23.7% apart and must NOT be multiplied. Same role as
+                // `*_score_denominator` on axis 4, which this renderer has shown
+                // since the day it was published. Found by the unread-field marker
+                // on its first live pass, not by reading the schema.
+                (typeof c.basis_warning === 'string' && c.basis_warning.trim()
+                    ? '<div class="sc-caveat">\u26a0\ufe0f Basis caveat: ' +
+                      self._mdInlineHtml(c.basis_warning) + '</div>' : '') +
                 // ⚠️ The producer asked for this one BY NAME: the sUSDS reflexive
                 // loop is measured, unsized, and did not price the cut. Rendering
                 // the move without it invites a reader to assume it did.
                 (typeof c.not_load_bearing === 'string' && c.not_load_bearing.trim()
                     ? '<div class="sc-nlb">⚠️ Recorded, and explicitly NOT what drove this ' +
                       'move: ' + self._mdInlineHtml(c.not_load_bearing) + '</div>' : '') +
+                // ⚠️ THE CONDITION FOR THE NEXT MOVE, WHICH IS THE HALF A READER
+                // CAN ACT ON. syrupUSDC's cut publishes what would restore 7.5 (a
+                // DexTracker ladder at institutional notional) AND what would take
+                // it to 6.0 — "free liquidity stays under 2% for four consecutive
+                // weekly reads". Both were dropped on the floor by the first cut
+                // of this renderer, which read `basis` and `not_load_bearing` only.
+                (typeof c.restore_trigger === 'string' && c.restore_trigger.trim()
+                    ? '<div class="sc-trigger">What would move it again: ' +
+                      self._mdInlineHtml(c.restore_trigger) + '</div>' : '') +
+                // ⚠️ NAME THE FIELD, NEVER PRINT THE VALUE. Same rule as
+                // _authoredAxisScore's unknown-field report, and for the same
+                // reason this renderer does not promote `*_score_correction*`: a
+                // key we have not read could be reader copy or could be the
+                // producer's own errata, and a renderer cannot tell without
+                // guessing at meaning. So the gap is made visible to whoever can
+                // fix it, and the unvetted prose stays off the page.
+                unread +
             '</div>';
         });
         return out;

@@ -24,8 +24,20 @@
  */
 
 // Static metadata for the Collateral Mix sub-block + loan-table column.
+// ⚠️ TWO ROWS THE PAYLOAD CALLS `category: "unknown"` ARE IN HERE DELIBERATELY,
+// and neither is a guess. riskAnalyst's 2026-09-25 ruling establishes both: WBTC
+// is BTC price risk ("the category field understates correlated exposure by 2.57
+// points and a consumer trusting it gets it wrong"), and USDtb sits inside the
+// arithmetic that reconciles the liquidity bucket to `principal_liquidity_usd`.
+// ⚠️ ISSUERS ARE LEFT BLANK ON BOTH — BitGo and Ethena are not named for these
+// positions on any surface I can read, and an issuer label is a claim about who
+// a depositor is exposed to. USDG (a $5 dust row, also "unknown") is NOT added:
+// nothing sources it, and inventing a third classification to tidy a table is
+// how a renderer becomes an author.
 var SYRUP_COLLATERAL_META = {
     BTC:   { category: 'crypto',     issuer: '—',           color: '#f59e0b' },
+    WBTC:  { category: 'crypto',     issuer: '—',           color: '#f59e0b' },
+    USDtb: { category: 'stablecoin', issuer: '—',           color: '#64748b' },
     cbBTC: { category: 'crypto',     issuer: 'Coinbase',    color: '#f59e0b' },
     ETH:   { category: 'crypto',     issuer: '—',           color: '#6366f1' },
     XRP:   { category: 'crypto',     issuer: '—',           color: '#0ea5e9' },
@@ -627,7 +639,95 @@ var SyrupUSDCRenderer = {
         this._renderRepaymentScheduleChart(specific);
         this._renderAumCoverageChart(specific, data.asset_slug);
         this._attachLoanTableSort();
+        this._loadCushionHistory(data);
         this._loadCrossPoolFamily(data);
+    },
+
+    // ⚠️ A SPOT CUSHION READ CANNOT SUPPORT A CLAIM ABOUT THE CUSHION, and both
+    // surfaces had been making one. The page showed free liquidity as a single
+    // number with a "<2%" flag beside it; riskAnalyst's own trigger is worded on
+    // FOUR CONSECUTIVE WEEKLY READS, and their argument for not cutting syrupUSDC
+    // below syrupUSDT rested on the sibling holding "the larger cushion (3.39%)"
+    // — a figure measured near that day's maximum. Read hourly instead: over the
+    // 14 days to 2026-09-25 syrupUSDT ranges 0.16%-15.10% and syrupUSDC
+    // 0.38%-11.72%, and which pool is thinner flips depending on the hour.
+    //
+    // ⚠️ THE SERIES WAS ALREADY IN THE REPO — 678 hourly `deployment_ratio_pct`
+    // rows per pool, synced since June and plotted nowhere. This derives nothing
+    // the producer does not publish: free liquidity % is 100 - deployment_ratio,
+    // the same identity the spot tile above already uses (checked against
+    // free_liquidity / total_assets on both pools, equal to the second decimal).
+    _CUSHION_FLAG_PCT: 2,
+
+    _loadCushionHistory: function(data) {
+        var slot = document.getElementById('syrup-cushion-hist');
+        if (!slot) return;
+        var ref = (data.asset_slug || 'syrupusdc') + '_backing_history.json';
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + ref + '?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                var entries = (hist && Array.isArray(hist.entries)) ? hist.entries : [];
+                var cutoff = Date.now() - 14 * 86400000;
+                var pts = entries.filter(function(e) {
+                    if (!e || e.deployment_ratio_pct == null || !e.timestamp) return false;
+                    var t = Date.parse(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z');
+                    return isFinite(t) && t >= cutoff;
+                }).map(function(e) { return 100 - e.deployment_ratio_pct; });
+                // A range needs a range. Two points is a line segment, not a
+                // 14-day character, so the strip is withheld rather than drawn
+                // from almost nothing.
+                if (pts.length < 12) { slot.remove(); return; }
+                slot.innerHTML = SyrupUSDCRenderer._cushionHistHtml(pts);
+            })
+            .catch(function() { slot.remove(); });
+    },
+
+    _cushionHistHtml: function(pts) {
+        var flag = SyrupUSDCRenderer._CUSHION_FLAG_PCT;
+        var sorted = pts.slice().sort(function(a, b) { return a - b; });
+        var min = sorted[0], max = sorted[sorted.length - 1];
+        var mid = sorted.length % 2
+            ? sorted[(sorted.length - 1) / 2]
+            : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+        var under = pts.filter(function(v) { return v < flag; }).length;
+        var now = pts[pts.length - 1];
+        // Sparkline over the same points, on a 0..max scale so the flag line
+        // sits where a reader expects it. Same polyline idiom as the APY spark.
+        var W = 180, H = 26, span = (max > 0 ? max : 1);
+        var xy = pts.map(function(v, i) {
+            var x = (i / (pts.length - 1)) * W;
+            var y = H - (v / span) * H;
+            return x.toFixed(1) + ',' + Math.max(0, Math.min(H, y)).toFixed(1);
+        }).join(' ');
+        var flagY = (H - (flag / span) * H);
+        var flagLine = (flag <= max)
+            ? '<line x1="0" y1="' + flagY.toFixed(1) + '" x2="' + W + '" y2="' + flagY.toFixed(1) +
+              '" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2,2"/>'
+            : '';
+        var fmt = function(v) { return v.toFixed(2) + '%'; };
+        return '<div class="mt-3">' +
+            '<div class="text-xs font-semibold text-slate-600 mb-1">Cushion history ' +
+                '<span class="font-normal text-slate-400">— free liquidity, hourly, 14d</span></div>' +
+            '<div class="flex items-center gap-3 flex-wrap">' +
+                '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" ' +
+                    'preserveAspectRatio="none" class="shrink-0">' + flagLine +
+                    '<polyline points="' + xy + '" fill="none" stroke="#6366f1" stroke-width="1.5" ' +
+                    'stroke-linejoin="round" stroke-linecap="round"/></svg>' +
+                '<div class="text-xs text-slate-600 font-mono">' +
+                    'now ' + fmt(now) + ' · 14d ' + fmt(min) + '\u2013' + fmt(max) +
+                    ' · median ' + fmt(mid) +
+                    ' · <span class="' + (under > pts.length / 2 ? 'text-amber-700 font-semibold' : '') + '">' +
+                    under + ' of ' + pts.length + ' reads under ' + flag + '%</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="text-[11px] text-slate-400 mt-1" style="line-height:1.45;">' +
+                'free liquidity = total_assets \u2212 principal_out, read hourly from this pool\u2019s ' +
+                'own history (100 \u2212 deployment_ratio_pct) \u2014 the same construction as the spot ' +
+                'figure above. The dashed line is the ' + flag + '% flag. \u26a0\ufe0f A single read is ' +
+                'not the level: intraday spikes are deposits not yet deployed.' +
+            '</div>' +
+        '</div>';
     },
 
     // ----- Cross-Pool Family panel (shared by syrupUSDC + syrupUSDT) ------
@@ -895,6 +995,8 @@ var SyrupUSDCRenderer = {
             assetBlock =
                 renderAssetTable(loanAssets, loansAumF, 'By asset (Loans)') +
                 loanCallout +
+                SyrupUSDCRenderer._correlatedBtcHtml(loanAssets, 'combined_principal_usd',
+                                                     loansAumF, 'family loans class') +
                 renderAssetTable(liqAssets, liqAumF, 'By asset (Liquidity)');
         }
 
@@ -1553,6 +1655,45 @@ var SyrupUSDCRenderer = {
         '</div>';
     },
 
+    // ⚠️ CORRELATED EXPOSURE, STATED — because two rows of one price risk read as
+    // diversification. The payload categorises WBTC as `unknown`, so BTC 81.7%
+    // and WBTC 2.6% sit apart in the by-asset list and nothing on the page adds
+    // them. riskAnalyst's ruling prices exactly that sum ("BTC + WBTC = 84.27% of
+    // the lending book") and their re-cut trigger is denominated on it — `backing`
+    // 6.5 -> 6.0 above 88% — so the number a score moves on was the one number
+    // this dashboard did not show.
+    //
+    // ⚠️ SUMMED BY SYMBOL, NOT BY THE CATEGORY FIELD, and the note says so. The
+    // producer's own rows supply every figure; this adds no classification of its
+    // own beyond naming which symbols are the same underlying, and it never
+    // rewrites `category`. A wrapper this list does not name stays counted where
+    // the producer put it — the group is a stated set, not a heuristic.
+    SYRUP_BTC_SYMBOLS: ['BTC', 'WBTC', 'cbBTC', 'tBTC'],
+
+    _correlatedBtcHtml: function(rows, principalKey, classTotal, classLabel) {
+        if (!Array.isArray(rows) || !classTotal) return '';
+        var members = rows.filter(function(r) {
+            return SyrupUSDCRenderer.SYRUP_BTC_SYMBOLS.indexOf(r.asset) >= 0 &&
+                   (r[principalKey] || 0) > 0;
+        });
+        // One row is not a correlation to point out — the by-asset line already
+        // says it. This fires only where the exposure is SPLIT across symbols.
+        if (members.length < 2) return '';
+        var usd = members.reduce(function(a, r) { return a + (r[principalKey] || 0); }, 0);
+        var pct = usd / classTotal * 100;
+        var names = members.map(function(r) { return r.asset; }).join(' + ');
+        var cls = pct >= 80 ? 'risk-warning' : 'risk-info';
+        return '<div class="risk-flag ' + cls + ' mt-2">' +
+            '<span class="font-semibold">' + names + ' = ' +
+            CommonRenderer.formatCurrency(usd) + ' · ' + CommonRenderer.formatPercent(pct, 1) +
+            ' of the ' + classLabel + '</span> — one price risk across ' + members.length +
+            ' symbols. ' +
+            '<span class="text-xs text-slate-500">Summed by symbol from the rows above; the ' +
+            'payload categorises WBTC as <span class="font-mono">unknown</span>, so its own ' +
+            'category field understates this.</span>' +
+        '</div>';
+    },
+
     // ----- §2b Liquidity Layer helpers ------------------------------------
     // Map a liquidity position (by asset) to its functional sleeve id.
     // `metaMap` is asset → {meta, venue} harvested from the visible loans[]
@@ -1560,7 +1701,11 @@ var SyrupUSDCRenderer = {
     // that have no visible row fall through to category-only classification.
     _liquiditySleeveKey: function(asset, category, metaMap) {
         var m = SYRUP_COLLATERAL_META[asset] || {};
-        var cat = category || m.category;
+        // ⚠️ "unknown" IS A VALUE, NOT AN ABSENCE, so `category || m.category`
+        // let the payload's non-answer outrank a category we hold. Latent until
+        // WBTC and USDtb started arriving as "unknown"; the sleeve fallback
+        // happened to land right, which is why it stayed invisible.
+        var cat = (category && category !== 'unknown') ? category : m.category;
         var info = (metaMap && metaMap[asset]) || {};
         var meta = info.meta;
         var venue = info.venue || '';
@@ -2038,6 +2183,7 @@ var SyrupUSDCRenderer = {
             '<div class="text-sm font-semibold text-slate-700 mb-2">By collateral asset</div>' +
             '<div class="text-xs text-slate-400 mb-2">Percentages relative to ' + CommonRenderer.formatCurrency(loansOnlyTotal) + ' loans-only book.</div>' +
             loanAssets.sort(function(a, b) { return (b.principal_usd || 0) - (a.principal_usd || 0); }).map(bar).join('') +
+            SyrupUSDCRenderer._correlatedBtcHtml(loanAssets, 'principal_usd', loansOnlyTotal, 'loans-only book') +
         '</div>';
     },
 
@@ -2803,7 +2949,10 @@ var SyrupUSDCRenderer = {
                 'Free liquidity (<span class="font-semibold">' + freePctText + '</span>, ' + freeUsdText + ') covers redemptions to ~<span class="font-semibold">' + freeUsdText + '</span> before queueing' + freeSplitFragment + '. ' +
                 'Above that, exits depend on incoming loan repayments' + inflowFragment + '. ' +
                 'Avg loan payment interval <span class="font-semibold">' + intervalText + '</span>; the pool has 24h notice + 48h grace to call a delinquent loan.' +
-            '</p>';
+            '</p>' +
+            // Filled by _loadCushionHistory after render; removed if the history
+            // carries no usable series, so the panel degrades to the spot figure.
+            '<div id="syrup-cushion-hist"></div>';
 
         // ===== Sub-section B: Secondary market ===========================
         // DEX-aggregator slippage→underlying ladder + pool depth. Instant but
