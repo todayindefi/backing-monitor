@@ -360,31 +360,7 @@ var DusdAltoRenderer = {
                     '</div></div>' +
                   '</div>'
                 : '') +
-            // ⚠️ THE RESIDUAL IS NOT DERIVED HERE, AND THAT IS DELIBERATE. My first
-            // draft subtracted the enumerated non-venue holders from the float and
-            // printed the remainder as "third-party hands". The two figures are a
-            // USD float and DUSD token counts, read at different blocks by
-            // different producers — subtracting them produces a number with no
-            // basis, on an asset where the honest answer spans three orders of
-            // magnitude. Both inputs are shown; whoever measures the split should
-            // publish it as a field. (riskAnalyst has measured it: ask them.)
-            (floatUsd != null
-                ? '<div class="text-sm text-slate-700 mb-2">' +
-                    '<span class="font-semibold">Float that can reach the market: ' +
-                    CommonRenderer.formatCurrency(floatUsd) + '</span>' +
-                    (nonSwap.length
-                        ? '<div class="text-xs text-slate-500 mt-1" style="line-height:1.5;">' +
-                          'The producer separately enumerates DUSD held by contracts that are NOT ' +
-                          'venues — ' +
-                          nonSwap.map(function(e) { return CommonRenderer._escapeAttr(String(e)); }).join('; ') +
-                          '. ⚠️ Those are token counts at the enumeration block and the float above is ' +
-                          'a USD figure from the depth measurement, so the genuinely third-party ' +
-                          'remainder is NOT subtracted here — it would be arithmetic across two bases. ' +
-                          (excl.non_swap_reason ? CommonRenderer._escapeAttr(excl.non_swap_reason) : '') +
-                          '</div>'
-                        : '') +
-                  '</div>'
-                : '') +
+            this._floatLadderHtml(lq, floatUsd, nonSwap, excl) +
             (lq.axis_binding_constraint && lq.axis_binding_constraint.basis
                 ? '<div class="risk-flag risk-warning mb-3"><span class="font-semibold">Binding leg — ' +
                     CommonRenderer._escapeAttr(String(lq.axis_binding_constraint.leg || '').replace(/_/g, ' ')) +
@@ -392,7 +368,110 @@ var DusdAltoRenderer = {
                 : '') +
             this._regimeHtml(lq) +
             this._downstreamHtml(lq) +
+            this._measurementClocksHtml(lq) +
         '</div>';
+    },
+
+
+    // ⚠️ "FLOAT" IS THREE DIFFERENT NUMBERS AND THE PAGE WAS SHOWING THE MIDDLE
+    // ONE UNDER THE BIGGEST CLAIM. My earlier version printed the depth figure as
+    // "float that can reach the market": that is supply-less-pool, 24,936 — and
+    // the number a holder could actually sell into is 946.70, twenty-six times
+    // smaller. riskAnalyst measured and published the split after I declined to
+    // derive it, and the reason the distinction matters arrived with it: supply
+    // moved +1,000 into an AltoBorrowMarket, so supply-less-pool grew by 1,000
+    // while third-party float did not move at all. A page quoting the middle
+    // number renders growth that never reaches a holder.
+    //
+    // ⚠️ THE METHOD LABEL IS NOT DECORATION AND THE PRODUCER ASKED FOR IT BY
+    // NAME. `method: residual` means totalSupply minus five known addresses, so
+    // an unrecognised protocol contract makes the figure OVERSTATE third-party
+    // float — it errs generous, which on an exit axis is the unsafe direction.
+    // Rendering the number without the method would publish the optimistic read
+    // of an optimistic method.
+    _floatLadderHtml: function(lq, floatUsd, nonSwap, excl) {
+        var fs = lq.float_split;
+        // Two decimals on every rung, including the trailing zero: 946.70 beside
+        // 24,936.18 reads as the same kind of measurement, and "946.7" reads as a
+        // rounder number than the producer published.
+        var fmt = function(n) {
+            return (typeof n === 'number')
+                ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) +
+                  ' DUSD' : '—';
+        };
+        if (!fs || typeof fs !== 'object') {
+            // No published split: state the one figure we have and DO NOT derive
+            // the rest. (This was the whole panel before 2026-09-25.)
+            return floatUsd == null ? '' :
+                '<div class="text-sm text-slate-700 mb-2"><span class="font-semibold">Supply outside ' +
+                'the pool: ' + CommonRenderer.formatCurrency(floatUsd) + '</span>' +
+                '<div class="text-xs text-slate-500 mt-1">⚠️ This is not the tradable float and no ' +
+                'split is published for this asset.</div></div>';
+        }
+        var row = function(label, value, cls, note) {
+            return '<tr>' +
+                '<td class="text-sm text-slate-600">' + label +
+                    (note ? '<div class="text-[11px] text-slate-500" style="line-height:1.4;">' +
+                        note + '</div>' : '') + '</td>' +
+                '<td class="text-right font-mono text-sm ' + (cls || '') + '">' + value + '</td>' +
+            '</tr>';
+        };
+        var det = function(label, text) {
+            return (typeof text === 'string' && text.trim())
+                ? CommonRenderer._scoreBasisHtml(label, text) : '';
+        };
+        return '<div class="mb-3">' +
+            '<div class="text-sm font-semibold text-slate-700 mb-1">Float ladder ' +
+                '<span class="text-xs font-normal text-slate-400">' +
+                (fs.measured_at ? 'measured ' + CommonRenderer._escapeAttr(fs.measured_at) : '') +
+                (fs.measured_at_block ? ' · block ' + CommonRenderer._escapeAttr(fs.measured_at_block) : '') +
+                '</span></div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><tbody>' +
+                row('Total supply', fmt(fs.total_supply_dusd)) +
+                row('Supply outside the pool', fmt(fs.supply_less_pool_dusd), 'text-slate-500',
+                    '⚠️ NOT the tradable float — DUSD minted into a borrow market inflates this and ' +
+                    'never reaches a holder.') +
+                row('Third-party float', fmt(fs.third_party_float_dusd),
+                    'text-amber-600 font-semibold',
+                    (fs.method ? 'method: <span class="font-mono">' +
+                        CommonRenderer._escapeAttr(fs.method) + '</span> — errs generous' : '')) +
+            '</tbody></table></div>' +
+            det('How the residual is computed, and what it cannot bound', fs.method_note) +
+            det('Cross-check against the full enumeration', fs.cross_check_note) +
+            det('⚠️ Supply moved — and only one of the two floats moved with it', fs.supply_moved_note) +
+            det('Holder count and largest holder are a different basis',
+                fs.holder_count_and_largest_are_a_DIFFERENT_BASIS) +
+            (nonSwap.length
+                ? '<div class="text-[11px] text-slate-400 mt-2" style="line-height:1.5;">' +
+                  'DexTracker separately enumerates the non-venue holders that make up the gap — ' +
+                  nonSwap.map(function(e) { return CommonRenderer._escapeAttr(String(e)); }).join('; ') +
+                  '. ' + (excl.non_swap_reason ? CommonRenderer._escapeAttr(excl.non_swap_reason) : '') +
+                  '</div>'
+                : '') +
+        '</div>';
+    },
+
+    // ⚠️ ONE CLOCK PER MEASUREMENT, BECAUSE THE FILE'S as_of SPEAKS FOR NONE OF
+    // THEM. The producer added this after my merge was caught re-dating
+    // DexTracker's pool read to their authoring time — including an explicit line
+    // that their 23.33% DUSD share and DexTracker's rendered share are two
+    // readings of one quantity at two blocks, not a correction of one by the other.
+    _measurementClocksHtml: function(lq) {
+        var mc = lq.measurement_clocks;
+        if (!mc || typeof mc !== 'object') return '';
+        var rows = Object.keys(mc).filter(function(k) { return k !== 'note' && typeof mc[k] === 'string'; })
+            .map(function(k) {
+                return '<tr><td class="text-xs text-slate-600">' +
+                    CommonRenderer._escapeAttr(k.replace(/_/g, ' ')) + '</td>' +
+                    '<td class="text-xs text-slate-500">' + CommonRenderer._escapeAttr(mc[k]) + '</td></tr>';
+            }).join('');
+        if (!rows) return '';
+        return '<details class="score-basis mt-2"><summary class="score-basis-toggle">' +
+            'What was measured when — one clock per figure</summary>' +
+            '<div class="score-basis-body">' +
+            (mc.note ? '<div class="mb-2">' + CommonRenderer._escapeAttr(mc.note) + '</div>' : '') +
+            '<table class="data-table"><tbody>' + rows + '</tbody></table>' +
+            '</div></details>';
     },
 
     // The counterfactual the producer measured: what the float becomes if the
