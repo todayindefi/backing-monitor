@@ -1,19 +1,19 @@
 {
  "schema_version": 1,
- "timestamp": "2026-09-25T13:56:05.540477Z",
+ "timestamp": "2026-09-25T15:02:02.449257Z",
  "asset": "DUSD (Alto)",
  "asset_slug": "dusd-alto",
  "chain": "ethereum",
  "contract_address": "0x63d74d22E689C715a04F2C13962b1f77F443d35b",
  "data_source": "on-chain snapshot with forward-only PegTracker point history",
- "block_number": 26054899,
+ "block_number": 26055223,
  "producer": "dusd_alto_backing_analyzer.py (run_backing_analyzers.sh, hourly :35)",
  "peg": {
   "market_price": 1.0019075804071347,
   "market_price_source": "single source: Curve StableSwap-NG DUSD (Alto token 0x63d74d22E689C715a04F2C13962b1f77F443d35b) / frxUSD pool 0x104d6a1b97A6CEf88D905d7b865A378d90be932A get_dy, composed with tracked Chainlink frxUSD/USD; no second live Alto DUSD venue exists",
   "source": "Curve get_dy DUSD/frxUSD swap rate multiplied by Chainlink frxUSD/USD",
-  "as_of": "2026-09-25T13:15:33Z",
-  "market_price_as_of": "2026-09-25T13:15:33Z",
+  "as_of": "2026-09-25T14:15:34Z",
+  "market_price_as_of": "2026-09-25T14:15:34Z",
   "nav": 1.0,
   "nav_source": "fixed USD par",
   "nav_basis": "FixedPriceStrategy mint/redeem reference is fixed at 1e18 against frxUSD; this is the declared reference, not a holder-accessible redemption quote",
@@ -30,18 +30,18 @@
   "market_price_rejected": null
  },
  "backing": {
-  "as_of": "2026-09-25T13:56:05Z",
+  "as_of": "2026-09-25T15:02:02Z",
   "collateral_ratio": null,
   "collateral_ratio_basis": "deliberately underivable as one safety ratio: the 100% USM tranche has zero buffer, while CDP collateral is isolated and not generally claimable by DUSD holders; blending them would hide opposite failure modes",
   "usm": {
    "module": "0x1BD08B43D1579881cfAd0A35AEEa5b547dBE4c91",
    "underlying": "frxUSD",
    "underlying_address": "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
-   "minted": 722604.6117709246,
-   "minted_raw": "722604611770924639631386",
-   "underlying_balance": 722604.6117709246,
-   "underlying_balance_raw": "722604611770924639631386",
-   "available_liquidity_raw": "722604611770924639631386",
+   "minted": 472604.6117709246,
+   "minted_raw": "472604611770924639631386",
+   "underlying_balance": 472604.6117709246,
+   "underlying_balance_raw": "472604611770924639631386",
+   "available_liquidity_raw": "472604611770924639631386",
    "ratio": 1.0,
    "ratio_scale": "multiple",
    "ratio_basis": "underlying token units divided by DUSD minted",
@@ -59,19 +59,27 @@
    "backstop": "none"
   },
   "cdp": {
-   "total_debt": 100250.54921817908,
-   "collateral_value_usd": 195117.0,
-   "ratio": 1.9462979682661607,
+   "total_debt": 600250.5492181791,
+   "collateral_value_usd": 195170.0,
+   "ratio": 0.3251469168453457,
    "ratio_scale": "multiple",
    "ratio_basis": "USD collateral value from each market's own Alto oracle divided by isolated market DUSD debt; collateral is liquidatable and not a general DUSD-holder claim",
    "value_basis": "collateralToken.balanceOf(market) x oracle.getPrice() / 1e36, per market",
    "markets": [
     {
+     "collateral": "frxUSDDUSD",
+     "market": "0x6b3458c87CD38aeFA6A5D059Eb19f609420DD852",
+     "debt": 500000.0,
+     "coll_value": 0.0,
+     "ratio": 0.0,
+     "oracle": "market's own Alto oracle 0x6eD6F809abedE70a2f13a828eC59EFfE2d197bB7"
+    },
+    {
      "collateral": "wstETH",
      "market": "0x4Ad5AC62542164A74fF88a2BCDd0142126c1E3A3",
      "debt": 45433.72,
-     "coll_value": 105662.0,
-     "ratio": 2.3256230001378984,
+     "coll_value": 105697.0,
+     "ratio": 2.3264000791497255,
      "oracle": "market's own Alto oracle 0xE1C7DD173C1CafF4Fd3a03B09694C4fc1c78f460"
     },
     {
@@ -86,24 +94,24 @@
      "collateral": "WETH",
      "market": "0x81b2CcE73052f67312eD9994385f62D413eE566e",
      "debt": 21226.91,
-     "coll_value": 42349.0,
-     "ratio": 1.9950589028710284,
+     "coll_value": 42363.0,
+     "ratio": 1.9957255278574035,
      "oracle": "market's own Alto oracle 0xC3842dE42853A901EaB267e5b98EE59a56F5fE49"
     },
     {
      "collateral": "WETH",
      "market": "0x8DED9e2B8Bc5128B862dD534b97c8a32991959ff",
      "debt": 1830.36,
-     "coll_value": 4873.0,
-     "ratio": 2.662192633613325,
+     "coll_value": 4874.0,
+     "ratio": 2.663082173328446,
      "oracle": "market's own Alto oracle 0xFaa114a9f19d86837c373D13fbf3cC154d03459D"
     },
     {
      "collateral": "rETH",
      "market": "0x12C219BaCc90E87Fe11E34288454728E1D8C8Dcf",
      "debt": 1503.0,
-     "coll_value": 3157.0,
-     "ratio": 2.1007074224516535,
+     "coll_value": 3158.0,
+     "ratio": 2.101409348622783,
      "oracle": "market's own Alto oracle 0xE860bC68C90CF97e681802fF348E1D365b237242"
     },
     {
@@ -120,45 +128,45 @@
      ],
      "debt": 57.36896650588624,
      "coll_value": 251.0,
-     "ratio": 4.3801289423287955,
+     "ratio": 4.380756372492415,
      "oracle": "each market's own Alto oracle; grouped because individual values are immaterial"
     }
    ],
    "markets_unreadable": []
   },
   "totals": {
-   "supply": 822855.1609891037,
-   "supply_raw": "822855160989103709962351",
-   "minted_sum": 822855.1609891037,
-   "minted_sum_raw": "822855160989103709962351",
+   "supply": 1072855.1609891036,
+   "supply_raw": "1072855160989103709962351",
+   "minted_sum": 1072855.1609891036,
+   "minted_sum_raw": "1072855160989103709962351",
    "reconciliation_gap_raw": "0",
    "reconciled_to_wei": true,
-   "minters_enumerated": 15,
+   "minters_enumerated": 16,
    "minters_basis": "minterConfig(address).minted over the discovered minter set (data/dusd_alto_minters.json); discovery via mint-tx receipts because no reachable RPC serves wide eth_getLogs",
-   "discovery_note": null
+   "discovery_note": "incremental discovery ran: 1 new minter(s), scanned to block 26055031"
   },
-  "total_supply": 822855.1609891037,
+  "total_supply": 1072855.1609891036,
   "total_supply_scope": "Ethereum DUSD token 0x63d74d22E689C715a04F2C13962b1f77F443d35b totalSupply only; no bridge deployment is enumerated and no OFT peer has been set",
   "breakdown": [
    {
     "name": "USM issuance",
     "label": "USM \u2014 frxUSD",
-    "amount": 722604.6117709246,
-    "value": 722604.6117709246,
-    "pct": 87.8167441888954,
+    "amount": 472604.6117709246,
+    "value": 472604.6117709246,
+    "pct": 44.0511104346288,
     "basis": "minted DUSD partition"
    },
    {
     "name": "CDP issuance",
     "label": "isolated CDP markets",
-    "amount": 100250.54921817908,
-    "value": 100250.54921817908,
-    "pct": 12.183255811104598,
+    "amount": 600250.5492181791,
+    "value": 600250.5492181791,
+    "pct": 55.9488895653712,
     "basis": "minted DUSD partition"
    }
   ],
   "breakdown_basis": "minted-side partition; collateral values are intentionally not used as an allocation because they do not partition supply",
-  "arithmetic_only_blended_ratio": 1.1152899022091518,
+  "arithmetic_only_blended_ratio": 0.6224271937772998,
   "arithmetic_only_blended_ratio_basis": "informational arithmetic only; never a safety margin"
  },
  "asset_specific": {
@@ -168,7 +176,7 @@
    "curve_dusd_frxusd": "0x104d6a1b97A6CEf88D905d7b865A378d90be932A",
    "treasury_safe": "0xA1148A1b94262540994Cf9Aa431A13ad39764228"
   },
-  "snapshot_basis": "Backing quantities read at Ethereum block 26054899; peg point observed separately at 2026-09-25T13:15:33Z.",
+  "snapshot_basis": "Backing quantities read at Ethereum block 26055223; peg point observed separately at 2026-09-25T14:15:34Z.",
   "axis_thresholds": {
    "backing": {
     "usm_ratio": {
