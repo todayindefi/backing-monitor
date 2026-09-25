@@ -217,11 +217,51 @@ const CommonRenderer = {
     // cannot carry the previous asset's provenance onto this one.
     AXIS_PROVENANCE: {},
 
+    // ⚠️ BLOCK-LEVEL PROSE, WHICH IS A DIFFERENT SHAPE FROM A SCORE SIBLING AND
+    // WAS REACHING NOBODY. riskAnalyst's axis-basis blocks carry arguments under
+    // their own key rather than as `<score>_<suffix>` — `authored_vs_band_note`
+    // (dusd-alto peg AND liquidity, fxusd liquidity), and on dusd-alto four more
+    // that are the whole reading of the asset: the deviation is a PREMIUM not a
+    // depeg, the premium cannot close by trading, the issuer's LP share moved on
+    // the denominator rather than by withdrawing, and pool composition is the
+    // leading signal. None of it rendered.
+    //
+    // ⚠️ AN ALLOWLIST, NOT A SWEEP, AND THE REASON IS MEASURED. A sweep over the
+    // merged axis block would re-print base-feed fields that already render
+    // elsewhere (peg.note, nav_basis, two_pct_depth_basis…) — duplication is its
+    // own defect. So notes are collected AT MERGE TIME from the axis-basis
+    // overlay's own block, where the vocabulary is one producer's and auditable:
+    // 11 block-level string keys across the whole corpus on 2026-09-25, every
+    // prose one reader-facing, and the internal `routing_note` sits at the FILE
+    // level rather than inside a block, so it is out of scope structurally.
+    //
+    // ⚠️ AND AN UNADOPTED KEY IS NAMED, NOT DROPPED — same rule as the score-move
+    // marker: the KEY renders, never the value, so a new note trips a visible
+    // flag instead of vanishing and gets adopted deliberately.
+    AXIS_AUTHORED_NOTES: {},
+
+    AUTHORED_NOTE_KEYS: [
+        'authored_vs_band_note',
+        'current_deviation_is_a_premium_note',
+        'premium_cannot_close_by_trading_note',
+        'treasury_share_refresh_note',
+        'treasury_exit_regime_refresh_note',
+        'venue_composition_is_the_leading_signal',
+        'producer_note'
+    ],
+
+    // Keys inside an axis-basis block that are META or already rendered by a
+    // dedicated slot — excluded from the marker so it stays a real signal.
+    AUTHORED_NOTE_IGNORE: [
+        'as_of', 'source', 'producer', 'collateral_ratio_basis'
+    ],
+
     // `overlays` is [{axis, file, json}] — nulls (404s) already filtered by the
     // caller. A missing overlay is the NORMAL case today: no producer emits one
     // yet, so this must be a no-op on all 25 live assets.
     mergeAxisOverlays(data, overlays, sourceSlug) {
         this.AXIS_PROVENANCE = {};
+        this.AXIS_AUTHORED_NOTES = {};
         if (!data || !Array.isArray(overlays)) return data;
         var self = this;
         var has = function(o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
@@ -438,7 +478,19 @@ const CommonRenderer = {
                 // block already declared, so a block that dates itself wins.
                 var pay = {};
                 Object.keys(payload).forEach(function(k) { pay[k] = payload[k]; });
-                if (!has(pay, 'as_of') && typeof ov.as_of === 'string') pay.as_of = ov.as_of;
+                // ⚠️ AN ENVELOPE-DERIVED CLOCK MUST NOT OVERWRITE A MEASURED ONE.
+                // riskAnalyst's axis-basis liquidity block carries no as_of, so it
+                // inherits the file's envelope stamp — and the merge then wrote that
+                // over DexTracker's `as_of`, the timestamp of the actual pool read.
+                // dusd-alto rendered its Curve balances "as of" riskAnalyst's
+                // authoring time, three days after the sweep that measured them.
+                // The fallback is still right where nothing else declared a clock;
+                // it is only wrong when it displaces one.
+                var asOfIsEnvelopeFallback = false;
+                if (!has(pay, 'as_of') && typeof ov.as_of === 'string') {
+                    pay.as_of = ov.as_of;
+                    asOfIsEnvelopeFallback = true;
+                }
 
                 if (spec.mode === 'replace') {
                     var droppedKeys = Object.keys(base);
@@ -484,12 +536,17 @@ const CommonRenderer = {
                 var m = {}, ovr = [], add = [], kpt = [];
                 Object.keys(base).forEach(function(k) { m[k] = base[k]; });
                 Object.keys(pay).forEach(function(k) {
+                    if (k === 'as_of' && asOfIsEnvelopeFallback && has(base, 'as_of')) {
+                        kpt.push(k);   // the measured clock stays
+                        return;
+                    }
                     (has(base, k) ? ovr : add).push(k);
                     m[k] = pay[k];
                 });
                 Object.keys(base).forEach(function(k) { if (!has(pay, k)) kpt.push(k); });
                 var stale = self._dropStaleDerived(axis, m, ovr, kpt);
                 var replacedArrays = self._recordArrayReplacements(base, pay, ovr);
+                if (schema === 'axis-basis/1') self._collectAuthoredNotes(axis, pay);
                 data[axis] = m;
                 self.AXIS_PROVENANCE[axis] = carryVerdict({
                     contributors: priorContributors().concat([
@@ -1818,6 +1875,35 @@ const CommonRenderer = {
             document.getElementById('chart-panel').style.display = 'none';
             return;
         }
+        // ⚠️ THE PRODUCER SAID NO SUCH RATIO EXISTS, SO THIS DOES NOT PLOT ONE.
+        // Not the same branch as "no history published": here the series is
+        // present and the DECLARATION is the finding. The panel states it instead
+        // of drawing a line, and an asset-specific renderer is free to plot the
+        // per-tranche series that IS meaningful (dusd-alto.js does).
+        if (opts && typeof opts.declared_underivable === 'string') {
+            var dPanel = document.getElementById('chart-panel');
+            var dHolder = dPanel ? dPanel.querySelector('.chart-container') : null;
+            if (dHolder) dHolder.style.display = 'none';
+            var priorD = document.getElementById('cr-chart-declared-note');
+            if (priorD) priorD.remove();
+            var dNote = document.createElement('div');
+            dNote.id = 'cr-chart-declared-note';
+            dNote.className = 'text-sm text-slate-500';
+            dNote.style.lineHeight = '1.5';
+            // ⚠️ SHORT ON PURPOSE. The declaration's full text already renders on
+            // the backing axis head as "Basis: …"; printing it again here put the
+            // same paragraph on the page twice, a few hundred pixels apart.
+            dNote.innerHTML = '<span class="font-semibold text-slate-600">No single collateral ' +
+                'ratio is published for this asset, by declaration</span> — the reason is in ' +
+                '<span class="font-mono text-xs">collateral_ratio_basis</span>, shown with the ' +
+                'axis score above. Per-segment coverage is rendered separately where the asset ' +
+                'publishes segments.';
+            if (dPanel) dPanel.appendChild(dNote);
+            var dStats = document.getElementById('cr-chart-stats');
+            if (dStats) dStats.innerHTML = '';
+            if (window._crChart) { window._crChart.destroy(); window._crChart = null; }
+            return;
+        }
         document.getElementById('chart-panel').style.display = '';
 
         // Idempotency, not SPA cleanup — every asset change here is a full page
@@ -2622,6 +2708,9 @@ const CommonRenderer = {
         // fills only where the band is genuinely absent, so a producer's measured
         // judgement can now land here. Under the old behaviour the computed 1/5
         // outranked it permanently.
+        // ⚠️ Any status added here MUST also be in DEPTH_NON_DERIVABLE_STATUSES —
+        // a band withheld without the authored path unblocked leaves the axis
+        // blank with both halves in hand. That is the defect this pair caused.
         if (lq.two_pct_depth_status === 'supply_capped') return null;
         var th = this._axisThresholds(data).liquidity.depth_usd;
         return this._rate(data.liquidity ? data.liquidity.total_2pct_depth : null, th, 'high');
@@ -2667,13 +2756,32 @@ const CommonRenderer = {
     //
     // ⚠️ The BASIS requirement stays in both paths. A judgement with no stated
     // reasoning cannot be assessed by a reader whether or not a band sits beside it.
+    // ⚠️ THE GUARD AND THE GATE HAD DIFFERENT LISTS, AND THE ASSET THAT NEEDED
+    // BOTH FELL THROUGH THE GAP. `liquidityRating` learned to refuse a
+    // `supply_capped` figure — DUSD (Alto) publishes the reachable FLOAT where a
+    // crossing would go, and rating a float as depth grades an asset's size —
+    // and that refusal was documented as "UNBLOCKING the authored path". It did
+    // not: `_authoredLiquidity` kept its own three-condition list, `supply_capped`
+    // was not in it, so riskAnalyst's authored 5.5 was REJECTED for having "no
+    // non-derivability declaration" on the very asset whose declaration is why
+    // the band was withheld. The page read "Not rated" with both halves present.
+    //
+    // One list now, consulted by both, so a status added to one cannot be missing
+    // from the other.
+    DEPTH_NON_DERIVABLE_STATUSES: ['not_size_responsive', 'supply_capped'],
+
+    _depthNonDerivable(lq) {
+        lq = lq || {};
+        return lq.derived_score_status === 'not_computed' ||
+            lq.two_pct_depth_size_responsive === false ||
+            this.DEPTH_NON_DERIVABLE_STATUSES.indexOf(lq.two_pct_depth_status) >= 0;
+    },
+
     _authoredLiquidity(data, requireDeclaration) {
         if (requireDeclaration === undefined) requireDeclaration = true;
         var lq = data.liquidity || {};
         if (typeof lq.liquidity_score !== 'number') return null;
-        var declared = lq.derived_score_status === 'not_computed' ||
-            lq.two_pct_depth_status === 'not_size_responsive' ||
-            lq.two_pct_depth_size_responsive === false;
+        var declared = this._depthNonDerivable(lq);
         if (!declared && !requireDeclaration) {
             var b0 = lq.liquidity_score_basis || lq.liquidity_score_source;
             if (!b0) return { rejected: 'An authored liquidity score of ' + lq.liquidity_score +
@@ -2689,7 +2797,9 @@ const CommonRenderer = {
         if (!declared) {
             return { rejected: 'An authored liquidity score of ' + lq.liquidity_score +
                 '/10 was supplied WITHOUT a non-derivability declaration ' +
-                '(derived_score_status / two_pct_depth_size_responsive), so it was not ' +
+                '(derived_score_status: not_computed, two_pct_depth_size_responsive: false, ' +
+                'or two_pct_depth_status in [' + this.DEPTH_NON_DERIVABLE_STATUSES.join(', ') +
+                ']), so it was not ' +
                 'rendered. An authored score may only fill a gap the producer has ' +
                 'declared unmeasurable — otherwise it would paper over a broken feed. ' +
                 'Showing neither.' };
@@ -3353,7 +3463,14 @@ const CommonRenderer = {
         for (var k in block) {
             if (!Object.prototype.hasOwnProperty.call(block, k)) continue;
             if (typeof block[k] !== 'number') continue;
-            if (!/_score$/.test(k)) continue;
+            // ⚠️ `score` DOES NOT END IN `_score`, so a bare key slipped past this
+            // reporter entirely. dusd-alto's issuer overlay published `score: 4.5`
+            // — the only one of 24 issuer overlays to do so — and axis 6 rendered
+            // NO number with nothing saying one existed. The producer has since
+            // renamed it and asked that no `score` -> `issuer_score` translation
+            // be added, because a translation would silence the next typo instead
+            // of surfacing it. Agreed: this widens the REPORTER, not the reader.
+            if (!/_score$/.test(k) && k !== 'score') continue;
             if (names.indexOf(k) >= 0) continue;
             return { score: null, unknownField: k, unknownValue: block[k] };
         }
@@ -5038,7 +5155,8 @@ const CommonRenderer = {
             if (!head || (!basis && !change)) return;
             var el = document.createElement('div');
             el.className = 'axis-basis-note';
-            el.innerHTML = self._scoreBasisHtml('Why this backing score', basis, change);
+            el.innerHTML = self._scoreBasisHtml('Why this backing score', basis, change) +
+                self._authoredNotesHtml('backing');
             head.appendChild(el);
         })(this);
 
@@ -5086,7 +5204,8 @@ const CommonRenderer = {
                     }
                 });
                 var change = self._scoreChangeHtml(blk);
-                if (!basis && !perChain && !change) return;
+                var pegNotes = self._authoredNotesHtml('peg');
+                if (!basis && !perChain && !change && !pegNotes) return;
                 var el = document.createElement('div');
                 el.className = 'axis-basis-note';
                 el.innerHTML =
@@ -5094,7 +5213,8 @@ const CommonRenderer = {
                         ? '<div class="text-xs text-amber-700 mb-1">' +
                           self._mdInlineHtml(perChain) + '</div>'
                         : '') +
-                    self._scoreBasisHtml(row[3], basis, change);
+                    self._scoreBasisHtml(row[3], basis, change) +
+                    self._authoredNotesHtml('peg');
                 head.appendChild(el);
             });
         })(this);
@@ -5177,6 +5297,7 @@ const CommonRenderer = {
                 parts += self._scoreBasisHtml('Why the report scores liquidity differently',
                                               basis, liqChange);
             }
+            parts += self._authoredNotesHtml('liquidity');
             if (!parts) return;
             var el = document.createElement('div');
             el.className = 'axis-basis-note';
@@ -7144,13 +7265,14 @@ const CommonRenderer = {
         // hovers for — same rule already applied to backing_score_basis and
         // structural_score_basis, which were tooltip-only until they weren't.
         var depChange = this._scoreChangeHtml(dep);
+        var depNotes = this._authoredNotesHtml('dependencies');
         var depBasis = ((dep.underlying_score_basis && typeof dep.underlying_score_basis === 'string') || depChange)
             ? this._scoreBasisHtml('Why this dependencies score', dep.underlying_score_basis, depChange) +
               (dep.underlying_score_denominator
                   ? '<div class="text-xs text-slate-500 mb-3">Denominator: ' +
                     this._escapeAttr(String(dep.underlying_score_denominator)) + '</div>'
-                  : '')
-            : '';
+                  : '') + depNotes
+            : depNotes;
 
         var titleChip = opts.withScoreChip
             ? this.authoredScoreChipHtml(dep, ['underlying_score'], '') : '';
@@ -7696,6 +7818,60 @@ const CommonRenderer = {
                 unread +
             '</div>';
         });
+        return out;
+    },
+
+    // Called per axis-basis/1 block at merge time. Splits its block-level prose
+    // into adopted notes (rendered) and unadopted keys (named, not printed).
+    _collectAuthoredNotes(axis, block) {
+        if (!block || typeof block !== 'object') return;
+        var self = this, notes = [], unread = [];
+        Object.keys(block).forEach(function(k) {
+            var v = block[k];
+            if (typeof v !== 'string' || !v.trim()) return;
+            // A score's own siblings are handled by the basis/addenda path.
+            if (/_score(_|$)/.test(k)) return;
+            if (/_generated_at$/.test(k)) return;
+            if (self.AUTHORED_NOTE_IGNORE.indexOf(k) >= 0) return;
+            if (self.AUTHORED_NOTE_KEYS.indexOf(k) >= 0) { notes.push({ key: k, text: v }); return; }
+            // ⚠️ Short strings are values, not arguments (a date, a venue name).
+            // The marker fires on prose only, so a new scalar field does not read
+            // as a missing paragraph.
+            if (v.trim().length >= 120) unread.push(k);
+        });
+        if (notes.length || unread.length) {
+            this.AXIS_AUTHORED_NOTES[axis] = { notes: notes, unread: unread };
+        }
+    },
+
+    // Humanised from the key: the producer's key names ARE the headline
+    // ("premium cannot close by trading"), so inventing a label here would only
+    // move the wording away from the person who authored the argument.
+    _authoredNoteLabel(key) {
+        var t = key.replace(/_note$/, '').replace(/_/g, ' ').trim();
+        return t.charAt(0).toUpperCase() + t.slice(1);
+    },
+
+    // One collapsed <details> per note — the summary line carries the producer's
+    // own framing ("Read the sign before the size"), which is the half a reader
+    // needs even unopened.
+    _authoredNotesHtml(axis) {
+        var e = this.AXIS_AUTHORED_NOTES[axis];
+        if (!e) return '';
+        var self = this, out = '';
+        (e.notes || []).forEach(function(n) {
+            out += self._scoreBasisHtml(self._authoredNoteLabel(n.key), n.text);
+        });
+        if (e.unread && e.unread.length) {
+            out += '<div class="sc-unread" title="' + this._escapeAttr(
+                    'The axis-basis overlay carries ' + e.unread.length + ' prose field' +
+                    (e.unread.length === 1 ? '' : 's') + ' this renderer has not adopted, so ' +
+                    (e.unread.length === 1 ? 'it is' : 'they are') + ' NOT on the page. The name ' +
+                    'is shown and the content is not: an unadopted field may be reader copy or may ' +
+                    'be an internal note, and no renderer-side rule separates them.') +
+                '">\u26a0\ufe0f unread note' + (e.unread.length === 1 ? '' : 's') + ': ' +
+                e.unread.map(function(k) { return self._escapeAttr(k); }).join(', ') + '</div>';
+        }
         return out;
     },
 

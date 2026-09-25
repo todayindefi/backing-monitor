@@ -38,11 +38,19 @@ fi
 #
 # Adding an axis producer is now one word in SUFFIXES, not N lines.
 # ============================================================================
+# ⚠️ `_minters` and `_peg_backfill` ADDED 2026-09-25. Both were PUBLISHED by
+# PegTracker for dusd-alto on 09-21/09-22 and neither had ever been copied: the
+# minter enumeration (15 live minters, reconciled to totalSupply to the wei — the
+# admin surface of an 822K-supply token) and the 283-sample lifetime peg archive.
+# Registering a slug wires its whole file set ONLY for block types named here, so
+# a new producer output is invisible until its suffix is added. This is the
+# failure mode the SUFFIXES x SLUGS design was meant to make cheap to fix, not to
+# prevent — the fix is one word, noticing is the hard part.
 SUFFIXES="_backing _backing_history _peg_history _critical_events _flow \
           _nav_history _coverage_history _reserve_known_destinations _family \
           _treasury _treasury_history _backing_last_attempt \
           _liquidity _contract _dependencies _issuer _backing_overlay _contract_overlay \
-          _axis_basis"
+          _axis_basis _minters _peg_backfill"
 
 SLUGS=$(python3 -c "import json;print(' '.join(a['slug'].replace('-','_') for a in json.load(open('data/assets.json'))))")
 

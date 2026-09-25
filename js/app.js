@@ -78,7 +78,11 @@ var ASSET_RENDERERS = {
     // Reads hastra_prime_backing.json via assets.json `data_source` (the
     // analyzer's filename is underscored; the URL slug is dashed).
     'hastra-prime': typeof HastraPrimeRenderer !== 'undefined' ? HastraPrimeRenderer : null,
-    'fiat-stable-reserve-backed': typeof USDmRenderer !== 'undefined' ? USDmRenderer : null
+    'fiat-stable-reserve-backed': typeof USDmRenderer !== 'undefined' ? USDmRenderer : null,
+    // Both spellings: the URL/view slug is dashed, the feed's asset_slug is
+    // underscored, and findAssetRenderer consults them in that order.
+    'dusd-alto': typeof DusdAltoRenderer !== 'undefined' ? DusdAltoRenderer : null,
+    dusd_alto:   typeof DusdAltoRenderer !== 'undefined' ? DusdAltoRenderer : null
 };
 
 function findAssetRenderer(data) {
@@ -602,6 +606,21 @@ async function renderAsset(slug) {
         // Only this one consumer wants the collateral series; the peg-rating and
         // peg-chart readers below genuinely want the reassigned `history`.
         var crHistory = (history && history._backing_history) || history;
+        // ⚠️ A DECLARED-UNDERIVABLE RATIO MUST NOT COME BACK AS A CHART. DUSD
+        // (Alto) publishes `backing.collateral_ratio: null` with a basis saying a
+        // single safety ratio cannot exist for it — and its HISTORY file still
+        // writes `collateral_ratio: 100.0` hourly, so the shared chart drew a flat
+        // 100% line over 67 reads with "Range: 0.00pp" underneath. That is the
+        // most reassuring possible rendering of the exact figure two producers
+        // declared misleading. The declaration travels with the live block, so it
+        // is read here and passed down rather than inferred from the series.
+        var bk = data.backing || {};
+        if (bk.collateral_ratio == null && typeof bk.collateral_ratio_basis === 'string' &&
+            bk.collateral_ratio_basis.trim()) {
+            chartOpts = Object.assign({}, chartOpts, {
+                declared_underivable: bk.collateral_ratio_basis
+            });
+        }
         CommonRenderer.renderCRChart(crHistory, chartOpts);
 
         // Breakdown table + pie: skip for crvUSD (handled in asset-specific renderer)
