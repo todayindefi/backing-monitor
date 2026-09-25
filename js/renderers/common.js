@@ -1532,10 +1532,8 @@ const CommonRenderer = {
     // depth, primary redemption}; saying which one that is turns a rating into a
     // statement a reader can act on: here $15.5K of venue against $1.5M/quarter
     // of primary, so the venue is the constraint.
-    _renderDepthScope(data) {
+    depthScopeHtml(data) {
         var l = data.liquidity || {};
-        var head = document.getElementById('axis-liquidity-head');
-        if (!head) return;
         var ds = (l.depth && l.depth.denomination_scope) || l.denomination_scope;
         var bind = l.axis_binding_constraint;
         // ⚠️ A WITHHELD DEPTH MUST SAY WHY IT WAS WITHHELD. Adopting liquidity/1
@@ -1633,10 +1631,23 @@ const CommonRenderer = {
                 self._escapeAttr(String(bind.leg || '?').replace(/_/g, ' ')) + ' \u2014 ' +
                 self._escapeAttr(String(bind.basis)) + '</div>');
         }
-        if (!bits.length) return;
+        if (!bits.length) return '';
+        return bits.join('');
+    },
+
+    // ⚠️ THE SCOPE LINE LIVES ON THE HEAD, AND A PAGE WITH NO HEAD LOSES IT.
+    // Same split as the panel above, for the same reason: ethena hides the axis
+    // head, so "Measured scope: … ⚠️ ONE CHAIN" — the sentence that stops a
+    // single depth figure reading as complete — reached neither Ethena page.
+    // One builder, two callers, so the head and the panel cannot drift.
+    _renderDepthScope(data) {
+        var head = document.getElementById('axis-liquidity-head');
+        if (!head) return;
+        var html = this.depthScopeHtml(data);
+        if (!html) return;
         var el = document.createElement('div');
         el.className = 'depth-scope';
-        el.innerHTML = bits.join('');
+        el.innerHTML = html;
         head.appendChild(el);
     },
 
@@ -6537,10 +6548,56 @@ const CommonRenderer = {
                   '<tbody>' + ladderRows + '</tbody></table></div>';
     },
 
+    // ⚠️ A HIDDEN SECTION IS NOT A RENDERED ONE, AND THIS AXIS HAD NO WAY OUT OF
+    // ITS NODE. ethena.js hides every numbered section — right, and documented at
+    // that call site — then re-renders axes 1, 2, 4 and 6 in its own stream from
+    // HTML-returning helpers. Axis 3 had none, so both Ethena pages showed a
+    // summary-band card and nothing else: no ladder, no floor semantics, no
+    // one-chain scope caveat, and not the producer's note that sUSDe's primary
+    // exit is a SEVEN-DAY COOLDOWN while the ladder is the instant-but-thin
+    // alternative. That last sentence is the axis for this asset.
+    //
+    // Split exactly as `dependenciesPanelHtml` and `issuerPanelHtml` already are:
+    // the section renderer keeps the DOM write, the panel builder returns HTML and
+    // touches no node. Nothing about the markup changed in the split — verified by
+    // capturing axis-liquidity-body's innerHTML on crvusd, usds and dusd-alto
+    // before and after and comparing length + hash.
     _renderLiquiditySection(data) {
         var body = document.getElementById('axis-liquidity-body');
         if (!body) return;
+        body.innerHTML = this.liquidityPanelHtml(data);
+    },
+
+    // ⚠️ NO `withQualifier` OPTION, AND THE FIRST CUT HAD ONE. I added it on the
+    // reasoning that the depth qualifier lives on the axis HEAD, which ethena
+    // hides — then the DOM showed "ladder exhausted — floor, not a measurement"
+    // TWICE in the same panel, because the stat row's depth card already carries
+    // it. The head copy is the duplicate, not the source. Planned wrong, caught
+    // by rendering it.
+    // `opts.withHeadContext` prepends the two strings that belong to this axis and
+    // render on the HEAD (the scope line) or ⚠️ NOWHERE AT ALL (`liquidity.note`).
+    // Only a caller whose head is hidden may pass it.
+    //
+    // ⚠️ `liquidity.note` IS PUBLISHED BY 8 ASSETS AND RENDERED BY THE SHARED
+    // PANEL FOR NONE OF THEM — susde's is "Primary exit: 7-day cooldown to USDe at
+    // NAV; ladder = instant secondary market", which is the whole answer to how a
+    // holder gets out. syrupusdc.js renders its own copy bespoke; the other six
+    // (hastra-prime, reusd-re, reusde-re, susdat, susds, and the two here) show it
+    // nowhere. Folding it into the panel fleet-wide means de-duplicating syrup's
+    // copy in the same change, so it is raised separately rather than smuggled in
+    // behind an Ethena fix.
+    liquidityPanelHtml(data, opts) {
+        opts = opts || {};
         var liq = data.liquidity || {};
+        var headContext = '';
+        if (opts.withHeadContext) {
+            var scopeHtml = this.depthScopeHtml(data);
+            if (scopeHtml) headContext += '<div class="depth-scope mb-2">' + scopeHtml + '</div>';
+            if (typeof liq.note === 'string' && liq.note.trim()) {
+                headContext += '<div class="text-sm text-slate-600 mb-2" style="line-height:1.5;">' +
+                    this._escapeAttr(liq.note.trim()) + '</div>';
+            }
+        }
         // ⚠️ "No ladder in this snapshot" reads as a MISSING measurement. Where
         // the producer has published an exit_capacity block it is not missing —
         // the venue has no curve to ladder, and the capacity block says so and
@@ -6947,8 +7004,9 @@ const CommonRenderer = {
             '</div>';
 
 
-        body.innerHTML = '<div class="panel">' +
+        return '<div class="panel">' +
             '<div class="panel-title">Liquidity &amp; Exit</div>' +
+            headContext +
             statRow + this.exitCapacityHtml(liq) + exitLine + ladderBlock +
             this._depthShareHtml(data) + poolBlock + poolsNote + chainBlock +
         '</div>';

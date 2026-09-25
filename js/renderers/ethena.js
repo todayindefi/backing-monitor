@@ -266,6 +266,13 @@ var EthenaRenderer = {
         // hover-only beside a 102.64% Healthy 5/5 tile, which is exactly the
         // wrapper-shows-its-underlying's-number case.
         html += anc('panel-peg', EthenaRenderer._renderPegPanel(data, slug));
+        // ⚠️ AXIS 3, THE THIRD ONE THIS RENDERER HID WITHOUT REPLACING. The band
+        // card said "≥$2.0M · vol n/a · exit leg undeclared" and the panel behind
+        // it — floor semantics, the kyberswap ladder, the one-chain scope, and the
+        // producer's "primary exit: 7-day cooldown to USDe at NAV" — rendered into
+        // a display:none node.
+        html += anc('panel-liquidity',
+            CommonRenderer.liquidityPanelHtml(data, { withHeadContext: true }));
         html += CommonRenderer.backingBasisPanelHtml(data);
         // Async-filled placeholders (all from ethena_family.json):
         html += '<div id="ethena-custody-panel"></div>';
@@ -364,7 +371,8 @@ var EthenaRenderer = {
         var inner = document.getElementById('asset-anchor-nav-inner');
         if (!navEl || !inner) return;
 
-        var items = [{ id: 'panel-headline', label: 'Asset' }, { id: 'panel-peg', label: 'Peg' }];
+        var items = [{ id: 'panel-headline', label: 'Asset' }, { id: 'panel-peg', label: 'Peg' },
+                     { id: 'panel-liquidity', label: 'Liquidity' }];
         if (slug === 'usde') items.unshift({ id: 'chart-panel', label: 'Coverage' });
         items.push({ id: 'ethena-custody-panel', label: 'Custody' });
         items.push({ id: 'ethena-defi-panel',    label: 'DeFi' });
