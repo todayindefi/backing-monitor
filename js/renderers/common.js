@@ -3288,10 +3288,21 @@ const CommonRenderer = {
         var br = liq.two_pct_depth_bracket;
         if (liq.total_2pct_depth == null) return '';
         var tip = liq.two_pct_depth_basis || '';
+        // ⚠️ A RELABELLED FLOOR HAS TO SHOW ITS EVIDENCE. Where the headline moved
+        // to 0.5% off the rungs rather than off a producer declaration, the rungs
+        // that justify it render beside the figure — otherwise the tighter
+        // threshold is an assertion the reader cannot check.
+        var headlineNote = this._depthHeadlineNote(liq);
+        var headlineLine = headlineNote
+            ? '<div class="text-[11px] text-slate-400">' + this._escapeAttr(headlineNote) + '</div>'
+            : '';
+        // ⚠️ APPENDED INSIDE wrap(), not at one return site. This function has six
+        // return paths and picking one or two would have shown the evidence on
+        // some assets and not others — the bug shape this file keeps hitting.
         function wrap(txt, cls) {
             return '<div class="text-[11px] ' + (cls || 'text-slate-400') + '"' +
                 (tip ? ' title="' + CommonRenderer._escapeAttr(tip) + '"' : '') + '>' +
-                txt + (tip ? ' \u24d8' : '') + '</div>';
+                txt + (tip ? ' \u24d8' : '') + '</div>' + headlineLine;
         }
         // ⚠️ TWO BRACKET SHAPES, AND THE RICHER ONE IS THE NEW DEFAULT.
         //
@@ -3812,9 +3823,103 @@ const CommonRenderer = {
     // Reads `depth_threshold_bps`, set by _adaptSchema from the producer's
     // `primary_threshold_bps`. Absent -> 200, so every feed that predates the field
     // keeps saying "2% depth" exactly as before.
+    // ⚠️ 0.5% IS THE RIGHT HEADLINE FOR A PEG-TRACKING ASSET AND ONLY SIX OF
+    // TWENTY-FOUR GOT IT, FOR A PRODUCER REASON RATHER THAN AN ASSET ONE.
+    //
+    // DexTracker declares `primary_threshold_bps: -50`; PegTracker's embedded
+    // ladders declare no threshold at all, so 17 assets fell back to 200 and the
+    // same question rendered as "2% depth" on susde and "0.5% depth" on dusd-alto.
+    // For a stablecoin a 2% move is already a depeg, so the 2% crossing answers a
+    // question nobody holding it is asking (owner decision 2026-09-22, and the
+    // user's again on 2026-09-26).
+    //
+    // ⚠️ THIS DERIVES NOTHING. It relabels ONLY where the published figure is
+    // already a FLOOR and every quoted rung clears inside 50 bps — then the same
+    // number is a 0.5% floor as surely as it is a 2% one, and the tighter
+    // threshold is the stronger true statement. susde's $2.0M deepest rung clears
+    // at −3.7 bps; calling that "2% depth" understates it.
+    //
+    // ⚠️ A LOCATED CROSSING IS NEVER RELABELLED. crvUSD's $25M, usg's $500K and
+    // usdat's $2M are measured 200 bps crossings; the 0.5% crossing is a
+    // different, smaller number this cannot see. Those keep their label.
+    DEPTH_HEADLINE_BPS: 50,
+
+    _headlineThresholdBps(liq) {
+        if (!liq) return 200;
+        // 1. The producer's own declaration always wins.
+        if (typeof liq.depth_threshold_bps === 'number') return liq.depth_threshold_bps;
+        var tight = this.DEPTH_HEADLINE_BPS;
+        var fig = liq.total_2pct_depth;
+        if (typeof fig !== 'number') return 200;
+        // 2. ⚠️ A LADDER THAT IS NOT SIZE-RESPONSIVE BOUNDS NOTHING AT ANY
+        // THRESHOLD, so it cannot be relabelled to a tighter one. susDS returns
+        // 0.00 bps at every rung from $1K to $1M — a fixed-rate redemption quote
+        // returned as a fill, which is why `liquidityRating` already refuses to
+        // band it. The first cut of this rule relabelled it to "0.5% depth" off
+        // seven zeros: the most confident possible reading of a measurement that
+        // never varied.
+        //
+        // ⚠️ AND IT MUST NOT REUSE `_depthNonDerivable`, WHICH I TRIED FIRST. That
+        // predicate also treats `derived_score_status: "not_computed"` as
+        // disqualifying — correct for the AUTHORED-SCORE gate, where it means the
+        // producer declined to derive a score, and wrong here, where it says
+        // nothing about whether the ladder responds to size. susde carries it and
+        // was silently refused a relabel its own rungs support. Two rules that
+        // look alike and answer different questions must not share a
+        // discriminator; the unification that was right for the score gate is
+        // wrong here.
+        if (liq.two_pct_depth_size_responsive === false ||
+            liq.two_pct_depth_status === 'not_size_responsive') return 200;
+        // 3. Only a FLOOR can be relabelled — both readings are then floors.
+        var isFloor = liq.total_2pct_depth_is_floor === true ||
+                      liq.two_pct_depth_status === 'ladder_exhausted';
+        if (!isFloor) return 200;
+        var rungs = this._ladderRungs(liq);
+        if (!rungs.length) return 200;
+        // 4. Every quoted rung must clear the tighter threshold, and the figure
+        //    must not exceed the deepest rung that actually cleared it.
+        var deepestClearing = null;
+        for (var i = 0; i < rungs.length; i++) {
+            if (!(Math.abs(rungs[i].bps) <= tight)) return 200;
+            deepestClearing = rungs[i].size;
+        }
+        if (deepestClearing == null || fig > deepestClearing) return 200;
+        return tight;
+    },
+
+    // Sorted [{size, bps}] from the exit-mark ladder; rungs with no slippage are
+    // dropped rather than treated as zero.
+    _ladderRungs(liq) {
+        var q = (liq && liq.exit_mark && liq.exit_mark.quotes) || null;
+        if (!q || typeof q !== 'object') return [];
+        var out = [];
+        Object.keys(q).forEach(function(k) {
+            var size = parseFloat(k), bps = q[k] && q[k].slippage_bps;
+            if (isFinite(size) && typeof bps === 'number') out.push({ size: size, bps: bps });
+        });
+        return out.sort(function(a, b) { return a.size - b.size; });
+    },
+
+    // The sentence that makes a relabelled floor checkable: how far inside the
+    // threshold the deepest quoted rung actually cleared.
+    _depthHeadlineNote(liq) {
+        if (typeof (liq || {}).depth_threshold_bps === 'number') return '';
+        if (this._headlineThresholdBps(liq) !== this.DEPTH_HEADLINE_BPS) return '';
+        var rungs = this._ladderRungs(liq);
+        if (!rungs.length) return '';
+        var deepest = rungs[rungs.length - 1];
+        var worst = rungs.reduce(function(a, r) {
+            return Math.abs(r.bps) > Math.abs(a.bps) ? r : a;
+        }, rungs[0]);
+        return 'every quoted rung clears inside ' + this.DEPTH_HEADLINE_BPS + ' bps \u2014 deepest ' +
+            this.formatCurrency(deepest.size) + ' at ' + deepest.bps.toFixed(1) + ' bps' +
+            (worst.size !== deepest.size
+                ? ', worst ' + worst.bps.toFixed(1) + ' bps at ' + this.formatCurrency(worst.size)
+                : '');
+    },
+
     _depthLabel(liq) {
-        var bps = (liq && typeof liq.depth_threshold_bps === 'number')
-            ? liq.depth_threshold_bps : 200;
+        var bps = this._headlineThresholdBps(liq);
         var pct = bps / 100;
         // 0.5 not 0.50, 2 not 2.0 — trailing zeros on a label read as precision.
         return (Math.round(pct * 100) / 100) + '% depth';
