@@ -1,12 +1,12 @@
 {
  "schema_version": "liquidity/1",
  "asset_slug": "fxusd",
- "as_of": "2026-09-24T23:46:58Z",
+ "as_of": "2026-09-25T23:47:56Z",
  "producer": "dextracker",
  "note": "Axis 3 (Liquidity & Exit), single producer. Measured exit evidence only; no risk score. f(x) Protocol's fxUSD 0x085780639CC2cACd35E474e71f4d000e2405d8f6 -- NOT fxSAVE (0x7743e50F..., an ERC-4626 share at ~1.12). Protocol redemption is measured as REFUSED (riskAnalyst 2026-09-22), so this DEX ladder is the ONLY exit for fxUSD and for fxSAVE, which redeems into it.",
  "depth": {
   "status": "bracketed",
-  "depth_usd": 1000000.0,
+  "depth_usd": 5218750.0,
   "depth_usd_semantics": "lower_bound_of_bracket: a size that cleared the threshold, never the crossing itself. Read `bracket` for the located range and `bracket.meets_precision_obligation` for whether it is within 1% of midpoint; a false there with a wide bracket means depth_usd may understate the crossing by the bracket's width.",
   "is_floor": true,
   "threshold_bps": -200.0,
@@ -15,8 +15,8 @@
   "tested_through_input_usd": 20000000.0,
   "baseline_rung": {
    "size_usd": 100.0,
-   "slippage_bps": -1.4337999999991524,
-   "amount_out_tokens": 99.985662
+   "slippage_bps": -0.7372999999999408,
+   "amount_out_tokens": 99.992627
   },
   "rung_set": {
    "grid": "decade",
@@ -30,15 +30,16 @@
    "spec": "riskAnalyst liquidity-ladder-spec.md \u00a77 (178e54a)"
   },
   "slippage_convention": "Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. The dated external mid sizes the input notional and is NOT the impact reference.",
-  "basis": "The -200bps crossing is BRACKETED between 1,000,000 (clears at -1.79bps) and 10,000,000 (-4659.18bps). Published figure is the last rung that cleared, so true depth sits inside the bracket and above what is shown.",
+  "basis": "The -200bps crossing is BRACKETED between $5,218,750.00 and $5,253,906.25. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor.",
   "bracket": {
-   "last_clearing_size_usd": 1000000.0,
-   "last_clearing_marginal_impact_bps": -1.788536050000289,
-   "first_crossing_size_usd": 10000000.0,
-   "first_crossing_marginal_impact_bps": -4659.180328845001,
-   "width_usd": 9000000.0,
+   "last_clearing_size_usd": 5218750.0,
+   "last_clearing_marginal_impact_bps": -182.93767516071924,
+   "first_crossing_size_usd": 5253906.25,
+   "first_crossing_marginal_impact_bps": -211.2877595640139,
+   "width_usd": 35156.25,
    "monotonic_in_bracket": true,
-   "threshold_bps": -200.0
+   "threshold_bps": -200.0,
+   "meets_precision_obligation": true
   },
   "quote": {
    "method": "KyberSwap GET /api/v1/routes exact-input fxUSD -> USDC; single-hop through Curve USDC/fxUSD to ~$4M, then the router splits through msUSD/alUSD/reUSD and their own onward USDC legs, all priced end-to-end",
@@ -50,7 +51,7 @@
     "decimals": 18
    },
    "baseline_size_usd": 100.0,
-   "quoted_as_of": "2026-09-24T23:46:31Z",
+   "quoted_as_of": "2026-09-25T23:47:10Z",
    "token_out": {
     "symbol": "USDC",
     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -85,6 +86,10 @@
     "method": "union of address-keyed router routes returned across tested sizes",
     "venues": [
      {
+      "venue": "axima-v2/ekubo-v3",
+      "status": "quoted"
+     },
+     {
       "venue": "curve",
       "status": "quoted"
      },
@@ -93,11 +98,27 @@
       "status": "quoted"
      },
      {
+      "venue": "curve-stable-plain",
+      "status": "quoted"
+     },
+     {
       "venue": "curve-twocrypto-ng",
       "status": "quoted"
      },
      {
-      "venue": "frxusd",
+      "venue": "fermi",
+      "status": "quoted"
+     },
+     {
+      "venue": "hashflow-v3/fluid-dex-t1",
+      "status": "quoted"
+     },
+     {
+      "venue": "kyberswap-limit-order-v2/uniswap-v4",
+      "status": "quoted"
+     },
+     {
+      "venue": "metric-propamm/ekubo-v3",
       "status": "quoted"
      },
      {
@@ -106,10 +127,6 @@
      },
      {
       "venue": "uniswap-v4",
-      "status": "quoted"
-     },
-     {
-      "venue": "uniswap-v4-stable-stable",
       "status": "quoted"
      },
      {
@@ -125,7 +142,7 @@
    "fair_value": 1.0,
    "fair_value_basis": "par_input_sizing_only",
    "fair_value_source": "producer_declared_input_sizing",
-   "fair_value_as_of": "2026-09-24T23:46:24Z",
+   "fair_value_as_of": "2026-09-25T23:47:02Z",
    "fair_value_choice": "marginal_baseline",
    "fair_value_choice_mode": "producer_method",
    "market_price_cross_check": null,
@@ -136,110 +153,110 @@
     "size_usd": 1000.0,
     "status": "ok",
     "amount_in_tokens": 1000.0,
-    "amount_out_tokens": 999.856471,
-    "slippage_bps": -1.4352899999992008,
+    "amount_out_tokens": 999.926127,
+    "slippage_bps": -0.7387300000005759,
     "route_venues": [
      "curve-stable-ng"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.19075729224107277",
-    "router_price_in": 1.0038582631553652,
-    "router_price_out": 1.0039259608389286,
-    "slippage_bps_debiased": -0.001490000000048397,
-    "price_bias_bps": -1.4337999999991524,
+    "gas_usd": "0.06755757174512227",
+    "router_price_in": 1.0002552272671643,
+    "router_price_out": 0.9998347055209209,
+    "slippage_bps_debiased": -0.00143000000063509,
+    "price_bias_bps": -0.7372999999999408,
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000.0,
     "status": "ok",
     "amount_in_tokens": 10000.0,
-    "amount_out_tokens": 9998.549638,
-    "slippage_bps": -1.4503619999994832,
+    "amount_out_tokens": 9999.246308,
+    "slippage_bps": -0.7536920000006386,
     "route_venues": [
      "curve-stable-ng"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.19075729224107277",
-    "router_price_in": 1.003882208448954,
-    "router_price_out": 1.0039259608389286,
-    "slippage_bps_debiased": -0.016562000000330812,
-    "price_bias_bps": -1.4337999999991524,
+    "gas_usd": "0.06755757174512227",
+    "router_price_in": 1.0002552272671643,
+    "router_price_out": 0.9998347055209208,
+    "slippage_bps_debiased": -0.01639200000069785,
+    "price_bias_bps": -0.7372999999999408,
     "rung_kind": "decade"
    },
    {
     "size_usd": 100000.0,
     "status": "ok",
     "amount_in_tokens": 100000.0,
-    "amount_out_tokens": 99983.984603,
-    "slippage_bps": -1.6015396999990994,
+    "amount_out_tokens": 99990.966572,
+    "slippage_bps": -0.9033427999993737,
     "route_venues": [
      "curve-stable-ng"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.19075729224107277",
-    "router_price_in": 1.0038169895480442,
-    "router_price_out": 1.0039259970818188,
-    "slippage_bps_debiased": -0.16773969999994698,
-    "price_bias_bps": -1.4337999999991524,
+    "gas_usd": "0.06755757174512227",
+    "router_price_in": 1.000255227267164,
+    "router_price_out": 1.0001126921649761,
+    "slippage_bps_debiased": -0.16604279999943294,
+    "price_bias_bps": -0.7372999999999408,
     "rung_kind": "decade"
    },
    {
     "size_usd": 1000000.0,
     "status": "ok",
     "amount_in_tokens": 1000000.0,
-    "amount_out_tokens": 999677.766395,
-    "slippage_bps": -3.2223360499994413,
+    "amount_out_tokens": 999754.469952,
+    "slippage_bps": -2.455300480000977,
     "route_venues": [
      "curve-stable-ng"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.19075729224107277",
-    "router_price_in": 1.0039020820116287,
-    "router_price_out": 1.0039259970818188,
-    "slippage_bps_debiased": -1.788536050000289,
-    "price_bias_bps": -1.4337999999991524,
+    "gas_usd": "0.06755757174512227",
+    "router_price_in": 0.9998610670347636,
+    "router_price_out": 1.0001108345776748,
+    "slippage_bps_debiased": -1.7180004800010362,
+    "price_bias_bps": -0.7372999999999408,
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000000.0,
     "status": "ok",
     "amount_in_tokens": 10000000.0,
-    "amount_out_tokens": 5339385.871155,
-    "slippage_bps": -4660.614128845,
+    "amount_out_tokens": 5536367.319948,
+    "slippage_bps": -4463.632680052,
     "route_venues": [
      "curve",
      "curve-stable-ng",
+     "curve-stable-plain",
      "curve-twocrypto-ng",
-     "frxusd",
+     "fermi",
+     "hashflow-v3/fluid-dex-t1",
      "metric-propamm/uniswapv3",
-     "uniswap-v4",
-     "uniswap-v4-stable-stable",
-     "uniswapv3"
+     "uniswap-v4"
     ],
-    "route_leg_count": 11,
-    "gas_usd": "2.4190358613536294",
-    "router_price_in": 1.0036656779154622,
-    "router_price_out": 1.003902053194293,
-    "slippage_bps_debiased": -4659.180328845001,
-    "price_bias_bps": -1.4337999999991524,
+    "route_leg_count": 10,
+    "gas_usd": "1.2924224776036084",
+    "router_price_in": 0.9998610670347636,
+    "router_price_out": 1.0001108345776748,
+    "slippage_bps_debiased": -4462.895380052,
+    "price_bias_bps": -0.7372999999999408,
     "rung_kind": "decade"
    },
    {
     "size_usd": 5000000.0,
     "status": "ok",
     "amount_in_tokens": 5000000.0,
-    "amount_out_tokens": 4906417.068594,
-    "slippage_bps": -187.1658628119999,
+    "amount_out_tokens": 4946572.581006,
+    "slippage_bps": -106.85483798800077,
     "route_venues": [
      "curve-stable-ng",
-     "frxusd"
+     "kyberswap-limit-order-v2/uniswap-v4"
     ],
     "route_leg_count": 2,
-    "gas_usd": "0.40360232202667035",
-    "router_price_in": 1.0036764409520458,
-    "router_price_out": 1.0039259970818188,
-    "slippage_bps_debiased": -185.73206281200072,
-    "price_bias_bps": -1.4337999999991524,
+    "gas_usd": "0.330885515183447",
+    "router_price_in": 1.0002552272671643,
+    "router_price_out": 0.9998347055209209,
+    "slippage_bps_debiased": -106.11753798800083,
+    "price_bias_bps": -0.7372999999999408,
     "rung_kind": "envelope_probe",
     "excluded_from_bracket": true,
     "exclusion_reason": "Execution-envelope probe only. The crossing bracket is classified from the ascending decade grid; this post-crossing probe measures proceeds turnover and is not a refinement rung."
@@ -248,24 +265,27 @@
     "size_usd": 20000000.0,
     "status": "ok",
     "amount_in_tokens": 20000000.0,
-    "amount_out_tokens": 5344704.307272,
-    "slippage_bps": -7327.6478463640005,
+    "amount_out_tokens": 5541381.897537,
+    "slippage_bps": -7229.3090512315,
     "route_venues": [
+     "axima-v2/ekubo-v3",
      "curve",
      "curve-stable-ng",
+     "curve-stable-plain",
      "curve-twocrypto-ng",
-     "frxusd",
+     "fermi",
+     "hashflow-v3/fluid-dex-t1",
+     "metric-propamm/ekubo-v3",
      "metric-propamm/uniswapv3",
      "uniswap-v4",
-     "uniswap-v4-stable-stable",
      "uniswapv3"
     ],
-    "route_leg_count": 13,
-    "gas_usd": "2.6803321252340275",
-    "router_price_in": 1.0036656779154622,
-    "router_price_out": 1.003902053194293,
-    "slippage_bps_debiased": -7326.214046364002,
-    "price_bias_bps": -1.4337999999991524,
+    "route_leg_count": 16,
+    "gas_usd": "1.8908996554972806",
+    "router_price_in": 0.9998124478045246,
+    "router_price_out": 1.0001126921649761,
+    "slippage_bps_debiased": -7228.5717512315005,
+    "price_bias_bps": -0.7372999999999408,
     "rung_kind": "envelope_probe",
     "excluded_from_bracket": true,
     "exclusion_reason": "Execution-envelope probe only. The crossing bracket is classified from the ascending decade grid; this post-crossing probe measures proceeds turnover and is not a refinement rung."
@@ -287,18 +307,18 @@
      "check": "quote_economically_plausible",
      "passed": true,
      "blocking": false,
-     "detail": "Quote is -1.4bps against the reference rate.",
+     "detail": "Quote is -0.7bps against the reference rate.",
      "evidence": {
-      "loss_bps": -1.4352899999992008
+      "loss_bps": -0.7387300000005759
      }
     },
     {
      "check": "depth_against_supply",
      "passed": true,
      "blocking": false,
-     "detail": "Depth is 1.2% of chain supply.",
+     "detail": "Depth is 6.4% of chain supply.",
      "evidence": {
-      "ratio": 0.012382482455824528
+      "ratio": 0.06363231803954449
      }
     }
    ]
@@ -315,7 +335,7 @@
    },
    "observed_peak": {
     "input_size_usd": 20000000.0,
-    "output_value_usd": 5344704.307272
+    "output_value_usd": 5541381.897537
    },
    "basis": "Peak is the maximum successful routed output among tested rungs, not a claim that the exact global maximum was located."
   },
@@ -325,14 +345,14 @@
   },
   "quote_stability": {
    "sample_size_usd": 4500000.0,
-   "requested_samples": 2,
-   "successful_samples": 2,
+   "requested_samples": 4,
+   "successful_samples": 4,
    "samples": [
     {
      "phase": "before_refinement",
      "sample": 1,
      "status": "ok",
-     "output_value_usd": 4476367.560728,
+     "output_value_usd": 4486128.474966,
      "failure_kind": null,
      "http_status": null
     },
@@ -340,21 +360,38 @@
      "phase": "before_refinement",
      "sample": 2,
      "status": "ok",
-     "output_value_usd": 4476367.560728,
+     "output_value_usd": 4486128.491011,
+     "failure_kind": null,
+     "http_status": null
+    },
+    {
+     "phase": "after_refinement",
+     "sample": 1,
+     "status": "ok",
+     "output_value_usd": 4486128.474966,
+     "failure_kind": null,
+     "http_status": null
+    },
+    {
+     "phase": "after_refinement",
+     "sample": 2,
+     "status": "ok",
+     "output_value_usd": 4486128.491011,
      "failure_kind": null,
      "http_status": null
     }
    ],
-   "output_spread_usd": 0.0,
-   "output_spread_bps": 0.0,
-   "precision_floor_usd": 0.0,
+   "output_spread_usd": 0.01604500040411949,
+   "output_spread_bps": 3.5765806674870084e-05,
+   "precision_floor_usd": 0.01604500040411949,
    "basis": "Same-size routed output spread across samples immediately before and after refinement. The published bracket must not be narrower than this observed spread."
   },
   "refinement": {
-   "status": "refusal_non_monotonic",
-   "stopped_on": null,
-   "probe_count": 6,
-   "precision_target": "<=1% of bracket midpoint"
+   "status": "refined",
+   "stopped_on": "precision_obligation_met",
+   "probe_count": 8,
+   "precision_target": "<=1% of bracket midpoint",
+   "validation_cooldown_seconds": 8.0
   },
   "asset_category": "stable",
   "primary_threshold_bps": -50.0,
@@ -365,36 +402,37 @@
    "status": "bracketed",
    "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
    "refinement": {
-    "status": "refined",
+    "status": "salvaged_from_probes",
     "stopped_on": "precision_obligation_met",
-    "probe_count": 8
+    "probe_count": 8,
+    "wobble_above_crossing": []
    },
    "bracket": {
-    "last_clearing_size_usd": 4480468.75,
-    "last_clearing_marginal_impact_bps": -48.7351489587462,
-    "first_crossing_size_usd": 4515625.0,
-    "first_crossing_marginal_impact_bps": -53.11058868595286,
-    "width_usd": 35156.25,
+    "last_clearing_size_usd": 4726562.5,
+    "last_clearing_marginal_impact_bps": -46.909358885818264,
+    "first_crossing_size_usd": 4796875.0,
+    "first_crossing_marginal_impact_bps": -54.68149594319183,
+    "width_usd": 70312.5,
     "monotonic_in_bracket": true,
     "threshold_bps": -50.0,
-    "meets_precision_obligation": true
+    "meets_precision_obligation": false
    },
-   "depth_usd": 4480468.75,
+   "depth_usd": 4726562.5,
    "is_floor": true,
-   "basis": "The -50bps marginal crossing is BRACKETED between $4,480,468.75 and $4,515,625.00, both ends re-quoted. `depth_usd` is the lower bound.",
+   "basis": "Re-quoting the refined ends did not straddle (-39.54983426469716 / -42.85039095513699 bps); the FIRST crossing was salvaged from the search's probes and both ends re-quoted: $4,726,562.50 - $4,796,875.00.",
    "note": "Primary figure for a STABLE asset per spec \u00a77.8; the 2% bracket above is retained for comparison across the corpus. Widths are independent: this one may be wider than the 2% bracket where it coincides with a router split boundary (\u00a77.7)."
   },
   "supply_check": {
    "status": "passed",
    "token": "0x085780639CC2cACd35E474e71f4d000e2405d8f6",
-   "total_supply_units": 85893865.18064912,
-   "total_supply_usd": 85893865.18064912,
+   "total_supply_units": 86940000.77284557,
+   "total_supply_usd": 86940000.77284557,
    "non_float_holders": {
-    "curve USDC/fxUSD pool 0x5018BE88": 5134614.879461282
+    "curve USDC/fxUSD pool 0x5018BE88": 4925858.261853067
    },
-   "float_units": 80759250.30118783,
-   "float_usd": 80759250.30118783,
-   "read_as_of": "2026-09-24T23:46:58Z"
+   "float_units": 82014142.5109925,
+   "float_usd": 82014142.5109925,
+   "read_as_of": "2026-09-25T23:47:56Z"
   }
  },
  "primary_exit": {
@@ -1992,25 +2030,25 @@
   "basis": "Originated 2026-09-22 for riskAnalyst's fxusd-usdc-exit-ladder handoff."
  },
  "refresh_cadence": "daily",
- "payload_revised_at": "2026-09-24T23:46:58Z",
+ "payload_revised_at": "2026-09-25T23:47:56Z",
  "rescore_trigger": {
-  "evaluated_at": "2026-09-24T23:46:58Z",
+  "evaluated_at": "2026-09-25T23:47:56Z",
   "checks": [
    {
     "check": "observed_peak_below_usd",
     "threshold_usd": 3000000.0,
-    "value_usd": 5344704.307272,
+    "value_usd": 5541381.897537,
     "tripped": false,
-    "detail": "Proceeds ceiling $5,344,704 is above the $3,000,000 re-score threshold."
+    "detail": "Proceeds ceiling $5,541,382 is above the $3,000,000 re-score threshold."
    },
    {
     "check": "counter_balance_below",
     "holder": "0x5018BE882DccE5E3F2f3B0913AE2096B9b3fB61f",
     "holder_label": "curve USDC/fxUSD 0x5018BE88",
     "threshold_units": 3000000.0,
-    "value_units": 4874631.116191,
+    "value_units": 5083927.606078,
     "tripped": false,
-    "detail": "USDC in curve USDC/fxUSD 0x5018BE88 is 4,874,631, above the 3,000,000 re-score threshold."
+    "detail": "USDC in curve USDC/fxUSD 0x5018BE88 is 5,083,928, above the 3,000,000 re-score threshold."
    }
   ],
   "tripped": false
