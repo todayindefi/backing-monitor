@@ -8561,12 +8561,21 @@ const CommonRenderer = {
         '</div>';
     },
 
-    _contractPanelsHtml(data) {
+    // `opts.withHeadContext` prepends the score basis, which renders on the axis
+    // HEAD for every normal asset. ⚠️ Only a caller whose head is hidden may pass
+    // it: on susde the 1,741-character argument for the 5.5 was reachable ONLY as
+    // a tooltip on the summary card, and the head copy — the one a reader can
+    // actually read — was inside a display:none node.
+    _contractPanelsHtml(data, opts) {
+        opts = opts || {};
         var sp = data.asset_specific || {};
+        var basis = (data.contract || {}).structural_score_basis;
+        var head = (opts.withHeadContext && typeof basis === 'string' && basis.trim())
+            ? this._scoreBasisHtml('Why this contract score', basis) : '';
         // ⚠️ IN THE PANEL, NOT ON THE HEAD. The axis-5 basis renders on the head,
         // which ethena hides — so anything appended there is lost on exactly the
         // pages this material matters for. Notes travel with the panel instead.
-        var out = this._authoredNotesHtml('contract') + this._topologyWalkHtml(data);
+        var out = head + this._authoredNotesHtml('contract') + this._topologyWalkHtml(data);
 
         // 2. Governance — gated on the NORMALISED shape only. apxusd and
         // syrupusdc publish governance under entirely different keys and are

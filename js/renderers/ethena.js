@@ -153,9 +153,15 @@ var EthenaRenderer = {
     },
 
     // Inject an id into a panel's outer div so the anchor nav can jump to it.
+    // ⚠️ THE CLASS IS NOT ALWAYS EXACTLY "panel". This matched `<div class="panel"`
+    // with the closing quote, so the authority walk — which opens
+    // `<div class="panel topology-walk">` — rendered correctly and silently got
+    // NO id: the panel was on the page and its anchor-nav link pointed at
+    // nothing. Found by looking for #panel-contract and finding the content but
+    // not the node.
     _anchor: function(id, html) {
         if (!html || typeof html !== 'string') return html;
-        return html.replace(/^(<div class="panel")/, '<div id="' + id + '" class="panel"');
+        return html.replace(/^<div class="panel/, '<div id="' + id + '" class="panel');
     },
 
     // Map a custody-slice `source` string to a scannable freshness badge.
@@ -300,6 +306,29 @@ var EthenaRenderer = {
         // back. The summary band carried "Issuer 7.0/10" and the facts behind it
         // (entity, regulator, the written assessment) rendered into a display:none
         // node. Same shared panel, same one-line drop-in as dependencies above.
+        // ⚠️ AXIS 5, THE LAST ONE THIS RENDERER HID WITHOUT REPLACING. A
+        // security_analyst hand-walk has existed for both slugs since 2026-09-09
+        // — usde 1 layer / 8 unresolved, susde 3 layers / 9 — with riskAnalyst's
+        // structural 5.5 and a ~1,750-character basis beside it, all painting
+        // into a display:none node for seventeen days. The band card said "0h
+        // warning" and that was the whole of axis 5 on these pages.
+        //
+        // ⚠️ THE "NOT ASSESSED" FALLBACK IS CARRIED ACROSS DELIBERATELY.
+        // `_renderContractSection` substitutes it when the builder returns empty,
+        // and dropping the builder in bare would render NOTHING for an asset with
+        // no walk — an absence of data reading as an absence of risk, which is
+        // the sentence that fallback exists to prevent.
+        // ⚠️ WRAPPED, NOT anc()'d. `anc` rewrites the FIRST `<div class="panel`,
+        // and with head context the block now opens with a <details> — so the id
+        // would land on the wrong node or nowhere. An explicit wrapper cannot
+        // drift with the content's shape.
+        html += '<div id="panel-contract">' +
+            (CommonRenderer._contractPanelsHtml(data, { withHeadContext: true }) ||
+            '<div class="panel"><div class="panel-title">Smart Contract &amp; Admin — not assessed</div>' +
+            '<div class="text-sm text-slate-500" style="line-height:1.5;">' +
+            'No admin-control facts are published for this asset. \u26a0\ufe0f Not assessed — this is ' +
+            'an absence of data, not a finding that control is unconstrained.</div></div>') +
+            '</div>';
         html += anc('panel-issuer', CommonRenderer.issuerPanelHtml(data));
         html += '<div id="ethena-riskflags-panel"></div>';
         html += '<div id="ethena-family-panel"></div>';
@@ -380,6 +409,7 @@ var EthenaRenderer = {
         items.push({ id: 'ethena-cex-panel',     label: 'CEX hedge' });
         if (slug === 'susde') items.push({ id: 'panel-vault', label: 'Vault' });
         items.push({ id: 'ethena-attestation-panel', label: 'Attestation' });
+        items.push({ id: 'panel-contract',            label: 'Contract' });
         items.push({ id: 'panel-issuer',              label: 'Issuer' });
         items.push({ id: 'ethena-family-panel',       label: 'Family' });
 
