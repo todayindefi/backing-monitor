@@ -42,7 +42,7 @@ var DusdAltoRenderer = {
             backingSlot.innerHTML =
                 this._identityHtml(data, specific) +
                 this._trancheCoverageHtml(backing) +
-                this._usmHtml(backing, specific) +
+                this._usmHtml(backing, specific, data) +
                 this._cdpHtml(backing) +
                 '<div id="dusd-minters"></div>';
         }
@@ -194,7 +194,7 @@ var DusdAltoRenderer = {
     },
 
     // ---- axis 2: the stability module -------------------------------------
-    _usmHtml: function(backing, specific) {
+    _usmHtml: function(backing, specific, dataRef) {
         var u = backing.usm;
         if (!u || typeof u !== 'object') return '';
         var esc = function(v) { return CommonRenderer._escapeAttr(String(v)); };
@@ -239,7 +239,8 @@ var DusdAltoRenderer = {
                     : u.is_seized === true ? '<span class="text-red-600 font-semibold">YES</span>' : '—') +
                 (treasury ? row('Treasury Safe',
                     '<span class="text-xs">' + DusdAltoRenderer._truncAddr(treasury) + '</span> ' +
-                    DusdAltoRenderer._ethLink(treasury)) : '') +
+                    DusdAltoRenderer._ethLink(treasury) +
+                    DusdAltoRenderer._sharedAuthorityMark(dataRef, treasury)) : '') +
             '</tbody></table></div>' +
             // ⚠️ THE PRODUCER CALLS THIS SOLVENCY-CRITICAL AND IT IS ONE FIELD.
             (u.is_seized_basis
@@ -669,6 +670,27 @@ var DusdAltoRenderer = {
                 }
             }
         });
+    },
+
+
+    // ⚠️ THREE SAFE ADDRESSES, ONE SIGNER SET — AND THIS PAGE NAMES TWO OF THEM.
+    // riskAnalyst publishes `contract.one_authority_three_safes`: governance,
+    // treasury and emergency Safes each return the IDENTICAL seven EOAs at 4-of-7,
+    // and the field states the consumer obligation outright — "a panel naming any
+    // one of these Safes beside another must state that four signatures reach
+    // both". The Stability Module panel prints the treasury Safe and the exit
+    // panel references it, so without this a reader counts separate controls that
+    // do not exist. Same shape as the frxUSD six-addresses-one-owner-set pattern.
+    //
+    // ⚠️ MEMBERSHIP IS TESTED AGAINST THE PRODUCER'S OWN TEXT, not a list I keep.
+    // A hardcoded address list here would silently stop matching the day they
+    // revise the set, and would be a second place to maintain the same fact.
+    _sharedAuthorityMark: function(data, addr) {
+        var note = ((data || {}).contract || {}).one_authority_three_safes;
+        if (typeof note !== 'string' || !addr) return '';
+        if (note.toLowerCase().indexOf(String(addr).toLowerCase()) < 0) return '';
+        return ' <span class="shared-authority" title="' + CommonRenderer._escapeAttr(note) +
+            '">\u26a0\ufe0f 1 of 3 Safes \u2014 four signatures reach all three</span>';
     },
 
     // ---- helpers ---------------------------------------------------------

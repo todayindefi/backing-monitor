@@ -241,6 +241,25 @@ const CommonRenderer = {
     AXIS_AUTHORED_NOTES: {},
 
     AUTHORED_NOTE_KEYS: [
+        // ⚠️ Both written FOR a consumer, in the imperative: "render the walk and
+        // this 5.0 side by side with both dates visible and do NOT reconcile
+        // them", and "a panel naming any one of these Safes beside another must
+        // state that four signatures reach both". Adopted on sight for that
+        // reason — a producer instruction that reaches no consumer is the same
+        // defect as an unrendered score.
+        'structural_score_rescore_pending',
+        'one_authority_three_safes',
+        // ⚠️ FOUND BY THE MARKER ITSELF, minutes after it was widened to
+        // backing-overlay/1: five of dusd-alto's six backing notes reached no
+        // reader — including "92.5% OF ALL COLLATERAL VALUE IS A SINGLE ASSET"
+        // and "THERE IS NO INSURANCE FUND, SURPLUS BUFFER" — while the sixth
+        // (`is_seized_note`) already rendered. Checked each against the DOM
+        // before adopting rather than trusting the marker.
+        'zero_buffer_note',
+        'no_backstop_note',
+        'blended_ratio_note',
+        'verifiability_note',
+        'concentration_note',
         'authored_vs_band_note',
         'current_deviation_is_a_premium_note',
         'premium_cannot_close_by_trading_note',
@@ -252,8 +271,14 @@ const CommonRenderer = {
 
     // Keys inside an axis-basis block that are META or already rendered by a
     // dedicated slot — excluded from the marker so it stays a real signal.
+    // ⚠️ RENDERED ELSEWHERE, so the marker must not report them as unread. It
+    // fired on `coverage_note` the moment the collector was widened to
+    // contract-overlay/1 — a field with eleven read sites in this file. A false
+    // "unread" is worse than no marker: it teaches the reader to ignore it.
     AUTHORED_NOTE_IGNORE: [
-        'as_of', 'source', 'producer', 'collateral_ratio_basis'
+        'as_of', 'source', 'producer', 'collateral_ratio_basis',
+        'coverage_note', 'coverage_summary', 'cross_axis',
+        'is_seized_note'
     ],
 
     // `overlays` is [{axis, file, json}] — nulls (404s) already filtered by the
@@ -546,7 +571,16 @@ const CommonRenderer = {
                 Object.keys(base).forEach(function(k) { if (!has(pay, k)) kpt.push(k); });
                 var stale = self._dropStaleDerived(axis, m, ovr, kpt);
                 var replacedArrays = self._recordArrayReplacements(base, pay, ovr);
-                if (schema === 'axis-basis/1') self._collectAuthoredNotes(axis, pay);
+                // ⚠️ NOT axis-basis/1 ONLY. Both of riskAnalyst's new contract-overlay
+                // fields had zero read sites AND tripped no marker, because the
+                // collector was scoped to one schema — so the mechanism built to
+                // make an unread field visible was itself blind to the schema next
+                // door. Any merge-mode overlay carrying prose gets the same
+                // treatment now.
+                if (schema === 'axis-basis/1' || schema === 'contract-overlay/1' ||
+                    schema === 'backing-overlay/1') {
+                    self._collectAuthoredNotes(axis, pay);
+                }
                 data[axis] = m;
                 self.AXIS_PROVENANCE[axis] = carryVerdict({
                     contributors: priorContributors().concat([
@@ -7992,11 +8026,16 @@ const CommonRenderer = {
         Object.keys(block).forEach(function(k) {
             var v = block[k];
             if (typeof v !== 'string' || !v.trim()) return;
+            // ⚠️ ADOPTION IS CHECKED FIRST, and it has to be. The skip below is a
+            // substring test, so `structural_score_rescore_pending` — a key whose
+            // whole purpose is to be rendered beside the score — was swallowed as
+            // "a score's own sibling" and then rendered by nothing, because the
+            // sibling path only reads `_basis`. Adopted on the list, rendered.
+            if (self.AUTHORED_NOTE_KEYS.indexOf(k) >= 0) { notes.push({ key: k, text: v }); return; }
             // A score's own siblings are handled by the basis/addenda path.
             if (/_score(_|$)/.test(k)) return;
             if (/_generated_at$/.test(k)) return;
             if (self.AUTHORED_NOTE_IGNORE.indexOf(k) >= 0) return;
-            if (self.AUTHORED_NOTE_KEYS.indexOf(k) >= 0) { notes.push({ key: k, text: v }); return; }
             // ⚠️ Short strings are values, not arguments (a date, a venue name).
             // The marker fires on prose only, so a new scalar field does not read
             // as a missing paragraph.
@@ -8524,7 +8563,10 @@ const CommonRenderer = {
 
     _contractPanelsHtml(data) {
         var sp = data.asset_specific || {};
-        var out = this._topologyWalkHtml(data);
+        // ⚠️ IN THE PANEL, NOT ON THE HEAD. The axis-5 basis renders on the head,
+        // which ethena hides — so anything appended there is lost on exactly the
+        // pages this material matters for. Notes travel with the panel instead.
+        var out = this._authoredNotesHtml('contract') + this._topologyWalkHtml(data);
 
         // 2. Governance — gated on the NORMALISED shape only. apxusd and
         // syrupusdc publish governance under entirely different keys and are
