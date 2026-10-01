@@ -682,15 +682,38 @@ var DusdAltoRenderer = {
     // panel references it, so without this a reader counts separate controls that
     // do not exist. Same shape as the frxUSD six-addresses-one-owner-set pattern.
     //
+    // ⚠️⚠️ "FOUR SIGNATURES REACH ALL THREE" WAS WRONG AND I RENDERED IT. The
+    // producer corrected the field on 2026-10-01: treasury and governance are
+    // genuinely 4-of-7 over one owner set, but the EmergencyController gates on
+    // `pauserSafe.isOwner(msg.sender)` and never calls execTransaction, so the
+    // Safe threshold is bypassed entirely for halting. THREE ADDRESSES, ONE OWNER
+    // SET, TWO EFFECTIVE THRESHOLDS: four keys to move value, ONE to halt.
+    //
+    // ⚠️ So the marker no longer states a threshold at all. Any single figure is
+    // wrong for this asset whichever one is picked, and the producer publishes
+    // `power_surface_by_delay` for the full split — a number in a chip cannot
+    // carry it.
+    //
     // ⚠️ MEMBERSHIP IS TESTED AGAINST THE PRODUCER'S OWN TEXT, not a list I keep.
     // A hardcoded address list here would silently stop matching the day they
     // revise the set, and would be a second place to maintain the same fact.
+    // ⚠️ MATCHED ON THE ADDRESS PREFIX, ACROSS BOTH FIELDS — because matching the
+    // FULL address against prose broke the moment the producer reformatted. Their
+    // corrected text abbreviates to "0xA1148A1b…4228", so the full-string test
+    // failed and the marker silently disappeared from the page. That is the cost
+    // of testing membership against prose: it is hostage to formatting. A 10-char
+    // prefix (4 bytes) survives both the full and the elided form and is still
+    // distinctive; and both authority fields are searched, since the split now
+    // lives in `power_surface_by_delay`.
     _sharedAuthorityMark: function(data, addr) {
-        var note = ((data || {}).contract || {}).one_authority_three_safes;
-        if (typeof note !== 'string' || !addr) return '';
-        if (note.toLowerCase().indexOf(String(addr).toLowerCase()) < 0) return '';
+        var c = (data || {}).contract || {};
+        var note = [c.one_authority_three_safes, c.power_surface_by_delay]
+            .filter(function(x) { return typeof x === 'string'; }).join('\n');
+        if (!note || !addr) return '';
+        var probe = String(addr).slice(0, 10).toLowerCase();
+        if (probe.length < 10 || note.toLowerCase().indexOf(probe) < 0) return '';
         return ' <span class="shared-authority" title="' + CommonRenderer._escapeAttr(note) +
-            '">\u26a0\ufe0f 1 of 3 Safes \u2014 four signatures reach all three</span>';
+            '">\u26a0\ufe0f 1 of 3 Safes, one owner set \u2014 two thresholds</span>';
     },
 
     // ---- helpers ---------------------------------------------------------

@@ -249,6 +249,9 @@ const CommonRenderer = {
         // defect as an unrendered score.
         'structural_score_rescore_pending',
         'one_authority_three_safes',
+        // ⚠️ The split the chip cannot carry: four keys to move value, one to
+        // halt. Published after the three-Safes field was found wrong about pause.
+        'power_surface_by_delay',
         // ⚠️ FOUND BY THE MARKER ITSELF, minutes after it was widened to
         // backing-overlay/1: five of dusd-alto's six backing notes reached no
         // reader — including "92.5% OF ALL COLLATERAL VALUE IS A SINGLE ASSET"

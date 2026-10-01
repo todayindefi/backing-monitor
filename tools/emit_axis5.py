@@ -189,10 +189,44 @@ def derive_headline(layers):
                 f"NOT MEASURED: {names} — an unknown delay, not an absent one.")
 
     if delayed and undelayed:
-        d, u = delayed[0], undelayed[0]
-        return (f"A {d[0]} timelock covers {d[2]} ({d[1]}). "
-                f"{u[2]} ({u[1]}) has NO established delay — timelock: none. "
-                f"The delay protects the code and not the supply." + tail)
+        # ⚠️ "The delay protects the code and not the supply" WAS A STORED SENTENCE
+        # IN A FUNCTION WHOSE FIRST LINE FORBIDS STORED SENTENCES, and it was false
+        # on most assets carrying it. Measured across the 11 live files: apxUSD's
+        # asset-permission is delayed 4h and parameter 24h; both syrup pools delay
+        # MINTER_ROLE/BURNER_ROLE by 3h. On DUSD (Alto) the 1h covers mint, burn,
+        # setMinterCeiling AND seize — so the delay protects the supply, which is
+        # precisely what the sentence denied. ⚠️ A reader takes "not the supply" to
+        # mean minting is undelayed; that is the single claim most likely to be
+        # acted on. Found by riskAnalyst reading the headline against its own rows.
+        #
+        # ⚠️ AND IT NAMED ONLY delayed[0] AND undelayed[0]. apxUSD's headline cited
+        # contract-upgrade 72h and pause none while silently omitting that
+        # asset-permission (4h) and parameter (24h) are delayed too — file order
+        # decided which fact a reader saw. Both halves are now listed in full.
+        # ⚠️ A LAYER NAME CAN APPEAR ON BOTH SIDES, AND THE BARE NAME THEN LIES BY
+        # LOOKING LIKE A CONTRADICTION. syrupUSDC has two asset-permission layers —
+        # poolPermissionManager undelayed, MINTER_ROLE/BURNER_ROLE at 3h — and
+        # crvUSD has four bridge layers across three buckets. Both are true; a
+        # reader seeing the same word in "Delayed" and "NO established delay"
+        # cannot tell that without the keys. So keys are added ONLY where the name
+        # is ambiguous, keeping the common case short.
+        _names = [r[2] for r in delayed] + [r[2] for r in undelayed] + [u[2] for u in unmeasured]
+        _dupes = {n for n in _names if _names.count(n) > 1}
+
+        def _fmt(rows):
+            seen, out = set(), []
+            for tl, keys, layer in rows:
+                label = f"{layer} {tl}" if tl and tl != 'none' else str(layer)
+                if layer in _dupes and keys:
+                    short = ', '.join(str(keys).split(', ')[:2])
+                    label = f"{label} ({short})"
+                if label not in seen:
+                    seen.add(label)
+                    out.append(label)
+            return ', '.join(out)
+
+        return (f"Delayed: {_fmt(delayed)}. "
+                f"NO established delay: {_fmt(undelayed)}." + tail)
     if delayed and not undelayed:
         return (f"All MEASURED authority sits behind a {delayed[0][0]} timelock." + tail)
     if undelayed:
