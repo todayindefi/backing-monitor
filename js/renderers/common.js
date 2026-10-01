@@ -3338,10 +3338,73 @@ const CommonRenderer = {
             ' \u2014 not used as the axis figure \u24d8</div>';
     },
 
+    // ⚠️ THE EXECUTION COST AT MINIMUM SIZE WAS PUBLISHED ON 8 ASSETS AND RENDERED
+    // NOWHERE, AND THE SPEC PROMISED TO STATE IT. §Axis 3: "The standing cost is
+    // then STATED, not discarded." That worked only on ALL-IN ladders, where it sits
+    // in `slippage_bps` and the subtraction strips it. On an IMPACT ladder
+    // `slippage_bps` at the reference rung is 0.0 BY CONSTRUCTION — there is nothing
+    // to strip and nothing to state, so the cost became invisible rather than
+    // stated. It was never missing from the payload: it is `output_usd` / size.
+    //
+    //   syzUSD -237.8 bps · usde +58.5 · reUSD-RE +43.6 · syrupUSDT -16.5
+    //   susds +12.1 · apyUSD -9.7 · apxUSD +4.6 · hastra-prime -2.01
+    //
+    // Found by riskAnalyst asking why our depth tile ranks syrupUSDT ABOVE
+    // syrupUSDC while their report scores it below: impact -4.0 vs -8.6 bps at $1M
+    // (we are right), all-in -20.52 vs -7.68 (they are right). ⚠️ The surfaces were
+    // never in conflict — ours was SILENT on the quantity theirs scores.
+    //
+    // ⚠️ DERIVED FROM output_usd REGARDLESS OF CONVENTION, which is why it is one
+    // rule and not two. It reproduces the published field wherever the producer
+    // already used all-in — usg -54.17 vs -54.2 published, susdat 65.5 vs 65.54,
+    // usdai 4.5 vs 4.52, hastra-prime -2.01 vs -2.01 — so there is no branch to get
+    // wrong and no asset where the two readings race.
+    //
+    // ⚠️ NOT THE SAME NUMBER AS `standing_bps`, AND BOTH MUST SURVIVE.
+    // `standing_bps` is what `depthAtLimit` SUBTRACTS, and it has to stay in the
+    // rungs' own units or the subtraction double-counts on an all-in ladder and
+    // removes a real cost on an impact one. This one is for DISPLAY only. They
+    // coincide on all-in ladders; they must not be merged.
+    //
+    // ⚠️ AND IT IS NOT THE PEG DISCOUNT. It is spread + basis at the smallest probe,
+    // measured against the size sold. Axis 1 prices the discount; stating this on
+    // the exit-cost line is the cost of TRADING, and the tooltip says so rather than
+    // letting a reader net the two.
+    _executionCostBps(liq) {
+        if (!liq || typeof liq !== 'object') return null;
+        var q = (liq.exit_mark && liq.exit_mark.quotes) || null;
+        if (!q || typeof q !== 'object') return null;
+        var sizes = Object.keys(q).map(parseFloat).filter(isFinite).sort(function(a, b) { return a - b; });
+        if (!sizes.length) return null;
+        var refSize = typeof liq.slippage_reference_size_usd === 'number' &&
+                      sizes.indexOf(liq.slippage_reference_size_usd) !== -1
+            ? liq.slippage_reference_size_usd : sizes[0];
+        var rung = q[String(refSize)];
+        if (!rung || typeof rung !== 'object') return null;
+        var bps = null;
+        if (typeof rung.output_usd === 'number' && refSize > 0) {
+            bps = (rung.output_usd / refSize - 1) * 10000;
+        } else if (typeof rung.fill_ratio === 'number') {
+            bps = (rung.fill_ratio - 1) * 10000;
+        } else if (typeof rung.slippage_bps === 'number') {
+            // Last resort: the producer's own field, whatever convention it used.
+            bps = rung.slippage_bps;
+        }
+        if (typeof bps !== 'number' || !isFinite(bps)) return null;
+        return { bps: bps, size: refSize };
+    },
+
     _depthQualifierHtml(liq, data) {
         var st = liq.two_pct_depth_status;
         var br = liq.two_pct_depth_bracket;
-        if (liq.total_2pct_depth == null) return '';
+        // ⚠️ A DERIVED FIGURE USED TO LOSE ITS WHOLE EVIDENCE BLOCK. This returned ''
+        // the moment the producer published no scalar — but the tile still renders a
+        // figure in that case, derived from the rungs (syrupUSDT and syrupUSDC read
+        // "0.5% depth >=$1.0M" with total_2pct_depth null). So the one case where the
+        // reader most needs the basis and the execution level is the case that
+        // silently dropped both. The STATUS qualifier still requires the scalar,
+        // because `two_pct_depth_status` describes that scalar; the evidence does not.
+        var scalarAbsent = liq.total_2pct_depth == null;
         var tip = liq.two_pct_depth_basis || '';
         // ⚠️ A RELABELLED FLOOR HAS TO SHOW ITS EVIDENCE. Where the headline moved
         // to 0.5% off the rungs rather than off a producer declaration, the rungs
@@ -3357,19 +3420,25 @@ const CommonRenderer = {
         // before a single dollar of size impact. Shown only where it is material,
         // so the sixteen ladders that start at ~0 stay quiet.
         var standingLine = '';
-        if (data) {
-            var dd = this.depthAtLimit(data);
-            if (typeof dd.standing_bps === 'number' && Math.abs(dd.standing_bps) >= 2) {
-                standingLine = '<div class="text-[11px] text-amber-700">' +
-                    (dd.standing_bps < 0 ? 'costs ' : 'pays ') +
-                    Math.abs(dd.standing_bps).toFixed(1) + ' bps at the smallest quoted size, ' +
-                    'before any size impact \u2014 that standing cost is not counted as depth' +
-                    '</div>';
-            }
+        var ex = this._executionCostBps(liq);
+        if (ex && Math.abs(ex.bps) >= 2) {
+            standingLine = '<div class="text-[11px] text-amber-700" title="' + this._escapeAttr(
+                'Measured as output_usd / size at the ' + this.formatCurrency(ex.size) +
+                ' rung, so it is the ALL-IN cost of trading at minimum size: the venue\u2019s ' +
+                'spread plus the asset\u2019s basis against what was sold into. ' +
+                'The depth figure above deliberately EXCLUDES it \u2014 depth is the impact of ' +
+                'SIZE, and an asset can have excellent depth at a poor level. ' +
+                '\u26a0\ufe0f It is NOT the peg discount, which axis 1 prices; do not net the ' +
+                'two. Neither figure is adjudicated against the other here.') + '">' +
+                (ex.bps < 0 ? 'costs ' : 'pays ') +
+                Math.abs(ex.bps).toFixed(1) + ' bps at the smallest quoted size (' +
+                this.formatCurrency(ex.size) + '), before any size impact \u2014 ' +
+                'a cost of LEVEL, not of depth \u24d8</div>';
         }
         // ⚠️ APPENDED INSIDE wrap(), not at one return site. This function has six
         // return paths and picking one or two would have shown the evidence on
         // some assets and not others — the bug shape this file keeps hitting.
+        if (scalarAbsent) return headlineLine + standingLine;
         function wrap(txt, cls) {
             return '<div class="text-[11px] ' + (cls || 'text-slate-400') + '"' +
                 (tip ? ' title="' + CommonRenderer._escapeAttr(tip) + '"' : '') + '>' +
