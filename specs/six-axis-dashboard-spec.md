@@ -410,11 +410,33 @@ from an overlooked one, and a later editor cannot tell whether the score already
 ## Axis 3 — Liquidity & Exit
 
 **REQUIRED** · depth figure with its STATUS (`bracketed` / `ladder_exhausted` / `quote_failed` /
-`not_size_responsive`) · whether it is a floor · what the depth was measured AGAINST · primary
-redemption: gated or not, and for whom.
+`not_size_responsive`) · whether it is a floor · THE COST LIMIT IT WAS MEASURED AT · what the depth
+was measured AGAINST · primary redemption: gated or not, and for whom.
 
 ⚠️ **A floor is not a measurement.** `≥$100k` because the ladder stopped at $100k must not rate
 like $100k of measured depth. Say "floor, not a measurement" on the tile.
+
+⚠️ **DEPTH IS QUOTED AT 0.5%.** Depth answers "how much can I sell before losing more than X". For
+a peg-tracking asset a 2% loss is already a depeg — USG sells **$500,000 inside 2%** and **cannot
+sell $10,000 inside 0.5%**, same ladder, same morning. 50 bps is the default for every asset;
+`depth_threshold_bps` in `assets.json` overrides it per asset (empty today — a volatile asset would
+be the first entry). Owner decisions 2026-09-22 and 2026-09-26.
+
+⚠️ **A LADDER ANSWERS IN ONE OF THREE SHAPES, AND THE TILE MUST SAY WHICH.** A CROSSING (the rungs
+straddle the limit), a BRACKET (it fell between two rungs — the width is the ladder's RESOLUTION,
+not a measurement), or a FLOOR (the probing stopped first: "at least $X", never "the limit is $X").
+This is inherent to probing at discrete sizes, not a producer defect.
+
+⚠️ **A FIXED-RATE ROUTE CLAIMS NO PERCENTAGE.** USDS routes the Sky PSM and sUSDS returns its
+redemption rate as a quote: the same cost at every size, so no crossing exists to name and
+"0.5% depth $1M" is as false as "2% depth $1M". Render the route and its floor. The producer says
+so itself — *"publishing it as '2% depth' would read as a limit we found."* A flat ladder also may
+NOT displace an authored score; it is not evidence about depth at any threshold.
+
+```
+corpus 2026-10-01   8 floors · 5 brackets · 2 below the smallest probe · 2 fixed-rate
+                    every asset is answerable at 0.5% from rungs already published
+```
 
 ⚠️ **Exit eligibility is part of the axis, not a footnote.** reUSD's primary redemption is
 non-U.S.-persons-only and pays sUSDe on Mainnet. An axis that says "redeemable at NAV" without the
