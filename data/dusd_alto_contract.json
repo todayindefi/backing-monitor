@@ -1,0 +1,217 @@
+{
+  "schema_version": "contract/1",
+  "asset": "dusd_alto",
+  "producer": "security_analyst",
+  "as_of": "2026-09-26",
+  "generated_at": "2026-10-01T08:11:29Z",
+  "contract": {
+    "headline": "Delayed: asset-permission 1h, parameter 1h, contract-upgrade 1h. NO established delay: pause.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-26",
+    "source_file": "security_analyst/topology/assets/dusd-alto.yaml",
+    "layers": [
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-09-26",
+        "walked_by": "hand",
+        "target_name": "Alto DUSD issuance and burn permissions",
+        "terminal_name": "Alto governance Safe via AltoTimelockController",
+        "topology": "timelock-multisig",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "setMinterStatus",
+          "setMinterCeiling",
+          "setBurnerStatus",
+          "mint",
+          "burn"
+        ],
+        "timelock": "1h",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0",
+            "name": "Alto governance Safe",
+            "name_verified": true,
+            "via": "PROPOSER/EXECUTOR/CANCELLER -> AltoTimelockController -> DUSD owner functions",
+            "terminal": "timelock",
+            "holder_kind": "safe",
+            "terminal_address": "0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "1h",
+            "timelock_floor": "none",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "DUSD owner() is the timelock. Its current PROPOSER, EXECUTOR and CANCELLER holder is Safe 0xc49b…; DEFAULT_ADMIN is held only by the timelock itself. address(0) and 0x…dEaD hold no role, so execution is not open. The Safe is 4-of-7 with no module or guard. updateDelay(0) succeeds only with msg.sender equal to the timelock, establishing that a scheduled self-call can remove the current 3600-second delay."
+          },
+          {
+            "holder": "18 live capped minter contracts",
+            "name": "13 AltoMintMarket proxies, three USMs, one DUSDFlashMinter, and one AltoConvexCreditLineMarket (18 total)",
+            "name_verified": true,
+            "via": "DUSD.allowedMinter/minterConfig",
+            "terminal": "timelock",
+            "holder_kind": "contract",
+            "terminal_address": "0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86",
+            "timelock": "1h",
+            "timelock_floor": "none",
+            "delay_applies": true,
+            "reach": "bounded",
+            "reach_bound": "each minterConfig ceiling; every live minter had current minted <= ceiling",
+            "hand_walk": "Complete SetMinterStatus history plus live allowedMinter and minterConfig reads found 18 live minters (the handoff's 17 became stale when 0x6b3458… was added). No minter is an EOA. Implementations resolve to AltoMintMarket, DUSDUsm, DUSDAdvancedPermissionsUsm, AltoConvexCreditLineMarket, or the verified DUSDFlashMinter. Every market/flash-minter owner resolves to the timelock; USM administrative roles also resolve there. All ceilings were non-zero and binding in DUSD.mint; no current minted amount exceeded its ceiling."
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "observed_at": "2026-09-26",
+        "walked_by": "hand",
+        "target_name": "USM configuration, seizure, and market risk parameters",
+        "terminal_name": "Alto governance Safe via AltoTimelockController",
+        "topology": "timelock-multisig",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "seize",
+          "updateExposureCap",
+          "updatePriceStrategy",
+          "updateFeeStrategy",
+          "market_parameters"
+        ],
+        "timelock": "1h",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0",
+            "name": "Alto governance Safe",
+            "name_verified": true,
+            "via": "timelock roles -> USM LIQUIDATOR/CONFIGURATOR and market owner",
+            "terminal": "timelock",
+            "holder_kind": "safe",
+            "terminal_address": "0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "1h",
+            "timelock_floor": "none",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "Permissioned USDC USM 0x2dE874… grants LIQUIDATOR_ROLE to the timelock. eth_call seize() from the timelock succeeded and returned 10,000 underlying base units; the same call from 0x…dEaD reverted with AccessControlUnauthorizedAccount. Verified source sets seized, zeros exposure and accrued fees, sets the cap to zero, then transfers the entire underlying balance to treasury Safe 0xA114… while DUSD remains outstanding. seize has notSeized but no notFrozen/pause modifier. The path is delayed today, but has no immutable delay floor."
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-09-26",
+        "walked_by": "hand",
+        "target_name": "Alto market, USM, and EmergencyController UUPS proxies",
+        "terminal_name": "Alto governance Safe via AltoTimelockController",
+        "topology": "timelock-multisig",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "upgradeToAndCall"
+        ],
+        "timelock": "1h",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0",
+            "name": "Alto governance Safe",
+            "name_verified": true,
+            "via": "timelock -> UUPS owner/upgrade role",
+            "terminal": "timelock",
+            "holder_kind": "safe",
+            "terminal_address": "0xfAe841679dc1A93D225ECc827E4BbF3e8d703F86",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "1h",
+            "timelock_floor": "none",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "Live market, USM, and EmergencyController addresses have non-zero EIP-1967 implementation slots. Their owner or administrative upgrade authority resolves to the timelock. DUSD itself is non-proxy immutable bytecode and is excluded from this upgrade layer."
+          }
+        ]
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "observed_at": "2026-09-26",
+        "walked_by": "hand",
+        "target_name": "DUSD, registered market, USM, and rewards emergency halt",
+        "terminal_name": "any one owner of the 4-of-7 pauser Safe",
+        "topology": "single-key",
+        "n": 1,
+        "m": 7,
+        "keys": [
+          "pauseDusd",
+          "pauseMarket",
+          "freezeMarket",
+          "freezeUsm",
+          "pauseUniversalRewardsDistributor"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "bounded",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x3c822f14a90955bf35278b42ba509feecad3a305",
+            "name": "EmergencyController",
+            "name_verified": true,
+            "via": "onlyPauserSafeOwner -> DUSD.pauser / registered targets",
+            "terminal": "eoa",
+            "holder_kind": "contract",
+            "terminal_address": "any owner of Safe 0x1c11d2d42929bd17aB7212b79c91862Adfa8bbe4",
+            "threshold": 1,
+            "owners": 7,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "bounded",
+            "reach_bound": "halt/freeze only; no unpause or asset transfer in the emergency entry points",
+            "hand_walk": "EmergencyController source checks pauserSafe.isOwner(msg.sender), not Safe signatures. The pauser Safe is 4-of-7 and has exactly the same seven owners as the treasury/governance Safes, but any one owner can invoke the controller. pauseDusd simulated successfully from owner 0x0e3CB3… and reverted Unauthorized for 0x…dEaD. Controller owner() is the timelock, which can replace its configuration and upgrade it after the current, reducible one-hour delay."
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "Signer custody, legal identity, funding provenance, and organizational independence are not established. Two of seven owners have nonce zero; all seven had zero code and therefore no EIP-7702 delegation at the observation block.",
+      "The audit review establishes report-disclosed finding status, not absence of undisclosed or post-review vulnerabilities.",
+      "The bug bounty is publicly documented in a repository updated 2026-09-25, but no independent submission test was made; the report does not call that proof of operational responsiveness."
+    ],
+    "authority_shared_with": [],
+    "review": null,
+    "walk_notes": [
+      "Hand-walked 2026-09-26 with read-only eth_call / eth_getStorageAt /",
+      "eth_getCode and complete event histories from Blockscout. Ethereum was pinned",
+      "at block 26,055,720. No transaction was signed or sent. Full evidence is in",
+      "the companion DUSD Alto authority-walk audit dated 2026-09-26.",
+      "",
+      "⚠️ RESOLVE THIS ASSET BY ADDRESS, NOT TICKER: this file is Alto DUSD at",
+      "0x63d74d22E689C715a04F2C13962b1f77F443d35b.",
+      "",
+      "⚠️ FOUR SIGNATURES CONTROL TREASURY AND GOVERNANCE. Treasury Safe",
+      "0xA114… and governance Safe 0xc49b… are distinct 4-of-7 Safes with exactly the",
+      "same seven owners. Neither has an enabled module or guard. All seven owners",
+      "are EOAs with no EIP-7702 delegation code at the observation block.",
+      "",
+      "⚠️ THE ONE-HOUR TIMELOCK IS A SETTING, NOT A FLOOR. updateDelay(0)",
+      "succeeds when simulated from the timelock itself and reverts from the Safe and",
+      "0x…dEaD. A scheduled self-call can therefore reduce the delay to zero.",
+      "",
+      "⚠️ EMERGENCY PAUSE IS 1-OF-7, NOT 4-OF-7. EmergencyController allows",
+      "any individual owner of the pauser Safe to pause DUSD and registered",
+      "markets/USMs immediately. A live owner simulation succeeded; 0x…dEaD reverted."
+    ]
+  }
+}
