@@ -9,13 +9,20 @@
         "name": "Permanently closed collateral set: WETH / wstETH / rETH",
         "metric": "3 collateral branches; getToken(0..2) = WETH / wstETH / rETH and getToken(3) = address(0)",
         "source": "CollateralRegistry on-chain read, 2026-09-14",
-        "note": "The set cannot be extended by any administrator. WETH is direct ETH exposure; wstETH imports Lido risk and rETH imports Rocket Pool risk. All three remain correlated ETH-beta rather than independent collateral classes."
+        "note": "The set cannot be extended by any administrator. WETH is direct ETH exposure; wstETH imports Lido risk and rETH imports Rocket Pool risk. All three remain correlated ETH-beta rather than independent collateral classes.",
+        "slugs": [
+          "weth",
+          "wsteth",
+          "reth"
+        ]
       },
       {
         "name": "Chainlink ETH/USD and LST rate feeds",
         "metric": "ETH/USD 24h; stETH/USD 24h; rETH/ETH 48h staleness thresholds",
         "source": "deployed immutable PriceFeed configuration and internal BOLD assessment, verified 2026-09-14",
-        "note": "Each branch has constructor-fixed oracle addresses and staleness thresholds with no setter. A revert, stale or zero feed permanently shuts down the affected branch rather than failing over; lastGoodPrice then supports urgent redemptions. rETH uses min(market, exchange-rate). Coinspect BOLD-05's possible cross-branch redemption halt was not established as remediated. Chainlink feed governance is outside the completed core authority walk."
+        "note": "Each branch has constructor-fixed oracle addresses and staleness thresholds with no setter. A revert, stale or zero feed permanently shuts down the affected branch rather than failing over; lastGoodPrice then supports urgent redemptions. rETH uses min(market, exchange-rate). Coinspect BOLD-05's possible cross-branch redemption halt was not established as remediated. Chainlink feed governance is outside the completed core authority walk.",
+        "terminal": true,
+        "kind": "oracle"
       }
     ],
     "downstream": [
@@ -26,7 +33,17 @@
         "note": "DOWNSTREAM, not collateral and not an upstream issuer dependency. sBOLD is tracked because material BOLD inventory sits behind a wrapper owner and pause surface. Those authority observations belong on axis 5 and are not priced again here; percentages are dated measurements, not timeless claims."
       }
     ],
-    "downstream_tracked": true,
-    "note": "The dependency chain is short and enumerable, but not absent. The immutable collateral set prevents governance from adding new backing counterparties; it does not remove Chainlink, Lido, Rocket Pool, ETH or the material downstream sBOLD wrapper. Live BOLD is identified by 0x6440f144b7e50D6a8439336510312d2F54beB01D, not by the case-colliding ticker."
+    "downstream_tracked": [],
+    "note": "The dependency chain is short and enumerable, but not absent. The immutable collateral set prevents governance from adding new backing counterparties; it does not remove Chainlink, Lido, Rocket Pool, ETH or the material downstream sBOLD wrapper. Live BOLD is identified by 0x6440f144b7e50D6a8439336510312d2F54beB01D, not by the case-colliding ticker.",
+    "upstream_resolution_rule": "⚠️ EVERY upstream entry MUST carry exactly one resolution: `slug` (one asset we score), `slugs` (a set entry naming several), `terminal: true` + `kind` (never scoreable — oracle, venue, contract, authority, incentive, real-world), or `unresolved` (scoreable, no report yet = COVERAGE GAP). ⚠️ TERMINAL AND UNRESOLVED ARE DIFFERENT CLAIMS and must never be merged: terminal means nothing is missing, unresolved means a report is owed. `address` is REQUIRED wherever the ticker collides in this corpus (DUSD x4, msUSD x3, reUSD x2, USD3 x2, BOLD x2) — a ticker-keyed graph would merge Resupply's reUSD (3.5) with Re Protocol's (5.0).",
+    "downstream_basis": {
+      "derived_by_inversion": [],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
   }
 }

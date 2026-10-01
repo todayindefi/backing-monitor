@@ -9,25 +9,34 @@
         "name": "WBTC (BitGo) — 89.7% of all debt",
         "metric": "1,292.12 WBTC collateral against 76,591,690 fxUSD debt; pool CR 143.8%",
         "source": "PoolManager pools on-chain, 2026-09-22",
-        "note": "⚠️ THE FRAMING \"backed by wstETH and WBTC\" IMPLIES A BALANCE THAT DOES NOT EXIST. The WBTC leg carries nearly all the debt at the LOWER ratio, and it is the CUSTODIAL one — an off-chain counterparty sits under 90% of the book."
+        "note": "⚠️ THE FRAMING \"backed by wstETH and WBTC\" IMPLIES A BALANCE THAT DOES NOT EXIST. The WBTC leg carries nearly all the debt at the LOWER ratio, and it is the CUSTODIAL one — an off-chain counterparty sits under 90% of the book.",
+        "unresolved": [
+          "WBTC"
+        ],
+        "unresolved_note": "89.7% of fxUSD's debt and NO REPORT. The single largest unscored exposure in these six files; the custodial leg sits under 90% of the book."
       },
       {
         "name": "wstETH (Lido) — 10.3% of debt",
         "metric": "6,661.71 wstETH against 8,786,912 fxUSD debt; pool CR 257.1%",
         "source": "PoolManager pools on-chain, 2026-09-22",
-        "note": "Comfortably collateralised, but a small share of the book."
+        "note": "Comfortably collateralised, but a small share of the book.",
+        "slug": "wsteth"
       },
       {
         "name": "Collateral price oracles",
         "metric": "wstETH 0x0C5C61025f047cB7e3e85852dC8eAFd7b9a4Abfb · WBTC 0xb3c90e64EB6f456A5F5C17Aa99b6aecA6f4a6390",
         "source": "pool.priceOracle() on-chain, 2026-09-22",
-        "note": "⚠️ REPOINTABLE UNDELAYED at three keys on every pool and at ONE key on the WBTC pool. Also carries OZ M-06's pre-fix formula: both are non-upgradeable and predate the fix marked resolved. ⚠️ The deployment manifest names a DIFFERENT oracle (PriceOracle#StETHPriceOracle 0x3716352d…) that no pool reads — a manifest is a deployment record, not a wiring record."
+        "note": "⚠️ REPOINTABLE UNDELAYED at three keys on every pool and at ONE key on the WBTC pool. Also carries OZ M-06's pre-fix formula: both are non-upgradeable and predate the fix marked resolved. ⚠️ The deployment manifest names a DIFFERENT oracle (PriceOracle#StETHPriceOracle 0x3716352d…) that no pool reads — a manifest is a deployment record, not a wiring record.",
+        "terminal": true,
+        "kind": "oracle"
       },
       {
         "name": "Curve USDC/fxUSD 0x5018BE882DccE5E3F2f3B0913AE2096B9b3fB61f",
         "metric": "$10.0M TVL, USDC side $4.0M; the only direct USDC venue of 33 pools holding fxUSD",
         "source": "Curve stable-ng + DexTracker enumeration, 2026-09-22",
-        "note": "⚠️ Doubles as a peg mechanism: isRedeemAllowed() reads this pool's EMA price, so the redemption gate and the exit venue are the SAME dependency."
+        "note": "⚠️ Doubles as a peg mechanism: isRedeemAllowed() reads this pool's EMA price, so the redemption gate and the exit venue are the SAME dependency.",
+        "terminal": true,
+        "kind": "venue"
       }
     ],
     "downstream": [
@@ -49,10 +58,26 @@
     ],
     "downstream_tracked": [
       "fxsave",
-      "usg",
+      "msusd-metronome",
       "reusd-resupply",
-      "msusd-metronome"
+      "usg"
     ],
-    "note": "⚠️ THE DEPENDENCY THAT MATTERS IS NOT A TOKEN. 90.55% of fxUSD supply is locked inside the f(x) Stability Pool, so the free float is ~2.2% — and fxSAVE redemption converts that locked supply into float on demand. The contingent seller pool is the whole book against a $4.65M realisable ceiling. ⚠️ TRANSPORT BUT NO CONSUMER AS OF 2026-09-22 — backing-monitor has no dashboard page for this asset yet; they are building one and requested these overlays. Nothing renders this file today, so it cannot yet reach a reader."
+    "note": "⚠️ THE DEPENDENCY THAT MATTERS IS NOT A TOKEN. 90.55% of fxUSD supply is locked inside the f(x) Stability Pool, so the free float is ~2.2% — and fxSAVE redemption converts that locked supply into float on demand. The contingent seller pool is the whole book against a $4.65M realisable ceiling. ⚠️ TRANSPORT BUT NO CONSUMER AS OF 2026-09-22 — backing-monitor has no dashboard page for this asset yet; they are building one and requested these overlays. Nothing renders this file today, so it cannot yet reach a reader.",
+    "upstream_resolution_rule": "⚠️ EVERY upstream entry MUST carry exactly one resolution: `slug` (one asset we score), `slugs` (a set entry naming several), `terminal: true` + `kind` (never scoreable — oracle, venue, contract, authority, incentive, real-world), or `unresolved` (scoreable, no report yet = COVERAGE GAP). ⚠️ TERMINAL AND UNRESOLVED ARE DIFFERENT CLAIMS and must never be merged: terminal means nothing is missing, unresolved means a report is owed. `address` is REQUIRED wherever the ticker collides in this corpus (DUSD x4, msUSD x3, reUSD x2, USD3 x2, BOLD x2) — a ticker-keyed graph would merge Resupply's reUSD (3.5) with Re Protocol's (5.0).",
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "fxsave"
+      ],
+      "asserted_only": [
+        "msusd-metronome",
+        "reusd-resupply",
+        "usg"
+      ],
+      "asserted_only_note": "⚠️ BACKFILL LIST, NOT NOISE. These were asserted by hand here and are NOT reproducible by inverting any upstream array, because the named asset has no dependencies file. They are preserved deliberately: regenerating from inversion alone would DELETE them, and one of them ('usg' on fxusd) is the edge whose absence from any consumer let a stale score sit live for nine days. Each entry is an upstream array that needs writing.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
   }
 }
