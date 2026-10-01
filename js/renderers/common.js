@@ -3936,6 +3936,16 @@ const CommonRenderer = {
         // requested size. Different mechanisms, same consequence: the figure is a
         // capacity limit, not a price crossing, and no percentage is true of it.
         // My first cut called this 'fixed_rate' and would have mislabelled hastra.
+        // ⚠️ A PRODUCER-MEASURED ANSWER AT THIS LIMIT OUTRANKS ANYTHING DERIVED
+        // HERE. PegTracker now searches its ladder a second time at 50 bps and
+        // publishes the result as its own block; reading their answer beats
+        // re-deriving it from their rungs, which is what this function did alone
+        // until 2026-10-01. Their first two published assets agreed with the
+        // derivation to the dollar — that agreement is the reason to switch, not
+        // a reason to keep both.
+        var published = this._publishedDepthAt(liq, bps);
+        if (published) return published;
+
         if (this._ladderIsFlat(liq)) {
             return { bps: bps, shape: 'capacity', value: typeof fig === 'number' ? fig : null };
         }
@@ -3975,6 +3985,52 @@ const CommonRenderer = {
                                         deepest: lastOk.bps };
         return { bps: bps, shape: 'bracket', value: lastOk.size,
                  bracket: [lastOk.size, firstBad.size], upper_bps: firstBad.bps };
+    },
+
+    // ⚠️ MATCHED ON `threshold_bps` INSIDE THE BLOCK, NOT ON THE KEY NAME. The
+    // block is called `depth_50bps` today; keying off that string would need a
+    // code edit the day a producer publishes a second one or the default moves.
+    // The block states its own threshold — read that.
+    //
+    // ⚠️ AND `primary_threshold_bps` IS NOT CONSULTED HERE, DELIBERATELY. It is
+    // live on PegTracker's primary block and reads `200`, and on the obvious
+    // interpretation it would send all 17 of their assets back to a 2% headline.
+    // It means "this is the producer's OWN headline block", which is true — their
+    // 2pct keys have always been the 200 search. Which question to ASK is the
+    // consumer's policy (spec, Axis 3), and the answer is 50. Confirmed with the
+    // producer 2026-10-01 rather than assumed.
+    _publishedDepthAt(liq, bps) {
+        if (!liq || typeof liq !== 'object') return null;
+        var keys = Object.keys(liq).filter(function(k) { return /^depth_\d+bps$/.test(k); });
+        for (var i = 0; i < keys.length; i++) {
+            var b = liq[keys[i]];
+            if (!b || typeof b !== 'object') continue;
+            if (b.threshold_bps !== bps) continue;
+            if (typeof b.depth_usd !== 'number') continue;
+            var shape;
+            if (b.status === 'not_size_responsive' || b.size_responsive === false) shape = 'capacity';
+            else if (b.status === 'below_smallest_probe') shape = 'below_probe';
+            else if (b.status === 'bracketed') {
+                // ⚠️ A BRACKET WITHOUT A USABLE RANGE FALLS BACK, it does not
+                // degrade to a point figure. Printing `depth_usd` alone there
+                // would assert a precision the producer explicitly declined —
+                // the status says they located a RANGE. Caught by a fixture, not
+                // by live data.
+                if (!Array.isArray(b.bracket) || typeof b.bracket[0] !== 'number' ||
+                    typeof b.bracket[1] !== 'number') return null;
+                shape = 'bracket';
+            }
+            else if (b.is_floor === true || b.status === 'ladder_exhausted') shape = 'floor';
+            else shape = 'measured';
+            return {
+                bps: bps, shape: shape, value: b.depth_usd,
+                bracket: shape === 'bracket' ? b.bracket : undefined,
+                // The producer's own sentence, used in place of the derived one.
+                published_basis: (typeof b.basis === 'string' && b.basis.trim()) ? b.basis.trim() : null,
+                from_producer: true
+            };
+        }
+        return null;
     },
 
     // ⚠️ FLATNESS IS JUDGED ON THE NON-REFERENCE RUNGS. Impact is struck against
@@ -4040,6 +4096,10 @@ const CommonRenderer = {
     // measurement of uncertainty in the venue rather than in our probing.
     _depthHeadlineNote(data) {
         var d = this.depthAtLimit(data);
+        // ⚠️ Their sentence, not mine, where they wrote one — it names the rungs
+        // and their costs ("BRACKETED between $250,000 (clears) and $400,000
+        // (1,051bps)"), which is strictly more than a derived shape can say.
+        if (d.published_basis) return d.published_basis;
         var pct = (Math.round(d.bps) / 100) + '%';
         if (d.shape === 'capacity') {
             // The producer's own reason where it gives one — a fixed rate and an
