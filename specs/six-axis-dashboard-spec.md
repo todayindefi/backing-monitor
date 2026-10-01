@@ -22,21 +22,24 @@ cites an asset, that asset is the evidence.
 ```
 1 Peg / Stability     PegTracker        market vs its own reference (par OR NAV)
 2 Backing             PegTracker        reserves, coverage, first-loss position
-3 Liquidity & Exit    DexTracker*       venue depth AND primary redemption
+3 Liquidity & Exit    SPLIT BY PART*    ladder PegTracker · venues DexTracker · redemption OPEN
 4 Dependencies        riskAnalyst       what fails INTO this asset from outside
 5 Smart Contract & Admin  security_analyst + riskAnalyst  how code can fail, and who can act ON it
 6 Issuer              riskAnalyst       editorial: who you are trusting
 ```
 
-\* DexTracker owns axis 3 by decision (2026-08-30). ⚠️ **THIS LINE IS UNDER REVISION AND ITS OLD
-FOOTNOTE LICENSED A LIVE DEFECT.** It used to read "PegTracker's embedded block still serves every
-asset until `liquidity/1` is adopted renderer-side" — adoption landed 2026-09-03, so on the plain
-reading PegTracker's ladder became superseded everywhere DexTracker publishes, including where
-DexTracker publishes NO FIGURE. reUSD-RE and syzUSD render `0.5% depth n/a` + `Not rated` over a
-PegTracker `depth_50bps` block measured hours earlier. **Ownership of the DEPTH FIGURE is an open
-question** — see the note in §Axis 3 and the draft at
-`specs/handoffs/DISPATCH-axis3-tiers-2026-10-01.md`. Until it closes, treat "owns the axis" as
-owning the venue structure, not as a licence to delete a measurement.
+\* ⚠️ **AXIS 3 IS OWNED BY PART, NOT WHOLE — see the ownership table in §Axis 3, which is the
+authority.** Owner decision 2026-10-01: the exit ladder and its crossing are PegTracker's (3h, 17
+assets); venue inventory and venue size are DexTracker's; **primary redemption is OPEN** because both
+publish it and they disagree on live data. This replaces, for the depth figure only, the 2026-08-30
+decision that DexTracker owns axis 3 whole.
+
+⚠️ **The sentence this footnote replaced licensed a live defect.** It read "PegTracker's embedded
+block still serves every asset until `liquidity/1` is adopted renderer-side" — adoption landed
+2026-09-03, so on the plain reading PegTracker's ladder became superseded everywhere DexTracker
+publishes, **including where DexTracker publishes NO FIGURE.** reUSD-RE and syzUSD still render
+`0.5% depth n/a` + `Not rated` over a `depth_50bps` block measured hours earlier. An owner with
+nothing to say hands off; it does not take the axis down with it.
 
 **One producer per axis** — except where two producers cover disjoint HALVES and say so; see §5.4.
 
@@ -72,14 +75,15 @@ axis 1  PegTracker        peg.{nav,nav_source,nav_basis,market_price,market_pric
 axis 2  PegTracker        backing.{collateral_ratio + basis, supply + scope, breakdown}
         riskAnalyst       backing-overlay/1 — what chain cannot show: first-loss attachment,
                           NAV write path, and an AUTHORED score gated per §6.3
-axis 3  DexTracker        liquidity/1 — depth, enumeration, venues, primary_exit
-                          ⚠️ daily; its `enumeration` carries its OWN clock and is 9–32d old
-                          (2026-10-01), so the payload stamp dates the DEPTH, not the venue list
-        PegTracker        the embedded liquidity block — 3-hourly, 17 assets, and NOT retired by
-                          liquidity/1's adoption. ⚠️ The old wording here said "until liquidity/1
-                          is adopted"; adoption landed 2026-09-03 and that reading deletes a live
-                          measurement wherever DexTracker declines to publish one. Depth ownership
-                          is OPEN — see §Axis 3.
+axis 3  ⚠️ OWNED BY PART — the table in §Axis 3 is the authority. Summary:
+        PegTracker        the exit ladder + crossing (rungs, status, floor, bracket, basis).
+                          3-hourly, 17 of 32 assets. NOT retired by liquidity/1's adoption.
+        DexTracker        liquidity/1 — bisected crossing, venue inventory + exclusions +
+                          completeness, venue size. ⚠️ `enumeration` carries its OWN clock and runs
+                          9–32d behind (2026-10-01): the payload stamp dates the DEPTH, not the
+                          venue list.
+        ⚠️ OPEN           primary redemption — both publish it, coverage is asymmetric both ways,
+                          and they disagree on syzUSD and reUSD-RE today.
 axis 4  riskAnalyst       dependencies/1 — upstream[] with name/metric/source/note
 axis 5  security_analyst  topology YAML: layers, timelock, timelock_floor, unmeasured[]
                           ⚠️ THEY DO NOT EMIT JSON. backing-monitor's tools/emit_axis5.py
@@ -479,24 +483,89 @@ the venue stamp is more than 24h older. Silent where the two halves share a cloc
 carry pools under the block's own `as_of`, and a second identical date would assert a split the
 asset does not have. Shipped `2e351bc0f`.
 
-⚠️ **OWNERSHIP OF THE DEPTH FIGURE IS OPEN, AND THE OBVIOUS SPLIT DOES NOT WORK.** Recorded so the
-next person does not re-derive a false premise. Measured 2026-10-01:
+## ⚠️ Axis 3 ownership — one owner per PART, with a declared fallback
+
+**Owner decision 2026-10-01.** Axis 3 is not owned whole. Each part below has one owner, its own
+cadence, and a declared behaviour when that owner has nothing to say. ⚠️ **This REPLACES, for the
+depth figure only, the 2026-08-30 decision that DexTracker owns axis 3 whole. Venue structure stays
+DexTracker's** — that half of the 2026-08-30 decision is unchanged.
+
+```
+PART                     OWNER        CADENCE     IF ABSENT OR STALE          ON CONFLICT
+exit ladder + crossing   PegTracker   3h          unrated, NAMING depth as    --
+  rungs, status, floor,                           the missing half
+  bracket, basis
+bisected crossing        DexTracker   daily       fall back to the ladder     the sharper
+  a located point                                 bracket, NEVER to n/a       measurement wins,
+  between two rungs                                                           labelled as bisected
+venue inventory          DexTracker   weekly/     PegTracker pool rows as a   DexTracker's wins:
+  venues, exclusions       monthly               LABELLED fallback tier       the curation IS the
+  with reasons,                                                               content
+  completeness
+venue size / TVL         DexTracker   weekly/     PegTracker reserves,        ⚠️ the two lists are
+                           monthly               labelled, SHAPE VARIES       NOT JOINABLE -- never
+                                                                              mix them in one table
+primary redemption       ⚠️ OPEN      --          ⚠️ OPEN                     ⚠️ OPEN -- both publish
+  gate + eligibility                                                          and they DISAGREE
+```
+
+⚠️ **THE FALLBACK COLUMN IS THE WHOLE POINT, AND IT IS WHAT WAS MISSING.** Adoption used to replace
+the WHOLE axis, so a payload that DECLINED to publish a figure deleted a measured one: reUSD-RE and
+syzUSD render `0.5% depth n/a` + `Not rated` over a PegTracker `depth_50bps` block measured hours
+earlier. **An owner with nothing to say hands off; it does not take the axis down with it.**
+
+⚠️ **STATUS: SPECCED, NOT YET IMPLEMENTED.** The renderer still adopts `liquidity/1` in `replace`
+mode. The two assets above are live-wrong until the fallback lands. Do not read this table as a
+description of current behaviour.
+
+### Why the obvious split does not work — measured 2026-10-01
+
+Recorded so nobody re-derives the premise that a ladder-vs-venues partition is available:
 
 - **Both producers query the same KyberSwap `/api/v1/routes` endpoint.** PegTracker: 4 fixed sizes
   ($1K/$10K/$50K/$100K), ≤8 rungs, every 3h, 17 of 32 registered assets, onboarding = 3 config
   fields + a flag. DexTracker: decade grid $100–$20M **plus bisection**, daily 07:45, 8 of 32, ~29
-  lines of hand config per asset. One instrument, two grids, a day apart — not two measurements of
-  two different things.
+  lines of hand config per asset. One instrument, two grids, a day apart.
 - **DexTracker's venue enumeration is partly DERIVED from DexTracker's own ladder**
-  (`rung.route_venues` → `depth.quote.venue_enumeration`), so "keep the venues, drop the depth" takes
-  part of the venue data with it. A ladder-vs-venues partition is not available.
+  (`rung.route_venues` → `depth.quote.venue_enumeration`). "Keep the venues, drop the depth" takes
+  part of the venue data with it, so tiers 2 and 3 cannot be separated — one probe produces both.
 - **The enumeration is not on the depth cadence.** `enumeration.as_of` on 2026-10-01: syzUSD 32d,
   reUSDe-RE 28d, USG 25d, USDM 25d, reUSD-RE 23d, BOLD 17d, DUSD 10d, fxUSD 9d; TSM-RH and USDG's
   whole payloads 25d and 22d. ⚠️ Cite these only with the date — membership and ages move.
-- The live draft proposes TIERS with a consumer preference order (bisected crossing when fresh, rung
-  bracket otherwise, **never nothing**) rather than a producer split, because that removes the
-  suppression class without asking either producer to stop publishing anything. **Not agreed by
-  either producer as of this writing — do not render as settled.**
+- **Venue SIZE went to DexTracker on SHAPE, not on freshness.** PegTracker's reserves are fresher
+  (on-chain, 3h) and come in **7 different shapes across 11 assets** — only 3 share one, hastra-prime
+  has 13 fields, syzUSD and yzUSD have 4 and **no pool address at all**. DexTracker's venue list is
+  ONE shape across all 8. One consistent schema refreshed slowly beats seven refreshed fast, because
+  the goal is an axis that builds the same way on every asset.
+- ⚠️ **AND THE LISTS CANNOT BE JOINED, so "list from one, sizes from the other" is not available.**
+  reUSD-RE shares 3 pools with 1 unmatched on PegTracker's side and 2 on DexTracker's; syzUSD shares
+  none and has no address field to join on. A join key that exists for some assets is not a join key.
+- **The worse-of-two-legs comparison is NOT a producer's job, which is what frees this table.** The
+  2026-08-30 "whole axis" decision rested on: the axis scores the worse of {venue depth, primary
+  redemption}, a comparison needs both operands on one clock, therefore no split. But neither data
+  producer computes it — the axis score arrives from riskAnalyst's risk feed
+  (`liquidity_score_source: risk-feed@…`, relayed by PegTracker) and the renderer only DISPLAYS which
+  leg binds. The comparison is editorial, in the report. So parts may be assigned on capability.
+
+### ⚠️ Why primary redemption is left OPEN rather than assigned
+
+Both producers publish it, coverage is asymmetric in BOTH directions, and they contradict each other
+on live data. Measured 2026-10-01 across the 8 assets DexTracker covers:
+
+```
+PegTracker publishes it for 10 assets overall -- but for only 4 of DexTracker's 8
+DexTracker publishes it for all 8 -- 2 of them by RELAYING riskAnalyst's canonical, not measuring
+syzUSD: PegTracker `gated: false` from a probe (`measured:erc4626_…`) vs DexTracker `unmeasured`
+        -- and riskAnalyst's report disagrees with PegTracker, so the renderer WITHHOLDS it today
+reUSD-RE: PegTracker `gated: true` vs DexTracker `gated: null`
+```
+
+**Assigning it to PegTracker would strip USG, BOLD, DUSD and fxUSD of their only redemption data** —
+the same "tier it, do not strip it" rule this table applies to venues, which the first draft of the
+proposal got wrong for redemption. Assigning it to DexTracker would promote two relays to the status
+of measurements. ⚠️ **Neither assignment is derivable from our evidence, so the spec states the
+conflict instead of picking.** Closing it needs the producers: see
+`specs/handoffs/DISPATCH-axis3-tiers-2026-10-01.md`.
 
 ⚠️ **Exit eligibility is part of the axis, not a footnote.** reUSD's primary redemption is
 non-U.S.-persons-only and pays sUSDe on Mainnet. An axis that says "redeemable at NAV" without the
@@ -622,6 +691,15 @@ A declared `schema_version` must be adopted renderer-side before it renders, WIT
 - **replace** — the axis's owner supplies the whole axis; nothing of the base survives.
 - **merge** — a SUPPLEMENT beside what the dashboard computes, per field.
 
+⚠️ **`replace` IS NOT ADMISSIBLE ON AN AXIS OWNED BY PART, AND AXIS 3 IS STILL USING IT.** "Nothing
+of the base survives" and "an owner with nothing to say hands off" are contradictory, and the
+contradiction is live: `liquidity/1` is adopted `replace`, so DexTracker declining to publish a depth
+figure deletes PegTracker's measured one on reUSD-RE and syzUSD. An axis with a §Axis 3-style
+ownership table needs a third mode — **replace PER PART, with the declared fallback** — and until it
+exists the table in §Axis 3 describes intent, not behaviour. ⚠️ Whoever implements it: the fallback
+is the feature. A mode that replaces per part but falls back to silence reproduces the defect one
+field along.
+
 ⚠️ **Mode is not inferable from the schema.** Replacing wholesale on a supplement would have
 discarded a computed collateral ratio and left only an attachment point.
 
@@ -636,12 +714,27 @@ security_analyst's authority walk + riskAnalyst's code half, whose `authority_no
 not restate the walk). ⚠️ **The chip must name every contributor** — crediting the last file
 fetched attributes one repo's work to another.
 
-⚠️ **AXIS 3 DOES NOT FIT THIS SHAPE, AND FORCING IT IS WHAT BROKE.** Disjoint halves presuppose the
-halves are separable; axis 3's two producers measure the SAME quantity off the SAME endpoint, and one
-of them derives its venue list from its own ladder. The seam being drafted is a PREFERENCE ORDER on
-one quantity (prefer the sharper measurement, fall back to the coarser, never to silence) rather than
-a partition of fields. When it lands, this section needs a second permitted shape — it is not an
-instance of the first. See §Axis 3.
+**SECOND PERMITTED SHAPE — a PREFERENCE ORDER on one quantity.** Disjoint halves presuppose the
+halves are separable. Axis 3's two producers measure the SAME quantity off the SAME endpoint, and one
+derives its venue list from its own ladder, so no partition of fields exists. Allowed instead when
+all four hold:
+
+```
+[ ] the PARTS are named, each with ONE owner        (axis 3's table, §Axis 3)
+[ ] each part declares its own CADENCE and CLOCK    -- not one payload stamp over several cadences
+[ ] every part declares a FALLBACK, and no fallback is SILENCE
+[ ] where both publish, the precedence rule is stated IN THE SPEC, not decided per render
+```
+
+⚠️ **A part whose precedence is genuinely unresolved is marked OPEN in the table, not quietly given
+to whoever publishes more fields.** Axis 3's primary-redemption row is the live example, and the
+reason is in §Axis 3: the two producers disagree on the same asset.
+
+⚠️ **AND THE CADENCE A PAYLOAD DECLARES BELONGS TO A CLOCK, NOT TO THE FILE.** DexTracker's payload
+declares `refresh_cadence: "daily"`, which is true of its depth and false of its venue enumeration in
+the same file — and the page paired "refreshes daily" with a 23-day-old venue age, reading as a
+producer three weeks late. A producer publishing more than one cadence must declare which clock each
+one describes.
 
 ## 5.5 Identity
 
@@ -1088,7 +1181,10 @@ NOT FINISHED                          FINISHED
     (run the published-vs-DOM diff; "published but unrendered" is this repo's
      most repeated defect).
 [ ] Every score labelled computed or authored.
-[ ] Every axis clock derived from its own as_of.
+[ ] Every axis clock derived from its own as_of — AND every FIGURE that has a clock of
+    its own shows it. ⚠️ §8.1 requires a clock per NUMBER; an axis-level clock satisfies
+    this line and can still hide a 23-day-old venue list behind a 13-hour-old depth
+    figure, which is how axis 3 passed acceptance while violating §8.1.
 [ ] Producer-authored prose is producer-authored. No composed issuer claims.
 [ ] Every derived figure cross-checked against an INDEPENDENT producer of the
     same quantity — not merely re-derived from its own inputs.
