@@ -1,0 +1,41 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "cusd",
+  "as_of": "2026-10-01T00:00:00Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "USDC — 94.3% of the reserve",
+        "slug": "usdc",
+        "edge_kind": "backing",
+        "materiality": "dominant"
+      },
+      {
+        "name": "Tokenized government money-market fund",
+        "unresolved": [
+          "cUSD's tokenized government MMF"
+        ],
+        "unresolved_note": "⚠️ Named as part of the reserve and not identified by instrument or issuer, so it cannot be resolved or scored."
+      }
+    ],
+    "upstream_resolution_rule": "⚠️ One resolution per entry: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL = nothing is missing. UNRESOLVED = a report is owed. Never merged. Bar set 2026-10-01: terminal requires the report to POSITIVELY STATE the backing; a peg_mechanism label is not evidence.",
+    "edge_kind_rule": "`backing` = my SOLVENCY depends on it. `venue` = my EXIT PRICE does.",
+    "coverage_note": "⚠️ RECORDED 2026-10-01. 1 dependent (stcusd). Cap Labs, MegaETH ecosystem. ⚠️ The report notes it is MARKETED as USDC/USD-backed while the reserve is blue-chip stablecoins plus a tokenized MMF — so the marketing and the composition are not the same claim.",
+    "collateral_as_of": "2026-08-24",
+    "downstream_tracked": [
+      "stcusd"
+    ],
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "stcusd"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
+  }
+}

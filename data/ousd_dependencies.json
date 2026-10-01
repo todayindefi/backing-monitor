@@ -1,0 +1,46 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "ousd",
+  "as_of": "2026-10-01T00:00:00Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "USDC — the terminal asset under every strategy",
+        "slug": "usdc",
+        "edge_kind": "backing",
+        "materiality": "dominant",
+        "note": "Reached through strategies rather than held directly: Morpho v2 52.5%, a Cross-Chain Master allocation, and vault-idle USDC."
+      },
+      {
+        "name": "Morpho — the dominant strategy venue at 52.5%",
+        "terminal": true,
+        "kind": "protocol"
+      },
+      {
+        "name": "⚠️ AMO self-minted OUSD is NOT collateral-backed",
+        "terminal": true,
+        "kind": "authority",
+        "note": "⚠️ SAME SHAPE AS crvUSD's PEGKEEPER. This report establishes amo_usdc_only = pol_self_minted EXACTLY, so a share of supply is protocol-minted and has no upstream at all. A lookthrough assuming every unit is collateralised overstates the backing — and the report records that identity as the correct way to handle it."
+      }
+    ],
+    "upstream_resolution_rule": "⚠️ One resolution per entry: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL = nothing is missing. UNRESOLVED = a report is owed. Never merged. Bar set 2026-10-01: terminal requires the report to POSITIVELY STATE the backing; a peg_mechanism label is not evidence.",
+    "edge_kind_rule": "`backing` = my SOLVENCY depends on it. `venue` = my EXIT PRICE does.",
+    "coverage_note": "⚠️ RECORDED 2026-10-01. 1 dependent (usg). CR ~100.45% on ~$6.2M supply — a thin cushion, so strategy composition matters more than it would at a higher ratio.",
+    "collateral_as_of": "2026-08-24",
+    "downstream_tracked": [
+      "usg"
+    ],
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "usg"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
+  }
+}

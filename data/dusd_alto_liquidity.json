@@ -3,7 +3,7 @@
  "asset_slug": "dusd_alto",
  "as_of": "2026-09-30T23:46:50Z",
  "producer": "dextracker",
- "note": "Axis 3 (Liquidity & Exit), single producer. Measured exit evidence only; no risk score. Alto Protocol's DUSD 0x63d74d22E689C715a04F2C13962b1f77F443d35b -- NOT Dialectic USD, dTRINITY dUSD or DeFi Dollar, which share the ticker. The 2% crossing lies above the asset's supply; `depth.depth_usd` is the float cap and the crossing is retained in `depth.curve_crossing_above_supply`.",
+ "note": "Axis 3 (Liquidity & Exit), single producer. Measured exit evidence only; no risk score. Alto Protocol's DUSD 0x63d74d22E689C715a04F2C13962b1f77F443d35b -- NOT Dialectic USD, dTRINITY dUSD or DeFi Dollar, which share the ticker. The 2% crossing lies above the asset's supply; `depth.depth_usd` is capped at supply outside the pool (an upper bound, not third-party float) and the crossing is retained in `depth.curve_crossing_above_supply`.",
  "depth": {
   "status": "supply_capped",
   "depth_usd": 25954.895937847206,
@@ -30,7 +30,7 @@
    "spec": "riskAnalyst liquidity-ladder-spec.md \u00a77 (178e54a)"
   },
   "slippage_convention": "Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. The dated external mid sizes the input notional and is NOT the impact reference.",
-  "basis": "The -200bps crossing sits at $3,408,203, ABOVE the float that can actually reach the market ($25,955 of $1,323,214 total supply, the rest sitting inside curve DUSD/frxUSD pool 0x104d6a1b). Every unit that can be sold clears inside the threshold, so `depth_usd` is that cap, not the crossing. The crossing is retained in `curve_crossing_above_supply` as a property of the pool curve.",
+  "basis": "The -200bps crossing sits at $3,408,203, ABOVE the supply outside the pool ($25,955 of $1,323,214 total supply, the rest sitting inside curve DUSD/frxUSD pool 0x104d6a1b). `depth_usd` is that cap, not the crossing: an upper bound on what could be sold, NOT a measure of what holders hold. Supply outside the pool still includes any protocol-owned balances, so third-party sellable float may be far smaller. The crossing is retained in `curve_crossing_above_supply` as a property of the pool curve.",
   "bracket": {
    "last_clearing_size_usd": 3408203.125,
    "last_clearing_marginal_impact_bps": -181.45684561430397,
@@ -327,7 +327,7 @@
    },
    "depth_usd": 25954.895937847206,
    "is_floor": false,
-   "basis": "The 0.5% crossing also sits above what can reach the market; capped at the same float as the headline. Curve property retained in curve_crossing_above_supply.",
+   "basis": "The 0.5% crossing also sits above the supply cap; capped at the same figure as the headline. Curve property retained in curve_crossing_above_supply.",
    "note": "Primary figure for a STABLE asset per spec \u00a77.8; the 2% bracket above is retained for comparison across the corpus. Widths are independent: this one may be wider than the 2% bracket where it coincides with a router split boundary (\u00a77.7).",
    "curve_crossing_above_supply": {
     "depth_usd": 3074218.75,
@@ -1074,10 +1074,6 @@
   "leg": "supply_cap",
   "basis": "The secondary route clears 2% only above $2.5M, but only 23,935 DUSD exist outside the pool being quoted (517,907 if the treasury withdraws its 61.9% of LP, at which point the crossing falls to ~$961K). Holders have no primary redemption. The binding fact is how little DUSD can reach the market, not the curve.",
   "risk_score": null
- },
- "consumer_status": {
-  "registered_in_backing_monitor_assets": false,
-  "basis": "Originated 2026-09-21 for riskAnalyst's dusd-alto-usd-exit-ladder handoff. No consumer registration asserted."
  },
  "refresh_cadence": "daily",
  "payload_revised_at": "2026-09-30T23:46:50Z"

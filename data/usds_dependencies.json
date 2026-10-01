@@ -1,0 +1,59 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "usds",
+  "as_of": "2026-10-01T00:00:00Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "Spark — 33.01% of Sky vat debt",
+        "terminal": true,
+        "kind": "protocol",
+        "note": "⚠️ Spark and Grove together are 48.35% of USDS backing. Declared in this report's `dependency_protocols`, so the protocol-level edge was already recorded; what was missing was the asset-level graph. Nearly half the backing is an allocation decision rather than a token."
+      },
+      {
+        "name": "Grove — 15.34% of Sky vat debt",
+        "terminal": true,
+        "kind": "protocol"
+      },
+      {
+        "name": "T-bills — 15.78% of backing",
+        "terminal": true,
+        "kind": "rwa-reserve"
+      },
+      {
+        "name": "Crypto lending book — ~30% of backing, on-chain plus OTC",
+        "unresolved": [
+          "Sky crypto lending collateral set"
+        ],
+        "unresolved_note": "⚠️ ~30% OF BACKING IS CRYPTO LENDING against 15.78% T-bills, and the collateral set is not enumerated here. The single largest unresolved share of any asset in this pass."
+      },
+      {
+        "name": "⚠️ USDS minted against USDS is NOT external collateral",
+        "terminal": true,
+        "kind": "authority",
+        "note": "⚠️ This report already flags the double-count: some vat debt was minted against positions that USDS itself created, and counting that as external collateral COUNTS USDS TWICE. A lookthrough that sums vat debt without this correction overstates backing. Flagged in the report, not resolved."
+      }
+    ],
+    "upstream_resolution_rule": "⚠️ One resolution per entry: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL = nothing is missing. UNRESOLVED = a report is owed. Never merged. Bar set 2026-10-01: terminal requires the report to POSITIVELY STATE the backing; a peg_mechanism label is not evidence.",
+    "edge_kind_rule": "`backing` = my SOLVENCY depends on it. `venue` = my EXIT PRICE does.",
+    "coverage_note": "⚠️ RECORDED 2026-10-01. 1 dependent (usdp-parallel). Sky/MakerDAO.",
+    "collateral_as_of": "2026-09-06",
+    "downstream_tracked": [
+      "usdm",
+      "usdp-parallel"
+    ],
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "usdm",
+        "usdp-parallel"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
+  }
+}
