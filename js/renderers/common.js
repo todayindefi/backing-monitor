@@ -2736,7 +2736,9 @@ const CommonRenderer = {
         // means the producer measured the crossing, found it ABOVE the float that
         // can reach the market, and published the FLOAT in `depth_usd` instead.
         // DUSD (Alto): the -200bps crossing sits at $2.51M against $821,855 of
-        // total supply, so `depth_usd` is $23,935 of reachable float — the other
+        // total supply, so `depth_usd` is $23,935 of supply outside the pool — an
+        // UPPER BOUND on what could be sold, not third-party float (measured at
+        // 946.70; the rest is protocol-owned). The other
         // 797,920 sit inside the Curve pool being quoted.
         //
         // The band is absolute — [2M, 1M, 500K, 100K] — so that float rates 1/5
@@ -3428,7 +3430,24 @@ const CommonRenderer = {
                 ? ' \u2014 the 2% crossing sits above it at ' +
                   (cross.is_floor === true ? '\u2265' : '') + this.formatCurrency(cross.depth_usd)
                 : '';
-            return wrap('reachable float, not a depth crossing' + crossTxt, 'text-amber-700');
+            // ⚠️ THIS STRING IS OURS AND IT SAID "reachable float", WHICH OVERSTATES
+            // BY ~26x. DexTracker's figure for dusd-alto is supply-outside-the-pool
+            // (24,936.18); riskAnalyst measured the third-party float at 946.70,
+            // the gap being protocol-owned — two AltoBorrowMarkets and two fee
+            // timelocks. "Float" is the word a reader prices an exit on.
+            //
+            // ⚠️⚠️ AND I DISPATCHED IT TO DexTracker AS THEIR WORDING, twice,
+            // including the sentence "it is your string and we do not rewrite
+            // producer copy". It was never theirs — it is hardcoded here. I
+            // verified the FIGURE's provenance and assumed the WORDING came with
+            // it. They corrected it. Their own payload prose had the same
+            // overstatement in different words and they fixed that end.
+            //
+            // ⚠️ The two quantities also DIVERGE: +1,000 DUSD minted into a borrow
+            // market raises supply-outside-pool and leaves third-party float
+            // untouched, so this figure can grow while nothing new can be sold.
+            return wrap('supply outside the pool \u2014 an upper bound on what could be sold, ' +
+                        'not third-party float' + crossTxt, 'text-amber-700');
         }
         if (st === 'quote_failed') {
             return wrap('floor \u2014 the deeper rung returned a broken route', 'text-amber-700');

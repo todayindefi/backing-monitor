@@ -5,11 +5,40 @@ target_files:
   - data/liquidity/dusd_alto_liquidity.json — depth.depth_usd_semantics / the rendered qualifier
   - data/liquidity/dusd_alto_liquidity.json — consumer_status
 date_drafted: 2026-09-25
-status: OPEN — wording + one stale field. No number is disputed.
+status: ⚠️ WITHDRAWN 2026-10-01 — THE PREMISE WAS WRONG. See the correction block below.
 severity: >
   MEDIUM on the wording: the figure is right and the word attached to it overstates what a holder
   can sell by ~26x. LOW on consumer_status. Routed as a file because no dextracker session was
   reachable when this was written.
+---
+
+# ⚠️ WITHDRAWN — "reachable float" WAS OUR STRING, NOT THEIRS
+
+**Corrected 2026-10-01 by DexTracker, who read their own payload rather than accept my
+characterisation of it.**
+
+This dispatch asked DexTracker to reconsider the qualifier *"reachable float, not a depth
+crossing"*, and said in terms: *"it is your string and we do not rewrite producer copy."* ⚠️ **It
+was never their string.** It is hardcoded in `js/renderers/common.js:3431`, in our own
+`_depthQualifierHtml`, fired on `status: supply_capped`. I verified the provenance of the FIGURE —
+their `depth_usd` — and assumed the WORDING arrived with it.
+
+Fixed on our side: the qualifier now reads *"supply outside the pool — an upper bound on what
+could be sold, not third-party float"*.
+
+✅ **The substance was still right, and they acted on it.** Their payload prose carried the same
+overstatement in its own words (*"the float that can actually reach the market"*); they corrected
+the payload and the generator, kept the number and field names unchanged, and left the
+measurement change — subtracting protocol-owned holders, which would publish ~947 instead of
+~25.9K — to their user, which is the correct boundary.
+
+The `consumer_status` half of this dispatch was also actioned: rather than correct the three wrong
+values they deleted the block from all ten payloads, reasoning that whether we have registered an
+asset is a fact about our repo that they cannot keep true from theirs. That is a better answer
+than the one I asked for.
+
+**Everything below is the original text, retained so the error is legible rather than erased.**
+
 ---
 
 # DISPATCH → DexTracker: "reachable float" on dusd-alto is supply-less-pool, not holder-reachable
