@@ -28,8 +28,15 @@ cites an asset, that asset is the evidence.
 6 Issuer              riskAnalyst       editorial: who you are trusting
 ```
 
-\* DexTracker owns axis 3 by decision; PegTracker's embedded block still serves every asset
-until `liquidity/1` is adopted renderer-side.
+\* DexTracker owns axis 3 by decision (2026-08-30). ⚠️ **THIS LINE IS UNDER REVISION AND ITS OLD
+FOOTNOTE LICENSED A LIVE DEFECT.** It used to read "PegTracker's embedded block still serves every
+asset until `liquidity/1` is adopted renderer-side" — adoption landed 2026-09-03, so on the plain
+reading PegTracker's ladder became superseded everywhere DexTracker publishes, including where
+DexTracker publishes NO FIGURE. reUSD-RE and syzUSD render `0.5% depth n/a` + `Not rated` over a
+PegTracker `depth_50bps` block measured hours earlier. **Ownership of the DEPTH FIGURE is an open
+question** — see the note in §Axis 3 and the draft at
+`specs/handoffs/DISPATCH-axis3-tiers-2026-10-01.md`. Until it closes, treat "owns the axis" as
+owning the venue structure, not as a licence to delete a measurement.
 
 **One producer per axis** — except where two producers cover disjoint HALVES and say so; see §5.4.
 
@@ -66,7 +73,13 @@ axis 2  PegTracker        backing.{collateral_ratio + basis, supply + scope, bre
         riskAnalyst       backing-overlay/1 — what chain cannot show: first-loss attachment,
                           NAV write path, and an AUTHORED score gated per §6.3
 axis 3  DexTracker        liquidity/1 — depth, enumeration, venues, primary_exit
-        PegTracker        the embedded liquidity block, until liquidity/1 is adopted
+                          ⚠️ daily; its `enumeration` carries its OWN clock and is 9–32d old
+                          (2026-10-01), so the payload stamp dates the DEPTH, not the venue list
+        PegTracker        the embedded liquidity block — 3-hourly, 17 assets, and NOT retired by
+                          liquidity/1's adoption. ⚠️ The old wording here said "until liquidity/1
+                          is adopted"; adoption landed 2026-09-03 and that reading deletes a live
+                          measurement wherever DexTracker declines to publish one. Depth ownership
+                          is OPEN — see §Axis 3.
 axis 4  riskAnalyst       dependencies/1 — upstream[] with name/metric/source/note
 axis 5  security_analyst  topology YAML: layers, timelock, timelock_floor, unmeasured[]
                           ⚠️ THEY DO NOT EMIT JSON. backing-monitor's tools/emit_axis5.py
@@ -455,6 +468,36 @@ corpus 2026-10-01   8 floors · 6 brackets · 3 capacity · 0 below-the-smallest
                     every asset is answerable at 0.5% from rungs already published
 ```
 
+⚠️ **DEPTH AND VENUE STRUCTURE EACH STATE THEIR OWN AGE, WHERE EACH PUBLISHES ONE.** The axis clock
+shows the axis's STALEST input, which is the right rule for an axis and the wrong number to read
+either half by: on reUSD-RE the ladder was probed 13h ago and the venue enumeration is 23 DAYS old,
+so the heading read "refreshes daily · 23d old" — a producer on time for the daily thing presented as
+three weeks late, and the headline depth figure tarred with the age of a monthly sweep. Required
+where a venue-specific stamp exists (`enumeration.as_of`, else `venues_as_of`): the venue list and
+its TVL carry "enumerated <date> · N old", and the depth figure carries its own measured-at whenever
+the venue stamp is more than 24h older. Silent where the two halves share a clock — 23 base blocks
+carry pools under the block's own `as_of`, and a second identical date would assert a split the
+asset does not have. Shipped `2e351bc0f`.
+
+⚠️ **OWNERSHIP OF THE DEPTH FIGURE IS OPEN, AND THE OBVIOUS SPLIT DOES NOT WORK.** Recorded so the
+next person does not re-derive a false premise. Measured 2026-10-01:
+
+- **Both producers query the same KyberSwap `/api/v1/routes` endpoint.** PegTracker: 4 fixed sizes
+  ($1K/$10K/$50K/$100K), ≤8 rungs, every 3h, 17 of 32 registered assets, onboarding = 3 config
+  fields + a flag. DexTracker: decade grid $100–$20M **plus bisection**, daily 07:45, 8 of 32, ~29
+  lines of hand config per asset. One instrument, two grids, a day apart — not two measurements of
+  two different things.
+- **DexTracker's venue enumeration is partly DERIVED from DexTracker's own ladder**
+  (`rung.route_venues` → `depth.quote.venue_enumeration`), so "keep the venues, drop the depth" takes
+  part of the venue data with it. A ladder-vs-venues partition is not available.
+- **The enumeration is not on the depth cadence.** `enumeration.as_of` on 2026-10-01: syzUSD 32d,
+  reUSDe-RE 28d, USG 25d, USDM 25d, reUSD-RE 23d, BOLD 17d, DUSD 10d, fxUSD 9d; TSM-RH and USDG's
+  whole payloads 25d and 22d. ⚠️ Cite these only with the date — membership and ages move.
+- The live draft proposes TIERS with a consumer preference order (bisected crossing when fresh, rung
+  bracket otherwise, **never nothing**) rather than a producer split, because that removes the
+  suppression class without asking either producer to stop publishing anything. **Not agreed by
+  either producer as of this writing — do not render as settled.**
+
 ⚠️ **Exit eligibility is part of the axis, not a footnote.** reUSD's primary redemption is
 non-U.S.-persons-only and pays sUSDe on Mainnet. An axis that says "redeemable at NAV" without the
 gate describes an exit most holders do not have.
@@ -592,6 +635,13 @@ Allowed ONLY when they cover disjoint halves AND the seam is declared in the dat
 security_analyst's authority walk + riskAnalyst's code half, whose `authority_note` states it does
 not restate the walk). ⚠️ **The chip must name every contributor** — crediting the last file
 fetched attributes one repo's work to another.
+
+⚠️ **AXIS 3 DOES NOT FIT THIS SHAPE, AND FORCING IT IS WHAT BROKE.** Disjoint halves presuppose the
+halves are separable; axis 3's two producers measure the SAME quantity off the SAME endpoint, and one
+of them derives its venue list from its own ladder. The seam being drafted is a PREFERENCE ORDER on
+one quantity (prefer the sharper measurement, fall back to the coarser, never to silence) rather than
+a partition of fields. When it lands, this section needs a second permitted shape — it is not an
+instance of the first. See §Axis 3.
 
 ## 5.5 Identity
 
