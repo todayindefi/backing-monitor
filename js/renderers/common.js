@@ -3987,7 +3987,11 @@ const CommonRenderer = {
         // 4.8 bps both arrive with a producer block, so the line would never have
         // rendered for them. Computed once, from the rungs, regardless.
         var rungs0 = this._ladderRungs(liq);
-        var standingBps = rungs0.length ? rungs0[0].bps : null;
+        var refSize0 = liq.slippage_reference_size_usd, ref0 = null;
+        if (typeof refSize0 === 'number') {
+            ref0 = rungs0.filter(function(r) { return r.size === refSize0; })[0] || null;
+        }
+        var standingBps = rungs0.length ? (ref0 || rungs0[0]).bps : null;
 
         var published = this._publishedDepthAt(liq, bps);
         if (published) {
@@ -4041,7 +4045,20 @@ const CommonRenderer = {
         // ⚠️ What this removes is NOT discarded: `standing_bps` carries it to the
         // tile as the exit cost at minimum size, so an asset whose smallest probe
         // already costs real money still says so.
-        var standing = rungs[0].bps;
+        // ⚠️ THE REFERENCE RUNG IS NAMED WHERE THE PRODUCER NAMES IT. PegTracker
+        // publishes `slippage_reference_size_usd` at axis level (10,000 on usg,
+        // whose ladder starts at $10k). Positional rungs[0] happens to agree
+        // today; it would not if a producer ever struck impact against something
+        // other than its smallest probe, and then we would be subtracting the
+        // wrong number with nothing to notice it.
+        var refSize = liq.slippage_reference_size_usd;
+        var refRung = null;
+        if (typeof refSize === 'number') {
+            for (var ri = 0; ri < rungs.length; ri++) {
+                if (rungs[ri].size === refSize) { refRung = rungs[ri]; break; }
+            }
+        }
+        var standing = (refRung || rungs[0]).bps;
         var lastOk = null, firstBad = null;
         for (var i = 0; i < rungs.length; i++) {
             var impact = rungs[i].bps - standing;
