@@ -3348,13 +3348,29 @@ const CommonRenderer = {
         var headlineLine = headlineNote
             ? '<div class="text-[11px] text-slate-400">' + this._escapeAttr(headlineNote) + '</div>'
             : '';
+        // ⚠️ THE STANDING COST, STATED, BECAUSE THE DEPTH FIGURE NO LONGER CONTAINS
+        // IT. Depth is the impact of SIZE; what it costs to sell at the smallest
+        // quoted size is a different fact and a real one — USG's is −54.7 bps
+        // before a single dollar of size impact. Shown only where it is material,
+        // so the sixteen ladders that start at ~0 stay quiet.
+        var standingLine = '';
+        if (data) {
+            var dd = this.depthAtLimit(data);
+            if (typeof dd.standing_bps === 'number' && Math.abs(dd.standing_bps) >= 2) {
+                standingLine = '<div class="text-[11px] text-amber-700">' +
+                    (dd.standing_bps < 0 ? 'costs ' : 'pays ') +
+                    Math.abs(dd.standing_bps).toFixed(1) + ' bps at the smallest quoted size, ' +
+                    'before any size impact \u2014 that standing cost is not counted as depth' +
+                    '</div>';
+            }
+        }
         // ⚠️ APPENDED INSIDE wrap(), not at one return site. This function has six
         // return paths and picking one or two would have shown the evidence on
         // some assets and not others — the bug shape this file keeps hitting.
         function wrap(txt, cls) {
             return '<div class="text-[11px] ' + (cls || 'text-slate-400') + '"' +
                 (tip ? ' title="' + CommonRenderer._escapeAttr(tip) + '"' : '') + '>' +
-                txt + (tip ? ' \u24d8' : '') + '</div>' + headlineLine;
+                txt + (tip ? ' \u24d8' : '') + '</div>' + headlineLine + standingLine;
         }
         // ⚠️ TWO BRACKET SHAPES, AND THE RICHER ONE IS THE NEW DEFAULT.
         //
@@ -3962,8 +3978,19 @@ const CommonRenderer = {
         // until 2026-10-01. Their first two published assets agreed with the
         // derivation to the dollar — that agreement is the reason to switch, not
         // a reason to keep both.
+        // ⚠️ THE STANDING COST IS A FACT ABOUT THE LADDER, NOT ABOUT WHICH PATH
+        // ANSWERED. Attaching it only where WE derive would have hidden it on
+        // exactly the assets that have one: sUSDat's +69 bps premium and usdai's
+        // 4.8 bps both arrive with a producer block, so the line would never have
+        // rendered for them. Computed once, from the rungs, regardless.
+        var rungs0 = this._ladderRungs(liq);
+        var standingBps = rungs0.length ? rungs0[0].bps : null;
+
         var published = this._publishedDepthAt(liq, bps);
-        if (published) return published;
+        if (published) {
+            if (standingBps != null) published.standing_bps = standingBps;
+            return published;
+        }
 
         if (this._ladderIsFlat(liq)) {
             return { bps: bps, shape: 'capacity', value: typeof fig === 'number' ? fig : null };
@@ -3990,20 +4017,45 @@ const CommonRenderer = {
         // clears when its cost is no worse than the limit; there is no upper bound
         // on how favourable it may be.
         //
-        // This is the same defect PegTracker documents in its own ladder code
-        // ("the test only ever rejected rungs in the FAVOURABLE direction"), made
-        // again in the mirror image. Caught by the user reading the output.
+        // ⚠️⚠️ AND MEASURED RELATIVE TO THE FIRST RUNG, because two ladder
+        // conventions are in play and only one of them is depth. Nine feeds publish
+        // PRICE IMPACT against the venue's own smallest rung (first rung 0.0 by
+        // construction). Eight publish ALL-IN COST against notional, which folds in
+        // the asset's STANDING DISCOUNT — the price of the asset, not the price of
+        // your trade. USG's smallest rung is −54.7 bps and ~49 of that is its peg
+        // discount at fair value 0.99511, so "cannot sell $10,000 inside 0.5%" was
+        // a statement about USG's quote, not its depth; impact-basis the crossing
+        // is near $250K–$500K. Found by PegTracker, who stopped before publishing a
+        // 0.5% block for it rather than publish the conflation.
+        //
+        // Subtracting the first rung is a NO-OP on every impact ladder (0 − 0 = 0)
+        // and strips the standing cost from every all-in one. Verified across all
+        // 17 ladders: only usg's answer changes. ⚠️ Deliberately NOT keyed off the
+        // basis prose — `slippage_reference` is null on 15 of 17, so there is no
+        // structured field, and matching sentence prefixes breaks the first time
+        // someone rewords one.
+        //
+        // ⚠️ What this removes is NOT discarded: `standing_bps` carries it to the
+        // tile as the exit cost at minimum size, so an asset whose smallest probe
+        // already costs real money still says so.
+        var standing = rungs[0].bps;
         var lastOk = null, firstBad = null;
         for (var i = 0; i < rungs.length; i++) {
-            if (rungs[i].bps >= -bps) { lastOk = rungs[i]; }
+            var impact = rungs[i].bps - standing;
+            if (impact >= -bps) { lastOk = rungs[i]; }
             else { firstBad = rungs[i]; break; }
         }
+        // ⚠️ `below_probe` IS NOW ALL BUT UNREACHABLE and that is correct: impact at
+        // the smallest rung is zero by definition, so nothing can fail at it. The
+        // shape only ever fired because a standing discount was being counted as
+        // depth. Kept as a guard for a zero/negative limit, not as a live branch.
         if (lastOk === null) return { bps: bps, shape: 'below_probe', value: rungs[0].size,
-                                      worst: rungs[0].bps };
+                                      worst: rungs[0].bps, standing_bps: standing };
         if (firstBad === null) return { bps: bps, shape: 'floor', value: lastOk.size,
-                                        deepest: lastOk.bps };
+                                        deepest: lastOk.bps - standing, standing_bps: standing };
         return { bps: bps, shape: 'bracket', value: lastOk.size,
-                 bracket: [lastOk.size, firstBad.size], upper_bps: firstBad.bps };
+                 bracket: [lastOk.size, firstBad.size], upper_bps: firstBad.bps - standing,
+                 standing_bps: standing };
     },
 
     // ⚠️ MATCHED ON `threshold_bps` INSIDE THE BLOCK, NOT ON THE KEY NAME. The

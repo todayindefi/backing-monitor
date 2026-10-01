@@ -433,8 +433,25 @@ redemption rate as a quote: the same cost at every size, so no crossing exists t
 so itself — *"publishing it as '2% depth' would read as a limit we found."* A flat ladder also may
 NOT displace an authored score; it is not evidence about depth at any threshold.
 
+⚠️ **DEPTH IS THE IMPACT OF SIZE, MEASURED RELATIVE TO THE SMALLEST QUOTED RUNG.** Two ladder
+conventions are in play: nine feeds publish PRICE IMPACT against the venue's own smallest rung, and
+eight publish ALL-IN COST against notional, which folds in the asset's STANDING DISCOUNT — the price
+of the asset, not the price of your trade. USG's smallest rung is −54.7 bps and ~49 of that is its
+peg discount, so reading it as depth said "cannot sell $10,000 inside 0.5%" when the impact-basis
+crossing is near $250K–$500K. **Subtract the first rung.** It is a no-op on an impact ladder (0−0)
+and strips the standing cost from an all-in one.
+
+⚠️ **The standing cost is then STATED, not discarded** — "costs 54.7 bps at the smallest quoted
+size, before any size impact". Otherwise an asset whose smallest probe already costs real money
+reads as clean. And it belongs on the EXIT-COST line rather than the depth figure because the
+discount is already priced on axis 1; counting it twice is the double-count axis 2 forbids.
+
+⚠️ **This retires "below the smallest probe" as a shape.** Impact at the smallest rung is zero by
+definition, so nothing can fail at it. That reading only ever appeared where a standing discount
+was being counted as depth.
+
 ```
-corpus 2026-10-01   8 floors · 5 brackets · 2 below the smallest probe · 2 fixed-rate
+corpus 2026-10-01   8 floors · 6 brackets · 3 capacity · 0 below-the-smallest-probe
                     every asset is answerable at 0.5% from rungs already published
 ```
 
