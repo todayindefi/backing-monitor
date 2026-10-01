@@ -3,7 +3,7 @@
   "asset": "USDe",
   "asset_slug": "usde",
   "chain": "ethereum",
-  "timestamp": "2026-10-01T12:57:13Z",
+  "timestamp": "2026-10-01T13:56:48Z",
   "summary": {
     "total_supply": 4866806662.25,
     "supply_unit": "USD",
@@ -27,7 +27,7 @@
       "id": "attestation_stale",
       "severity": "warning",
       "message": "Custody data in use is the July 2026 attestation, 70d old (threshold 45d); latest published (custodian-attestations-of-assets-backing-usde-august-3) is 28d old",
-      "value": 69.5,
+      "value": 69.6,
       "scope": "usde_level"
     },
     {
@@ -79,13 +79,13 @@
         "0x2bf5d9a2326ad3c5ef8208f91af79c3ca1f0f67c",
         "0x3feaa7483fcfba130e68b41369dd78ff30465459"
       ],
-      "embedded_age_days": 69.5,
+      "embedded_age_days": 69.6,
       "latest_slug": "custodian-attestations-of-assets-backing-usde-august-3",
       "latest_url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-august-3",
       "latest_lastmod": "2026-09-03T10:43:28.000Z",
       "discovery_status": "ok",
       "latest_published_age_days": 28.1,
-      "age_days": 69.5,
+      "age_days": 69.6,
       "age_basis": "embedded_snapshot",
       "drift_status": "newer_available"
     },
@@ -116,10 +116,10 @@
     "peg_mechanism_score_source": "risk-feed@2026-10-01T01:45:04Z",
     "peg_mechanism_score_status": "ok",
     "peg_mechanism_score_generated_at": "2026-10-01T01:45:04Z",
-    "peg_mechanism_score_age_hours": 11.2
+    "peg_mechanism_score_age_hours": 12.2
   },
   "liquidity": {
-    "as_of": "2026-10-01T10:30:47Z",
+    "as_of": "2026-10-01T13:33:17Z",
     "total_tvl": null,
     "total_2pct_depth": 5000000.0,
     "total_2pct_depth_is_floor": true,
@@ -130,12 +130,14 @@
     "primary_threshold_bps": 200.0,
     "depth_50bps": {
       "threshold_bps": 50.0,
-      "depth_usd": 5000000.0,
-      "is_floor": true,
-      "status": "ladder_exhausted",
-      "size_responsive": true,
-      "unresponsive_note": null,
-      "basis": "A FLOOR, not a measurement. The deepest rung quoted ($5,000,000) still clears inside 50bps, so the crossing is somewhere above where we look. Publishing it as '0.5% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
+      "depth_usd": 10000.0,
+      "is_floor": false,
+      "status": "bracketed",
+      "bracket": [
+        10000.0,
+        50000.0
+      ],
+      "basis": "The 50bps crossing is BRACKETED between $10,000 (clears) and $50,000 (57bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
     },
     "volume_24h": null,
     "measured_chain": "ethereum",
@@ -144,64 +146,64 @@
     "exit_mark": {
       "source": "kyberswap",
       "sell_into": "USDC",
-      "fair_value": 0.99977937,
+      "fair_value": 0.99979864,
       "fair_value_basis": "market",
       "quotes": {
         "1000": {
-          "output_usd": 1000.06,
+          "output_usd": 1005.85,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 1.00006,
+          "fill_ratio": 1.00585,
           "slippage_bps": 0.0
         },
         "10000": {
-          "output_usd": 10002.06,
+          "output_usd": 10056.88,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 1.000206,
-          "slippage_bps": 0.0
+          "fill_ratio": 1.005688,
+          "slippage_bps": -1.6
         },
         "50000": {
-          "output_usd": 50002.84,
+          "output_usd": 50006.32,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 1.000057,
-          "slippage_bps": 0.0
+          "fill_ratio": 1.000126,
+          "slippage_bps": -56.9
         },
         "100000": {
-          "output_usd": 100001.37,
+          "output_usd": 100009.42,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 1.000014,
-          "slippage_bps": -0.4
+          "fill_ratio": 1.000094,
+          "slippage_bps": -57.2
         },
         "250000": {
-          "output_usd": 250005.43,
+          "output_usd": 250011.02,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 1.000022,
-          "slippage_bps": -0.4
+          "fill_ratio": 1.000044,
+          "slippage_bps": -57.7
         },
         "500000": {
-          "output_usd": 499999.1,
+          "output_usd": 500004.02,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 0.999998,
-          "slippage_bps": -0.6
+          "fill_ratio": 1.000008,
+          "slippage_bps": -58.1
         },
         "2000000": {
-          "output_usd": 1999751.72,
+          "output_usd": 1999755.01,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 0.999876,
-          "slippage_bps": -1.8
+          "fill_ratio": 0.999878,
+          "slippage_bps": -59.4
         },
         "5000000": {
-          "output_usd": 4997230.31,
+          "output_usd": 4996536.24,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 0.999446,
-          "slippage_bps": -6.1
+          "fill_ratio": 0.999307,
+          "slippage_bps": -65.0
         }
       },
       "slippage_bps_basis": "PRICE IMPACT against this venue's own smallest quoted rung, which EXCLUDES that rung's own spread \u2014 it is not the holder's all-in cost. The all-in figure is fill_ratio (output_usd / size). Impact is measured this way deliberately, so peg discount and source lag do not leak into it."
@@ -213,7 +215,7 @@
     "liquidity_score_source": "risk-feed@2026-10-01T01:45:04Z",
     "liquidity_score_status": "ok",
     "liquidity_score_generated_at": "2026-10-01T01:45:04Z",
-    "liquidity_score_age_hours": 11.2
+    "liquidity_score_age_hours": 12.2
   },
   "backing": {
     "collateral_ratio": 104.1829,
@@ -243,7 +245,7 @@
     "backing_score_source": "risk-feed@2026-10-01T01:45:04Z",
     "backing_score_status": "ok",
     "backing_score_generated_at": "2026-10-01T01:45:04Z",
-    "backing_score_age_hours": 11.2
+    "backing_score_age_hours": 12.2
   },
   "dependencies": {
     "upstream": [
@@ -280,7 +282,7 @@
     "issuer_score_source": "risk-feed@2026-10-01T01:45:04Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-10-01T01:45:04Z",
-    "issuer_score_age_hours": 11.2,
-    "attestation_age_days": 69.5
+    "issuer_score_age_hours": 12.2,
+    "attestation_age_days": 69.6
   }
 }
