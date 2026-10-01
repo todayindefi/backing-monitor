@@ -1,0 +1,44 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "msusd_metronome",
+  "as_of": "2026-10-01T00:00:00Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "Collateral set — NOT ESTABLISHED",
+        "unresolved": [
+          "metronome collateral set"
+        ],
+        "unresolved_note": "⚠️ DELIBERATELY UNRESOLVED RATHER THAN GUESSED. msUSD is crypto-overcollateralised across ethereum, optimism, base and plasma, with collateral priced through each chain's own masterOracle — and the report NEVER ENUMERATES the collateral tokens. Establishing them needs a DepositToken enumeration per registered pool on all four chains, which is an on-chain read this pass did not do. An empty upstream array would read as 'no dependencies'; this entry says 'dependencies exist and are unrecorded'."
+      },
+      {
+        "name": "Per-chain masterOracle",
+        "terminal": true,
+        "kind": "oracle",
+        "note": "Collateral is valued through a different oracle on each of the four chains, so oracle risk is not shared across them."
+      },
+      {
+        "name": "fxUSD — 95.6% of the Curve msUSD/fxUSD pool",
+        "slug": "fxusd",
+        "edge_kind": "venue",
+        "materiality": "dominant",
+        "note": "⚠️ A VENUE EDGE, AND AN EXTREME ONE. fxUSD is 95.6% of the only pool msUSD trades against, so msUSD's exit is effectively denominated in fxUSD alone — with msUSD itself last marked near $0.70. Not collateral: it bears on the liquidity axis. This is the edge fxusd_dependencies.json asserted; it is now derivable and correctly typed."
+      }
+    ],
+    "upstream_resolution_rule": "⚠️ EVERY upstream entry MUST carry exactly one resolution: `slug` (one asset we score), `slugs` (a set entry naming several), `terminal: true` + `kind` (never scoreable — oracle, venue, contract, authority, incentive, real-world, protocol), or `unresolved` (scoreable, no report yet = COVERAGE GAP). ⚠️ TERMINAL AND UNRESOLVED ARE DIFFERENT CLAIMS and must never be merged: terminal means nothing is missing, unresolved means a report is owed. `address` is REQUIRED wherever the ticker collides in this corpus (DUSD x4, msUSD x3, reUSD x2, USD3 x2, BOLD x2) — a ticker-keyed graph would merge Resupply's reUSD (3.5) with Re Protocol's (5.0).",
+    "coverage_note": "⚠️ Written 2026-10-01 to record the fxusd -> msusd-metronome edge as EXPLICITLY UNRESOLVED rather than leave the asset with no file at all — an absent file and an empty one are different claims, and only the second can be audited. ⚠️ ADDRESS IS LOAD-BEARING: THREE live tokens answer to msUSD (Mainstreet, Metronome, and the ticker's third holder). This is Metronome's, 0xab5eB14c09D416F0aC63661E57EDB7AEcDb9BEfA. ⚠️ We score this 1.5 and hold none; `last_verified` 2026-08-16.",
+    "address": "0xab5eB14c09D416F0aC63661E57EDB7AEcDb9BEfA",
+    "downstream_tracked": [],
+    "downstream_basis": {
+      "derived_by_inversion": [],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    },
+    "edge_kind_rule": "⚠️ EDGE KIND MATTERS AND fxUSD's HAND-WRITTEN DOWNSTREAM LIST CONFLATED TWO. `backing` means my SOLVENCY depends on this asset; `venue` means my EXIT PRICE does. Both are real and the response differs — a backing dependency moving calls for a re-read of the collateral analysis, a venue dependency moving calls for a re-read of the liquidity axis. A work queue that cannot tell them apart sends the same instruction for both."
+  }
+}
