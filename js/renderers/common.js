@@ -6988,6 +6988,98 @@ const CommonRenderer = {
     // touches no node. Nothing about the markup changed in the split — verified by
     // capturing axis-liquidity-body's innerHTML on crvusd, usds and dusd-alto
     // before and after and comparing length + hash.
+    // ⚠️ THE VENUE LIST AND THE DEPTH FIGURE ARE NOT THE SAME AGE, AND THE AXIS
+    // CLOCK CAN ONLY SHOW ONE OF THEM. `_axisClockHtml` takes the OLDEST declared
+    // input, which is the right rule for an axis-level age and the wrong number to
+    // read either half by. On reUSD-RE today the depth was measured 12h ago and the
+    // venue enumeration is 23 DAYS old, so the head renders "refreshes daily ·
+    // 23d old": it reads as a producer 22 days late, when they are on time for the
+    // thing that refreshes daily and the stale half is the one that moves slowly.
+    //
+    // Both failures point the same way for a reader — they cannot tell which half
+    // the age belongs to — and for depth that matters most, because exit cost moves
+    // in hours (one asset's deepest rung: -5.2 bps at 13:30Z, -130.2 at 22:30Z).
+    // So each half states its own clock where it renders. The axis-level
+    // oldest-wins rule is untouched; this does not replace it, it disambiguates it.
+    //
+    // ⚠️ RENDERED ONLY WHERE A VENUE-SPECIFIC STAMP IS PUBLISHED. 23 base blocks
+    // carry pools under the block's own `as_of`, and for those the axis clock is
+    // already the pool clock — a second identical date would be noise asserting a
+    // distinction that does not exist. Two spellings exist in the corpus:
+    // DexTracker's `enumeration.as_of` and PegTracker's `venues_as_of`.
+    _stampAge(stamp) {
+        if (typeof stamp !== 'string' || !stamp) return null;
+        var t = new Date(/Z$|[+-]\d\d:?\d\d$/.test(stamp) ? stamp : stamp + 'Z');
+        if (isNaN(t)) return null;
+        var h = (Date.now() - t.getTime()) / 3600000;
+        return {
+            hours: h,
+            text: h < 1 ? Math.max(0, Math.round(h * 60)) + 'm' :
+                  h < 48 ? h.toFixed(1) + 'h' : Math.round(h / 24) + 'd'
+        };
+    },
+
+    // The venue enumeration's own stamp, not the payload's. Null when the producer
+    // publishes none, which is NOT the same as fresh — see the note above for why
+    // silence is correct there rather than falling back to the block clock.
+    _venueStamp(liq) {
+        if (!liq || typeof liq !== 'object') return null;
+        var e = liq.enumeration;
+        if (e && typeof e === 'object' && typeof e.as_of === 'string') return e.as_of;
+        if (typeof liq.venues_as_of === 'string') return liq.venues_as_of;
+        return null;
+    },
+
+    // When the ladder was actually probed. ⚠️ `enumeration.routed_measurement_as_of`
+    // sits INSIDE the enumeration block but is the depth clock, not the venue one —
+    // DexTracker re-stamps it on every daily refresh while the enumeration around
+    // it keeps its own older date.
+    _depthStamp(liq) {
+        if (!liq || typeof liq !== 'object') return null;
+        var e = liq.enumeration;
+        if (e && typeof e === 'object' && typeof e.routed_measurement_as_of === 'string') {
+            return e.routed_measurement_as_of;
+        }
+        var em = liq.exit_mark;
+        if (em && typeof em === 'object') {
+            if (typeof em.as_of === 'string') return em.as_of;
+            if (typeof em.measured_at === 'string') return em.measured_at;
+        }
+        return typeof liq.as_of === 'string' ? liq.as_of : null;
+    },
+
+    _venueClockHtml(liq) {
+        var s = this._venueStamp(liq);
+        var a = this._stampAge(s);
+        if (!a) return '';
+        return '<span class="text-[11px] font-normal text-slate-400 ml-2" title="' +
+            this._escapeAttr(
+                'The venue list and the TVL beside it were enumerated at ' + s + ' — ' +
+                a.text + ' ago. That is the enumeration’s OWN clock, which the producer ' +
+                'publishes separately from the depth refresh: a venue sweep is a slow, ' +
+                'registry-wide search and does not run on the depth cadence. An age here is ' +
+                'not evidence that the depth figure above is the same age.') +
+            '">enumerated ' + this._escapeAttr(String(s).replace('T', ' ').slice(0, 16)) +
+            'Z · ' + a.text + ' old ⓘ</span>';
+    },
+
+    // ⚠️ ONLY WHEN THE AXIS AGE IS SET BY SOMETHING OTHER THAN THE DEPTH. Where the
+    // two halves share a clock the head already states it and repeating it here
+    // would imply a split that this asset does not have.
+    _depthClockHtml(liq) {
+        var vs = this._venueStamp(liq), ds = this._depthStamp(liq);
+        var va = this._stampAge(vs), da = this._stampAge(ds);
+        if (!va || !da || va.hours - da.hours < 24) return '';
+        return '<div class="text-[11px] text-slate-500 mt-1" title="' + this._escapeAttr(
+            'This figure was measured at ' + ds + ' — ' + da.text + ' ago. The age on the ' +
+            'axis heading is older because it reports the axis’s STALEST input, which for ' +
+            'this asset is the venue enumeration (' + va.text + '), not the ladder. Exit cost ' +
+            'moves in hours, so the two must not be read off one number.') +
+            '">ladder measured ' + this._escapeAttr(String(ds).replace('T', ' ').slice(0, 16)) +
+            'Z · ' + da.text + ' old, not the ' + va.text +
+            ' on the heading — that is the venue sweep ⓘ</div>';
+    },
+
     _renderLiquiditySection(data) {
         var body = document.getElementById('axis-liquidity-body');
         if (!body) return;
@@ -7286,7 +7378,8 @@ const CommonRenderer = {
             var showLend = byChain.some(function(c) { return c.lending_tvl_usd; });
             var showVault = byChain.some(function(c) { return c.issuer_vault_tvl_usd; });
             chainBlock =
-                '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">TVL by chain</div>' +
+                '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">TVL by chain' +
+                this._venueClockHtml(liq) + '</div>' +
                 '<div class="data-table-scroll"><table class="data-table">' +
                 '<thead><tr><th>Chain</th><th class="text-right">Swap</th>' +
                 (showLend ? '<th class="text-right">Lending</th>' : '') +
@@ -7314,7 +7407,8 @@ const CommonRenderer = {
         }
 
         var poolBlock = pools.length
-            ? '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">Pools</div>' +
+            ? '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">Pools' +
+                this._venueClockHtml(liq) + '</div>' +
               '<div class="data-table-scroll"><table class="data-table">' +
                   '<thead><tr>' + cols.map(function(c) {
                       return '<th' + (/text-right/.test(c.cls) ? ' class="text-right"' : '') + '>' + c.th + '</th>';
@@ -7433,7 +7527,7 @@ const CommonRenderer = {
         return '<div class="panel">' +
             '<div class="panel-title">Liquidity &amp; Exit</div>' +
             headContext +
-            statRow + this.exitCapacityHtml(liq) + exitLine + ladderBlock +
+            statRow + this._depthClockHtml(liq) + this.exitCapacityHtml(liq) + exitLine + ladderBlock +
             this._depthShareHtml(data) + poolBlock + poolsNote + chainBlock +
         '</div>';
     },
