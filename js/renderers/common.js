@@ -7195,6 +7195,27 @@ const CommonRenderer = {
                 ? ''
                 : '<div class="text-sm text-slate-400">No exit-mark RFQ ladder in this snapshot.</div>');
 
+        // ⚠️ THE VENUE THE LADDER ACTUALLY RAN THROUGH, PUBLISHED AND UNRENDERED.
+        // `exit_mark.basis_note` names the route and its caveats, and on syrupUSDT
+        // those caveats qualify the figure directly above it: every rung from $1K to
+        // $1M routes through ONE Uniswap v4 pool (~$5.0M reserve, ~$190K 24h volume),
+        // whose v4 hook was NOT inspected, and the Plasma pools that exist traded ~$0
+        // and are not configured. A ">=$1.0M floor" read without that is a floor
+        // through a single uninspected pool presented as the asset's depth.
+        //
+        // ⚠️ Flagged to us by riskAnalyst, who had it from the producer's config while
+        // our page showed none of it. Live on both syrup assets only — the other 17
+        // ladders carry no basis_note, so this renders where it exists and is silent
+        // elsewhere rather than inventing a line.
+        var ladderBasis = (liq.exit_mark && typeof liq.exit_mark === 'object' &&
+                           typeof liq.exit_mark.basis_note === 'string' &&
+                           liq.exit_mark.basis_note.trim())
+            ? '<div class="text-[11px] text-slate-500 mt-2" style="line-height:1.5">' +
+              '<span class="font-semibold">Route measured:</span> ' +
+              this._escapeAttr(liq.exit_mark.basis_note.trim()) + '</div>'
+            : '';
+        ladderBlock = ladderBlock + ladderBasis;
+
         // ⚠️ Four n/a's read as "we know nothing about this asset's liquidity".
         // For usdm the feed says something quite different: there is no secondary
         // depth BY DESIGN, because Mento pools are a mint/redeem venue, and the
