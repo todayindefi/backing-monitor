@@ -1,7 +1,7 @@
 {
  "schema_version": "liquidity/1",
  "asset_slug": "reusd_re",
- "as_of": "2026-09-29T23:50:47Z",
+ "as_of": "2026-09-30T23:48:52Z",
  "producer": "dextracker",
  "note": "Axis 3 (Liquidity & Exit), single producer. The axis is the worse of executable venue depth and primary redemption. Pool TVL is context only and is never substituted for executable depth.",
  "depth": {
@@ -17,10 +17,10 @@
    "reduction_policy": "refuse_cross_chain_scalar"
   },
   "anchor": {
-   "fair_value": 1.104196859590721,
+   "fair_value": 1.1042826143858655,
    "fair_value_basis": "market",
    "fair_value_source": "peg_tracker:CoinGecko API external aggregate mid for re-protocol-reusd; off-chain market-data API, not an on-chain read and not the issuer API",
-   "fair_value_as_of": "2026-09-29T04:57:28Z",
+   "fair_value_as_of": "2026-09-30T22:56:13Z",
    "fair_value_choice": "market_price",
    "fair_value_choice_mode": "inherited",
    "market_price_cross_check": null,
@@ -36,7 +36,7 @@
     "base",
     "avalanche"
    ],
-   "quoted_as_of": "2026-09-29T23:49:41Z",
+   "quoted_as_of": "2026-09-30T23:47:48Z",
    "baseline_size_usd": 1000.0,
    "addresses": {
     "ethereum": {
@@ -76,8 +76,8 @@
     "attempted_rungs": 5,
     "baseline_rung": {
      "size_usd": 100.0,
-     "slippage_bps": -1.6690999999990908,
-     "amount_out_tokens": 99.983309
+     "slippage_bps": -1.0180999999997997,
+     "amount_out_tokens": 99.989819
     },
     "bracket_50bps": {
      "threshold_bps": -50.0,
@@ -86,18 +86,18 @@
      "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
      "depth_usd": 10000000.0,
      "is_floor": true,
-     "basis": "No rung reached -50bps. The largest size tried (10,000,000) still clears at -11.14bps, so depth is a FLOOR: at least this, and the true crossing is beyond the ladder."
+     "basis": "No rung reached -50bps. The largest size tried (10,000,000) still clears at -12.77bps, so depth is a FLOOR: at least this, and the true crossing is beyond the ladder."
     }
    },
    "arbitrum": {
     "status": "bracketed",
-    "depth_usd": 2335937.5,
+    "depth_usd": 2511718.75,
     "is_floor": true,
     "bracket": {
-     "last_clearing_size_usd": 2335937.5,
-     "last_clearing_marginal_impact_bps": -18.461342650969435,
-     "first_crossing_size_usd": 2353515.625,
-     "first_crossing_marginal_impact_bps": -812.6040531578427,
+     "last_clearing_size_usd": 2511718.75,
+     "last_clearing_marginal_impact_bps": -172.74619979968932,
+     "first_crossing_size_usd": 2529296.875,
+     "first_crossing_marginal_impact_bps": -240.90678018977798,
      "width_usd": 17578.125,
      "monotonic_in_bracket": true,
      "threshold_bps": -200.0,
@@ -108,38 +108,39 @@
     "attempted_rungs": 5,
     "baseline_rung": {
      "size_usd": 100.0,
-     "slippage_bps": -4.425900000000205,
-     "amount_out_tokens": 99.955741
+     "slippage_bps": -3.299300000000338,
+     "amount_out_tokens": 99.967007
     },
     "refinement": {
-     "status": "refined",
+     "status": "salvaged_from_probes",
      "stopped_on": "precision_obligation_met",
-     "probe_count": 9
+     "probe_count": 9,
+     "wobble_above_crossing": []
     },
-    "basis": "The -200bps marginal crossing is BRACKETED between $2,335,937.50 and $2,353,515.62, both ends re-quoted. `depth_usd` is the lower bound.",
+    "basis": "Re-quoting the refined ends did not straddle (-18.601611492781167 / -18.740290176475497 bps); the FIRST crossing was salvaged from the search's probes and both ends re-quoted: $2,511,718.75 - $2,529,296.88.",
     "bracket_50bps": {
      "threshold_bps": -50.0,
      "convention": "marginal",
      "status": "bracketed",
      "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
      "refinement": {
-      "status": "refined",
-      "stopped_on": "precision_obligation_met",
-      "probe_count": 9
+      "status": "refusal_non_monotonic",
+      "stopped_on": null,
+      "probe_count": 8
      },
      "bracket": {
-      "last_clearing_size_usd": 2353515.625,
-      "last_clearing_marginal_impact_bps": -18.600012912730612,
-      "first_crossing_size_usd": 2371093.75,
-      "first_crossing_marginal_impact_bps": -812.7243300278086,
-      "width_usd": 17578.125,
+      "last_clearing_size_usd": 1000000.0,
+      "last_clearing_marginal_impact_bps": -7.911764769999996,
+      "first_crossing_size_usd": 10000000.0,
+      "first_crossing_marginal_impact_bps": -7529.105412108,
+      "width_usd": 9000000.0,
       "monotonic_in_bracket": true,
       "threshold_bps": -50.0,
-      "meets_precision_obligation": true
+      "meets_precision_obligation": false
      },
-     "depth_usd": 2353515.625,
+     "depth_usd": 1000000.0,
      "is_floor": true,
-     "basis": "The -50bps marginal crossing is BRACKETED between $2,353,515.62 and $2,371,093.75, both ends re-quoted. `depth_usd` is the lower bound."
+     "basis": "Bisection refused: the ladder is not monotonic in this range, so a located crossing would be an artefact of the search rather than a property of the market."
     }
    },
    "base": {
@@ -152,8 +153,8 @@
     "attempted_rungs": 2,
     "baseline_rung": {
      "size_usd": 100.0,
-     "slippage_bps": -214.8247999999997,
-     "amount_out_tokens": 97.851752
+     "slippage_bps": -215.60060000000104,
+     "amount_out_tokens": 97.843994
     }
    },
    "avalanche": {
@@ -162,9 +163,9 @@
     "is_floor": true,
     "bracket": {
      "last_clearing_size_usd": 5605.46875,
-     "last_clearing_marginal_impact_bps": -62.46747160975502,
+     "last_clearing_marginal_impact_bps": -65.0728584111493,
      "first_crossing_size_usd": 5640.625,
-     "first_crossing_marginal_impact_bps": -278.5189726315795,
+     "first_crossing_marginal_impact_bps": -281.94123152354587,
      "width_usd": 35.15625,
      "monotonic_in_bracket": true,
      "threshold_bps": -200.0,
@@ -175,8 +176,8 @@
     "attempted_rungs": 2,
     "baseline_rung": {
      "size_usd": 100.0,
-     "slippage_bps": -438.15680000000026,
-     "amount_out_tokens": 95.618432
+     "slippage_bps": -436.24149999999975,
+     "amount_out_tokens": 95.637585
     },
     "refinement": {
      "status": "refined",
@@ -196,18 +197,18 @@
       "probe_count": 8
      },
      "bracket": {
-      "last_clearing_size_usd": 476.171875,
-      "last_clearing_marginal_impact_bps": -49.91988449548734,
-      "first_crossing_size_usd": 479.6875,
-      "first_crossing_marginal_impact_bps": -50.017375895765554,
+      "last_clearing_size_usd": 412.890625,
+      "last_clearing_marginal_impact_bps": -49.89242469252696,
+      "first_crossing_size_usd": 416.40625,
+      "first_crossing_marginal_impact_bps": -50.02728198874371,
       "width_usd": 3.515625,
       "monotonic_in_bracket": true,
       "threshold_bps": -50.0,
       "meets_precision_obligation": true
      },
-     "depth_usd": 476.171875,
+     "depth_usd": 412.890625,
      "is_floor": true,
-     "basis": "The -50bps marginal crossing is BRACKETED between $476.17 and $479.69, both ends re-quoted. `depth_usd` is the lower bound."
+     "basis": "The -50bps marginal crossing is BRACKETED between $412.89 and $416.41, both ends re-quoted. `depth_usd` is the lower bound."
     }
    }
   },
@@ -216,87 +217,96 @@
    {
     "size_usd": 1000.0,
     "status": "ok",
-    "amount_in_tokens": 905.6356131737756,
-    "amount_out_tokens": 999.755137,
-    "slippage_bps": -2.4486300000003958,
+    "amount_in_tokens": 905.5652846224867,
+    "amount_out_tokens": 999.820239,
+    "slippage_bps": -1.79760999999945,
     "route_venues": [
      "curve-stable-ng"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.11442760380012792",
-    "router_price_in": 1.1032116778306165,
-    "router_price_out": 0.9991659539218357,
-    "slippage_bps_debiased": -0.779530000001305,
-    "price_bias_bps": -1.6690999999990908,
+    "gas_usd": "0.0659766407692625",
+    "router_price_in": 1.0948954973069265,
+    "router_price_out": 0.9950755965064311,
+    "slippage_bps_debiased": -0.7795099999996502,
+    "price_bias_bps": -1.0180999999997997,
     "chain": "ethereum",
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000.0,
     "status": "ok",
-    "amount_in_tokens": 9056.356131737755,
-    "amount_out_tokens": 9997.353954,
-    "slippage_bps": -2.6460459999999575,
+    "amount_in_tokens": 9055.652846224866,
+    "amount_out_tokens": 9997.174006,
+    "slippage_bps": -2.825994000000831,
     "route_venues": [
-     "fluid-dex-t1"
+     "curve-stable-ng",
+     "ekubo",
+     "fluid-dex-t1",
+     "frxusd",
+     "metric-propamm/uniswap-v4-angstrom",
+     "uniswapv3"
     ],
-    "route_leg_count": 1,
-    "gas_usd": "0.28436135708000054",
-    "router_price_in": 1.1037640959945647,
-    "router_price_out": 0.9996291788912319,
-    "slippage_bps_debiased": -0.9769460000008667,
-    "price_bias_bps": -1.6690999999990908,
+    "route_leg_count": 8,
+    "gas_usd": "0.4456860347270872",
+    "router_price_in": 1.0949173259617697,
+    "router_price_out": 0.9949800413826672,
+    "slippage_bps_debiased": -1.8078940000010313,
+    "price_bias_bps": -1.0180999999997997,
     "chain": "ethereum",
     "rung_kind": "decade"
    },
    {
     "size_usd": 100000.0,
     "status": "ok",
-    "amount_in_tokens": 90563.56131737756,
-    "amount_out_tokens": 99972.414918,
-    "slippage_bps": -2.7585082000003425,
+    "amount_in_tokens": 90556.52846224867,
+    "amount_out_tokens": 99964.845821,
+    "slippage_bps": -3.5154179000007613,
     "route_venues": [
+     "curve-stable-ng",
      "fluid-dex-t1",
-     "lite-psm",
-     "uniswap-v4"
+     "metric-propamm/uniswap-v4",
+     "metric-propamm/uniswap-v4-angstrom",
+     "uniswap-v4",
+     "uniswapv3"
     ],
-    "route_leg_count": 1,
-    "gas_usd": "0.23758406819000125",
-    "router_price_in": 1.1045075120106165,
-    "router_price_out": 1.0007540802350583,
-    "slippage_bps_debiased": -1.0894082000012517,
-    "price_bias_bps": -1.6690999999990908,
+    "route_leg_count": 8,
+    "gas_usd": "0.4854401805060052",
+    "router_price_in": 1.094872807838212,
+    "router_price_out": 0.9950671670715259,
+    "slippage_bps_debiased": -2.4973179000009615,
+    "price_bias_bps": -1.0180999999997997,
     "chain": "ethereum",
     "rung_kind": "decade"
    },
    {
     "size_usd": 1000000.0,
     "status": "ok",
-    "amount_in_tokens": 905635.6131737756,
-    "amount_out_tokens": 999619.846872,
-    "slippage_bps": -3.801531279999937,
+    "amount_in_tokens": 905565.2846224867,
+    "amount_out_tokens": 999546.950331,
+    "slippage_bps": -4.530496689999497,
     "route_venues": [
      "curve-stable-ng",
+     "curve-stable-plain",
      "fluid-dex-t1",
      "lite-psm",
      "uniswap-v4",
-     "uniswap-v4-stable-stable"
+     "uniswapv3"
     ],
-    "route_leg_count": 10,
-    "gas_usd": "0.7335905815794237",
-    "router_price_in": 1.1045075120106165,
-    "router_price_out": 0.9996291788912319,
-    "slippage_bps_debiased": -2.132431280000846,
-    "price_bias_bps": -1.6690999999990908,
+    "route_leg_count": 12,
+    "gas_usd": "0.44139518602556355",
+    "router_price_in": 1.0949173259617697,
+    "router_price_out": 0.9949800413826673,
+    "slippage_bps_debiased": -3.5123966899996972,
+    "price_bias_bps": -1.0180999999997997,
     "chain": "ethereum",
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000000.0,
     "status": "ok",
-    "amount_in_tokens": 9056356.131737756,
-    "amount_out_tokens": 9987189.885165,
-    "slippage_bps": -12.810114835000164,
+    "amount_in_tokens": 9055652.846224867,
+    "amount_out_tokens": 9986212.050377,
+    "slippage_bps": -13.787949622999784,
     "route_venues": [
      "curve-stable-ng",
      "curve-stable-plain",
@@ -305,130 +315,128 @@
      "lite-psm",
      "native-v2/curve-stable-plain",
      "uniswap-v4",
-     "uniswap-v4-stable-stable",
      "uniswapv3"
     ],
-    "route_leg_count": 15,
-    "gas_usd": "1.3494912013045566",
-    "router_price_in": 1.1045075120106165,
-    "router_price_out": 0.998964708673156,
-    "slippage_bps_debiased": -11.141014835001073,
-    "price_bias_bps": -1.6690999999990908,
+    "route_leg_count": 12,
+    "gas_usd": "0.6469693489276421",
+    "router_price_in": 1.0948954973069265,
+    "router_price_out": 0.9950705199026949,
+    "slippage_bps_debiased": -12.769849622999985,
+    "price_bias_bps": -1.0180999999997997,
     "chain": "ethereum",
     "rung_kind": "decade"
    },
    {
     "size_usd": 1000.0,
     "status": "ok",
-    "amount_in_tokens": 905.6356131737756,
-    "amount_out_tokens": 999.556698,
-    "slippage_bps": -4.433019999999788,
+    "amount_in_tokens": 905.5652846224867,
+    "amount_out_tokens": 999.669357,
+    "slippage_bps": -3.3064299999996383,
     "route_venues": [
      "fluid-dex-t1"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.02080712930857792",
-    "router_price_in": 1.1035263275152318,
-    "router_price_out": 0.9995866481569526,
-    "slippage_bps_debiased": -0.0071199999995830154,
-    "price_bias_bps": -4.425900000000205,
+    "gas_usd": "0.020931077676934647",
+    "router_price_in": 1.104560290483844,
+    "router_price_out": 1.0004292484276993,
+    "slippage_bps_debiased": -0.007129999999300196,
+    "price_bias_bps": -3.299300000000338,
     "chain": "arbitrum",
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000.0,
     "status": "ok",
-    "amount_in_tokens": 9056.356131737755,
-    "amount_out_tokens": 9995.495721,
-    "slippage_bps": -4.5042790000004995,
+    "amount_in_tokens": 9055.652846224866,
+    "amount_out_tokens": 9996.622309,
+    "slippage_bps": -3.3776909999994054,
     "route_venues": [
      "fluid-dex-t1"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.02080712930857792",
-    "router_price_in": 1.1035263275152318,
-    "router_price_out": 0.9995866481569526,
-    "slippage_bps_debiased": -0.07837900000029485,
-    "price_bias_bps": -4.425900000000205,
+    "gas_usd": "0.020864311878922095",
+    "router_price_in": 1.1048387264085258,
+    "router_price_out": 1.0004283948258696,
+    "slippage_bps_debiased": -0.07839099999906729,
+    "price_bias_bps": -3.299300000000338,
     "chain": "arbitrum",
     "rung_kind": "decade"
    },
    {
     "size_usd": 100000.0,
     "status": "ok",
-    "amount_in_tokens": 90563.56131737756,
-    "amount_out_tokens": 99947.831503,
-    "slippage_bps": -5.21684970000047,
+    "amount_in_tokens": 90556.52846224867,
+    "amount_out_tokens": 99959.09677,
+    "slippage_bps": -4.090323000000007,
     "route_venues": [
      "fluid-dex-t1"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.02080712930857792",
-    "router_price_in": 1.1035263275152318,
-    "router_price_out": 0.9995866481569526,
-    "slippage_bps_debiased": -0.7909497000002652,
-    "price_bias_bps": -4.425900000000205,
+    "gas_usd": "0.020931077676934647",
+    "router_price_in": 1.1046122534462128,
+    "router_price_out": 1.0004292484276993,
+    "slippage_bps_debiased": -0.7910229999996687,
+    "price_bias_bps": -3.299300000000338,
     "chain": "arbitrum",
     "rung_kind": "decade"
    },
    {
     "size_usd": 1000000.0,
     "status": "ok",
-    "amount_in_tokens": 905635.6131737756,
-    "amount_out_tokens": 998766.301798,
-    "slippage_bps": -12.336982020000331,
+    "amount_in_tokens": 905565.2846224867,
+    "amount_out_tokens": 998878.893523,
+    "slippage_bps": -11.211064770000334,
     "route_venues": [
      "fluid-dex-t1"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.02080712930857792",
-    "router_price_in": 1.1038956296226405,
-    "router_price_out": 0.9995866481569526,
-    "slippage_bps_debiased": -7.911082020000126,
-    "price_bias_bps": -4.425900000000205,
+    "gas_usd": "0.020931077676934647",
+    "router_price_in": 1.104560290483844,
+    "router_price_out": 1.0004292484276993,
+    "slippage_bps_debiased": -7.911764769999996,
+    "price_bias_bps": -3.299300000000338,
     "chain": "arbitrum",
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000000.0,
     "status": "ok",
-    "amount_in_tokens": 9056356.131737756,
-    "amount_out_tokens": 2467316.762759,
-    "slippage_bps": -7532.683237241,
+    "amount_in_tokens": 9055652.846224867,
+    "amount_out_tokens": 2467595.287892,
+    "slippage_bps": -7532.404712108,
     "route_venues": [
      "fluid-dex-t1",
      "kyberswap-limit-order-v2",
-     "metric-propamm/camelot-v3",
-     "pmm-5/pancake-v3",
-     "uniswap-v4-fairflow"
+     "pancake-v3",
+     "sushiswap-v3"
     ],
-    "route_leg_count": 7,
-    "gas_usd": "0.42060468776265825",
-    "router_price_in": 1.1038956296226405,
-    "router_price_out": 0.9995866481569526,
-    "slippage_bps_debiased": -7528.257337241,
-    "price_bias_bps": -4.425900000000205,
+    "route_leg_count": 4,
+    "gas_usd": "0.35890458849248474",
+    "router_price_in": 1.1046122534462128,
+    "router_price_out": 1.000633503459937,
+    "slippage_bps_debiased": -7529.105412108,
+    "price_bias_bps": -3.299300000000338,
     "chain": "arbitrum",
     "rung_kind": "decade"
    },
    {
     "size_usd": 1000.0,
     "status": "invalid_quote",
-    "amount_in_tokens": 905.6356131737756,
-    "amount_out_tokens": 270.443153,
-    "slippage_bps": -7295.56847,
+    "amount_in_tokens": 905.5652846224867,
+    "amount_out_tokens": 270.435641,
+    "slippage_bps": -7295.643590000001,
     "route_venues": [
      "aerodrome",
      "aerodrome-cl-3",
      "kyberswap-limit-order-v2",
-     "pmm-2/aerodrome-cl-3"
+     "pancake-infinity-cl"
     ],
     "route_leg_count": 3,
-    "gas_usd": "0.01831131167317691",
-    "router_price_in": 3.7086861242095486,
-    "router_price_out": 0.9996138426919349,
-    "slippage_bps_debiased": -7080.743670000001,
-    "price_bias_bps": -214.8247999999997,
+    "gas_usd": "0.015493539330123",
+    "router_price_in": 3.722095441701186,
+    "router_price_out": 1.0007596915469832,
+    "slippage_bps_debiased": -7080.04299,
+    "price_bias_bps": -215.60060000000104,
     "chain": "base",
     "rung_kind": "decade",
     "reason": "Successful router response returned less than 50% of input notional at the smallest rung; retained as evidence, not counted as executable depth."
@@ -436,23 +444,24 @@
    {
     "size_usd": 10000.0,
     "status": "invalid_quote",
-    "amount_in_tokens": 9056.356131737755,
-    "amount_out_tokens": 134.244054,
-    "slippage_bps": -9865.755946,
+    "amount_in_tokens": 9055.652846224866,
+    "amount_out_tokens": 134.349884,
+    "slippage_bps": -9865.650116,
     "route_venues": [
      "aerodrome",
-     "kipseli-prop",
+     "alien-base-cl",
      "kyberswap-limit-order-v2",
      "pancake-infinity-cl",
+     "sectorone-v20",
      "uniswap-v4",
      "uniswap-v4-fairflow"
     ],
-    "route_leg_count": 5,
-    "gas_usd": "0.04234621542400005",
-    "router_price_in": 3.707445404698583,
-    "router_price_out": 0.9996138426919348,
-    "slippage_bps_debiased": -9650.931145999999,
-    "price_bias_bps": -214.8247999999997,
+    "route_leg_count": 11,
+    "gas_usd": "0.04661870809972416",
+    "router_price_in": 3.7220954417011853,
+    "router_price_out": 1.0007596915469832,
+    "slippage_bps_debiased": -9650.049516,
+    "price_bias_bps": -215.60060000000104,
     "chain": "base",
     "rung_kind": "decade",
     "reason": "Successful router response returned less than 50% of input notional at the smallest rung; retained as evidence, not counted as executable depth."
@@ -460,27 +469,27 @@
    {
     "size_usd": 1000.0,
     "status": "ok",
-    "amount_in_tokens": 905.6356131737756,
-    "amount_out_tokens": 950.493401,
-    "slippage_bps": -495.06599000000097,
+    "amount_in_tokens": 905.5652846224867,
+    "amount_out_tokens": 950.446182,
+    "slippage_bps": -495.5381800000003,
     "route_venues": [
      "blackhole-v4"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.03753371518203707",
-    "router_price_in": 1.1572346439150472,
-    "router_price_out": 0.9971483030688219,
-    "slippage_bps_debiased": -56.909190000000706,
-    "price_bias_bps": -438.15680000000026,
+    "gas_usd": "0.03606192756874759",
+    "router_price_in": 1.0570076330611613,
+    "router_price_out": 1.0006937765337645,
+    "slippage_bps_debiased": -59.29668000000055,
+    "price_bias_bps": -436.24149999999975,
     "chain": "avalanche",
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000.0,
     "status": "ok",
-    "amount_in_tokens": 9056.356131737755,
-    "amount_out_tokens": 6163.10904,
-    "slippage_bps": -3836.89096,
+    "amount_in_tokens": 9055.652846224866,
+    "amount_out_tokens": 6163.605529,
+    "slippage_bps": -3836.3944709999996,
     "route_venues": [
      "blackhole-v2",
      "blackhole-v4",
@@ -488,11 +497,11 @@
      "uniswap-v4"
     ],
     "route_leg_count": 3,
-    "gas_usd": "0.08133396727005614",
-    "router_price_in": 1.1572346439150472,
-    "router_price_out": 0.9971483030688219,
-    "slippage_bps_debiased": -3398.73416,
-    "price_bias_bps": -438.15680000000026,
+    "gas_usd": "0.07814466599819457",
+    "router_price_in": 1.0570076330611613,
+    "router_price_out": 1.0006937765337645,
+    "slippage_bps_debiased": -3400.152971,
+    "price_bias_bps": -436.24149999999975,
     "chain": "avalanche",
     "rung_kind": "decade"
    }
@@ -561,7 +570,7 @@
    "BNB Chain"
   ],
   "completeness": "Complete for the four-chain registry supplied in the handoff; not a complete census of every chain reported by CoinGecko at measurement time.",
-  "routed_measurement_as_of": "2026-09-29T23:50:47Z",
+  "routed_measurement_as_of": "2026-09-30T23:48:52Z",
   "by_chain_measurement": {
    "ethereum": {
     "status": "ladder_exhausted",
@@ -573,8 +582,8 @@
     "attempted_rungs": 5,
     "baseline_rung": {
      "size_usd": 100.0,
-     "slippage_bps": -1.6690999999990908,
-     "amount_out_tokens": 99.983309
+     "slippage_bps": -1.0180999999997997,
+     "amount_out_tokens": 99.989819
     },
     "bracket_50bps": {
      "threshold_bps": -50.0,
@@ -583,18 +592,18 @@
      "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
      "depth_usd": 10000000.0,
      "is_floor": true,
-     "basis": "No rung reached -50bps. The largest size tried (10,000,000) still clears at -11.14bps, so depth is a FLOOR: at least this, and the true crossing is beyond the ladder."
+     "basis": "No rung reached -50bps. The largest size tried (10,000,000) still clears at -12.77bps, so depth is a FLOOR: at least this, and the true crossing is beyond the ladder."
     }
    },
    "arbitrum": {
     "status": "bracketed",
-    "depth_usd": 2335937.5,
+    "depth_usd": 2511718.75,
     "is_floor": true,
     "bracket": {
-     "last_clearing_size_usd": 2335937.5,
-     "last_clearing_marginal_impact_bps": -18.461342650969435,
-     "first_crossing_size_usd": 2353515.625,
-     "first_crossing_marginal_impact_bps": -812.6040531578427,
+     "last_clearing_size_usd": 2511718.75,
+     "last_clearing_marginal_impact_bps": -172.74619979968932,
+     "first_crossing_size_usd": 2529296.875,
+     "first_crossing_marginal_impact_bps": -240.90678018977798,
      "width_usd": 17578.125,
      "monotonic_in_bracket": true,
      "threshold_bps": -200.0,
@@ -605,38 +614,39 @@
     "attempted_rungs": 5,
     "baseline_rung": {
      "size_usd": 100.0,
-     "slippage_bps": -4.425900000000205,
-     "amount_out_tokens": 99.955741
+     "slippage_bps": -3.299300000000338,
+     "amount_out_tokens": 99.967007
     },
     "refinement": {
-     "status": "refined",
+     "status": "salvaged_from_probes",
      "stopped_on": "precision_obligation_met",
-     "probe_count": 9
+     "probe_count": 9,
+     "wobble_above_crossing": []
     },
-    "basis": "The -200bps marginal crossing is BRACKETED between $2,335,937.50 and $2,353,515.62, both ends re-quoted. `depth_usd` is the lower bound.",
+    "basis": "Re-quoting the refined ends did not straddle (-18.601611492781167 / -18.740290176475497 bps); the FIRST crossing was salvaged from the search's probes and both ends re-quoted: $2,511,718.75 - $2,529,296.88.",
     "bracket_50bps": {
      "threshold_bps": -50.0,
      "convention": "marginal",
      "status": "bracketed",
      "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
      "refinement": {
-      "status": "refined",
-      "stopped_on": "precision_obligation_met",
-      "probe_count": 9
+      "status": "refusal_non_monotonic",
+      "stopped_on": null,
+      "probe_count": 8
      },
      "bracket": {
-      "last_clearing_size_usd": 2353515.625,
-      "last_clearing_marginal_impact_bps": -18.600012912730612,
-      "first_crossing_size_usd": 2371093.75,
-      "first_crossing_marginal_impact_bps": -812.7243300278086,
-      "width_usd": 17578.125,
+      "last_clearing_size_usd": 1000000.0,
+      "last_clearing_marginal_impact_bps": -7.911764769999996,
+      "first_crossing_size_usd": 10000000.0,
+      "first_crossing_marginal_impact_bps": -7529.105412108,
+      "width_usd": 9000000.0,
       "monotonic_in_bracket": true,
       "threshold_bps": -50.0,
-      "meets_precision_obligation": true
+      "meets_precision_obligation": false
      },
-     "depth_usd": 2353515.625,
+     "depth_usd": 1000000.0,
      "is_floor": true,
-     "basis": "The -50bps marginal crossing is BRACKETED between $2,353,515.62 and $2,371,093.75, both ends re-quoted. `depth_usd` is the lower bound."
+     "basis": "Bisection refused: the ladder is not monotonic in this range, so a located crossing would be an artefact of the search rather than a property of the market."
     }
    },
    "base": {
@@ -649,8 +659,8 @@
     "attempted_rungs": 2,
     "baseline_rung": {
      "size_usd": 100.0,
-     "slippage_bps": -214.8247999999997,
-     "amount_out_tokens": 97.851752
+     "slippage_bps": -215.60060000000104,
+     "amount_out_tokens": 97.843994
     }
    },
    "avalanche": {
@@ -659,9 +669,9 @@
     "is_floor": true,
     "bracket": {
      "last_clearing_size_usd": 5605.46875,
-     "last_clearing_marginal_impact_bps": -62.46747160975502,
+     "last_clearing_marginal_impact_bps": -65.0728584111493,
      "first_crossing_size_usd": 5640.625,
-     "first_crossing_marginal_impact_bps": -278.5189726315795,
+     "first_crossing_marginal_impact_bps": -281.94123152354587,
      "width_usd": 35.15625,
      "monotonic_in_bracket": true,
      "threshold_bps": -200.0,
@@ -672,8 +682,8 @@
     "attempted_rungs": 2,
     "baseline_rung": {
      "size_usd": 100.0,
-     "slippage_bps": -438.15680000000026,
-     "amount_out_tokens": 95.618432
+     "slippage_bps": -436.24149999999975,
+     "amount_out_tokens": 95.637585
     },
     "refinement": {
      "status": "refined",
@@ -693,18 +703,18 @@
       "probe_count": 8
      },
      "bracket": {
-      "last_clearing_size_usd": 476.171875,
-      "last_clearing_marginal_impact_bps": -49.91988449548734,
-      "first_crossing_size_usd": 479.6875,
-      "first_crossing_marginal_impact_bps": -50.017375895765554,
+      "last_clearing_size_usd": 412.890625,
+      "last_clearing_marginal_impact_bps": -49.89242469252696,
+      "first_crossing_size_usd": 416.40625,
+      "first_crossing_marginal_impact_bps": -50.02728198874371,
       "width_usd": 3.515625,
       "monotonic_in_bracket": true,
       "threshold_bps": -50.0,
       "meets_precision_obligation": true
      },
-     "depth_usd": 476.171875,
+     "depth_usd": 412.890625,
      "is_floor": true,
-     "basis": "The -50bps marginal crossing is BRACKETED between $476.17 and $479.69, both ends re-quoted. `depth_usd` is the lower bound."
+     "basis": "The -50bps marginal crossing is BRACKETED between $412.89 and $416.41, both ends re-quoted. `depth_usd` is the lower bound."
     }
    }
   },
@@ -831,5 +841,5 @@
   "basis": "Neither a single cross-chain secondary-depth scalar nor reUSD primary-redemption capacity was established. The file therefore replaces the unverifiable $10M substitute with a declared unrated result while retaining the measured chain-local evidence."
  },
  "refresh_cadence": "daily",
- "payload_revised_at": "2026-09-29T23:50:47Z"
+ "payload_revised_at": "2026-09-30T23:48:52Z"
 }
