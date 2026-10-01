@@ -2757,8 +2757,24 @@ const CommonRenderer = {
         // a band withheld without the authored path unblocked leaves the axis
         // blank with both halves in hand. That is the defect this pair caused.
         if (lq.two_pct_depth_status === 'supply_capped') return null;
+        // ⚠️ THE BAND SCORES WHAT THE TILE SHOWS. Both read `depthAtLimit`, so a
+        // bracket is graded on its LOWER end (the last size that actually cleared)
+        // and a capacity figure is not graded at all — there is no crossing to
+        // bucket. Measured across the fleet the day this landed: every band input
+        // is unchanged, because a bracket's lower end IS the rung the old 2%
+        // figure came from. What it buys is that the two cannot drift apart when
+        // a ladder changes shape.
+        //
+        // ⚠️ It also ends sUSDS's flip-flop at the root. Its producer flag
+        // oscillates on the sign of sub-bp jitter; when it read "size-responsive"
+        // a computed band displaced riskAnalyst's authored 8.5, and when it read
+        // otherwise the authored score came back — twice a day. A capacity figure
+        // is never bandable, so the authored judgement holds either way.
+        var d = this.depthAtLimit(data);
+        if (d.shape === 'capacity' || d.shape === 'none') return null;
+        var bandFig = (d.shape === 'bracket') ? d.bracket[0] : d.value;
         var th = this._axisThresholds(data).liquidity.depth_usd;
-        return this._rate(data.liquidity ? data.liquidity.total_2pct_depth : null, th, 'high');
+        return this._rate(bandFig, th, 'high');
     },
 
     // The liquidity twin of backing's authored path (§6.3, §6.5.1). susds is the
@@ -3155,7 +3171,7 @@ const CommonRenderer = {
             'compares with the size of the book; nobody exits as a percentage of supply. ' +
             'Denominator: ' + label + ' ' + this.formatCurrency(denom) + '.') +
             '">For context: \u2248 ' + txt + ' of ' + label + ' would clear at ' +
-            this._depthLabel(data && data.liquidity) + '</div>';
+            this._depthLabel(data) + '</div>';
     },
 
     // ⚠️ A DEPTH MEASURED AGAINST ITS OWN VENUE'S QUOTE, WITH NOTHING SAYING SO.
@@ -3317,7 +3333,7 @@ const CommonRenderer = {
             ' \u2014 not used as the axis figure \u24d8</div>';
     },
 
-    _depthQualifierHtml(liq) {
+    _depthQualifierHtml(liq, data) {
         var st = liq.two_pct_depth_status;
         var br = liq.two_pct_depth_bracket;
         if (liq.total_2pct_depth == null) return '';
@@ -3326,7 +3342,7 @@ const CommonRenderer = {
         // to 0.5% off the rungs rather than off a producer declaration, the rungs
         // that justify it render beside the figure — otherwise the tighter
         // threshold is an assertion the reader cannot check.
-        var headlineNote = this._depthHeadlineNote(liq);
+        var headlineNote = data ? this._depthHeadlineNote(data) : '';
         var headlineLine = headlineNote
             ? '<div class="text-[11px] text-slate-400">' + this._escapeAttr(headlineNote) + '</div>'
             : '';
@@ -3878,47 +3894,131 @@ const CommonRenderer = {
     // different, smaller number this cannot see. Those keep their label.
     DEPTH_HEADLINE_BPS: 50,
 
-    _headlineThresholdBps(liq) {
-        if (!liq) return 200;
-        // 1. The producer's own declaration always wins.
-        if (typeof liq.depth_threshold_bps === 'number') return liq.depth_threshold_bps;
-        var tight = this.DEPTH_HEADLINE_BPS;
+    // ⚠️ 0.5% IS THE DEFAULT FOR EVERY ASSET — spec, Axis 3. Depth answers "how
+    // much can I sell before losing more than X", and for a peg-tracking asset a
+    // 2% loss is already a depeg: USG sells $500,000 inside 2% and cannot sell
+    // $10,000 inside 0.5%, same ladder, same morning.
+    //
+    // Resolution: per-asset override, else the producer's own declaration of
+    // which of ITS published crossings is the headline, else 50.
+    _headlineThresholdBps(liq, overrideBps) {
+        if (typeof overrideBps === 'number') return overrideBps;
+        if (liq && typeof liq.depth_threshold_bps === 'number') return liq.depth_threshold_bps;
+        return this.DEPTH_HEADLINE_BPS;
+    },
+
+    // ⚠️ A LADDER ANSWERS IN ONE OF THREE SHAPES AND THE TILE MUST SAY WHICH.
+    // This is inherent to probing at discrete sizes, not a producer defect: the
+    // limit either falls between two rungs (BRACKET), or beyond the deepest one
+    // probed (FLOOR — "at least $X", never "the limit is $X"), or below the
+    // smallest (BELOW_PROBE — susdat cannot sell $1,000 inside 0.5%, usg cannot
+    // sell $10,000; both read as healthy five-figure depths at 2%).
+    //
+    // ⚠️ THE PRODUCER'S OWN FIGURE WINS WHERE IT WAS MEASURED AT THIS LIMIT.
+    // DexTracker bisects the 50bps crossing; a rung bracket is coarser than a
+    // bisection and must not displace it.
+    //
+    // ⚠️ AND A FIXED-RATE ROUTE GETS NO PERCENTAGE AT ALL. USDS routes the Sky
+    // PSM, sUSDS returns its redemption rate as a quote — same cost at every
+    // size, so no crossing exists to name and "0.5% depth $1M" is as false as
+    // "2% depth $1M".
+    depthAtLimit(data) {
+        var liq = (data && data.liquidity) || {};
+        var over = this.assetDepthOverrideBps(data);
+        var bps = this._headlineThresholdBps(liq, over);
         var fig = liq.total_2pct_depth;
-        if (typeof fig !== 'number') return 200;
-        // 2. ⚠️ A LADDER THAT IS NOT SIZE-RESPONSIVE BOUNDS NOTHING AT ANY
-        // THRESHOLD, so it cannot be relabelled to a tighter one. susDS returns
-        // 0.00 bps at every rung from $1K to $1M — a fixed-rate redemption quote
-        // returned as a fill, which is why `liquidityRating` already refuses to
-        // band it. The first cut of this rule relabelled it to "0.5% depth" off
-        // seven zeros: the most confident possible reading of a measurement that
-        // never varied.
-        //
-        // ⚠️ AND IT MUST NOT REUSE `_depthNonDerivable`, WHICH I TRIED FIRST. That
-        // predicate also treats `derived_score_status: "not_computed"` as
-        // disqualifying — correct for the AUTHORED-SCORE gate, where it means the
-        // producer declined to derive a score, and wrong here, where it says
-        // nothing about whether the ladder responds to size. susde carries it and
-        // was silently refused a relabel its own rungs support. Two rules that
-        // look alike and answer different questions must not share a
-        // discriminator; the unification that was right for the score gate is
-        // wrong here.
-        if (liq.two_pct_depth_size_responsive === false ||
-            liq.two_pct_depth_status === 'not_size_responsive') return 200;
-        // 3. Only a FLOOR can be relabelled — both readings are then floors.
-        var isFloor = liq.total_2pct_depth_is_floor === true ||
-                      liq.two_pct_depth_status === 'ladder_exhausted';
-        if (!isFloor) return 200;
         var rungs = this._ladderRungs(liq);
-        if (!rungs.length) return 200;
-        // 4. Every quoted rung must clear the tighter threshold, and the figure
-        //    must not exceed the deepest rung that actually cleared it.
-        var deepestClearing = null;
-        for (var i = 0; i < rungs.length; i++) {
-            if (!(Math.abs(rungs[i].bps) <= tight)) return 200;
-            deepestClearing = rungs[i].size;
+
+        // ⚠️ ONE SHAPE, TWO REASONS, AND BOTH MEAN "NOT A CROSSING". sUSDS/USDS
+        // return the SAME cost at every size (a fixed rate quoted as a fill);
+        // hastra-prime's ladder DOES respond — -2.2 to -11.5 bps — but hits the
+        // pool's counter-token inventory ceiling, so output stops increasing with
+        // requested size. Different mechanisms, same consequence: the figure is a
+        // capacity limit, not a price crossing, and no percentage is true of it.
+        // My first cut called this 'fixed_rate' and would have mislabelled hastra.
+        if (this._ladderIsFlat(liq)) {
+            return { bps: bps, shape: 'capacity', value: typeof fig === 'number' ? fig : null };
         }
-        if (deepestClearing == null || fig > deepestClearing) return 200;
-        return tight;
+        // Measured at this very limit by the producer — use it as published.
+        if (typeof liq.depth_threshold_bps === 'number' && liq.depth_threshold_bps === bps &&
+            typeof fig === 'number') {
+            return { bps: bps, shape: liq.total_2pct_depth_is_floor ? 'floor' : 'measured', value: fig };
+        }
+        if (!rungs.length) {
+            // No rungs to re-read: keep the producer's figure and label it with
+            // the limit IT was measured at rather than the one we wanted.
+            return typeof fig === 'number'
+                ? { bps: (typeof liq.depth_threshold_bps === 'number' ? liq.depth_threshold_bps : 200),
+                    shape: liq.total_2pct_depth_is_floor ? 'floor' : 'measured', value: fig,
+                    not_at_default: true }
+                : { bps: bps, shape: 'none', value: null };
+        }
+        // ⚠️ SIGNED, NEVER ABSOLUTE. `slippage_bps` is signed: a COST is negative and
+        // a GAIN is positive. My first cut used Math.abs(), which turned sUSDat's
+        // +70.17 bps at $1,000 — you get $1,007.02 back on a $1,000 sale, a 0.70%
+        // PREMIUM — into a 70 bps cost, and the tile would have said "cannot sell
+        // $1,000 inside 0.5%" about the one size that pays you to sell. A rung
+        // clears when its cost is no worse than the limit; there is no upper bound
+        // on how favourable it may be.
+        //
+        // This is the same defect PegTracker documents in its own ladder code
+        // ("the test only ever rejected rungs in the FAVOURABLE direction"), made
+        // again in the mirror image. Caught by the user reading the output.
+        var lastOk = null, firstBad = null;
+        for (var i = 0; i < rungs.length; i++) {
+            if (rungs[i].bps >= -bps) { lastOk = rungs[i]; }
+            else { firstBad = rungs[i]; break; }
+        }
+        if (lastOk === null) return { bps: bps, shape: 'below_probe', value: rungs[0].size,
+                                      worst: rungs[0].bps };
+        if (firstBad === null) return { bps: bps, shape: 'floor', value: lastOk.size,
+                                        deepest: lastOk.bps };
+        return { bps: bps, shape: 'bracket', value: lastOk.size,
+                 bracket: [lastOk.size, firstBad.size], upper_bps: firstBad.bps };
+    },
+
+    // ⚠️ FLATNESS IS JUDGED ON THE NON-REFERENCE RUNGS. Impact is struck against
+    // the smallest rung, so that one is ~0 by construction — counting it is why
+    // the producer's own size-responsiveness flag flips on the sign of sub-bp
+    // jitter (sUSDS oscillated every ~12h, 2026-09-29 to 10-01, taking the
+    // threshold label and the authored-vs-band decision with it).
+    _ladderIsFlat(liq) {
+        var rungs = this._ladderRungs(liq);
+        if (rungs.length >= 3) {
+            var distinct = {};
+            for (var i = 1; i < rungs.length; i++) { distinct[Math.round(rungs[i].bps * 1e4)] = 1; }
+            if (Object.keys(distinct).length <= 1) return true;
+        }
+        return liq.two_pct_depth_size_responsive === false ||
+               liq.two_pct_depth_status === 'not_size_responsive';
+    },
+
+    // Per-asset override from the registry — the escape hatch for an asset the
+    // default does not fit. Empty today; a volatile asset would be the first.
+    ASSET_DEPTH_OVERRIDES: {},
+    assetDepthOverrideBps(data) {
+        var slug = (data && (data.view_slug || data.asset_slug)) || null;
+        if (!slug) return null;
+        var v = this.ASSET_DEPTH_OVERRIDES[slug];
+        if (v == null) v = this.ASSET_DEPTH_OVERRIDES[String(slug).replace(/_/g, '-')];
+        return typeof v === 'number' ? v : null;
+    },
+
+    _depthValueHtml(data) {
+        var d = this.depthAtLimit(data);
+        if (d.value == null) return 'n/a';
+        var money = this.formatCurrency(d.value);
+        if (d.shape === 'bracket') {
+            return money + '<span class="text-sm font-normal text-slate-500"> \u2013 ' +
+                this.formatCurrency(d.bracket[1]) + '</span>';
+        }
+        if (d.shape === 'below_probe') {
+            return '<span class="text-red-600">under ' + money + '</span>';
+        }
+        if (d.shape === 'floor') return '\u2265' + money;
+        // capacity and measured print the figure plainly: a capacity limit has no
+        // crossing to be a floor OF, and a measured crossing is exact.
+        return money;
     },
 
     // Sorted [{size, bps}] from the exit-mark ladder; rungs with no slippage are
@@ -3934,26 +4034,62 @@ const CommonRenderer = {
         return out.sort(function(a, b) { return a.size - b.size; });
     },
 
-    // The sentence that makes a relabelled floor checkable: how far inside the
-    // threshold the deepest quoted rung actually cleared.
-    _depthHeadlineNote(liq) {
-        if (typeof (liq || {}).depth_threshold_bps === 'number') return '';
-        if (this._headlineThresholdBps(liq) !== this.DEPTH_HEADLINE_BPS) return '';
-        var rungs = this._ladderRungs(liq);
-        if (!rungs.length) return '';
-        var deepest = rungs[rungs.length - 1];
-        var worst = rungs.reduce(function(a, r) {
-            return Math.abs(r.bps) > Math.abs(a.bps) ? r : a;
-        }, rungs[0]);
-        return 'every quoted rung clears inside ' + this.DEPTH_HEADLINE_BPS + ' bps \u2014 deepest ' +
-            this.formatCurrency(deepest.size) + ' at ' + deepest.bps.toFixed(1) + ' bps' +
-            (worst.size !== deepest.size
-                ? ', worst ' + worst.bps.toFixed(1) + ' bps at ' + this.formatCurrency(worst.size)
-                : '');
+    // One line of evidence under the figure, so a reader can check the shape
+    // rather than take it. ⚠️ The bracket's width is the ladder's RESOLUTION and
+    // says so — printing a range without that invites it to be read as a
+    // measurement of uncertainty in the venue rather than in our probing.
+    _depthHeadlineNote(data) {
+        var d = this.depthAtLimit(data);
+        var pct = (Math.round(d.bps) / 100) + '%';
+        if (d.shape === 'capacity') {
+            // The producer's own reason where it gives one — a fixed rate and an
+            // inventory ceiling are different findings and it knows which.
+            var liq = (data && data.liquidity) || {};
+            if (typeof liq.two_pct_depth_unresponsive_note === 'string' &&
+                liq.two_pct_depth_unresponsive_note.trim()) {
+                return liq.two_pct_depth_unresponsive_note.trim();
+            }
+            // ⚠️ NO MECHANISM IS ASSERTED WITHOUT EVIDENCE. The fallback used to say
+            // "returns the same cost at every size", which is true of sUSDS/USDS and
+            // FALSE of hastra-prime, whose rungs run -2.2 to -11.5 before hitting an
+            // inventory ceiling. Where the producer gives no reason, say only what is
+            // common to both and leave the reason to its own basis string.
+            var flatData = this._ladderRungs(liq).length >= 3 &&
+                Object.keys(this._ladderRungs(liq).slice(1).reduce(function(acc, r) {
+                    acc[Math.round(r.bps * 1e4)] = 1; return acc; }, {})).length <= 1;
+            return flatData
+                ? 'the quote path returns the same cost at every size, so no crossing exists ' +
+                  'to name \u2014 this is capacity, not depth'
+                : 'the producer reports this figure as a capacity limit rather than a price ' +
+                  'crossing \u2014 see its basis for which limit binds';
+        }
+        if (d.shape === 'below_probe') {
+            return 'the SMALLEST size quoted (' + this.formatCurrency(d.value) + ') already costs ' +
+                Math.abs(d.worst).toFixed(1) + ' bps, past ' + pct + ' \u2014 the crossing is below ' +
+                'anything probed';
+        }
+        if (d.shape === 'bracket') {
+            return pct + ' crossing falls between two rungs \u2014 the width is the ladder\u2019s ' +
+                'resolution, not a measurement';
+        }
+        if (d.shape === 'floor' && d.deepest != null) {
+            return 'every quoted rung clears inside ' + d.bps + ' bps \u2014 deepest ' +
+                this.formatCurrency(d.value) + ' at ' + d.deepest.toFixed(1) + ' bps, so the ' +
+                'crossing is above where probing stopped';
+        }
+        if (d.not_at_default) {
+            return 'no ladder to re-read, so this is the producer\u2019s own figure at ' + pct;
+        }
+        return '';
     },
 
-    _depthLabel(liq) {
-        var bps = this._headlineThresholdBps(liq);
+    // ⚠️ TAKES `data`, NOT `liq` — the per-asset override is keyed by slug and a
+    // liquidity block does not carry one. All three call sites had `data` in
+    // scope already.
+    _depthLabel(data) {
+        var d = this.depthAtLimit(data);
+        if (d.shape === 'capacity') return 'exit capacity';
+        var bps = d.bps;
         var pct = bps / 100;
         // 0.5 not 0.50, 2 not 2.0 — trailing zeros on a label read as precision.
         return (Math.round(pct * 100) / 100) + '% depth';
@@ -4063,7 +4199,7 @@ const CommonRenderer = {
                           this._escapeAttr(String(liq.two_pct_depth_basis || '')) +
                       '">float that can reach the market — not a 2% depth</span> · ' +
                       this._volumeSubHtml(liq) + exitScope
-                    : this._depthLabel(liq) + dWord + ' · ' + this._volumeSubHtml(liq) + exitScope));
+                    : this._depthLabel(data) + dWord + ' · ' + this._volumeSubHtml(liq) + exitScope));
         // Say WHY it is unrated, or an honest blank reads as a missing feed.
         if (this._depthContradictedByLadder(data)) {
             liqSub = '<span class="text-amber-700">depth exceeds the 2% crossing in its own ladder</span>';
@@ -5434,7 +5570,7 @@ const CommonRenderer = {
             // Consequence, accepted: usdai and susdai blank the body, so the
             // share no longer appears on them at all. Owner's call was "demote
             // or drop"; on those two it drops.
-            var parts = self._depthQualifierHtml(liq);
+            var parts = self._depthQualifierHtml(liq, data);
             var basis = typeof liq.liquidity_score_basis === 'string' && liq.liquidity_score_basis.trim()
                 ? liq.liquidity_score_basis : null;
             var perChain = typeof liq.liquidity_score_per_chain === 'string' && liq.liquidity_score_per_chain.trim()
@@ -7073,7 +7209,7 @@ const CommonRenderer = {
         var statRow =
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">' +
-                    CommonRenderer._depthLabel(liq) + '</div>' +
+                    CommonRenderer._depthLabel(data) + '</div>' +
                     // ⚠️ total_2pct_depth_is_floor means the quote ladder was
                     // EXHAUSTED before price moved 2% — the real depth is at
                     // least this, not equal to it. sUSDS publishes it true and
@@ -7091,12 +7227,12 @@ const CommonRenderer = {
                         // $25M" — the worst-measured asset rendering as the deepest.
                         // Found by riskAnalyst reading a truncated comment and ASKING
                         // rather than asserting.
-                        (liq.total_2pct_depth != null
-                            ? ((liq.total_2pct_depth_is_floor === true &&
-                                liq.two_pct_depth_status !== 'not_size_responsive' &&
-                                liq.two_pct_depth_size_responsive !== false) ? '\u2265' : '') +
-                              this.formatCurrency(liq.total_2pct_depth)
-                            : 'n/a') + '</div>' +
+                        // ⚠️ THE VALUE FOLLOWS THE SHAPE, because the shape is the
+                        // finding. A bracket printed as a single number asserts a
+                        // precision the rungs do not have, and "below $10,000"
+                        // printed as "$500,000" (usg's 2% figure) inverts the
+                        // reading entirely.
+                        this._depthValueHtml(data) + '</div>' +
                     // ⚠️ Four kinds of number wore the same label. The producer
                     // now declares which: `bracketed` located the crossing
                     // between two rungs, `ladder_exhausted` never reached it,
@@ -7111,7 +7247,7 @@ const CommonRenderer = {
                     // comparison read a signed cost as though it were a
                     // magnitude. Rendering "≥" or a bracket is what stops a
                     // bound being read as a measurement.
-                    this._depthQualifierHtml(liq) +
+                    this._depthQualifierHtml(liq, data) +
                     this._selfReferentialHtml(data) +
                     (liq.total_2pct_depth == null && liq.total_2pct_depth_note
                         ? '<div class="text-[11px] text-slate-400" title="' +
