@@ -495,9 +495,9 @@ PART                     OWNER        CADENCE     IF ABSENT OR STALE          ON
 exit ladder + crossing   PegTracker   3h          unrated, NAMING depth as    --
   rungs, status, floor,                           the missing half
   bracket, basis
-bisected crossing        DexTracker   daily       fall back to the ladder     the sharper
-  a located point                                 bracket, NEVER to n/a       measurement wins,
-  between two rungs                                                           labelled as bisected
+bisected crossing        DexTracker   daily       fall back to the ladder     ⚠️ sharper wins ONLY
+  a located point                                 bracket, NEVER to n/a       WHILE FRESH -- see
+  between two rungs                                                           the age rule below
 venue inventory          DexTracker   weekly/     PegTracker pool rows as a   DexTracker's wins:
   venues, exclusions       monthly               LABELLED fallback tier       the curation IS the
   with reasons,                                                               content
@@ -508,6 +508,33 @@ venue size / TVL         DexTracker   weekly/     PegTracker reserves,        �
 primary redemption       ⚠️ OPEN      --          ⚠️ OPEN                     ⚠️ OPEN -- both publish
   gate + eligibility                                                          and they DISAGREE
 ```
+
+⚠️ **PRECISION DOES NOT OUTRANK FRESHNESS, AND THE FIRST VERSION OF THIS TABLE SAID IT DID.**
+Written 2026-10-01 as "the sharper measurement wins"; corrected the same day when riskAnalyst's
+reading of our own intraday series pushed back on it. **A bisected point wins only while it is no
+older than one refresh interval of the coarser measurement it is displacing.** Past that, the fresh
+rung bracket wins and the stale point renders beside it as context, labelled with its age.
+
+Measured on PegTracker's 3-hourly history — how often a 50 bps crossing **24 hours old** no longer
+matches the live one, counting only pairs where the producer had not re-rigged the grid:
+
+```
+syrupUSDC  0% (884 pairs) · sUSDe 2% (706) · crvUSD 8% (686) · reUSD 13% (272) · USDe 28% (759)
+```
+
+So a day-old bisected point is false precision on reUSD and USDe and perfectly good on syrupUSDC and
+sUSDe. ⚠️ **Neither a flat precision rule nor a flat freshness rule is right** — the spread is
+0% to 28% across five assets, so the rule has to be conditional on age, and the per-asset rates
+above are the evidence. Re-measure before citing; these move.
+
+⚠️ **AND DO NOT INFER CROSSING INSTABILITY FROM RUNG-COST VOLATILITY — THEY ARE DIFFERENT
+QUANTITIES AND WE NEARLY SHIPPED THE CONFLATION.** USDe's deepest rung has a median INTRADAY COST
+spread of 112.3 bps (109 days, 3-hourly, tails unvetted), which reads as "a daily sample cannot
+locate a 50 bps crossing even in principle." It does not follow: the crossing is quantised to the
+decade grid, so a 112 bps swing in cost at a $5M rung moves the crossing only when it carries a rung
+across the limit. The honest version is the 0–28% table above, which is measured on crossings rather
+than inferred from costs. The cost series is still the right evidence that a DAILY-ONLY axis cannot
+state an exit cost; it is not evidence about where the crossing sits.
 
 ⚠️ **THE FALLBACK COLUMN IS THE WHOLE POINT, AND IT IS WHAT WAS MISSING.** Adoption used to replace
 the WHOLE axis, so a payload that DECLINED to publish a figure deleted a measured one: reUSD-RE and
