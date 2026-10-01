@@ -2,7 +2,15 @@
 target_repos: PegTracker (~/PegTracker) · DexTracker (~/DexTracker)
 target_claude: pegtracker, dextracker
 date_drafted: 2026-10-01
-status: PROPOSAL — owner-approved direction, field assignment open to correction by either producer
+status: >
+  SUPERSEDED 2026-10-01 by DISPATCH-axis3-tiers-2026-10-01.md, and NOT SENT in this form. The split
+  below rests on a premise measurement contradicts: both producers query the same KyberSwap routing
+  endpoint, and DexTracker's venue list is partly derived from DexTracker's own ladder, so "ladder
+  vs venues" is not a separable partition. Kept for the three sub-decisions in §"Three decisions",
+  which the tier version carries forward unchanged.
+  ⚠️ Its closing line "No page is broken today" was true when the suppression discarded only raw
+  rungs. It stopped being true once PegTracker published explicit 50 bps blocks — which this file's
+  own opening section describes as a live failure. The later sentence is the stale one.
 severity: >
   Not a defect report. Axis 3 currently has two producers publishing OVERLAPPING payloads in
   different vocabularies, and one of them can suppress the other. This proposes splitting by what
