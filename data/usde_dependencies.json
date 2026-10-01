@@ -1,0 +1,81 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "usde",
+  "as_of": "2026-10-01T00:00:00Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "USDC — liquid stablecoin reserves at published addresses",
+        "slug": "usdc",
+        "edge_kind": "backing",
+        "materiality": "material"
+      },
+      {
+        "name": "USDtb — the path to BlackRock BUIDL",
+        "slug": "usdtb",
+        "edge_kind": "backing",
+        "materiality": "material",
+        "note": "Tokenized RWAs are held primarily as BUIDL via the USDtb path, so USDtb is the recorded hop."
+      },
+      {
+        "name": "JAAA — the June 2026 AAA-CLO sleeve",
+        "slug": "jaaa",
+        "edge_kind": "backing",
+        "materiality": "minor",
+        "note": "~$310M cap / ~$200M live. First realised non-BUIDL RWA; adds corporate-credit cyclicality plus a Centrifuge/Solana tokenization layer. Scored net-neutral at current size."
+      },
+      {
+        "name": "BlackRock BUIDL",
+        "unresolved": [
+          "BUIDL"
+        ],
+        "unresolved_note": "⚠️ Securitize ERC-20, wallet-readable, and NO REPORT — reached through USDtb and a material share of the RWA leg."
+      },
+      {
+        "name": "Institutional overcollateralized lending — Anchorage, Maple Institutional, Coinbase AM",
+        "terminal": true,
+        "kind": "real-world",
+        "note": "⚠️ Off-chain bilateral loans against borrower BTC/ETH collateral in triparty custody. Attested monthly (Harris & Trotter), not verifiable on-chain. This report flags the book as NEW and NOT OPERATIONALLY SEASONED THROUGH STRESS. maple.md exists as a protocol report; Anchorage and Coinbase AM have none."
+      },
+      {
+        "name": "Basis trade — BTC/ETH perpetual shorts, ~11% of backing",
+        "terminal": true,
+        "kind": "real-world",
+        "note": "⚠️ USDe IS NO LONGER PRIMARILY A BASIS TRADE — the report is explicit that negative-funding fragility is now an 11% concern rather than a 93% one. OES custody balances are readable; the CEX short legs are off-chain. Includes HIP-3 equity/commodity perps."
+      },
+      {
+        "name": "Chaos Labs Edge Proof of Reserves",
+        "terminal": true,
+        "kind": "oracle",
+        "note": "Ingests off-chain custodian and CEX data and publishes to Ethena's transparency page. The verifiability of ~89% of backing rests on it."
+      }
+    ],
+    "upstream_resolution_rule": "⚠️ EVERY upstream entry carries exactly one resolution: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL means nothing is missing; UNRESOLVED means a report is owed. Never merged.",
+    "edge_kind_rule": "`backing` = my SOLVENCY depends on it. `venue` = my EXIT PRICE does.",
+    "coverage_note": "⚠️ RECORDED 2026-10-01. 5 dependents — aavethena-loop-mainnet, avUSD, reUSDe, savUSD, usdp-parallel — so a hole in the middle of the graph. ⚠️ EXACT WITHIN-CATEGORY PERCENTAGES ARE NOT DISCLOSED, so materiality here is ordinal and not derived from published shares. Collateral as of `last_verified` 2026-09-10.",
+    "collateral_as_of": "2026-09-10",
+    "downstream_tracked": [
+      "aavethena-loop-mainnet",
+      "avusd",
+      "reusde-re",
+      "savusd",
+      "usdp-parallel"
+    ],
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "aavethena-loop-mainnet",
+        "avusd",
+        "reusde-re",
+        "savusd",
+        "usdp-parallel"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
+  }
+}

@@ -1,0 +1,79 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "crvusd",
+  "as_of": "2026-10-01T00:00:00Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "wstETH",
+        "slug": "wsteth",
+        "edge_kind": "backing",
+        "materiality": "material"
+      },
+      {
+        "name": "WETH",
+        "slug": "weth",
+        "edge_kind": "backing",
+        "materiality": "material"
+      },
+      {
+        "name": "sfrxETH",
+        "unresolved": [
+          "sfrxETH"
+        ],
+        "unresolved_note": "⚠️ A live crvUSD collateral market and NO REPORT. We rate sfrxUSD but not sfrxETH."
+      },
+      {
+        "name": "WBTC",
+        "unresolved": [
+          "WBTC"
+        ],
+        "unresolved_note": "⚠️ Same WBTC gap as fxUSD's 89.7%-of-debt leg. A crvUSD collateral market, the custodial BTC wrapper, no report."
+      },
+      {
+        "name": "tBTC",
+        "unresolved": [
+          "tBTC"
+        ],
+        "unresolved_note": "⚠️ A live collateral market, no report. Also named in DUSD's collateral set."
+      },
+      {
+        "name": "LLAMMA — soft-liquidation AMM, collateral held in price bands",
+        "terminal": true,
+        "kind": "contract",
+        "note": "⚠️ crvUSD does not hold collateral as a simple balance: LLAMMA distributes it across narrow price bands and soft-liquidates continuously. So collateral quality and the AMM's behaviour are not separable risks here, unlike a hard-liquidation CDP."
+      },
+      {
+        "name": "⚠️ PegKeeper-minted crvUSD is NOT collateral-backed",
+        "terminal": true,
+        "kind": "authority",
+        "note": "⚠️ This report states that PegKeeper crvUSD is PROTOCOL-MINTED, PROTOCOL-OWNED AND NOT BACKED BY COLLATERAL. So a share of supply has no upstream at all, and a lookthrough that assumes every unit is collateralised overstates the backing."
+      }
+    ],
+    "upstream_resolution_rule": "⚠️ EVERY upstream entry carries exactly one resolution: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL means nothing is missing; UNRESOLVED means a report is owed. Never merged.",
+    "edge_kind_rule": "`backing` = my SOLVENCY depends on it. `venue` = my EXIT PRICE does.",
+    "coverage_note": "⚠️ RECORDED 2026-10-01. HELD (~$518) and 4 dependents — Beefy curvelend, reusd-resupply, scrvUSD and USG — so this was a hole in the MIDDLE of the graph: traversable down to crvUSD, not through it. ⚠️ THREE OF FIVE COLLATERAL MARKETS ARE UNSCORED (sfrxETH, WBTC, tBTC). Collateral as of `last_verified` 2026-08-24.",
+    "collateral_as_of": "2026-08-24",
+    "downstream_tracked": [
+      "beefy-curvelend-sfrxeth-crvusd-fraxtal",
+      "reusd-resupply",
+      "scrvusd",
+      "usg"
+    ],
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "beefy-curvelend-sfrxeth-crvusd-fraxtal",
+        "reusd-resupply",
+        "scrvusd",
+        "usg"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
+  }
+}

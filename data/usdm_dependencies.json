@@ -1,0 +1,58 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "usdm",
+  "as_of": "2026-10-01T00:00:00Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "USDC — in BOTH the canonical model and the live Monad realisation",
+        "slug": "usdc",
+        "edge_kind": "backing",
+        "materiality": "dominant"
+      },
+      {
+        "name": "USDT — canonical model only",
+        "slug": "usdt",
+        "edge_kind": "backing",
+        "materiality": "material",
+        "note": "⚠️ In the CANONICAL basket, not in the live Monad one. The two differ and both are recorded."
+      },
+      {
+        "name": "USDS — canonical model only",
+        "slug": "usds",
+        "edge_kind": "backing",
+        "materiality": "material",
+        "note": "⚠️ Canonical only; absent from the live Monad realisation."
+      },
+      {
+        "name": "AUSD — live Monad realisation only",
+        "slug": "ausd",
+        "edge_kind": "backing",
+        "materiality": "material",
+        "note": "⚠️ Present in what Mento ACTUALLY holds on Monad, absent from the documented canonical basket."
+      },
+      {
+        "name": "USDT0 — live Monad realisation only",
+        "slug": "usdt0",
+        "edge_kind": "backing",
+        "materiality": "material",
+        "note": "⚠️ Bridged USDT, so this is a TWO-HOP edge: USDm -> USDT0 -> USDT. And per usdt0's own file the 1:1 is Safe-dependent rather than bridge-enforced on HyperEVM; on Monad it is the OFT."
+      }
+    ],
+    "upstream_resolution_rule": "⚠️ EVERY upstream entry carries exactly one resolution: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL means nothing is missing; UNRESOLVED means a report is owed. Never merged.",
+    "edge_kind_rule": "`backing` = my SOLVENCY depends on it. `venue` = my EXIT PRICE does.",
+    "coverage_note": "⚠️ RECORDED 2026-10-01. USDm is labelled `fiat-backed` AND IT IS NOT — it is Reserve-backed 1:1 by a BASKET OF OTHER STABLECOINS, which is why it failed sub-task B's terminal bar. HELD ~$25,867. ⚠️ TWO BASKETS, BOTH RECORDED, BECAUSE THEY DIFFER: the canonical model is USDC/USDT/USDS; the actual Monad realisation is USDC + AUSD + USDT0. Recording only one would be a claim the report does not make. ⚠️ A SECOND MENTO DIVERGENCE IS ALREADY ON RECORD in this report — docs say EURm is Reserve-backed by EUROC while the Monad Reserve holds ZERO EUROC — so documented-vs-actual divergence is this issuer's pattern, not a one-off. Collateral set as of `last_verified` 2026-08-28.",
+    "collateral_as_of": "2026-08-28",
+    "downstream_tracked": [],
+    "downstream_basis": {
+      "derived_by_inversion": [],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
+  }
+}

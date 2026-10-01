@@ -1,0 +1,41 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "usdai",
+  "as_of": "2026-10-01T00:00:00Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "PYUSD — the stated backing",
+        "slug": "pyusd",
+        "edge_kind": "backing",
+        "materiality": "dominant",
+        "note": "The report states plainly that it is backed by PYUSD."
+      },
+      {
+        "name": "⚠️ M0 — RAILS ONLY, EXPLICITLY NOT BACKING",
+        "terminal": true,
+        "kind": "protocol",
+        "note": "⚠️ THE TRAP ON THIS ASSET, AND IT RUNS THE WRONG WAY FROM THE OBVIOUS GUESS. m0.md states that usdai USES M0 RAILS BUT IS NOT BACKED BY $M. Several sibling assets (usdat, musd-metamask) ARE backed by $M, so a pattern-match across the M0 family would wire this edge as backing and be wrong. Recorded as terminal infrastructure, not as an upstream asset."
+      }
+    ],
+    "upstream_resolution_rule": "⚠️ EVERY upstream entry carries exactly one resolution: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL means nothing is missing; UNRESOLVED means a report is owed. Never merged.",
+    "edge_kind_rule": "`backing` = my SOLVENCY depends on it. `venue` = my EXIT PRICE does.",
+    "coverage_note": "⚠️ RECORDED 2026-10-01. Labelled `fiat-backed`; its own report says 'backed by PYUSD', so it failed sub-task B's terminal bar. Collateral as of `last_verified` 2026-08-26.",
+    "collateral_as_of": "2026-08-26",
+    "downstream_tracked": [
+      "susdai"
+    ],
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "susdai"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
+  }
+}
