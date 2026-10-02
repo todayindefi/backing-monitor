@@ -597,3 +597,34 @@ status      not started. Deliberately separated from the declaration fix: one is
             is a plotted number on four assets with a known mis-scaling trap.
 Last reviewed 2026-10-02
 ```
+
+### fxusd — ⚠️ renders an issuer score riskAnalyst says nobody authored
+```
+raised      2026-10-02
+what        fxusd's page renders "Issuer 5.5/10". riskAnalyst's new score-derivation check reports
+            that value as an ORPHAN — a score in their overlay with no frontmatter counterpart, so
+            no report authored it. ⚠️ The field asserts the opposite: issuer_score_source is
+            "riskAnalyst:authored", generated_at 2026-09-22. Both cannot be right.
+why         ⚠️ They assessed it as not reader-visible because the asset is production:false on
+            their side. It IS reachable here: fxusd is registered in data/assets.json with no
+            `published` flag, so it is absent from the index and renders at ?asset=fxusd. Our own
+            feed checker calls those four assets "built, reachable by direct link, NOT in the
+            index". Unlisted is not staged — same lesson as "writing to a listed source root
+            publishes", one layer out.
+            An unauthored number carrying an authored-source label is worse than a missing one: a
+            reader has no signal, and neither does an auditor.
+owner       riskAnalyst to resolve the orphan (a human call — a missing axis is not a low axis, and
+            they declined to resolve it by copying the underlying's number across). Then us only if
+            the field is withdrawn.
+closes when the score has an author, or is withdrawn from the overlay
+status      flagged to riskAnalyst 2026-10-02 with the live DOM evidence, correcting their
+            not-reader-visible assessment. Not ours to edit.
+note        The other two orphans (fxsave backing 4.5, fxsave issuer 5.5) are NOT live here —
+            fxsave is unregistered and we hold no fxsave overlay. One of three is reachable, and it
+            is the one with the authored-source claim attached.
+⚠️ wider     Worth a pass of its own: are there OTHER scores on our pages whose claimed provenance
+            nothing can corroborate? We cannot see riskAnalyst's frontmatter, so their derivation
+            check is the only detector — which means our exposure to this class is entirely
+            dependent on a tool in another repo that was built today.
+Last reviewed 2026-10-02
+```
