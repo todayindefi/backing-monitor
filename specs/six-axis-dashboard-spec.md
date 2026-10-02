@@ -1195,6 +1195,8 @@ NOT FINISHED                          FINISHED
 
 ```
 [ ] check_feeds.py: 0 failures
+[ ] This asset's entries in specs/asset-backlog.md are each CLOSED or RESTATED with why they
+    are still true. ⚠️ Leaving one untouched rots it into a stale claim.
 [ ] Every axis: a figure OR a stated unrated reason. No bare dashes.
 [ ] Every tile: not blank while its axis has a finding; label matches the value shown.
 [ ] Every panel renders INSIDE its axis section. No duplicates across the page.
