@@ -3781,12 +3781,26 @@ const CommonRenderer = {
         var gap = Math.abs(authored.score - band * 2);
         var head = 'Authored score for this axis: ' + authored.score + '/10 (' + authored.field + '), ' +
             'against the measured band of ' + (band * 2) + '/10.';
-        if (gap >= this.AUTHORED_DIVERGENCE_MIN_GAP) return head;
+        // ⚠️ THE REASON WAS DROPPED EXACTLY WHERE IT WAS NEEDED MOST — the basis
+        // was appended only on the BELOW-threshold branch, so an authored score
+        // that merely differs by arithmetic got a full explanation and a REAL
+        // disagreement got two bare numbers and no reason. reUSD-RE: band 10/10
+        // against an authored 4.5, gap 5.5, and the producer's own basis says
+        // "MEASURES THE WORSE OF TWO LEGS ... THE BINDING LEG IS REDEMPTION, NOT
+        // DEPTH ... SO THE COMPUTED DEPTH FIGURE BESIDE THIS SCORE IS NOT WHAT THIS
+        // SCORE MEASURES" — published, and reaching no pixel at the one place a
+        // reader is looking at both numbers at once.
+        var reason = (authored.basis ? ' Basis: ' + this._mdPlain(String(authored.basis)) : '');
+        if (gap >= this.AUTHORED_DIVERGENCE_MIN_GAP) {
+            return head + ' \u26a0\ufe0f This gap is at or above the ' +
+                this.AUTHORED_DIVERGENCE_MIN_GAP.toFixed(1) + '-point threshold, so it is a real ' +
+                'disagreement rather than band arithmetic \u2014 the two numbers may be measuring ' +
+                'different things, and the basis below says which.' + reason;
+        }
         return head + ' Gap of ' + gap.toFixed(1) + ' is below the ' +
             this.AUTHORED_DIVERGENCE_MIN_GAP.toFixed(1) + '-point threshold and is NOT flagged: bands ' +
             'can only emit even numbers, so an authored ' + authored.score + ' cannot match one ' +
-            'exactly. The difference here is resolution, not disagreement.' +
-            (authored.basis ? ' Basis: ' + authored.basis : '');
+            'exactly. The difference here is resolution, not disagreement.' + reason;
     },
 
     // Appended to a band chip when an authored score disagrees with it.
