@@ -122,7 +122,7 @@ status      ✅ CLOSED 2026-10-02 (fe1d82f10). reUSD-RE now reads 0.5% depth $10
 Last reviewed 2026-10-02
 ```
 
-### reusd-re — ⚠️ ESCALATED: rated Healthy 10/10 where the analyst scores liquidity 4.5/10
+### reusd-re — rated Healthy 10/10 where the analyst scores liquidity 4.5/10 — DEFERRED to next refresh
 ```
 raised      2026-10-02
 what        Our band is computed from DEPTH ALONE and renders 10/10. The spec defines this axis as
@@ -138,9 +138,23 @@ owner       riskAnalyst supplies a liquidity non-derivability declaration; then 
 closes when the declaration exists and the chip shows the authored score, OR the band learns to
             account for the redemption leg, OR this is recorded as acceptable with the tooltip
             disclosure as the mitigation.
-status      answered to riskAnalyst 2026-10-02 with the measurement; they agreed the declaration is
-            honest for this asset and said they will NOT declare for syzusd/yzusd (gap 1.0, inside
-            band resolution — no disagreement there).
+status      ⏸ DEFERRED by the owner 2026-10-02 to reUSD-RE's next refresh. Was raised as
+            ESCALATED the same day and is deliberately NOT any more — see the re-triage below.
+            riskAnalyst answered 2026-10-02: the declaration is honest for this asset, and they will
+            NOT declare for syzusd/yzusd (gap 1.0, inside band resolution — no disagreement there).
+            They are holding the field unpublished until the build is approved, so nothing of theirs
+            is waiting on the refresh either.
+
+re-triage   ⚠️ This was escalated under the rule "a page showing something FALSE jumps the queue",
+            and the owner has deferred it anyway. Both are defensible and the reason the second one
+            is, is an interim fix that landed the same day (de9586303): the hover on that rating now
+            carries riskAnalyst's own explanation — that the axis measures the worse of venue depth
+            and primary redemption, that the binding leg here is redemption, and that 4.5 and $10M
+            are therefore not in conflict. Before that it showed two bare numbers and no reason.
+            ⚠️ So what remains is a VISIBLE chip that overstates with a correct explanation one hover
+            away. That is a weaker defect than the n/a-over-a-live-measurement case this file
+            escalated and closed, and it is the reason deferring is reasonable rather than a
+            concession. If the mitigation is ever reverted, this goes back to escalated.
 note        The tooltip already states both numbers, and the head carries the report's full
             reasoning in a disclosure. So this is "visible chip overstates" rather than "hidden".
             Whether a hover is sufficient mitigation is the open question.
