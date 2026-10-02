@@ -417,3 +417,28 @@ status      ⏸ DEFERRED with the reUSD-RE instance. Not re-raised in status upd
             implementation, in the generous direction, on a held asset.
 Last reviewed 2026-10-02
 ```
+
+### cross-asset — 16 assets owe the coverage-history element, and silence is the failure
+```
+raised      2026-10-02
+what        §4.0's manifest requires a coverage history chart wherever a coverage figure exists,
+            and where there is no series the absence must be DECLARED: "coverage is not tracked
+            over time". 16 assets have the figure, no series, and say nothing.
+why         The governing rule is explicit — "every element is either RENDERED or its absence is
+            DECLARED ON THE PAGE. Silence is the failure." A missing chart with no statement reads
+            as an oversight, and ABSENT and UNMEASURED must not look alike.
+            ⚠️ sUSDe is the instructive case: its coverage history genuinely belongs to USDe, the
+            same reserve pool, and the page carries a "View USDe ↗" link. But a link to another
+            asset is not a declaration about this element on this page.
+owner       us — a generic declared-absence string in the renderer, not per-asset copy
+closes when a coverage figure with no series renders the declared absence instead of nothing
+status      not started. Deliberately not built at the end of a long session: it is a fleet-wide
+            reader-facing string on 16 assets and deserves its own pass.
+how found   Answering "is sUSDe up to spec?". ⚠️ check_feeds.py was reporting 11 assets as missing
+            coverage or composition they DO publish — it read summary.* and backing_breakdown but
+            never the six-axis `backing.*` block. Fixed in d241f1e88. Its own comment had predicted
+            exactly that failure one shape earlier ("cry-wolf with a work order attached"), and I
+            was about to report its three sUSDe gaps as fact without reading the predicate.
+            Real conformance for sUSDe after the fix: ONE gap, this one.
+Last reviewed 2026-10-02
+```
