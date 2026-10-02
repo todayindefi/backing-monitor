@@ -252,3 +252,48 @@ status      drafted, corrections identified, not sent — awaiting the redemptio
             since correction 2 depends on it
 Last reviewed 2026-10-02
 ```
+
+### usdm — the sentence that bounds its redemption verdict is dropped by the overlay
+```
+raised      2026-10-02
+what        The page now reads "Primary exit: Mento V3 USDm/USDC FPMM — Not gated — public router
+            route". PegTracker publishes the sentence that bounds that: "Any address may call swap()
+            on the Monad FPMMs — the probe reverts on economics, not permission. The Celo Reserve's
+            own mint/redeem is a SEPARATE venue and is allowlisted to strategies; this field
+            describes the FPMM only." DexTracker's overlay replaces the axis and its own entry has
+            no equivalent note, so that sentence never reaches the page.
+why         Not urgent: the venue name says FPMM and the basis says "public router route", so a
+            reader is not told they can redeem with the issuer. But "Not gated" is the flattering
+            direction, and the one sentence that makes it precise is published and invisible.
+            ⚠️ This same lost sentence is what the renderer had been citing as an unresolved
+            producer dispute, for weeks, as its reason for withholding the verdict on all seven
+            assets. The producer had answered it in the data.
+owner       us
+closes when the hand-off carries a base scoping note where the overlay's redemption entry has
+            none — the same mechanism already built for depth (fe1d82f10) — or DexTracker publishes
+            the scope itself.
+status      not started. Deliberately left out of 7397dfb6c to keep that change to rendering a
+            published verdict rather than widening the merge.
+Last reviewed 2026-10-02
+```
+
+### cross-asset — the redemption split needs one typed field from each producer
+```
+raised      2026-10-02
+what        The specification now splits redemption into a PROBE (does the call execute, at what
+            cost, to what size — owned by whoever runs it) and an ELIGIBILITY judgement (who may
+            actually use it — riskAnalyst). Nothing in the data distinguishes the two, so the split
+            is specced and unimplementable.
+why         Measured across the 10 published redemption entries: 3 carry a usable typed prefix, 4
+            are prose, and 3 — including BOTH producers on reUSD-RE — publish no basis at all.
+            Gating on the prose prefixes would make the wording load-bearing, which the spec
+            forbids elsewhere for the same reason.
+owner       PegTracker and DexTracker, one field each; then us to route by it
+closes when each redemption entry declares which of the two questions it answers
+status      not sent. ⚠️ Scope corrected 2026-10-02: this REPLACES the drafted five-part ownership
+            proposal (DISPATCH-axis3-tiers-2026-10-01.md), which asked for agreement we do not need
+            — ownership is our decision and we choose which fields we read. Fold in the one useful
+            remainder: telling each producer which of their fields we actually READ, since a prose
+            audit the same day found ~60 fields they publish that reach no reader.
+Last reviewed 2026-10-02
+```
