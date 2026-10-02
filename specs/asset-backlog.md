@@ -777,3 +777,38 @@ closes when the declaration is published, or the absence is accepted
 status      answered 2026-10-03. Nothing owed from us; no code change.
 Last reviewed 2026-10-03
 ```
+
+### syrupusdc · syrupusdt — ⚠️ ESCALATED: both lost their rating AND depth figure when an overlay arrived
+```
+raised      2026-10-03, by riskAnalyst asking why only one pool had a band
+what        Both pages now read chip "Not rated" and "0.5% depth n/a". At 21:17 on 2026-10-02 both
+            carried a computed band (syrupusdc Stress 2/10, syrupusdt 4/10) from PegTracker's
+            `band_score`. DexTracker liquidity overlays for BOTH arrived in the 22:11 sync
+            (47d69705c) and the band disappeared.
+cause       `liquidity/1` is adopted in REPLACE mode, so the overlay supersedes the whole axis and
+            drops the base's `band_score` and `free_liquidity_pct` — the fields the rating was
+            computed from. ⚠️ syrupusdt's overlay has no `depth` key AT ALL (keys: asset_slug,
+            asset_symbol, distribution, enumeration, methodology, scope, token_registry,
+            token_resolution, venues), so it supplies no replacement.
+⚠️ MINE      This is the suppression class fixed yesterday for reUSD-RE and syzUSD (fe1d82f10), and
+            the hand-off is too narrow in TWO ways:
+            1. It fires on `typeof base.total_2pct_depth === 'number'`. Syrup publishes that as
+               NULL BY DESIGN with the crossing nested at `exit_mark.depth`, so the condition is
+               false and nothing carries.
+            2. It carries depth fields only. `band_score` and `free_liquidity_pct` are RATING
+               inputs of a different kind and are not in the carry list at all.
+            So yesterday's fix answered the shape it was shown and not the class.
+why escalated A rating and a depth figure that existed yesterday evening are gone from two
+            REGISTERED pages, and "0.5% depth n/a" asserts no depth is known while PegTracker's
+            ladder (8 rungs, floor at >=$1M, both crossings) sits underneath. That is the FALSE
+            case the triage rule reserves escalation for, identical to the one closed yesterday.
+owner       us
+closes when both pools render their band and depth again, with the carry generalised rather than
+            widened once more for this shape
+⚠️ note      riskAnalyst's five "byte-identical gate flags" were all irrelevant: the band never came
+            from depth on these assets. It came from free-liquidity `band_score`. And the asymmetry
+            they could not reconcile was two observations taken either side of the 22:11 sync — the
+            overlays arrived for BOTH pools in the same commit.
+status      not fixed. Surfaced to the owner 2026-10-03 with a proposed fix awaiting confirmation.
+Last reviewed 2026-10-03
+```
