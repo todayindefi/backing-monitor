@@ -699,6 +699,37 @@ tractable?  YES, measured 2026-10-03: across every synced overlay only 5 object-
             product-level page. Their block carries `effect_on_score: NONE` with the reason, which
             is the field that stops a reader inferring the score moved. Rendering assurance is its
             own job with its own care; NAMING the unread block is this one.
-status      not started. Recorded same-day with the verification, before the sync lands.
+status      ✅ BUILT 2026-10-03 (af507bd23). AUTHORED_BLOCK_KNOWN mirrors the prose adoption list;
+            unread object- and array-valued fields are now named with their field count.
+            Verified across all 32 assets and every axis: fires on exactly 2, zero false positives
+            on the six known blocks, and pre-tested against riskAnalyst's un-synced files so both
+            syrupusdc and susde will say "unread block: assurance" the moment it arrives.
+⚠️ found    Its first real output is a genuine one, which is the validation that matters:
+            reusd-re and reusde-re publish `eligible_sleeve_assets` = ["sUSDe","USDe","USDC",
+            "T-Bills"] and nothing reads it. What the backing is PERMITTED to hold is reader
+            content, so that is now its own item below.
+⚠️ limit    The known-blocks list is GLOBAL while the reading is PER-RENDERER. float_split and
+            measurement_clocks are read by dusd-alto.js alone, so listing them silences the marker
+            for every other asset. A floor on detection, not a guarantee — same trade the prose
+            list already makes.
+Last reviewed 2026-10-03
+```
+
+### reusd-re · reusde-re — `eligible_sleeve_assets` is published and reaches no reader
+```
+raised      2026-10-03, by the unread-block marker's first run (af507bd23)
+what        Both publish backing.eligible_sleeve_assets = ["sUSDe","USDe","USDC","T-Bills"] and
+            nothing renders it. The page now NAMES it as an unread block, so the omission is
+            visible rather than silent — but the content still does not reach a reader.
+why         What a sleeve is PERMITTED to hold is reader content, not plumbing: it bounds what the
+            backing can become, which a point-in-time composition table does not. On reUSD-RE the
+            list includes sUSDe, so the permitted set reaches an asset whose own custody findings
+            we already render as inherited.
+owner       us — adopt it in the backing panel beside the composition
+closes when the permitted set renders, or is recorded as deliberately internal
+status      not started. Small and self-contained; the marker will keep naming it until it lands.
+note        ⚠️ A permitted-set list must not render as a holdings list. These are four names with
+            no amounts — a reader seeing them beside a composition table could read them as
+            current positions. The label has to carry "permitted", not "held".
 Last reviewed 2026-10-03
 ```
