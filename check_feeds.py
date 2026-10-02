@@ -963,7 +963,22 @@ def _manifest_row(slug):
         '1 peg hist':   bool(peg.get('history_ref')) or has('peg_premium_discount_pct',
                              'peg_market_price', 'premium_discount_pct'),
         '2 coverage':   _cov_present(),
-        '2 cov hist':   has('collateral_ratio', 'coverage_pct', 'cr'),
+        # ⚠️ TWO BUGS, BOTH FOUND BY TRYING TO WRITE THIS GAP INTO 16 ASSETS' BACKLOGS.
+        #
+        # 1. It hand-wrote a NARROW key list while `_COV` sat four lines above with the
+        #    wider one. So usdai and usde (which publish `coverage_ratio` in history)
+        #    and susdat and usdat (`backing_ratio`) reported no coverage series while
+        #    carrying 700-2,175 entries of exactly that.
+        # 2. It ignored the manifest's CONDITION. §4.0 requires this element "a
+        #    coverage figure exists", with the absence declared otherwise — so bmnr,
+        #    strc, strcx, mstr and susdai, which publish no coverage figure at all,
+        #    were being flagged for a chart they do not owe.
+        #
+        # Measured 2026-10-02: 16 flagged, ~6 genuinely owed. Recording the unfixed
+        # list in the backlog would have sent someone to fix ten non-problems — the
+        # "cry-wolf with a work order attached" this file already warns about, which
+        # is now the third instance of it in the same function.
+        '2 cov hist':   (not _cov_present()) or has(*_COV),
         '2 breakdown':  _comp_present(),
         '3 liquidity':  bool(d.get('liquidity')) or bool(liq.get('depth')) or
                         bool(liq.get('venues')) or bool(liq.get('primary_exit')) or

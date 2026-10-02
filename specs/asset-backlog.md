@@ -418,12 +418,16 @@ status      ⏸ DEFERRED with the reUSD-RE instance. Not re-raised in status upd
 Last reviewed 2026-10-02
 ```
 
-### cross-asset — 16 assets owe the coverage-history element, and silence is the failure
+### cross-asset — 7 assets owe the coverage-history element, and silence is the failure
 ```
 raised      2026-10-02
 what        §4.0's manifest requires a coverage history chart wherever a coverage figure exists,
             and where there is no series the absence must be DECLARED: "coverage is not tracked
-            over time". 16 assets have the figure, no series, and say nothing.
+            over time". ⚠️ SEVEN assets have the figure, no series, and say nothing — corrected from
+            16 after fixing two more bugs in the test (d241f1e88 then the follow-up): it hand-wrote
+            a narrow key list while the wider `_COV` tuple sat four lines above, and it ignored the
+            manifest's own condition that the element is only owed where a coverage figure exists.
+            Each asset has its own entry below so it surfaces at that asset's refresh.
 why         The governing rule is explicit — "every element is either RENDERED or its absence is
             DECLARED ON THE PAGE. Silence is the failure." A missing chart with no statement reads
             as an oversight, and ABSENT and UNMEASURED must not look alike.
@@ -440,5 +444,97 @@ how found   Answering "is sUSDe up to spec?". ⚠️ check_feeds.py was reportin
             exactly that failure one shape earlier ("cry-wolf with a work order attached"), and I
             was about to report its three sUSDe gaps as fact without reading the predicate.
             Real conformance for sUSDe after the fix: ONE gap, this one.
+Last reviewed 2026-10-02
+```
+
+
+### hastra-prime — owes the coverage-history element (declare or chart)
+```
+raised      2026-10-02
+what        Publishes a coverage figure (100.21%) with no coverage series, and the page says
+            nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
+            ("coverage is not tracked over time"). Silence is the failure.
+detail      664 entries and no coverage column at all.
+owner       us for the declared-absence string; the producer if a series should exist
+closes when the page renders the series OR states its absence
+status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+Last reviewed 2026-10-02
+```
+
+### msusd-metronome — owes the coverage-history element (declare or chart)
+```
+raised      2026-10-02
+what        Publishes a coverage figure (21.90%) with no coverage series, and the page says
+            nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
+            ("coverage is not tracked over time"). Silence is the failure.
+detail      349 entries carrying supply only, no coverage column. ⚠️ The figure itself is 21.90% — unusually low for a collateral ratio, so a reader seeing it with no series has no way to tell a structural level from a deterioration. Worth confirming the figure means what the label says when this one is refreshed.
+owner       us for the declared-absence string; the producer if a series should exist
+closes when the page renders the series OR states its absence
+status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+Last reviewed 2026-10-02
+```
+
+### susdat — owes the coverage-history element (declare or chart)
+```
+raised      2026-10-02
+what        Publishes a coverage figure (104.08%) with no coverage series, and the page says
+            nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
+            ("coverage is not tracked over time"). Silence is the failure.
+detail      ⚠️ SHARPER THAN "NO HISTORY": the history carries a `backing_ratio` COLUMN in all 702 entries and it is NULL in every one. Scaffolded and never populated — which is worse than absent, because a consumer testing for the key's presence concludes a series exists. The declaration owed here is not "not tracked" but "declared and never written".
+owner       us for the declared-absence string; the producer if a series should exist
+closes when the page renders the series OR states its absence
+status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+Last reviewed 2026-10-02
+```
+
+### susde — owes the coverage-history element (declare or chart)
+```
+raised      2026-10-02
+what        Publishes a coverage figure (101.30%) with no coverage series, and the page says
+            nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
+            ("coverage is not tracked over time"). Silence is the failure.
+detail      2,175 entries of price, NAV and supply, no coverage column. ⚠️ Its coverage history genuinely belongs to USDe — same reserve pool — and the page carries a "View USDe ↗" link. But a link to another asset is not a declaration about this element on this page, and USDe DOES publish a coverage_ratio series.
+owner       us for the declared-absence string; the producer if a series should exist
+closes when the page renders the series OR states its absence
+status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+Last reviewed 2026-10-02
+```
+
+### susds — owes the coverage-history element (declare or chart)
+```
+raised      2026-10-02
+what        Publishes a coverage figure (100.00%) with no coverage series, and the page says
+            nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
+            ("coverage is not tracked over time"). Silence is the failure.
+detail      2,070 entries of NAV and supply, no coverage column. Same wrapper shape as susde — the coverage belongs to USDS. Check whether USDS publishes a series before declaring the absence.
+owner       us for the declared-absence string; the producer if a series should exist
+closes when the page renders the series OR states its absence
+status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+Last reviewed 2026-10-02
+```
+
+### syzusd — owes the coverage-history element (declare or chart)
+```
+raised      2026-10-02
+what        Publishes a coverage figure (110.98%) with no coverage series, and the page says
+            nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
+            ("coverage is not tracked over time"). Silence is the failure.
+detail      NO history file at all, so nothing to chart and nothing said.
+owner       us for the declared-absence string; the producer if a series should exist
+closes when the page renders the series OR states its absence
+status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+Last reviewed 2026-10-02
+```
+
+### thusd — owes the coverage-history element (declare or chart)
+```
+raised      2026-10-02
+what        Publishes a coverage figure (26.23% (on_chain_coverage_pct)) with no coverage series, and the page says
+            nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
+            ("coverage is not tracked over time"). Silence is the failure.
+detail      NO history file at all. ⚠️ And the figure is an ON-CHAIN coverage share rather than a collateral ratio — >30% of backing is off-chain by the producer's own note — so a series would need to track the same quantity the figure names.
+owner       us for the declared-absence string; the producer if a series should exist
+closes when the page renders the series OR states its absence
+status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
 Last reviewed 2026-10-02
 ```
