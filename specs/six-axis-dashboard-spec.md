@@ -541,9 +541,11 @@ the WHOLE axis, so a payload that DECLINED to publish a figure deleted a measure
 syzUSD render `0.5% depth n/a` + `Not rated` over a PegTracker `depth_50bps` block measured hours
 earlier. **An owner with nothing to say hands off; it does not take the axis down with it.**
 
-⚠️ **STATUS: SPECCED, NOT YET IMPLEMENTED.** The renderer still adopts `liquidity/1` in `replace`
-mode. The two assets above are live-wrong until the fallback lands. Do not read this table as a
-description of current behaviour.
+✅ **STATUS: BUILT 2026-10-02 (`fe1d82f10`).** The hand-off is live for the depth row: where the
+axis owner publishes no figure and the base feed has one, the base's depth fields carry over and the
+page attributes them. reUSD-RE and syzUSD now render their measured figures with bands. ⚠️ The
+remaining rows of this table are still a statement of intent — the adoption mode is unchanged for
+everything except depth, and `primary redemption` is still OPEN.
 
 ### Why the obvious split does not work — measured 2026-10-01
 

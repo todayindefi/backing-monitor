@@ -113,6 +113,9 @@ why         This is the FALSE case, not the missing case — the page asserts no
 owner       us
 closes when the fallback rule in the specification is built: an owner with nothing to say hands off
             rather than taking the axis down.
-status      specced (axis-3 ownership table) and NOT built
+status      ✅ CLOSED 2026-10-02 (fe1d82f10). reUSD-RE now reads 0.5% depth $10.0M, crossing
+            between $10.0M and $20.0M, chip Healthy, attributed to the base feed with the owner's
+            reason for declining in the tooltip. syzUSD $100K bracketed to $150K. 29 other panels
+            byte-identical.
 Last reviewed 2026-10-02
 ```
