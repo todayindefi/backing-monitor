@@ -263,6 +263,28 @@ const CommonRenderer = {
         'blended_ratio_note',
         'verifiability_note',
         'concentration_note',
+        // ⚠️ ADOPTED 2026-10-02, both read in full first because adopting is
+        // publishing. sUSDe published six new prose fields and five reached no
+        // reader; these two are the ones that bound a figure already on the page.
+        //
+        // `coverage_limit`: the venue enumeration is DEX-only — neither source
+        // returns centralised exchanges — so every venue figure on the page is a
+        // FLOOR on coverage rather than a census. A reader comparing venue TVL
+        // across assets has no way to know that without this.
+        //
+        // `recheck_basis`: a $20.92M Pendle market, larger than every non-Ethereum
+        // chain's spot venues combined, MATURES 2026-10-22. For a PT maturity is
+        // binding rather than indicative, so a material exit route has a hard expiry
+        // inside the month. The producer's own reason for the field is the one that
+        // decided it: "a durable range with no re-check date still reads
+        // authoritative after it expires."
+        //
+        // ⚠️ NOT adopted: `threshold_tier_basis`. Its substance is correct and it is
+        // written for another producer, not a reader — it cites a spec section in
+        // another repo and contrasts an asset we declined to register. The unread
+        // marker names it, which is the right outcome rather than a silent drop.
+        'coverage_limit',
+        'recheck_basis',
         'authored_vs_band_note',
         'current_deviation_is_a_premium_note',
         'premium_cannot_close_by_trading_note',
