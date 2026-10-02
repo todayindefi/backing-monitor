@@ -59,12 +59,26 @@ why         $4.08M of pool value and ~$335/24h turnover (~0.008% daily). A reade
 owner       PegTracker
 closes when rungs appear under liquidity.exit_mark.quotes, or a depth figure does. Our renderer
             derives the 0.5% answer from rungs with no change on our side.
-status      requested 2026-10-02 (live message + handoffs/inbox/thusd-exit-ladder-venue-selection-2026-10-02.md
-            in their repo, status blocked on their codex rollout guard; with their user to decide)
-note        Their own note says the blocker is venue selection across Ethereum/Arbitrum/Stable. Their
-            own venues array says Ethereum holds 99.2% and Arbitrum is self-labelled dust at $0
-            volume, so an Ethereum-only ladder labelled as one leg probably answers it. Asked, not
-            asserted.
+status      ✅ DELIVERED by PegTracker 2026-10-02 06:40Z (their 40f3c03); handoff closed completed.
+            Our copy syncs on the next cycle. Our side needed one change, shipped ahead of the data
+            (d2d70a48f): prefer their published scope sentence over our derived one.
+result      ⚠️ FAR WORSE THAN THE $4.08M TVL SUGGESTED. The sell side caps at about $8,800 of
+            OUTPUT at any size. Fill ratio 0.9994 at $1K, 0.972 at $2.5K, 0.446 at $10K, 0.075 at
+            $100K, 0.0088 at $1M. The 0.5% crossing is bracketed [$1,000, $2,500] — so the measured
+            exit is roughly a thousand dollars, against $4.08M of pool value.
+            The pool is one Uniswap v4 thUSD/USDC pool that is almost entirely thUSD, so BUYING $1M
+            fills at par while selling collapses. ParaSwap agrees independently; syrupUSDC as a
+            control is normal on both aggregators.
+            ⚠️ Scope matters as much as the figure: Ethereum only, and Stable holds ~38% of SUPPLY
+            with NO indexed venue (GeckoTerminal 404s thUSD there, none of Stable's top 60 pools
+            contain it, and KyberSwap does not route Stable). Their control was that GeckoTerminal
+            does index Stable.
+            Our band will read Stress 2/10 against riskAnalyst's authored 3.5 — a 1.5 gap, inside
+            band resolution, so not a flagged divergence.
+note        The venue question is settled and I was right to ask rather than assert: their stale
+            three-way-split note was the blocker, and the ladder is now labelled ONE LEG.
+            Also changed in their payload: peg.market_price_self_referential flips to FALSE, because
+            the exit leg is now KyberSwap-routed rather than the GeckoTerminal mark.
 Last reviewed 2026-10-02
 ```
 
