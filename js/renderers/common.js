@@ -1705,8 +1705,22 @@ const CommonRenderer = {
                 self._escapeAttr(derived) + '</div>');
         }
         if (withheld) {
-            bits.push('<div class="ds-line ds-warn">\u26a0\ufe0f Depth not published \u2014 ' +
-                self._escapeAttr(String(l.depth.basis)) + '</div>');
+            // ⚠️ "Depth not published" SAT ABOVE A PUBLISHED DEPTH FIGURE the moment
+            // the hand-off landed (fe1d82f10): the axis owner still publishes none,
+            // which is what this line reports, but the tile now shows the base
+            // feed's figure — so the two read as a contradiction. The sentence is
+            // about WHOSE figure is absent, so it has to say whose.
+            var ownerLabel = self._producerLabel(
+                (self.AXIS_PROVENANCE && self.AXIS_PROVENANCE.liquidity &&
+                 self.AXIS_PROVENANCE.liquidity.producer) || '') || 'the axis owner';
+            var handed = !!(self.AXIS_PROVENANCE && self.AXIS_PROVENANCE.liquidity &&
+                            self.AXIS_PROVENANCE.liquidity.depth_handed_off);
+            bits.push('<div class="ds-line ds-warn">\u26a0\ufe0f ' +
+                (handed
+                    ? 'The ' + self._escapeAttr(ownerLabel) + ' publishes no depth figure for this ' +
+                      'asset, so the figure shown is the base feed\u2019s'
+                    : 'Depth not published') +
+                ' \u2014 ' + self._escapeAttr(String(l.depth.basis)) + '</div>');
         }
         if (ds && typeof ds === 'object') {
             bits.push('<div class="ds-line"><span class="ds-key">Measured leg:</span> ' +
