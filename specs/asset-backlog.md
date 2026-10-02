@@ -384,3 +384,36 @@ status      explained to riskAnalyst 2026-10-02 with the measurement. Not ours t
             straightforwardly correct. Worth re-checking after any future bespoke-renderer change.
 Last reviewed 2026-10-02
 ```
+
+### cross-asset — a computed band sits in an authored judgement's seat (4 instances, 3 assets)
+```
+raised      2026-10-02
+what        Where a live band and an authored score both exist, the chip shows ONLY the band (owner
+            decision) and the authored score goes in the tooltip. On four axis-asset pairs the gap
+            is at or above our own 2.0-point flag threshold, so it is a real disagreement rather
+            than band arithmetic — and on all four the BAND IS THE FRIENDLIER NUMBER.
+measured    2026-10-02, our band vs riskAnalyst's authored, both on /10:
+              reusd-re  liquidity  10/10 vs 4.5   gap 5.5   (own entry above, DEFERRED)
+              usde      peg        10/10 vs 6.5   gap 3.5
+              susde     peg        10/10 vs 6.5   gap 3.5
+              usde      liquidity  10/10 vs 7.0   gap 3.0
+            ⚠️ NOT divergences, below the 2.0 threshold — recorded because riskAnalyst reported one
+            of them as a divergence and it is not: susde backing 8/10 vs 6.5 (gap 1.5), usde
+            backing 8/10 vs 6.5 (1.5), reusd-re backing 6/10 vs 5.0 (1.0). A band emits only even
+            numbers, so an authored 6.5 cannot match one exactly.
+why         usde and susde are a held position ($159,736 on susde) and the stale-attestation
+            finding is live on both. A reader sees our friendlier number on the axes where the
+            analyst is most cautious. ⚠️ Same class as the reUSD-RE entry above, which carries the
+            full agreed design for the fix — a producer non-derivability declaration plus our gate.
+owner       owner decision (deferred on reUSD-RE 2026-10-02); then riskAnalyst declares, then us
+closes when the declaration gate exists and these pairs either resolve or are recorded as accepted
+status      ⏸ DEFERRED with the reUSD-RE instance. Not re-raised in status updates.
+⚠️ ours      I told riskAnalyst and the owner this class was "already parked in the backlog". Only
+            the reUSD-RE instance was. The other three were unrecorded while I described them as
+            recorded — which is the shape of claim this file exists to stop. Measured and written
+            down rather than left as an assertion.
+⚠️ note      USDe's liquidity panel deliberately did NOT gain a score chip in 1fdf4dd2e for exactly
+            this reason: adding the band there would have answered the deferred decision by
+            implementation, in the generous direction, on a held asset.
+Last reviewed 2026-10-02
+```
