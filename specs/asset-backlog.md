@@ -448,93 +448,152 @@ Last reviewed 2026-10-02
 ```
 
 
-### hastra-prime — owes the coverage-history element (declare or chart)
+### hastra-prime — coverage-history absence now DECLARED; the data gap remains
 ```
 raised      2026-10-02
 what        Publishes a coverage figure (100.21%) with no coverage series, and the page says
             nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
             ("coverage is not tracked over time"). Silence is the failure.
 detail      664 entries and no coverage column at all.
-owner       us for the declared-absence string; the producer if a series should exist
-closes when the page renders the series OR states its absence
-status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+owner       the producer, if a coverage series should exist for this asset
+closes when the producer publishes a coverage series, or this is accepted as permanent
+status      ✅ OUR HALF DONE 2026-10-02 (705fc6341) — the page now states the absence with what
+            would close it, so §4.0 is satisfied and this is no longer a spec gap. What remains is
+            a DATA gap: the asset has a coverage figure and no series behind it.
+            ⚠️ My earlier version of this entry said "the page says nothing". That was wrong for
+            five of the seven — they already declared it, and I had taken the conformance
+            checker's data-side verdict for the reader's experience.
 Last reviewed 2026-10-02
 ```
 
-### msusd-metronome — owes the coverage-history element (declare or chart)
+### msusd-metronome — coverage-history absence now DECLARED; the data gap remains
 ```
 raised      2026-10-02
 what        Publishes a coverage figure (21.90%) with no coverage series, and the page says
             nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
             ("coverage is not tracked over time"). Silence is the failure.
 detail      349 entries carrying supply only, no coverage column. ⚠️ The figure itself is 21.90% — unusually low for a collateral ratio, so a reader seeing it with no series has no way to tell a structural level from a deterioration. Worth confirming the figure means what the label says when this one is refreshed.
-owner       us for the declared-absence string; the producer if a series should exist
-closes when the page renders the series OR states its absence
-status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+owner       the producer, if a coverage series should exist for this asset
+closes when the producer publishes a coverage series, or this is accepted as permanent
+status      ✅ OUR HALF DONE 2026-10-02 (705fc6341) — the page now states the absence with what
+            would close it, so §4.0 is satisfied and this is no longer a spec gap. What remains is
+            a DATA gap: the asset has a coverage figure and no series behind it.
+            ⚠️ My earlier version of this entry said "the page says nothing". That was wrong for
+            five of the seven — they already declared it, and I had taken the conformance
+            checker's data-side verdict for the reader's experience.
 Last reviewed 2026-10-02
 ```
 
-### susdat — owes the coverage-history element (declare or chart)
+### susdat — coverage-history absence now DECLARED; the data gap remains
 ```
 raised      2026-10-02
 what        Publishes a coverage figure (104.08%) with no coverage series, and the page says
             nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
             ("coverage is not tracked over time"). Silence is the failure.
 detail      ⚠️ SHARPER THAN "NO HISTORY": the history carries a `backing_ratio` COLUMN in all 702 entries and it is NULL in every one. Scaffolded and never populated — which is worse than absent, because a consumer testing for the key's presence concludes a series exists. The declaration owed here is not "not tracked" but "declared and never written".
-owner       us for the declared-absence string; the producer if a series should exist
-closes when the page renders the series OR states its absence
-status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+owner       the producer, if a coverage series should exist for this asset
+closes when the producer publishes a coverage series, or this is accepted as permanent
+status      ✅ OUR HALF DONE 2026-10-02 (705fc6341) — the page now states the absence with what
+            would close it, so §4.0 is satisfied and this is no longer a spec gap. What remains is
+            a DATA gap: the asset has a coverage figure and no series behind it.
+            ⚠️ My earlier version of this entry said "the page says nothing". That was wrong for
+            five of the seven — they already declared it, and I had taken the conformance
+            checker's data-side verdict for the reader's experience.
 Last reviewed 2026-10-02
 ```
 
-### susde — owes the coverage-history element (declare or chart)
+### susde — coverage-history absence now DECLARED; the data gap remains
 ```
 raised      2026-10-02
 what        Publishes a coverage figure (101.30%) with no coverage series, and the page says
             nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
             ("coverage is not tracked over time"). Silence is the failure.
 detail      2,175 entries of price, NAV and supply, no coverage column. ⚠️ Its coverage history genuinely belongs to USDe — same reserve pool — and the page carries a "View USDe ↗" link. But a link to another asset is not a declaration about this element on this page, and USDe DOES publish a coverage_ratio series.
-owner       us for the declared-absence string; the producer if a series should exist
-closes when the page renders the series OR states its absence
-status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+owner       the producer, if a coverage series should exist for this asset
+closes when the producer publishes a coverage series, or this is accepted as permanent
+status      ✅ OUR HALF DONE 2026-10-02 (705fc6341) — the page now states the absence with what
+            would close it, so §4.0 is satisfied and this is no longer a spec gap. What remains is
+            a DATA gap: the asset has a coverage figure and no series behind it.
+            ⚠️ My earlier version of this entry said "the page says nothing". That was wrong for
+            five of the seven — they already declared it, and I had taken the conformance
+            checker's data-side verdict for the reader's experience.
 Last reviewed 2026-10-02
 ```
 
-### susds — owes the coverage-history element (declare or chart)
+### susds — coverage-history absence now DECLARED; the data gap remains
 ```
 raised      2026-10-02
 what        Publishes a coverage figure (100.00%) with no coverage series, and the page says
             nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
             ("coverage is not tracked over time"). Silence is the failure.
 detail      2,070 entries of NAV and supply, no coverage column. Same wrapper shape as susde — the coverage belongs to USDS. Check whether USDS publishes a series before declaring the absence.
-owner       us for the declared-absence string; the producer if a series should exist
-closes when the page renders the series OR states its absence
-status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+owner       the producer, if a coverage series should exist for this asset
+closes when the producer publishes a coverage series, or this is accepted as permanent
+status      ✅ OUR HALF DONE 2026-10-02 (705fc6341) — the page now states the absence with what
+            would close it, so §4.0 is satisfied and this is no longer a spec gap. What remains is
+            a DATA gap: the asset has a coverage figure and no series behind it.
+            ⚠️ My earlier version of this entry said "the page says nothing". That was wrong for
+            five of the seven — they already declared it, and I had taken the conformance
+            checker's data-side verdict for the reader's experience.
 Last reviewed 2026-10-02
 ```
 
-### syzusd — owes the coverage-history element (declare or chart)
+### syzusd — coverage-history absence now DECLARED; the data gap remains
 ```
 raised      2026-10-02
 what        Publishes a coverage figure (110.98%) with no coverage series, and the page says
             nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
             ("coverage is not tracked over time"). Silence is the failure.
 detail      NO history file at all, so nothing to chart and nothing said.
-owner       us for the declared-absence string; the producer if a series should exist
-closes when the page renders the series OR states its absence
-status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+owner       the producer, if a coverage series should exist for this asset
+closes when the producer publishes a coverage series, or this is accepted as permanent
+status      ✅ OUR HALF DONE 2026-10-02 (705fc6341) — the page now states the absence with what
+            would close it, so §4.0 is satisfied and this is no longer a spec gap. What remains is
+            a DATA gap: the asset has a coverage figure and no series behind it.
+            ⚠️ My earlier version of this entry said "the page says nothing". That was wrong for
+            five of the seven — they already declared it, and I had taken the conformance
+            checker's data-side verdict for the reader's experience.
 Last reviewed 2026-10-02
 ```
 
-### thusd — owes the coverage-history element (declare or chart)
+### thusd — coverage-history absence now DECLARED; the data gap remains
 ```
 raised      2026-10-02
 what        Publishes a coverage figure (26.23% (on_chain_coverage_pct)) with no coverage series, and the page says
             nothing. §4.0 requires the chart where a figure exists, or the absence DECLARED
             ("coverage is not tracked over time"). Silence is the failure.
 detail      NO history file at all. ⚠️ And the figure is an ON-CHAIN coverage share rather than a collateral ratio — >30% of backing is off-chain by the producer's own note — so a series would need to track the same quantity the figure names.
-owner       us for the declared-absence string; the producer if a series should exist
-closes when the page renders the series OR states its absence
-status      not started. Full reasoning and the corrected fleet list are in the cross-asset entry.
+owner       the producer, if a coverage series should exist for this asset
+closes when the producer publishes a coverage series, or this is accepted as permanent
+status      ✅ OUR HALF DONE 2026-10-02 (705fc6341) — the page now states the absence with what
+            would close it, so §4.0 is satisfied and this is no longer a spec gap. What remains is
+            a DATA gap: the asset has a coverage figure and no series behind it.
+            ⚠️ My earlier version of this entry said "the page says nothing". That was wrong for
+            five of the seven — they already declared it, and I had taken the conformance
+            checker's data-side verdict for the reader's experience.
+Last reviewed 2026-10-02
+```
+
+### cross-asset — four assets publish a coverage series this chart cannot read
+```
+raised      2026-10-02
+what        USDe (2,175 readings of `coverage_ratio`), USDai (731, same), USDat (706 of
+            `backing_ratio`) and cUSD (708, `coverage_ratio` plus `coverage_pct`) all publish a
+            real coverage series. The chart reads `collateral_ratio` ONLY, so none of them plots.
+why         Published-but-unrendered, this repo's most repeated defect, on four assets including a
+            held one. ⚠️ Until today it rendered as "no collateral-ratio history is published",
+            which blamed the producer for data they published. The page now names the field and
+            says the gap is ours (705fc6341) — visible rather than silent, but still unplotted.
+owner       us
+closes when the chart reads the published field names and plots them
+⚠️ hazard    THE SCALE IS THE WHOLE RISK. These values are RATIOS — 1.0004, 0.9999, 1.0 — where
+            this chart plots PERCENTS. Scale here is resolved by declaration or an explicit
+            raw-ratio list, NEVER by magnitude, because a magnitude guard inverted at 200% once
+            before. Plotting 1.0004 as 1.0004% is precisely what that rule prevents. So each of
+            the four needs its scale confirmed — declared in the feed or added to the list — before
+            the field name is widened. cUSD is the useful case: it publishes BOTH a ratio and a
+            percent, so it can corroborate the conversion rather than assume it.
+status      not started. Deliberately separated from the declaration fix: one is a sentence, this
+            is a plotted number on four assets with a known mis-scaling trap.
 Last reviewed 2026-10-02
 ```
