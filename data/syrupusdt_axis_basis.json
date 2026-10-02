@@ -2,7 +2,7 @@
   "schema_version": "axis-basis/1",
   "producer": "riskanalyst",
   "asset": "syrupusdt",
-  "as_of": "2026-09-24T09:40:00Z",
+  "as_of": "2026-10-03T00:00:00Z",
   "backing": {
     "backing_score": 6.0,
     "backing_score_source": "riskAnalyst:authored",
@@ -29,19 +29,19 @@
     "liquidity_score_depth_caveat": "⚠️ THE FEED COMPUTES NO DEPTH FOR THIS ASSET (`total_2pct_depth: null`), so this authored score has NOTHING beside it to agree or disagree with. An uncontested number reads as more settled than a contested one — it is not."
   },
   "dependencies": {
-    "underlying_score": 5.0,
+    "underlying_score": 4.0,
     "underlying_score_source": "riskAnalyst:authored",
     "underlying_score_generated_at": "2026-09-24T09:40:00Z",
-    "underlying_score_basis": "MEASURES BORROWER CONCENTRATION AND SHARED INFRASTRUCTURE. ⚠️ AUTHORED 2026-09-06 AT 4.0 ON FIGURES THAT WERE WRONG-HARSH, THEN RE-DERIVED TO 5.0. That direction matters: the error OVERSTATED risk, and an overstated risk score is not the safe direction — it can push a holder out of a position over a figure that was never right. ⚠️ LIQUIDITY CUSTODY EOAs ARE SHARED WITH syrupUSDC (PYUSD + USTB + AMM), so a holder of both pools does not hold two independent positions at the custody layer. ⚠️ Below syrupUSDC's 5.5 because this pool is typically ~5-15% of the family book against syrupUSDC's ~20-30%, so the same borrower set concentrates harder here.",
+    "underlying_score_basis": "MEASURES THE COUNTERPARTY SET — how many, how concentrated, how SUBSTITUTABLE. ⚠️⚠️ CUT 5.0 → 4.0 ON 2026-10-03 (owner ruling) AND THIS IS A BOUND, NOT A NEW MEASUREMENT: syrupUSDT's counterparty set CONTAINS usdt's, so it may not score above it, and usdt carries 4.0 for unenumerability — no full audit has ever been completed, so not one custodian or banking counterparty is nameable for a $183.64B book. syrupUSDT inherits that whole set and adds its own unenumerable one: firm is null on all nine addresses, Maple publishes no borrower identities, and collateral is held off-chain by the delegate's custodian. Two unenumerable sets stacked, so 4.0 is the CEILING. ✅ IT SITS AT THE CEILING RATHER THAN BELOW IT ON TWO MEASURED OFFSETS: ~19.74% of the book is a $50M at-par USDC position (0x1Af652b5…BAA5, position_type liquidity), so Tether is ~80% of this set and not all of it, and that fifth is Circle at axis-4 7.0; and this pool's own added legs are address-enumerable with shares measured at 100% enumeration and $0.00 residual, where usdt's cannot be named at all. Those offsets cancel the added borrower set; they do not lift it past the ceiling. ⚠️ QUALITY IS NOT THE ARGUMENT. Circle scoring 7.0 is a reason the USDT weight is ~80%, not a reason this asset scores better — a good counterparty at 100% is still 100%, and the 154.45% pool collateral ratio is a Backing fact this axis does not price. ⚠️ LIQUIDITY CUSTODY EOAs ARE SHARED WITH syrupUSDC (PYUSD + USTB + AMM), so a holder of both pools does not hold two independent positions at the custody layer. ⚠️ THE CONCENTRATION MOVE IS NOT CHARGED HERE, DELIBERATELY. Live at 2026-10-02T16:45:40Z: top-1 36.42%, top-3 77.96%, HHI 2,328 against the 24.19% / 66.77% / 1,876 the report states. A cut on those figures was taken 2026-09-24 and retracted the same day as a moved denominator; eight days on they have not reverted. Left off this cut so the bound stays reviewable, and carried to the backlog for its own ruling. ⚠️ BASIS TRAP: the $253,242,712.37 denominator includes $59,150,015 of pool-owned liquidity wrapped as loans (10 of 18 positions). On third-party credit alone ($194,092,697) the top name is 47.52%, not 36.42%.",
     "underlying_score_persistence": "filtered — borrower set and custody architecture, not a daily balance",
     "underlying_score_routing": "⚠️ Merges after backing-monitor's 49d0b4ca2 but axis 4 RENDERS NO SCORE today — source-of-record pending their display decision.",
     "underlying_score_change": {
-      "from": 4.5,
-      "to": 5.0,
-      "on": "2026-09-24",
-      "direction": "retraction",
-      "basis": "Retracts the same-day 5.0 -> 4.5 cut for the same reason as backing: moved denominator.",
-      "inherited_from": null
+      "from": 5.0,
+      "to": 4.0,
+      "on": "2026-10-03",
+      "direction": "cut",
+      "basis": "A BOUND, not a measurement. syrupUSDT's counterparty set contains usdt's, whose axis 4 is 4.0 for unenumerability, so 4.0 is the ceiling. Sits AT the ceiling because ~19.74% of the book is a Circle position and this pool's own shares are enumerated at 100% residual $0.00, which cancels the added borrower set without lifting past the ceiling. ⚠️ It had never been flagged: asset_refresh_check.py's child-above-parent loop omitted underlying_score entirely, and the PURE_WRAPPERS guard was never going to cover a pool holding a loan book. An enumeration of all declared dependent→underlying pairs across 153 reports returns this as the corpus's ONLY dependent-above-underlying pair.",
+      "inherited_from": "usdt"
     }
   },
   "issuer": {
