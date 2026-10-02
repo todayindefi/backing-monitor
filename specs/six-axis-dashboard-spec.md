@@ -505,8 +505,14 @@ venue inventory          DexTracker   weekly/     PegTracker pool rows as a   De
 venue size / TVL         DexTracker   weekly/     PegTracker reserves,        ⚠️ the two lists are
                            monthly               labelled, SHAPE VARIES       NOT JOINABLE -- never
                                                                               mix them in one table
-primary redemption       ⚠️ OPEN      --          ⚠️ OPEN                     ⚠️ OPEN -- both publish
-  gate + eligibility                                                          and they DISAGREE
+redemption: THE PROBE    whoever can  probe's own  unmeasured, SAID SO --      the fresher probe,
+  does the call execute,   run it       cadence      never "no redemption"      with its method named
+  at what cost, up to                                                           --
+  what size
+redemption: ELIGIBILITY  riskAnalyst  report       the probe alone, labelled   riskAnalyst --
+  who may actually use                 cadence      as the call only            eligibility is not
+  it; is it an exit a                                                           probeable
+  holder really has
 ```
 
 ⚠️ **PRECISION DOES NOT OUTRANK FRESHNESS, AND THE FIRST VERSION OF THIS TABLE SAID IT DID.**
@@ -576,7 +582,7 @@ Recorded so nobody re-derives the premise that a ladder-vs-venues partition is a
   (`liquidity_score_source: risk-feed@…`, relayed by PegTracker) and the renderer only DISPLAYS which
   leg binds. The comparison is editorial, in the report. So parts may be assigned on capability.
 
-### ⚠️ Why primary redemption is left OPEN rather than assigned
+### ✅ Why primary redemption is SPLIT rather than assigned — owner decision 2026-10-02
 
 Both producers publish it, coverage is asymmetric in BOTH directions, and they contradict each other
 on live data. Measured 2026-10-01 across the 8 assets DexTracker covers:
@@ -592,9 +598,39 @@ reUSD-RE: PegTracker `gated: true` vs DexTracker `gated: null`
 **Assigning it to PegTracker would strip USG, BOLD, DUSD and fxUSD of their only redemption data** —
 the same "tier it, do not strip it" rule this table applies to venues, which the first draft of the
 proposal got wrong for redemption. Assigning it to DexTracker would promote two relays to the status
-of measurements. ⚠️ **Neither assignment is derivable from our evidence, so the spec states the
-conflict instead of picking.** Closing it needs the producers: see
-`specs/handoffs/DISPATCH-axis3-tiers-2026-10-01.md`.
+of measurements.
+
+⚠️ **SO THE FIELD IS SPLIT, NOT ASSIGNED, AND THE SPLIT IS WHAT MAKES IT ASSET-INDEPENDENT.** The
+seven assets carrying a redemption entry are seven different kinds of thing — BOLD a permissionless
+redemption with a measurable fee ladder; fxUSD a call that reverts for everyone; USG no holder
+redemption at all, only borrowers releasing collateral; reUSD-RE a capacity-limited quarterly window
+gated by jurisdiction; USDM a fixed-price market maker with circuit breakers, not an issuer
+redemption; syzUSD a two-hop vault chain, unmeasured; DUSD permissioned to a single role-holder. A
+single owner is wrong for roughly half of them whichever way it is picked. **But every one has BOTH
+parts and they differ only in which part binds**, so splitting by question removes the
+asset-specificity instead of encoding it.
+
+⚠️ **AND IT DISSOLVES THE syzUSD CONFLICT WITHOUT EITHER PRODUCER BEING WRONG.** PegTracker's
+`gated: false` is true of the CALL (`measured:erc4626_redeem_simulated`); riskAnalyst's report is
+true of ELIGIBILITY. Two answers to two questions, which the renderer currently resolves by
+withholding the field entirely — so a reader gets nothing about redemption on that asset. Same shape
+as the impact-vs-all-in confusion one layer up on this axis.
+
+**Why the editorial half is not simply given the whole field, measured 2026-10-02:** riskAnalyst's
+scores on this fleet are **8 to 22 days old** — 22 for most assets, including reUSD-RE, syzUSD, USG
+and USDM — while PegTracker probes every 3 hours. Redemption changes rarely, but the change IS the
+event: a gate closing, a cooldown lengthening, a queue filling. Parts of it are also numeric and
+move (reUSD-RE publishes a window capacity in dollars and a years-to-full-exit figure; DUSD a
+capacity). An editorial owner on a three-week cycle either re-reads those every cycle or publishes
+stale ones.
+
+⚠️ **WHAT IS STILL NEEDED FROM THE PRODUCERS IS ONE TYPED FIELD EACH, NOT AGREEMENT.** We can choose
+which fields we read; we cannot invent a distinction the data does not carry. Measured across the 10
+published redemption entries: 3 carry a typed-ish prefix (`measured:erc4626_redeem_simulated`,
+`measured:swap_probe...`, `measured_protocol_design:`, `unmeasured`), 4 are prose, and 3 — including
+BOTH producers on reUSD-RE, where the conflict is live — publish no basis at all. So nothing today
+separates a probe result from a judgement, and gating on the prose prefixes would make the wording
+load-bearing, which this spec forbids elsewhere for the same reason.
 
 ⚠️ **Exit eligibility is part of the axis, not a footnote.** reUSD's primary redemption is
 non-U.S.-persons-only and pays sUSDe on Mainnet. An axis that says "redeemable at NAV" without the
