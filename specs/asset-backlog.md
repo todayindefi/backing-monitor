@@ -142,5 +142,41 @@ status      answered to riskAnalyst 2026-10-02 with the measurement; they agreed
 note        The tooltip already states both numbers, and the head carries the report's full
             reasoning in a disclosure. So this is "visible chip overstates" rather than "hidden".
             Whether a hover is sufficient mitigation is the open question.
+
+            ⚠️ THE JUDGEMENT IS ALREADY PUBLISHED, PER ASSET — 28 entries of
+            liquidity_score_depth_caveat in riskAnalyst's overlays, and they already split the way
+            we spent today re-deriving: reUSD-RE "it measures the leg this axis does NOT score on";
+            syzUSD and yzUSD "this one may be read as depth". It is PROSE, which is why it cannot be
+            the gate: matching a rating against a sentence makes the wording load-bearing and the
+            green-making fix becomes un-improving the copy.
+
+            AGREED SHAPE if the build is approved (mirrors the backing gate, which riskAnalyst
+            already authors on this same asset):
+              liquidity_score               4.5                                already published
+              liquidity_score_applies_when   "depth_measures_non_binding_leg"   exact sentinel, NEW
+              liquidity_score_depth_caveat   the existing prose                 required
+            All three present and the sentinel matched exactly, else the computed band renders
+            unchanged. The sentinel names the REASON, not the outcome, so a different reason needs
+            its own value.
+
+            ⚠️ WHAT THE SENTINEL MUST NOT FIRE ON, and this is the constraint that keeps it from
+            becoming an override (riskAnalyst's, from their backing precedent): not an ABSENT depth
+            figure but a PRESENT one they merely disagree with. It must be false whenever depth IS
+            the binding leg and the score simply differs — exactly the syzUSD/yzUSD case, gap 1.0,
+            which they refused to declare. Their backing notes carry the equivalent sentence for
+            their own case ("MUST NOT fire on a merely-absent collateral_ratio ... promoting an
+            authored score over a measured one on the strength of an outage is the failure").
+
+            ⚠️ THE DECLARED SCORE RENDERS AS 4.5, NEVER ROUND-TRIPPED TO "4/10". Already logged as
+            a bug once here (an authored 5.5 rendered "Watch · 6/10", provenance stripped and the
+            number changed). riskAnalyst adds the sharper reason: their scale is 0.5-granular and a
+            band holds five values, so the round trip asserts a number nobody authored — and its
+            DIRECTION depends on parity (4.5 reads harsher, 5.5 read softer). A transform that moves
+            a rating either way depending on parity is not a display choice. Route through the
+            unrounded path usds/susds/thUSD already use.
+
+            ⚠️ Neither side pre-stages: riskAnalyst will not publish the sentinel until the build is
+            approved, because a field with no consumer is a dead key, and the build is not approved
+            because it changes a rendered rating on a held asset.
 Last reviewed 2026-10-02
 ```
