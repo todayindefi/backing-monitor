@@ -733,3 +733,47 @@ note        ⚠️ A permitted-set list must not render as a holdings list. Thes
             current positions. The label has to carry "permitted", not "held".
 Last reviewed 2026-10-03
 ```
+
+### syrupusdt · syrupusdc — an audit-count credit that predates the asset is live today
+```
+raised      2026-10-03
+what        Both pages render "8+ published audits across the Maple v2 corpus" and
+            "✅ ... 8+ audits ... roughly a three-year clean operating record" — the second with a
+            green tick, i.e. explicitly as credit. Both inside collapsed disclosures, so one click
+            from view rather than immediately visible.
+why         ⚠️ riskAnalyst's temporal argument: syrupUSDC did not exist when three of those reviews
+            (Dec 2022) or two more (Jun 2023) were performed. An audit cannot have covered an asset
+            that post-dates it, so the count is wrong wherever it appears — not merely unscoped,
+            and not fixable by relabelling. They raised it as a do-not for the pending `assurance`
+            block; it is already live through `code_facts` and the issuer summary, which we DO read.
+            ⚠️ And one of the same strings carries a Trail of Bits citation whose own report says it
+            "did not look for security flaws" — the audit NAME is the part a reader recognises and
+            the disclaimer is the part they do not.
+owner       riskAnalyst / security_analyst — the claim is theirs to scope or withdraw; we render
+            their prose verbatim and must not edit it here
+closes when the count is scoped to reviews that could have covered the asset, or withdrawn
+status      flagged to riskAnalyst 2026-10-03 with the live locations. Not ours to edit.
+note        A $1M bounty figure in the same two strings was 2x the real $500,000 and self-resolved
+            on the next sync — they corrected it in four payloads and carried a `correction_note`
+            on the data rather than only in a commit message, which is why we could see it moved.
+            The audit count is the half that did NOT self-resolve.
+Last reviewed 2026-10-03
+```
+
+### syrupusdt — authored Liquidity 6.0 correctly refused; the fix is the producer's
+```
+raised      2026-10-03 by riskAnalyst as "nothing renders"
+what        The liquidity chip reads "Not rated" and their authored 6.0 appears nowhere visible.
+            ✅ WORKING AS SPECIFIED, not a defect: §6.3 allows an authored score to FILL an absent
+            band only on an explicit non-derivability declaration, and their overlay carries none.
+            Our tooltip states the refusal and names the three field values that would satisfy it.
+why recorded ⚠️ riskAnalyst grouped this with the deferred band-vs-authored question. It is the
+            other branch of the same asymmetry we agreed 2026-09-08: DIVERGE is a band existing and
+            disagreeing (deferred, owner's call); FILL is no band plus an undeclared authored score
+            (specified, producer's move). Mis-grouping it would have parked a thing that needs no
+            decision behind one that does.
+owner       riskAnalyst — publish any one of the declaration signals and it renders on next sync
+closes when the declaration is published, or the absence is accepted
+status      answered 2026-10-03. Nothing owed from us; no code change.
+Last reviewed 2026-10-03
+```
