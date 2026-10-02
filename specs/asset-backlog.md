@@ -356,3 +356,31 @@ shipped     depended on weETH existing: the per-chain OBJECT shape (ac08bd855 �
             published depth scope beating our derived one (d2d70a48f).
 Last reviewed 2026-10-02
 ```
+
+### cross-asset — bespoke-renderer pages cannot be audited by a numbered-axis parse
+```
+raised      2026-10-02
+what        Five of the six generic axis sections are hidden with inline display:none on
+            bespoke-renderer assets (ethena.js does it for susde and usde, replacing them with
+            UNNUMBERED panels). So any audit that locates axes by their number finds none.
+why         riskAnalyst's checker reported susde as "zero of six axes MISSING" and spent an
+            afternoon on it. Their URL was correct — tidresearch.com/dashboards/ fronts our page,
+            byte-identical. Their control asset was generic-rendered, so it held the page constant
+            and varied the RENDERER without knowing it.
+            ⚠️ Nothing is actually absent for a reader: Peg Performance, Backing Breakdown,
+            Liquidity & Exit, Dependencies 6/10, Authority walk, Issuer and Risk Flags are all
+            visible as unnumbered panels. The numbering is what is missing, by design — a lone
+            "5 Contract & Admin" on a page with no 1-4 or 6 reads as a rendering failure.
+owner       riskAnalyst for their parse; us only if we want the layout difference documented for
+            auditors
+closes when the audit keys on the axis LABEL or carries a per-asset bespoke-layout flag
+status      explained to riskAnalyst 2026-10-02 with the measurement. Not ours to fix.
+⚠️ ours      I told them "susde renders all six axes" on the strength of a classList check and
+            section lengths. Both PASS on display:none content. Five sections are not visible; I
+            got the reader-facing answer right by luck. Recorded as a memory rule, not a code fix.
+⚠️ history   Our comments record that axes 1, 4, 5 and 6 were once hidden with NOTHING put back —
+            a security_analyst hand-walk and a ~1,750-char authored basis painting into a
+            display:none node for seventeen days. During that window the report would have been
+            straightforwardly correct. Worth re-checking after any future bespoke-renderer change.
+Last reviewed 2026-10-02
+```
