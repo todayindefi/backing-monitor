@@ -41,7 +41,9 @@ For each asset, in this order:
    and a stale reason is worse than a stale number because it closes the question.
 3. **Published-vs-rendered** — anything new in the payload reaching no pixel. This repo's most
    repeated defect.
-4. Update `Last reviewed` on each entry touched.
+4. **The cross-asset section** at the end — items that belong to the axis rather than to one
+   slug, so they are invisible to a per-asset sweep and get skipped forever otherwise.
+5. Update `Last reviewed` on each entry touched.
 
 ---
 
@@ -178,5 +180,61 @@ note        The tooltip already states both numbers, and the head carries the re
             ⚠️ Neither side pre-stages: riskAnalyst will not publish the sentinel until the build is
             approved, because a field with no consumer is a dead key, and the build is not approved
             because it changes a rendered rating on a held asset.
+Last reviewed 2026-10-02
+```
+
+---
+
+## Cross-asset — belongs to the axis, not to one slug
+
+⚠️ **These are invisible to a per-asset sweep.** Recorded here because an item that no single asset
+owns gets skipped by a pass that walks assets, and both of these have been "next" for a day already.
+
+### axis 3 — who owns primary redemption
+```
+raised      2026-10-02
+what        The "can I redeem with the issuer, and am I eligible" half of the axis has NO owner.
+            The specification's ownership table marks it OPEN rather than assigning it.
+why         Both market-data producers publish it, coverage is asymmetric in both directions, and
+            they contradict each other on live data: on syzUSD PegTracker publishes "not gated" off
+            an actual contract probe while DexTracker publishes "unmeasured", and riskAnalyst's
+            report disagrees with PegTracker, so our renderer currently withholds the field
+            entirely. A reader gets nothing about redemption on that asset.
+            ⚠️ Assigning it to PegTracker would strip USG, BOLD, DUSD and fxUSD of their only
+            redemption data. Assigning it to DexTracker would promote two riskAnalyst relays to the
+            status of measurements.
+owner       owner decision, then whoever it lands on
+closes when the ownership table's redemption row names an owner and a conflict rule
+recommendation it goes to riskAnalyst, and the field splits in two: a mechanical probe of whether
+            redemption executes, and an editorial judgement of who is eligible. That split also
+            dissolves the syzUSD conflict — both producers are right about different questions,
+            which is the same shape as the impact-vs-all-in confusion one layer up.
+status      recommended to the owner 2026-10-02, not decided. riskAnalyst notified as NOTICE only
+            and is not acting on it.
+Last reviewed 2026-10-02
+```
+
+### axis 3 — the five-part ownership proposal is drafted and unsent
+```
+raised      2026-10-01
+what        specs/handoffs/DISPATCH-axis3-tiers-2026-10-01.md proposes replacing "who owns the whole
+            axis" with five named parts, each with one owner, its own cadence and a declared
+            fallback. Needs two corrections before it goes out.
+why         The current arrangement is what produced the blank-depth bug: one producer declining to
+            publish deleted another's live measurement. The fallback rule is now built for the depth
+            part, so the acute failure is fixed — but the ownership it rests on is still only
+            written on our side and unagreed by either producer.
+owner       us to send; then PegTracker and DexTracker to agree
+closes when both producers have responded to the proposal
+corrections 1. Venue SIZE moves to DexTracker, not PegTracker. I assigned it on freshness; the
+               evidence says consistency — PegTracker's pool rows come in 7 shapes across 11 assets
+               (two carry 4 fields and no pool address at all) against DexTracker's 1 shape across
+               8, and the two lists cannot be joined.
+            2. The redemption row becomes the OPEN question above rather than an assignment. My
+               first draft gave it to PegTracker, which would have stripped four assets of their
+               only redemption data — the same "tier it, do not strip it" rule the proposal already
+               applies to venues, got wrong one field along.
+status      drafted, corrections identified, not sent — awaiting the redemption decision above,
+            since correction 2 depends on it
 Last reviewed 2026-10-02
 ```
