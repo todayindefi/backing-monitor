@@ -240,6 +240,27 @@ const CommonRenderer = {
     // flag instead of vanishing and gets adopted deliberately.
     AXIS_AUTHORED_NOTES: {},
 
+    // ⚠️ BLOCKS WE READ. The sibling of AUTHORED_NOTE_KEYS, for object- and
+    // array-valued fields rather than prose — see _collectAuthoredNotes.
+    //
+    // ⚠️ A LIST, NOT A SCAN OF OUR OWN SOURCE. Introspecting the renderer text for
+    // each key name produced three false positives: `backing_score_change`,
+    // `liquidity_score_change` and `underlying_score_change` are reached by
+    // assembling the key at runtime (`blk[f + '_score_change']`), so the literal
+    // never appears. A detector that reads our source is as blind as one that reads
+    // a producer's — both answer "is this name written down" rather than "is this
+    // used".
+    //
+    // ⚠️ GLOBAL, WHILE THE READING IS PER-RENDERER, AND THAT IS A FLOOR ON
+    // DETECTION RATHER THAN A GUARANTEE. `float_split` and `measurement_clocks` are
+    // read by dusd-alto.js alone, so listing them here silences the marker for every
+    // other asset too. Same trade the prose adoption list already makes; matching it
+    // beats adding a second, subtler rule.
+    AUTHORED_BLOCK_KNOWN: [
+        'code_facts', 'cross_axis', 'segments', 'unmeasured',
+        'float_split', 'measurement_clocks'
+    ],
+
     AUTHORED_NOTE_KEYS: [
         // ⚠️ Both written FOR a consumer, in the imperative: "render the walk and
         // this 5.0 side by side with both dates visible and do NOT reconcile
@@ -8843,8 +8864,31 @@ const CommonRenderer = {
     _collectAuthoredNotes(axis, block) {
         if (!block || typeof block !== 'object') return;
         var self = this, notes = [], unread = [];
+        var unreadBlocks = [];
         Object.keys(block).forEach(function(k) {
             var v = block[k];
+            // ⚠️ A NEW BLOCK VANISHED AS SILENTLY AS A NEW PROSE FIELD USED TO, and
+            // this marker existed the whole time. It inspected strings only, so
+            // riskAnalyst's 11-field `contract.assurance` — audits, bounty, formal
+            // verification, test coverage, effect_on_score — landed on syrupUSDC and
+            // susde, rendered nowhere, and was not named, while the SAME call named
+            // `authority_note` and `provenance_note` on that same asset.
+            //
+            // Its own comment records being "blind to the schema next door" once and
+            // being widened to every merge-mode overlay. It was still blind, to a
+            // SHAPE rather than a schema: prose detected, structures not. The defect
+            // this repo calls its most repeated had a detector covering half the
+            // cases.
+            if (v && typeof v === 'object') {
+                if (self.AUTHORED_BLOCK_KNOWN.indexOf(k) >= 0) return;
+                // The score-sibling skip below covers *_score_change and
+                // *_score_per_chain, which the basis/addenda path already renders.
+                if (/_score(_|$)/.test(k)) return;
+                if (self.AUTHORED_NOTE_IGNORE.indexOf(k) >= 0) return;
+                var empty = Array.isArray(v) ? v.length === 0 : Object.keys(v).length === 0;
+                if (!empty) unreadBlocks.push(k);
+                return;
+            }
             if (typeof v !== 'string' || !v.trim()) return;
             // ⚠️ ADOPTION IS CHECKED FIRST, and it has to be. The skip below is a
             // substring test, so `structural_score_rescore_pending` — a key whose
@@ -8861,8 +8905,10 @@ const CommonRenderer = {
             // as a missing paragraph.
             if (v.trim().length >= 120) unread.push(k);
         });
-        if (notes.length || unread.length) {
-            this.AXIS_AUTHORED_NOTES[axis] = { notes: notes, unread: unread };
+        if (notes.length || unread.length || unreadBlocks.length) {
+            this.AXIS_AUTHORED_NOTES[axis] = {
+                notes: notes, unread: unread, unreadBlocks: unreadBlocks
+            };
         }
     },
 
@@ -8884,6 +8930,25 @@ const CommonRenderer = {
         (e.notes || []).forEach(function(n) {
             out += self._scoreBasisHtml(self._authoredNoteLabel(n.key), n.text);
         });
+        // ⚠️ NAMED, NEVER SHOWN. A block may be reader copy or an internal structure
+        // and no renderer-side rule separates them — the same reason the prose marker
+        // prints the name and withholds the content. The field COUNT is given because
+        // it is the one safe signal of how much is being dropped: an 11-field
+        // structure and a one-field stub are very different omissions.
+        if (e.unreadBlocks && e.unreadBlocks.length) {
+            var blkSelf = this;
+            out += '<div class="sc-unread" title="' + this._escapeAttr(
+                    'The overlay carries ' + e.unreadBlocks.length + ' structured field' +
+                    (e.unreadBlocks.length === 1 ? '' : 's') + ' this renderer does not read, so ' +
+                    (e.unreadBlocks.length === 1 ? 'it is' : 'they are') + ' NOT on the page. ' +
+                    'Named rather than shown: a block may be reader content or an internal ' +
+                    'structure, and nothing here separates them. Adopting it in the consumer is ' +
+                    'the fix \u2014 a published field reaching no reader is the same defect as an ' +
+                    'unrendered score.') +
+                '">\u26a0\ufe0f unread block' + (e.unreadBlocks.length === 1 ? '' : 's') + ': ' +
+                e.unreadBlocks.map(function(k) { return blkSelf._escapeAttr(k); }).join(', ') +
+                '</div>';
+        }
         if (e.unread && e.unread.length) {
             out += '<div class="sc-unread" title="' + this._escapeAttr(
                     'The axis-basis overlay carries ' + e.unread.length + ' prose field' +
