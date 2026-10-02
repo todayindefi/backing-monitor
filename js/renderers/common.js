@@ -7406,25 +7406,51 @@ const CommonRenderer = {
                             : 'venue not named')) +
                     (pe.into ? ' \u2192 ' + this._escapeAttr(pe.into) : '') +
                     gateHtml +
-                    // ⚠️ pe.gated is DELIBERATELY NOT RENDERED. usdm publishes
-                    // gated:false while riskAnalyst's report says the redemption
-                    // path is gated to allowlisted strategies. One is wrong and
-                    // it is unresolved with PegTracker. Rendering false would
-                    // assert "open to any holder" on the strength of a field
-                    // under dispute — and that is the more dangerous direction,
-                    // since it overstates how easily a holder can leave.
-                    // Restore once the producer confirms it is measured.
+                    // ⚠️ THE GATE IS NOW RENDERED, AND THE REASON IT WAS WITHHELD
+                    // STOPPED BEING TRUE IN THE DATA.
                     //
-                    // ⚠️ The UNMEASURED case is different and safe to show. "Primary
-                    // exit: Yuzu redemption → reserve stables" reads as an exit that
-                    // exists and works; yzUSD's own gated_note says "Redemption
-                    // reachability is not probed in v1. ⚠️ Unmeasured, not open."
-                    // Naming a venue while withholding that is the flattering
-                    // direction — it implies a route out that nothing has tested.
+                    // This block used to say pe.gated is "DELIBERATELY NOT RENDERED"
+                    // because usdm published gated:false while riskAnalyst's report
+                    // said the path was allowlisted — "one is wrong and it is
+                    // unresolved with PegTracker". It is resolved, and PegTracker
+                    // resolved it IN THE FIELD: usdm's own gated_note reads "Any
+                    // address may call swap() on the Monad FPMMs — the probe reverts
+                    // on economics, not permission. The Celo Reserve's own
+                    // mint/redeem is a SEPARATE venue and is allowlisted to
+                    // strategies; this field describes the FPMM only." Two venues,
+                    // both producers correct. The dispute was a scope confusion and
+                    // the producer named the scope.
                     //
-                    // Rendered ONLY when the exit is not asserted open, so the
-                    // disputed gated:false case stays withheld as above.
-                    ((pe.gated == null || pe.gated_basis === 'unmeasured') && pe.gated_note
+                    // ⚠️ ONE ASSET'S UNRESOLVED VALUE WAS SUPPRESSING SEVEN. The spec
+                    // requires this ALWAYS (§4.0 manifest row 3, "primary redemption:
+                    // gated or not, for WHOM"), and we were in violation of our own
+                    // required-render rule on every asset that publishes a verdict:
+                    // bold, dusd-alto, fxusd, reusde-re, susds, usdm, usg. Same shape
+                    // as the axis-wide depth suppression fixed this morning — a single
+                    // declining case taking down a fleet.
+                    //
+                    // ⚠️ THE VERDICT NEVER RENDERS BARE. "Not gated" alone reads as
+                    // "open to any holder", which is the flattering direction and the
+                    // original comment was right about that. It renders WITH the
+                    // producer's basis, so what the claim covers travels with it —
+                    // usdm's says "public router route", which is a statement about a
+                    // market-maker swap and not about an issuer redemption, and the
+                    // venue name beside it already says FPMM.
+                    (typeof pe.gated === 'boolean' && pe.gated_basis
+                        ? '<div class="text-xs mt-1" style="line-height:1.45;">' +
+                          '<span class="' + (pe.gated ? 'text-amber-700 font-semibold'
+                                                      : 'text-slate-600 font-semibold') + '">' +
+                          (pe.gated ? 'Gated' : 'Not gated') + '</span>' +
+                          '<span class="text-slate-500"> \u2014 ' +
+                          this._escapeAttr(this._mdPlain(String(pe.gated_basis))) + '</span></div>'
+                        : '') +
+                    // ⚠️ THE SCOPING NOTE NOW RENDERS WHENEVER IT EXISTS, not only
+                    // where there is no verdict. It was gated on (gated == null ||
+                    // basis == 'unmeasured'), which showed it on exactly the five
+                    // assets with nothing to qualify and hid it on the ones with a
+                    // verdict to bound. On usdm that note is the sentence that makes
+                    // a rendered "Not gated" honest.
+                    (pe.gated_note
                         ? '<div class="text-xs text-amber-700 mt-1" style="line-height:1.45;">' +
                           this._escapeAttr(pe.gated_note) + '</div>' : '') +
                 '</div>';
