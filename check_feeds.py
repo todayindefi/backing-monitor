@@ -918,9 +918,24 @@ def _manifest_row(slug):
     _COV = ('collateral_ratio', 'backing_ratio', 'coverage_ratio', 'coverage_pct',
             'on_chain_coverage_pct', 'psm_coverage_pct', 'collateral_ratio_inclusive')
     def _cov_present():
-        return any(sm.get(k) is not None for k in _COV)
+        # ⚠️ THE SIX-AXIS LOCATION WAS NEVER CHECKED, AND THE WARNING ABOVE PREDICTED
+        # THIS. The note below records that the first cut read only summary.* and
+        # invented gaps for assets publishing elsewhere. It was widened to more KEYS
+        # and never to the six-axis BLOCK — so every asset carrying its coverage at
+        # `backing.collateral_ratio` (the shape §4 asks for) still reported missing.
+        # Measured 2026-10-02: 11 assets, including susde, usde, susds, susdat, fxusd,
+        # syzusd and msusd-metronome. A conformance report with a 39% false-gap rate
+        # sends someone to re-add data that is already on the page.
+        if any(sm.get(k) is not None for k in _COV):
+            return True
+        bk = d.get('backing') if isinstance(d.get('backing'), dict) else {}
+        return any(bk.get(k) is not None for k in _COV)
     def _comp_present():
         if d.get('backing_breakdown'):
+            return True
+        # Same omission, same fix: §4's composition lives at `backing.breakdown`.
+        bk = d.get('backing') if isinstance(d.get('backing'), dict) else {}
+        if bk.get('breakdown'):
             return True
         for k, v in sp.items():
             if v and any(t in k for t in ('composition', 'breakdown', 'decomposition')):
