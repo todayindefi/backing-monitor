@@ -1150,6 +1150,36 @@ const CommonRenderer = {
         'backing_monitor':  'this dashboard',
     },
 
+    // ⚠️ `*_score_per_chain` ARRIVES IN TWO SHAPES AND ONLY THE STRING WAS READ.
+    // yzUSD publishes a sentence ("⚠️ ethereum 3.0 · monad 2.5."); weETH publishes an
+    // OBJECT ({ethereum: 6.5, base: 5.0, arbitrum: 4.0, optimism: 2.0}). The string
+    // test dropped the object silently, so weETH's Optimism leg at 2.0 under a 6.5
+    // headline would have reached no reader — precisely the case the per-chain line
+    // exists for, on the asset that prompted it.
+    //
+    // ⚠️ Found before weETH was registered, so this lands ahead of the data rather
+    // than after a reader saw the wrong thing. riskAnalyst reports the same field is
+    // load-bearing in their own scoring and renders NOWHERE in two other repos — 81
+    // values across 14 reports — so a shape mismatch here would have been the third
+    // independent instance of the same layer going unread.
+    //
+    // ⚠️ KEY ORDER IS THE PRODUCER'S AND IS NOT SORTED. weETH's reads best-to-worst
+    // and that ordering is theirs to mean something by; re-sorting would be the
+    // renderer editorialising a judgement it did not make. Values are printed as
+    // published, not rounded into bands.
+    _perChainScoreText(v) {
+        if (typeof v === 'string') return v.trim() || null;
+        if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+        var parts = [];
+        Object.keys(v).forEach(function(k) {
+            var n = v[k];
+            if (typeof n !== 'number' || !isFinite(n)) return;
+            parts.push(String(k).replace(/_/g, ' ') + ' ' + (Math.round(n * 10) / 10).toFixed(1));
+        });
+        if (!parts.length) return null;
+        return '⚠️ by chain: ' + parts.join(' · ');
+    },
+
     _producerLabel(name) {
         if (!name || typeof name !== 'string') return name;
         var key = name.trim();
@@ -5870,8 +5900,8 @@ const CommonRenderer = {
                     if (!basis && typeof blk[f + '_basis'] === 'string' && blk[f + '_basis'].trim()) {
                         basis = blk[f + '_basis'];
                     }
-                    if (!perChain && typeof blk[f + '_per_chain'] === 'string' && blk[f + '_per_chain'].trim()) {
-                        perChain = blk[f + '_per_chain'];
+                    if (!perChain) {
+                        perChain = self._perChainScoreText(blk[f + '_per_chain']);
                     }
                 });
                 var change = self._scoreChangeHtml(blk);
@@ -5958,10 +5988,20 @@ const CommonRenderer = {
             var parts = self._depthQualifierHtml(liq, data);
             var basis = typeof liq.liquidity_score_basis === 'string' && liq.liquidity_score_basis.trim()
                 ? liq.liquidity_score_basis : null;
-            var perChain = typeof liq.liquidity_score_per_chain === 'string' && liq.liquidity_score_per_chain.trim()
-                ? liq.liquidity_score_per_chain : null;
+            var perChain = self._perChainScoreText(liq.liquidity_score_per_chain);
             if (perChain) {
                 parts += '<div class="text-xs text-amber-700 mb-1">' + self._mdInlineHtml(perChain) + '</div>';
+                // ⚠️ THE PRODUCER'S REASON FOR THE PER-CHAIN SPLIT, WHERE THEY GIVE
+                // ONE. weETH publishes `liquidity_score_per_chain_basis` and it is the
+                // sentence that stops a reader averaging the legs: "WORSE-LEG BY
+                // CHAIN, NOT BLENDED — weETH is four markets and an aggregate figure
+                // would lift the asset on its best leg." Numbers without it invite
+                // exactly the averaging it forbids.
+                var pcb = liq.liquidity_score_per_chain_basis;
+                if (typeof pcb === 'string' && pcb.trim()) {
+                    parts += '<div class="text-[11px] text-slate-500 mb-1" style="line-height:1.5">' +
+                        self._mdInlineHtml(pcb.trim()) + '</div>';
+                }
             }
             var liqChange = self._scoreChangeHtml(liq);
             if (basis || liqChange) {
