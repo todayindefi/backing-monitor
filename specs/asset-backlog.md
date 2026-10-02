@@ -598,7 +598,7 @@ status      not started. Deliberately separated from the declaration fix: one is
 Last reviewed 2026-10-02
 ```
 
-### fxusd — ⚠️ renders an issuer score riskAnalyst says nobody authored
+### fxusd — ✅ CLOSED: the issuer score was authored all along; its frontmatter link was missing
 ```
 raised      2026-10-02
 what        fxusd's page renders "Issuer 5.5/10". riskAnalyst's new score-derivation check reports
@@ -617,8 +617,24 @@ owner       riskAnalyst to resolve the orphan (a human call — a missing axis i
             they declined to resolve it by copying the underlying's number across). Then us only if
             the field is withdrawn.
 closes when the score has an author, or is withdrawn from the overlay
-status      flagged to riskAnalyst 2026-10-02 with the live DOM evidence, correcting their
-            not-reader-visible assessment. Not ours to edit.
+status      ✅ CLOSED 2026-10-02. riskAnalyst transcribed all three judgements into frontmatter
+            with their provenance; their check now reports 0 diverged, 0 orphan across 136 files
+            and 176 values. fxUSD's live chip has the author it was claiming. Our copy is unchanged
+            and byte-identical to theirs — the fix was the author record, not the number.
+
+⚠️ MY FRAMING WAS WRONG AND THE EVIDENCE WAS IN OUR OWN COPY. This entry was titled "an issuer
+            score riskAnalyst says nobody authored". The judgement existed and was substantively
+            argued: `data/fxusd_issuer.json` carries FOUR sourced facts — protocol TVL $134.3M
+            Ethereum-only (DefiLlama, dated), an OpenZeppelin audit at commit 56a47eab with
+            1 Critical / 2 High / 7 Medium / 13 Low / 23 Note and 5 resolved, and a responsibly
+            disclosed finding marked never exploited — plus a 308-character summary. I wrote
+            "unauthored" from their tool's verdict while holding the basis locally and not reading
+            it. ⚠️ AN ORPHAN IS EVIDENCE OF A BROKEN LINK, NEVER OF A FABRICATED NUMBER, and the
+            two have OPPOSITE fixes: one restores the link, the other deletes the number.
+            riskAnalyst nearly deleted three argued assessments on the same reading.
+            ⚠️ And my "wider exposure" paragraph below overstated it on the same mistake — the
+            detector matters less than I implied, because what it detects is a missing record and
+            not a missing argument.
 note        The other two orphans (fxsave backing 4.5, fxsave issuer 5.5) are NOT live here —
             fxsave is unregistered and we hold no fxsave overlay. One of three is reachable, and it
             is the one with the authored-source claim attached.
@@ -626,5 +642,26 @@ note        The other two orphans (fxsave backing 4.5, fxsave issuer 5.5) are NO
             nothing can corroborate? We cannot see riskAnalyst's frontmatter, so their derivation
             check is the only detector — which means our exposure to this class is entirely
             dependent on a tool in another repo that was built today.
+Last reviewed 2026-10-02
+```
+
+### fxsave — NOT registered; carries a live condition that can move two scores
+```
+raised      2026-10-02 by riskAnalyst, recorded for if this asset is ever registered
+what        fxSP `previewRedeem(1e18)` returns 0.976407 — the pool redeems ~2.4% BELOW PAR — and
+            whether that is a BASE FEE or ACCUMULATED STABILITY-POOL LOSSES is unestablished since
+            2026-09-22. ⚠️ If it is losses, fxsave's authored backing 4.5 AND stability 5.0 are
+            both wrong.
+why         Not live: fxsave is unregistered here and we hold no fxsave files. Recorded because a
+            2.4% sub-par redemption with an unresolved cause is exactly the fact a new dashboard
+            would render as a clean number — and because the condition sits UNDER a score that is
+            now properly sourced, which makes it easy to read as settled.
+owner       riskAnalyst / the producer to establish fee-vs-losses; us only on registration
+closes when the cause is established, or registration is declined permanently
+note        fxsave's backing overlay deliberately carries
+            `backing_score_applies_when: collateral_ratio_declared_underivable` — the §6.3 gate —
+            so a consumer cannot silently drop its authored score on an asset that emits no ratio.
+            That is the mechanism our liquidity axis still lacks.
+            Both fxusd and fxsave remain 5 of 6 axes: neither carries `underlying_score`.
 Last reviewed 2026-10-02
 ```
