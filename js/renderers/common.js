@@ -365,7 +365,7 @@ const CommonRenderer = {
             // always the same: the behaviour is right and the chip explaining it
             // never appears.
             var VERDICT_KEYS = ['refused', 'refused_detail', 'stale_sole_source',
-                                'superseded_depth'];
+                                'superseded_depth', 'depth_handed_off'];
             function priorVerdict() {
                 var e = self.AXIS_PROVENANCE[axis];
                 if (!e) return null;
@@ -536,15 +536,70 @@ const CommonRenderer = {
                     // renderer can show it as what it is: the other producer's
                     // measurement, attributed, beside the owner's reason for
                     // declining. Both are real and they answer different questions.
-                    var sup = null;
+                    // ⚠️ AN OWNER WITH NOTHING TO SAY HANDS OFF. IT DOES NOT TAKE
+                    // THE AXIS DOWN WITH IT. Spec, §Axis 3 ownership table, the
+                    // "if absent or stale" column: no fallback is silence.
+                    //
+                    // The stash-and-explain this replaces was the wrong shape. It
+                    // kept `n/a` as the headline and offered the real figure as a
+                    // footnote, so the page asserted no depth was known while a
+                    // PegTracker measurement taken hours earlier sat underneath —
+                    // reUSD-RE ($10.0M, bracketed to $20.0M, ethereum) and syzUSD
+                    // ($100K, bracketed to $150K, monad). That is the FALSE case
+                    // rather than the missing case, which is why it was fixed ahead
+                    // of every other open item on this axis.
+                    var handedOff = null;
                     if (axis === 'liquidity' && pay.total_2pct_depth == null &&
                         typeof base.total_2pct_depth === 'number') {
-                        sup = {
-                            depth: base.total_2pct_depth,
-                            status: base.two_pct_depth_status || null,
-                            basis: base.two_pct_depth_basis || null,
+                        var CARRY = ['total_2pct_depth', 'total_2pct_depth_is_floor',
+                                     'two_pct_depth_bracket', 'exit_mark',
+                                     'slippage_reference_size_usd',
+                                     'two_pct_depth_size_responsive',
+                                     'two_pct_depth_unresponsive_note',
+                                     'total_2pct_depth_note'];
+                        var carried = [];
+                        CARRY.forEach(function(k) {
+                            if (has(base, k) && base[k] != null) { pay[k] = base[k]; carried.push(k); }
+                        });
+                        // The producer's own crossing blocks, whatever thresholds
+                        // they published — our resolver picks the one matching the
+                        // limit in force.
+                        Object.keys(base).forEach(function(k) {
+                            if (/^depth_\d+bps$/.test(k) && base[k] != null) {
+                                pay[k] = base[k]; carried.push(k);
+                            }
+                        });
+                        // ⚠️ THESE THREE DESCRIBE THE FIGURE AND MUST OVERRIDE, NOT
+                        // DEFER. `_adaptSchema` sets them off the overlay's depth
+                        // block whenever that block EXISTS, regardless of whether it
+                        // published a figure — so they are present, and they describe
+                        // the REFUSAL. Carrying the base's number under them renders
+                        // "$10.0M" labelled status "not measured" with a basis
+                        // paragraph explaining why no measurement exists. A
+                        // present-on-the-overlay test would have skipped all three.
+                        ['two_pct_depth_status', 'two_pct_depth_basis'].forEach(function(k) {
+                            if (has(base, k) && base[k] != null) { pay[k] = base[k]; carried.push(k); }
+                            else { delete pay[k]; }
+                        });
+                        // ⚠️ AND THE THRESHOLD LABEL SAYS WHAT THE FIGURE MEASURES,
+                        // SO IT CANNOT KEEP THE OVERLAY'S. Dropped ONLY inside a
+                        // firing hand-off, and only where the base declares none:
+                        // usdm, tsm_rh and usdg also decline depth but have no base
+                        // figure to take over, and an unconditional drop would
+                        // silently relabel their empty tile from 2% to 0.5%.
+                        if (typeof base.depth_threshold_bps === 'number') {
+                            pay.depth_threshold_bps = base.depth_threshold_bps;
+                        } else {
+                            delete pay.depth_threshold_bps;
+                        }
+                        handedOff = {
+                            producer: (typeof base.producer === 'string' && base.producer) || 'the asset feed',
+                            fields: carried,
                             chain: (base.exit_mark || {}).chain || null,
-                            as_of: base.as_of || null
+                            as_of: base.as_of || null,
+                            owner: srcName,
+                            owner_reason: (ov.depth && typeof ov.depth === 'object' &&
+                                           typeof ov.depth.basis === 'string') ? ov.depth.basis : null
                         };
                     }
                     data[axis] = pay;
@@ -555,7 +610,8 @@ const CommonRenderer = {
                         overridden: [], added: Object.keys(pay), kept: [], dropped: droppedKeys,
                         overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null,
                         stale_sole_source: staleSoleSource,
-                        superseded_depth: sup
+                        superseded_depth: null,
+                        depth_handed_off: handedOff
                     });
                     return;
                 }
@@ -3319,23 +3375,49 @@ const CommonRenderer = {
     // Renders the depth figure a `replace` overlay superseded, where the overlay
     // itself publishes none. Reads only what was stashed at merge time; returns ''
     // when the owner did publish a figure, which is the normal case.
-    _supersededDepthHtml() {
+    // ⚠️ THE DEPTH FIGURE CHANGED HANDS, SO THE PAGE SAYS WHOSE IT IS. The axis
+    // owner declined to publish one and the other producer's measurement took over
+    // (see the hand-off in `mergeAxisOverlays`). Attribution is not optional here:
+    // the chip above credits the axis owner, so an unattributed figure reads as
+    // theirs — and on reUSD-RE it is precisely the number they declined to publish,
+    // for a stated reason.
+    //
+    // ⚠️ THIS REPLACED A NOTE THAT SAID "not used as the axis figure", WHICH WAS
+    // TRUE AND IS NOW FALSE. That note belonged to the stash-and-explain behaviour,
+    // where the figure was shown as a footnote under an `n/a` headline. The figure
+    // is now the headline, so the old sentence would deny what the tile says one
+    // line above it. A renderer left pointing at retired behaviour is the fossil
+    // this file keeps producing.
+    _depthHandoffHtml() {
         var p = (this.AXIS_PROVENANCE || {}).liquidity;
-        var sup = p && p.superseded_depth;
-        if (!sup || typeof sup.depth !== 'number') return '';
-        var who = this._producerLabel(p.producer) || 'the depth feed';
-        return '<div class="text-[11px] text-amber-700 dark:text-amber-300" title="' +
+        var h = p && p.depth_handed_off;
+        if (!h) return '';
+        // ⚠️ CREDITED BY ROLE, NOT BY REPO, BECAUSE THE BASE FEED NAMES NOBODY.
+        // It carries no `producer` field at any level, so naming the repo here would
+        // be the renderer asserting an authorship the data does not state — the same
+        // rule that keeps composed issuer claims off these pages. What IS checkable
+        // from the page is that the same file supplies the peg and backing axes, so
+        // that is what the tooltip says.
+        var who = (typeof h.producer === 'string' && h.producer !== 'the asset feed')
+            ? (this._producerLabel(h.producer) || h.producer)
+            : 'this page\u2019s base feed';
+        var owner = this._producerLabel(h.owner) || h.owner || 'the axis owner';
+        return '<div class="text-[11px] text-slate-500 mt-1" title="' +
             this._escapeAttr(
-                'The asset feed measures ' + this.formatCurrency(sup.depth) +
-                (sup.chain ? ' on ' + String(sup.chain) : '') + '.' +
-                (sup.basis ? '\n\n' + sup.basis : '') +
-                '\n\nIt is NOT shown as this axis\u2019s depth, because ' + who +
-                ' owns the axis and has declined to publish a figure. Both are real and ' +
-                'they answer different questions \u2014 one venue measured, versus a ' +
-                'single figure for the whole asset. Neither is adjudicated here.') +
-            '">asset feed measures ' + this.formatCurrency(sup.depth) +
-            (sup.chain ? ' on ' + this._escapeAttr(String(sup.chain)) : '') +
-            ' \u2014 not used as the axis figure \u24d8</div>';
+                owner + ' owns this axis and published no depth figure for this asset, so the ' +
+                'figure above comes from ' + who +
+                (h.chain ? ', measured on ' + String(h.chain) : '') + ' \u2014 the same file that ' +
+                'supplies this page\u2019s peg and backing axes \u2014 used in its place rather ' +
+                'than rendering nothing. It declares no producer name, so it is credited by role.' +
+                (h.owner_reason ? '\n\n' + owner + '\u2019s stated reason for declining: ' +
+                    h.owner_reason : '') +
+                '\n\n\u26a0\ufe0f The two are not adjudicated here. The owner\u2019s reason may be ' +
+                'the better answer for this asset; what is certain is that a reason to withhold ONE ' +
+                'figure is not evidence that NO figure is known, and the page used to assert the ' +
+                'second.') +
+            '">depth figure from ' + this._escapeAttr(who) +
+            (h.chain ? ' (' + this._escapeAttr(String(h.chain)) + ')' : '') +
+            ' \u2014 the ' + this._escapeAttr(owner) + ' publishes none for this asset \u24d8</div>';
     },
 
     // ⚠️ THE EXECUTION COST AT MINIMUM SIZE WAS PUBLISHED ON 8 ASSETS AND RENDERED
@@ -7597,7 +7679,7 @@ const CommonRenderer = {
                     // But a reader seeing only "n/a" cannot know a current
                     // measurement of the same asset exists, on a named chain, from
                     // the producer whose block this one replaced.
-                    this._supersededDepthHtml() +
+                    this._depthHandoffHtml() +
                     (liq.total_2pct_depth == null && liq.two_pct_depth_status === 'not_size_responsive'
                         ? '<div class="text-[11px] text-amber-700 dark:text-amber-300" title="' +
                           this._escapeAttr(liq.two_pct_depth_basis ||
