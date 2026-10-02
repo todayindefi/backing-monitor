@@ -1655,7 +1655,26 @@ const CommonRenderer = {
         var derived = null;
         if (!ds && !bind && !withheld) {
             // 1. An explicit producer declaration beats anything I derive.
-            if (typeof l.scope === 'string' && l.scope.trim()) {
+            //
+            // ⚠️ TWO PUBLISHED LOCATIONS, AND THE RICHER ONE WAS NOT READ.
+            // `liquidity.scope` is a short slug ("routed_ethereum"); thUSD publishes
+            // `exit_mark.scope` as a full sentence, and it carries the fact that
+            // decides the figure: "ONE LEG: Ethereum only. Arbitrum (~$34K, ~$0
+            // volume) is excluded as dust. Stable holds ~38% of SUPPLY but no indexed
+            // DEX venue: GeckoTerminal 404s thUSD there and none of Stable's top 60
+            // pools contain it (control: GeckoTerminal does index Stable)."
+            //
+            // Our derivation would have said "Depth measured on ethereum only" —
+            // true, and silent about over a third of the supply sitting where no
+            // venue could be found. A depth figure with no scope looks complete,
+            // which this function's own header calls worse than a blank.
+            //
+            // The sentence form is preferred over the slug and used verbatim: it is
+            // the producer's prose, not ours to recompose.
+            var emScope = (l.exit_mark || {}).scope;
+            if (typeof emScope === 'string' && emScope.trim()) {
+                derived = emScope.trim();
+            } else if (typeof l.scope === 'string' && l.scope.trim()) {
                 derived = 'Measured scope: ' + l.scope.trim().replace(/_/g, ' ');
             } else if ((l.exit_mark || {}).chain) {
                 // ⚠️ THE LADDER'S OWN CHAIN, WHICH IS NOT A DERIVATION. The union
