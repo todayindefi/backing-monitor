@@ -2096,8 +2096,41 @@ const CommonRenderer = {
     // ------ CR trend chart ------
     renderCRChart(historyData, opts) {
         var ctx = document.getElementById('cr-chart');
+        // ⚠️ THIS BRANCH WAS THE ONLY SILENT ONE, AND SILENCE IS THE FAILURE §4.0 NAMES.
+        // Hiding the panel made "no history file is published" indistinguishable from
+        // "this element does not apply here" and from a chart that failed to load.
+        // Fourteen lines down, the sibling branch for a series that exists-but-is-all-null
+        // already states its absence; this one hid instead. syzUSD and thUSD publish a
+        // coverage figure and no history file, so both showed a figure with no series
+        // and no word about it.
+        //
+        // ⚠️ THE TWO CAUSES ARE SEPARATED because they close differently: no file at all
+        // is a producer gap, while a file too short to plot is a series that has just
+        // started and will fill. A reader told only "not tracked" cannot tell which.
         if (!ctx || !historyData || !historyData.entries || historyData.entries.length < 2) {
-            document.getElementById('chart-panel').style.display = 'none';
+            var sPanel = document.getElementById('chart-panel');
+            if (!ctx || !sPanel) { if (sPanel) sPanel.style.display = 'none'; return; }
+            var sHolder = sPanel.querySelector('.chart-container');
+            if (sHolder) sHolder.style.display = 'none';
+            var priorS = document.getElementById('cr-chart-absent-note');
+            if (priorS) priorS.remove();
+            var nEnt = (historyData && historyData.entries) ? historyData.entries.length : 0;
+            var sNote = document.createElement('div');
+            sNote.id = 'cr-chart-absent-note';
+            sNote.className = 'text-sm text-slate-400';
+            sNote.style.lineHeight = '1.5';
+            sNote.textContent = (nEnt === 0
+                ? 'Coverage is not tracked over time — no history file is published for this asset. ' +
+                  'It would close when the producer begins retaining a coverage series; the current ' +
+                  'figure above is a single reading, not a trend.'
+                : 'Coverage history has ' + nEnt + ' reading' + (nEnt === 1 ? '' : 's') +
+                  ', too few to plot. It will close on its own as the series accumulates — this is a ' +
+                  'series that has just started, not one that is missing.');
+            sPanel.appendChild(sNote);
+            sPanel.style.display = '';
+            var sStats = document.getElementById('cr-chart-stats');
+            if (sStats) sStats.innerHTML = '';
+            if (window._crChart) { window._crChart.destroy(); window._crChart = null; }
             return;
         }
         // ⚠️ THE PRODUCER SAID NO SUCH RATIO EXISTS, SO THIS DOES NOT PLOT ONE.
@@ -2272,7 +2305,44 @@ const CommonRenderer = {
             var note = document.createElement('div');
             note.id = 'cr-chart-absent-note';
             note.className = 'text-sm text-slate-400';
-            note.textContent = 'No collateral-ratio history is published for this asset.';
+            // ⚠️ §6.5.3 REQUIRES WHY AND WHAT WOULD CLOSE IT, and this stopped at the
+            // bare statement. But the honest version has TWO cases, and my first draft
+            // asserted the wrong one on four assets.
+            //
+            // This branch fires when `collateral_ratio` is absent from every entry —
+            // which is NOT the same as "no coverage series exists". USDe publishes
+            // `coverage_ratio`, USDai `coverage_ratio`, USDat `backing_ratio`, cUSD both
+            // `coverage_ratio` and `coverage_pct`. All four have a real series that THIS
+            // CHART CANNOT READ, because it reads one field name. Telling a reader
+            // "carries no coverage field" there is a false statement about a producer who
+            // published the data.
+            //
+            // ⚠️ So the unreadable case is reported as what it is — a transport gap with
+            // the field NAMED — rather than as an absence. That is the "published but
+            // unrendered" idiom this repo uses elsewhere, and it points at the fix
+            // instead of at the producer.
+            //
+            // ⚠️ NOT widened to read those fields here, deliberately: their values are
+            // RATIOS (1.0004, 0.9999) where this chart plots percents, and scale is
+            // resolved by declaration or an explicit list, never by magnitude. Plotting
+            // 1.0004 as 1.0004% is the mis-scaling that rule exists to prevent, so the
+            // widening needs its own pass with the scale confirmed per asset.
+            var ALT_COV = ['coverage_ratio', 'backing_ratio', 'coverage_pct',
+                           'on_chain_coverage_pct', 'collateral_ratio_inclusive'];
+            var altField = null;
+            for (var ai = 0; ai < ALT_COV.length && !altField; ai++) {
+                var nm = ALT_COV[ai];
+                if (historyData.entries.some(function(e) { return e && e[nm] != null; })) altField = nm;
+            }
+            note.textContent = altField
+                ? 'A coverage series IS published for this asset — ' +
+                  historyData.entries.length + ' readings of "' + altField + '" — and this chart ' +
+                  'does not read it. The gap is on the dashboard side, not the producer\u2019s, and ' +
+                  'it closes by teaching this chart that field name and its scale.'
+                : 'Coverage is not tracked over time — the history file has ' +
+                  historyData.entries.length + ' readings and carries no coverage field under any ' +
+                  'name this chart knows. It would close when the producer writes coverage into ' +
+                  'the series it already publishes.';
             chartPanel.appendChild(note);
             var sEl = document.getElementById('cr-chart-stats');
             if (sEl) sEl.innerHTML = '';
