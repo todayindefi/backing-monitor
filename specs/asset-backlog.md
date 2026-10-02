@@ -317,3 +317,42 @@ status      not sent. ⚠️ Scope corrected 2026-10-02: this REPLACES the draft
             audit the same day found ~60 fields they publish that reach no reader.
 Last reviewed 2026-10-02
 ```
+
+### weeth — NOT registered, owner decision 2026-10-02. Do not re-raise.
+```
+raised      2026-10-02 by riskAnalyst
+what        Three producers have written weETH payloads — PegTracker (axes 1/2 + the ladder, NAV-
+            shaped not CR-shaped, wrapped share re-derived at 96.499%), DexTracker (280 venues
+            across four chains), riskAnalyst (liquidity 6.5 headline with per-chain 6.5 / 5.0 / 4.0
+            / 2.0 for eth / base / arb / op). None of it reaches a reader.
+decision    ⏸ NO DASHBOARD FOR NOW. Owner, 2026-10-02: "i dont want a dashboard for weeth yet."
+            Not a judgement on the data or the producers — we are simply not taking the asset on.
+why it is   One entry in data/assets.json does three things at once: creates the page, makes the
+a decision  hourly sync copy and PUBLISH every weETH file from all three producer repos, and
+            expands riskAnalyst's audit scope because their checker reads our registry. Reversible,
+            but the data will have been public in the interim.
+            ⚠️ The `published: false` half-state does NOT stage anything — the sync builds its file
+            list from the registry and ignores that flag. It hides an asset from the menu only.
+if revisited two things come with it, both already established and neither needing re-derivation:
+            1. weETH is the FIRST depth_threshold_bps entry — 200 bps, not our 50 bps default. The
+               test is riskAnalyst's and our spec should have used it: would a 2% move in this
+               asset's unit value be a FAILURE of its design? For an ETH-denominated wrapper, no.
+               Material: on Arbitrum 50 bps brackets 25-50 ETH against 200 bps at 50-100 ETH. Our
+               spec reserved the override for exactly this and said "a volatile asset would be the
+               first entry". ⚠️ Owner's to set — the 50 bps default came from two explicit owner
+               decisions (2026-09-22, 2026-09-26).
+            2. Axes 4, 5 and 6 are NOT refreshed. A topology walk is outstanding with
+               security_analyst, so axis 5 would carry a 2026-08-27 hand-walk (renders its real age,
+               since our axis clock takes the oldest declared input) and signer_independence is
+               "unverified" — riskAnalyst carries the word explicitly, because an absent field and
+               an unverified one are opposite claims.
+            ⚠️ Unverified on our side: riskAnalyst's `contract_admin` block is a shape our axis-5
+            renderer has not seen, so signer_independence may be published-and-unrendered. Check on
+            arrival, do not assume.
+already     Nothing here was wasted. Three renderer fixes landed from the conversation and none
+shipped     depended on weETH existing: the per-chain OBJECT shape (ac08bd855 — weETH's four legs
+            would have been dropped silently, Optimism 2.0 under a 6.5 headline), inherited risk
+            flags saying they are inherited (b4aec7f90 — live on sUSDe, held), and the producer's
+            published depth scope beating our derived one (d2d70a48f).
+Last reviewed 2026-10-02
+```
