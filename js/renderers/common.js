@@ -7403,6 +7403,30 @@ const CommonRenderer = {
     liquidityPanelHtml(data, opts) {
         opts = opts || {};
         var liq = data.liquidity || {};
+        // ⚠️ A BESPOKE PANEL HAS NO AXIS HEAD, SO THE SCORE HAD NOWHERE TO GO.
+        // ethena.js hides the generic liquidity section and renders this panel
+        // instead, unnumbered. Dependencies and issuer were given `withScoreChip`
+        // for exactly that reason ("withScoreChip because there is no axis head here
+        // to carry the score") and liquidity was missed — so on sUSDe riskAnalyst's
+        // authored Liquidity 7.0 reached NO READER, including the basis they
+        // corrected on 2026-10-02.
+        //
+        // ⚠️ AUTHORED ONLY WHERE NO COMPUTED BAND EXISTS, which is the rule the
+        // generic path already follows and the spec already describes for four
+        // tiles. sUSDe qualifies: its depth resolves to shape 'none', so there is no
+        // live number and the authored score is the only one.
+        //
+        // ⚠️ AND DELIBERATELY NOT WHERE A BAND DOES EXIST. USDe's band is 10/10
+        // against the same producer's authored 7.0 — a 3.0 gap in the FLATTERING
+        // direction on an asset whose July attestation is 70 days stale. Which chip
+        // wins there is the open owner decision already deferred on reUSD-RE
+        // (specs/asset-backlog.md), and adding the band here would answer it by
+        // implementation and in the generous direction. So USDe gains nothing from
+        // this and stays as it is.
+        var liqTitleChip = '';
+        if (opts.withScoreChip && this.liquidityRating(data) == null) {
+            liqTitleChip = this.authoredScoreChipHtml(liq, ['liquidity_score'], '');
+        }
         var headContext = '';
         if (opts.withHeadContext) {
             var scopeHtml = this.depthScopeHtml(data);
@@ -7868,7 +7892,9 @@ const CommonRenderer = {
 
 
         return '<div class="panel">' +
-            '<div class="panel-title">Liquidity &amp; Exit</div>' +
+            '<div class="panel-title">Liquidity &amp; Exit' +
+                (liqTitleChip ? ' <span class="ml-2 align-middle">' + liqTitleChip + '</span>' : '') +
+            '</div>' +
             headContext +
             statRow + this._depthClockHtml(liq) + this.exitCapacityHtml(liq) + exitLine + ladderBlock +
             this._depthShareHtml(data) + poolBlock + poolsNote + chainBlock +

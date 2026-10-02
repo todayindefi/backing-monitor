@@ -278,7 +278,7 @@ var EthenaRenderer = {
         // producer's "primary exit: 7-day cooldown to USDe at NAV" — rendered into
         // a display:none node.
         html += anc('panel-liquidity',
-            CommonRenderer.liquidityPanelHtml(data, { withHeadContext: true }));
+            CommonRenderer.liquidityPanelHtml(data, { withHeadContext: true, withScoreChip: true }));
         html += CommonRenderer.backingBasisPanelHtml(data);
         // Async-filled placeholders (all from ethena_family.json):
         html += '<div id="ethena-custody-panel"></div>';
