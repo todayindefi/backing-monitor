@@ -2000,8 +2000,44 @@ const CommonRenderer = {
             container.innerHTML = '<div class="text-green-600 text-sm font-medium">No risk flags</div>';
             return;
         }
+        // ⚠️ AN INHERITED FLAG MUST SAY IT IS INHERITED. sUSDe carries two warnings
+        // whose `inherited_from: "USDe"` and `scope: "usde_level"` were both dropped
+        // here — the renderer read only `severity` and `message`. A finding about
+        // USDe's custody attestation then reads as a finding about sUSDe's own state.
+        //
+        // PegTracker has been compensating in prose: both messages start "USDe: ".
+        // That is the producer working around a field we do not read, and it is
+        // ambiguous in exactly the wrong way — "USDe:" could as easily label sUSDe's
+        // exposure TO USDe as a finding measured one level up. The structured field
+        // says which, and it was published from the start.
+        //
+        // riskAnalyst asked whether this mechanism is generic enough for a wrapper
+        // whose upstream is not a stablecoin. It is generic because it is a
+        // pass-through — we assert nothing and derive nothing. But it has never
+        // rendered for anyone, so the honest answer was that weETH would be the
+        // second asset to use a mechanism that had never reached a reader, not the
+        // first non-stablecoin case of a working one.
+        var self = this;
         container.innerHTML = data.risk_flags.map(function(f) {
-            return '<div class="risk-flag risk-' + f.severity + '">' + f.message + '</div>';
+            // ⚠️ ESCAPED. Producer prose went into innerHTML raw. Counted before
+            // changing it: 87 flags across the fleet and NOT ONE contains markup, so
+            // nothing is being formatted deliberately and this changes no rendered
+            // text — it closes a path where a producer string is interpreted as HTML.
+            var msg = self._escapeAttr(String(f.message == null ? '' : f.message));
+            var prov = '';
+            if (f.inherited_from) {
+                prov = '<div class="text-[11px] text-slate-500 mt-1" title="' +
+                    self._escapeAttr(
+                        'This finding was measured on ' + String(f.inherited_from) +
+                        ' and carried down to this asset' +
+                        (f.scope ? ' (producer scope: ' + String(f.scope) + ')' : '') +
+                        '. It is NOT a measurement of this asset\u2019s own state \u2014 the ' +
+                        'asset inherits the exposure, so the finding travels with it.') +
+                    '">inherited from ' + self._escapeAttr(String(f.inherited_from)) +
+                    ' \u2014 not measured on this asset \u24d8</div>';
+            }
+            return '<div class="risk-flag risk-' + self._escapeAttr(String(f.severity || '')) +
+                '">' + msg + prov + '</div>';
         }).join('') + this._divergenceContextHtml(data);
     },
 
