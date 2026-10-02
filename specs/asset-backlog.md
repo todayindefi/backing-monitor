@@ -436,8 +436,10 @@ why         The governing rule is explicit — "every element is either RENDERED
             asset is not a declaration about this element on this page.
 owner       us — a generic declared-absence string in the renderer, not per-asset copy
 closes when a coverage figure with no series renders the declared absence instead of nothing
-status      not started. Deliberately not built at the end of a long session: it is a fleet-wide
-            reader-facing string on 16 assets and deserves its own pass.
+status      ✅ BUILT 2026-10-02 (705fc6341) — the declaration renders, so §4.0 is satisfied on all
+            seven and each per-asset entry is closed. ⚠️ Building it uncovered a SEPARATE live
+            defect: four assets publish a coverage series under a field name this chart does not
+            read. That has its own entry below and is the part still open.
 how found   Answering "is sUSDe up to spec?". ⚠️ check_feeds.py was reporting 11 assets as missing
             coverage or composition they DO publish — it read summary.* and backing_breakdown but
             never the six-axis `backing.*` block. Fixed in d241f1e88. Its own comment had predicted
