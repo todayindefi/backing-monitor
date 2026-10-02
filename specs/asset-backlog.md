@@ -667,3 +667,38 @@ note        fxsave's backing overlay deliberately carries
             Both fxusd and fxsave remain 5 of 6 axes: neither carries `underlying_score`.
 Last reviewed 2026-10-02
 ```
+
+### cross-asset — the unread-field marker is blind to new BLOCKS, only to new prose
+```
+raised      2026-10-03
+what        riskAnalyst's axis-5 re-scope adds `contract.assurance` — an 11-field block (audit
+            engagements, bounty, formal_verification, test_coverage, effect_on_score and more) — to
+            syrupusdc, susde and weeth. ⚠️ Verified by merging their file: it lands in
+            data.contract.assurance, NOTHING renders it, and the unread-field marker does NOT name
+            it. The marker inspects only STRING values ≥120 chars, so it names `authority_note` and
+            `provenance_note` on that same asset and is silent on an 11-field structure.
+why         The marker exists precisely so a published field cannot vanish unnoticed — its own
+            comment records being "blind to the schema next door" once before and being widened to
+            cover every merge-mode overlay. It is still blind, now to a SHAPE rather than a schema:
+            prose is detected, blocks are not. So the most repeated defect in this repo has a
+            detector that covers half the cases.
+            ⚠️ syrupusdc is REGISTERED, so this is a live silent drop on a reader-facing asset, not
+            a future one. susde too. weeth is declined, so its block is correctly unreachable.
+owner       us
+closes when an unread object-valued key is named the way an unread prose field already is
+tractable?  YES, measured 2026-10-03: across every synced overlay only 5 object-valued keys are not
+            obviously read — `float_split`, `measurement_clocks` and the three `*_score_change`
+            variants, and the last three ARE read via dynamic key access so they are false
+            positives of a source-text test. So the marker would need an explicit known-blocks
+            list rather than introspection, and would fire on roughly two keys today plus
+            `assurance` when it syncs. Not noisy.
+⚠️ do NOT   render the assurance block itself as part of this. riskAnalyst named three traps in
+            syrupusdc's copy that must not read as credit — "8+ total audits" predates the asset's
+            existence, Trail of Bits states it "did not look for security flaws", and formal
+            verification is not established — plus a protocol-level Maple bounty on a
+            product-level page. Their block carries `effect_on_score: NONE` with the reason, which
+            is the field that stops a reader inferring the score moved. Rendering assurance is its
+            own job with its own care; NAMING the unread block is this one.
+status      not started. Recorded same-day with the verification, before the sync lands.
+Last reviewed 2026-10-03
+```
