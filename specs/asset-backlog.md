@@ -23,6 +23,12 @@ ESCALATE TO NOW      only when a page is showing something FALSE to a reader.
 ⚠️ **"Missing" is not "wrong."** An asset with no depth figure is incomplete and waits. An asset
 showing `n/a` on top of a live measurement is asserting something untrue and does not.
 
+⚠️ **AN ENTRY IN THIS FILE IS OUT OF THE ACTIVE QUEUE. THAT IS THE POINT OF THE FILE.** Owner
+instruction 2026-10-02. Once something is recorded here and triaged to the refresh, it stops being a
+thing to raise in status updates or to offer as the next task. Re-surfacing it costs the owner the
+same attention twice and defeats the batching this file exists to do. It comes back at the refresh,
+or when its triage changes — not because it is still on someone's mind.
+
 ⚠️ **Holdings are not a factor here and are not recorded in this repo.** riskAnalyst holds that
 context. If an asset's exposure makes something urgent, that call comes from them or the owner — do
 not infer it, and do not keep a holdings list here to guess with.
