@@ -119,3 +119,28 @@ status      ✅ CLOSED 2026-10-02 (fe1d82f10). reUSD-RE now reads 0.5% depth $10
             byte-identical.
 Last reviewed 2026-10-02
 ```
+
+### reusd-re — ⚠️ ESCALATED: rated Healthy 10/10 where the analyst scores liquidity 4.5/10
+```
+raised      2026-10-02
+what        Our band is computed from DEPTH ALONE and renders 10/10. The spec defines this axis as
+            the worse of {venue depth, primary redemption}; reUSD-RE's binding leg is redemption,
+            gated to non-U.S. persons, which is what riskAnalyst's 4.5/10 prices. So the band is a
+            measurement of the NON-BINDING leg rendered as the axis rating.
+why         A 5.5-point gap on a 10-scale, in the FLATTERING direction, on an asset riskAnalyst
+            holds at $172,641. Our own divergence threshold is 2.0 points.
+            ⚠️ Created by our own fix the same day: the hand-off (fe1d82f10) moved this asset off
+            the authored-only path and onto the computed path. Before it the chip read Not rated.
+owner       riskAnalyst supplies a liquidity non-derivability declaration; then us, to implement the
+            liquidity equivalent of the backing gate (score + applies_when + basis, all required).
+closes when the declaration exists and the chip shows the authored score, OR the band learns to
+            account for the redemption leg, OR this is recorded as acceptable with the tooltip
+            disclosure as the mitigation.
+status      answered to riskAnalyst 2026-10-02 with the measurement; they agreed the declaration is
+            honest for this asset and said they will NOT declare for syzusd/yzusd (gap 1.0, inside
+            band resolution — no disagreement there).
+note        The tooltip already states both numbers, and the head carries the report's full
+            reasoning in a disclosure. So this is "visible chip overstates" rather than "hidden".
+            Whether a hover is sufficient mitigation is the open question.
+Last reviewed 2026-10-02
+```
