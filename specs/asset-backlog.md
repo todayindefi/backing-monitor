@@ -923,3 +923,39 @@ note        Found only because riskAnalyst asked us NOT to restore facts they we
             by reviewing this file. The same pattern in apyx.js and usdai.js has its own entries.
 Last reviewed 2026-10-03
 ```
+
+### dusd-alto — second float figure arrives 2026-10-04 07:45 and will render nowhere
+```
+affects     dusd-alto
+raised      2026-10-03 by DexTracker
+what        `depth.third_party_float` joins the existing `depth.depth_usd`:
+              depth_usd           supply outside the pool — the UPPER bound, ~$26.5K today
+              third_party_float   that minus Alto's 2 borrow markets + 2 fee timelocks, ~$2,347
+            Carries status (measured | not_assessed — a failed balance read never shows as zero),
+            usd, units, protocol_holders{label: units}, method "residual", semantics and
+            holder_list_source. Their user chose to show BOTH; the headline is unchanged.
+why         ⚠️ THE SELLABLE AMOUNT LIES BETWEEN THE TWO, because borrow-market DUSD can be
+            borrowed and sold. So neither figure alone is the answer and the smaller one must NOT
+            read as the depth: rendering $2,347 next to a $26.5K cap without that sentence invites
+            a reader to take the lower number as the real exit. The producer's own basis names both
+            and says so — render it beside the cap labelled as held by ordinary holders, not
+            instead of it.
+owner       us
+closes when both figures render with the between-them sentence, or the block is declined
+⚠️ silent    It will NOT be flagged on arrival. The unread-block marker (af507bd23) scans only the
+            TOP level of an axis block, and `third_party_float` is nested inside `depth`, which is
+            on the known-blocks list — so we skip without descending. Second new nested block
+            today after contract.assurance, which WAS caught because it sat at the top level.
+            Recorded as the marker's limit rather than widened: descending into `depth` would name
+            every sub-key we do not read (bracket_50bps, per_chain, anchor, quote, rungs) and a
+            noisy marker is one a reader learns to ignore.
+⚠️ do not    render a change or trend on this figure yet. Today's 2,347 against riskAnalyst's 946.70
+            at block 26,053,732 is NOT established as holder growth — supply also grew 823K to
+            1.32M, and the residual OVERSTATES if an unlisted protocol holder appears. DexTracker
+            has asked riskAnalyst to re-check the holder set first.
+note        The phrase "third-party float" ALREADY appears on the page inside the producer's basis
+            prose ("third-party float — the 2% crossing sits above it at ≥$3…"), so a reader meets
+            the concept with no figure attached. That makes the structured block's absence easier
+            to miss, not harder.
+Last reviewed 2026-10-03
+```
