@@ -542,6 +542,17 @@ across the limit. The honest version is the 0–28% table above, which is measur
 than inferred from costs. The cost series is still the right evidence that a DAILY-ONLY axis cannot
 state an exit cost; it is not evidence about where the crossing sits.
 
+✅ **DEXTRACKER COVERAGE IS CAPPED AT 10 ASSETS — THEIR OWNER'S DECISION, 2026-10-03.** Relayed by
+DexTracker: they will not widen liquidity coverage, and a new asset is added only if their owner
+names it. This replaces their earlier *"please don't plan on our coverage growing until my user says
+so"* with a firm no.
+
+⚠️ **So the fallback tier in the table above is not a transitional arrangement and must never be
+built as one.** PegTracker's pool rows are the permanent, attributed venue source for the ~22 assets
+DexTracker does not cover, and any future work that treats them as a stopgap — a migration plan, a
+"once DexTracker covers it" branch, a TODO — is building against a decision that has been taken.
+Their curation still wins where it exists; it simply will not arrive anywhere new.
+
 ⚠️ **THE FALLBACK COLUMN IS THE WHOLE POINT, AND IT IS WHAT WAS MISSING.** Adoption used to replace
 the WHOLE axis, so a payload that DECLINED to publish a figure deleted a measured one: reUSD-RE and
 syzUSD render `0.5% depth n/a` + `Not rated` over a PegTracker `depth_50bps` block measured hours

@@ -281,8 +281,14 @@ corrections 1. Venue SIZE moves to DexTracker, not PegTracker. I assigned it on 
                first draft gave it to PegTracker, which would have stripped four assets of their
                only redemption data — the same "tier it, do not strip it" rule the proposal already
                applies to venues, got wrong one field along.
-status      drafted, corrections identified, not sent — awaiting the redemption decision above,
-            since correction 2 depends on it
+status      🗑 RETIRE IT. Three of the things it asked for are now settled without it:
+            · ownership — decided 2026-10-02 and in the spec, and never needed either producer's
+              agreement since we choose which fields we read;
+            · DexTracker's coverage question — their owner answered it 2026-10-03 with a firm cap
+              at 10 assets, so the "tier it, do not strip it" sub-decision is moot;
+            · the redemption row — superseded by the probe/eligibility split.
+            What survives is the one typed-field request, which has its own entry. Delete the file
+            rather than send it; a drafted proposal left lying around reads as pending.
 Last reviewed 2026-10-02
 ```
 
