@@ -75,13 +75,39 @@ var SYRUP_UNCORROBORATED_TITLE = 'Reads below par in Maple GraphQL but uncorrobo
 
 var SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD = 100000;
 
-// Static facts for §6 audit roll-up — sourced from the public risk report.
-var SYRUP_AUDIT_INFO = {
-    primary_audits: 'Spearbit + Trail of Bits',
-    other_audits_count: 6,
-    total_audits: '8+',
-    bug_bounty: 'Immunefi $1M+'
-};
+// ⚠️ REMOVED 2026-10-03: SYRUP_AUDIT_INFO WAS OUR CLAIM AND EVERY PART OF IT WAS WRONG.
+// It rendered, visible and uncollapsed, in the Trust Stack panel on both pools:
+//
+//   "Audits: Spearbit + Trail of Bits + 6 others (8+ total) · Bug bounty: Immunefi $1M+"
+//
+//   $1M+          the programme maximum is $500,000 (security_analyst, 2026-10-03,
+//                 Immunefi version 2026-04-21). "$1M+" asserts a FLOOR above the real
+//                 MAXIMUM, so it was not merely doubled — it was wrong in the direction
+//                 that flatters.
+//   Maple's       the bounty is a Maple PROTOCOL programme covering 43 listed assets,
+//                 not a syrupUSDC one. A protocol bounty on a product page needs that
+//                 distinction and had none.
+//   8+ total      five of those reviews (three Dec 2022, two Jun 2023) PREDATE this
+//                 asset's existence. An audit cannot have covered something that did not
+//                 exist when it ran — a temporal argument, so relabelling cannot save it.
+//   Trail of Bits their own report states it reviewed the V2 upgrade mechanism only to
+//                 understand it and "did not look for security flaws". The firm NAME is
+//                 what a reader recognises; the disclaimer is what they do not read.
+//
+// ⚠️ The comment said "sourced from the public risk report" — we copied a report that has
+// since been corrected into a HARDCODED CONSTANT, so no producer sync could ever fix it.
+// riskAnalyst corrected the same figure in four payloads today and none of them reached
+// this line. That is the rule the apyx trust-banner incident already set: do not author
+// security, custody or attestation claims in reader-facing copy.
+//
+// ⚠️ AND NOTHING REPLACES IT, DELIBERATELY. §4.0 would have us declare the absence, but
+// the declared form is "no audit published" and that would be a NEW false claim — audits
+// do exist, they are simply not ours to assert unsourced. riskAnalyst now publishes an
+// `assurance` block on axis 5 (contract) for both pools, under an anti-offset rule where
+// it correctly moves no score; it is neither synced nor adopted here yet, and adopting it
+// is its own job with its own care. Until then this panel says nothing about assurance,
+// and the report link already on the page is where a reader gets it. Recorded in
+// specs/asset-backlog.md.
 
 // §2b Liquidity Layer — functional-sleeve definitions. Each liquidity
 // position is grouped by *what it's doing* (parked cash vs deployed
@@ -3188,11 +3214,10 @@ var SyrupUSDCRenderer = {
                     '<div class="text-xs text-slate-400 italic">No additional custody addresses at this snapshot.</div>');
         }
 
-        var auditLine =
-            '<div class="text-sm text-slate-600 mt-3 pt-3 border-t border-slate-200">' +
-                'Audits: <strong>' + SYRUP_AUDIT_INFO.primary_audits + '</strong> + ' + SYRUP_AUDIT_INFO.other_audits_count + ' others (' + SYRUP_AUDIT_INFO.total_audits + ' total) · ' +
-                'Bug bounty: <strong>' + SYRUP_AUDIT_INFO.bug_bounty + '</strong>' +
-            '</div>';
+        // See the note at SYRUP_AUDIT_INFO's former definition: the audit/bounty line was
+        // ours, unsourced and wrong on all four counts, and is deliberately replaced by
+        // nothing rather than by a declared absence that would itself be false.
+        var auditLine = '';
 
         return '<div class="panel">' +
             '<div class="panel-title">Trust Stack</div>' +
