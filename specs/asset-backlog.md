@@ -137,8 +137,19 @@ not         a product decision about layout, which is how this was filed. It is 
             emitting for OUSD what it already emits fleet-wide, over data measured today.
 closes when OUSD's own feed carries a liquidity block, or we record that this legacy asset stays
             unmeasured on purpose AND the tile stops saying n/a over a live ladder
-status      not requested. ⚠️ Ask before asking: PegTracker's weETH test is still red and a
+status      DEFERRED to OUSD's next refresh — not in the active queue, not awaiting the owner.
+            ⚠️ Ask before asking: PegTracker's weETH test is still red and a
             previous handoff from here was mistaken for their own work.
+⚠️ DECISION  "Is a ~$7M legacy asset worth a producer ask?" was held open as a question for the
+   TOO       owner, which was wrong twice over: it is not urgent (OUSD is not a held asset), and
+            keeping it open parks the whole entry behind a reply. ⚠️ DECIDE IT AT THE REFRESH,
+            with the other five tasks in front of you, not in isolation — the answer depends on
+            what else OUSD needs, and task 1 costs almost nothing because the measurement
+            already exists. If the answer is no, record THAT: "OUSD stays unmeasured on purpose"
+            is a finished state, and the tile must then stop saying n/a over a live ladder
+            (see `why` above) — declining task 1 does not dispose of the false reading.
+            Moved out of the active queue 2026-10-03 at the owner's instruction.
+
 TASKS — in order, for OUSD's next refresh. Each one measured 2026-10-03, not inferred.
   1  AXIS 3, the ladder. Ask PegTracker to have `ousd_backing_analyzer.py` emit a `liquidity`
      block, as its siblings already do for ~20 assets. ⚠️ NO MEASUREMENT IS NEEDED — the ladder
