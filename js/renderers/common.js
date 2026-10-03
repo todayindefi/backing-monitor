@@ -6384,11 +6384,24 @@ const CommonRenderer = {
             if (perChain) {
                 parts += '<div class="text-xs text-amber-700 mb-1">' + self._mdInlineHtml(perChain) + '</div>';
                 // ⚠️ THE PRODUCER'S REASON FOR THE PER-CHAIN SPLIT, WHERE THEY GIVE
-                // ONE. weETH publishes `liquidity_score_per_chain_basis` and it is the
-                // sentence that stops a reader averaging the legs: "WORSE-LEG BY
-                // CHAIN, NOT BLENDED — weETH is four markets and an aggregate figure
-                // would lift the asset on its best leg." Numbers without it invite
-                // exactly the averaging it forbids.
+                // ONE. It is the sentence that stops a reader averaging the legs —
+                // weETH's reads "WORSE-LEG BY CHAIN, NOT BLENDED — weETH is four
+                // markets and an aggregate figure would lift the asset on its best
+                // leg." Numbers without it invite exactly the averaging it forbids.
+                //
+                // ⚠️ THE EXEMPLAR IS NOT IN OUR CORPUS AND THE CITATION SAID NOTHING
+                // ABOUT THAT, so the claim read as uncheckable and drew a (wrong)
+                // correction from riskAnalyst, who looked for weETH in data/ and
+                // found nothing. weETH is NOT a registered asset here; the quote is
+                // from riskAnalyst/data/axes/weeth_axis_basis.json, which the sync
+                // never copies because `weeth` is absent from assets.json.
+                //
+                // THE ONLY SERVED PAYLOAD CARRYING THIS FIELD IS susde_axis_basis.json
+                // — nine chains, ethereum 7.0 down to monad 2.0, and its basis is the
+                // sharper argument of the two: eight of the nine legs are
+                // VENUE-INVENTORY-DERIVED, not ladder-derived, so only the 7.0 rests
+                // on a measured crossing. Cite that one when checking this path
+                // locally. ⚠️ Name the repo whenever an example lives outside ours.
                 var pcb = liq.liquidity_score_per_chain_basis;
                 if (typeof pcb === 'string' && pcb.trim()) {
                     parts += '<div class="text-[11px] text-slate-500 mb-1" style="line-height:1.5">' +
