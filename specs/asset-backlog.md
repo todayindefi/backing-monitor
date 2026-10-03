@@ -91,20 +91,60 @@ note        The venue question is settled and I was right to ask rather than ass
 Last reviewed 2026-10-02
 ```
 
-### ousd — not on the six-axis layout at all
+### ousd — ⚠️ a measured ladder, ten hours old, rendering as "n/a"
 ```
-raised      2026-10-02
-what        The file carries none of the six axis sections, and the layout switches off when the peg
-            section is absent. So OUSD shows no axis 3 rather than an empty one.
-why         Looks like a liquidity gap and is not one. I twice reported it as a missing measurement
-            before checking which layout it was on.
-owner       product decision (yours), then PegTracker for the sections + riskAnalyst for the
-            editorial axes
-closes when either migrated, or recorded as deliberately legacy so nobody re-raises it
-status      not requested — migration is a decision, not a defect
-note        Six others are in the same state: usdd, cusd, strc, strcx, mstr, bmnr. The last four are
-            equity-style instruments where a trading ladder is not the right question anyway.
-Last reviewed 2026-10-02
+raised      2026-10-02. ⚠️ ENTRY REWRITTEN 2026-10-03 — the 10-02 version was WRONG ON ITS
+            CENTRAL CLAIM and is kept below so the error is not silently replaced.
+⚠️ WRONG     "The file carries none of the six axis sections, and the layout switches off when the
+   as filed  peg section is absent. So OUSD shows no axis 3 rather than an empty one."
+            ALL THREE SENTENCES ARE FALSE TODAY, measured 2026-10-03:
+              - OUSD IS on the six-axis layout. riskAnalyst's axis_basis file supplies peg,
+                backing, liquidity and dependencies, and `hasAxisBlocks` is literally `!!data.peg`
+                — so their envelope switching the layout ON is the same mechanism that unhid the
+                frame on the MSTR equity page. The file has been there since 2026-09-11.
+              - It shows an EMPTY axis 3, which is precisely what the entry said it did not do.
+              - The entry was written to correct an earlier mistake ("looks like a liquidity gap
+                and is not one") and it over-corrected into a second one. It IS a liquidity gap.
+what        THREE PARTIES EACH HOLD PART OF THE ANSWER AND NONE OF IT REACHES THE PAGE:
+              PegTracker measured OUSD's full ladder at 2026-10-03T01:35Z — 4 rungs, $1K to
+                $100K, status ok, EVERY RUNG CLEARING AT A PREMIUM (fill_ratio 1.00048-1.00067).
+                It lands in the combined `peg_tracker_latest_usd.json` and nothing in this repo
+                reads that file. See [[project-pegtracker-ladder-output-path]].
+              PegTracker's `ousd_backing_analyzer.py` is ALIVE and current (02:35Z the same day)
+                but emits the pre-six-axis shape — summary, backing_breakdown, risk_flags,
+                vault_status, and no axis blocks at all.
+              riskAnalyst authored liquidity 5.0/10 WITH a written non-derivability reason, in
+                `liquidity_score_depth_caveat`: "NO COMPUTED DEPTH EXISTS FOR THIS ASSET — the
+                feed carries no liquidity block at all." Our FILL gate wants a STRUCTURED
+                declaration (derived_score_status, two_pct_depth_size_responsive,
+                two_pct_depth_status), so the prose is rejected and the score is withheld.
+            Net: "0.5% depth n/a · Max ≤25bps n/a · Pool TVL n/a · No exit-mark RFQ ladder in
+            this snapshot", and no rating.
+why         ⚠️ The depth is NOT unknown. Every tested size through $100,000 clears at a GAIN, so
+            the honest answer is a floor at ≥$100K — against a ~$6.94M book, ~1.4% of supply at
+            the top rung. "n/a" asserts we do not know something we do know. Same class as the
+            reUSD-RE / syzUSD escalation, different mechanism: there an overlay deleted a
+            measurement, here the measurement is in a file no consumer reads.
+⚠️ and the  The gate is arguably RIGHT to reject riskAnalyst's prose, and that is worth keeping
+   gate is  separate from the wiring: "no depth exists because nobody produced one" is a GAP,
+   not the  not a by-design absence. It is the `not_measured` vs `not_size_responsive`
+   bug      distinction, and the FILL gate exists to stop an authored score papering over a
+            broken feed. Widening it to accept this prose would admit exactly the case it
+            guards. Once the ladder is wired the question dissolves — a real depth exists.
+owner       PegTracker (emit the axis blocks for OUSD, as its analyzer already does for the other
+            ~20 assets). Ours only if they decline, by reading the combined store.
+not         a product decision about layout, which is how this was filed. It is one producer
+            emitting for OUSD what it already emits fleet-wide, over data measured today.
+closes when OUSD's own feed carries a liquidity block, or we record that this legacy asset stays
+            unmeasured on purpose AND the tile stops saying n/a over a live ladder
+status      not requested. ⚠️ Ask before asking: PegTracker's weETH test is still red and a
+            previous handoff from here was mistaken for their own work.
+note        The others in the pre-six-axis state are NOT all alike, and the 10-02 entry lumped
+            them: usdd and cusd are in OUSD's position (axis_basis present, layout on, axis 3
+            empty); strc has peg+liquidity; bmnr genuinely has no axis blocks and no overlay, so
+            its layout stays off. mstr and strcx have no feed of their own — they are sibling
+            views on strc's. For bmnr/mstr/strcx an exit ladder is not the right question.
+Last reviewed 2026-10-03
 ```
 
 ### syrupusdt · syrupusdc — crossing published in a layout we cannot read
