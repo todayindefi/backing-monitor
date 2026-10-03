@@ -1033,6 +1033,52 @@ const CommonRenderer = {
     // "live_venue_count of venue_count", which on bold said "6 of 20 ... are live" —
     // comparing a confirmed-live count against an enumeration total, with 6 itself a
     // FLOOR because 2 rows are unresolved. Never compare the two.
+    // ⚠️ WHAT CORROBORATES THE TVL COLUMN, AS A PROPORTION RATHER THAN A BADGE.
+    // DexTracker verifies a reported TVL two ways: a supply check (a pool claiming
+    // more than 5x the token's whole value on that chain is implausible) and an
+    // on-chain custody check reading BOTH named legs by balanceOf (reported more
+    // than 20x what the pool actually holds is implausible).
+    //
+    // ⚠️ The custody check applies ONLY to pool types that hold their own tokens —
+    // Curve, Uniswap v2/v3 and forks — and never to v4, Balancer or Fluid, which
+    // are marked `not_checked`. That is the state this line exists for: it is NOT a
+    // pass, and on most assets it is the majority of rows (64 of 71 on apxUSD, 49
+    // of 49 on syrupUSDC). Rendering it per-row would put a marker on nearly every
+    // line, which a reader learns to skip; the proportion is the fact.
+    //
+    // ⚠️ Reading only OUR leg was their first attempt and it condemned a real $13.5M
+    // weETH/WETH pool holding 5,033 WETH against 1.7 weETH — an all-counter-asset
+    // pool is the BEST place to sell into, so a one-sided read inverts the verdict.
+    // Kept here because it is the reason the column means what it means.
+    _tvlTrustHtml(pools) {
+        if (!Array.isArray(pools) || !pools.length) return '';
+        var rejected = 0, notChecked = 0, checked = 0;
+        pools.forEach(function(p) {
+            if (p.tvl_status === 'implausible') rejected++;
+            if (p.custody_check === 'not_checked') notChecked++;
+            else if (p.custody_check) checked++;
+        });
+        if (!rejected && !notChecked && !checked) return '';
+        var bits = [];
+        if (rejected) {
+            bits.push('<span class="text-amber-700 font-semibold">' + rejected +
+                ' row' + (rejected === 1 ? '' : 's') + ' rejected</span> — the indexer\u2019s ' +
+                'figure is contradicted by what the pool holds on-chain, and ' +
+                (rejected === 1 ? 'it is' : 'they are') + ' excluded from every total');
+        }
+        if (notChecked) {
+            bits.push(notChecked + ' of ' + pools.length +
+                ' not corroborated on-chain — pool types that do not custody their own ' +
+                'tokens (Uniswap v4, Balancer, Fluid) cannot be checked this way. ' +
+                '<span class="font-semibold">Not the same as verified.</span>');
+        }
+        if (checked && !notChecked) {
+            bits.push(checked + ' corroborated against on-chain balances');
+        }
+        return '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
+               bits.join(' · ') + '</div>';
+    },
+
     _adaptVenues(block) {
         var vs = Array.isArray(block.venues) ? block.venues : null;
         if (!vs || !vs.length) return;
@@ -1137,6 +1183,23 @@ const CommonRenderer = {
             if (v.exclusion_reason) p.exclusion_reason = String(v.exclusion_reason);
             if (v.exclusion_reason_note) p.exclusion_reason_note = String(v.exclusion_reason_note);
             if (v.liveness_basis) p.liveness_basis = String(v.liveness_basis);
+            // ⚠️ THE INDEXER'S TVL IS NOT ALWAYS A TVL, and DexTracker added these
+            // three fields on 2026-10-03 after their first full venue run found
+            // GeckoTerminal reporting Curve crvUSD/WETH/CRV at $6.94B, then $964M an
+            // hour later, against ~$2-3M actually on-chain — a leg draining to ~0
+            // breaks the indexer's price maths. `tvl_status` is "reported" or
+            // "implausible"; an implausible row STAYS LISTED and drops out of every
+            // total on their side.
+            //
+            // ⚠️ `custody_check: "not_checked"` IS NOT A PASS. It means the check does
+            // not apply to this pool type — v4, Balancer and Fluid do not hold their
+            // own tokens — so nothing on-chain corroborates the figure. On apxUSD that
+            // is 64 of 71 rows and on syrupUSDC 49 of 49, which is why it renders as a
+            // count rather than a per-row badge: a marker on nearly every row is
+            // wallpaper, and the reader needs the PROPORTION.
+            if (v.tvl_status) p.tvl_status = String(v.tvl_status);
+            if (v.tvl_exclusion_basis) p.tvl_exclusion_basis = String(v.tvl_exclusion_basis);
+            if (v.custody_check) p.custody_check = v.custody_check;
             return p;
         });
 
@@ -7985,6 +8048,22 @@ const CommonRenderer = {
         if (anyPool('tvl_usd')) cols.push({ th: 'TVL (USD)', cls: 'text-right font-mono',
             get: function(p) {
                 if (p.tvl_usd == null) return '—';
+                // ⚠️ A REJECTED FIGURE MUST NOT RENDER AS A FIGURE. crvUSD's
+                // FraxlendV1 row reports $1,428,182 against $0 held on-chain in both
+                // named legs. Printed plainly it is the fourth-largest venue on the
+                // page and a reader would price an exit on it.
+                //
+                // Struck through rather than hidden, and the number is kept: the
+                // reader is better served knowing the indexer claims $1.4M and we
+                // reject it than seeing a dash, which reads as "not reported". The
+                // producer's own basis is the tooltip — ours would be a second-hand
+                // retelling of a measurement we did not take.
+                if (p.tvl_status === 'implausible') {
+                    var eb = CommonRenderer._escapeAttr(p.tvl_exclusion_basis || '');
+                    return '<span class="text-amber-700"' + (eb ? ' title="' + eb + '"' : '') + '>' +
+                           '<s>' + CommonRenderer.formatCurrencyExact(p.tvl_usd) + '</s>' +
+                           ' <span class="text-xs font-semibold">rejected</span></span>';
+                }
                 return (p.tvl_is_upper_bound === true ? '≤' : '') +
                        CommonRenderer.formatCurrencyExact(p.tvl_usd);
             }});
@@ -8087,7 +8166,8 @@ const CommonRenderer = {
                   '<thead><tr>' + cols.map(function(c) {
                       return '<th' + (/text-right/.test(c.cls) ? ' class="text-right"' : '') + '>' + c.th + '</th>';
                   }).join('') + '</tr></thead>' +
-                  '<tbody>' + poolRows + '</tbody></table></div>'
+                  '<tbody>' + poolRows + '</tbody></table></div>' +
+                  this._tvlTrustHtml(pools)
             : '';
 
         // ⚠️ "24h volume: n/a — not tracked" was a HARDCODED literal that read no
