@@ -247,8 +247,16 @@ recommendation it goes to riskAnalyst, and the field splits in two: a mechanical
             redemption executes, and an editorial judgement of who is eligible. That split also
             dissolves the syzUSD conflict — both producers are right about different questions,
             which is the same shape as the impact-vs-all-in confusion one layer up.
-status      recommended to the owner 2026-10-02, not decided. riskAnalyst notified as NOTICE only
-            and is not acting on it.
+status      ✅ DECIDED 2026-10-02 and recorded in specs/six-axis-dashboard-spec.md §Axis 3 as
+            "SPLIT rather than assigned — owner decision": the PROBE (does the call execute, at
+            what cost, to what size) to whoever runs it on its own cadence; the ELIGIBILITY
+            judgement (who may actually use it) to riskAnalyst on theirs.
+            ⚠️ This status line read "recommended to the owner, not decided" for a day after the
+            decision was taken and written into the spec — and I nearly asked the owner to decide
+            it twice. A backlog status lagging the spec is the same defect as a stale reason in a
+            data file, which this file exists to catch.
+            What remains is NOT this decision: it is the typed field each producer must publish
+            before the split is implementable, which has its own entry.
 Last reviewed 2026-10-02
 ```
 
