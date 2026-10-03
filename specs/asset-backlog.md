@@ -1141,3 +1141,41 @@ closes when implausible rows render as excluded-and-why, and not_checked renders
             rather than as verified
 Last reviewed 2026-10-03
 ```
+
+### venue-payload assets — three chain-level facts published and unrendered
+```
+affects     crvusd, apyusd, susde (no local dollar exit) · thusd (chain not queried) ·
+            wsteth, weeth (chains truncated — both UNREGISTERED, so no page today)
+raised      2026-10-03 by DexTracker, with the venue batch
+what        Three keys inside `enumeration`, none read:
+              chains_without_local_dollar_exit   apyusd: base, bsc, solana
+                                                 crvusd: bsc, fraxtal, taiko, xdai
+                                                 susde:  blast, fraxtal, mantle, monad
+              chains_not_queried                 thusd on Stable — no indexer exists
+              chains_truncated                   GeckoTerminal's 10-page cap, so the chain
+                                                 count is a FLOOR not a total
+why         ⚠️ The first is the strongest of the three and the reason this is not cosmetic:
+            "holders on those chains have no local exit" is a harder statement about a
+            holder's actual position than any TVL row on the page. A reader holding crvUSD on
+            bsc learns nothing today.
+            The second and third are both ABSENCE-vs-ZERO: an unqueried chain and a truncated
+            list each render as a complete enumeration, which is the failure the venue clock
+            and the live_venue_count floor were separately built to avoid. Same class, third
+            instance.
+owner       us — these are published fields, nothing is owed by the producer
+✅ cheap     The per-chain table ALREADY has the column: `no_local_swap_venue` renders as
+            "none — holders cannot exit locally". So the dollar-exit key is a wiring job, not
+            a design one. ⚠️ But `by_chain` is a DIFFERENT producer structure from
+            `enumeration.chains_without_local_*`, so confirm they agree on a shared asset
+            before routing one into the other — two sources for one claim is how the
+            axis-3 clock split started.
+⚠️ and the  weeth and wsteth are NOT registered (owner decision 2026-10-02: no weETH
+   two      dashboard yet), so chains_truncated has no reader today. Do not register an asset
+   truncated to render a field.
+not done    deliberately, 2026-10-03: the same pass fixed a live wrong figure (crvUSD's
+   in the   rejected $1.4M row) and mixing an enrichment into a correctness fix makes the A/B
+   same pass unable to tell which change moved what. 12 panels moved for the fix alone.
+closes when the no-local-exit chains render per asset, and an unqueried or truncated chain
+            list stops reading as a complete one
+Last reviewed 2026-10-03
+```
