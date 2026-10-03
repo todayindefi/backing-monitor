@@ -139,6 +139,41 @@ closes when OUSD's own feed carries a liquidity block, or we record that this le
             unmeasured on purpose AND the tile stops saying n/a over a live ladder
 status      not requested. ⚠️ Ask before asking: PegTracker's weETH test is still red and a
             previous handoff from here was mistaken for their own work.
+TASKS — in order, for OUSD's next refresh. Each one measured 2026-10-03, not inferred.
+  1  AXIS 3, the ladder. Ask PegTracker to have `ousd_backing_analyzer.py` emit a `liquidity`
+     block, as its siblings already do for ~20 assets. ⚠️ NO MEASUREMENT IS NEEDED — the ladder
+     ran at 2026-10-03T01:35Z and sits in `peg_tracker_latest_usd.json` under key "OUSD": 4
+     rungs $1K-$100K, status ok, fill_ratio 1.00067 / 1.00065 / 1.00058 / 1.00048. This is a
+     transport ask, not an analysis ask, and that is the whole reason it is cheap.
+     Verify: the tile stops reading "0.5% depth n/a" and shows a floor at ≥$100K.
+  2  AXIS 6, a stranded authored score. riskAnalyst authored `issuer_score: 6.0` inside
+     `ousd_axis_basis.json` and it reaches no reader. ⚠️ THEY ALREADY TOLD US, in the payload:
+     `issuer_score_routing: "⚠️ UNROUTED — backing-monitor holding axis-6 registration"`, and
+     their routing_note repeats it. The score arrives on every other asset from the BASE feed's
+     own `issuer` block (usde 7.0, syzusd 4.0, yzusd 4.0) — and OUSD's base feed has no issuer
+     block at all, so there is nothing to carry it.
+     ⚠️ `AXIS_OVERLAYS.issuer` is `_issuer` ONLY, with no `_axis_basis`, unlike axes 2/3/4.
+     But do NOT just add it: `ousd_issuer.json` does not exist, and the 19 `_issuer.json` files
+     that DO exist carry NARRATIVE (summary, facts) and no score — measured, so the one-line fix
+     is not the fix it looks like. Decide WHERE axis 6's score is supposed to come from first.
+     affects cusd, usdd — same shape exactly: authored score, no base issuer block. ⚠️ NOT
+     syzusd or yzusd: they have no `_issuer.json` either but their BASE feed carries the score,
+     so they render fine. A missing `_issuer.json` is not the discriminator; an absent base
+     issuer block is.
+  3  AXIS 1 — CHECK, not a finding. `pegRating` is null for OUSD and 5 for usde, and OUSD has no
+     measured peg block, though `ousd_peg_history.json` exists and riskAnalyst authors
+     `peg_mechanism_score: 5.5`. I have NOT established whether axis 1 is meant to show that
+     mechanism score, whether the history file can fill the measured half, or whether null is
+     correct here. Establish which before filing anything against a producer.
+  4  Registry. `assets.json` gives OUSD no `report_url`, so axis 6 reads "No report linked" —
+     and axis 6 is the editorial axis whose whole convention is to link the report instead of
+     showing a number. Add the URL if a report exists; if none does, that is the answer and
+     should be recorded rather than left looking like an oversight.
+  5  ⚠️ LAST, and only after 1 lands: riskAnalyst's `coverage_note` says "THIS ASSET CARRIES 3 OF
+     6 AXES … AND THE FEED SUPPLIES NO COMPUTED VALUE ON ANY AXIS, so nothing on this asset is
+     cross-checked by a measurement." True today, FALSE the moment the ladder is wired, and it is
+     the kind of sentence that survives the change that falsifies it. Theirs to refresh; flag it
+     rather than editing their copy.
 note        The others in the pre-six-axis state are NOT all alike, and the 10-02 entry lumped
             them: usdd and cusd are in OUSD's position (axis_basis present, layout on, axis 3
             empty); strc has peg+liquidity; bmnr genuinely has no axis blocks and no overlay, so
