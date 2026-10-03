@@ -1,142 +1,157 @@
 ---
-target_repos: PegTracker (~/PegTracker) · DexTracker (~/DexTracker)
-target_claude: pegtracker, dextracker
+target_repos: PegTracker (~/PegTracker) · DexTracker (~/DexTracker) · riskAnalyst (~/riskAnalyst)
+target_claude: pegtracker, dextracker, riskanalyst
 date_drafted: 2026-10-01
-status: DRAFT — for backing-monitor owner review before sending
-supersedes: DISPATCH-axis3-split-ladder-vs-venues-2026-10-01.md (fd874fd8f)
-severity: >
-  Not a defect report. Re-pitches the axis-3 ownership proposal after measuring what each producer
-  actually does. The field-split version rested on a premise that is false, and asks more of both
-  teams than the problem needs.
+date_revised: 2026-10-03
+status: >
+  LIVE RECORD, not a proposal awaiting agreement. The ownership question it opened is DECIDED and
+  in specs/six-axis-dashboard-spec.md § Axis 3; this file is kept because DexTracker asked for it
+  to carry the corrected split, and because the one remaining ASK (§5) is still open.
+  ⚠️ Revised 2026-10-03 after three of its original asks dissolved and one of its assignments was
+  measured wrong. Supersedes DISPATCH-axis3-split-ladder-vs-venues-2026-10-01.md.
 ---
 
-# Axis 3 — tiers, not halves
+# Axis 3 — ownership by part, and the one thing still needed
 
-## Why this replaces the field-split proposal
+## 0 ▶ WHAT CHANGED SINCE THE FIRST DRAFT, IN ONE PARAGRAPH
 
-The earlier proposal divided axis 3 into two halves: **ladder → PegTracker, venues → DexTracker**.
-Measuring both repos first shows two reasons that cannot be implemented as written.
+This started as a proposal asking two producers to agree a field split. **It did not need their
+agreement** — ownership of what we render is a consumer decision, and we choose which fields we
+read. So the ownership half is settled and recorded in the spec. What remains is one small ask that
+genuinely cannot be done without the producers (§5), plus a coverage widening DexTracker has
+already taken on (§4). ⚠️ One assignment in the first draft was **wrong** and is corrected in §2.
 
-**1. ⚠️ Both producers call the same endpoint.** PegTracker's `liquidity_tracker.py` and
-DexTracker's `liquidity_refresh.py` both query KyberSwap `/api/v1/routes` and derive a ladder from
-the responses. This was never two instruments measuring two things; it is one instrument run twice a
-day apart, on different grids. PegTracker: 4 fixed sizes ($1K/$10K/$50K/$100K), ≤8 rungs, every 3h.
-DexTracker: a decade grid from $100 to $20M, **plus bisection**, daily at 07:45.
+## 1. The settled ownership — spec § Axis 3 is the authority
 
-**2. ⚠️ DexTracker's venue list is partly derived from DexTracker's own ladder.** The enumeration is
-built from the venues the router actually used (`rung.route_venues` →
-`depth.quote.venue_enumeration`). So "stop publishing depth, keep publishing venues" removes part of
-the venue data with it. The halves are not separable at the measurement level.
-
-The failure the earlier proposal opened with is real and unchanged: `replace` on the whole axis means
-a payload that DECLINES a figure deletes a measured one. reUSD-RE and syzUSD render `0.5% depth n/a`
-+ `Not rated` today over a PegTracker `depth_50bps` block measured hours earlier. That is the thing
-to fix. The fix just does not require anybody to give up a field.
-
-## The measured comparison
+Axis 3 is owned BY PART. Each part has one owner, its own cadence, and a declared behaviour when
+that owner has nothing to say.
 
 ```
-                        PegTracker                      DexTracker
-ladder source           KyberSwap (+Odos fallback)      KyberSwap
-grid                    4 fixed sizes, <=8 rungs        $100-$20M decades + BISECTION
-precision               a range as wide as a rung gap   resolves to a point (usg $381,250)
-refresh                 every 3h                        daily 07:45
-coverage                17 of 32 registered assets       8 of 32
-cost to add an asset    3 config fields + a flag         ~29 lines of hand config
-pool data               12 assets, live on-chain          8 assets, registry sweep
-                        reserves, same 3h clock          (CoinGecko/GeckoTerminal/DefiLlama)
-curation                none                             excluded venues WITH REASONS,
-                                                         completeness, not_searched
+exit ladder + crossing    PegTracker    3h            EVERY asset, including the 10 DexTracker covers
+bisected crossing         DexTracker    daily         optional refinement; falls back to the rung
+                                                      bracket, NEVER to n/a
+venue inventory           DexTracker    weekly/month  widening — see §4
+venue size / TVL          DexTracker    weekly/month  ⚠️ CORRECTED, see §2
+redemption: the PROBE     whoever runs it              does the call execute, at what cost, to what size
+redemption: ELIGIBILITY   riskAnalyst   report cadence who may actually use it
 ```
 
-⚠️ **AND THE CADENCE ARGUMENT WAS BACKWARDS.** The earlier proposal argued venue structure can
-tolerate a daily refresh. True — but the enumeration is not refreshed daily or weekly. Measured from
-`enumeration.as_of` on 2026-10-01:
+⚠️ **The fallback column is the point.** An owner with nothing to say HANDS OFF; it does not take
+the axis down with it. That is built (`fe1d82f10`, generalised `5f7db40cc`).
+
+## 2. ⚠️ CORRECTION — venue SIZE goes to DexTracker, and the first draft had it backwards
+
+The first draft assigned venue size to PegTracker on FRESHNESS: their reserves are read on-chain
+every 3h, against a registry sweep that is 9–32 days old. That reasoning is true and was the wrong
+criterion.
 
 ```
-syzUSD 32d · reUSDe-RE 28d · USG 25d · USDM 25d · reUSD-RE 23d · BOLD 17d · DUSD 10d · fxUSD 9d
-TSM-RH and USDG: the WHOLE payload is 25d / 22d old
+PegTracker pool rows   7 DIFFERENT SHAPES across 11 assets. Only 3 share one. hastra-prime has 13
+                       fields; syzUSD and yzUSD have 4 and NO POOL ADDRESS AT ALL.
+DexTracker venues[]    ONE shape across all 10.
 ```
 
-That is not a complaint — a registry-wide venue sweep is genuinely slow work, and DexTracker has
-already said coverage should not be assumed to grow. It is a statement that the cadence to match is
-the *enumeration's*, not the depth refresh's, and that the two must not share one clock.
+⚠️ **And the two lists cannot be joined, so "list from one, sizes from the other" is not available:**
+reUSD-RE shares 3 pools with 1 unmatched on PegTracker's side and 2 on DexTracker's; syzUSD shares
+none and has no address field to join on. A join key that exists for some assets is not a join key.
 
-**Already fixed on our side** (`2e351bc0f`): the venue list and TVL now render `enumerated <date> ·
-Nd old` from `enumeration.as_of`, and the depth figure renders `ladder measured <date> · Nh old`.
-Before that the axis heading showed only the oldest input — "refreshes daily · 23d old" — which read
-as a producer three weeks late when the depth was 13h old. Nothing is being asked of either producer
-for this; the fields were already published and we were not reading them.
+One consistent schema refreshed slowly beats seven refreshed fast, because the goal is an axis that
+builds the same way on every asset. Freshness was the wrong axis to optimise.
 
-## The proposal: five tiers, each with one owner and its own clock
+## 3. ⚠️ REDEMPTION IS SPLIT BY QUESTION, NOT ASSIGNED — owner decision 2026-10-02
+
+The first draft gave `primary_exit` to PegTracker. **That would have stripped USG, BOLD, DUSD and
+fxUSD of their only redemption data** — the same "tier it, do not strip it" rule the draft already
+applied to venues, got wrong one field along.
+
+The seven assets carrying a redemption entry are seven different kinds of thing: a permissionless
+redemption with a fee ladder; a call that reverts for everyone; no holder redemption at all, only
+borrowers releasing collateral; a capacity-limited quarterly window gated by jurisdiction; a
+fixed-price market maker that is not an issuer redemption; a two-hop vault chain; one permissioned
+to a single role-holder. **A single owner is wrong for about half whichever way it is picked — but
+every asset has BOTH parts and differs only in which binds.** So splitting by question removes the
+asset-specificity instead of encoding it.
+
+✅ **It also dissolves the syzUSD conflict without either producer being wrong.** PegTracker's
+`gated: false` is true of the CALL (`measured:erc4626_redeem_simulated`); riskAnalyst's report is
+true of ELIGIBILITY. Our renderer currently resolves that by withholding the field entirely, so a
+reader gets nothing about redemption on that asset.
+
+## 4. VENUE COVERAGE IS WIDENING — DexTracker, 2026-10-03
+
+DexTracker will take on venue structure for the assets PegTracker currently rows. Until each lands,
+PegTracker's rows stay as the **attributed fallback — transitional, not permanent.**
+
+⚠️ **This section said the exact opposite for about three hours.** DexTracker first relayed a firm
+cap at 10 assets; I recorded the fallback as permanent and wrote that it must never be built as a
+stopgap. They corrected it: **their owner's "no" was about LADDERS, not venues**, and they
+attributed the confusion to their own framing rather than to their owner. The word that moved was
+"coverage" — venue coverage to one of us, ladder coverage to the other — and both readings were
+coherent, which is why neither side caught it in the first exchange. **A producer's summary of their
+owner's decision is not the decision; ask which noun before recording a cap.**
+
+**The eight assets, computed from `data/*_backing.json` against the presence of
+`{slug}_liquidity.json`** — not the "roughly ten" both sides had been repeating, including us:
 
 ```
-TIER 1  EXIT LADDER + CROSSING          PegTracker     every 3h     REQUIRED, every asset
-        exit_mark.quotes · depth at 50 and 200 · status · is_floor · bracket · basis
-        Generic by construction: token_address + decimals + sell_into and it works.
-        This is the tier that makes a new asset's axis 3 appear with no design work.
-
-TIER 2  BISECTED CROSSING               DexTracker     daily        OPTIONAL refinement
-        Published under its own key at a stated threshold. The consumer PREFERS it when
-        present and fresh, and falls back to tier 1 otherwise -- never to nothing.
-        ⚠️ This one rule removes the suppression failure class entirely.
-
-TIER 3  VENUE INVENTORY + COMPLETENESS  DexTracker     weekly/monthly, honestly labelled
-        venues[] with roles · enumeration + method + pinned block · excluded_liquidity
-        with reasons · regimes · route legs · axis_binding_constraint
-        Must carry its OWN clock (it already does). Where DexTracker does not cover an
-        asset, PegTracker's pool rows show as a labelled fallback tier -- PERMANENT, not
-        transitional.
-
-TIER 4  LIVE POOL SIZE                  PegTracker     every 3h
-        On-chain reserves, which are cheaper and more current than a registry TVL.
-        DexTracker's TVL becomes context on the venue list, not a live number.
-
-TIER 5  PRIMARY REDEMPTION + GATE       PegTracker     ladder cadence
-        A contract probe (redeem() simulated, cooldowns, eligibility), not venue
-        structure. DexTracker currently relays riskAnalyst's canonical for one asset,
-        which is a cross-reference rather than a measurement.
+crvusd        7 pools   $79,341,336
+apxusd        4 pools   $16,628,369     } same protocol, do as one unit
+apyusd        3 pools   $16,622,623     }
+hastra-prime  2 pools    $9,003,243     only one of the eight publishing a 24h volume ($6.1M)
+usdat         1 pool     $8,909,676     } same family
+susdat        2 pools       $57,749     }
+thusd         2 venues   $4,056,584     ⚠️ lowest priority despite the value — see below
+yzusd         1 pool       $800,905     smallest
 ```
 
-## What each producer is being asked for
+⚠️ **`usdai` and `susdai` are NOT on this list** though an earlier message of ours implied it. They
+publish `total_tvl` ($4.39M / $23.73M) and `volume_24h` ($2.38M / $10.35M) with **zero pool rows** —
+a figure with no venues behind it, which is a different gap and arguably a worse one.
 
-**PegTracker** — nothing new to build. Tier 1 is what you already do; tiers 4 and 5 are what you
-already publish. The only ask is the separate dispatch about three assets whose ladders are measured
-but do not reach the per-asset feed.
+⚠️ **thUSD is last despite being mid-value:** its ladder resolves to a $1,000–$2,500 crossing and
+~38% of supply sits on a chain with no indexed DEX venue at all. Venue structure is not what
+misleads a reader there.
 
-**DexTracker** — nothing to stop publishing. Two asks:
-1. Keep the bisected crossing under its own key with its threshold stated, so a consumer can prefer
-   it without having to guess whether it is the same quantity as the rung bracket.
-2. Keep `enumeration.as_of` as the venue clock (you already do) and let the depth refresh stamp only
-   depth. We render both separately now.
+## 5. ▶ THE ONE REMAINING ASK — one typed field each, from PegTracker and DexTracker
 
-⚠️ **Neither ask requires shrinking a payload, and that is the point.** We do not need a producer to
-stop publishing a field in order for us to choose which field we read. The tidying was the part that
-needed everyone's agreement, and it is the part that was never necessary.
+The redemption split in §3 is **specced and unimplementable**, because nothing in the data
+distinguishes a probe result from an eligibility judgement. Measured across the 10 published
+redemption entries:
 
-## Three sub-decisions carried forward unchanged
+```
+3 carry a usable typed prefix   measured:erc4626_redeem_simulated · measured:swap_probe… ·
+                                measured_protocol_design: · unmeasured
+4 are prose                     "Permissionless protocol redemption with a size-dependent fee."
+3 publish NO basis at all       ⚠️ including BOTH producers on reUSD-RE, where the conflict is live
+```
 
-From the superseded proposal, already answered rather than handed back:
+**Ask: mark each redemption entry as a PROBE result or an ELIGIBILITY judgement, in a typed field.**
+We can choose which fields we read; we cannot invent a distinction the data does not carry. ⚠️ And
+gating on the prose prefixes would make the wording load-bearing — the next person to improve a
+basis string would silently flip a rendered verdict.
 
-1. **Tier the venue coverage, do not strip it.** PegTracker publishes pool/TVL rows for ~10 assets
-   DexTracker does not cover (apxUSD, crvUSD, Hastra PRIME, sUSDat, USDat, yzUSD, USDai, thUSD). A
-   strict split deletes live content from ten pages to tidy a boundary.
-2. **DexTracker's bisected crossing is a deeper measurement, not a rival headline.** PegTracker's
-   second ceiling re-searches the same rungs, so its 0.5% answer is a bracket of the same width;
-   DexTracker's extra probes are strictly better where they exist.
-3. **`primary_exit` goes to PegTracker.** A contract probe on the ladder's cadence.
+## 6. ⚠️ FOR DEXTRACKER, ON THE SHAPE OF A VENUE-ONLY PAYLOAD
 
-## One small defect, separate from the above
+A payload declaring `schema_version: liquidity/1` is adopted in **replace** mode here: it supersedes
+the WHOLE axis, not the fields it fills.
 
-⚠️ **syzUSD's `depth.basis` is reUSD-RE's, byte for byte** (identical SHA1 across the two payloads).
-It names Ethereum/Arbitrum/Base/Avalanche and "PegTracker's cross-chain [10M, 20M] aggregate", while
-syzUSD's own `per_chain` keys are plasma/monad/ethereum and its base bracket is [$100K, $150K]. The
-rungs and `per_chain` ARE per-asset, so this is a template/prose leak rather than swapped payloads.
-Two independent confirmations: the hash match, and the prose contradicting other fields in its own
-file.
+**On 2026-10-02 at 22:11 that cost both syrup pools their rating and their depth figure.** The
+overlays arrived with no `depth` block; `replace` dropped PegTracker's `band_score` and
+`free_liquidity_pct` — the fields the rating was computed from — and both pages went to
+"Not rated · 0.5% depth n/a" over a live 8-rung ladder. Fixed 2026-10-03 (`5f7db40cc`): the carry is
+now default-on with a deny-list, triggered by whether the overlay supplies a rating or figure at all.
 
-## Nothing here is urgent, with one exception
+So a venue-only payload is safe **as of today** and was not yesterday. ⚠️ **But please DECLARE
+venue-only rather than leaving it to be inferred from absence.** A `depth` block you deliberately
+omit and one you failed to write are identical from here, and that inference is three wrong versions
+deep: an empty `quotes` object is truthy; "any depth status counts as a claim" first broke USDM, then
+once widened broke the two assets the fix was built for, because a DECLINING overlay also sets a
+status.
 
-The tier structure removes a failure class; no page is waiting on it. The exception is the live
-suppression on reUSD-RE and syzUSD, which is ours to fix on the consumer side (tier 2's fallback
-rule) and does not need either producer to move first.
+## 7. What is NOT being asked for
+
+- **No agreement on ownership.** It is decided and it was never either producer's to grant.
+- **No `as_of` bump**, ever, for a schema change.
+- **No payload shrinking.** Nobody needs to stop publishing anything; we choose what we read.
+- **No ladder work from DexTracker.** Ladders and crossings are PegTracker's for every asset,
+  including the 10 DexTracker covers. Their bisected crossing stays as an optional refinement.
