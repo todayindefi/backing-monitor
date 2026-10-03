@@ -924,7 +924,7 @@ note        Found only because riskAnalyst asked us NOT to restore facts they we
 Last reviewed 2026-10-03
 ```
 
-### dusd-alto — second float figure arrives 2026-10-04 07:45 and will render nowhere
+### dusd-alto — CLOSED 2026-10-03, WILL NOT RENDER: the float figures stay off the page
 ```
 affects     dusd-alto
 raised      2026-10-03 by DexTracker
@@ -952,9 +952,26 @@ why         ⚠️ THE SELLABLE AMOUNT LIES BETWEEN THE TWO, because borrow-mark
             and the two differ by two weeks.
             So the pair is: cap bounds supply outside the pool · residual bounds third-party
             holdings. Neither is the sellable amount; it lies between them.
-owner       us
-closes when both figures render, each as a CEILING, with the between-them sentence and the
-            holder-list date, or the block is declined
+owner       nobody — CLOSED
+⚠️ DECIDED   2026-10-03, by the user, asked directly whether to render the pair or show depth
+            alone: "depth alone is fine". So `depth.holdings` — supply_outside_pool_usd,
+            third_party_float, excluded_pool_holders, lp_withdrawal_caveat — is DELIBERATELY
+            UNRENDERED. Not a gap, not a backlog item, not something to fix on refresh.
+why closed  Once DexTracker moved the clamp off the depth field (depth is now total supply, with
+            the crossing kept beside it), the float figures stopped being load-bearing. The
+            reason they had to be rendered was that one of them WAS the depth and a reader
+            needed the correction. That is gone. What remains is context the user does not want
+            on the tile — their own framing: "26k isn't a meaningful number except for reference
+            for this. it's useful to know and it's not relevant for sell depth."
+⚠️ do not    re-raise this as an unread-field gap. It will look like one: two measured dollar
+   reopen   figures, a status, a caveat, all published and none rendered, and nothing flags them
+            (they are nested inside `depth`, which is on the known-blocks list, so the unread
+            marker is blind to them by design — see the note below). ⚠️ An audit that greps for
+            published-but-unrendered fields WILL surface these. The answer is this entry.
+reopen if   the depth figure ever goes back to being bounded by anything other than total supply
+            — then a reader needs the distribution again to read the number. Also if DexTracker
+            ever publishes a float figure that is NOT a ceiling, since the whole difficulty here
+            was that both figures were upper bounds on different things.
 ⚠️ silent    It will NOT be flagged on arrival. The unread-block marker (af507bd23) scans only the
             TOP level of an axis block, and `third_party_float` is nested inside `depth`, which is
             on the known-blocks list — so we skip without descending. Second new nested block
@@ -976,7 +993,7 @@ note        The phrase "third-party float" ALREADY appears on the page inside th
 Last reviewed 2026-10-03
 ```
 
-### dusd-alto — the depth tile shows a distribution snapshot, and it inverts the answer
+### dusd-alto — RESOLVED 2026-10-03: the depth tile no longer shows a distribution snapshot
 ```
 affects     dusd-alto
 raised      2026-10-03 by the user
@@ -1005,8 +1022,21 @@ proposed    depth_usd = the pool's crossing, clamped at TOTAL SUPPLY when it exc
             own figures). So "if more were outside it would sell fine" holds for NEWLY MINTED
             float, not for float created by LP withdrawal. Keep this sentence wherever the pair
             is rendered — it is the non-obvious half.
-owner       DexTracker (definition). Ours only if they decline.
-raised with DexTracker 2026-10-03, with the arithmetic and the caveat. Awaiting their call.
+owner       nobody — RESOLVED, both halves shipped
+✅ theirs    DexTracker accepted the objection the same day (their user agreed) and re-measured:
+            depth_usd is now total supply with status `clears_entire_supply`, the crossing is
+            retained in curve_crossing_above_supply, and the distribution moved to a separate
+            `depth.holdings` block. Published as a GENERAL rule, not a DUSD patch: a crossing
+            above total supply is clamped and labelled, and a crossing between float and supply
+            is published as measured instead of clamped to float.
+✅ ours      The new status would have BANDED (4/5, graded on the asset's own supply) and
+            displaced riskAnalyst's authored 5.5. Fixed in the same day's commit — see
+            DEPTH_NON_DERIVABLE_STATUSES. The old status is kept beside the new one.
+⚠️ left over riskAnalyst's authored basis still argues the retired facts — it cites "the published
+            depth is the FLOAT CAP of 23,935 DUSD" and a "$823K market cap" against a supply of
+            1.32M. The SCORE is still right and arguably better supported than when written; the
+            sentence a reader sees is two weeks behind. Theirs. Passed to them via DexTracker,
+            who was already in contact about the holder set.
 closes when the depth figure is bounded by supply rather than by float, or they justify the float
             cap and we render the inversion risk on our side
 Last reviewed 2026-10-03
