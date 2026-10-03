@@ -47,8 +47,11 @@ For each asset, in this order:
    and a stale reason is worse than a stale number because it closes the question.
 3. **Published-vs-rendered** — anything new in the payload reaching no pixel. This repo's most
    repeated defect.
-4. **The cross-asset section** at the end — items that belong to the axis rather than to one
-   slug, so they are invisible to a per-asset sweep and get skipped forever otherwise.
+4. **The cross-asset section** at the end. ⚠️ **Owner instruction 2026-10-03: a cross-asset item
+   is worked PER ASSET, at that asset's refresh, unless it is urgent.** So every cross-asset entry
+   carries an `affects` line naming its slugs, and a grep for the slug you are refreshing surfaces
+   it alongside that asset's own entries. Do the slice that belongs to this asset and leave the
+   rest; the entry closes when its last asset does.
 5. Update `Last reviewed` on each entry touched.
 
 ---
@@ -226,6 +229,7 @@ owns gets skipped by a pass that walks assets, and both of these have been "next
 
 ### axis 3 — who owns primary redemption
 ```
+affects     reusd-re reusde-re syzusd usdm usg bold dusd-alto fxusd  (8 publishing a redemption entry)
 raised      2026-10-02
 what        The "can I redeem with the issuer, and am I eligible" half of the axis has NO owner.
             The specification's ownership table marks it OPEN rather than assigning it.
@@ -250,6 +254,7 @@ Last reviewed 2026-10-02
 
 ### axis 3 — the five-part ownership proposal is drafted and unsent
 ```
+affects     none directly — fleet-level, and largely superseded by the typed-field entry below
 raised      2026-10-01
 what        specs/handoffs/DISPATCH-axis3-tiers-2026-10-01.md proposes replacing "who owns the whole
             axis" with five named parts, each with one owner, its own cadence and a declared
@@ -299,6 +304,7 @@ Last reviewed 2026-10-02
 
 ### cross-asset — the redemption split needs one typed field from each producer
 ```
+affects     reusd-re reusde-re syzusd usdm usg bold dusd-alto fxusd
 raised      2026-10-02
 what        The specification now splits redemption into a PROBE (does the call execute, at what
             cost, to what size — owned by whoever runs it) and an ELIGIBILITY judgement (who may
@@ -359,6 +365,7 @@ Last reviewed 2026-10-02
 
 ### cross-asset — bespoke-renderer pages cannot be audited by a numbered-axis parse
 ```
+affects     usde susde  (the bespoke-renderer assets; weeth too if ever registered)
 raised      2026-10-02
 what        Five of the six generic axis sections are hidden with inline display:none on
             bespoke-renderer assets (ethena.js does it for susde and usde, replacing them with
@@ -387,6 +394,7 @@ Last reviewed 2026-10-02
 
 ### cross-asset — a computed band sits in an authored judgement's seat (4 instances, 3 assets)
 ```
+affects     reusd-re usde susde
 raised      2026-10-02
 what        Where a live band and an authored score both exist, the chip shows ONLY the band (owner
             decision) and the authored score goes in the tooltip. On four axis-asset pairs the gap
@@ -420,6 +428,7 @@ Last reviewed 2026-10-02
 
 ### cross-asset — 7 assets owe the coverage-history element, and silence is the failure
 ```
+affects     hastra-prime msusd-metronome susdat susde susds syzusd thusd  (our half is BUILT; the data gap is per asset)
 raised      2026-10-02
 what        §4.0's manifest requires a coverage history chart wherever a coverage figure exists,
             and where there is no series the absence must be DECLARED: "coverage is not tracked
@@ -578,6 +587,7 @@ Last reviewed 2026-10-02
 
 ### cross-asset — four assets publish a coverage series this chart cannot read
 ```
+affects     usde usdai usdat cusd
 raised      2026-10-02
 what        USDe (2,175 readings of `coverage_ratio`), USDai (731, same), USDat (706 of
             `backing_ratio`) and cUSD (708, `coverage_ratio` plus `coverage_pct`) all publish a
@@ -670,6 +680,7 @@ Last reviewed 2026-10-02
 
 ### cross-asset — the unread-field marker is blind to new BLOCKS, only to new prose
 ```
+affects     syrupusdc susde reusd-re reusde-re  (marker is BUILT; adopting each named block is per asset)
 raised      2026-10-03
 what        riskAnalyst's axis-5 re-scope adds `contract.assurance` — an 11-field block (audit
             engagements, bounty, formal_verification, test_coverage, effect_on_score and more) — to
