@@ -778,7 +778,7 @@ status      answered 2026-10-03. Nothing owed from us; no code change.
 Last reviewed 2026-10-03
 ```
 
-### syrupusdc · syrupusdt — ⚠️ ESCALATED: both lost their rating AND depth figure when an overlay arrived
+### syrupusdc · syrupusdt — ✅ CLOSED: rating and depth restored; hand-off generalised
 ```
 raised      2026-10-03, by riskAnalyst asking why only one pool had a band
 what        Both pages now read chip "Not rated" and "0.5% depth n/a". At 21:17 on 2026-10-02 both
@@ -809,7 +809,19 @@ closes when both pools render their band and depth again, with the carry general
             from depth on these assets. It came from free-liquidity `band_score`. And the asymmetry
             they could not reconcile was two observations taken either side of the 22:11 sync — the
             overlays arrived for BOTH pools in the same commit.
-status      not fixed. Surfaced to the owner 2026-10-03 with a proposed fix awaiting confirmation.
+status      ✅ FIXED 2026-10-03 (5f7db40cc). syrupUSDC renders 1/5 with a $1.0M floor, syrupUSDT
+            3/5. 29 assets byte-identical.
+            The trigger is now an OUTCOME (does the overlay supply a rating or figure at all?) and
+            the carry is DEFAULT-ON with a 14-key deny-list rather than an allow-list — because
+            replace drops 50 distinct base fields across 8 assets and an allow-list loses whatever
+            nobody thought of, which is how this recurred.
+⚠️ cost      Three wrong versions first, each caught by the fleet A/B and none by review: an empty
+            `quotes` object is truthy (usdm ships `{}`); "any depth status is a claim" broke usdm,
+            then once widened broke reUSD-RE and syzUSD, because a DECLINING overlay also sets a
+            status. The distinction already existed here — DEPTH_NON_DERIVABLE_STATUSES means "no
+            curve by design", while "not_measured" is a refusal. Every wrong version showed 3 or 4
+            assets moving where 2 should have, so a check limited to the two broken assets would
+            have passed all three.
 Last reviewed 2026-10-03
 ```
 
@@ -864,5 +876,24 @@ why         ⚠️ Ours, hardcoded, with no source and no as-of. Specific findin
 owner       us to remove; the producers if the facts should be re-established
 closes when the hardcoded strings are gone and either a producer field renders or the absence is
             declared
+Last reviewed 2026-10-03
+```
+
+### syrupusdc · syrupusdt — ✅ our hardcoded audit/bounty claim removed
+```
+raised      2026-10-03
+what        js/renderers/syrupusdc.js hardcoded, and rendered visible and uncollapsed in a "Trust
+            Stack" panel: "Audits: Spearbit + Trail of Bits + 6 others (8+ total) · Bug bounty:
+            Immunefi $1M+". Ours, not a producer's, so no sync could correct it.
+why         Wrong on four counts: the programme maximum is $500,000 so "$1M+" asserted a FLOOR
+            above the real MAXIMUM; it is Maple's protocol programme over 43 assets, not this
+            pool's; five of the "8+" reviews predate the asset's existence; and Trail of Bits'
+            own report says it "did not look for security flaws".
+status      ✅ REMOVED 2026-10-03 (24790658b). Nothing replaces it — the declared-absence form
+            would be "no audit published", which is itself false. riskAnalyst publishes an
+            assurance block on axis 5 for both pools under an anti-offset rule; not synced, not
+            adopted, and adopting it is its own job.
+note        Found only because riskAnalyst asked us NOT to restore facts they were removing — not
+            by reviewing this file. The same pattern in apyx.js and usdai.js has its own entries.
 Last reviewed 2026-10-03
 ```
