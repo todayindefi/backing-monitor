@@ -812,3 +812,57 @@ closes when both pools render their band and depth again, with the carry general
 status      not fixed. Surfaced to the owner 2026-10-03 with a proposed fix awaiting confirmation.
 Last reviewed 2026-10-03
 ```
+
+### apxusd · apyusd — ⚠️ we author an unsourced audit + formal-verification claim in a Trust Stack panel
+```
+raised      2026-10-03
+what        js/renderers/apyx.js hardcodes APYX_AUDITS and renders it, VISIBLE and uncollapsed, in
+            a panel titled "Trust Stack":
+              "Audits: Quantstamp + Zellic + Certora (formal verification) (3 total) ·
+               Bug bounty: none disclosed"
+            Confirmed on the live apxusd page 2026-10-03. Serves both apxusd and apyusd.
+why         ⚠️ It is OUR claim, not a producer's — a hardcoded constant, so no producer sync can
+            correct it and no provenance field carries a source or a date. That is the failure the
+            apyx trust-banner incident already set a rule against: do not author security,
+            custody or attestation claims in reader-facing copy.
+            ⚠️ "(formal verification)" is the specific claim riskAnalyst established is NOT citable
+            elsewhere without published proofs — on syrupUSDC they ruled that symbolic execution and
+            invariant monitoring are neither. We assert it here with no citation at all.
+            ⚠️ And "none disclosed" is a negative claim about a bounty with no as-of: if a program
+            launches, the page keeps asserting its absence.
+owner       us to remove; security_analyst / riskAnalyst if the facts should be re-established
+closes when the hardcoded constant is gone and either a producer field renders in its place or the
+            absence is declared
+⚠️ sequence  Removing it leaves nothing, and §4.0 wants audits rendered where published and the
+            absence DECLARED otherwise — so the honest end state is a declared absence, not silence.
+            Neither producer publishes an assurance block for these two today (they exist for
+            syrupusdc, susde and weeth), so there is nothing to render in its place yet.
+note        Same pattern and same panel title as the syrupusdc/syrupusdt case below, which is where
+            this was found — three of four renderers carrying hardcoded trust claims were found by
+            checking the fourth.
+Last reviewed 2026-10-03
+```
+
+### usdai · susdai — ⚠️ we author audit finding-counts and a bounty claim with no source or date
+```
+raised      2026-10-03
+what        js/renderers/usdai.js hardcodes and renders, in a panel titled "Governance & Trust":
+              "Audit: Cantina (Spearbit) reviewed USDai + sUSDai — 0 critical / 0 high /
+               1 medium (fixed) / 8 low. Live bug bounty; audit set shared across both tokens."
+            Serves both usdai and susdai.
+why         ⚠️ Ours, hardcoded, with no source and no as-of. Specific finding COUNTS are the most
+            citable-looking form a claim can take and the most quickly stale — if that review is
+            superseded or re-scoped, the page keeps publishing 0/0/1/8 indefinitely.
+            ⚠️ "Live bug bounty" with no programme, no maximum and no date is the shape that was
+            wrong by 2x on syrupUSDC ("Immunefi $1M+" against a measured $500,000 maximum) — and
+            there it was at least specific enough to be checked. This one cannot be falsified by a
+            reader at all.
+            ⚠️ "audit set shared across both tokens" asserts coverage of sUSDai by a USDai review.
+            That is the TRANSFERRED-versus-MEASURED distinction riskAnalyst added to syrupusdt's
+            assurance block precisely because a sibling's evidence reading as this asset's is the
+            failure mode on paired assets.
+owner       us to remove; the producers if the facts should be re-established
+closes when the hardcoded strings are gone and either a producer field renders or the absence is
+            declared
+Last reviewed 2026-10-03
+```
