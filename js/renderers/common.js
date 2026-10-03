@@ -5300,6 +5300,47 @@ const CommonRenderer = {
         var head = document.getElementById('axis-backing-head');
         if (!head) return;
 
+        // ⚠️ A WITHDRAWN METRIC IS NOT A STALE ONE, AND THE SCHEMA COULD NOT SAY SO.
+        //
+        // reUSD-RE's attachment point rendered for three weeks after riskAnalyst
+        // retired it, and NOTHING IN THE PAYLOAD WAS FALSE: `attachment_point_as_of`
+        // was right, `attachment_point_status` said `report_derived_not_onchain`
+        // which was right, and the source said "riskAnalyst report passthrough"
+        // which was right. `as_of` can express staleness and `*_status` could
+        // express derivation; neither could express THE PRODUCER WITHDREW THIS.
+        // A change the consumer needed had no channel, so a correct passthrough
+        // kept serving a retired ratio and no field anywhere was wrong.
+        //
+        // ⚠️ IT WAS THE OVERLAY'S READING THAT RENDERED, NOT THE FEED'S. The base
+        // feed carried 9.66% (as_of 2026-08-24) and `backing-overlay/1` merges with
+        // NO `max_age_days` — that gate is declared on `liquidity/1` alone — so a
+        // month-old overlay overrode the hourly feed with 7.94% unconditionally.
+        // The first report of this said the stale 9.66 was showing and implied the
+        // 7.94 was acceptable; both readings are retired and serving EITHER was the
+        // defect. Fixing the file named in that report would have fixed nothing.
+        //
+        // ⚠️ AND THE OVERRIDING FILE CARRIED THE CASE FOR BELIEVING IT: below_norm
+        // against a 10.0 norm (so warn styling), a clean three-point declining
+        // series, `basis_independent: true`, and a vintage note reading "RESOLVED
+        // 2026-09-06, AND IT RESOLVED ADVERSELY". Maximum confidence on a quantity
+        // the producer says is not computable. That is why this branch strips the
+        // warn class FIRST: the breach was a true statement about the 7.94 reading,
+        // not a current condition, and amber is the part a reader acts on.
+        //
+        // ⚠️ DELETING THE FIELDS WAS THE OTHER OPTION AND IS WORSE. One asset
+        // publishes this metric at all, so blanking makes the panel a no-op and a
+        // reader who saw 9.66% last month learns nothing about why it vanished —
+        // when a cushion going from 9.66% to NOT COMPUTABLE is itself the finding.
+        // So the history is retained and explicitly marked history.
+        //
+        // ⚠️ WHICH FIELDS ARE HISTORICAL IS THE PRODUCER'S LIST, NOT OURS.
+        // `attachment_point_fields_are_historical` names them; re-deriving that
+        // set here would disagree the first time they retire a different subset.
+        if (b.attachment_point_status === 'withdrawn_by_producer') {
+            this._renderAttachmentPointWithdrawn(head, b, pct);
+            return;
+        }
+
         var norm = typeof b.attachment_point_norm_pct === 'number' ? b.attachment_point_norm_pct : null;
         // ⚠️ Trust the producer's own verdict over re-deriving it from the two
         // numbers. `below_norm` is the analyst's call; a renderer recomputing
@@ -5376,6 +5417,79 @@ const CommonRenderer = {
                           ? ' \u00b7 ' + this._escapeAttr(b.attachment_point_vintage_note)
                           : '') + '</div>');
         }
+        el.innerHTML = bits.join('');
+        head.appendChild(el);
+    },
+
+    // The withdrawn face of the attachment point. NO current value, NO warn
+    // styling, and the retired reading shown as history with its own date.
+    //
+    // ⚠️ `as_of` IS LEFT AT THE DATA'S VINTAGE ON PURPOSE and must not be read as
+    // the withdrawal date. The producer declined to bump it because every operand
+    // is still 2026-09-06 vintage — only the withdrawal is new, and it carries
+    // `attachment_point_withdrawn_at`. Bumping `as_of` would have claimed the
+    // operands were re-measured. So this renders the two dates in different
+    // sentences: what the reading was as of, and when it was withdrawn.
+    _renderAttachmentPointWithdrawn(head, b, pct) {
+        var el = document.createElement('div');
+        el.className = 'attachment-point attachment-point-withdrawn';
+        var bits = [];
+
+        var when = typeof b.attachment_point_withdrawn_at === 'string'
+            ? b.attachment_point_withdrawn_at : null;
+        bits.push('<span class="ap-label">First-loss attachment point</span>' +
+                  '<span class="ap-withdrawn-flag">withdrawn by the producer' +
+                  (when ? ' \u00b7 ' + this._escapeAttr(when) : '') + '</span>');
+
+        // The retired reading, unmistakably past tense. Struck through rather than
+        // removed, because its disappearance is the thing a returning reader needs
+        // explained — see the note on deletion above.
+        bits.push('<div class="ap-note ap-was">' +
+            '<span class="ap-note-key">No longer computable.</span> Last published reading ' +
+            '<s>' + pct.toFixed(2) + '%</s>' +
+            (b.attachment_point_as_of
+                ? ' as of ' + this._escapeAttr(b.attachment_point_as_of)
+                : '') +
+            ' \u2014 retained as the record of what was believed, NOT a current cushion.' +
+            '</div>');
+
+        if (b.attachment_point_withdrawn_reason) {
+            bits.push('<div class="ap-note ap-withdrawn-reason">' +
+                '<span class="ap-note-key">Why:</span> ' +
+                this._escapeAttr(String(b.attachment_point_withdrawn_reason)) + '</div>');
+        }
+
+        // ⚠️ The historical notes are rendered UNDER ONE "Historical" heading rather
+        // than in their original places. In the live face `Basis:` and `Series:`
+        // read as supporting the number beside them; here there is no number for
+        // them to support, and leaving them unframed is how a retired series gets
+        // read as a current trend.
+        var histKeys = Array.isArray(b.attachment_point_fields_are_historical)
+            ? b.attachment_point_fields_are_historical : [];
+        var labelled = [
+            ['attachment_point_basis', 'Basis'],
+            ['attachment_point_direction_note', 'Direction'],
+            ['attachment_point_series_note', 'Series'],
+            ['attachment_point_basis_independent_note', 'Basis independence'],
+            ['attachment_point_vintage_note', 'Vintage']
+        ];
+        var hist = [];
+        for (var i = 0; i < labelled.length; i++) {
+            var key = labelled[i][0];
+            // Only what the producer declared historical. A field they kept as
+            // current would be wrong to bury under this heading.
+            if (histKeys.indexOf(key) < 0) continue;
+            var val = b[key];
+            if (typeof val !== 'string' || !val.trim()) continue;
+            hist.push('<div class="ap-note ap-hist-item"><span class="ap-note-key">' +
+                labelled[i][1] + ':</span> ' + this._escapeAttr(val.trim()) + '</div>');
+        }
+        if (hist.length) {
+            bits.push('<div class="ap-hist"><div class="ap-note ap-hist-head">' +
+                'Historical \u2014 the record of the withdrawn reading, not current measurement' +
+                '</div>' + hist.join('') + '</div>');
+        }
+
         el.innerHTML = bits.join('');
         head.appendChild(el);
     },
