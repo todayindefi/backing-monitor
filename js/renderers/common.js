@@ -3184,7 +3184,13 @@ const CommonRenderer = {
         // ⚠️ Any status added here MUST also be in DEPTH_NON_DERIVABLE_STATUSES —
         // a band withheld without the authored path unblocked leaves the axis
         // blank with both halves in hand. That is the defect this pair caused.
-        if (lq.two_pct_depth_status === 'supply_capped') return null;
+        // ⚠️ READS THE LIST, not a literal. This line named `supply_capped` directly
+        // while the authored gate consulted the shared list, which is the exact drift
+        // the comment on that list was written about — and it recurred within the
+        // month, because a retired status changes a literal's meaning silently.
+        if (this.DEPTH_NON_DERIVABLE_STATUSES.indexOf(lq.two_pct_depth_status) >= 0) {
+            return null;
+        }
         // ⚠️ THE BAND SCORES WHAT THE TILE SHOWS. Both read `depthAtLimit`, so a
         // bracket is graded on its LOWER end (the last size that actually cleared)
         // and a capacity figure is not graded at all — there is no crossing to
@@ -3257,7 +3263,30 @@ const CommonRenderer = {
     //
     // One list now, consulted by both, so a status added to one cannot be missing
     // from the other.
-    DEPTH_NON_DERIVABLE_STATUSES: ['not_size_responsive', 'supply_capped'],
+    // ⚠️ `clears_entire_supply` ADDED 2026-10-03, and it is a SEMANTIC change, not a
+    // rename. DexTracker retired `supply_capped` the same day on our user's objection:
+    // the old status published the FLOAT where a crossing goes, the new one publishes
+    // TOTAL SUPPLY and means "the crossing lies above everything in existence". The
+    // figure went from $26,495 to $1,323,765 and from a refusal to a valid answer.
+    //
+    // ⚠️ IT STILL MUST NOT BE BANDED, and the reason survives the rename intact: the
+    // band is absolute — [2M, 1M, 500K, 100K] — so banding a supply-clamped figure
+    // grades the asset's SIZE. Measured on this payload the day it landed:
+    //
+    //     supply $  900,000  ->  3/5
+    //     supply $1,323,765  ->  4/5     <- today, and it is live
+    //     supply $2,100,000  ->  5/5
+    //
+    // Nothing about the book moves those. DUSD's supply grew 61% in the two weeks to
+    // 2026-10-03, so the score would have walked 3 -> 4 on MINTING. And it displaced
+    // riskAnalyst's authored 5.5, which is the pair this list exists to keep in step.
+    //
+    // `supply_capped` is KEPT alongside it. No live payload carries it — DUSD was the
+    // only one — but our own synced copy still did when this was written, the history
+    // store carries it, and a status that has been retired upstream is exactly the kind
+    // of string that comes back on a replay.
+    DEPTH_NON_DERIVABLE_STATUSES: ['not_size_responsive', 'supply_capped',
+                                   'clears_entire_supply'],
 
     _depthNonDerivable(lq) {
         lq = lq || {};
@@ -3957,6 +3986,38 @@ const CommonRenderer = {
         //
         // Named explicitly, in amber, with the crossing quoted where the producer
         // published one, so the two numbers cannot be confused for each other.
+        // ⚠️ `clears_entire_supply` — the figure IS the asset's whole supply, and the
+        // crossing lies above it. Without a branch this fell to the generic grey
+        // `st.replace(/_/g,' ')` fallback, which happened to read "clears entire
+        // supply" and so looked correct — a fallback that reads well by luck is the
+        // worst case, because nothing prompts anyone to write the real sentence.
+        //
+        // What the grey version loses is the SIZE of the headroom, which is the
+        // whole point: the crossing sits at ~2.4x everything in existence. "Clears
+        // entire supply" sounds like a boundary just met. It is not close.
+        //
+        // ⚠️ Quote the crossing at the SAME threshold the tile is labelled with.
+        // DexTracker publishes one per threshold and the 0.5% figure is the headline
+        // for a stable asset — quoting the 2% crossing under a "0.5% depth" label
+        // would be a different measurement presented as this one, which is the error
+        // the supply_capped branch below was itself written to avoid.
+        if (st === 'clears_entire_supply') {
+            var dep = liq.depth || {};
+            var thBps = this._headlineThresholdBps(liq);
+            var matched = (thBps === 50 && dep.bracket_50bps)
+                ? (dep.bracket_50bps.curve_crossing_above_supply || {})
+                : (dep.curve_crossing_above_supply || {});
+            var xTxt = (typeof matched.depth_usd === 'number')
+                ? ' — the crossing sits above everything in existence, at ' +
+                  (matched.is_floor === true ? '≥' : '') +
+                  this.formatCurrency(matched.depth_usd)
+                : '';
+            // ⚠️ BENIGN class, deliberately, and it is the one case on this axis that
+            // earns it. Every other branch here flags a figure that is weaker than it
+            // looks; this one is stronger. Amber would read as a warning about an
+            // asset whose entire supply exits inside the threshold.
+            return wrap('the whole supply clears' + xTxt, 'text-slate-500');
+        }
         if (st === 'supply_capped') {
             // \u26a0\ufe0f Read, never derived. DexTracker publishes the real crossing in a
             // SEPARATE object precisely so the float in `depth_usd` is not mistaken
