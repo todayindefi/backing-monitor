@@ -258,7 +258,20 @@ const CommonRenderer = {
     // beats adding a second, subtler rule.
     AUTHORED_BLOCK_KNOWN: [
         'code_facts', 'cross_axis', 'segments', 'unmeasured',
-        'float_split', 'measurement_clocks'
+        'float_split', 'measurement_clocks',
+        // ⚠️ THE LIQUIDITY AXIS'S OWN BLOCKS, added when the marker was extended to
+        // replace-mode overlays. Without them it named eleven blocks on DexTracker's
+        // apxUSD sample, eight of which we read — `venues`, `pools`, `enumeration`,
+        // `exit_mark`, `primary_exit`, `depth_50bps` and the rest. A marker whose
+        // first output is mostly false positives trains a reader to ignore it, which
+        // is worse than the silence it replaced.
+        'venues', 'pools', 'enumeration', 'exit_mark', 'primary_exit', 'depth',
+        'by_chain', 'exit_capacity', 'two_pct_depth_bracket', 'slippage_reference',
+        'cost_conventions', 'quotes', 'distribution', 'token_registry',
+        'token_resolution', 'methodology', 'regimes', 'downstream_route_legs',
+        'excluded_liquidity', 'venue_enumeration',
+        // Payload metadata — a declaration ABOUT the payload, not content in it.
+        'publishes', 'does_not_publish'
     ],
 
     AUTHORED_NOTE_KEYS: [
@@ -645,17 +658,39 @@ const CommonRenderer = {
                     //   reusd_re   not_measured                        -> declines
                     //   syzusd     not_measured                        -> declines
                     //   syrup      no depth block at all               -> declines
+                    // ⚠️ A DECLARED SCOPE IS THE PRIMARY SIGNAL, AND THE OUTCOME TEST
+                    // STAYS AS THE FALLBACK — not replaced by it. DexTracker asked us to
+                    // key the carry on `scope` rather than on absence, and they are right
+                    // that a deliberate omission and a failure to write look identical
+                    // from here. But the three payloads already live in their
+                    // data/liquidity/ carry NO scope, no as_of and no producer — and
+                    // those are the ones that blanked both syrup ladders at 22:11 on
+                    // 2026-10-02. A declaration-only rule would have done nothing for
+                    // exactly the case that caused the damage.
+                    // ⚠️ TWO SCOPE SPELLINGS ARE ALREADY IN THE WILD. The apxUSD sample
+                    // declares `venue_inventory_only`; the three payloads written
+                    // 2026-10-02 declare `venue_inventory_and_venue_tvl_only`. Matching
+                    // one exact string would have honoured the new asset's declaration
+                    // and missed the three live ones — which are the payloads that
+                    // caused the damage. Prefix-matched, with the explicit
+                    // does_not_publish list as the other accepted form.
+                    var declaredVenueOnly =
+                        (typeof pay.scope === 'string' &&
+                         pay.scope.indexOf('venue_inventory') === 0) ||
+                        (Array.isArray(pay.does_not_publish) &&
+                         pay.does_not_publish.indexOf('depth') >= 0);
                     var ovDepth = (pay.depth && typeof pay.depth === 'object') ? pay.depth : {};
                     var self2 = self;
                     var declaredNoCurve = function(st) {
                         return typeof st === 'string' &&
                                self2.DEPTH_NON_DERIVABLE_STATUSES.indexOf(st) >= 0;
                     };
-                    var overlayClaims = pay.band_score != null ||
+                    var overlayClaims = !declaredVenueOnly &&
+                                       (pay.band_score != null ||
                                         typeof pay.total_2pct_depth === 'number' ||
                                         declaredNoCurve(pay.two_pct_depth_status) ||
                                         declaredNoCurve(ovDepth.status) ||
-                                        !!pay.exit_capacity;
+                                        !!pay.exit_capacity);
                     // ⚠️ AND AN EMPTY `quotes` OBJECT IS TRUTHY. usdm publishes
                     // `exit_mark.quotes = {}` — a ladder container with no rungs — so a
                     // bare truthiness test read it as a measurement the base had made.
@@ -711,6 +746,14 @@ const CommonRenderer = {
                                            typeof ov.depth.basis === 'string') ? ov.depth.basis : null
                         };
                     }
+                    // ⚠️ THE UNREAD MARKER WAS WIRED TO MERGE-MODE ONLY, so a block
+                    // published by a REPLACE-mode overlay vanished with nothing on the
+                    // page admitting it — the exact failure the marker exists to stop,
+                    // in the one mode that discards the most. DexTracker's apxUSD sample
+                    // publishes `venues_by_role` (the per-role totals: $22.7M dollar
+                    // exit against $29.0M family swap), `chains`, `non_swap_listings`
+                    // and `scope_note`, and all four were silent.
+                    self._collectAuthoredNotes(axis, pay);
                     data[axis] = pay;
                     self.AXIS_PROVENANCE[axis] = carryVerdict({
                         contributors: priorContributors().concat([
@@ -834,6 +877,14 @@ const CommonRenderer = {
     // fallback would silently confuse.
     _adaptSchema(axis, schema, block) {
         if (axis !== 'liquidity' || schema !== 'liquidity/1') return;
+        // ⚠️ VENUES ARE ADAPTED BEFORE THE DEPTH GUARD, because they do not depend on
+        // depth and a venue-only payload has no `depth` block at all. The guard below
+        // used to return first, so DexTracker's apxUSD sample — 70 enumerated pools
+        // across four chains, $22.7M of dollar exits — rendered as ZERO venues. It
+        // would have hit all eight assets they are widening to; nothing about it was
+        // apxUSD-specific. Caught in their pre-live sample review, which is what a
+        // sample review is for.
+        this._adaptVenues(block);
         var d = block.depth;
         if (!d || typeof d !== 'object') return;
 
@@ -943,7 +994,9 @@ const CommonRenderer = {
             };
         }
         this._adaptLadder(d, block);
-        this._adaptVenues(block);
+        // _adaptVenues already ran above, before the depth guard. It is idempotent
+        // (it returns early when `pools` is already populated) but calling it twice
+        // would be a second place to keep in step, so it is called once.
     },
 
     // ⚠️ SEVEN ASSETS PUBLISHED A VENUE ENUMERATION AND NOT ONE OF THEM RENDERED IT.
@@ -1007,15 +1060,36 @@ const CommonRenderer = {
         // is immaterial; DEAD is a warning. DUSD's dead Uniswap pool carries "slot0
         // still reports ~1.0000 and must not be quoted" — a reader who cannot see that
         // row could quote a price from a pool with zero liquidity.
-        var dust = vs.filter(function(v) {
+        // ⚠️ THE COLLAPSE ONLY FIRED ON A MARKER THE OLDER PAYLOADS DO NOT SET.
+        // It tested `exclusion_reason === 'dust_below_threshold'` alone. The three
+        // venue payloads written 2026-10-02 mark NO dust at all, and their medians are
+        // $246, $355 and $112 — so unblocking the adapter would have shipped a 219-row
+        // table on sUSDe with 148 rows under $1,000. That is exactly the haystack the
+        // owner decision of 2026-09-22 collapses, and it applies to every asset rather
+        // than to the ones whose producer happens to label it.
+        //
+        // So: the marker still wins where it exists, and where it does not we fall back
+        // to the producer's own declared floor (`enumeration.tvl_floor_usd`, $1,000 on
+        // the apxUSD sample) and then to $1,000. ⚠️ The fallback is NEVER applied to a
+        // row the producer explicitly kept — only to rows nobody classified.
+        var FLOOR_DEFAULT = 1000;
+        var declaredFloor = ((block.enumeration || {}).tvl_floor_usd);
+        var floorUsd = typeof declaredFloor === 'number' && declaredFloor > 0
+            ? declaredFloor : FLOOR_DEFAULT;
+        var anyMarked = vs.some(function(v) {
             return v && v.exclusion_reason === 'dust_below_threshold';
+        });
+        var dust = vs.filter(function(v) {
+            if (!v) return false;
+            if (v.exclusion_reason === 'dust_below_threshold') return true;
+            if (anyMarked) return false;                 // producer classified; trust it
+            if (v.exclusion_reason) return false;        // kept for a stated reason
+            return typeof v.tvl_usd === 'number' && v.tvl_usd < floorUsd;
         });
         var dustTvl = dust.reduce(function(t, v) {
             return t + (typeof v.tvl_usd === 'number' ? v.tvl_usd : 0);
         }, 0);
-        vs = vs.filter(function(v) {
-            return !v || v.exclusion_reason !== 'dust_below_threshold';
-        });
+        vs = vs.filter(function(v) { return dust.indexOf(v) < 0; });
         if (!vs.length) { vs = dust; dust = []; }   // never render an empty table
         block.pools = vs.map(function(v) {
             var p = {
@@ -1038,7 +1112,22 @@ const CommonRenderer = {
             if (typeof v.volume_24h_usd === 'number') p.volume_24h = v.volume_24h_usd;
             else if (typeof v.volume_24h === 'number') p.volume_24h = v.volume_24h;
             if (typeof v.balance_ratio === 'number') p.balance_ratio = v.balance_ratio;
-            if (v.depth_role) p.role = String(v.depth_role);
+            // ⚠️ TWO DIFFERENT FIELDS, AND ONLY ONE WAS READ. `depth_role` is PROSE
+            // about how to read the TVL — reUSD-RE's says "Routed ladder is canonical;
+            // TVL is context only." `role` is a CATEGORICAL classification of the venue
+            // — DexTracker's apxUSD sample uses dollar_exit / family_swap / other_pair.
+            //
+            // ⚠️ The category is the column that matters and it was invisible. On apxUSD
+            // $29.0M of family_swap (a swap into the SISTER TOKEN, not a way out) sat at
+            // the same visual weight as $22.7M of real dollar exits, and today's page
+            // sums both into one $16.6M figure. Their producer asked for this column
+            // specifically; we were reading the wrong key.
+            //
+            // Category wins the Role column where both are present, and the prose is
+            // kept beside it rather than displacing it.
+            if (v.role) p.role = String(v.role).replace(/_/g, ' ');
+            else if (v.depth_role) p.role = String(v.depth_role);
+            if (v.role && v.depth_role) p.role_note = String(v.depth_role);
             if (v.pool_id) p.pool_id = v.pool_id;
             // Tri-state, carried as-is. `has_liveness` distinguishes "the producer
             // published null" from "this payload predates the field", which must not
@@ -8947,6 +9036,10 @@ const CommonRenderer = {
             // cases.
             if (v && typeof v === 'object') {
                 if (self.AUTHORED_BLOCK_KNOWN.indexOf(k) >= 0) return;
+                // ⚠️ Dynamic key family: the depth-crossing blocks are matched by
+                // pattern in _publishedDepthAt (/^depth_\d+bps$/), so no literal name
+                // can be listed above.
+                if (/^depth_\d+bps(_all_in)?$/.test(k)) return;
                 // The score-sibling skip below covers *_score_change and
                 // *_score_per_chain, which the basis/addenda path already renders.
                 if (/_score(_|$)/.test(k)) return;
