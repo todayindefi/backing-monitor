@@ -940,8 +940,21 @@ why         ⚠️ THE SELLABLE AMOUNT LIES BETWEEN THE TWO, because borrow-mark
             a reader to take the lower number as the real exit. The producer's own basis names both
             and says so — render it beside the cap labelled as held by ordinary holders, not
             instead of it.
+⚠️ CORRECTED  2026-10-03, by DexTracker on riskAnalyst's finding: BOTH FIGURES ARE CEILINGS, of
+ 2026-10-03  different things, and the smaller one is NOT a measurement of third-party holdings.
+            The issuer holder list dates from 2026-09-20 and supply has grown 61% since, so a
+            newer issuer contract would be counted as an ordinary holder. The block now carries
+            `is_upper_bound: true`, `upper_bound_basis` and `holder_list_as_of`.
+            REQUIRED WORDING, theirs: "at most $X held by ordinary holders (issuer list as of
+            2026-09-20)". Not "$X held by" — ⚠️ a bound rendered as a quantity is the exact error
+            the between-them sentence exists to prevent, one level down. Render
+            `holder_list_as_of`, not the payload's `as_of`: the figure is as stale as the LIST,
+            and the two differ by two weeks.
+            So the pair is: cap bounds supply outside the pool · residual bounds third-party
+            holdings. Neither is the sellable amount; it lies between them.
 owner       us
-closes when both figures render with the between-them sentence, or the block is declined
+closes when both figures render, each as a CEILING, with the between-them sentence and the
+            holder-list date, or the block is declined
 ⚠️ silent    It will NOT be flagged on arrival. The unread-block marker (af507bd23) scans only the
             TOP level of an axis block, and `third_party_float` is nested inside `depth`, which is
             on the known-blocks list — so we skip without descending. Second new nested block
@@ -952,10 +965,74 @@ closes when both figures render with the between-them sentence, or the block is 
 ⚠️ do not    render a change or trend on this figure yet. Today's 2,347 against riskAnalyst's 946.70
             at block 26,053,732 is NOT established as holder growth — supply also grew 823K to
             1.32M, and the residual OVERSTATES if an unlisted protocol holder appears. DexTracker
-            has asked riskAnalyst to re-check the holder set first.
+            has asked riskAnalyst to re-check the holder set first. ⚠️ Now right TWICE OVER
+            (their words): the stale holder list means the growth could be entirely an uncounted
+            issuer contract. DexTracker is running a minter-attribution check on who received the
+            +500K. Do not plot this series until that returns.
 note        The phrase "third-party float" ALREADY appears on the page inside the producer's basis
             prose ("third-party float — the 2% crossing sits above it at ≥$3…"), so a reader meets
             the concept with no figure attached. That makes the structured block's absence easier
             to miss, not harder.
+Last reviewed 2026-10-03
+```
+
+### dusd-alto — the depth tile shows a distribution snapshot, and it inverts the answer
+```
+affects     dusd-alto
+raised      2026-10-03 by the user
+what        `depth.depth_usd` publishes $26,495 — DUSD sitting outside the pool right now — and our
+            depth tile renders it as the measured 0.5% figure. TWO DIFFERENT BOUNDS ARE MERGED:
+              total supply  $1,323,765   HARD. Depth can never exceed it. The producer's
+                                         impossibility check against it is CORRECT.
+              float         $   26,495   NOT a bound on depth. A snapshot of who holds. Mint 100K
+                                         to users and it sells at the same cost — the curve did
+                                         not move, the distribution did.
+why         ⚠️ IT INVERTS THE READING, which is why this is not cosmetic:
+              pool 0.5% crossing   $3,126,953   2.36x total supply
+              pool 2.0% crossing   $3,373,047   2.55x total supply
+              max routed output    $3,364,882   saturation at $10M input
+            The true statement is EVERY DUSD IN EXISTENCE CLEARS INSIDE 0.5%. Rendered as $26,495
+            it reads as one of the thinnest assets we track. Opposite conclusions from one field.
+⚠️ not a    The producer's finding is RIGHT and is the most interesting fact about this asset —
+   defect   `axis_binding_constraint` already says "the binding fact is how little DUSD can reach
+   in the   the market, not the curve". The objection is to WHERE IT LANDED, not to the finding.
+   finding  It sits in the depth field, where it reads as a curve measurement.
+proposed    depth_usd = the pool's crossing, clamped at TOTAL SUPPLY when it exceeds it, with a
+            status like clears_entire_supply. Both float figures beside it as distribution facts,
+            explaining why the depth figure is untestable in practice rather than overwriting it.
+⚠️ caveat   Float and depth are NOT independent here: the treasury's 61.9% of LP is BOTH SIDES.
+            Withdrawing it raises float to 517,907 AND drops the crossing to ~$961K (producer's
+            own figures). So "if more were outside it would sell fine" holds for NEWLY MINTED
+            float, not for float created by LP withdrawal. Keep this sentence wherever the pair
+            is rendered — it is the non-obvious half.
+owner       DexTracker (definition). Ours only if they decline.
+raised with DexTracker 2026-10-03, with the arithmetic and the caveat. Awaiting their call.
+closes when the depth figure is bounded by supply rather than by float, or they justify the float
+            cap and we render the inversion risk on our side
+Last reviewed 2026-10-03
+```
+
+### dusd-alto, all venue-table assets — three new TVL-trust fields are unread
+```
+affects     dusd-alto, bold, fxusd, reusd-re, reusde-re, syzusd, usdm, usg + the 13-asset rebuild
+raised      2026-10-03 by DexTracker, ahead of publishing
+what        Each venue row will carry `tvl_status` ("reported" | "implausible"),
+            `tvl_exclusion_basis` and `custody_check` ("not_checked" for pool types that do not
+            hold their own tokens — v4, Balancer, Fluid). An implausible row stays LISTED but
+            drops out of every total on their side. ⚠️ All three appear ZERO times in our
+            renderer (measured 2026-10-03).
+why         An `implausible` row renders as an ordinary row carrying a TVL the producer has
+            explicitly told us not to trust, and a `not_checked` custody row renders as a
+            verified one. Their exclusion holds in their totals and is INVISIBLE in our table.
+            ⚠️ The figures are not slightly off: GeckoTerminal read Curve crvUSD/WETH/CRV at
+            $6.94B, then $964M an hour later, against ~$2-3M actually on-chain — a drained leg
+            breaks the indexer's price maths. Their first guard then condemned real pools ($5M
+            syrupUSDT on v4, $4M thUSD), which is why the custody check is scoped by pool type.
+owner       us
+decided     Told them to publish WITHOUT waiting for us — better to hold the fields with a gap on
+            our side than a clean table built on TVLs they know are wrong. ⚠️ So the obligation is
+            ours: do NOT show a venue table on any asset until the three states render.
+closes when implausible rows render as excluded-and-why, and not_checked renders as unverified
+            rather than as verified
 Last reviewed 2026-10-03
 ```
