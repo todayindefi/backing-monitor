@@ -1,0 +1,283 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "hastra_prime",
+ "asset_symbol": "PRIME",
+ "producer": "dextracker",
+ "as_of": "2026-10-03T04:07:26Z",
+ "refresh_cadence": "daily",
+ "scope": "venue_inventory_only",
+ "publishes": [
+  "venues",
+  "venues_by_role",
+  "chains",
+  "non_swap_listings"
+ ],
+ "does_not_publish": [
+  "depth",
+  "primary_exit",
+  "rating"
+ ],
+ "scope_note": "VENUE-ONLY BY DESIGN. This payload deliberately carries no depth, crossing, redemption path or rating; those belong to PegTracker's ladder. Absence of `depth` here is a declaration, not a failed write -- a consumer should keep the ladder from its other source.",
+ "venues_by_role": {
+  "dollar_exit": {
+   "pool_count": 5,
+   "tvl_usd": 18716359.888700005,
+   "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
+  },
+  "family_swap": {
+   "pool_count": 0,
+   "tvl_usd": 0,
+   "meaning": "Swaps the asset for its own sister token: NOT a way out."
+  },
+  "other_pair": {
+   "pool_count": 2,
+   "tvl_usd": 3583479.7878,
+   "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
+  }
+ },
+ "chains": {
+  "eth": {
+   "status": "queried",
+   "token": "0x19ebb35279a16207ec4ba82799cc64715065f7f6",
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 3,
+   "published_pool_count": 1,
+   "below_floor_count": 2,
+   "dollar_exit_pool_count": 1,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 9061277.208,
+   "local_dollar_exit": true
+  },
+  "solana": {
+   "status": "queried",
+   "token": "3b8X44fLF9ooXaUm3hhSgjpmVs6rZZ3pPoGnGahc3Uu7",
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 27,
+   "published_pool_count": 6,
+   "below_floor_count": 21,
+   "dollar_exit_pool_count": 4,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 9655082.680699999,
+   "local_dollar_exit": true
+  }
+ },
+ "enumeration": {
+  "as_of": "2026-10-03T04:07:26Z",
+  "source": "GeckoTerminal token-pools API, paginated, by exact chain-specific address",
+  "venue_count": 30,
+  "published_venue_count": 7,
+  "tvl_floor_usd": 1000.0,
+  "chains_queried": [
+   "eth",
+   "solana"
+  ],
+  "chains_query_failed": [],
+  "chains_not_queried": [],
+  "chains_truncated": [],
+  "chains_without_local_dollar_exit": [],
+  "chain_count_is_floor": true,
+  "chain_count_note": "FLOOR, not a census: chains are the asset's CoinGecko platforms. A deployment CoinGecko does not list is not queried here.",
+  "live_venue_count": 0,
+  "excluded_venue_count": 0,
+  "unestablished_venue_count": 7,
+  "live_venue_count_is_floor": true,
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 7 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
+ },
+ "venues": [
+  {
+   "name": "PYUSD / PRIME",
+   "chain": "solana",
+   "dex": "orca",
+   "kind": "swap",
+   "address": "9R9nmGDRdLLwWjc9raRjaRoZZNXiXQBEPGFRj6SfSkPQ",
+   "counter_asset": {
+    "symbol": "PYUSD",
+    "address": "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo",
+    "decimals": 6,
+    "price_usd": 0.9956062615
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 9603663.3591,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 2289108.30440367,
+   "as_of": "2026-10-03T04:07:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/solana/pools/9R9nmGDRdLLwWjc9raRjaRoZZNXiXQBEPGFRj6SfSkPQ",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked"
+  },
+  {
+   "name": "PRIME / USDC 0.01%",
+   "chain": "eth",
+   "dex": "uniswap_v3",
+   "kind": "swap",
+   "address": "0x5b70a1582135bd04e39ca94a6a56fc3a828e3115",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 1.0003582312449
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 9061277.208,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 5820627.73974498,
+   "as_of": "2026-10-03T04:07:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x5b70a1582135bd04e39ca94a6a56fc3a828e3115",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 1808691.492542,
+    "counter_units_in_pool": 7081471.86411,
+    "two_leg_usd_onchain": 9006000.01175945,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   }
+  },
+  {
+   "name": "AUTO / PRIME",
+   "chain": "solana",
+   "dex": "orca",
+   "kind": "swap",
+   "address": "4D2MXM8H7sKpyeXMQ9T4eULc3qb2fWBBE8Un9P6eEx8W",
+   "counter_asset": {
+    "symbol": "AUTO",
+    "address": "GNE6oDS6jHrfaV3GQVVCCp37fDnT7PiPuewMKBj2bqNm",
+    "decimals": 6,
+    "price_usd": 1.0198917239
+   },
+   "role": "other_pair",
+   "tvl_usd": 3578154.3258,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 223386.583944353,
+   "as_of": "2026-10-03T04:07:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/solana/pools/4D2MXM8H7sKpyeXMQ9T4eULc3qb2fWBBE8Un9P6eEx8W",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked"
+  },
+  {
+   "name": "PRIME / USDC",
+   "chain": "solana",
+   "dex": "meteora",
+   "kind": "swap",
+   "address": "DDeDVBjKkMhygGxRdUniQo84idjr6ewwrSRwPU2UoTP9",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "decimals": 6,
+    "price_usd": 0.9998353911
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 47481.8093,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-03T04:07:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/solana/pools/DDeDVBjKkMhygGxRdUniQo84idjr6ewwrSRwPU2UoTP9",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked"
+  },
+  {
+   "name": "PRIME / CASH",
+   "chain": "solana",
+   "dex": "raydium-clmm",
+   "kind": "swap",
+   "address": "3CiG1JsPHfwQFwbVPSArgvGH1soZy7ikef5m4gBcvxvE",
+   "counter_asset": {
+    "symbol": "CASH",
+    "address": "CASHx9KJUStyftLFWGvEVf59SGeG9sh5FfcnZMVPCASH",
+    "decimals": 6,
+    "price_usd": 1.550411573045897
+   },
+   "role": "other_pair",
+   "tvl_usd": 5325.462,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 195.248031767,
+   "as_of": "2026-10-03T04:07:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/solana/pools/3CiG1JsPHfwQFwbVPSArgvGH1soZy7ikef5m4gBcvxvE",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked"
+  },
+  {
+   "name": "PRIME / USDC",
+   "chain": "solana",
+   "dex": "orca",
+   "kind": "swap",
+   "address": "CYjJbTRCHFMxgyjwMgLnVir72fWwtRnaiZBwXghLUSkq",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "decimals": 6,
+    "price_usd": 1.0000000000000007
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 2370.3751,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 8.0583342601,
+   "as_of": "2026-10-03T04:07:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/solana/pools/CYjJbTRCHFMxgyjwMgLnVir72fWwtRnaiZBwXghLUSkq",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked"
+  },
+  {
+   "name": "PRIME / USDC",
+   "chain": "solana",
+   "dex": "meteora-damm-v2",
+   "kind": "swap",
+   "address": "9C8qZBn4jVxweNGEhd6miygf1esrFHxYNDwKRmzsC7mL",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "decimals": 6,
+    "price_usd": 1.0004660728
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1567.1372,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-03T04:07:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/solana/pools/9C8qZBn4jVxweNGEhd6miygf1esrFHxYNDwKRmzsC7mL",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked"
+  }
+ ],
+ "non_swap_listings": {
+  "status": "not_queried",
+  "listings": null,
+  "basis": "Ticker is shared with unrelated tokens; a symbol match would list strangers."
+ },
+ "payload_revised_at": "2026-10-03T04:31:08Z"
+}

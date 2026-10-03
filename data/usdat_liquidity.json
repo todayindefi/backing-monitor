@@ -1,9 +1,9 @@
 {
  "schema_version": "liquidity/1",
- "asset_slug": "syrupusdt",
- "asset_symbol": "syrupUSDT",
+ "asset_slug": "usdat",
+ "asset_symbol": "USDat",
  "producer": "dextracker",
- "as_of": "2026-10-03T04:10:49Z",
+ "as_of": "2026-10-03T04:07:39Z",
  "refresh_cadence": "daily",
  "scope": "venue_inventory_only",
  "publishes": [
@@ -21,7 +21,7 @@
  "venues_by_role": {
   "dollar_exit": {
    "pool_count": 4,
-   "tvl_usd": 7899472.332599999,
+   "tvl_usd": 11404213.8609,
    "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
   },
   "family_swap": {
@@ -31,27 +31,40 @@
   },
   "other_pair": {
    "pool_count": 1,
-   "tvl_usd": 2817.853,
+   "tvl_usd": 1351.7913,
    "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
   }
  },
  "chains": {
   "eth": {
    "status": "queried",
-   "token": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+   "token": "0x23238f20b894f29041f48d88ee91131c395aaa71",
    "pool_list_truncated": false,
    "truncation_note": null,
-   "pool_count": 9,
-   "published_pool_count": 1,
-   "below_floor_count": 8,
-   "dollar_exit_pool_count": 1,
+   "pool_count": 25,
+   "published_pool_count": 3,
+   "below_floor_count": 22,
+   "dollar_exit_pool_count": 2,
    "implausible_tvl_count": 0,
-   "dollar_exit_tvl_usd": 5022849.9911,
+   "dollar_exit_tvl_usd": 8942518.5056,
    "local_dollar_exit": true
   },
   "bsc": {
    "status": "queried",
-   "token": "0x8e9d4cea39299323fe8eda678cad449718556c4e",
+   "token": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 1,
+   "published_pool_count": 1,
+   "below_floor_count": 0,
+   "dollar_exit_pool_count": 1,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 126002.1249,
+   "local_dollar_exit": true
+  },
+  "monad": {
+   "status": "queried",
+   "token": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
    "pool_list_truncated": false,
    "truncation_note": null,
    "pool_count": 2,
@@ -59,33 +72,20 @@
    "below_floor_count": 1,
    "dollar_exit_pool_count": 1,
    "implausible_tvl_count": 0,
-   "dollar_exit_tvl_usd": 251220.9432,
-   "local_dollar_exit": true
-  },
-  "plasma": {
-   "status": "queried",
-   "token": "0xc4374775489cb9c56003bf2c9b12495fc64f0771",
-   "pool_list_truncated": false,
-   "truncation_note": null,
-   "pool_count": 8,
-   "published_pool_count": 3,
-   "below_floor_count": 5,
-   "dollar_exit_pool_count": 2,
-   "implausible_tvl_count": 0,
-   "dollar_exit_tvl_usd": 2625401.3983,
+   "dollar_exit_tvl_usd": 2335693.2304,
    "local_dollar_exit": true
   }
  },
  "enumeration": {
-  "as_of": "2026-10-03T04:10:49Z",
+  "as_of": "2026-10-03T04:07:39Z",
   "source": "GeckoTerminal token-pools API, paginated, by exact chain-specific address",
-  "venue_count": 19,
+  "venue_count": 28,
   "published_venue_count": 5,
   "tvl_floor_usd": 1000.0,
   "chains_queried": [
    "bsc",
    "eth",
-   "plasma"
+   "monad"
   ],
   "chains_query_failed": [],
   "chains_not_queried": [],
@@ -101,133 +101,143 @@
  },
  "venues": [
   {
-   "name": "syrupUSDT / USDT 0.08%",
+   "name": "USDat / USDC",
    "chain": "eth",
-   "dex": "uniswap-v4-ethereum",
+   "dex": "curve",
    "kind": "swap",
-   "address": "0xd861038a98942312d1495dd1313fb66c7e7de48f549a15edf3a45decf7338e1d",
+   "address": "0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
    "counter_asset": {
-    "symbol": "USDT",
-    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     "decimals": 6,
-    "price_usd": 0.998546117426542
+    "price_usd": 0.99982656721366
    },
    "role": "dollar_exit",
-   "tvl_usd": 5022849.9911,
-   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
-   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
-   "volume_24h_usd": 129579.884399765,
-   "as_of": "2026-10-03T04:10:49Z",
-   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xd861038a98942312d1495dd1313fb66c7e7de48f549a15edf3a45decf7338e1d",
-   "is_live": null,
-   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
-   "exclusion_reason": null,
-   "tvl_status": "reported",
-   "tvl_exclusion_basis": null,
-   "custody_check": "not_checked"
-  },
-  {
-   "name": "syrupUSDT / USDT0 0.05%",
-   "chain": "plasma",
-   "dex": "oku-trade-plasma",
-   "kind": "swap",
-   "address": "0x6ba44eaed40e85bd4e5ff0636336ea35827a5939",
-   "counter_asset": {
-    "symbol": "USDT0",
-    "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
-    "decimals": 6,
-    "price_usd": 0.985247161493117
-   },
-   "role": "dollar_exit",
-   "tvl_usd": 2608174.0519,
+   "tvl_usd": 8912749.4551,
    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
    "tvl_caveat": null,
-   "volume_24h_usd": 0.0,
-   "as_of": "2026-10-03T04:10:49Z",
-   "source_url": "https://api.geckoterminal.com/api/v2/networks/plasma/pools/0x6ba44eaed40e85bd4e5ff0636336ea35827a5939",
+   "volume_24h_usd": 650948.928089865,
+   "as_of": "2026-10-03T04:07:39Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
    "is_live": null,
    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
    "exclusion_reason": null,
    "tvl_status": "reported",
    "tvl_exclusion_basis": null,
    "custody_check": {
-    "token_units_in_pool": 2.351416,
-    "counter_units_in_pool": 2694010.497806,
-    "two_leg_usd_onchain": 2654268.8889874257,
+    "token_units_in_pool": 4307266.325304,
+    "counter_units_in_pool": 4602333.297883,
+    "two_leg_usd_onchain": 8909046.492201421,
     "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
    }
   },
   {
-   "name": "syrupUSDT / USDT 0.08%",
-   "chain": "bsc",
-   "dex": "uniswap-v4-bsc",
+   "name": "USDat / USDC",
+   "chain": "monad",
+   "dex": "curve-monad",
    "kind": "swap",
-   "address": "0x48466ed2d31d41819ba79cd7100c26ea50a8c59ca44f9e8d3f1ee75ed9542d2c",
+   "address": "0xfd945d71d4e9609a1fab0ae9c30da8088e7aee1e",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+    "decimals": 6,
+    "price_usd": 0.999423462973634
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 2335693.2304,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 73828.1710693033,
+   "as_of": "2026-10-03T04:07:39Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/monad/pools/0xfd945d71d4e9609a1fab0ae9c30da8088e7aee1e",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 1100471.891538,
+    "counter_units_in_pool": 1237990.645426,
+    "two_leg_usd_onchain": 2337261.866471948,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   }
+  },
+  {
+   "name": "USDat / USDT 0.01%",
+   "chain": "bsc",
+   "dex": "pancakeswap-v3-bsc",
+   "kind": "swap",
+   "address": "0xf80ab3cc041d8ccc1c51acc295afdba26ad70aa9",
    "counter_asset": {
     "symbol": "USDT",
     "address": "0x55d398326f99059ff775485246999027b3197955",
     "decimals": 18,
-    "price_usd": 1.00427979757511
+    "price_usd": 0.999766957747916
    },
    "role": "dollar_exit",
-   "tvl_usd": 251220.9432,
-   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
-   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
-   "volume_24h_usd": 19939.9969903335,
-   "as_of": "2026-10-03T04:10:49Z",
-   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x48466ed2d31d41819ba79cd7100c26ea50a8c59ca44f9e8d3f1ee75ed9542d2c",
-   "is_live": null,
-   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
-   "exclusion_reason": null,
-   "tvl_status": "reported",
-   "tvl_exclusion_basis": null,
-   "custody_check": "not_checked"
-  },
-  {
-   "name": "USDT0 / syrupUSDT",
-   "chain": "plasma",
-   "dex": "fluid-plasma",
-   "kind": "swap",
-   "address": "0x2886a01a0645390872a9eb99dae1283664b0c524",
-   "counter_asset": {
-    "symbol": "USDT0",
-    "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
-    "decimals": 6,
-    "price_usd": 1.0002069738
-   },
-   "role": "dollar_exit",
-   "tvl_usd": 17227.3464,
+   "tvl_usd": 126002.1249,
    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
    "tvl_caveat": null,
-   "volume_24h_usd": 0.9237811589,
-   "as_of": "2026-10-03T04:10:49Z",
-   "source_url": "https://api.geckoterminal.com/api/v2/networks/plasma/pools/0x2886a01a0645390872a9eb99dae1283664b0c524",
+   "volume_24h_usd": 1337.346440996,
+   "as_of": "2026-10-03T04:07:39Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0xf80ab3cc041d8ccc1c51acc295afdba26ad70aa9",
    "is_live": null,
    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
    "exclusion_reason": null,
    "tvl_status": "reported",
    "tvl_exclusion_basis": null,
-   "custody_check": "not_checked"
+   "custody_check": {
+    "token_units_in_pool": 59572.252982,
+    "counter_units_in_pool": 66423.99935736993,
+    "two_leg_usd_onchain": 126017.98958264783,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   }
   },
   {
-   "name": "syrupUSDT / waPlaUSDT0 0.02%",
-   "chain": "plasma",
-   "dex": "balancer-v3-plasma",
+   "name": "USDat / USDC 0.006%",
+   "chain": "eth",
+   "dex": "maverick-v2-eth",
    "kind": "swap",
-   "address": "0x699153933db85fb32e8937fabeb8a16b3bace4a7",
+   "address": "0x00f46c6729d29d50ec7d114b3fde856237ccbf57",
    "counter_asset": {
-    "symbol": "waPlaUSDT0",
-    "address": "0xe0126f0c4451b2b917064a93040fd4770d6774b5",
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     "decimals": 6,
-    "price_usd": 1.0035636979
+    "price_usd": 1.0004554001
    },
-   "role": "other_pair",
-   "tvl_usd": 2817.853,
+   "role": "dollar_exit",
+   "tvl_usd": 29769.0505,
    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
    "tvl_caveat": null,
    "volume_24h_usd": 0.0,
-   "as_of": "2026-10-03T04:10:49Z",
-   "source_url": "https://api.geckoterminal.com/api/v2/networks/plasma/pools/0x699153933db85fb32e8937fabeb8a16b3bace4a7",
+   "as_of": "2026-10-03T04:07:39Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x00f46c6729d29d50ec7d114b3fde856237ccbf57",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked"
+  },
+  {
+   "name": "USDat / waEthUSDC 0.002%",
+   "chain": "eth",
+   "dex": "balancer-v3-ethereum",
+   "kind": "swap",
+   "address": "0x32d4c5bb72b96a52cf7b9a54fff12ea4340d2314",
+   "counter_asset": {
+    "symbol": "waEthUSDC",
+    "address": "0xd4fa2d31b7968e448877f69a96de69f5de8cd23e",
+    "decimals": 6,
+    "price_usd": 1.1802043447
+   },
+   "role": "other_pair",
+   "tvl_usd": 1351.7913,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-03T04:07:39Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x32d4c5bb72b96a52cf7b9a54fff12ea4340d2314",
    "is_live": null,
    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
    "exclusion_reason": null,
@@ -242,46 +252,46 @@
   "match": "by symbol, NOT by address: names may collide, treat as a pointer",
   "listings": [
    {
-    "project": "aave-v3",
-    "chain": "Ethereum",
-    "symbol": "SYRUPUSDT",
-    "tvl_usd": 114558863,
+    "project": "morpho-blue",
+    "chain": "Monad",
+    "symbol": "PT-USDAT-14JAN2027",
+    "tvl_usd": 23730125,
     "kind": "lending"
-   },
-   {
-    "project": "aave-v3",
-    "chain": "Plasma",
-    "symbol": "SYRUPUSDT",
-    "tvl_usd": 36867290,
-    "kind": "lending"
-   },
-   {
-    "project": "aave-v3",
-    "chain": "Mantle",
-    "symbol": "SYRUPUSDT",
-    "tvl_usd": 33648747,
-    "kind": "lending"
-   },
-   {
-    "project": "tydro",
-    "chain": "Ink",
-    "symbol": "SYRUPUSDT",
-    "tvl_usd": 5434303,
-    "kind": "unclassified"
    },
    {
     "project": "morpho-blue",
     "chain": "Ethereum",
-    "symbol": "SYRUPUSDT",
-    "tvl_usd": 85828,
+    "symbol": "PT-USDAT-14JAN2027",
+    "tvl_usd": 9697367,
     "kind": "lending"
    },
    {
-    "project": "fluid-lending",
+    "project": "morpho-blue",
     "chain": "Ethereum",
-    "symbol": "SYRUPUSDT",
-    "tvl_usd": 13943,
+    "symbol": "PT-USDAT-14JAN2027",
+    "tvl_usd": 1608961,
     "kind": "lending"
+   },
+   {
+    "project": "pendle-v2",
+    "chain": "Ethereum",
+    "symbol": "USDAT",
+    "tvl_usd": 1517926,
+    "kind": "unclassified"
+   },
+   {
+    "project": "pendle-v2",
+    "chain": "Monad",
+    "symbol": "USDAT",
+    "tvl_usd": 1483859,
+    "kind": "unclassified"
+   },
+   {
+    "project": "pendle-v2",
+    "chain": "BSC",
+    "symbol": "USDAT",
+    "tvl_usd": 42860,
+    "kind": "unclassified"
    }
   ]
  },
