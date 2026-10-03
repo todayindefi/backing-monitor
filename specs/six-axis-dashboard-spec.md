@@ -542,16 +542,22 @@ across the limit. The honest version is the 0–28% table above, which is measur
 than inferred from costs. The cost series is still the right evidence that a DAILY-ONLY axis cannot
 state an exit cost; it is not evidence about where the crossing sits.
 
-✅ **DEXTRACKER COVERAGE IS CAPPED AT 10 ASSETS — THEIR OWNER'S DECISION, 2026-10-03.** Relayed by
-DexTracker: they will not widen liquidity coverage, and a new asset is added only if their owner
-names it. This replaces their earlier *"please don't plan on our coverage growing until my user says
-so"* with a firm no.
+⚠️ **THE FALLBACK TIER IS TRANSITIONAL — CORRECTED 2026-10-03, HOURS AFTER THE OPPOSITE WAS
+RECORDED HERE.** DexTracker first relayed that their owner had capped coverage at 10 assets, and
+this section said the PegTracker fallback was therefore permanent and must never be built as a
+stopgap. They then corrected it: **their owner's "no" was about LADDERS, not venues.** DexTracker
+will widen venue structure to the assets PegTracker currently rows, and it was already settled at a
+higher level that DexTracker handles venues. They attributed the confusion to their own framing of
+the question rather than to their owner.
 
-⚠️ **So the fallback tier in the table above is not a transitional arrangement and must never be
-built as one.** PegTracker's pool rows are the permanent, attributed venue source for the ~22 assets
-DexTracker does not cover, and any future work that treats them as a stopgap — a migration plan, a
-"once DexTracker covers it" branch, a TODO — is building against a decision that has been taken.
-Their curation still wins where it exists; it simply will not arrive anywhere new.
+So: **PegTracker keeps ladders and crossings for every asset. DexTracker owns venue structure and is
+widening. Until each asset lands, PegTracker's rows stay as the ATTRIBUTED fallback — transitional,
+not permanent.**
+
+⚠️ **The lesson is for whoever reads a relayed decision next, and it cost this file two contradictory
+entries in one afternoon: a producer's summary of their owner's decision is not the decision.** The
+word that moved was "coverage", which means venue coverage to one of us and ladder coverage to the
+other — and both readings were coherent. Ask which noun before recording a cap.
 
 ⚠️ **THE FALLBACK COLUMN IS THE WHOLE POINT, AND IT IS WHAT WAS MISSING.** Adoption used to replace
 the WHOLE axis, so a payload that DECLINED to publish a figure deleted a measured one: reUSD-RE and

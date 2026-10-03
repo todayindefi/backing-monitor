@@ -281,14 +281,15 @@ corrections 1. Venue SIZE moves to DexTracker, not PegTracker. I assigned it on 
                first draft gave it to PegTracker, which would have stripped four assets of their
                only redemption data — the same "tier it, do not strip it" rule the proposal already
                applies to venues, got wrong one field along.
-status      🗑 RETIRE IT. Three of the things it asked for are now settled without it:
-            · ownership — decided 2026-10-02 and in the spec, and never needed either producer's
-              agreement since we choose which fields we read;
-            · DexTracker's coverage question — their owner answered it 2026-10-03 with a firm cap
-              at 10 assets, so the "tier it, do not strip it" sub-decision is moot;
-            · the redemption row — superseded by the probe/eligibility split.
-            What survives is the one typed-field request, which has its own entry. Delete the file
-            rather than send it; a drafted proposal left lying around reads as pending.
+status      ⚠️ DO NOT RETIRE — reinstated 2026-10-03. I marked this for deletion on the strength of
+            DexTracker's coverage cap, which they corrected hours later: their owner's "no" was
+            about LADDERS, not venues, and DexTracker IS widening venue coverage. So the "tier it,
+            do not strip it" sub-decision is live again and the fallback is transitional.
+            DexTracker has asked for the proposal file to be UPDATED with the corrected split, and
+            for the exact slug list where PegTracker rows venues and they publish nothing.
+            Sent 2026-10-03: crvusd apxusd apyusd hastra-prime usdat thusd yzusd susdat — EIGHT,
+            computed from data, against the "roughly ten" both sides had been repeating. Their
+            list also had usdai, which publishes TVL and volume with NO pool rows at all.
 Last reviewed 2026-10-02
 ```
 
