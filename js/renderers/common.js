@@ -591,26 +591,85 @@ const CommonRenderer = {
                     // ($100K, bracketed to $150K, monad). That is the FALSE case
                     // rather than the missing case, which is why it was fixed ahead
                     // of every other open item on this axis.
+                    // ⚠️ THE TRIGGER IS AN OUTCOME, NOT A SHAPE — the first cut of this
+                    // keyed on `base.total_2pct_depth` being a number and carried eight
+                    // named depth fields. Both halves were too narrow, and it cost two
+                    // registered assets their rating within a day.
+                    //
+                    // Syrup publishes `total_2pct_depth` as NULL BY DESIGN (its axis
+                    // rates instant exit at NAV, with the crossing nested under
+                    // `exit_mark.depth`), so the condition read false and nothing
+                    // carried. And its rating never came from depth at all — it came
+                    // from `band_score`, derived from free-liquidity, which was not in
+                    // the carry list. Both syrup pools went from a live band to
+                    // "Not rated · 0.5% depth n/a" when DexTracker's overlays arrived.
+                    //
+                    // So the test is now: does the overlay supply a rating or a figure
+                    // AT ALL? If it does, it is making a claim and replace is right. If
+                    // it does not, it has displaced one without replacing it.
+                    //
+                    // ⚠️ AND THE CARRY IS DEFAULT-ON, DENY-LISTED — not an allow-list.
+                    // Measured 2026-10-03: replace drops 50 DISTINCT base fields across
+                    // 8 assets, including `liquidity_score` on three. An allow-list
+                    // loses every field nobody thought of, silently, which is how this
+                    // defect recurred. Default-carry loses only what the overlay's own
+                    // vocabulary genuinely supersedes, and a NEW field from the base
+                    // producer survives instead of vanishing.
+                    var OVERLAY_OWNS = ['pools', 'venues', 'enumeration', 'total_tvl',
+                        'total_tvl_basis', 'swap_tvl_usd', 'volume_24h', 'volume_24h_usd',
+                        'volume_24h_scope', 'by_chain', 'by_chain_note',
+                        'unclassified_venues', 'venues_as_of', 'lending_exposure_usd'];
                     var handedOff = null;
-                    if (axis === 'liquidity' && pay.total_2pct_depth == null &&
-                        typeof base.total_2pct_depth === 'number') {
-                        var CARRY = ['total_2pct_depth', 'total_2pct_depth_is_floor',
-                                     'two_pct_depth_bracket', 'exit_mark',
-                                     'slippage_reference_size_usd',
-                                     'two_pct_depth_size_responsive',
-                                     'two_pct_depth_unresponsive_note',
-                                     'total_2pct_depth_note'];
+                    // ⚠️ A DECLARED NON-ANSWER IS STILL A CLAIM. First cut tested only
+                    // for a band or a number, so usdm — whose overlay says
+                    // `status: not_size_responsive` and publishes an `exit_capacity`
+                    // block, i.e. "there is no depth curve here, and here is the real
+                    // ceiling instead" — read as silence. The hand-off fired, overrode
+                    // its status and dropped its threshold, and its tile went from a
+                    // capacity figure at 200 bps to nothing. Caught by the A/B, which
+                    // showed 3 assets changing where 2 should have.
+                    // ⚠️ "ANY STATUS" WAS ALSO WRONG, IN THE OTHER DIRECTION — a DECLINING
+                    // overlay still sets one. reUSD-RE and syzUSD both publish
+                    // `depth.status: "not_measured"`, so counting any status as a claim
+                    // undid yesterday's fix on exactly the two assets it was built for.
+                    // The A/B caught it: 4 assets moved where 2 should have.
+                    //
+                    // The distinction already exists in this file's own vocabulary.
+                    // DEPTH_NON_DERIVABLE_STATUSES is the set meaning "no curve exists
+                    // here, by design" — not_size_responsive, supply_capped. Those are
+                    // positive declarations. `not_measured` is a refusal to answer, which
+                    // is the silence the hand-off is for.
+                    //
+                    //   usdm       not_size_responsive + exit_capacity -> CLAIMS (no curve,
+                    //                                                   real ceiling given)
+                    //   reusd_re   not_measured                        -> declines
+                    //   syzusd     not_measured                        -> declines
+                    //   syrup      no depth block at all               -> declines
+                    var ovDepth = (pay.depth && typeof pay.depth === 'object') ? pay.depth : {};
+                    var self2 = self;
+                    var declaredNoCurve = function(st) {
+                        return typeof st === 'string' &&
+                               self2.DEPTH_NON_DERIVABLE_STATUSES.indexOf(st) >= 0;
+                    };
+                    var overlayClaims = pay.band_score != null ||
+                                        typeof pay.total_2pct_depth === 'number' ||
+                                        declaredNoCurve(pay.two_pct_depth_status) ||
+                                        declaredNoCurve(ovDepth.status) ||
+                                        !!pay.exit_capacity;
+                    // ⚠️ AND AN EMPTY `quotes` OBJECT IS TRUTHY. usdm publishes
+                    // `exit_mark.quotes = {}` — a ladder container with no rungs — so a
+                    // bare truthiness test read it as a measurement the base had made.
+                    var baseQuotes = (base.exit_mark || {}).quotes;
+                    var baseClaims = base.band_score != null ||
+                                     typeof base.total_2pct_depth === 'number' ||
+                                     !!(baseQuotes && Object.keys(baseQuotes).length);
+                    if (axis === 'liquidity' && !overlayClaims && baseClaims) {
                         var carried = [];
-                        CARRY.forEach(function(k) {
-                            if (has(base, k) && base[k] != null) { pay[k] = base[k]; carried.push(k); }
-                        });
-                        // The producer's own crossing blocks, whatever thresholds
-                        // they published — our resolver picks the one matching the
-                        // limit in force.
                         Object.keys(base).forEach(function(k) {
-                            if (/^depth_\d+bps$/.test(k) && base[k] != null) {
-                                pay[k] = base[k]; carried.push(k);
-                            }
+                            if (has(pay, k) && pay[k] != null) return;      // overlay spoke
+                            if (OVERLAY_OWNS.indexOf(k) >= 0) return;       // its vocabulary
+                            if (base[k] == null) return;
+                            pay[k] = base[k]; carried.push(k);
                         });
                         // ⚠️ THESE THREE DESCRIBE THE FIGURE AND MUST OVERRIDE, NOT
                         // DEFER. `_adaptSchema` sets them off the overlay's depth
@@ -620,6 +679,13 @@ const CommonRenderer = {
                         // "$10.0M" labelled status "not measured" with a basis
                         // paragraph explaining why no measurement exists. A
                         // present-on-the-overlay test would have skipped all three.
+                        // ⚠️ These describe the figure and `_adaptSchema` sets them off a
+                        // depth block that EXISTS even when it published no figure — so
+                        // they are present on the overlay and describe its REFUSAL. The
+                        // default-carry above skips anything the overlay defined, so
+                        // these two need the explicit override the old allow-list gave
+                        // them: without it, a carried $10.0M renders labelled
+                        // "not measured".
                         ['two_pct_depth_status', 'two_pct_depth_basis'].forEach(function(k) {
                             if (has(base, k) && base[k] != null) { pay[k] = base[k]; carried.push(k); }
                             else { delete pay[k]; }
