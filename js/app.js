@@ -671,6 +671,50 @@ async function renderAsset(slug) {
             }
         }
 
+        // ⚠️ LAST, AND DEFERRED, AND THE DEFERRAL IS NOT OPTIONAL. It asks what is
+        // VISIBLE on the finished page, so every renderer that could reveal a flag
+        // must already have run. Four bespoke pages were dropping their risk flags
+        // entirely — usdat's two CRITICAL ones (a 100%-of-supply accounting
+        // divergence and an implementation drift) were in the DOM and unreachable.
+        //
+        // ⚠️ RUNNING IT INLINE HERE DUPLICATED FLAGS ON THREE PAGES. Measured on
+        // cusd: the flag text appeared TWICE in visible text, once in this banner
+        // and once in a bespoke panel that populated after this line. Some bespoke
+        // renderers resolve their own fetches, so `renderer.render()` returning is
+        // not the page being finished. Found by testing twelve assets instead of
+        // the four the fix was for — the duplicates were all on assets that were
+        // already correct.
+        //
+        // ⚠️ A FIXED DELAY WAS THE FIRST FIX AND IT WAS NOT ENOUGH. At 1200ms the
+        // duplicates cleared on cusd and usde and msusd-metronome STILL showed four
+        // — its analyzer runs in this repo and its renderer is the slowest on the
+        // fleet. Any constant is a guess about the slowest renderer, and the guess
+        // is wrong the moment one gets slower.
+        //
+        // So: re-run on DOM settle instead of on a clock. renderUnseenRiskFlags is
+        // idempotent (it clears and rebuilds from the feed every time), so repeated
+        // passes converge rather than accumulate — the last pass, on the finished
+        // page, is the one that decides. Observer is capped and disconnects, so a
+        // page that never stops mutating cannot keep this running.
+        (function(payload) {
+            var run = function() { CommonRenderer.renderUnseenRiskFlags(payload); };
+            var view = document.getElementById('asset-view');
+            run();
+            if (!view || typeof MutationObserver !== 'function') return;
+            var timer = null;
+            var obs = new MutationObserver(function() {
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(run, 350);
+            });
+            obs.observe(view, { childList: true, subtree: true, characterData: true });
+            // Hard stop: the banner must not be a permanent observer on a live page.
+            setTimeout(function() {
+                obs.disconnect();
+                if (timer) clearTimeout(timer);
+                run();
+            }, 12000);
+        })(data);
+
     } catch (e) {
         showError('Could not load ' + slug + ': ' + e.message);
     }

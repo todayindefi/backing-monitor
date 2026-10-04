@@ -2284,6 +2284,130 @@ const CommonRenderer = {
             '</div>';
     },
 
+    // ⚠️⚠️ A CRITICAL RISK FLAG THAT REACHES NO READER, ON FIVE LIVE PAGES.
+    //
+    // #risk-flags lives inside #section-backing, and the bespoke renderers hide
+    // that section ("band-only ... every axis has a richer custom panel",
+    // saturn.js:346). Most of them re-render the flags in their own panels and
+    // lose nothing — thusd, cusd, msusd-metronome and usde all check out. FOUR
+    // DO NOT, and what they drop is the most severe content on the feed:
+    //
+    //   usdat   BOTH flags unseen, BOTH critical — "accounting divergence: holds
+    //           $92,361,127.74 but totalAssets() reports $0.00 (100% of supply
+    //           unaccounted by the contract)" and an implementation drift
+    //   susdat  3 of 3 unseen, 1 critical — implementation drifted from published
+    //   usdai   1 of 1 unseen
+    //   susde   2 of 2 unseen
+    //   syrupusdt 1 of 4 unseen with its panel VISIBLE — a different cause
+    //
+    // An implementation drift says the deployed code no longer matches what was
+    // published. That is the single thing a contract-risk dashboard exists to
+    // surface, and on two assets it was in the DOM and invisible.
+    //
+    // ⚠️ IT WAS FOUND BY A DETOUR, NOT BY LOOKING FOR IT. riskAnalyst asked about
+    // the wording of a buffer ALERT; checking whether that alert appeared on our
+    // page showed the whole flag panel was unreachable. The flag I was sent to
+    // look at was the least important one in the list.
+    //
+    // ⚠️ SELF-LIMITING BY CONSTRUCTION. It re-renders a flag ONLY when that flag's
+    // own message is absent from the page's VISIBLE text, so the thirteen assets
+    // whose panel renders normally, and the four bespoke pages that carry their
+    // flags themselves, get nothing added. A blanket banner would have duplicated
+    // flags on seventeen pages to fix five.
+    //
+    // ⚠️ VISIBILITY IS MEASURED, NOT ASSUMED — computed style on every ancestor
+    // plus a non-zero box, and collapsed <details> treated as unread. innerHTML
+    // returns true for text in a 0x0 box and innerText omits collapsed content;
+    // both were used in this session to report hidden content as rendering. See
+    // tools/visible_text_check.js, which is the same logic with its controls.
+    //
+    // Runs AFTER the bespoke renderer, into a container outside #asset-specific-panels,
+    // for the reason the staleness banner gives: a bespoke renderer assigns innerHTML
+    // and would overwrite anything placed before it.
+    renderUnseenRiskFlags(data) {
+        var el = document.getElementById('unseen-flags-banner');
+        if (!el) return;
+        el.innerHTML = '';
+        var flags = (data && Array.isArray(data.risk_flags)) ? data.risk_flags : [];
+        if (!flags.length) return;
+
+        var seen = this._pageVisibleText();
+        var unseen = flags.filter(function(f) {
+            var m = f && typeof f.message === 'string' ? f.message.trim() : '';
+            if (!m) return false;
+            // Compare on a prefix: a renderer may append its own suffix (an
+            // inherited-from note, a tooltip marker) to the producer's message.
+            return seen.indexOf(m.slice(0, 40)) < 0;
+        });
+        if (!unseen.length) return;
+
+        var anyCrit = unseen.some(function(f) { return f.severity === 'critical'; });
+        var cls = anyCrit
+            ? 'bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 text-red-800 dark:text-red-200'
+            : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200';
+        var self = this;
+        el.innerHTML =
+            '<div class="border rounded p-3 mb-4 text-sm ' + cls + '">' +
+                '<span class="font-semibold">' +
+                    (anyCrit ? 'Critical risk flags for this asset:' : 'Risk flags for this asset:') +
+                '</span>' +
+                '<ul class="mt-1 ml-4 list-disc">' +
+                unseen.map(function(f) {
+                    // ⚠️ CARRY `inherited_from`, because sUSDe is one of the four and
+                    // BOTH of its unseen flags are inherited from USDe. Rendering the
+                    // message alone here would reproduce, in a new place, exactly the
+                    // defect renderRiskFlags was fixed for: a finding measured on USDe
+                    // reading as a finding about sUSDe's own state. Escaped with the
+                    // same helper for the same reason — producer prose is not markup.
+                    return '<li>' +
+                        (f.severity === 'critical'
+                            ? '<span class="font-semibold uppercase text-xs mr-1">critical</span>' : '') +
+                        self._escapeAttr(String(f.message == null ? '' : f.message)) +
+                        (f.inherited_from
+                            ? '<span class="text-xs opacity-80"> \u2014 inherited from ' +
+                              self._escapeAttr(String(f.inherited_from)) +
+                              ', not measured on this asset' +
+                              (f.scope ? ' (producer scope: ' +
+                                  self._escapeAttr(String(f.scope)) + ')' : '') + '</span>'
+                            : '') +
+                        '</li>';
+                }).join('') +
+                '</ul>' +
+                '<div class="text-xs mt-2 opacity-80">' +
+                    'Shown here because this page\u2019s layout does not display them elsewhere.' +
+                '</div>' +
+            '</div>';
+    },
+
+    // Visible text of the page: text nodes whose ancestors all render.
+    // ⚠️ Deliberately NOT innerText (omits collapsed <details>, and is blind to
+    // visibility:hidden / zero-opacity) and NOT innerHTML (true for a 0x0 box).
+    _pageVisibleText() {
+        var out = '';
+        if (!document.body || !document.createTreeWalker) return out;
+        var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+            var el = walker.currentNode.parentElement;
+            if (el && this._elVisible(el)) out += ' ' + walker.currentNode.nodeValue;
+        }
+        return out.replace(/\s+/g, ' ');
+    },
+
+    _elVisible(el) {
+        var n = el;
+        while (n && n.tagName !== 'BODY') {
+            var cs = window.getComputedStyle(n);
+            if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+            if (n.tagName === 'DETAILS' && !n.open && n.firstElementChild) {
+                var sum = n.querySelector(':scope > summary');
+                if (!sum || !sum.contains(el)) return false;
+            }
+            n = n.parentElement;
+        }
+        var r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+    },
+
     // ------ Risk flags ------
     renderRiskFlags(data) {
         var container = document.getElementById('risk-flags');
