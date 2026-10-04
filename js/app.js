@@ -697,7 +697,13 @@ async function renderAsset(slug) {
         // page, is the one that decides. Observer is capped and disconnects, so a
         // page that never stops mutating cannot keep this running.
         (function(payload) {
-            var run = function() { CommonRenderer.renderUnseenRiskFlags(payload); };
+            var run = function() {
+                // Lift first: it moves content INTO the visible page, and the flag
+                // banner's self-limiting check reads what is visible — so a flag quoted
+                // inside a lifted note must be visible before that check runs.
+                CommonRenderer.liftHiddenAxisNotes();
+                CommonRenderer.renderUnseenRiskFlags(payload);
+            };
             var view = document.getElementById('asset-view');
             run();
             if (!view || typeof MutationObserver !== 'function') return;

@@ -2406,6 +2406,67 @@ const CommonRenderer = {
             '</div>';
     },
 
+    // ⚠️ 24 AXIS-BASIS DISCLOSURE LINES ARE BUILT AND NEVER SHOWN, ACROSS EIGHT PAGES.
+    //
+    // Each axis head can carry an `.axis-basis-note` — a collapsed <summary> reading
+    // "Why the report scores liquidity differently" / "Why this contract score" and
+    // the peg / backing / dependencies equivalents — with riskAnalyst's reasoning one
+    // click behind. The five bespoke renderers hide whole SECTIONS to avoid showing a
+    // second, emptier copy of each axis panel, and these notes live in the section
+    // HEADS, so they went as collateral. crvusd (5/5), usg (5/5) and cusd (3/3) show
+    // theirs, which is how we know the component works.
+    //
+    // ⚠️ THE COST IS CONCENTRATED IN THE TOOLTIP. With the note hidden, the only path
+    // to that reasoning is the rating chip's title="" — 4,031 chars on usdat's
+    // liquidity chip, 6,614 on its Structural chip. A native tooltip cannot be
+    // scrolled and truncates unpredictably, so the longest reasoning is the least
+    // readable. On crvusd the same basis sits in the visible note and the liquidity
+    // tooltip is 1,558 chars: the LENGTH is a symptom of the hiding.
+    //
+    // ⚠️ OPT-IN PER RENDERER, DELIBERATELY NOT FLEET-WIDE. Each bespoke renderer hides
+    // its own hardcoded section list, so each decides for itself by setting
+    // `CommonRenderer.LIFT_AXIS_NOTES = true`. ethena.js is NOT opted in: the backlog
+    // records that usde's liquidity panel was kept score-chip-free on purpose, because
+    // changing it "would have answered the deferred decision by implementation, in the
+    // generous direction, on a held asset". A fleet-wide lift would have done exactly
+    // that silently.
+    //
+    // MOVES the node rather than cloning it — a clone would leave the hidden original
+    // to drift, and the <details> is native so it carries its own toggle.
+    // Idempotent: a note already in the container is skipped, so the settle loop that
+    // calls this can run many times.
+    // ⚠️ SCANS THE SECTIONS, NOT A LIST OF HEAD IDS, AND THE FIRST VERSION DID THE
+    // LATTER AND MISSED ONE OF FOUR. The peg / liquidity / contract notes are appended
+    // to `#axis-<n>-head` as `.axis-basis-note` wrappers; the DEPENDENCIES one is built
+    // inline into `#axis-deps-common-mode`, a body container, so a head-id list lifted
+    // 3 of usdat's 4 and reported success. Measured in a browser, not reasoned about.
+    //
+    // ⚠️ TWO SELECTORS, AND BOTH ARE NEEDED. `_scoreBasisHtml` always emits
+    // `details.score-basis`, so that alone would catch every case — but the head
+    // wrappers also hold the per-chain line and the score-change chip, and lifting only
+    // the <details> would silently drop those. So: prefer the wrapper where there is
+    // one, fall back to the bare <details>, and never lift something already inside
+    // what was lifted.
+    liftHiddenAxisNotes() {
+        if (!this.LIFT_AXIS_NOTES) return;
+        var box = document.getElementById('axis-notes-lifted');
+        if (!box) return;
+        var self = this;
+        var found = document.querySelectorAll(
+            'section.axis-section .axis-basis-note, section.axis-section details.score-basis');
+        for (var i = 0; i < found.length; i++) {
+            var el = found[i];
+            // Only lift what a reader cannot already reach. If a renderer ever stops
+            // hiding its sections this becomes a no-op on its own.
+            if (self._elVisible(el)) continue;
+            // Skip a <details> whose wrapper is going to be (or has been) lifted whole.
+            if (el.closest && el.closest('.axis-basis-note') &&
+                el.closest('.axis-basis-note') !== el) continue;
+            box.appendChild(el);
+        }
+        box.className = box.children.length ? 'mb-6' : '';
+    },
+
     // Visible text of the page: text nodes whose ancestors all render.
     // ⚠️ Deliberately NOT innerText (omits collapsed <details>, and is blind to
     // visibility:hidden / zero-opacity) and NOT innerHTML (true for a 0x0 box).

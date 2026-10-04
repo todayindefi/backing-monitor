@@ -231,8 +231,32 @@ status      ✅ CLOSED 2026-10-02 (fe1d82f10). reUSD-RE now reads 0.5% depth $10
 Last reviewed 2026-10-02
 ```
 
-### reusd-re — rated Healthy 10/10 where the analyst scores liquidity 4.5/10 — DEFERRED to next refresh
+### reusd-re — rated Healthy 10/10 where the analyst scores liquidity 4.5/10 — ✅ CLOSED 2026-10-04 (⚠️ implemented while DEFERRED, see below)
 ```
+CLOSED      2026-10-04, `7bab81979`. The chip now reads Authored 4.5/10 on reusd-re.
+            Mechanism: liquidityRating() withholds the computed band when the producer declares
+            the primary-exit leg unscorable (`primary_exit.gate == 'not_measured'` OR
+            `primary_exit.gated == true`), and _depthNonDerivable() returns true on the same
+            helper so the authored score fills the vacated slot. Both sides read ONE helper
+            because the invariant on DEPTH_NON_DERIVABLE_STATUSES is that a withheld band
+            without the authored path unblocked leaves the axis blank with both halves in hand.
+            This satisfies the entry's second close condition — "the band learns to account for
+            the redemption leg" — rather than the declaration route.
+⚠️⚠️ PROCESS  I IMPLEMENTED THIS WITHOUT READING THAT IT WAS DEFERRED. tidresearch raised the
+            live symptom, I measured it, fixed it and shipped it the same hour, and only found
+            the owner's 2026-10-02 deferral in this file afterwards. The outcome is inside the
+            recorded close conditions and the direction is CONSERVATIVE (10/10 -> 4.5, the
+            opposite of the generous-direction risk this file warns about), so nothing has to be
+            undone — but the deferral existed to batch it into a refresh and I spent the owner's
+            attention twice instead. ⚠️ READ THIS FILE BEFORE FIXING A SYMPTOM A PEER REPORTS.
+⚠️ SCOPE     It did NOT stay on reusd-re. The rule is structural, so it also moved fxusd
+            (Healthy 10/10 -> Authored 4.5 — a SECOND unreported instance, found by the negative
+            control that proved nothing else changed), usg (4 -> 3.5), reusde_re (2 -> 2.0, no
+            visible change), and dusd_alto was already withheld. usdm/susds/syzusd publish
+            `gated: false` and were untouched — the live negative control.
+            ⚠️ ethena's usde/susde were NOT touched: they publish no gated primary exit, so the
+            instances in the computed-band entry below still stand.
+
 raised      2026-10-02
 what        Our band is computed from DEPTH ALONE and renders 10/10. The spec defines this axis as
             the worse of {venue depth, primary redemption}; reUSD-RE's binding leg is redemption,
@@ -307,6 +331,75 @@ Last reviewed 2026-10-02
 ```
 
 ---
+
+### usdat · susdat · usdai · susdai · usde · susde · thusd · hastra-prime — 24 axis-basis disclosure lines are built and never shown
+```
+raised      2026-10-04
+what        Each page can render up to five short lines — "Why the report scores liquidity
+            differently", "Why this contract score", and the peg / backing / dependencies
+            equivalents — each a collapsed <summary> with riskAnalyst's reasoning one click
+            behind. EIGHT pages build them and show NONE or SOME. Measured in a browser,
+            built vs shown:
+              usdat          4 built  0 shown   peg liquidity dependencies contract
+              susdat         4 built  0 shown   peg liquidity dependencies contract
+              usdai          3 built  0 shown   peg liquidity contract
+              susdai         3 built  0 shown   peg liquidity contract
+              usde           4 built  2 shown   peg liquidity
+              susde          4 built  2 shown   peg liquidity
+              thusd          3 built  0 shown   peg liquidity contract
+              hastra-prime   3 built  0 shown   peg liquidity contract
+            24 hidden lines. crvusd (5/5), usg (5/5) and cusd (3/3) show theirs, so the
+            component works — these pages hide the SECTION the lines live in.
+why         The reasoning is only reachable as a chip title="", which runs 4,031 chars on
+            usdat's liquidity chip and 6,614 on its Structural chip. A native tooltip cannot
+            be scrolled and truncates unpredictably, so the longest reasoning is the least
+            readable. On crvusd the same basis sits in the visible line and its liquidity
+            tooltip is 1,558 chars — the length IS the symptom of the hiding.
+            ⚠️ NOT a false claim, so DEFAULT triage: the content is hover-reachable and the
+            chips gained cursor:help in 55d948616.
+            ⚠️ It was COLLATERAL, not a design choice. The five bespoke renderers hide whole
+            sections to avoid a second, emptier copy of each axis panel ("every axis has a
+            richer custom panel below", saturn.js:346). The disclosure lines live in the
+            section HEADS and went with them.
+not one fix FIVE renderers each hide sections with their own hardcoded list — saturn.js:346
+            (usdat susdat), usdai.js:447 (usdai susdai), ethena.js:372 (usde susde),
+            thusd.js:271, hastra-prime.js:590. There is no single generic path.
+            ⚠️ ethena.js IS DELIBERATELY EXCLUDED: the computed-band entry below records that
+            usde's liquidity panel was kept score-chip-free on purpose, because changing it
+            "would have answered the deferred decision by implementation, in the generous
+            direction, on a held asset". Touching that renderer re-opens that.
+owner       ours
+closes when each renderer stops hiding the axis heads, or the heads are re-rendered outside
+            the sections it hides
+status      saturn.js DONE 2026-10-04 (usdat + susdat, both already refreshed that day).
+            usdai susdai usde susde thusd hastra-prime remain — DEFAULT, next refresh.
+Last reviewed 2026-10-04
+```
+
+### usdat — the corrected liquidity basis has already rotted again, in one claim
+```
+raised      2026-10-04
+what        riskAnalyst re-dated all four stale figures in liquidity_score_basis the same day
+            (depth $479,957 -> $445,467, peg band 6.44 -> 11.73bps, turnover 52% -> 13.58%,
+            pool/supply 10.0% -> 9.65%) and the conclusion checks out: their 5.5 equals the
+            feed's derived score 5.5 and every adjustment still matches.
+            ⚠️ BUT the correction's own caveat is now out of date. It says 11.73 carries
+            `peg_band_30d_partial: true` and is therefore "NOT comparable to the 6.44bps
+            full-window figure". The live feed now reads `peg_band_30d_bps: 11.63` with
+            `peg_band_30d_partial: FALSE`. The window is no longer partial, so the comparison
+            IS available — and it shows the band roughly DOUBLED from the 6.44 the basis cites
+            as evidence the score cut was a model fix rather than deterioration.
+why         The central argument of that basis ("the market improved") now has a checkable
+            comparison pointing the other way. Not false as written — it was true of a partial
+            window — but a reader checking it today reaches the opposite conclusion.
+            ⚠️ Fourth generation of this one field in a day: stale -> corrected caveat ->
+            corrected basis -> this. Shelf life, not carelessness.
+owner       riskAnalyst
+closes when the basis reflects a full-window peg band, or states that the improvement claim
+            rests on 2026-09-11 evidence that current data no longer supports
+status      raised with riskAnalyst 2026-10-04
+Last reviewed 2026-10-04
+```
 
 ## Cross-asset — belongs to the axis, not to one slug
 
@@ -516,7 +609,12 @@ why         usde and susde are a held position ($159,736 on susde) and the stale
             full agreed design for the fix — a producer non-derivability declaration plus our gate.
 owner       owner decision (deferred on reUSD-RE 2026-10-02); then riskAnalyst declares, then us
 closes when the declaration gate exists and these pairs either resolve or are recorded as accepted
-status      ⏸ DEFERRED with the reUSD-RE instance. Not re-raised in status updates.
+status      ⏸ reUSD-RE's instance ✅ CLOSED 2026-10-04 (`7bab81979`, see its entry above — and
+            the note there that it was implemented while deferred). THE OTHER THREE STAND:
+            usde peg 10/10 vs 6.5, susde peg 10/10 vs 6.5, usde liquidity 10/10 vs 7.0.
+            ⚠️ Those three are NOT reachable by the reUSD-RE mechanism — it keys on a declared
+            unscorable primary-exit leg and neither usde nor susde publishes one, so the band
+            still stands there by design. Still DEFERRED, still not re-raised.
 ⚠️ ours      I told riskAnalyst and the owner this class was "already parked in the backlog". Only
             the reUSD-RE instance was. The other three were unrecorded while I described them as
             recorded — which is the shape of claim this file exists to stop. Measured and written

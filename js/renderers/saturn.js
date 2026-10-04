@@ -346,6 +346,16 @@ var SaturnRenderer = {
             ['section-peg', 'section-liquidity', 'section-contract', 'section-backing', 'section-dependencies', 'section-issuer']
                 .forEach(function(id) { var s = document.getElementById(id); if (s) s.style.display = 'none'; });
             var bh = document.getElementById('axis-backing-head'); if (bh) bh.innerHTML = '';
+            // ⚠️ OPT IN TO HAVING THE AXIS-BASIS NOTES LIFTED BACK OUT. Hiding these
+            // sections is about the duplicate per-axis PANELS; the "Why the report
+            // scores X differently" disclosure lines live in the section HEADS and were
+            // collateral. On usdat that cost the reader the only readable path to
+            // riskAnalyst's reasoning for a 10/10 band sitting beside a Derived Score of
+            // 5.5 — it survived only as a 4,031-character chip tooltip.
+            // app.js performs the lift after the DOM settles; see
+            // CommonRenderer.liftHiddenAxisNotes for why this is per-renderer opt-in
+            // rather than fleet-wide.
+            CommonRenderer.LIFT_AXIS_NOTES = true;
         }
 
         // Hide the common CR History chart — for USDat the meaningful trend
