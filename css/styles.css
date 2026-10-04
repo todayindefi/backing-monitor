@@ -191,6 +191,16 @@ body {
 .axis-rating.r-crit { background: #fef2f2; color: #b91c1c; }
 .axis-rating.r-na   { background: #f1f5f9; color: #64748b; }
 
+/* ⚠️ A CHIP WHOSE ONLY EXPLANATION IS A TOOLTIP MUST LOOK HOVERABLE.
+   On usdat the band reads "Healthy · 10/10 ⚠️" while the panel below reads
+   "Derived Score 5.5/10", and riskAnalyst's 4,031-character reasoning for the
+   gap is the chip's own title="" — attached to the exact number in dispute. The
+   ⚠️ is a real content-driven cue (it appears only when the producer's note
+   carries one), but the chip rendered with cursor:auto, so nothing told a reader
+   there was anything to hover. The explanation was reachable and undiscoverable.
+   Scoped to [title] so chips with no tooltip keep a normal cursor. */
+.axis-rating[title] { cursor: help; }
+
 /* Indexer-derived figures in a summary-card subtitle (e.g. 24h volume, which is
    GeckoTerminal-sourced while the depth beside it is an on-chain quote). Dotted
    underline + tooltip marks the weaker provenance without shouting. */
