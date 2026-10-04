@@ -2376,6 +2376,33 @@ const CommonRenderer = {
                 '<div class="text-xs mt-2 opacity-80">' +
                     'Shown here because this page\u2019s layout does not display them elsewhere.' +
                 '</div>' +
+                // ⚠️⚠️ A TRUE FLAG RENDERED BARE IS A FALSE SOLVENCY ALARM, AND THIS
+                // BANNER SHIPPED ONE FOR AN HOUR.
+                //
+                // usdat's critical flag reads "holds $92,361,127.74 but totalAssets()
+                // reports $0.00 (100.000000% of supply unaccounted by the contract)".
+                // Every word is true and a reader meets it as THE MONEY IS GONE. It is
+                // not: backing $92,361,127.74 against supply $92,361,127.74,
+                // `backing_ratio: 1.0`, tying to the cent. What is missing is the
+                // CONTRACT'S RECOGNITION — isAllowedAsset is false for the reserve
+                // token, so its internal accounting counts none of it.
+                //
+                // ⚠️ THE SAME DEFECT CLASS AS `inherited_from`, WHICH THIS FUNCTION
+                // ALREADY HANDLES. I carried that one deliberately and missed this one,
+                // because `renderRiskFlags` appends `_divergenceContextHtml` after its
+                // list and my banner was an INCOMPLETE COPY of it. Surfacing hidden
+                // content means surfacing everything that made it readable, not the
+                // messages alone.
+                //
+                // ⚠️ MEASURED FIELDS, NOT PROSE. riskAnalyst offered to emit their
+                // 2026-08-29 analysis as a basis string; it is not needed and would
+                // have shipped a stale figure — their prose says 80,461,171.08, the
+                // feed says 92,361,127.74. This block reads `backing_total_usd`,
+                // `supply_usd` and `contract_total_assets_usd` live, so it cannot drift.
+                //
+                // Self-gating: returns '' unless the divergence is material AND backing
+                // ties to supply within 0.5%, so it appears only where it is the answer.
+                this._divergenceContextHtml(data) +
             '</div>';
     },
 
