@@ -3254,6 +3254,11 @@ const CommonRenderer = {
         if (this.DEPTH_NON_DERIVABLE_STATUSES.indexOf(lq.two_pct_depth_status) >= 0) {
             return null;
         }
+        // ⚠️ AN UNMEASURED OR GATED PRIMARY LEG MEANS DEPTH IS NOT THE BINDING
+        // LEG — see _primaryExitNotScorable. Withholding here unblocks the authored
+        // path there, so the axis shows the producer's worse-leg judgement instead
+        // of a venue reading dressed as an exit rating.
+        if (this._primaryExitNotScorable(lq)) return null;
         // ⚠️ THE BAND SCORES WHAT THE TILE SHOWS. Both read `depthAtLimit`, so a
         // bracket is graded on its LOWER end (the last size that actually cleared)
         // and a capacity figure is not graded at all — there is no crossing to
@@ -3351,10 +3356,118 @@ const CommonRenderer = {
     DEPTH_NON_DERIVABLE_STATUSES: ['not_size_responsive', 'supply_capped',
                                    'clears_entire_supply'],
 
+    // ⚠️ DEPTH IS NOT THE EXIT WHEN THE WORSE LEG IS UNMEASURED, AND THE TILE
+    // SAID "Healthy 10/10" ON AN AXIS TWO PRODUCERS SCORE 4.5.
+    //
+    // reUSD-RE: `total_2pct_depth` $10M (bracketed, genuinely measured) banded 5/5
+    // and rendered as Liquidity & Exit. But axis 3 is the WORSE of venue depth and
+    // primary redemption — venue 5.0, redemption 4.5 — and redemption binds,
+    // because a U.S. person has no primary channel at all. So the band measured
+    // the leg that does not constrain the exit and published it as the exit rating.
+    //
+    // ⚠️ THE PRODUCER HAD ALREADY WRITTEN THE WARNING INTO OUR OWN SERVED PAYLOAD
+    // AND IT REACHED NO READER: `liquidity_score_depth_caveat` says the $10M
+    // "measures the leg this axis does NOT score on. Do not reconcile 4.5 against
+    // it." The tile reconciled exactly that way. It is rendered now, below.
+    //
+    // ⚠️ THE DIRECTION IS WHY THIS WAS URGENT RATHER THAN UNTIDY. Overstating risk
+    // is the usual error to guard against; this UNDERSTATED it, on a held asset, on
+    // a surface tidresearch's published report LINKS TO — so our page lent a
+    // flattering rating their credibility. A divergence that favours the asset is
+    // the one that costs a reader money.
+    //
+    // ⚠️ IT AROSE FROM A CORRECT FIX. Before 2026-10-02 a DexTracker overlay
+    // publishing no depth suppressed PegTracker's measured figure under `replace`,
+    // so the tile read "n/a · Not rated". Carrying the base feed's depth through
+    // (fe1d82f10) was right; it moved this asset from the authored path onto the
+    // computed one, and that second-order consequence was the defect.
+    //
+    // ⚠️⚠️ THE DISCRIMINATOR IS `gate: 'not_measured'`, NOT `gated: true`, AND I
+    // GOT THAT WRONG FIRST WITH A FALSE COUNT WRITTEN INTO THIS COMMENT. I scanned
+    // only the `*_backing.json` feeds, found `primary_exit.gated: true` on reusd_re
+    // alone, and wrote "reusd_re ALONE" here. The liquidity/1 OVERLAYS also carry
+    // it — dusd_alto, fxusd, reusde_re, tsm_rh and usg — so that rule would have
+    // withheld the band on SIX assets while the comment claimed one. Four of those
+    // are currently banded, so four headline ratings would have moved silently on a
+    // report about a fifth asset.
+    //
+    // The two cases are genuinely different and only one was reported:
+    //   gated: true        — the gate is KNOWN and DESCRIBED ("Redemption disabled
+    //                        at the protocol level for holders"), and riskAnalyst
+    //                        has already priced the worse leg into an authored
+    //                        score. ALSO WITHHELD — see below.
+    //   gate: not_measured — the leg is DECLARED UNMEASURED.
+    //
+    // ⚠️⚠️ `gated: true` IS INCLUDED BECAUSE A NEGATIVE CONTROL FOUND A SECOND
+    // INSTANCE OF THE REPORTED DEFECT THAT NOBODY HAD REPORTED. Running the five
+    // controls to prove reusd_re was the only asset that moved, fxusd came back
+    // "Healthy · 10/10" — with `primary_exit.gate: "Redemption disabled at the
+    // protocol level for holders."` and riskAnalyst's authored liquidity 4.5. The
+    // same 5.5-point flattering gap, the same mechanism, on a registered asset,
+    // and it was found by checking that a fix did NOT do something rather than
+    // that it did.
+    //
+    // tidresearch reported the CLASS, not the instance: "don't compute an axis-3
+    // band from depth alone where a primary-redemption leg exists and is worse."
+    // fxusd satisfies that exactly, so leaving it would have been knowing about a
+    // live flattering rating and shipping around it.
+    //
+    // ⚠️ EVERY AFFECTED ASSET MEASURED BEFORE INCLUDING IT, because the first
+    // version of this rule shipped a false count in this very comment:
+    //   fxusd      Healthy 10/10 -> Authored 4.5   <- the material correction
+    //   usg        Stress  4/10  -> Authored 3.5   <- half a notch, same direction
+    //   reusde_re  Stress  2/10  -> Authored 2.0   <- no visible change
+    //   dusd_alto  already withheld (clears_entire_supply) — unchanged
+    //   tsm_rh     gated, NO authored score -> "Not rated". Not registered, so no
+    //              page renders it today; if it is ever registered the axis reads
+    //              Not rated rather than wrong, which is the honest failure.
+    //   usdm, susds, syzusd publish `gated: false` -> untouched, live control.
+    //
+    // ⚠️ KEYED ON THE STRUCTURE, NOT ON THE SIZE OF THE DISAGREEMENT. Withholding
+    // only where the authored score differs materially would key on the divergence
+    // itself — which is the comparison the owner closed on axis 1, for the reason
+    // that a published score beside a live band reads as a rival to it. A holder
+    // with no primary channel is a fact about the asset; the gap it produces is a
+    // consequence, not the test.
+    //   gate: not_measured — the leg is DECLARED UNMEASURED, so the worse of two
+    //                        legs is not computable at all. tidresearch's own
+    //                        framing: if the worse leg isn't available, not rating
+    //                        beats rating the wrong leg.
+    //
+    // ⚠️ Counted across every served liquidity/1 overlay AND every base feed with a
+    // liquidity block: `gate: 'not_measured'` is reusd_re ALONE. syzusd publishes
+    // `depth.status: 'not_measured'` with no gate field and is unaffected, which is
+    // the live negative control for the field being read rather than the word.
+    //
+    // ⚠️ READ FROM THE MERGED BLOCK, WHICH IS WHY IT IS THE OVERLAY'S FIELD. The
+    // base feed's `primary_exit.gated: true` DOES NOT SURVIVE to render time:
+    // liquidity/1 is `mode: 'replace'`, so the overlay's `primary_exit` (gated:
+    // null, gate: 'not_measured') supplants it wholesale — the same silent field
+    // loss the replace-mode note on AXIS_OVERLAY_SCHEMAS warns about. My first
+    // attempt keyed on the base feed's flag and changed nothing on the page; the
+    // browser said so and the diff would not have.
+    _primaryExitNotScorable(lq) {
+        var pe = (lq || {}).primary_exit;
+        if (!pe || typeof pe !== 'object') return false;
+        // Declared unmeasured: the worse of two legs is not computable.
+        if (pe.gate === 'not_measured') return true;
+        // Declared gated: the holder's primary channel does not exist, so venue
+        // depth is not the binding leg. `gated` is a deliberate tri-state —
+        // false is published and must NOT trip this.
+        return pe.gated === true;
+    },
+
     _depthNonDerivable(lq) {
         lq = lq || {};
+        // ⚠️ BOTH SIDES READ THIS ONE HELPER ON PURPOSE. The invariant stated on
+        // DEPTH_NON_DERIVABLE_STATUSES — "a band withheld without the authored path
+        // unblocked leaves the axis blank with both halves in hand" — was violated
+        // once already by a literal here drifting from the shared list. A gated
+        // primary exit withholds the band in liquidityRating AND admits the
+        // producer's authored score here; expressing it twice is how they drift.
         return lq.derived_score_status === 'not_computed' ||
             lq.two_pct_depth_size_responsive === false ||
+            this._primaryExitNotScorable(lq) ||
             this.DEPTH_NON_DERIVABLE_STATUSES.indexOf(lq.two_pct_depth_status) >= 0;
     },
 
@@ -6494,6 +6607,20 @@ const CommonRenderer = {
             var parts = self._depthQualifierHtml(liq, data);
             var basis = typeof liq.liquidity_score_basis === 'string' && liq.liquidity_score_basis.trim()
                 ? liq.liquidity_score_basis : null;
+            // ⚠️ THE CAVEAT THAT WOULD HAVE PREVENTED THE DEFECT ABOVE IT, PUBLISHED
+            // AND UNRENDERED. reUSD-RE's `liquidity_score_depth_caveat` reads: the
+            // feed's $10M 2% depth "is a genuine venue measurement — but it measures
+            // the leg this axis does NOT score on. Do not reconcile 4.5 against it."
+            // That sentence sat in our own served payload while the tile reconciled
+            // exactly that way and published Healthy 10/10. Rendered next to the
+            // depth figure, which is where a reader meets the number it is about.
+            var depthCaveat = typeof liq.liquidity_score_depth_caveat === 'string' &&
+                liq.liquidity_score_depth_caveat.trim()
+                ? liq.liquidity_score_depth_caveat.trim() : null;
+            if (depthCaveat) {
+                parts += '<div class="text-xs text-amber-700 mb-1">' +
+                    self._mdInlineHtml(depthCaveat) + '</div>';
+            }
             var perChain = self._perChainScoreText(liq.liquidity_score_per_chain);
             if (perChain) {
                 parts += '<div class="text-xs text-amber-700 mb-1">' + self._mdInlineHtml(perChain) + '</div>';
