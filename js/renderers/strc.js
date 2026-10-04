@@ -958,20 +958,43 @@ var STRCRenderer = {
             // occurred. Nothing in it read from the feed, which is why it froze.
             //
             // ⚠️ REPLACED WITH A STALENESS STATEMENT, NOT A NEW FORECAST, AND NOT A
-            // DURATION. The published series is CONTIGUOUS MONTHLY and appends even when
-            // the rate does not move — 2026-04, -05 and -06 all repeat 11.50% — so the
-            // months after its last entry are MISSING DATA, not an unchanged rate. Saying
-            // "held at 12.00% since July" would be inferring the opposite of what the
-            // evidence supports. The current rate is already rendered above as the headline
-            // figure, so this does not restate it.
+            // DURATION. "Held at 12.00% since July" would infer an unchanged rate from an
+            // absence, which this field cannot support.
+            //
+            // ⚠️⚠️ MY FIRST VERSION OF THIS SENTENCE SAID "the published series appends every
+            // month, including months with no change" AND THAT WAS FALSE. I inferred an
+            // unconditional monthly append from 2026-04/-05/-06 all repeating 11.50% —
+            // three identical consecutive values looked like proof. PegTracker's diagnosis:
+            // `rate_history` is a HAND-TYPED CONSTANT (STRC_DIVIDEND_RATE_HISTORY in their
+            // analyzer) that has never appended at all, and those repeats were typed by
+            // hand. The feed's own `source` string says so — it ends "dividend rate history
+            // manual cadence" — and I had printed that string without reading the end of it.
+            //
+            // So my CONCLUSION was right (the missing months are missing data) and my
+            // EVIDENCE was wrong, which is the worst shape to ship: the sentence sounded
+            // more sourced than it was, and it asserted a mechanism the producer does not
+            // have. It is now stated as what it is — a hand-maintained list — citing the
+            // feed's own admission rather than my inference about its cadence.
+            //
+            // ⚠️ `current_rate` IS THE SAME CONSTANT'S LAST ENTRY, i.e. also hand-typed. It
+            // reads 12.00% correctly today only because the rate has not moved. It is still
+            // rendered above as the headline figure and this does not restate it — but the
+            // authoritative series DOES exist in a file we already serve:
+            // strategy_events.json carries four STRC_RATE_ANNOUNCEMENT events parsed from
+            // the rate 8-Ks (2026-06-15 11.5%, 2026-07-30 12.0%, 2026-09-01 12.0%,
+            // 2026-10-01 12.0%, each with its accession). PegTracker is deriving both
+            // fields from those. ⚠️ DELIBERATELY NOT DERIVED HERE — a consumer-side
+            // reimplementation of a producer's series goes stale-silent the moment they
+            // change it, and they are changing it now.
             (history.length
                 ? '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
                       '<strong>Rate history ends <span class="font-mono">' +
                       CommonRenderer._escapeAttr(String(history[history.length - 1].month)) + '</span>.</strong> ' +
-                      'The published series appends every month, including months with no ' +
-                      'change, so any later month is absent from the feed rather than ' +
-                      'unchanged. The monthly reset is discretionary and no forward rate ' +
-                      'is published here.' +
+                      'This is a hand-maintained list, not an automatic series \u2014 the ' +
+                      'feed\u2019s own source note ends \u201cdividend rate history manual ' +
+                      'cadence\u201d \u2014 so a later month missing here means it has not ' +
+                      'been added, which is not the same as the rate being unchanged. The ' +
+                      'monthly reset is discretionary and no forward rate is published here.' +
                   '</div>'
                 : '') +
             '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
