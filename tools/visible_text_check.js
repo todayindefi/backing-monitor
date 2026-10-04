@@ -49,6 +49,36 @@ function visibleText(root) {
     return out.replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * Text a reader can reach by HOVERING: title and aria-label on visible elements.
+ *
+ * ⚠️ NOT COSMETIC. `structural_score_basis` renders as a title="" on the
+ * "Structural 4/10" chip in the summary band — a VISIBLE 114x26 element. On usdat
+ * that tooltip carries "One key can queue a full-reach upgrade of the token, the
+ * vault and the withdrawal queue", which is FACTUALLY WRONG (the control is a
+ * 2-of-3 MPC representation) and contradicts the MPC framing rendered as plain
+ * text elsewhere on the same page.
+ *
+ * I reported that claim as unreachable because visibleText() walks TEXT NODES and
+ * a title attribute is not one. The tool said "not visible"; a reader reads it by
+ * pointing at the chip. Fourth instrument-weaker-than-the-claim of the day, and
+ * the only one where the tool itself was the cause.
+ *
+ * ⚠️ Absence from visibleText() does NOT mean a reader cannot read it.
+ */
+function hoverText(root) {
+    root = root || document.body;
+    var W = root.ownerDocument.defaultView;
+    var out = '';
+    var nodes = root.querySelectorAll('[title],[aria-label]');
+    for (var i = 0; i < nodes.length; i++) {
+        if (!isVisible(nodes[i], W)) continue;
+        out += ' ' + (nodes[i].getAttribute('title') || '') +
+               ' ' + (nodes[i].getAttribute('aria-label') || '');
+    }
+    return out.replace(/\s+/g, ' ').trim();
+}
+
 /** Computed style on the element AND every ancestor, plus a non-zero box. */
 function isVisible(el, W) {
     W = W || el.ownerDocument.defaultView;
@@ -89,11 +119,18 @@ function isVisible(el, W) {
 function readerSaw(phrase, root) {
     root = root || document.body;
     var vis = visibleText(root).indexOf(phrase) >= 0;
+    var hover = hoverText(root).indexOf(phrase) >= 0;
     var text = (root.innerText || '').replace(/\s+/g, ' ').indexOf(phrase) >= 0;
     var html = root.innerHTML.indexOf(phrase) >= 0;
     return {
         phrase: phrase,
         inVisibleText: vis,
+        // ⚠️ Reachable by hover on a VISIBLE element. Deliberately NOT part of
+        // `disagree` — text-vs-tooltip is a real distinction, not instruments
+        // contradicting each other. `readerCanReach` is the field for "did we
+        // publish this claim", and it is TRUE for a tooltip-only string.
+        inHoverText: hover,
+        readerCanReach: vis || hover,
         inInnerText: text,
         inInnerHTML: html,
         disagree: !(vis === text && text === html)
@@ -112,4 +149,4 @@ function readerSaw(phrase, root) {
 // tidresearch pinned ours to the bespoke renderers by measuring crvusd, where
 // the same section renders at 753x6775. Without that the finding is true and
 // unactionable.
-if (typeof module !== 'undefined') module.exports = { visibleText, isVisible, readerSaw };
+if (typeof module !== 'undefined') module.exports = { visibleText, hoverText, isVisible, readerSaw };
