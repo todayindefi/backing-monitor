@@ -1,0 +1,97 @@
+// Visible-text extraction for DOM claims. Paste into a browser evaluate call
+// against a served page (python3 -m http.server, then ?asset=<slug>).
+//
+// ⚠️ WHY THIS EXISTS: on 2026-10-04 four separate claims about what a reader
+// sees were wrong, and every one came from asking a question the instrument
+// could not answer:
+//
+//   `innerHTML.includes(x)`        asked "did a reader see x?"  -> NO. Returns
+//                                 true for text in a 0x0 box, inside
+//                                 display:none, and inside a collapsed
+//                                 <details>. Five sections were reported as
+//                                 rendering on this basis; they were hidden.
+//   `classList.contains('hidden')` asked "is this hidden?"      -> NO. The
+//                                 bespoke renderers hide sections with
+//                                 `style.display = 'none'` and never set the
+//                                 class, so this passes on hidden content.
+//   `innerText`                    asked "what is on the page?" -> UNDER-reports.
+//                                 Collapsed <details> content is absent from
+//                                 it, which produced three false negatives in
+//                                 one hour.
+//   one element's bounding box     asked "is the page informative?" -> NO. That
+//                                 is a claim about every OTHER element.
+//                                 `#section-liquidity` measured 0x0 and the
+//                                 page's bespoke panel was rendering the same
+//                                 evidence a few inches away.
+//   a Python re-derivation         asked "what does the renderer do?" -> NO. A
+//                                 second implementation is a new artifact with
+//                                 its own bugs; it agreed on 4 of 5 assets and
+//                                 the 5th was the one that mattered.
+//
+// ⚠️ AND THE SUBTLEST ONE: searching for a TOKEN and reporting a CONCEPT.
+// "floor" matched the band's own subtitle `0.5% depth (floor)` and was reported
+// as the producer's explanation ("A FLOOR, not a measurement") rendering. It was
+// not. A string match tells you a word is present, never that a reader was told.
+// Search for the WHOLE SENTENCE you claim a reader read.
+//
+// RULE OF THUMB: if a claim contains the word "reader", use visibleText().
+
+/** Visible text of a subtree: text nodes whose ancestors are all displayed. */
+function visibleText(root) {
+    root = root || document.body;
+    var W = root.ownerDocument.defaultView;
+    var out = '';
+    var walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    while (walker.nextNode()) {
+        var el = walker.currentNode.parentElement;
+        if (el && isVisible(el, W)) out += ' ' + walker.currentNode.nodeValue;
+    }
+    return out.replace(/\s+/g, ' ').trim();
+}
+
+/** Computed style on the element AND every ancestor, plus a non-zero box. */
+function isVisible(el, W) {
+    W = W || el.ownerDocument.defaultView;
+    var n = el;
+    while (n && n.tagName !== 'BODY') {
+        var cs = W.getComputedStyle(n);
+        if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+        // ⚠️ A collapsed <details> is NOT display:none — its children simply do
+        // not render. innerHTML sees them; a reader does not.
+        if (n.tagName === 'DETAILS' && !n.open && n.firstElementChild !== null) {
+            var summary = n.querySelector(':scope > summary');
+            if (!summary || !summary.contains(el)) return false;
+        }
+        n = n.parentElement;
+    }
+    var r = el.getBoundingClientRect();
+    return r.width > 0 && r.height > 0;
+}
+
+/**
+ * Did a reader see this phrase? Pass the WHOLE sentence, not a keyword.
+ * Returns both answers so a present-but-invisible string is obvious rather
+ * than reported as rendering.
+ */
+function readerSaw(phrase, root) {
+    root = root || document.body;
+    return {
+        phrase: phrase,
+        inVisibleText: visibleText(root).indexOf(phrase) >= 0,
+        inInnerHTML: root.innerHTML.indexOf(phrase) >= 0
+    };
+}
+
+// ⚠️ NEGATIVE CONTROL, NOT OPTIONAL. A check that cannot come out the other way
+// has told you nothing. Before trusting a "renders correctly" result, break the
+// input that is supposed to drive it and confirm the old face comes back — that
+// is what proved the withdrawn-attachment-point branch was doing the work, and
+// it is also what surfaced fxusd, a second unreported defect found by verifying
+// that a fix changed NOTHING ELSE.
+//
+// ⚠️ AND RUN A POSITIVE CONTROL FOR THE OPPOSITE CAUSE: measuring that one page
+// hides a section cannot distinguish "hidden here" from "hidden everywhere".
+// tidresearch pinned ours to the bespoke renderers by measuring crvusd, where
+// the same section renders at 753x6775. Without that the finding is true and
+// unactionable.
+if (typeof module !== 'undefined') module.exports = { visibleText, isVisible, readerSaw };
