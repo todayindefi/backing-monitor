@@ -1,51 +1,52 @@
 {
- "schema_version": "axis-basis/1",
- "producer": "riskanalyst",
- "asset": "usdai",
- "as_of": "2026-09-11T00:00:00Z",
- "peg": {
-  "peg_mechanism_score": 7.0,
-  "peg_mechanism_score_source": "riskAnalyst:authored",
-  "peg_mechanism_score_generated_at": "2026-09-11T00:00:00Z",
-  "peg_mechanism_score_basis": "MEASURES THE MECHANISM, NOT THE \u22122.6bp DEVIATION. 1:1 PYUSD mint/redeem is a fiat-backed-with-redemption design, which is the strongest mechanism class in this corpus. \u26a0\ufe0f THE SCORE INHERITS PYUSD'S OWN MECHANISM RISK \u2014 a 1:1 redemption into PYUSD is only as good as PYUSD's redemption, so this 7.0 rests on a second issuer's arrangement and is not independent of it.",
-  "peg_mechanism_score_persistence": "filtered \u2014 mechanism design, not spot-responsive"
- },
- "backing": {
-  "backing_score": 7.0,
-  "backing_score_source": "riskAnalyst:authored",
-  "backing_score_generated_at": "2026-09-11T00:00:00Z",
-  "backing_score_basis": "MEASURES RESERVE QUALITY AND CUSTODY LOCATION, NOT THE RATIO \u2014 which is an identity. \u2705 THE STRONG FACT IS CUSTODY: the reserve is PYUSD held DIRECTLY IN THE USDai CONTRACT, so the assets are where a reader can see them rather than at an unwalked portal layer. That is precisely what usdat LOST in its 2026-08-19 rotation, and it is why these two assets score differently on similar-looking ratios. Quality is high: PYUSD is regulated and T-Bill backed. \u26a0\ufe0f THE FEED'S collateral_ratio 100.0 WITH A SURPLUS OF $0.92 ON $290,117,769.24 IS AN ACCOUNTING IDENTITY \u2014 ninety-two cents of surplus on a $290M book is rounding, and backing is defined as PYUSD held against supply. The ratio carries no information; THE CUSTODY LOCATION DOES, and that is what the 7.0 prices.",
-  "backing_score_persistence": "filtered \u2014 reserve quality and custody, not a spot ratio",
-  "backing_score_denominator": "\u26a0\ufe0f backing = PYUSD held = supply by construction, so the quotient cannot print anything but ~100. Never quote '100% collateralized' here as though it were a solvency measurement."
- },
- "liquidity": {
-  "liquidity_score": 5.5,
-  "liquidity_score_source": "riskAnalyst:authored",
-  "liquidity_score_generated_at": "2026-09-12T00:00:00Z",
-  "liquidity_score_basis": "\u26a0\ufe0f THE WEAK DIMENSION, AND IT IS THE ONE TO READ FIRST ON THIS ASSET. USDai/USDC Curve under ~$2M plus a thin Uni V4 pool; no CEX; the retail path is the constraint. \u26a0\ufe0f ~$2M OF VENUE AGAINST A $290,117,769.24 BOOK \u2014 under 0.7% \u2014 so peg 7.0 and backing 7.0 describe an asset most holders cannot exit at scale. The three axes are not in tension; they answer different questions and only one of them is about getting out.",
-  "liquidity_score_persistence": "filtered \u2014 venue structure, not spot depth",
-  "liquidity_score_depth_caveat": "\u26a0\ufe0f THE FEED'S total_2pct_depth OF $2,000,000 IS NOT A MEASUREMENT: is_floor true, status 'ladder_exhausted' \u2014 the ladder ran out without resolving a 2% crossing. It coincides with the ~$2M venue figure, \u26a0\ufe0f AND THE COINCIDENCE IS NOT CORROBORATION: a ladder that exhausts at its top rung reports that rung, so agreement with the pool size is arithmetic, not confirmation.",
-  "liquidity_score_ladder": "\u26a0\ufe0f **RE-DERIVED 2026-09-12 ON THE LADDER (all-in). 4.5 \u2192 5.5.** **MEASURED EXIT COST BY SIZE:** $1,000\u2192-0.1bps \u00b7 $10,000\u2192-0.1bps \u00b7 $100,000\u2192-0.5bps \u00b7 $500,000\u2192-1.9bps \u00b7 $1,000,000\u2192-2.6bps \u00b7 $2,000,000\u2192-3.6bps. \u2705 **$1,000,000 leaves for 2.6 basis points.** \u26a0\ufe0f **The 4.5 was argued from VENUE SIZE \u2014 *\"Curve under ~$2M + a thin Uni V4 pool\"* \u2014 which is the frame this axis retired.** A pool being small is not the claim that an exit is expensive: **small AND cheap are compatible**, and only one of them is the holder's question. \u26a0\ufe0f **Held below 6.0 by what is still true:** no CEX venue, and **retail primary redemption is gated**, so this ladder is the only route for an ungated holder. \u26a0\ufe0f **Ladder stops at $2,000,000 \u2014 evidenced to seven figures, unevidenced above.** \u26a0\ufe0f\u26a0\ufe0f **ALL FIGURES HERE ARE ALL-IN REALISED COST, RECOMPUTED FROM `output_usd` \u2014 NOT the `slippage_bps` field.** The two differ and the difference is not noise: **on crvUSD the gap is a CONSTANT ~2.6bps across six orders of magnitude** ($1k through $10M), which is a **FEE/SPREAD the impact field excludes**. `slippage_bps` is PRICE IMPACT; `output_usd` is what the holder actually receives. **This axis scores what the holder receives.** \u26a0\ufe0f At $100,000 crvUSD reads \u22120.1bps on the field and **\u22122.7bps all-in \u2014 a 27\u00d7 difference on the same trade.** \u26a0\ufe0f AND ON `susdat` AND `usdai` THE FIELD IS ALSO SIGN-INVERTED relative to `output_usd` \u2014 two distinct defects, not one. **Cross-check `output_usd` before quoting any rung.**",
-  "liquidity_score_ladder_as_of": "2026-09-12T00:00:00Z"
- },
- "issuer": {
-  "issuer_score": 5.0,
-  "issuer_score_source": "riskAnalyst:authored",
-  "issuer_score_generated_at": "2026-09-11T00:00:00Z",
-  "issuer_score_basis": "MEASURES THE ENTITY. Credible VC backing (Framework, Dragonfly, Coinbase Ventures, Arbitrum) and a MetaStreet lineage. \u26a0\ufe0f VC BACKING IS EVIDENCE ABOUT DILIGENCE AT A POINT IN TIME, NOT AN ONGOING CONTROL \u2014 it does not constrain what the issuer can do after the round, and it is scored as reputation rather than as a mitigant.",
-  "issuer_score_persistence": "filtered \u2014 entity, not spot-responsive",
-  "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration."
- },
- "dependencies_note": "\u26a0\ufe0f NO `underlying_score` EXISTS ON THIS ASSET \u2014 axis 4 is genuinely absent, not merely unrouted, so there is no block here. \u26a0\ufe0f THAT IS A REAL GAP AND A LOAD-BEARING ONE: USDai's reserve is entirely another issuer's stablecoin, which makes counterparty concentration close to total and squarely an axis-4 question. Declared rather than authored \u2014 filling it needs a pass on PYUSD's own dependency set, not a restatement of the backing row.",
- "coverage_note": "\u26a0\ufe0f AXIS 5 IS DECLINED ON THIS ASSET, NOT SCORED LOW: the walk covered plasma only, 1 of 4 declared chains. structural_score 3.0 exists in frontmatter; coverage extension for arbitrum, ethereum and base was routed to security_analyst.",
- "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` block \u2014 the contract overlay carries the rendering structural_score_basis where one exists.",
- "dependencies": {
-  "underlying_score": 7.0,
-  "underlying_score_source": "riskAnalyst:authored",
-  "underlying_score_generated_at": "2026-09-12T00:00:00Z",
-  "underlying_score_basis": "\u2705 SET EQUAL TO pyusd 7.0 UNDER THE SETTLED AXIS-4 WRAPPER RULE. USDai is a PURE WRAPPER by the spec's own discriminator, tested rather than assumed: baseToken() = PYUSD and the contract holds 156.9M PYUSD DIRECTLY on Arbitrum against 154.8M supply. It holds ONLY the underlying, so the equal rule binds. The PYUSDx layer is M0's RAILS, not what USDai holds \u2014 a mechanism fact already priced on Peg 7.0. WHAT THE 7.0 CARRIES: the counterparty is Paxos and behind it PYUSD's reserve banks; bankruptcy-remote trust under NYDFS, no reserve failure since 2018. \u26a0\ufe0f The concentration is total and IS ALREADY IN pyusd's 7.0 \u2014 restating it as a further dock prices one fact twice across two reports.",
-  "underlying_score_persistence": "filtered \u2014 reserve architecture, not a daily balance",
-  "underlying_score_routing": "\u26a0\ufe0f Merges after backing-monitor's 49d0b4ca2 but axis 4 RENDERS NO SCORE today \u2014 axis 4 is a link tile and the display decision sits with their owner. Source-of-record until then.",
-  "underlying_score_correction": "\u26a0\ufe0f\u26a0\ufe0f CORRECTED 5.5 -> 7.0 ON 2026-09-12. I AUTHORED 5.5 IN VIOLATION OF A RULE I WROTE INTO THE SPEC THE DAY BEFORE. The 5.5 argued 'a wrapper of a single asset cannot be more diversified than the asset' and notched down \u2014 the exact reasoning the spec names a DRAFTING DEFECT ('a FLOOR ON THE UNDERLYING, NOT A MANDATE TO NOTCH THE WRAPPER'). tidresearch's published 7.5 violates the same rule in the OTHER direction, since a wrapper may not outrank its underlying. \u26a0\ufe0f THE DIVERGENCE WAS REAL AND NEITHER NUMBER WAS THE ANSWER. It was found because the user asked why two surfaces disagreed rather than which was right. \u26a0\ufe0f This was the ONLY notched pair in the corpus \u2014 susds=usds, apyusd=apxusd, syzusd=yzusd, susde=usde are all EQUAL."
- }
+  "schema_version": "axis-basis/1",
+  "producer": "riskanalyst",
+  "asset": "usdai",
+  "as_of": "2026-09-11T00:00:00Z",
+  "peg": {
+    "peg_mechanism_score": 7.0,
+    "peg_mechanism_score_source": "riskAnalyst:authored",
+    "peg_mechanism_score_generated_at": "2026-09-11T00:00:00Z",
+    "peg_mechanism_score_basis": "MEASURES THE MECHANISM, NOT THE −2.6bp DEVIATION. 1:1 PYUSD mint/redeem is a fiat-backed-with-redemption design, which is the strongest mechanism class in this corpus. ⚠️ THE SCORE INHERITS PYUSD'S OWN MECHANISM RISK — a 1:1 redemption into PYUSD is only as good as PYUSD's redemption, so this 7.0 rests on a second issuer's arrangement and is not independent of it.",
+    "peg_mechanism_score_persistence": "filtered — mechanism design, not spot-responsive"
+  },
+  "backing": {
+    "backing_score": 7.0,
+    "backing_score_source": "riskAnalyst:authored",
+    "backing_score_generated_at": "2026-09-11T00:00:00Z",
+    "backing_score_basis": "MEASURES RESERVE QUALITY AND CUSTODY LOCATION, NOT THE RATIO — which is an identity. ✅ THE STRONG FACT IS CUSTODY: the reserve is PYUSD held DIRECTLY IN THE USDai CONTRACT, so the assets are where a reader can see them rather than at an unwalked portal layer. That is precisely what usdat LOST in its 2026-08-19 rotation, and it is why these two assets score differently on similar-looking ratios. Quality is high: PYUSD is regulated and T-Bill backed. ⚠️ THE FEED'S collateral_ratio 100.0 WITH A SURPLUS OF $0.92 ON $290,117,769.24 IS AN ACCOUNTING IDENTITY — ninety-two cents of surplus on a $290M book is rounding, and backing is defined as PYUSD held against supply. The ratio carries no information; THE CUSTODY LOCATION DOES, and that is what the 7.0 prices.",
+    "backing_score_persistence": "filtered — reserve quality and custody, not a spot ratio",
+    "backing_score_denominator": "⚠️ backing = PYUSD held = supply by construction, so the quotient cannot print anything but ~100. Never quote '100% collateralized' here as though it were a solvency measurement."
+  },
+  "liquidity": {
+    "liquidity_score": 5.5,
+    "liquidity_score_source": "riskAnalyst:authored",
+    "liquidity_score_generated_at": "2026-09-12T00:00:00Z",
+    "liquidity_score_basis": "⚠️ THE WEAK DIMENSION, AND IT IS THE ONE TO READ FIRST ON THIS ASSET. USDai/USDC Curve under ~$2M plus a thin Uni V4 pool; no CEX; the retail path is the constraint. ⚠️ ~$2M OF VENUE AGAINST A $328,158,736.57 (`summary.supply_usd`, 2026-10-04; was $290,117,769.24 when written, +13%) BOOK — under 0.7% — so peg 7.0 and backing 7.0 describe an asset most holders cannot exit at scale. The three axes are not in tension; they answer different questions and only one of them is about getting out. ⚠️ FIGURE RE-DATED 2026-10-04. ✅ THE ARGUMENT SURVIVES AND STRENGTHENS RATHER THAN WEAKENS, which is why no score moves: ~$2M of venue against $328.2M is ~0.61%, so \"under 0.7%\" is STILL TRUE and the asset is now THINNER relative to its book than when this was written. ⚠️ `supply_complete: true` with `supply_chains_unread: []`, so the denominator is a full reading rather than a floor — arbitrum $327.2M of $328.2M.",
+    "liquidity_score_persistence": "filtered — venue structure, not spot depth",
+    "liquidity_score_depth_caveat": "⚠️ THE FEED'S total_2pct_depth OF $2,000,000 IS NOT A MEASUREMENT: is_floor true, status 'ladder_exhausted' — the ladder ran out without resolving a 2% crossing. It coincides with the ~$2M venue figure, ⚠️ AND THE COINCIDENCE IS NOT CORROBORATION: a ladder that exhausts at its top rung reports that rung, so agreement with the pool size is arithmetic, not confirmation.",
+    "liquidity_score_ladder": "⚠️ **RE-DERIVED 2026-09-12 ON THE LADDER (all-in). 4.5 → 5.5.** **MEASURED EXIT COST BY SIZE:** $1,000→-0.1bps · $10,000→-0.1bps · $100,000→-0.5bps · $500,000→-1.9bps · $1,000,000→-2.6bps · $2,000,000→-3.6bps. ✅ **$1,000,000 leaves for 2.6 basis points.** ⚠️ **The 4.5 was argued from VENUE SIZE — *\"Curve under ~$2M + a thin Uni V4 pool\"* — which is the frame this axis retired.** A pool being small is not the claim that an exit is expensive: **small AND cheap are compatible**, and only one of them is the holder's question. ⚠️ **Held below 6.0 by what is still true:** no CEX venue, and **retail primary redemption is gated**, so this ladder is the only route for an ungated holder. ⚠️ **Ladder stops at $2,000,000 — evidenced to seven figures, unevidenced above.** ⚠️⚠️ **ALL FIGURES HERE ARE ALL-IN REALISED COST, RECOMPUTED FROM `output_usd` — NOT the `slippage_bps` field.** The two differ and the difference is not noise: **on crvUSD the gap is a CONSTANT ~2.6bps across six orders of magnitude** ($1k through $10M), which is a **FEE/SPREAD the impact field excludes**. `slippage_bps` is PRICE IMPACT; `output_usd` is what the holder actually receives. **This axis scores what the holder receives.** ⚠️ At $100,000 crvUSD reads −0.1bps on the field and **−2.7bps all-in — a 27× difference on the same trade.** ⚠️ AND ON `susdat` AND `usdai` THE FIELD IS ALSO SIGN-INVERTED relative to `output_usd` — two distinct defects, not one. **Cross-check `output_usd` before quoting any rung.**",
+    "liquidity_score_ladder_as_of": "2026-09-12T00:00:00Z",
+    "liquidity_score_basis_rechecked_at": "2026-10-04T00:00:00Z"
+  },
+  "issuer": {
+    "issuer_score": 5.0,
+    "issuer_score_source": "riskAnalyst:authored",
+    "issuer_score_generated_at": "2026-09-11T00:00:00Z",
+    "issuer_score_basis": "MEASURES THE ENTITY. Credible VC backing (Framework, Dragonfly, Coinbase Ventures, Arbitrum) and a MetaStreet lineage. ⚠️ VC BACKING IS EVIDENCE ABOUT DILIGENCE AT A POINT IN TIME, NOT AN ONGOING CONTROL — it does not constrain what the issuer can do after the round, and it is scored as reputation rather than as a mitigant.",
+    "issuer_score_persistence": "filtered — entity, not spot-responsive",
+    "issuer_score_routing": "⚠️ UNROUTED — backing-monitor holding axis-6 registration."
+  },
+  "dependencies_note": "⚠️ NO `underlying_score` EXISTS ON THIS ASSET — axis 4 is genuinely absent, not merely unrouted, so there is no block here. ⚠️ THAT IS A REAL GAP AND A LOAD-BEARING ONE: USDai's reserve is entirely another issuer's stablecoin, which makes counterparty concentration close to total and squarely an axis-4 question. Declared rather than authored — filling it needs a pass on PYUSD's own dependency set, not a restatement of the backing row.",
+  "coverage_note": "⚠️ AXIS 5 IS DECLINED ON THIS ASSET, NOT SCORED LOW: the walk covered plasma only, 1 of 4 declared chains. structural_score 3.0 exists in frontmatter; coverage extension for arbitrum, ethereum and base was routed to security_analyst.",
+  "routing_note": "⚠️ ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. ⚠️ NO `contract` block — the contract overlay carries the rendering structural_score_basis where one exists.",
+  "dependencies": {
+    "underlying_score": 7.0,
+    "underlying_score_source": "riskAnalyst:authored",
+    "underlying_score_generated_at": "2026-09-12T00:00:00Z",
+    "underlying_score_basis": "✅ SET EQUAL TO pyusd 7.0 UNDER THE SETTLED AXIS-4 WRAPPER RULE. USDai is a PURE WRAPPER by the spec's own discriminator, tested rather than assumed: baseToken() = PYUSD and the contract holds 156.9M PYUSD DIRECTLY on Arbitrum against 154.8M supply. It holds ONLY the underlying, so the equal rule binds. The PYUSDx layer is M0's RAILS, not what USDai holds — a mechanism fact already priced on Peg 7.0. WHAT THE 7.0 CARRIES: the counterparty is Paxos and behind it PYUSD's reserve banks; bankruptcy-remote trust under NYDFS, no reserve failure since 2018. ⚠️ The concentration is total and IS ALREADY IN pyusd's 7.0 — restating it as a further dock prices one fact twice across two reports.",
+    "underlying_score_persistence": "filtered — reserve architecture, not a daily balance",
+    "underlying_score_routing": "⚠️ Merges after backing-monitor's 49d0b4ca2 but axis 4 RENDERS NO SCORE today — axis 4 is a link tile and the display decision sits with their owner. Source-of-record until then.",
+    "underlying_score_correction": "⚠️⚠️ CORRECTED 5.5 -> 7.0 ON 2026-09-12. I AUTHORED 5.5 IN VIOLATION OF A RULE I WROTE INTO THE SPEC THE DAY BEFORE. The 5.5 argued 'a wrapper of a single asset cannot be more diversified than the asset' and notched down — the exact reasoning the spec names a DRAFTING DEFECT ('a FLOOR ON THE UNDERLYING, NOT A MANDATE TO NOTCH THE WRAPPER'). tidresearch's published 7.5 violates the same rule in the OTHER direction, since a wrapper may not outrank its underlying. ⚠️ THE DIVERGENCE WAS REAL AND NEITHER NUMBER WAS THE ANSWER. It was found because the user asked why two surfaces disagreed rather than which was right. ⚠️ This was the ONLY notched pair in the corpus — susds=usds, apyusd=apxusd, syzusd=yzusd, susde=usde are all EQUAL."
+  }
 }
