@@ -70,15 +70,33 @@ function isVisible(el, W) {
 
 /**
  * Did a reader see this phrase? Pass the WHOLE sentence, not a keyword.
- * Returns both answers so a present-but-invisible string is obvious rather
- * than reported as rendering.
+ *
+ * Returns THREE answers, because on 2026-10-04 each instrument caught the case
+ * another missed and neither is a superset of the other:
+ *
+ *   innerHTML   over-reports  — true inside display:none and collapsed <details>
+ *   innerText   under-reports — omits collapsed <details>; blind to
+ *                               visibility:hidden, zero-opacity and off-screen
+ *   visibleText this file's walk — needs the explicit <details> branch, which is
+ *                               why that branch is tested rather than assumed
+ *
+ * ⚠️ `disagree` is the field to read. When the three do not agree, the claim is
+ * not yet settled and the next step is to look at the element, not to pick the
+ * answer you prefer. Measured on crvusd: 20 of 20 <details> are closed, all 20
+ * report a NON-ZERO box, innerText excludes all 20 correctly, and a box-only
+ * check calls all 20 visible.
  */
 function readerSaw(phrase, root) {
     root = root || document.body;
+    var vis = visibleText(root).indexOf(phrase) >= 0;
+    var text = (root.innerText || '').replace(/\s+/g, ' ').indexOf(phrase) >= 0;
+    var html = root.innerHTML.indexOf(phrase) >= 0;
     return {
         phrase: phrase,
-        inVisibleText: visibleText(root).indexOf(phrase) >= 0,
-        inInnerHTML: root.innerHTML.indexOf(phrase) >= 0
+        inVisibleText: vis,
+        inInnerText: text,
+        inInnerHTML: html,
+        disagree: !(vis === text && text === html)
     };
 }
 
