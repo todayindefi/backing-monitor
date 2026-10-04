@@ -1212,8 +1212,28 @@ var SaturnRenderer = {
                 '<span id="saturn-nav-decline-stats"></span>' +
                 'Vesting sets the upward drift; the mark sets the noise around it — read a decline by size and ' +
                 'persistence, not by direction, because a single hourly tick is ordinary mark movement. ' +
-                '30-day vesting design intentionally delays yield landing, so a fresh ' +
-                'sUSDat position accrues with a lag for its first 30 days. Implied APY is computed from ' +
+                // ⚠️ THE DURATION IS GONE FROM THIS SENTENCE AND MUST NOT RETURN AS A LITERAL.
+                // It read "30-day vesting design ... for its first 30 days". That 30 is
+                // `vesting_period_days`, a HARDCODED CONSTANT in PegTracker's analyzer returned
+                // by NO on-chain getter — riskAnalyst tried 18 candidate signatures on the vault
+                // and the WithdrawalQueue, with a fabricated getter reverting as the control.
+                // The measured parameter is `vestingPeriod()` = 259,200s = 3 DAYS under a 90-day
+                // ceiling, so the figure was ALSO WRONG BY 10x for the yield drip it described.
+                //
+                // ⚠️ AND THE PAGE CONTRADICTED ITSELF. The "Exit / redemption delay" row already
+                // renders "Not established — both candidate figures ruled out", while these
+                // sentences used the ruled-out figure as the causal explanation for the
+                // premium/discount: one row disowning a number three sentences leaned on.
+                //
+                // ⚠️ NOT REPLACED WITH "3-day", DELIBERATELY. That value lives only in
+                // riskAnalyst's prose, not in any feed we read, so hardcoding it swaps an
+                // unsourced literal for a better-sourced one that still cannot refresh — the
+                // same defect in a nicer costume. The mechanism needs no duration to be true,
+                // and the Exit row carries the measured position. If the figure is wanted on
+                // the page, the fix is PegTracker publishing `vestingPeriod()` and this
+                // reading it live.
+                'Vesting intentionally delays yield landing, so a fresh ' +
+                'sUSDat position accrues with a lag at first. Implied APY is computed from ' +
                 'the NAV slope over the trailing window; the 11% headline target is a Saturn-disclosed ' +
                 'design number, not a guarantee. sUSDat NAV is denominated in USDat (the vault\'s underlying), ' +
                 'not USD. USDat\'s own peg deviation stacks on top, so $-equivalent NAV ≈ 4626 NAV × current USDat peg.' +
@@ -1523,7 +1543,7 @@ var SaturnRenderer = {
                     'NAV accrues over time (currently ~$' + (s.nav_per_share != null ? s.nav_per_share.toFixed(4) : '1.0007') +
                     ' and growing under the 11% APY design target), so absolute-price comparisons would mis-state ' +
                     'the true gap. Positive (+) = premium: market paying above NAV, often when buyers want to skip ' +
-                    'the 30-day vesting queue. Negative (-) = discount: market trading below NAV. A persistent small ' +
+                    'the vesting queue. Negative (-) = discount: market trading below NAV. A persistent small ' +
                     'discount is not a peg break.' +
                 '</div>';
         }
@@ -1941,7 +1961,7 @@ var SaturnRenderer = {
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
                 'Price-vs-NAV is the meaningful metric for a vault share — Curve sUSDat/USDC spot ' +
                 'is not "the peg" because 1 sUSDat ≠ $1 by design. Positive (+) = premium above NAV; ' +
-                'negative (-) = discount below NAV. Persistent small discount typically reflects the 30-day ' +
+                'negative (-) = discount below NAV. Persistent small discount typically reflects the ' +
                 'vesting queue (arbs can\'t close the gap atomically), not a backing problem.' +
             '</div>' : '';
 
