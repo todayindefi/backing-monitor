@@ -47,6 +47,24 @@ For each asset, in this order:
    and a stale reason is worse than a stale number because it closes the question.
 3. **Published-vs-rendered** — anything new in the payload reaching no pixel. This repo's most
    repeated defect.
+   ⚠️ **ON THE DEPLOYED URL, NOT LOCALHOST, AND MEASURE THE BOX.** A local server proves the code
+   parses; it cannot prove a reader sees anything. Four separate chains sit between the two —
+   GitHub Pages deploy, a `max-age=600` CDN cache, `index.html`'s per-file `?v=` tokens, and
+   `dataUrl()`'s hourly bucket plus `DATA_CACHE_REV`. On 2026-10-04 eleven commits shipped and
+   none was checked live until the end of the day; they were all fine, which is luck rather than
+   process. The same day `dataUrl()`'s hour bucket produced a **false green** — a test reported a
+   stale-data warning against a fresh 13-entry file because the browser served the cached
+   10-entry copy, and a data-shape change needs `DATA_CACHE_REV` bumped or the page lies to the
+   tester as well as the reader.
+   ⚠️ **And "in the DOM" is not "on the page".** `innerHTML.includes` returns true inside
+   `display:none`, inside a 0x0 box and inside a collapsed `<details>`; `innerText` omits
+   collapsed `<details>`; a `title=""` tooltip is reader-reachable and appears in NEITHER. Use
+   `tools/visible_text_check.js` — `readerSaw()` reports visible text, hover text and innerHTML
+   together and flags disagreement. Five claims about what a reader sees were wrong on
+   2026-10-04, every one from an instrument that could not answer the question asked of it.
+   ⚠️ **It is not only our surface.** `tidresearch.com/dashboards/` proxies these pages at HTTP
+   200 for 18 slugs, so for those assets our page IS their page, with their URL in the reader's
+   address bar. Correction at source is close to the only lever either desk has.
 4. **The cross-asset section** at the end. ⚠️ **Owner instruction 2026-10-03: a cross-asset item
    is worked PER ASSET, at that asset's refresh, unless it is urgent.** So every cross-asset entry
    carries an `affects` line naming its slugs, and a grep for the slug you are refreshing surfaces
