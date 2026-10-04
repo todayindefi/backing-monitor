@@ -2,24 +2,63 @@
  "schema_version": "axis-basis/1",
  "producer": "riskanalyst",
  "asset": "apxusd",
- "as_of": "2026-09-10T12:00:00Z",
+ "as_of": "2026-10-04T04:48:42Z",
  "peg": {
-  "peg_mechanism_score": 2.5,
+  "peg_mechanism_score": 3.5,
   "peg_mechanism_score_source": "riskAnalyst:authored",
-  "peg_mechanism_score_basis": "MEASURES THE REDEMPTION MECHANISM, NOT THE MARKET PRICE. An RWA-collateralised synthetic with NO ATOMIC ON-CHAIN REDEMPTION \u2014 the peg relies on opaque off-chain USDC settlement plus secondary liquidity. \u26a0\ufe0f What an earlier revision treated as a temporary intraweek break has HARDENED into a standing discount, so this is scored as a structural feature rather than an excursion. A live price near par would not restore the missing redemption path.",
-  "peg_mechanism_score_persistence": "filtered \u2014 redemption mechanism, not market price"
+  "peg_mechanism_score_generated_at": "2026-10-04T04:48:42Z",
+  "peg_mechanism_score_basis": "RAISED 2.5 -> 3.5 on 2026-10-04. The 2.5 priced a sustained ~-18% dislocation (~$0.82) that has RESOLVED: live -1.1013% at $0.988987, current-regime band -0.53% to -1.95% over 293 hourly readings since 2026-09-22, with 0% below -2% against 88% in the 431 readings before. CAPPED FAR BELOW THE PRE-DEPEG 4.5 BY MEASUREMENT: apxUSD has NEVER traded at or above $1.00 in 722 readings (max 0.994715733). A one-sided discount that never touches par through a full recovery of its collateral is the market pricing the absence of an arbitrage path -- which CONFIRMS this axis rather than refuting it, since backing closed on the balance sheet while the discount stayed open, and those are only jointly consistent with no atomic redemption. Mechanism unchanged: off-chain USDC settlement, approved-counterparty RFQ, no on-chain redemption. DO NOT READ 3.5 AS PRICING AN ADOPTED REDEMPTION VALUE -- the 'Apyx 2.0' floor is evidenced only by a 2026-06-16 blog post and is NOT re-verified as of 2026-10-04; that is the cheapest measurement that could move this axis.",
+  "peg_mechanism_score_live_field": "peg.premium_discount_pct in PegTracker/data/apxusd_backing.json",
+  "peg_mechanism_score_band_30d": {
+   "min_pct": -3.5578402,
+   "max_pct": -0.5284267,
+   "n": 722,
+   "readings_at_or_above_par": 0
+  }
  },
  "backing": {
-  "backing_score": 2.0,
+  "backing_score": 3.0,
   "backing_score_source": "riskAnalyst:authored",
-  "backing_score_basis": "MEASURES ATTESTED COVERAGE AND ITS SCOPE. Attested collateralisation has run SUB-100% since the June 2026 drawdown. \u26a0\ufe0f The attested ratio is NETTED of protocol-owned liquidity and inventory on both sides \u2014 it is not reserves over supply \u2014 and only the SECURITIES leg is CPA-examined, leaving roughly 43.6% of the reserve outside that scope. Neither disclosure layer attests liabilities, so no opinion exists on coverage at all.",
-  "backing_score_persistence": "filtered \u2014 attested coverage on a netted basis, scope-limited"
+  "backing_score_generated_at": "2026-10-04T04:48:42Z",
+  "backing_score_basis": "RAISED 2.0 -> 3.0 on 2026-10-04. THE REPORT'S OWN WRITTEN RECOVERY GATE IS MET ON BOTH LEGS. Leg 1: STRC $99.41 (-59bps to par) vs the ~$95 gate -- NOTE market_session: closed, a last close not a live quote. Leg 2: attested CR >=100% continuously since 2026-09-17T19:49:54Z, 393 consecutive hourly readings, 0 of 293 below par since 09-22. The 'sustained' qualifier does real work: there were 21 crossings of par between 09-04 and 09-17 (49% sub-100%, mean 99.998) before the clean break, so two weeks ago the gate was genuinely not met. IDENTITY REPRODUCED RATHER THAN TRUSTED: recomputing the issuer's netted basis from the raw bucket split returns 101.5602%, matching attested_basis_residual_pp = -2.6e-05 against a 0.01pp tolerance across 723 of 723 readings. LOOK-THROUGH: netted reserve is 85.845% STRC / 14.152% cash, so baseline ~4.71 (0.85845 x STRC 4.0 + 0.14152 x cash 9.0). THE BASELINE FELL 5.7 -> 4.71 -- the coverage hole closed while the collateral's own score dropped 5.0 -> 4.0. Divisor deepens no further because two of its five components are gone (the sub-par hole; 'no buffer', now a 1.56% surplus), leaving single-issuer concentration + no atomic redemption + issuer-push reconciliation: ~1.5 -> 3.14 -> 3.0. WHAT HOLDS IT DOWN: 85.845% is ONE issuer's preferred on the issuer's own netted basis (gross 50.34% understates it); only 47.82% of the $153,652,247 STRC bucket is on-chain verifiable STRCx, leaving ~$80,171,763 issuer-stated at an undisclosed price; and the verifiable half is marked off a venue that cannot support it -- $70,758,598 priced at Jupiter's $99.2284 against jupiter_liquidity_usd of $375,478, a 188x position-to-source ratio, with CoinGecko's scaled mark disagreeing by -213.1 bps. 47.82% is itself computed at an APRIL price (wolf_april_2026, $103.0454); at the live mark it is 46.05% -- prefer 46.05% against anything marked live.",
+  "backing_score_live_fields": [
+   "summary.collateral_ratio",
+   "summary.collateral_ratio_independent_lb",
+   "asset_specific.backing_attestation.strcx_safe.coverage_pct_of_strc_bucket"
+  ],
+  "backing_score_measured": {
+   "collateral_ratio_netted_pct": 101.5602,
+   "collateral_ratio_independent_lb_pct": 100.909075,
+   "surplus_usd": 2749709.77,
+   "total_reserves_usd": 305223224.59,
+   "total_supply_usd": 302473514.82,
+   "netted_strc_share_pct": 85.845,
+   "strc_bucket_usd": 153652247.32,
+   "strcx_onchain_usd_live_mark": 70758597.77,
+   "strc_offchain_issuer_stated_usd": 80171763.0,
+   "ge_100_since": "2026-09-17T19:49:54Z",
+   "consecutive_readings_ge_100": 393,
+   "attestation_timestamp": "2026-10-04T04:44:35Z",
+   "signing_key_match": true
+  }
  },
  "liquidity": {
-  "liquidity_score": 3.0,
+  "liquidity_score": 3.5,
   "liquidity_score_source": "riskAnalyst:authored",
-  "liquidity_score_basis": "MEASURES EXECUTABLE EXIT, and the figure it replaced was an artifact. A prior derivation quoted slippage on a PAR basis while the asset traded at a discount, triple-counting depth; the corrected basis is what this scores. \u26a0\ufe0f Exit is further constrained by a cooldown into a terminal asset that is itself sub-par, so the realisable exit is worse than a spot quote implies.",
-  "liquidity_score_persistence": "filtered \u2014 executable exit including cooldown, not spot slippage"
+  "liquidity_score_generated_at": "2026-10-04T04:48:42Z",
+  "liquidity_score_basis": "RAISED 3.0 -> 3.5 on 2026-10-04, AND ONLY THE PEG-LEG CONTAMINATION LIFTS -- DEPTH ITSELF DID NOT IMPROVE. The 3.0 was held on a ~20% 30-day peg band; it is now 302.94 bps, which un-crushes the derived score to 6.0. BUT THE DEPTH LEG MEASURED SEPARATELY IS FLAT: derived mean 5.613 (09-04->09-21) vs 5.570 (09-22->10-04), with sub-5.0 readings slightly MORE frequent after (38 vs 33). Only the floor rose, 1.00 -> 3.50. Half a notch for a removed distortion, not a liquidity recovery. DEPTH IS CENSORED, NOT MEASURED: total_2pct_depth and depth_50bps both report $100,000 with is_floor true and status ladder_exhausted -- the deepest rung quoted still clears inside 50bps, so the crossing is above where we look. A floor is a lower bound and MAY NOT LIFT A SCORE. TVL $16,632,175 vs $302,473,515 supply = 5.50%. THE WORSE LINK SETS THIS AXIS, NOT THE DEX: primary redemption is off-chain, gated to approved counterparties via RFQ, no atomic settlement, and the issuer's own post-mortem admits the manual plumbing was too slow to defend at scale. The retail DEX route (>=$100K inside 50bps) is the BETTER link. REDEMPTION IS FOLDED HERE PER SPEC -- this asset carries no redemption_score and must not acquire one. A DURABLE PRIOR FINDING IS NOT VISIBLE IN 30 DAYS AND IS DEMOTED TO A QUESTION: the claim that Apyx pulls Curve depth off-hours by design (RTH ~4.0 vs off-hours 2.0) does not appear -- weekend derived mean 5.922 vs weekday 5.449, and 9 of the 12 sub-2.0 readings fall on WEEKDAYS, with Sunday holding the highest floor of any day. NOT RECORDED AS REFUTED: the original was a June observation, the post-mortem promised overnight-liquidity infrastructure, and the 12 low readings are isolated single hours confined to 09-05 -> 09-21 that look like ladder degradations. A DELIVERED COMMITMENT AND A STALE CLAIM PRODUCE THE SAME DATA HERE.",
+  "liquidity_score_measured": {
+   "derived_score": 6.0,
+   "total_tvl_usd": 16632174.81,
+   "depth_2pct_usd": 100000.0,
+   "depth_2pct_is_floor": true,
+   "depth_2pct_status": "ladder_exhausted",
+   "depth_50bps_usd": 100000.0,
+   "depth_50bps_is_floor": true,
+   "peg_band_30d_bps": 302.9413,
+   "tvl_pct_of_supply": 5.4987
+  },
+  "liquidity_score_unmeasured": "depth above the $100,000 rung on both the 50bps and 200bps ladders; the crossing is uncensored nowhere"
  },
  "dependencies": {
   "underlying_score": 3.0,
@@ -37,5 +76,49 @@
   "issuer_score_basis": "\u26a0\ufe0f MEASURES ISSUER BEHAVIOUR UNDER STRESS, NOT CONTRACT POSTURE \u2014 AND THE CUT IS ENTIRELY ON THE FORMER. CUT 5.5 -> 5.0 (June 2026). \u2705 THE CONTRACT/ADMIN POSTURE IS GENUINELY UNCHANGED AND REMAINS ABOVE SELF-ATTESTING PEERS: 3 audits including formal verification, a 4-of-6 Safe with a 72h target delay and a distributed guardian, two-layer disclosure (Accountable TEE PoR plus monthly Wolf AICPA), brokerage named (Alpaca), STRCx Safe identified (0x37b0779a\u2026). \u26a0\ufe0f THE NOTCH IS FOR WHAT THE DEPEG REVEALED ABOUT OPERATIONS: off-chain reconciliation FAILED TO HOLD PAR UNDER A REAL RUN; secondary depth is DISCRETIONARILY PULLED OFF-HOURS; and the reserve is ~66% concentrated in a single instrument (STRC) THE ISSUER CHOSE AND WHICH HAS NOW DE-ANCHORED. \u26a0\ufe0f A GOOD AUDIT RECORD AND A BAD RUN ARE NOT IN TENSION \u2014 they are evidence about different things, and this axis prices the second. STANDING OFFSETS CARRIED: April Wolf cash-scope narrowing, a mid-tier rather than Big-4 auditor, and the STRCx Safe lacking a timelock.",
   "issuer_score_persistence": "filtered \u2014 operator behaviour and disclosure, not spot-responsive",
   "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration pending the axis-4 render decision."
+ },
+ "contract": {
+  "structural_score": 4.5,
+  "structural_score_source": "riskAnalyst:authored",
+  "structural_score_generated_at": "2026-10-04T04:48:42Z",
+  "structural_score_basis": "HELD at 4.5 on 2026-10-04 -- all three Safes re-verified live and the structure is unchanged. Token governance 0xABdd8c8e..65e96 4-of-6 with targetAdminDelay 259,200s = 72h; maintainer/bridge 0xf9862efc..3ce2 4-of-7 with owner_timelock_seconds 0; STRCx custody 0x37b0779a..a555 3-of-6, with owner_set_match, threshold_match and singleton_match ALL TRUE as of 2026-10-04T04:48:23Z. THE QUORUM GAP STILL SITS ON THE LEG HOLDING THE RESERVE ASSET: custody's six owners are a SUBSET of the maintainer's seven (maintainer = those six plus 0x6c927E5B..4e79), so three of the same six move 713,088.44 STRCx instantly while moving the token takes four and waits 72 hours. The seventh owner adds a signer, not a door. NEW AND DELIBERATELY NOT PRICED AS A DEDUCTION: ccip_conservation_match is now FALSE -- 18,224,305.94 locked on Ethereum against a Base burn-mint supply of 9,636,755.81, a surplus of 8,587,550.13. READ THE DIRECTION: locked EXCEEDS minted, so this is bridge over-collateralization and trapped idle capital, NOT more tokens circulating than are backed, which is the failure this invariant normally catches. Still a real finding -- the invariant is a two-sided equality and something is moving capital into the lock pool without minting, unexplained. STILL UNMEASURED AND STILL BOUNDING THIS: whether the 72h delay is itself reducible, and on what notice. Role-0 enumeration REVERTED on both AccessManagers and is recorded as a FAILED READ, not zero members.",
+  "structural_score_measured": {
+   "admin_safe": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+   "admin_threshold": "4-of-6",
+   "target_admin_delay_seconds": 259200,
+   "maintainer_safe": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+   "maintainer_threshold": "4-of-7",
+   "maintainer_timelock_seconds": 0,
+   "strcx_custody_safe": "0x37b0779a66edc491df83e59a56d485835323a555",
+   "strcx_custody_threshold": "3-of-6",
+   "strcx_custody_match_flags": {
+    "owner_set_match": true,
+    "threshold_match": true,
+    "singleton_match": true
+   },
+   "ccip_conservation_match": false,
+   "ccip_locked_eth": 18224305.938369047,
+   "ccip_base_supply": 9636755.805604678,
+   "ccip_surplus_locked_not_minted": 8587550.132764367,
+   "rmn_canonical": true,
+   "router_canonical": true,
+   "rebalancer_zero": true
+  }
+ },
+ "overall": {
+  "overall_score": 3.5,
+  "overall_score_source": "riskAnalyst:owner-ruling",
+  "overall_score_generated_at": "2026-10-04T04:48:42Z",
+  "overall_score_basis": "RAISED 3.0 -> 3.5 on 2026-10-04 by owner ruling, on a recommendation of 3.5. The 3.0 rested on an attested ~84% CR sustained for weeks with apxUSD at ~$0.82; both figures are resolved. AT 3.5 THIS SITS BELOW THE AXIS MEAN OF 3.7500 AND THE PLACEMENT IS DELIBERATE -- no spec section-4 disclosure and no OVERALL_EXEMPT registration is owed, and none should be added. The mean is lifted by Contract 4.5 and Issuer 5.0, the axes this asset is genuinely strong on; the binding constraint on a stablecoin is whether it holds its peg, and this one has never touched par in 722 readings. An asset that is well-governed and transparently attested while trading at a persistent discount should not score at its own average -- the average is diluted by axes that do not bind. PATH UP, and the prior gate is RETIRED BECAUSE IT WAS MET so a new one is required: Redemption Value adopted on-chain or in docs, OR sustained trading at or above par. PATH DOWN: STRC below ~$95, or the attested CR re-crossing 100% -- the 21 crossings between 09-04 and 09-17 show that boundary is live, not historical. GOVERNING CAVEAT ON THE WHOLE RE-RATE: NOTHING ALERTED. The recovery completed 2026-09-17 and was processed 2026-10-04 because the owner queued the asset, not because any monitor surfaced it -- the alerters fire on deterioration only, so a report cannot be caught being too harsh. The one alert that DID fire was a -1.10% peg WARN, on an asset where 90% of 724 readings sit below -1%.",
+  "axis_mean": 3.75,
+  "axis_set": [
+   "peg_mechanism_score",
+   "backing_score",
+   "liquidity_score",
+   "underlying_score",
+   "structural_score",
+   "issuer_score"
+  ],
+  "above_mean": false
  }
 }
