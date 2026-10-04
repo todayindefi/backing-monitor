@@ -928,7 +928,18 @@ var STRCRenderer = {
                         '<div class="text-4xl font-bold text-slate-800 dark:text-slate-100">' + rateTxt + '</div>' +
                         rateChangeBadge +
                     '</div>' +
-                    '<div class="text-xs text-slate-500 mt-4 mb-1">Rate history (last ' + history.length + ' months)</div>' +
+                    // ⚠️ "last N months" ASSERTED RECENCY THE SERIES DOES NOT HAVE. On
+                    // 2026-10-04 the 10 entries run 2025-10 → 2026-07, so "last 10 months"
+                    // described a window ending three months before the reader. The label
+                    // now states the window the data actually covers, read from the entries.
+                    '<div class="text-xs text-slate-500 mt-4 mb-1">Rate history ' +
+                        (history.length
+                            ? '<span class="font-mono">' + CommonRenderer._escapeAttr(String(history[0].month)) +
+                              '</span> \u2192 <span class="font-mono">' +
+                              CommonRenderer._escapeAttr(String(history[history.length - 1].month)) + '</span>' +
+                              ' (' + history.length + ' months)'
+                            : '(none published)') +
+                    '</div>' +
                     '<div style="height: 180px; position: relative;"><canvas id="strc-rate-chart"></canvas></div>' +
                 '</div>' +
                 '<div>' +
@@ -940,9 +951,29 @@ var STRCRenderer = {
                 '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">STRC defense = ' + STRC_DIV_POLICY_REGIME.label + '</div>' +
                 '<div class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">' + STRC_DIV_POLICY_REGIME.blurb + '</div>' +
             '</div>' +
-            '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
-                '<strong>Next reset:</strong> pending late July. Base case remains +50 bps to 12.50%, but a hold at 12.00% is now a live outcome: the record reserve and exercised buyback are already defending STRC.' +
-            '</div>' +
+            // ⚠️ THIS LINE FORECAST AN EVENT THREE MONTHS IN THE PAST. It read "Next
+            // reset: pending late July. Base case remains +50 bps to 12.50%, but a hold at
+            // 12.00% is now a live outcome" — on 2026-10-04, for a reset that had happened,
+            // with the rate holding at 12.00%, i.e. the sentence's own hedge is what
+            // occurred. Nothing in it read from the feed, which is why it froze.
+            //
+            // ⚠️ REPLACED WITH A STALENESS STATEMENT, NOT A NEW FORECAST, AND NOT A
+            // DURATION. The published series is CONTIGUOUS MONTHLY and appends even when
+            // the rate does not move — 2026-04, -05 and -06 all repeat 11.50% — so the
+            // months after its last entry are MISSING DATA, not an unchanged rate. Saying
+            // "held at 12.00% since July" would be inferring the opposite of what the
+            // evidence supports. The current rate is already rendered above as the headline
+            // figure, so this does not restate it.
+            (history.length
+                ? '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
+                      '<strong>Rate history ends <span class="font-mono">' +
+                      CommonRenderer._escapeAttr(String(history[history.length - 1].month)) + '</span>.</strong> ' +
+                      'The published series appends every month, including months with no ' +
+                      'change, so any later month is absent from the feed rather than ' +
+                      'unchanged. The monthly reset is discretionary and no forward rate ' +
+                      'is published here.' +
+                  '</div>'
+                : '') +
             '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
                 '<strong>Indicative VWAP rate schedule</strong> (prospectus mechanic — <em>no longer an automatic par defense</em> ' +
                 'as of the 06-29 framework; the monthly reset is now discretionary): ' +
