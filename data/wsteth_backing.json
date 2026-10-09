@@ -1,0 +1,695 @@
+{
+  "schema_version": 1,
+  "asset": "wstETH",
+  "asset_slug": "wsteth",
+  "timestamp": "2026-10-09T16:07:18Z",
+  "chain": "ethereum",
+  "chain_id": 1,
+  "identity": {
+    "instrument": "canonical Lido wstETH wrapper",
+    "issuer": "Lido",
+    "contract": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+    "underlying_contract": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+    "scope": "canonical Ethereum wstETH; other-chain representations are bridge context, not added supply"
+  },
+  "report_url": "https://tidresearch.com/reports/wsteth",
+  "peg": {
+    "chain": "ethereum",
+    "chain_id": 1,
+    "source_series": "wstETH_Ethereum",
+    "as_of": "2026-10-09T15:26:03Z",
+    "nav": 1.2459380791267287,
+    "nav_source": "peg_tracker_eth_history.json assets.wstETH_Ethereum.history[].theoretical_price (wstETH.stEthPerToken wrapper rate; tracker transport is Pyth)",
+    "nav_basis": "stETH per wstETH from the on-chain monotonic wrapper rate; the rate itself needs no price oracle",
+    "market_price": 1.245748320649683,
+    "market_price_source": "peg_tracker_eth_history.json assets.wstETH_Ethereum.history[].market_price (Pyth oracle mark in ETH per wstETH, not an executable trade quote)",
+    "premium_discount_pct": -0.01523016915725428,
+    "history_ref": "wsteth_peg_history.json"
+  },
+  "backing": {
+    "measurement_kind": "canonical_wrapper_onchain_reconciliation",
+    "chain": "ethereum",
+    "chain_id": 1,
+    "measured_at": "2026-10-09T16:07:11Z",
+    "block_number": 26155944,
+    "rpc": "https://ethereum-rpc.publicnode.com",
+    "wrapper_contract": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+    "underlying_contract": "0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84",
+    "underlying_address_source": "wstETH.stETH()",
+    "wrapper_total_supply": 3675168.9480906087,
+    "wrapper_total_supply_unit": "wstETH",
+    "steth_per_wsteth": 1.2459380791267287,
+    "steth_per_wsteth_source": "wstETH.stEthPerToken() at the same Ethereum block",
+    "represented_steth_claim": 4579032.939650213,
+    "represented_steth_claim_unit": "stETH",
+    "wrapper_steth_balance": 4579032.940773707,
+    "wrapper_steth_balance_unit": "stETH",
+    "coverage_ratio": 1.0000000002453562,
+    "coverage_pct": 100.00000002453562,
+    "coverage_formula": "stETH.balanceOf(wstETH) / (wstETH.totalSupply() \u00d7 wstETH.stEthPerToken())",
+    "evidence_basis": "three on-chain reads at one Ethereum block; no issuer attestation or custodian document"
+  },
+  "bridged_supply": {
+    "measurement_kind": "complete_shared_pool_reconciliation",
+    "ethereum_block_number": 26155945,
+    "measured_at": "2026-10-09T16:07:23Z",
+    "ethereum_rpc": "https://ethereum-rpc.publicnode.com",
+    "pool_contract": "0xA586a732394A1AFfCF15b972cd47C936033C9FA7",
+    "pool_type_and_version": "SiloedLockReleaseTokenPool 1.6.0",
+    "pool_balance": 16635.69709754069,
+    "pool_balance_unit": "wstETH",
+    "unsiloed_balance": 16587.63444033635,
+    "unsiloed_balance_unit": "wstETH",
+    "shared_mint_total": 16587.51177559531,
+    "shared_mint_total_unit": "wstETH",
+    "shared_mint_total_is_floor": false,
+    "unreachable_unsiloed_legs": [],
+    "residual_unsiloed_balance_minus_shared_mint_total": 0.12266474104035296,
+    "pool_balance_over_shared_mint_total_ratio": 1.0029049156134602,
+    "unsiloed_balance_over_shared_mint_total_ratio": 1.0000073950055137,
+    "ratio_status": "exact",
+    "owner": "0x44835bBBA9D40DEDa9b64858095EcFB2693c9449",
+    "unsiloed_rebalancer": "0x44835bBBA9D40DEDa9b64858095EcFB2693c9449",
+    "owner_is_unsiloed_rebalancer": true,
+    "withdrawal_path": "withdrawLiquidity(uint256) is callable by the unsiloed rebalancer",
+    "remote_legs": [
+      {
+        "chain": "bitlayer",
+        "chain_id": 200901,
+        "chain_selector": 7937294810946806131,
+        "remote_token": "0x5659b4C62897Fa36C05780cD96c2D5c0a5602488",
+        "is_siloed": true,
+        "shared_sum_inclusion": "excluded_siloed",
+        "measurement_kind": "excluded_siloed",
+        "status": "excluded",
+        "total_supply": null
+      },
+      {
+        "chain": "0g",
+        "chain_id": 16661,
+        "chain_selector": 4426351306075016396,
+        "remote_token": "0x161a128567BF0C005b58211757F7e46eed983F02",
+        "is_siloed": true,
+        "shared_sum_inclusion": "excluded_siloed",
+        "measurement_kind": "excluded_siloed",
+        "status": "excluded",
+        "total_supply": null
+      },
+      {
+        "chain": "ink",
+        "chain_id": 57073,
+        "chain_selector": 3461204551265785888,
+        "remote_token": "0xE561152E8d3f618b386EF4dD6E3fb980Eb2f9e61",
+        "is_siloed": false,
+        "shared_sum_inclusion": "included_if_reachable",
+        "measurement_kind": "live_total_supply",
+        "status": "ok",
+        "total_supply": 0.00023021109134338,
+        "decimals": 18,
+        "block_number": 58063642,
+        "measured_at": "2026-10-09T16:07:33Z",
+        "rpc": "https://rpc-gel.inkonchain.com"
+      },
+      {
+        "chain": "plasma",
+        "chain_id": 9745,
+        "chain_selector": 9335212494177455608,
+        "remote_token": "0x481e638105407Be40c2f2E2e006DE272d05930d0",
+        "is_siloed": false,
+        "shared_sum_inclusion": "included_if_reachable",
+        "measurement_kind": "live_total_supply",
+        "status": "ok",
+        "total_supply": 0.000191023456789784,
+        "decimals": 18,
+        "block_number": 34620758,
+        "measured_at": "2026-10-09T16:07:40Z",
+        "rpc": "https://rpc.plasma.to"
+      },
+      {
+        "chain": "monad",
+        "chain_id": 143,
+        "chain_selector": 8481857512324358265,
+        "remote_token": "0x10Aeaf63194db8d453d4D85a06E5eFE1dd0b5417",
+        "is_siloed": false,
+        "shared_sum_inclusion": "included_if_reachable",
+        "measurement_kind": "live_total_supply",
+        "status": "ok",
+        "total_supply": 16471.239093065327,
+        "decimals": 18,
+        "block_number": 111939803,
+        "measured_at": "2026-10-09T16:07:44Z",
+        "rpc": "https://rpc.monad.xyz"
+      },
+      {
+        "chain": "megaeth",
+        "chain_id": 4326,
+        "chain_selector": 6093540873831549674,
+        "remote_token": "0x601aC63637933D88285A025C685AC4e9a92a98dA",
+        "is_siloed": false,
+        "shared_sum_inclusion": "included_if_reachable",
+        "measurement_kind": "live_total_supply",
+        "status": "ok",
+        "total_supply": 116.24835624715405,
+        "decimals": 18,
+        "block_number": 28765055,
+        "measured_at": "2026-10-09T16:07:46Z",
+        "rpc": "https://mainnet.megaeth.com/rpc"
+      },
+      {
+        "chain": "jovay",
+        "chain_id": 5734951,
+        "chain_selector": 1523760397290643893,
+        "remote_token": "0x2dC99af320BC317c567f24eE95811dcbd5983DfD",
+        "is_siloed": false,
+        "shared_sum_inclusion": "included_if_reachable",
+        "measurement_kind": "live_total_supply",
+        "status": "ok",
+        "total_supply": 0.0001,
+        "decimals": 18,
+        "block_number": 13263635,
+        "measured_at": "2026-10-09T16:07:48Z",
+        "rpc": "https://rpc.jovay.io"
+      },
+      {
+        "chain": "abstract",
+        "chain_id": 2741,
+        "chain_selector": 3577778157919314504,
+        "remote_token": "0x313F663E79ef202251a28F0252c254842D5ABC6a",
+        "is_siloed": false,
+        "shared_sum_inclusion": "included_if_reachable",
+        "measurement_kind": "live_total_supply",
+        "status": "ok",
+        "total_supply": 0.023805048278530676,
+        "decimals": 18,
+        "block_number": 87280047,
+        "measured_at": "2026-10-09T16:07:54Z",
+        "rpc": "https://api.mainnet.abs.xyz"
+      },
+      {
+        "chain": "robinhood",
+        "chain_id": 4663,
+        "chain_selector": 6180753054346818345,
+        "remote_token": "0x2dC99af320BC317c567f24eE95811dcbd5983DfD",
+        "is_siloed": true,
+        "shared_sum_inclusion": "excluded_siloed",
+        "measurement_kind": "excluded_siloed",
+        "status": "excluded",
+        "total_supply": null
+      }
+    ],
+    "scope_note": "Only unsiloed remote supplies are additive here. Siloed legs have dedicated balances and are named but excluded."
+  },
+  "liquidity": {
+    "measurement_kind": "live_aggregator_exit_ladder",
+    "chain": "ethereum",
+    "chain_id": 1,
+    "aggregator": "KyberSwap",
+    "sell_into": "WETH",
+    "cost_basis": "all-in holder exit: (WETH output \u00d7 external Ethereum ETH/USD - route gas USD) / canonical input value",
+    "canonical_wsteth_usd": 3094.345690724937,
+    "canonical_steth_per_wsteth": 1.2459380791267287,
+    "eth_usd": 2483.54692947,
+    "ethereum_reference_block": 26155947,
+    "eth_usd_as_of": "2026-10-09T15:09:23Z",
+    "quotes": {
+      "1000": {
+        "input_wsteth": 0.3231700979620419,
+        "output_weth": 0.40258860682040726,
+        "gross_output_usd": 999.8476983084275,
+        "gas_usd": 0.8890994573043168,
+        "output_usd": 998.9585988511233,
+        "fill_ratio": 0.9989585988511233,
+        "all_in_exit_cost_bps": -10.414011488767416,
+        "exit_cost_bps_ex_gas": 1.5230169157243179,
+        "size_impact_bps": 0.0,
+        "route_pools": [
+          {
+            "pool": "0x68025a4615407993a680102b08a23a61d11c657c",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          }
+        ],
+        "status": "ok"
+      },
+      "10000": {
+        "input_wsteth": 3.2317009796204186,
+        "output_weth": 4.0258860682040725,
+        "gross_output_usd": 9998.476983084276,
+        "gas_usd": 0.88816308153021,
+        "output_usd": 9997.588820002746,
+        "fill_ratio": 0.9997588820002745,
+        "all_in_exit_cost_bps": -2.41117999725482,
+        "exit_cost_bps_ex_gas": 1.5230169157243179,
+        "size_impact_bps": 0.0,
+        "route_pools": [
+          {
+            "pool": "0x68025a4615407993a680102b08a23a61d11c657c",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          }
+        ],
+        "status": "ok"
+      },
+      "50000": {
+        "input_wsteth": 16.158504898102095,
+        "output_weth": 20.129430341020363,
+        "gross_output_usd": 49992.38491542138,
+        "gas_usd": 0.88816308153021,
+        "output_usd": 49991.49675233985,
+        "fill_ratio": 0.9998299350467971,
+        "all_in_exit_cost_bps": -1.700649532029308,
+        "exit_cost_bps_ex_gas": 1.5230169157232076,
+        "size_impact_bps": -1.1102230246251565e-12,
+        "route_pools": [
+          {
+            "pool": "0x68025a4615407993a680102b08a23a61d11c657c",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          }
+        ],
+        "status": "ok"
+      },
+      "100000": {
+        "input_wsteth": 32.31700979620419,
+        "output_weth": 40.258860682040726,
+        "gross_output_usd": 99984.76983084276,
+        "gas_usd": 0.8890994573043168,
+        "output_usd": 99983.88073138546,
+        "fill_ratio": 0.9998388073138547,
+        "all_in_exit_cost_bps": -1.6119268614533944,
+        "exit_cost_bps_ex_gas": 1.5230169157232076,
+        "size_impact_bps": -1.1102230246251565e-12,
+        "route_pools": [
+          {
+            "pool": "0x68025a4615407993a680102b08a23a61d11c657c",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          }
+        ],
+        "status": "ok"
+      },
+      "250000": {
+        "input_wsteth": 80.79252449051047,
+        "output_weth": 100.6471517051018,
+        "gross_output_usd": 249961.92457710687,
+        "gas_usd": 1.5997416399601871,
+        "output_usd": 249960.32483546692,
+        "fill_ratio": 0.9998412993418677,
+        "all_in_exit_cost_bps": -1.5870065813228251,
+        "exit_cost_bps_ex_gas": 1.523016915725428,
+        "size_impact_bps": 1.1102230246251565e-12,
+        "route_pools": [
+          {
+            "pool": "0x68025a4615407993a680102b08a23a61d11c657c",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          }
+        ],
+        "status": "ok"
+      },
+      "500000": {
+        "input_wsteth": 161.58504898102095,
+        "output_weth": 201.2943034102036,
+        "gross_output_usd": 499923.84915421373,
+        "gas_usd": 1.5997416399601871,
+        "output_usd": 499922.24941257376,
+        "fill_ratio": 0.9998444988251475,
+        "all_in_exit_cost_bps": -1.5550117485252368,
+        "exit_cost_bps_ex_gas": 1.523016915725428,
+        "size_impact_bps": 1.1102230246251565e-12,
+        "route_pools": [
+          {
+            "pool": "0x68025a4615407993a680102b08a23a61d11c657c",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          }
+        ],
+        "status": "ok"
+      },
+      "1000000": {
+        "input_wsteth": 323.1700979620419,
+        "output_weth": 402.5854239230179,
+        "gross_output_usd": 999839.7934333895,
+        "gas_usd": 3.2389977375476255,
+        "output_usd": 999836.554435652,
+        "fill_ratio": 0.999836554435652,
+        "all_in_exit_cost_bps": -1.6344556434799706,
+        "exit_cost_bps_ex_gas": 1.6020656661053234,
+        "size_impact_bps": 0.07904875038100556,
+        "route_pools": [
+          {
+            "pool": "0x68025a4615407993a680102b08a23a61d11c657c",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          },
+          {
+            "pool": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "exchange": "lido",
+            "pool_type": "lido"
+          },
+          {
+            "pool": "0x85b78aca6deae198fbf201c82daf6ca21942acc6",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          },
+          {
+            "pool": "0x21e27a5e5513d6e65c4f830167390997aa84843a",
+            "exchange": "curve-stable-plain",
+            "pool_type": "curve-stable-plain"
+          }
+        ],
+        "status": "ok"
+      },
+      "2000000": {
+        "input_wsteth": 646.3401959240838,
+        "output_weth": 805.1423820213698,
+        "gross_output_usd": 1999608.8906553348,
+        "gas_usd": 4.497554076362274,
+        "output_usd": 1999604.3931012584,
+        "fill_ratio": 0.9998021965506292,
+        "all_in_exit_cost_bps": -1.9780344937081473,
+        "exit_cost_bps_ex_gas": 1.9555467233256518,
+        "size_impact_bps": 0.43252980760133397,
+        "route_pools": [
+          {
+            "pool": "0x68025a4615407993a680102b08a23a61d11c657c",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          },
+          {
+            "pool": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "exchange": "lido",
+            "pool_type": "lido"
+          },
+          {
+            "pool": "0x0b1a513ee24972daef112bc777a5610d4325c9e7",
+            "exchange": "fluid-dex-t1",
+            "pool_type": "fluid-dex-t1"
+          },
+          {
+            "pool": "0x85b78aca6deae198fbf201c82daf6ca21942acc6",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          },
+          {
+            "pool": "0x21e27a5e5513d6e65c4f830167390997aa84843a",
+            "exchange": "curve-stable-plain",
+            "pool_type": "curve-stable-plain"
+          },
+          {
+            "pool": "0xdc24316b9ae028f1497c275eb9192a3ea0f67022",
+            "exchange": "curve-stable-plain",
+            "pool_type": "curve-stable-plain"
+          }
+        ],
+        "status": "ok"
+      },
+      "5000000": {
+        "input_wsteth": 1615.8504898102094,
+        "output_weth": 2012.7842243485222,
+        "gross_output_usd": 4998844.0800664285,
+        "gas_usd": 5.219522711868441,
+        "output_usd": 4998838.860543717,
+        "fill_ratio": 0.9997677721087433,
+        "all_in_exit_cost_bps": -2.3222789125665333,
+        "exit_cost_bps_ex_gas": 2.3118398671428952,
+        "size_impact_bps": 0.7888229514185774,
+        "route_pools": [
+          {
+            "pool": "0x68025a4615407993a680102b08a23a61d11c657c",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          },
+          {
+            "pool": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "exchange": "lido",
+            "pool_type": "lido"
+          },
+          {
+            "pool": "0x0b1a513ee24972daef112bc777a5610d4325c9e7",
+            "exchange": "fluid-dex-t1",
+            "pool_type": "fluid-dex-t1"
+          },
+          {
+            "pool": "0x109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa",
+            "exchange": "uniswapv3",
+            "pool_type": "uniswapv3"
+          },
+          {
+            "pool": "0x85b78aca6deae198fbf201c82daf6ca21942acc6",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          },
+          {
+            "pool": "0x21e27a5e5513d6e65c4f830167390997aa84843a",
+            "exchange": "curve-stable-plain",
+            "pool_type": "curve-stable-plain"
+          },
+          {
+            "pool": "0xdc24316b9ae028f1497c275eb9192a3ea0f67022",
+            "exchange": "curve-stable-plain",
+            "pool_type": "curve-stable-plain"
+          }
+        ],
+        "status": "ok"
+      },
+      "10000000": {
+        "input_wsteth": 3231.700979620419,
+        "output_weth": 4025.417597295008,
+        "gross_output_usd": 9997313.513596522,
+        "gas_usd": 3.8651331408266967,
+        "output_usd": 9997309.648463381,
+        "fill_ratio": 0.9997309648463382,
+        "all_in_exit_cost_bps": -2.6903515366183406,
+        "exit_cost_bps_ex_gas": 2.6864864034781277,
+        "size_impact_bps": 1.1634694877538099,
+        "route_pools": [
+          {
+            "pool": "0x68025a4615407993a680102b08a23a61d11c657c",
+            "exchange": "generic-arm",
+            "pool_type": "generic-arm"
+          },
+          {
+            "pool": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "exchange": "lido",
+            "pool_type": "lido"
+          },
+          {
+            "pool": "0x0b1a513ee24972daef112bc777a5610d4325c9e7",
+            "exchange": "fluid-dex-t1",
+            "pool_type": "fluid-dex-t1"
+          },
+          {
+            "pool": "0x109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa",
+            "exchange": "uniswapv3",
+            "pool_type": "uniswapv3"
+          },
+          {
+            "pool": "0x21e27a5e5513d6e65c4f830167390997aa84843a",
+            "exchange": "curve-stable-plain",
+            "pool_type": "curve-stable-plain"
+          },
+          {
+            "pool": "0xdc24316b9ae028f1497c275eb9192a3ea0f67022",
+            "exchange": "curve-stable-plain",
+            "pool_type": "curve-stable-plain"
+          }
+        ],
+        "status": "ok"
+      }
+    },
+    "depth_50bps": {
+      "threshold_bps": 50,
+      "impact_basis": "exit_cost_bps_ex_gas minus the smallest successful rung's exit_cost_bps_ex_gas",
+      "is_floor": true,
+      "ladder_exhausted": true,
+      "reference_rung_usd": 1000,
+      "reference_exit_cost_bps": 1.5230169157243179,
+      "standing_exit_cost_note": "The reference-rung exit cost is stated separately and is not counted as size impact.",
+      "value_usd": 10000000,
+      "status": "ladder_exhausted",
+      "note": "At least this much remains within 50 bps of size impact; the crossing was not located."
+    },
+    "two_pct_depth": {
+      "value_usd": 10000000.0,
+      "is_floor": true,
+      "ladder_exhausted": true,
+      "status": "ladder_exhausted",
+      "note": "At least this much clears inside 2%; the crossing was not located."
+    },
+    "venue_set": [
+      {
+        "pool": "0x68025a4615407993a680102b08a23a61d11c657c",
+        "exchange": "generic-arm",
+        "pool_type": "generic-arm"
+      },
+      {
+        "pool": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "exchange": "lido",
+        "pool_type": "lido"
+      },
+      {
+        "pool": "0x85b78aca6deae198fbf201c82daf6ca21942acc6",
+        "exchange": "generic-arm",
+        "pool_type": "generic-arm"
+      },
+      {
+        "pool": "0x21e27a5e5513d6e65c4f830167390997aa84843a",
+        "exchange": "curve-stable-plain",
+        "pool_type": "curve-stable-plain"
+      },
+      {
+        "pool": "0x0b1a513ee24972daef112bc777a5610d4325c9e7",
+        "exchange": "fluid-dex-t1",
+        "pool_type": "fluid-dex-t1"
+      },
+      {
+        "pool": "0xdc24316b9ae028f1497c275eb9192a3ea0f67022",
+        "exchange": "curve-stable-plain",
+        "pool_type": "curve-stable-plain"
+      },
+      {
+        "pool": "0x109830a1aaad605bbf02a9dfa7b0b92ec2fb7daa",
+        "exchange": "uniswapv3",
+        "pool_type": "uniswapv3"
+      }
+    ],
+    "single_pool_carries_every_rung": false,
+    "venue_scope": "All pools selected by KyberSwap for these exact rungs; not an enumeration of every on-chain market.",
+    "failed_rungs_usd": [],
+    "transport_gap_note": null,
+    "primary_exit": {
+      "chain": "ethereum",
+      "chain_id": 1,
+      "status": "mechanism_available",
+      "mechanism": "permissionless wstETH unwrap to stETH, then Lido withdrawal queue to ETH",
+      "call_accessibility": "permissionless",
+      "transaction_simulation": "not_run",
+      "eligibility_scope": "Call accessibility only; holder eligibility interpretation is not established here.",
+      "steps": [
+        {
+          "order": 1,
+          "from": "wstETH",
+          "to": "stETH",
+          "method": "wstETH.unwrap(uint256)",
+          "contract": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+          "access": "permissionless",
+          "duration": "same transaction"
+        },
+        {
+          "order": 2,
+          "from": "stETH",
+          "to": "ETH",
+          "method": "Lido withdrawal queue",
+          "contract": "0x889edC2eDab5f40e902b864aD4d7AdE8E412F9B1",
+          "access": "permissionless request and claim calls",
+          "duration": "variable; request finalization depends on queue and protocol conditions"
+        }
+      ],
+      "probe": {
+        "method": "same_block_deployed_code_check",
+        "result": "contracts_deployed",
+        "ethereum_block_number": 26155947,
+        "rpc": "https://ethereum-rpc.publicnode.com",
+        "unwrap_selector_validation": {
+          "unwrap(uint256)": {
+            "selector": "0xde0e9a3e",
+            "present_in_deployed_bytecode": true
+          }
+        },
+        "withdrawal_queue_code_present": true,
+        "withdrawal_queue_proxy_note": "The queue is proxied; implementation selectors are not asserted from proxy bytecode."
+      },
+      "queue_duration_status": "variable_not_estimated",
+      "not_primary_exit": "CCIP bridge movement is non-headline context, not the canonical holder's primary exit."
+    }
+  },
+  "not_established": [
+    "Aggregator venue scope is not a complete enumeration of every Ethereum market.",
+    "A quoted route is not proof that an executable transaction would succeed."
+  ],
+  "bridge_exit": {
+    "measurement_kind": "live_lane_rate_limits",
+    "measured_at": "2026-10-09T16:08:24Z",
+    "monad_pool_contract": "0x2f2E55517aac64c4066f6eB333b4Cb072eD00E8A",
+    "monad_pool_type_and_version": "BurnMintTokenPool 1.5.1",
+    "ethereum_pool_contract": "0xA586a732394A1AFfCF15b972cd47C936033C9FA7",
+    "ethereum_pool_type_and_version": "SiloedLockReleaseTokenPool 1.6.0",
+    "ethereum_chain_selector": 5009297550715157269,
+    "ethereum_selector_source": "Monad pool getSupportedChains()",
+    "monad_chain_selector": 8481857512324358265,
+    "monad_selector_source": "backing.remote_legs Monad entry",
+    "outbound_bucket_raw": {
+      "tokens": 2000000000000000000000,
+      "last_updated": 1791562100,
+      "is_enabled": true,
+      "capacity": 2000000000000000000000,
+      "rate": 23148148140000000,
+      "unit": "wstETH_base_units"
+    },
+    "inbound_bucket_raw": {
+      "tokens": 2200000000000000262144,
+      "last_updated": 1791562091,
+      "is_enabled": true,
+      "capacity": 2200000000000000262144,
+      "rate": 25462962954000004,
+      "unit": "wstETH_base_units"
+    },
+    "outbound_capacity_wsteth": 2000.0,
+    "outbound_refill_rate_wsteth_per_sec": 0.02314814814,
+    "outbound_is_enabled": true,
+    "inbound_capacity_wsteth": 2200.0000000000005,
+    "inbound_refill_rate_wsteth_per_sec": 0.025462962954000003,
+    "inbound_is_enabled": true,
+    "binding_direction": "outbound",
+    "binding_capacity_wsteth": 2000.0,
+    "windows_to_move_171_wsteth": 0.0855,
+    "monad_block_number": 111939923,
+    "monad_block_timestamp": "2026-10-09T16:08:20Z",
+    "monad_rpc": "https://rpc.monad.xyz",
+    "ethereum_block_number": 26155949,
+    "ethereum_block_timestamp": "2026-10-09T16:08:11Z",
+    "ethereum_rpc": "https://ethereum-rpc.publicnode.com",
+    "negative_controls": {
+      "monad_outbound": {
+        "chain_selector": 1,
+        "result": "disabled_all_zero_bucket"
+      },
+      "ethereum_inbound": {
+        "chain_selector": 1,
+        "result": "disabled_all_zero_bucket"
+      }
+    },
+    "abi_selector_validation": {
+      "monad": {
+        "getToken()": {
+          "selector": "0x21df0da7",
+          "present_in_deployed_bytecode": true
+        },
+        "getSupportedChains()": {
+          "selector": "0xc4bffe2b",
+          "present_in_deployed_bytecode": true
+        },
+        "getCurrentOutboundRateLimiterState(uint64)": {
+          "selector": "0xc75eea9c",
+          "present_in_deployed_bytecode": true
+        }
+      },
+      "ethereum": {
+        "getToken()": {
+          "selector": "0x21df0da7",
+          "present_in_deployed_bytecode": true
+        },
+        "getSupportedChains()": {
+          "selector": "0xc4bffe2b",
+          "present_in_deployed_bytecode": true
+        },
+        "getCurrentInboundRateLimiterState(uint64)": {
+          "selector": "0xaf58d59f",
+          "present_in_deployed_bytecode": true
+        }
+      }
+    },
+    "disabled_limiter_semantics": "is_enabled=false means no cap; disabled capacities are published as null, not zero"
+  }
+}
