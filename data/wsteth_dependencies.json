@@ -1,0 +1,67 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "wsteth",
+  "as_of": "2026-10-10T00:00:00Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "stETH — the wrapper's sole reserve asset",
+        "metric": "4,579,032.9408 stETH held against a represented claim of 4,579,032.9397 stETH; 100.0000000245% wrapper coverage",
+        "source": "Three same-block Ethereum contract reads at block 26,155,944, 2026-10-09",
+        "slug": "steth",
+        "edge_kind": "backing",
+        "materiality": "complete",
+        "note": "Every canonical wstETH claim resolves first to stETH. Wrapping adds no reserve diversification and no discretionary custodian: unwrap is permissionless and the wrapper holds no other asset."
+      },
+      {
+        "name": "ETH — stETH's terminal reserve asset",
+        "metric": "9,685,990.1572 ETH pooled; 9,676,652.7052 ETH recorded as beacon balance",
+        "source": "Lido protocol composition reads at Ethereum block 26,155,953, 2026-10-10",
+        "slug": "eth",
+        "edge_kind": "backing",
+        "materiality": "complete",
+        "note": "The reserve is staked ETH rather than liquid ETH. The measured composition subtotal is 9,679,464.5716 ETH; the 6,525.5856 ETH residual is explicitly uninterpreted and is neither labelled a deficit nor a surplus."
+      },
+      {
+        "name": "Lido staking-operator set",
+        "metric": "39 curated operators: 35 active, 4 fully exited; top operator 3.72%, top five 18.60%, HHI 345 within the measured Curated Module",
+        "source": "Direct Curated Module registry walk, 2026-10-09",
+        "terminal": true,
+        "kind": "operator",
+        "note": "Operator diversification is strong, but it sits beneath one Lido protocol claim. The Community Staking Module and Simple DVT registries were not included in this concentration measurement; adding their smaller operators would broaden the set rather than create a second issuer."
+      }
+    ],
+    "downstream_tracked": [
+      "bold",
+      "bsdeth",
+      "crvusd",
+      "dola",
+      "dusd-alto",
+      "ethplus",
+      "fxusd",
+      "teth"
+    ],
+    "downstream_tracking_note": "Yes. Eight currently declared assets identify wstETH as an upstream dependency. This list is an impact index, not part of wstETH's own score.",
+    "note": "Canonical wstETH has a short, enumerable chain: wstETH → stETH → staked ETH and Lido's operator set. Axis 4 scores that dependency structure, not governance keys, proxy controls or timelocks.",
+    "upstream_resolution_rule": "Every upstream row resolves to a scored asset through `slug`, or to a non-asset endpoint through `terminal: true` and `kind`. No upstream row is unresolved.",
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "bold",
+        "bsdeth",
+        "crvusd",
+        "dola",
+        "dusd-alto",
+        "ethplus",
+        "fxusd",
+        "teth"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every listed downstream edge is reproducible from a declared upstream relationship.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "downstream_tracked is generated from declared upstream relationships."
+    }
+  }
+}
