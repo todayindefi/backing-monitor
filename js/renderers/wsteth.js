@@ -1,6 +1,13 @@
 /** Canonical Ethereum wstETH dashboard additions. Bridged deployments are phase two. */
 var WstETHRenderer = {
     preRender: function (data) {
+        // This feed is sampled daily. Eight points are enough to show the
+        // requested seven-day view; do not widen it to the fleet's 30-day
+        // sparse-series fallback while the axis title says 7d.
+        data.peg = data.peg || {};
+        data.peg.chart_window_days = 7;
+        data.peg.chart_min_points = 2;
+
         var backing = data.backing || (data.backing = {});
         if (typeof backing.coverage_pct === 'number') {
             backing.collateral_ratio = backing.coverage_pct;

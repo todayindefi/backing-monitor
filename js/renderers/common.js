@@ -7382,8 +7382,12 @@ const CommonRenderer = {
         var field = data.peg.history_field || 'peg_market_price';
         var nav = data.peg.nav != null ? data.peg.nav : 1.0;
         var all = history.entries.filter(function(e) { return e[field] != null; });
+        var configuredWindow = data.peg && Number(data.peg.chart_window_days);
         var win = (windowDays === null) ? null
-            : (typeof windowDays === 'number' ? windowDays : this.PEG_CHART_WINDOW_DAYS);
+            : (typeof windowDays === 'number' ? windowDays
+                : (configuredWindow > 0 ? configuredWindow : this.PEG_CHART_WINDOW_DAYS));
+        var configuredMin = data.peg && Number(data.peg.chart_min_points);
+        var minPoints = configuredMin >= 2 ? configuredMin : this.PEG_CHART_MIN_POINTS;
         var entries = all, usedWindow = null;
         if (win) {
             var self2 = this;
@@ -7396,7 +7400,7 @@ const CommonRenderer = {
             };
             var kept = slice(win);
             // Widen once if the requested window is too sparse to read as a line.
-            if (kept.length < this.PEG_CHART_MIN_POINTS && this.PEG_CHART_FALLBACK_DAYS > win) {
+            if (kept.length < minPoints && this.PEG_CHART_FALLBACK_DAYS > win) {
                 var wider = slice(this.PEG_CHART_FALLBACK_DAYS);
                 if (wider.length > kept.length) { kept = wider; win = this.PEG_CHART_FALLBACK_DAYS; }
             }
