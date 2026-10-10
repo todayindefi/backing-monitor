@@ -6,41 +6,38 @@
   "contract": {
     "structural_score": 8.0,
     "structural_score_source": "riskAnalyst:authored",
-    "structural_score_generated_at": "2026-10-03T00:00:00Z",
-    "canonical_ethereum": {
-      "observation_block": 26159080,
-      "wrapper_changeability": "immutable",
-      "wrapper_local_controller": false,
-      "wrapper_basis": "Canonical wstETH is direct deployed code with a fixed stETH() dependency. Its EIP-1967 implementation, admin and beacon slots are zero, and no wrapper-local upgrade, pause, freeze, confiscation, arbitrary mint, parameter setter or rescue function was found.",
-      "upstream_changeability": "mutable through Lido governance",
-      "ordinary_governance_notice": "At least 8 days: five-day Aragon vote plus a three-day Dual Governance minimum. A separately measured one-day after-schedule delay remains to be reconciled with the walk's sequencing, so this overlay does not claim that eight days is the complete end-to-end floor.",
-      "ordinary_governance_reach": "Full reach over upgradeable Accounting, StakingRouter, AccountingOracle and WithdrawalQueue behavior through the DAO Agent.",
-      "accounting_oracle": {
-        "committee": "0xd624b08c83baecf0807dd2c6880c3154a5f0b288",
-        "threshold": 5,
-        "owners": 9,
-        "delay": "none",
-        "reach": "bounded",
-        "reach_bound": "Reports must match the active frame, hash and version and pass AccountingOracle, StakingRouter, withdrawal-queue and OracleReportSanityChecker validation."
-      },
-      "withdrawal_queue_circuit_breaker": {
-        "committee_safe": "0x8772e3a2d86b9347a2688f9bc1808a6d8917760c",
-        "threshold": 3,
-        "owners": 6,
-        "delay": "none",
-        "maximum_configured_pause": "21 days",
-        "reach": "bounded",
-        "reach_bound": "Can immediately pause new withdrawal requests and finalization for the configured period; cannot change code or seize balances, and already-finalized claims remain claimable."
-      },
-      "conditional_emergency_execution": "unresolved",
-      "conditional_emergency_execution_basis": "The ordinary route was measured, but the complete emergency-state predicates, committee threshold and conditional bypass/global delay floor were not reduced to a single enforceable bound.",
-      "score_effect": "Structural 8.0 held. The oracle and circuit-breaker powers are immediate but bounded, while full-reach code changes remain on the delayed governance path."
+    "structural_score_generated_at": "2026-10-10T00:00:00Z",
+    "structural_score_basis": "Canonical Ethereum wstETH holds at 8.0. The wrapper itself is immutable direct-deployed code with a fixed stETH() dependency and no local upgrade, pause, freeze, confiscation, arbitrary-mint, parameter-setter or rescue control. The risk sits upstream: Lido governance has full reach over the mutable Accounting, StakingRouter, AccountingOracle and WithdrawalQueue stack. The ordinary route has a measured five-day Aragon vote plus a three-day Dual Governance minimum. A separately observed one-day after-schedule parameter is not added to that total because the completed walk did not establish that it extends the ordinary end-to-end floor; the supported statement is a measured eight-day ordinary minimum, not a complete global delay bound. Two zero-delay paths are narrower: 5-of-9 Accounting HashConsensus can approve reports only within frame, hash, version and protocol sanity checks, while the 3-of-6 CircuitBreaker Committee can pause new withdrawal requests and finalization for the configured 21-day period but cannot change code or seize balances, and finalized claims remain claimable. Conditional emergency execution remains unresolved. The score is not cut because no immediate full-reach bypass was established; it is not raised because the upstream stack remains upgradeable and the conditional emergency floor is not fully resolved.",
+    "observation_block": 26159080,
+    "observation_commits": ["f9dcf0e", "3e31b38"],
+    "wrapper_changeability": "immutable",
+    "wrapper_local_controller": false,
+    "wrapper_basis": "Canonical wstETH is direct deployed code with a fixed stETH() dependency. Its EIP-1967 implementation, admin and beacon slots are zero, and no wrapper-local privileged control was found.",
+    "upstream_changeability": "mutable through Lido governance",
+    "ordinary_governance_vote_seconds": 432000,
+    "ordinary_dual_governance_minimum_seconds": 259200,
+    "ordinary_measured_minimum_seconds": 691200,
+    "after_schedule_delay_seconds": 86400,
+    "after_schedule_delay_treatment": "Observed separately but not added to the measured ordinary minimum because the completed authority walk did not establish additive end-to-end sequencing.",
+    "ordinary_governance_reach": "Full reach over upgradeable Accounting, StakingRouter, AccountingOracle and WithdrawalQueue behavior through the DAO Agent.",
+    "accounting_oracle": {
+      "committee": "0xd624b08c83baecf0807dd2c6880c3154a5f0b288",
+      "threshold": 5,
+      "owners": 9,
+      "delay": "none",
+      "reach": "bounded",
+      "reach_bound": "Reports must match the active frame, hash and version and pass AccountingOracle, StakingRouter, withdrawal-queue and OracleReportSanityChecker validation."
     },
-    "signer_independence": "common-operator — NOT independent",
-    "signer_independence_basis": "⚠️⚠️ THE FINDING IS ONLY VISIBLE IN THE COMPARISON, AND IT IS THAT TWO CHAINS ARE ONE AUTHORITY. The mainnet SiloedLockReleaseTokenPool's timelock and monad's RBACTimelock carry BYTE-IDENTICAL signer sets: 42-of-42 on the proposer role and 69-of-69 on the bypasser/canceller role (enumerated by security_analyst 2026-08-22, each MCMS minimum recomputed here from its own decoded getConfig() group tree rather than taken from the observation). ⚠️ So ethereum-side COLLATERAL CUSTODY and monad-side MINT answer to one signer population — four signatures from one operator population reach both. A per-chain layout invites reading them as two things that would both have to fail; they are one. ⚠️ AND THE VETO IS NOT INDEPENDENT OF THE PROPOSER: both proposer MCMS also hold CANCELLER themselves, so the same 4 signatures that schedule can cancel, and 40 of the 42 proposer signers sit inside the 69-address canceller/bypasser set (only 0x8569de6e…b266 and 0x97d0895b…3748 are proposer-only — truncated in the source record and NOT resolved, so uncheckable as written). Threshold 4, not 8 and not 2: the cheapest path with positive power is 4-of-42, a 3h wait, then execution by ANYONE through a CallProxy whose bytecode forwards any calldata unconditionally. bypasserExecuteBatch takes no delay argument, so 8-of-69 removes the delay entirely — 8 > 4, so it sets the FLOOR ON HOW FAST the delay can be skipped, not the threshold. The 2-of-69 canceller does not set it either: cancel() is its only power and it fails safe. ⚠️ Whether the 42 MCMS signers are 42 independent PARTIES is NOT READABLE FROM CHAIN — this is an observation, not an allegation. ⚠️ RE-VERIFIED 2026-10-09: the monad proxy implementation, ProxyAdmin, the timelock address, getMinDelay() 10800, getBlockedFunctionSelectorCount() 0 and self-administration all unchanged, and the token's owner/defaultAdmin/getCCIPAdmin still all terminate at the same timelock. THE SIGNER SETS THEMSELVES WERE NOT RE-WALKED — 48 days old.",
-    "delay_band": "nominal",
-    "delay_band_basis": "monad 3h is >=1h and <24h. ⚠️ It does NOT collapse to `none`, because live cancellers exist — but the band must be read together with the 8-of-69 bypass path, not instead of it. ⚠️ base is the harsher case and it is a DIFFERENT finding: getDelay() 0 with getMaximumDelay() = 1 SECOND, so the OptimismBridgeExecutor cannot be given a meaningful timelock without redeployment, and getGuardian() is the ZERO ADDRESS so the cancel entry point has no holder. Re-read 2026-10-09, unchanged. ⚠️ ethereum needs no band: the wrapper is immutable — implementation slot, admin slot and both ZeppelinOS slots all read zero (the slot set was checked beyond EIP-1967 deliberately; it is not USDC-only).",
-    "one_authority_over_code_and_mint": true,
-    "one_authority_over_code_and_mint_basis": "base: the token proxy's admin and the L2 bridge's admin are the SAME contract (0x0e37599436974a25ddeedf795c848d30af46eacf), confirmed 2026-10-09 from both EIP-1967 admin slots. monad: proxy admin, owner(), defaultAdmin(), getCCIPAdmin() and the sole minter's owner all terminate at one Chainlink RBACTimelock. ⚠️ A SECOND PATH NOT WALKED on base: compromising Base's own OP Stack ProxyAdmin owner reaches the messenger and the bridge with NO Lido vote. That is a chain-level authority and is not assessed here."
+    "withdrawal_queue_circuit_breaker": {
+      "committee_safe": "0x8772e3a2d86b9347a2688f9bc1808a6d8917760c",
+      "threshold": 3,
+      "owners": 6,
+      "delay": "none",
+      "maximum_configured_pause_seconds": 1814400,
+      "reach": "bounded",
+      "reach_bound": "Can immediately pause new withdrawal requests and finalization for 21 days; cannot change code or seize balances, and already-finalized claims remain claimable."
+    },
+    "conditional_emergency_execution": "unresolved",
+    "conditional_emergency_execution_basis": "The complete emergency-state predicates, committee threshold and conditional bypass/global delay floor were not reduced to a single enforceable bound. No active or zero-delay bypass is inferred."
   }
 }
