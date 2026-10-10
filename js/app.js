@@ -38,7 +38,7 @@ function isPublished(a) { return !!a && a.published === true; }
 // already landed. Keep SYNC_OFFSET_MIN ahead of the cron minute in
 // sync_and_push.sh if that ever moves.
 var SYNC_OFFSET_MIN = 10;
-var DATA_CACHE_REV = '20261004a';
+var DATA_CACHE_REV = '20261011a';
 function dataUrl(path) {
     var hour = Math.floor((Date.now() - SYNC_OFFSET_MIN * 60000) / 3600000);
     var sep = path.indexOf('?') >= 0 ? '&' : '?';
