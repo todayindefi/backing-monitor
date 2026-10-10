@@ -311,6 +311,14 @@ full-retention) collateral history. Their point counts may differ because produc
 their start/end horizon may not. If only one series has enough observations, keep the common 7d
 horizon and declare the other insufficient rather than widening one chart independently.
 
+⚠️ **ONE DECLARATION DRIVES BOTH CHARTS.** `renderCRChart` takes `opts.window_days` and `app.js`
+fills it from the SAME `peg.chart_window_days` the peg chart reads, so the two horizons cannot
+drift apart by someone updating one number. **Opt-in by that declaration, not fleet default** —
+a flat 7d for everyone would re-horizon eight long-retention coverage histories (crvUSD 535d,
+usds 347d, yzUSD 173d, syzusd/usde/susde ~90d, susds 67d, strcx 108d) at once. Clipping is stated
+in the stats line (`last 7d — 7 of 31 retained readings`), and a window holding fewer than two
+readings plots the full retention with the wider horizon declared in amber, never silently.
+
 ⚠️ **CLIPPING MUST BE STATED.** Eight assets retain longer (crvUSD 535d, usds 347d, yzUSD 173d,
 syzUSD/usde/susde ~90d, susds 67d, strcx 108d). `_renderPegChart` returns
 `{shown, total, windowDays, clipped, firstShown, firstAvailable}` and **a caller that does not say

@@ -2631,6 +2631,71 @@ const CommonRenderer = {
         if (chartHolder) chartHolder.style.display = '';
 
         opts = opts || {};
+        // ⚠️ THE PEG CHART CLIPS TO SEVEN DAYS AND THIS CHART PLOTTED THE WHOLE FILE.
+        // Two charts on one page, a few hundred pixels apart, answering "what has this
+        // asset been doing lately" over different spans with nothing saying so. The
+        // six-axis spec now requires ONE horizon per page: a reader comparing market
+        // behaviour with backing behaviour must not be shown 7d of peg beside full
+        // retention of coverage.
+        //
+        // ⚠️ OPT-IN BY DECLARATION, NOT FLEET-WIDE, AND THAT IS NOT TIMIDITY. Handing
+        // every asset the peg chart's 7 days would re-horizon eight long-retention
+        // histories (crvUSD 535d, usds 347d, yzUSD 173d, syzusd/usde/susde ~90d,
+        // susds 67d, strcx 108d) in a single line — a corpus change across 33 pages,
+        // and a decision that belongs to whoever owns those pages, not to this fix.
+        // The window arrives only where the asset declares `peg.chart_window_days`;
+        // today that is wstETH alone.
+        //
+        // ⚠️ The cutoff is anchored on Date.now(), the SAME anchor _renderPegChart
+        // uses. Anchoring on the newest row instead would hand a stale feed its own
+        // wider horizon while the peg chart beside it kept the real one — the two
+        // charts would agree on the number 7 and disagree about the week.
+        var crWindowDays = Number(opts.window_days) > 0 ? Number(opts.window_days) : null;
+        var crClip = null;
+        if (crWindowDays) {
+            var crAllEntries = historyData.entries;
+            var crCutoff = Date.now() - crWindowDays * 24 * 3600 * 1000;
+            var crKept = crAllEntries.filter(function(e) {
+                var t = (e && e.timestamp)
+                    ? Date.parse(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z') : NaN;
+                return isNaN(t) ? true : t >= crCutoff;
+            });
+            // ⚠️ Never clip to nothing — the peg chart's own rule, for the same reason:
+            // an empty plot reads as "no data" rather than "no recent data". Under two
+            // readings in the window, plot the full retention and SAY the horizon is
+            // wider than the peg chart's, rather than widening silently.
+            crClip = { windowDays: crWindowDays, kept: crKept.length,
+                       total: crAllEntries.length, applied: crKept.length >= 2 };
+            if (crClip.applied) {
+                historyData = Object.assign({}, historyData, { entries: crKept });
+            }
+            // ⚠️ A SHORT SERIES UNDER A 7d SIBLING IS THE OTHER WAY THE TWO CHARTS
+            // DISAGREE, and clipping cannot produce it: wstETH's coverage retention
+            // began the day before this shipped, so the peg chart above covers a week
+            // while this one covers seventeen hours. Both are honest; side by side
+            // they invite "coverage has been flat all week", which the data does not
+            // say. The series start is stated whenever it is materially inside the
+            // window — the producer's own `history_coverage` makes the same point at
+            // length, and nothing on this page rendered it.
+            // ⚠️ MEASURED OVER THE WHOLE FILE, NOT THE CLIPPED SLICE — the first
+            // version read the slice and told a 31-reading, 30-day series that it
+            // "begins 2026-10-04", which is where the CLIP begins. A statement about
+            // retention cannot be taken from the window that hid the retention.
+            var crEarliest = null;
+            crAllEntries.forEach(function(e) {
+                var t = (e && e.timestamp)
+                    ? Date.parse(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z') : NaN;
+                if (!isNaN(t) && (crEarliest === null || t < crEarliest)) crEarliest = t;
+            });
+            if (crEarliest !== null) {
+                var crSpanMs = Date.now() - crEarliest;
+                // Half a day of slack: an hourly feed's first row is never exactly on
+                // the cutoff, and "6.96 days" is not a short series.
+                if (crSpanMs < (crWindowDays * 24 - 12) * 3600 * 1000) {
+                    crClip.startsAt = new Date(crEarliest).toISOString().slice(0, 10);
+                }
+            }
+        }
         var bands = opts.bands || {
             critical: [0, 100], thin: [100, 110], amber: [110, 130], healthy: [130, 200],
             min_line: 100, max_line: 130
@@ -2861,7 +2926,37 @@ const CommonRenderer = {
                 var titleEl = chartPanel.querySelector('.panel-title');
                 if (titleEl) titleEl.after(statsEl);
             }
-            var minCls = minCR < 100 ? 'text-red-600 font-semibold' : minCR < 110 ? 'text-amber-600 font-semibold' : '';
+            // ⚠️ THE STATS LINE IGNORED THE BANDS DRAWN ON THE CHART BESIDE IT.
+            // 100 and 110 are hardcoded here, and they are not the frame the asset
+            // declared: wstETH's canonical wrapper is 100.000000% BY CONSTRUCTION and
+            // its Min rendered amber; cUSD's at-par 99.98% rendered RED against its
+            // own bands, which frame >=99.5% as at-par. A warning colour on a figure
+            // the same panel shades green is the panel contradicting itself.
+            //
+            // The rule is now "the number is coloured by the band it is drawn in",
+            // wherever the asset declares bands. display_only is deliberately NOT
+            // consulted: that flag exists because a shading boundary makes a poor
+            // 1-5 RATING (critical:[0,98] collapses 97% and 60%), and this is not a
+            // rating — it is the same shading, applied to the number beside it.
+            //
+            // ⚠️ MEASURED ACROSS THE FLEET BEFORE SHIPPING — three pages move, each
+            // onto the colour its own chart already draws: cusd 99.98 red->plain,
+            // usdm 105.97 amber->plain, syrupusdt 123.71 plain->amber.
+            //
+            // ⚠️ AND THE DEFAULT FRAME DISAGREES WITH ITSELF, which this does NOT
+            // touch. On the default bands the amber box is [110,130] and the thin box
+            // [100,110] is drawn in red tint, while the thresholds below call 110-130
+            // plain and 100-110 amber. crvUSD's Min of 113.47% sits inside the amber
+            // box and prints plain today. Resolving that re-colours every asset on the
+            // default frame, in the alarming direction, on a judgement about what the
+            // fleet's bands mean — a corpus decision, not a side effect of a wstETH fix.
+            var minCls;
+            if (opts.bands && Array.isArray(bands.healthy) && Array.isArray(bands.amber)) {
+                minCls = minCR < bands.amber[0] ? 'text-red-600 font-semibold'
+                       : minCR < bands.healthy[0] ? 'text-amber-600 font-semibold' : '';
+            } else {
+                minCls = minCR < 100 ? 'text-red-600 font-semibold' : minCR < 110 ? 'text-amber-600 font-semibold' : '';
+            }
             var suspectTooltip = Object.keys(suspectReasonCounts).sort(function(a, b) {
                 return suspectReasonCounts[b] - suspectReasonCounts[a] || a.localeCompare(b);
             }).map(function(reason) {
@@ -2909,7 +3004,8 @@ const CommonRenderer = {
             if (!spanLabel && tsAll.length > 1) {
                 var spanDays = Math.round((Math.max.apply(null, tsAll) - Math.min.apply(null, tsAll)) / 86400000);
                 spanLabel = crValues.length + ' obs over ' +
-                    (spanDays >= 60 ? Math.round(spanDays / 30) + ' months' : spanDays + ' days');
+                    (spanDays >= 60 ? Math.round(spanDays / 30) + ' months'
+                                    : spanDays + (spanDays === 1 ? ' day' : ' days'));
             }
             // The durable form of the reserve-step flag. The per-run flag fires
             // the hour a step happens and clears the next, while the LEVEL
@@ -2973,6 +3069,25 @@ const CommonRenderer = {
                 '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>' +
                 posNote +
                 (spanLabel ? '<span class="text-slate-400">' + spanLabel + '</span>' : '') +
+                // ⚠️ CLIPPING MUST BE STATED — the rule the peg chart already follows.
+                // A clipped chart and an unclipped one look identical; what a reader
+                // cannot see is the retention that was withheld, or that this panel's
+                // horizon stopped matching the peg chart's above it.
+                (crClip && crClip.applied && crClip.kept < crClip.total
+                    ? '<span class="text-slate-400">last ' + crClip.windowDays + 'd \u2014 ' +
+                      crClip.kept + ' of ' + crClip.total + ' retained readings</span>' : '') +
+                (crClip && crClip.startsAt
+                    ? '<span class="text-amber-600" title="' + escapeAttr(
+                        'This panel and the peg chart above are set to the same ' + crClip.windowDays +
+                        '-day window, but the coverage series does not reach back that far yet. ' +
+                        'Retention begins at the first preserved measurement; nothing earlier is implied.') +
+                      '">series begins ' + crClip.startsAt + ' \u2014 shorter than the ' +
+                      crClip.windowDays + 'd window the peg chart covers \u24d8</span>' : '') +
+                (crClip && !crClip.applied
+                    ? '<span class="text-amber-600">the ' + crClip.windowDays + '-day window holds ' +
+                      crClip.kept + ' reading' + (crClip.kept === 1 ? '' : 's') + ', too few to plot \u2014 ' +
+                      'showing all ' + crClip.total + ' retained, a wider horizon than the peg chart above</span>'
+                    : '') +
                 stepNote +
                 (missingReadCount > 0 ? '<span class="text-slate-400">' + missingReadCount + ' observations unavailable (missing/incomplete reads)</span>' : '') +
                 (suspectReadCount > 0 ? '<span class="text-amber-600" title="' + escapeAttr(suspectReadCount + ' excluded: ' + suspectTooltip) + '">' + suspectReadCount + ' flagged observations excluded as incomplete reads ⓘ</span>' : '') +

@@ -72,6 +72,47 @@ var WstETHRenderer = {
             data.summary.collateral_ratio = backing.coverage_pct;
             data.summary.collateral_ratio_scale = 'percent';
         }
+
+        // ⚠️ THE SAME ERROR AS THE SCORE, ONE PANEL LOWER, AND IT SHIPPED FOR AN HOUR.
+        // The guard above refuses to round-trip the authored 9.0 through the fleet's
+        // generic collateral-ratio bands — and the coverage history, which landed
+        // 2026-10-10, went straight through them: a flat line at 100.000000% drawn on
+        // the wrapper's par line, directly above a red "Critical" box, under an axis
+        // whose "healthy" starts at 130%, with "Min: 100.00%" coloured amber.
+        //
+        // Those bands describe an OVER-COLLATERALISED stablecoin, where 130% is a
+        // cushion. This is an immutable 1:1 wrapper: 100% is not a thin result, it is
+        // the only correct one, and there is nothing to be above. A reader who knows
+        // the fleet's frame reads that chart as a token sitting on the edge of
+        // insolvency. Frame it on the quantity actually measured instead.
+        //
+        // display_only: the bands shade the chart and must never score the asset —
+        // axis 2 here is RiskAnalyst's authored judgment, which is the whole point of
+        // backing_score_display above.
+        var specific = data.asset_specific || (data.asset_specific = {});
+        specific.chart_title = 'Wrapper coverage — stETH held vs represented claim';
+        specific.chart_dataset_label = 'Coverage %';
+        // ⚠️ A ±0.1pp frame, not a wider "safe-looking" one. The residual on a
+        // canonical read is ~2.5e-8 pp — four million times smaller than this axis —
+        // so nothing here renders float noise as movement, while anything a reader
+        // CAN see at this zoom is at least 0.001pp and therefore real. These are
+        // suggested bounds, so a genuine break pushes the axis open rather than
+        // being clipped off the bottom of it.
+        specific.chart_y_min = 99.9;
+        specific.chart_y_max = 100.1;
+        specific.chart_bands = {
+            display_only: true,
+            // A shortfall in a wrapper is an accounting break, not a thinner cushion:
+            // 99.9% of a 4.58M stETH claim is ~4,580 stETH that is not there.
+            critical: [0, 99.9],
+            thin:     [99.9, 99.99],
+            amber:    [99.99, 99.999],
+            healthy:  [99.999, 100.5],
+            // Par only. The generic frame's 130% "max" line has no meaning here —
+            // stETH donated above the claim would be dust, not strength.
+            min_line: 100,
+            max_line: null
+        };
         // Do not expose token-denominated wrapper supply as the shared USD
         // liquidity denominator. The common panel would otherwise present a
         // meaningless "depth as % of supply" comparison across unlike units.

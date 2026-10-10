@@ -588,6 +588,14 @@ async function renderAsset(slug) {
         // renderCRChart — a full-file range read as "30d" is the defect this
         // block was added upstream to close.
         chartOpts.history_window = (data.asset_specific && data.asset_specific.history_window) || null;
+        // ⚠️ ONE DECLARATION, TWO CHARTS. The peg chart reads `peg.chart_window_days`;
+        // reading the same field here is what makes the spec's "identical trailing
+        // cutoff" true by construction instead of by two numbers someone keeps in
+        // step by hand. asset_specific.chart_window_days overrides it for an asset
+        // whose coverage genuinely cannot share the peg horizon — none does today.
+        var crWin = (data.asset_specific && Number(data.asset_specific.chart_window_days)) ||
+                    (data.peg && Number(data.peg.chart_window_days)) || null;
+        chartOpts.window_days = crWin > 0 ? crWin : null;
         chartOpts.asset_slug = data.asset_slug || slug;
         // ⚠️ `_backing_history` WAS WRITTEN AND NEVER READ. The peg-ref block
         // above reassigns `history` to the PEG history and stashes the backing

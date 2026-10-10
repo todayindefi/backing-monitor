@@ -97,9 +97,19 @@ closes when each refreshed asset plots both peg and collateral/coverage history 
             back to 30d/full retention. If a series has fewer than two observations, it declares
             insufficient history instead. The cross-asset item closes after every page with both
             charts has been checked.
-status      wsteth peg is fixed; it publishes no dashboard-readable collateral history today, so
-            the paired-window condition is not yet exercised there. Remaining assets are queued
-            for their own refreshes.
+status      wsteth is fixed on BOTH charts and the paired-window condition is now exercised:
+            PegTracker shipped wsteth_backing_history.json (their c5708da) and the coverage chart
+            takes the same trailing cutoff as the peg chart. The mechanism shipped here
+            2026-10-10: renderCRChart accepts `window_days`, app.js feeds it the SAME
+            `peg.chart_window_days` the peg chart reads, so one declaration moves both charts.
+            ⚠️ It is opt-in by that declaration and NOT fleet-wide — handing every asset 7d
+            would re-horizon eight long-retention histories (crvUSD 535d, usds 347d, yzUSD 173d,
+            syzusd/usde/susde ~90d, susds 67d, strcx 108d) in one line. Each remaining asset
+            still takes its own refresh; the renderer work is done.
+            Verified by injection, not by today's data (18 of 18 wstETH rows fall inside 7d, so
+            the clip is a no-op on the live file): a 31-point 30-day series clipped to 7 and
+            said "last 7d — 7 of 31 retained readings"; a series entirely older than the window
+            kept all 21 points and said so in amber rather than widening silently.
 Last reviewed 2026-10-10
 ```
 
@@ -120,7 +130,18 @@ closes when the analyzer uses the shared backing-history writer, the runner requ
             `wsteth_backing_history.json`, the initial export is seeded only from preserved measured
             snapshots, and the staged dashboard renders peg and wrapper coverage on the same 7d
             cutoff. The coverage line must remain canonical Ethereum only.
-status      dispatched 2026-10-10; no historical coverage before retained snapshots is inferred.
+status      ✅ DELIVERED by PegTracker 2026-10-10 (their c5708da) and rendering here. 18 rows
+            synced, seeded from exactly the 17 preserved snapshots plus live appends, every row
+            `collateral_ratio_scale: "percent"` with block and canonical-Ethereum provenance.
+result      ⚠️ THE SERIES ARRIVED AND THE FRAME AROUND IT WAS WRONG, which is not something the
+            producer could have seen. The fleet's collateral bands describe an OVER-collateralised
+            stablecoin — healthy starts at 130% — so a canonical 1:1 wrapper reading 100.000000%
+            by construction drew a flat line on the par rule, directly above a red "Critical" box,
+            with "Min: 100.00%" coloured amber. The page's own renderer already refuses to
+            round-trip the authored 9/10 backing score through those same bands; the chart had
+            never been brought along. Fixed 2026-10-10: wrapper-specific frame (title names the
+            quantity, ±0.1pp axis, sub-par shading only below 99.999%), and the stats line is now
+            coloured by the band the number is drawn in rather than by hardcoded 100/110.
 Last reviewed 2026-10-10
 ```
 
