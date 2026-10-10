@@ -1,0 +1,4308 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "usde",
+ "asset_symbol": "USDe",
+ "producer": "dextracker",
+ "as_of": "2026-10-10T17:57:30Z",
+ "refresh_cadence": "daily",
+ "scope": "venue_inventory_only",
+ "publishes": [
+  "venues",
+  "venues_by_role",
+  "chains",
+  "non_swap_listings",
+  "absorbing_side",
+  "pendle"
+ ],
+ "does_not_publish": [
+  "depth",
+  "primary_exit",
+  "rating"
+ ],
+ "scope_note": "VENUE-ONLY BY DESIGN. This payload deliberately carries no depth, crossing, redemption path or rating; those belong to PegTracker's ladder. Absence of `depth` here is a declaration, not a failed write -- a consumer should keep the ladder from its other source.",
+ "venues_by_role": {
+  "dollar_exit": {
+   "pool_count": 55,
+   "tvl_usd": 17425592.011982422,
+   "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
+  },
+  "family_swap": {
+   "pool_count": 1,
+   "tvl_usd": 10991.4825,
+   "meaning": "Swaps the asset for its own sister token: NOT a way out."
+  },
+  "other_pair": {
+   "pool_count": 36,
+   "tvl_usd": 57365008.38698564,
+   "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
+  }
+ },
+ "chains": {
+  "eth": {
+   "status": "queried",
+   "token": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 191,
+   "published_pool_count": 38,
+   "below_floor_count": 153,
+   "dollar_exit_pool_count": 20,
+   "implausible_tvl_count": 1,
+   "dollar_exit_tvl_usd": 7809611.326699998,
+   "local_dollar_exit": true
+  },
+  "arbitrum": {
+   "status": "queried",
+   "token": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 66,
+   "published_pool_count": 14,
+   "below_floor_count": 52,
+   "dollar_exit_pool_count": 6,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 79467.37400000001,
+   "local_dollar_exit": true
+  },
+  "base": {
+   "status": "queried",
+   "token": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 57,
+   "published_pool_count": 5,
+   "below_floor_count": 52,
+   "dollar_exit_pool_count": 4,
+   "implausible_tvl_count": 1,
+   "dollar_exit_tvl_usd": 1026500.393,
+   "local_dollar_exit": true
+  },
+  "optimism": {
+   "status": "queried",
+   "token": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 11,
+   "published_pool_count": 4,
+   "below_floor_count": 7,
+   "dollar_exit_pool_count": 4,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 6742.3865,
+   "local_dollar_exit": true
+  },
+  "bsc": {
+   "status": "queried",
+   "token": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 80,
+   "published_pool_count": 18,
+   "below_floor_count": 62,
+   "dollar_exit_pool_count": 12,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 156686.65068242012,
+   "local_dollar_exit": true
+  },
+  "mantle": {
+   "status": "queried",
+   "token": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 27,
+   "published_pool_count": 7,
+   "below_floor_count": 20,
+   "dollar_exit_pool_count": 5,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 7112462.3765,
+   "local_dollar_exit": true
+  },
+  "blast": {
+   "status": "queried",
+   "token": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 17,
+   "published_pool_count": 1,
+   "below_floor_count": 16,
+   "dollar_exit_pool_count": 0,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 0,
+   "local_dollar_exit": false
+  },
+  "fraxtal": {
+   "status": "queried",
+   "token": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 4,
+   "published_pool_count": 3,
+   "below_floor_count": 1,
+   "dollar_exit_pool_count": 0,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 0,
+   "local_dollar_exit": false
+  },
+  "monad": {
+   "status": "queried",
+   "token": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 6,
+   "published_pool_count": 1,
+   "below_floor_count": 5,
+   "dollar_exit_pool_count": 1,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 1514.3791,
+   "local_dollar_exit": true
+  },
+  "plasma": {
+   "status": "queried",
+   "token": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 43,
+   "published_pool_count": 3,
+   "below_floor_count": 40,
+   "dollar_exit_pool_count": 3,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 1232607.1254999998,
+   "local_dollar_exit": true
+  }
+ },
+ "enumeration": {
+  "as_of": "2026-10-10T17:57:30Z",
+  "source": "GeckoTerminal token-pools API, paginated, by exact chain-specific address",
+  "venue_count": 502,
+  "published_venue_count": 94,
+  "tvl_floor_usd": 1000.0,
+  "chains_queried": [
+   "arbitrum",
+   "base",
+   "blast",
+   "bsc",
+   "eth",
+   "fraxtal",
+   "mantle",
+   "monad",
+   "optimism",
+   "plasma"
+  ],
+  "chains_query_failed": [],
+  "chains_not_queried": [],
+  "chains_truncated": [],
+  "chains_without_local_dollar_exit": [
+   "blast",
+   "fraxtal"
+  ],
+  "chains_none_found": [],
+  "finding_meanings": {
+   "venues_found": "Pools at or above the $1,000 TVL floor were found.",
+   "none_found": "Searched, and nothing at or above the floor was found: a market fact as far as the indexer reaches.",
+   "not_checked": "Not searched, for the stated reason: a gap in what this tool can reach, NOT a finding about the market.",
+   "unknown": "The search failed or the token could not be confirmed: NOT empty."
+  },
+  "chain_count_is_floor": true,
+  "chain_count_note": "FLOOR, not a census: chains are the asset's CoinGecko platforms. A deployment CoinGecko does not list is not queried here.",
+  "live_venue_count": 0,
+  "excluded_venue_count": 0,
+  "unestablished_venue_count": 94,
+  "live_venue_count_is_floor": true,
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 94 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
+ },
+ "venues": [
+  {
+   "name": "sDI / USDe 0.01%",
+   "chain": "eth",
+   "dex": "uniswap_v3",
+   "kind": "swap",
+   "address": "0x88198b4d64aa05e138520256d135d95805e02366",
+   "counter_asset": {
+    "symbol": "sDI",
+    "address": "0x3e695b9199383562a5028389e9c2a59cab7c5b40",
+    "decimals": 18,
+    "price_usd": 0.009949171878
+   },
+   "role": "other_pair",
+   "tvl_usd": 2748765409.9261155,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x88198b4d64aa05e138520256d135d95805e02366",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "implausible",
+   "tvl_exclusion_basis": "Reported TVL $2,748,765,410 rests on the indexer's price for sDI, which has no market cap or FDV and this pool trades no volume: an indexer pricing error, excluded from every total.",
+   "custody_check": {
+    "token_units_in_pool": 0.08400203113420354,
+    "counter_units_in_pool": 275225424508.71326,
+    "two_leg_usd_onchain": 2738265053.7167015,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": null
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 0.08400203113420354,
+    "asset_usd": 0.08399947693484407,
+    "counter_symbol": "sDI",
+    "counter_units": 275225424508.71326,
+    "counter_usd": 2738265053.632702,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / FRAX",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x5dc1bf6f1e983c0b21efb003c105133736fa0743",
+   "counter_asset": {
+    "symbol": "FRAX",
+    "address": "0x853d955acef822db058eb8505911ed77f175b99e",
+    "decimals": 18,
+    "price_usd": 0.989243650939205
+   },
+   "role": "other_pair",
+   "tvl_usd": 33961485.552,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 92765.0827970208,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x5dc1bf6f1e983c0b21efb003c105133736fa0743",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 8158368.003665185,
+    "counter_units_in_pool": 26092498.14842723,
+    "two_leg_usd_onchain": 33969958.06753892,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 216937416.014824
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 8158368.003665185,
+    "asset_usd": 8158119.937064318,
+    "counter_symbol": "FRAX",
+    "counter_units": 26092498.14842723,
+    "counter_usd": 25811838.130474597,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / WETH 0.3%",
+   "chain": "base",
+   "dex": "uniswap-v3-base",
+   "kind": "swap",
+   "address": "0x184f7052ddb6ca42dba67ee58fb05702781f3be6",
+   "counter_asset": {
+    "symbol": "WETH",
+    "address": "0x4200000000000000000000000000000000000006",
+    "decimals": 18,
+    "price_usd": 2081.18
+   },
+   "role": "other_pair",
+   "tvl_usd": 13787833.6883328,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/base/pools/0x184f7052ddb6ca42dba67ee58fb05702781f3be6",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "implausible",
+   "tvl_exclusion_basis": "Reported TVL $13,787,834 is over 20x the $0 the pool holds on-chain in its two named legs: an indexer error (typically a drained leg breaking its price maths), excluded from every total. The pool itself exists.",
+   "custody_check": {
+    "token_units_in_pool": 0.03244779786096102,
+    "counter_units_in_pool": 4.196598329517e-06,
+    "two_leg_usd_onchain": 0.04114037691788508,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 0.03244779786096102,
+    "asset_usd": 0.03240650040646089,
+    "counter_symbol": "WETH",
+    "counter_units": 4.196598329517e-06,
+    "counter_usd": 0.00873387651142419,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "AUSD / USDe",
+   "chain": "mantle",
+   "dex": "merchant-moe-liquidity-book-mantle",
+   "kind": "swap",
+   "address": "0x5a59359a1ad9b0a59aa70145dfeceb6d9ee07253",
+   "counter_asset": {
+    "symbol": "AUSD",
+    "address": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+    "decimals": 6,
+    "price_usd": 0.9989193891
+   },
+   "role": "other_pair",
+   "tvl_usd": 6395632.2492,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/mantle/pools/0x5a59359a1ad9b0a59aa70145dfeceb6d9ee07253",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 175895737.04294
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "MNT / USDe 0.3%",
+   "chain": "eth",
+   "dex": "uniswap_v3",
+   "kind": "swap",
+   "address": "0x9aac67deef711d438ad711ae495b8cb43a6ee1a8",
+   "counter_asset": {
+    "symbol": "MNT",
+    "address": "0x3c3a81e81dc49a522a592e7622a7e711c06bf354",
+    "decimals": 18,
+    "price_usd": 0.5655157144
+   },
+   "role": "other_pair",
+   "tvl_usd": 3536801.0393,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 148464.061915816,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x9aac67deef711d438ad711ae495b8cb43a6ee1a8",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 1496049.6953434972,
+    "counter_units_in_pool": 3616063.742885925,
+    "two_leg_usd_onchain": 3540945.076732113,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 3517121379.66714
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 1496049.6953434972,
+    "asset_usd": 1496004.2058580408,
+    "counter_symbol": "MNT",
+    "counter_units": 3616063.742885925,
+    "counter_usd": 2044940.870874072,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "#BTB / USDe 0.3%",
+   "chain": "bsc",
+   "dex": "uniswap-v4-bsc",
+   "kind": "swap",
+   "address": "0x83492f859234815d4e6a09f21ccdf7518ff36e241bb7d6058687e8ba2f092bbe",
+   "counter_asset": {
+    "symbol": "#BTB",
+    "address": "0x0841dde11e71f790cbc38da3c3c128a40841c9d8",
+    "decimals": 18,
+    "price_usd": 2.3287009202
+   },
+   "role": "other_pair",
+   "tvl_usd": 2974999.189,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x83492f859234815d4e6a09f21ccdf7518ff36e241bb7d6058687e8ba2f092bbe",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 95771829.1647745
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 0.01%",
+   "chain": "eth",
+   "dex": "uniswap_v3",
+   "kind": "swap",
+   "address": "0xe6d7ebb9f1a9519dc06d557e03c522d53520e76a",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 1.00047294875927
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 2429989.1801,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 1044243.75544569,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xe6d7ebb9f1a9519dc06d557e03c522d53520e76a",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 1886843.36568476,
+    "counter_units_in_pool": 539043.154989,
+    "two_leg_usd_onchain": 2426084.088350991,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 1886843.36568476,
+    "asset_usd": 1886785.9935706458,
+    "counter_symbol": "USDC",
+    "counter_units": 539043.154989,
+    "counter_usd": 539298.094780345,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "#BTB / USDe 0.3%",
+   "chain": "bsc",
+   "dex": "sushiswap-v3-bsc",
+   "kind": "swap",
+   "address": "0xe3e91ec6fe766757b44bfbfebaecb4dd18a4ae48",
+   "counter_asset": {
+    "symbol": "#BTB",
+    "address": "0x0841dde11e71f790cbc38da3c3c128a40841c9d8",
+    "decimals": 18,
+    "price_usd": 2.0386898116
+   },
+   "role": "other_pair",
+   "tvl_usd": 2336319.0111,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0xe3e91ec6fe766757b44bfbfebaecb4dd18a4ae48",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 0.006037176078698588,
+    "counter_units_in_pool": 1150000.0271287006,
+    "two_leg_usd_onchain": 2344493.344666201,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 95771829.1647745
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 0.006037176078698588,
+    "asset_usd": 0.006019195585558127,
+    "counter_symbol": "#BTB",
+    "counter_units": 1150000.0271287006,
+    "counter_usd": 2344493.3386470056,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDC",
+   "chain": "mantle",
+   "dex": "merchant-moe-liquidity-book-mantle",
+   "kind": "swap",
+   "address": "0x7e78b65d0525339df5f4aa22b82d9e97584da8fc",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0x09bc4e0d864854c6afb6eb9a9cdf58ac190d0df9",
+    "decimals": 6,
+    "price_usd": 1.008338677
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 2060569.6704,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/mantle/pools/0x7e78b65d0525339df5f4aa22b82d9e97584da8fc",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "#BTB / USDe 0.168%",
+   "chain": "bsc",
+   "dex": "pancakeswap-infinity-clmm",
+   "kind": "swap",
+   "address": "0x8fcbddc0f915bef343b8ea88bf881447cd3c5f43612af9781394d7bea3c1b07c",
+   "counter_asset": {
+    "symbol": "#BTB",
+    "address": "0x0841dde11e71f790cbc38da3c3c128a40841c9d8",
+    "decimals": 18,
+    "price_usd": 1.8953202196
+   },
+   "role": "other_pair",
+   "tvl_usd": 1979156.4145,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0003541705521,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x8fcbddc0f915bef343b8ea88bf881447cd3c5f43612af9781394d7bea3c1b07c",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 95771829.1647745
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT",
+   "chain": "eth",
+   "dex": "fluid-ethereum",
+   "kind": "swap",
+   "address": "0xf063bd202e45d6b2843102cb4ece339026645d4a",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 0.996735197516971
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1664358.3208,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 243228.943803007,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xf063bd202e45d6b2843102cb4ece339026645d4a",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.01%",
+   "chain": "mantle",
+   "dex": "agni-finance",
+   "kind": "swap",
+   "address": "0x36a7aff497eef6a9cd7d0e7bc243793fcb3e57e2",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x201eba5cc46d216ce6dc03f6a759e8e766e956ae",
+    "decimals": 6,
+    "price_usd": 1.00330730470114
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1551362.4154,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 3341.0121095782,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/mantle/pools/0x36a7aff497eef6a9cd7d0e7bc243793fcb3e57e2",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDC / USDe 0.01%",
+   "chain": "mantle",
+   "dex": "agni-finance",
+   "kind": "swap",
+   "address": "0xbcf99c834e65e8a58090e20edc058279317865bd",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0x09bc4e0d864854c6afb6eb9a9cdf58ac190d0df9",
+    "decimals": 6,
+    "price_usd": 1.0047279852
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1471813.4798,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 33.1608127509,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/mantle/pools/0xbcf99c834e65e8a58090e20edc058279317865bd",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 0.003%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x56fc29b86900aa0afa6e20b020429bffba1105cfb45070492c67529b46eb48c1",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 1.00023729131267
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1248635.7995,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 9040309.9371008,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x56fc29b86900aa0afa6e20b020429bffba1105cfb45070492c67529b46eb48c1",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDT / USDe",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x5b03cccab7ba3010fa5cad23746cbf0794938e96",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 0.995982489
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1235585.7748,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 251865.582275655,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x5b03cccab7ba3010fa5cad23746cbf0794938e96",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 174137.6285852601,
+    "counter_units_in_pool": 1066397.154077,
+    "two_leg_usd_onchain": 1236245.2254669971,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 174137.6285852601,
+    "asset_usd": 174132.3336868703,
+    "counter_symbol": "USDT",
+    "counter_units": 1066397.154077,
+    "counter_usd": 1062112.8917801268,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDB 0.05%",
+   "chain": "blast",
+   "dex": "thruster-v3",
+   "kind": "swap",
+   "address": "0x8c1bb76510d6873a4a156a9cb394e74a3783bdb5",
+   "counter_asset": {
+    "symbol": "USDB",
+    "address": "0x4300000000000000000000000000000000000003",
+    "decimals": 18,
+    "price_usd": 0.99330389412696
+   },
+   "role": "other_pair",
+   "tvl_usd": 1048499.7411,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 5.5997923715,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/blast/pools/0x8c1bb76510d6873a4a156a9cb394e74a3783bdb5",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 10272642.2090024
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "#BTB / USDe 0.25%",
+   "chain": "arbitrum",
+   "dex": "pancakeswap-v3-arbitrum",
+   "kind": "swap",
+   "address": "0x1321adb008500b97b3ab6015341d430157bf619e",
+   "counter_asset": {
+    "symbol": "#BTB",
+    "address": "0x03236ce80ed4d9e7cd2e858b2a23437ee0a99c1f",
+    "decimals": 18,
+    "price_usd": 1.025552521
+   },
+   "role": "other_pair",
+   "tvl_usd": 1046227.14177018,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0x1321adb008500b97b3ab6015341d430157bf619e",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 1.3189762605173458,
+    "counter_units_in_pool": 1020001.2808950056,
+    "two_leg_usd_onchain": 1046066.2039541762,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 39913441.8967711
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 1.3189762605173458,
+    "asset_usd": 1.3189090741088947,
+    "counter_symbol": "#BTB",
+    "counter_units": 1020001.2808950056,
+    "counter_usd": 1046064.8850451021,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "#BB / USDe 0.3%",
+   "chain": "bsc",
+   "dex": "uniswap-v4-bsc",
+   "kind": "swap",
+   "address": "0x5f36a262ea9e5e77b01236eec81a6210f587edf2e9e4118fd3e8c87158be45fe",
+   "counter_asset": {
+    "symbol": "#BB",
+    "address": "0x00b6f9800ddb34ab29f904889c012b2beb5dd389",
+    "decimals": 18,
+    "price_usd": 0.9868938619
+   },
+   "role": "other_pair",
+   "tvl_usd": 1030847.0746,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x5f36a262ea9e5e77b01236eec81a6210f587edf2e9e4118fd3e8c87158be45fe",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 97917725.6019411
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT0",
+   "chain": "mantle",
+   "dex": "merchant-moe-liquidity-book-mantle",
+   "kind": "swap",
+   "address": "0x2093a6fd094124a55f180dcea5033c3bf481100e",
+   "counter_asset": {
+    "symbol": "USDT0",
+    "address": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+    "decimals": 6,
+    "price_usd": 1.00470405060662
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1025860.2807,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 2742.9456893601,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/mantle/pools/0x2093a6fd094124a55f180dcea5033c3bf481100e",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 0.05%",
+   "chain": "base",
+   "dex": "uniswap-v3-base",
+   "kind": "swap",
+   "address": "0xedaf6ca46fb852d4ab0a2e9449d267cf03213f05",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+    "decimals": 6,
+    "price_usd": 0.998039520683461
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1003747.3968,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 26.8247363802,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/base/pools/0xedaf6ca46fb852d4ab0a2e9449d267cf03213f05",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 252265.32432363465,
+    "counter_units_in_pool": 748212.119342,
+    "two_leg_usd_onchain": 998689.5223232748,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 252265.32432363465,
+    "asset_usd": 251944.25736562852,
+    "counter_symbol": "USDC",
+    "counter_units": 748212.119342,
+    "counter_usd": 746745.2649576463,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDT0 0.01%",
+   "chain": "mantle",
+   "dex": "agni-finance",
+   "kind": "swap",
+   "address": "0x5133b772759a778ce2c39b640b7fa21544b129f6",
+   "counter_asset": {
+    "symbol": "USDT0",
+    "address": "0x779ded0c9e1022225f8e0630b35a9b54be713736",
+    "decimals": 6,
+    "price_usd": 0.999209826658767
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1002856.5302,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 7027.6649952771,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/mantle/pools/0x5133b772759a778ce2c39b640b7fa21544b129f6",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "#BB / USDe 0.3%",
+   "chain": "bsc",
+   "dex": "sushiswap-v3-bsc",
+   "kind": "swap",
+   "address": "0x284f2d4be00ad10cf7926e4307a52402185f58f2",
+   "counter_asset": {
+    "symbol": "#BB",
+    "address": "0x00b6f9800ddb34ab29f904889c012b2beb5dd389",
+    "decimals": 18,
+    "price_usd": 0.6968942887
+   },
+   "role": "other_pair",
+   "tvl_usd": 875025.5098,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x284f2d4be00ad10cf7926e4307a52402185f58f2",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 0.13497101530810074,
+    "counter_units_in_pool": 1260000.2068247434,
+    "two_leg_usd_onchain": 878087.0824660143,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 97917725.6019411
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 0.13497101530810074,
+    "asset_usd": 0.1345690317675724,
+    "counter_symbol": "#BB",
+    "counter_units": 1260000.2068247434,
+    "counter_usd": 878086.9478969825,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDT0",
+   "chain": "plasma",
+   "dex": "curve-plasma",
+   "kind": "swap",
+   "address": "0x2d84d79c852f6842abe0304b70bbaa1506add457",
+   "counter_asset": {
+    "symbol": "USDT0",
+    "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+    "decimals": 6,
+    "price_usd": 0.996858340860243
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 721102.4395,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 22479.763674531,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/plasma/pools/0x2d84d79c852f6842abe0304b70bbaa1506add457",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 261224.93720775127,
+    "counter_units_in_pool": 457723.384966,
+    "two_leg_usd_onchain": 716827.8081407748,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 261224.93720775127,
+    "asset_usd": 260542.43403063374,
+    "counter_symbol": "USDT0",
+    "counter_units": 457723.384966,
+    "counter_usd": 456285.37411014107,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "#BB / USDe 0.3%",
+   "chain": "arbitrum",
+   "dex": "sushiswap-v3-arbitrum",
+   "kind": "swap",
+   "address": "0xa50df318201c48c3af49b9249942ab7db5b5ada8",
+   "counter_asset": {
+    "symbol": "#BB",
+    "address": "0x4e616d5de0be655e9a39c3c604e518a8cf455148",
+    "decimals": 18,
+    "price_usd": 0.4636438308
+   },
+   "role": "other_pair",
+   "tvl_usd": 533764.4652,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.6285638694,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xa50df318201c48c3af49b9249942ab7db5b5ada8",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 103.30672764835587,
+    "counter_units_in_pool": 1150219.9347761935,
+    "two_leg_usd_onchain": 533395.6782875397,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 45256689.2890759
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 103.30672764835587,
+    "asset_usd": 103.30146537927091,
+    "counter_symbol": "#BB",
+    "counter_units": 1150219.9347761935,
+    "counter_usd": 533292.3768221604,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDT0",
+   "chain": "plasma",
+   "dex": "fluid-plasma",
+   "kind": "swap",
+   "address": "0x667701e51b4d1ca244f17c78f7ab8744b4c99f9b",
+   "counter_asset": {
+    "symbol": "USDT0",
+    "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+    "decimals": 6,
+    "price_usd": 1.00016441505784
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 509843.0301,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 21329.0241737859,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/plasma/pools/0x667701e51b4d1ca244f17c78f7ab8744b4c99f9b",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "#BTB / USDe 0.3%",
+   "chain": "arbitrum",
+   "dex": "sushiswap-v3-arbitrum",
+   "kind": "swap",
+   "address": "0x4c83d200852a69c1b6829d9029094f1a266de5b4",
+   "counter_asset": {
+    "symbol": "#BTB",
+    "address": "0x03236ce80ed4d9e7cd2e858b2a23437ee0a99c1f",
+    "decimals": 18,
+    "price_usd": 0.5258986026
+   },
+   "role": "other_pair",
+   "tvl_usd": 500980.8776,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0x4c83d200852a69c1b6829d9029094f1a266de5b4",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 109.01658578612361,
+    "counter_units_in_pool": 950130.6369669962,
+    "two_leg_usd_onchain": 499781.3853010578,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 39913441.8967711
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 109.01658578612361,
+    "asset_usd": 109.01103266657186,
+    "counter_symbol": "#BTB",
+    "counter_units": 950130.6369669962,
+    "counter_usd": 499672.3742683912,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDC",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x02950460e2b9529d0e00284a5fa2d7bdf3fa4d72",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 1.00047072598478
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 491759.7685,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 34424.5161002904,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x02950460e2b9529d0e00284a5fa2d7bdf3fa4d72",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 264021.77226129005,
+    "counter_units_in_pool": 228537.438519,
+    "two_leg_usd_onchain": 492658.76133947994,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 264021.77226129005,
+    "asset_usd": 264013.74430967396,
+    "counter_symbol": "USDC",
+    "counter_units": 228537.438519,
+    "counter_usd": 228645.01702980595,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.005%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x63bb22f47c7ede6578a25c873e77eb782ec8e4c19778e36ce64d37877b5bd1e7",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 0.995819571833878
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 356708.3516,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 70560.0026532485,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x63bb22f47c7ede6578a25c873e77eb782ec8e4c19778e36ce64d37877b5bd1e7",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / crvUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xf55b0f6f2da5ffddb104b58a60f2862745960442",
+   "counter_asset": {
+    "symbol": "crvUSD",
+    "address": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+    "decimals": 18,
+    "price_usd": 0.986876627092816
+   },
+   "role": "other_pair",
+   "tvl_usd": 315001.8092,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 1867.9112315643,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xf55b0f6f2da5ffddb104b58a60f2862745960442",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 152367.63624759516,
+    "counter_units_in_pool": 164398.58201274514,
+    "two_leg_usd_onchain": 314604.12141188,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 2096918721.25418
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 152367.63624759516,
+    "asset_usd": 152363.00329630036,
+    "counter_symbol": "crvUSD",
+    "counter_units": 164398.58201274514,
+    "counter_usd": 162241.11811557962,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDtb",
+   "chain": "eth",
+   "dex": "fluid-ethereum",
+   "kind": "swap",
+   "address": "0xb0960263e39c70c9b6e9ea2a382b18095264a364",
+   "counter_asset": {
+    "symbol": "USDtb",
+    "address": "0xc139190f447e929f090edeb554d95abb8b18ac1c",
+    "decimals": 18,
+    "price_usd": 1.00410512054507
+   },
+   "role": "other_pair",
+   "tvl_usd": 164606.9578,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 9766.7319937759,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xb0960263e39c70c9b6e9ea2a382b18095264a364",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 470260187.563356
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / DAI",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xf36a4ba50c603204c3fc6d2da8b78a7b69cbc67d",
+   "counter_asset": {
+    "symbol": "DAI",
+    "address": "0x6b175474e89094c44da98b954eedeac495271d0f",
+    "decimals": 18,
+    "price_usd": 0.998722342187213
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 147777.9695,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xf36a4ba50c603204c3fc6d2da8b78a7b69cbc67d",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 77587.33466010241,
+    "counter_units_in_pool": 66553.51863333631,
+    "two_leg_usd_onchain": 144053.46151885577,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 77587.33466010241,
+    "asset_usd": 77584.9755085698,
+    "counter_symbol": "DAI",
+    "counter_units": 66553.51863333631,
+    "counter_usd": 66468.48601028597,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "#BB / USDe 0.3%",
+   "chain": "arbitrum",
+   "dex": "uniswap-v4-arbitrum",
+   "kind": "swap",
+   "address": "0x10ea5a615a0a9ff69ee995d5be90779376271b7433e577f9381d4961ce2870d5",
+   "counter_asset": {
+    "symbol": "#BB",
+    "address": "0x4e616d5de0be655e9a39c3c604e518a8cf455148",
+    "decimals": 18,
+    "price_usd": 0.3364828346
+   },
+   "role": "other_pair",
+   "tvl_usd": 132615.4816,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.01439679386,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0x10ea5a615a0a9ff69ee995d5be90779376271b7433e577f9381d4961ce2870d5",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 45256689.2890759
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "mkUSD / USDe",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x1ab3d612ea7df26117554dddd379764ebce1a5ad",
+   "counter_asset": {
+    "symbol": "mkUSD",
+    "address": "0x4591dbff62656e7859afe5e45f6f47d3669fbb28",
+    "decimals": 18,
+    "price_usd": 0.9902219376
+   },
+   "role": "other_pair",
+   "tvl_usd": 113791.7821,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.6356165922,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x1ab3d612ea7df26117554dddd379764ebce1a5ad",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": {
+    "token_units_in_pool": 42633.0287743566,
+    "counter_units_in_pool": 71337.06081350072,
+    "two_leg_usd_onchain": 113271.2550388642,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 242829.716909887
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 42633.0287743566,
+    "asset_usd": 42631.73245743048,
+    "counter_symbol": "mkUSD",
+    "counter_units": 71337.06081350072,
+    "counter_usd": 70639.52258143372,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "#BTB / USDe 0.3%",
+   "chain": "arbitrum",
+   "dex": "uniswap-v4-arbitrum",
+   "kind": "swap",
+   "address": "0xdc804f1eca1c51015bb0ec342e4250228ebb58ec5c798dd4c5649e24e4008373",
+   "counter_asset": {
+    "symbol": "#BTB",
+    "address": "0x03236ce80ed4d9e7cd2e858b2a23437ee0a99c1f",
+    "decimals": 18,
+    "price_usd": 0.9247662392
+   },
+   "role": "other_pair",
+   "tvl_usd": 91273.9681,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xdc804f1eca1c51015bb0ec342e4250228ebb58ec5c798dd4c5649e24e4008373",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.1%",
+   "chain": "bsc",
+   "dex": "pancakeswap-infinity-clmm",
+   "kind": "swap",
+   "address": "0xa5789c1c3f526df2ebb133cc0e909717d22f653a3e2eed48d8f55a63631cf163",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 1.0013262089
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 69030.4615,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0xa5789c1c3f526df2ebb133cc0e909717d22f653a3e2eed48d8f55a63631cf163",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / GHO",
+   "chain": "arbitrum",
+   "dex": "fluid-arbitrum",
+   "kind": "swap",
+   "address": "0x1dd125c32e4b5086c63cc13b3ca02c4a2a61fa9b",
+   "counter_asset": {
+    "symbol": "GHO",
+    "address": "0x7dff72693f6a4149b17e7c6314655f6a9f7c8b33",
+    "decimals": 18,
+    "price_usd": 1.00032630778396
+   },
+   "role": "other_pair",
+   "tvl_usd": 63328.5607,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 3988.2771865386,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0x1dd125c32e4b5086c63cc13b3ca02c4a2a61fa9b",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "OUSD / USDe",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xdbdc27b649239f9c5afdc92e57c2601a0ce71a89",
+   "counter_asset": {
+    "symbol": "OUSD",
+    "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+    "decimals": 18,
+    "price_usd": 0.9976470126
+   },
+   "role": "other_pair",
+   "tvl_usd": 51311.7305,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 415.8091465147,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xdbdc27b649239f9c5afdc92e57c2601a0ce71a89",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 29532.80315947734,
+    "asset_usd": 29531.90517325135,
+    "counter_symbol": "OUSD",
+    "counter_units": 21755.583045556603,
+    "counter_usd": 21704.392432770754,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDC",
+   "chain": "eth",
+   "dex": "uniswap_v2",
+   "kind": "swap",
+   "address": "0x1e496fae4613b4e9c4f8fc31826812cdcbd03a90",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 0.999731893422801
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 50702.4798,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x1e496fae4613b4e9c4f8fc31826812cdcbd03a90",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 0.01%",
+   "chain": "arbitrum",
+   "dex": "camelot-v3",
+   "kind": "swap",
+   "address": "0xc23f308cf1bfa7efffb592920a619f00990f8d74",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+    "decimals": 6,
+    "price_usd": 1.00030436471354
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 45770.985,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 3436.9053842118,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xc23f308cf1bfa7efffb592920a619f00990f8d74",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 19130.918894395618,
+    "asset_usd": 19129.944397909698,
+    "counter_symbol": "USDC",
+    "counter_units": 26644.829285,
+    "counter_usd": 26652.939030832647,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "srUSDe / USDe 1.01%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x23e1eb9958843943b316b99085e992d5fca57f700f1ec75f0feb1b5078f6b60b",
+   "counter_asset": {
+    "symbol": "srUSDe",
+    "address": "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+    "decimals": 18,
+    "price_usd": 0.1547272726
+   },
+   "role": "other_pair",
+   "tvl_usd": 45518.9077,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x23e1eb9958843943b316b99085e992d5fca57f700f1ec75f0feb1b5078f6b60b",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "GHO / USDe",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x670a72e6d22b0956c0d2573288f82dcc5d6e3a61",
+   "counter_asset": {
+    "symbol": "GHO",
+    "address": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+    "decimals": 18,
+    "price_usd": 1.0036415134
+   },
+   "role": "other_pair",
+   "tvl_usd": 44296.0956,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 2306.7866368409,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x670a72e6d22b0956c0d2573288f82dcc5d6e3a61",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 16208.57955735605,
+    "asset_usd": 16208.086712802598,
+    "counter_symbol": "GHO",
+    "counter_units": 27922.74438925105,
+    "counter_usd": 28024.425437109283,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.006%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0xaae9da4a878406eb1de54efac30e239fd56d54fb8051e59f6fee529bc9609b3b",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 0.996937343238449
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 39966.2774,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 10637.8026595897,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xaae9da4a878406eb1de54efac30e239fd56d54fb8051e59f6fee529bc9609b3b",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 0.01%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x75dd55ec07ae4e95279d07a37de27778032be1af5ef6b0d2c927a311a21444c6",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 1.0002688922
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 38751.3878,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x75dd55ec07ae4e95279d07a37de27778032be1af5ef6b0d2c927a311a21444c6",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.01%",
+   "chain": "eth",
+   "dex": "uniswap_v3",
+   "kind": "swap",
+   "address": "0x435664008f38b0650fbc1c9fc971d0a3bc2f1e47",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 0.996356665718505
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 35079.0981,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 8598.3549742139,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x435664008f38b0650fbc1c9fc971d0a3bc2f1e47",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 17383.972021666406,
+    "asset_usd": 17383.443437659527,
+    "counter_symbol": "USDT",
+    "counter_units": 17821.248921,
+    "counter_usd": 17756.320153867062,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.002%",
+   "chain": "eth",
+   "dex": "maverick-v2-eth",
+   "kind": "swap",
+   "address": "0xe05a157700fd5a35048cef0f8088383cd35a2fc8",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 0.9968911704
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 30463.8342,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xe05a157700fd5a35048cef0f8088383cd35a2fc8",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "#BB / USDe 0.25%",
+   "chain": "arbitrum",
+   "dex": "pancakeswap-v3-arbitrum",
+   "kind": "swap",
+   "address": "0xd3f20692afefc02c574b001c00f1a7b9b4c28da7",
+   "counter_asset": {
+    "symbol": "#BB",
+    "address": "0x4e616d5de0be655e9a39c3c604e518a8cf455148",
+    "decimals": 18,
+    "price_usd": 0.199389595
+   },
+   "role": "other_pair",
+   "tvl_usd": 28751.6654154372,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xd3f20692afefc02c574b001c00f1a7b9b4c28da7",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 0.0721446257185009,
+    "asset_usd": 0.07214095079391267,
+    "counter_symbol": "#BB",
+    "counter_units": 1040000.3556935886,
+    "counter_usd": 207365.2497216006,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / FRAX",
+   "chain": "fraxtal",
+   "dex": "velodrome-finance-v2-fraxtal",
+   "kind": "swap",
+   "address": "0x36138da358b34d8061b0b0dce5babab7b8fa9767",
+   "counter_asset": {
+    "symbol": "FRAX",
+    "address": "0xfc00000000000000000000000000000000000001",
+    "decimals": 18,
+    "price_usd": 0.994346808222586
+   },
+   "role": "other_pair",
+   "tvl_usd": 27425.5311,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 707.6406719349,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/fraxtal/pools/0x36138da358b34d8061b0b0dce5babab7b8fa9767",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 14971.201450526965,
+    "asset_usd": 14873.409586606047,
+    "counter_symbol": "FRAX",
+    "counter_units": 12519.192598027646,
+    "counter_usd": 12448.419201372615,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / frxUSD 0.01%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x2552e53ca27046e78f09e330a5fb1873ace5078fd9d3a3ac8d2219c0053a1847",
+   "counter_asset": {
+    "symbol": "frxUSD",
+    "address": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+    "decimals": 18,
+    "price_usd": 0.998291615991628
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 20247.1005,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 719.5972664013,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x2552e53ca27046e78f09e330a5fb1873ace5078fd9d3a3ac8d2219c0053a1847",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 75%",
+   "chain": "base",
+   "dex": "uniswap-v4-base",
+   "kind": "swap",
+   "address": "0x3cd6363b320472577a3496f111afc379316f5d094a8122e3d54a05cafe42118e",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+    "decimals": 6,
+    "price_usd": 0.9947767737
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 16064.6099,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/base/pools/0x3cd6363b320472577a3496f111afc379316f5d094a8122e3d54a05cafe42118e",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.5%",
+   "chain": "bsc",
+   "dex": "uniswap-v4-bsc",
+   "kind": "swap",
+   "address": "0x124fa98850d7d2c44a46071b90af0bf565a71eec19f3f93ad45e3e8942d517a0",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 0.9997459789
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 15953.9182,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x124fa98850d7d2c44a46071b90af0bf565a71eec19f3f93ad45e3e8942d517a0",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.034%",
+   "chain": "bsc",
+   "dex": "pancakeswap-infinity-clmm",
+   "kind": "swap",
+   "address": "0xa61793adc1b743796e66fa5c5cc931b8759ed539279908a8d8b1b5f54f3af3bf",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 0.9987150831
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 15782.4866,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0xa61793adc1b743796e66fa5c5cc931b8759ed539279908a8d8b1b5f54f3af3bf",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / jrUSDe",
+   "chain": "eth",
+   "dex": "fluid-ethereum",
+   "kind": "swap",
+   "address": "0x505844cbb4ca37af433cf0abf247d6a2abed705d",
+   "counter_asset": {
+    "symbol": "jrUSDe",
+    "address": "0xc58d044404d8b14e953c115e67823784dea53d8f",
+    "decimals": 18,
+    "price_usd": 1.07710024025276
+   },
+   "role": "other_pair",
+   "tvl_usd": 15099.4069,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x505844cbb4ca37af433cf0abf247d6a2abed705d",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT",
+   "chain": "arbitrum",
+   "dex": "fluid-arbitrum",
+   "kind": "swap",
+   "address": "0x276084527b801e00db8e4410504f9baf93f72c67",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+    "decimals": 6,
+    "price_usd": 0.999439777542281
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 14388.596,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 1689.6182903172,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0x276084527b801e00db8e4410504f9baf93f72c67",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "iUSD / USDe",
+   "chain": "eth",
+   "dex": "fluid-ethereum",
+   "kind": "swap",
+   "address": "0xc6ca3e74e4af761ee4d0fba922b72408aac3a819",
+   "counter_asset": {
+    "symbol": "iUSD",
+    "address": "0x48f9e38f3070ad8945dfeae3fa70987722e3d89c",
+    "decimals": 18,
+    "price_usd": 0.9996077754
+   },
+   "role": "other_pair",
+   "tvl_usd": 14026.6091,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 489.4966926468,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xc6ca3e74e4af761ee4d0fba922b72408aac3a819",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.05%",
+   "chain": "arbitrum",
+   "dex": "uniswap_v3_arbitrum",
+   "kind": "swap",
+   "address": "0xaf7b48ae2f4773fd44f9208cca3db5ae7bfa7e37",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+    "decimals": 6,
+    "price_usd": 0.998900973669652
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 12934.2761,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 15.9205169572,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xaf7b48ae2f4773fd44f9208cca3db5ae7bfa7e37",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 315.33487456847837,
+    "asset_usd": 315.31881194603716,
+    "counter_symbol": "USDT",
+    "counter_units": 12588.141598,
+    "counter_usd": 12574.30689893365,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.25%",
+   "chain": "bsc",
+   "dex": "pancakeswap-v3-bsc",
+   "kind": "swap",
+   "address": "0x9dfb6ce3f6a3a103f4d44a5fdddab0815c111406",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 0.998588374187257
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 12306.9598,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 562.7495615419,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x9dfb6ce3f6a3a103f4d44a5fdddab0815c111406",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 4957.92073890631,
+    "asset_usd": 4943.154586871853,
+    "counter_symbol": "USDT",
+    "counter_units": 7360.6983256936355,
+    "counter_usd": 7350.307773937272,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "FRAX / USDe",
+   "chain": "fraxtal",
+   "dex": "curve-fraxtal",
+   "kind": "swap",
+   "address": "0x1e199dbe1f7aa237282fe941d5bcc3b167c8ce48",
+   "counter_asset": {
+    "symbol": "FRAX",
+    "address": "0xfc00000000000000000000000000000000000001",
+    "decimals": 18,
+    "price_usd": 0.9946028695
+   },
+   "role": "other_pair",
+   "tvl_usd": 11891.8252,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 5149.5812086875,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/fraxtal/pools/0x1e199dbe1f7aa237282fe941d5bcc3b167c8ce48",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 8239.261239384723,
+    "asset_usd": 8185.44239815188,
+    "counter_symbol": "FRAX",
+    "counter_units": 3685.5709239439957,
+    "counter_usd": 3665.679416700464,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / sUSDe 0.005%",
+   "chain": "eth",
+   "dex": "ekubo-v3-ethereum",
+   "kind": "swap",
+   "address": "0x00000000000014aa86c5d3c41765bb24e11bd701-0x0fcb46a418903bca6840ea3801dc09b2f46b5f423450e5772fb1c9a0af3d4990",
+   "counter_asset": {
+    "symbol": "sUSDe",
+    "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+    "decimals": 18,
+    "price_usd": 1.26308172766954
+   },
+   "role": "family_swap",
+   "tvl_usd": 10991.4825,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 108969.041574664,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x00000000000014aa86c5d3c41765bb24e11bd701-0x0fcb46a418903bca6840ea3801dc09b2f46b5f423450e5772fb1c9a0af3d4990",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 1%",
+   "chain": "bsc",
+   "dex": "uniswap-v4-bsc",
+   "kind": "swap",
+   "address": "0xd72133457908f70b59e8b32b9d320f9a4a674229fda36b38d7550613a763c02b",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 1.0004606128
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 10270.6629,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0xd72133457908f70b59e8b32b9d320f9a4a674229fda36b38d7550613a763c02b",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / OLQD 99.999%",
+   "chain": "arbitrum",
+   "dex": "uniswap-v4-arbitrum",
+   "kind": "swap",
+   "address": "0xb8d7e33d4a58bd1b53e09e40c35c32d5342d17bf0e34c0c0e7ce0c02144821a0",
+   "counter_asset": {
+    "symbol": "OLQD",
+    "address": "0xbfee8ce13a2e4ca6dd2c7c4d351f98198faef12a",
+    "decimals": 18,
+    "price_usd": 0.9977437084
+   },
+   "role": "other_pair",
+   "tvl_usd": 9834.2515,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xb8d7e33d4a58bd1b53e09e40c35c32d5342d17bf0e34c0c0e7ce0c02144821a0",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.197%",
+   "chain": "bsc",
+   "dex": "pancakeswap-infinity-clmm",
+   "kind": "swap",
+   "address": "0x63675d203d8bee26e453eae64c5f8ea4d0e01dd1f96da918c094a50ef4eff981",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 0.9968548365
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 8836.766,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x63675d203d8bee26e453eae64c5f8ea4d0e01dd1f96da918c094a50ef4eff981",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 1%",
+   "chain": "bsc",
+   "dex": "uniswap-bsc",
+   "kind": "swap",
+   "address": "0x30157596df68c85f834f22af282fd28e4489608f",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 1.0019995066
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 8167.3790277707,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x30157596df68c85f834f22af282fd28e4489608f",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 0.01%",
+   "chain": "base",
+   "dex": "uniswap-v3-base",
+   "kind": "swap",
+   "address": "0x455d7f0e33dafeade8b4c18f22383cbdd6108047",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+    "decimals": 6,
+    "price_usd": 1.00265203959071
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 5638.3363,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 958.7479104039,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/base/pools/0x455d7f0e33dafeade8b4c18f22383cbdd6108047",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 2863.0055141868556,
+    "asset_usd": 2859.361666291156,
+    "counter_symbol": "USDC",
+    "counter_units": 2756.930985,
+    "counter_usd": 2764.2424751210747,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.001%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0xce93ea3914c62e0008348cf39fd006e130e7c503935fb01d154b971c8663f4fb",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 0.995051130356317
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 5356.9461,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 434.0268644011,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xce93ea3914c62e0008348cf39fd006e130e7c503935fb01d154b971c8663f4fb",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 99.975%",
+   "chain": "bsc",
+   "dex": "uniswap-v4-bsc",
+   "kind": "swap",
+   "address": "0x53d76e809b63c2bacd5270112f80c0f27867ead3d82f05cd39fcd07158685dbc",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 1.0049846767
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 5155.1911,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x53d76e809b63c2bacd5270112f80c0f27867ead3d82f05cd39fcd07158685dbc",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 0.01%",
+   "chain": "arbitrum",
+   "dex": "uniswap_v3_arbitrum",
+   "kind": "swap",
+   "address": "0x3223859e24d5413947761cb79d3094f21be69bfa",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+    "decimals": 6,
+    "price_usd": 0.999266332856946
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 4068.2545,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 1555.3161451299,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0x3223859e24d5413947761cb79d3094f21be69bfa",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 418.5705746585123,
+    "asset_usd": 418.5492533850092,
+    "counter_symbol": "USDC",
+    "counter_units": 3652.491033,
+    "counter_usd": 3649.8113203387884,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "srUSDe / USDe",
+   "chain": "eth",
+   "dex": "fluid-ethereum",
+   "kind": "swap",
+   "address": "0x86df50987c744efc5a0cef83f8efd87e1880dab1",
+   "counter_asset": {
+    "symbol": "srUSDe",
+    "address": "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+    "decimals": 18,
+    "price_usd": 1.031856351
+   },
+   "role": "other_pair",
+   "tvl_usd": 3661.2082,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 1495.3141042443,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x86df50987c744efc5a0cef83f8efd87e1880dab1",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.101%",
+   "chain": "bsc",
+   "dex": "pancakeswap-infinity-clmm",
+   "kind": "swap",
+   "address": "0x6b29c9e679a412b824fc220b693210a02c2fed718a17bf5fb53bcfee12204033",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 0.9973484797
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 3603.3256,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x6b29c9e679a412b824fc220b693210a02c2fed718a17bf5fb53bcfee12204033",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.003%",
+   "chain": "eth",
+   "dex": "ekubo-v3-ethereum",
+   "kind": "swap",
+   "address": "0x00000000000014aa86c5d3c41765bb24e11bd701-0xdc4333eab8e60cb5ba3a8a77be5ce128d3bb5f97251b4bd1fdb5da65ec45c8ce",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 1.00160411484084
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 3598.5455,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 3198.7679959285,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x00000000000014aa86c5d3c41765bb24e11bd701-0xdc4333eab8e60cb5ba3a8a77be5ce128d3bb5f97251b4bd1fdb5da65ec45c8ce",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 0.003%",
+   "chain": "eth",
+   "dex": "ekubo-v3-ethereum",
+   "kind": "swap",
+   "address": "0x00000000000014aa86c5d3c41765bb24e11bd701-0x583531a847f49c31bb86c4ae1b650dc7cb21174b18e5b8ed13108a299c3adb35",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 0.999597808914011
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 3233.6283,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 3406.2515471894,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x00000000000014aa86c5d3c41765bb24e11bd701-0x583531a847f49c31bb86c4ae1b650dc7cb21174b18e5b8ed13108a299c3adb35",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.01%",
+   "chain": "bsc",
+   "dex": "pancakeswap-v3-bsc",
+   "kind": "swap",
+   "address": "0xdc35157217a3aeff3dcaf2e86327254fbf9f4601",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 0.995309625275905
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 3226.3783,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 7161.0499969055,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0xdc35157217a3aeff3dcaf2e86327254fbf9f4601",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 878.3006611951156,
+    "asset_usd": 875.6848224638912,
+    "counter_symbol": "USDT",
+    "counter_units": 2361.1057220636776,
+    "counter_usd": 2350.031251463994,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDT 1%",
+   "chain": "bsc",
+   "dex": "pancakeswap-v3-bsc",
+   "kind": "swap",
+   "address": "0xe1d09bae72ad6f7f180df2fabd06cd2a6e94187d",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 1.0020329142
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 2373.6404546494,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0xe1d09bae72ad6f7f180df2fabd06cd2a6e94187d",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 738.366883367327,
+    "asset_usd": 736.1678087489183,
+    "counter_symbol": "USDT",
+    "counter_units": 1639.703758629163,
+    "counter_usd": 1643.0371356838737,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.01%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x2bcfb83929d023f4fb608b8d71e881b7ce68c2894b3ccf4fe6ba4f8e5f286333",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 1.0007949563
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 2273.7815,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x2bcfb83929d023f4fb608b8d71e881b7ce68c2894b3ccf4fe6ba4f8e5f286333",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / NN",
+   "chain": "bsc",
+   "dex": "pancakeswap_v2",
+   "kind": "swap",
+   "address": "0x392edec33d6d188a1f511cec45078cc432e57db9",
+   "counter_asset": {
+    "symbol": "NN",
+    "address": "0xe2a18b15ee1162f216a718c64edb39f461902d10",
+    "decimals": 18,
+    "price_usd": 1.00104791214123
+   },
+   "role": "other_pair",
+   "tvl_usd": 2165.4513,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 180.0999093977,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x392edec33d6d188a1f511cec45078cc432e57db9",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDtb",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x2d9bf9c1befd77c094461df615bdbe905895f7c6",
+   "counter_asset": {
+    "symbol": "USDtb",
+    "address": "0xc139190f447e929f090edeb554d95abb8b18ac1c",
+    "decimals": 18,
+    "price_usd": 0.999032362157908
+   },
+   "role": "other_pair",
+   "tvl_usd": 2145.1113,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x2d9bf9c1befd77c094461df615bdbe905895f7c6",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 6.3250385237973425,
+    "asset_usd": 6.324846202145973,
+    "counter_symbol": "USDtb",
+    "counter_units": 5.9027826932801135,
+    "counter_usd": 5.89707093737245,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / USDT 85%",
+   "chain": "optimism",
+   "dex": "uniswap-v4-optimism",
+   "kind": "swap",
+   "address": "0x9791f843b6d9f200b525a9bc63abac835fda3404f665795ad3a5fd3b69aa6146",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",
+    "decimals": 6,
+    "price_usd": 0.9984535483
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 2113.874,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/optimism/pools/0x9791f843b6d9f200b525a9bc63abac835fda3404f665795ad3a5fd3b69aa6146",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.122%",
+   "chain": "bsc",
+   "dex": "pancakeswap-infinity-clmm",
+   "kind": "swap",
+   "address": "0x2772d1e0d3aa4c9bfa171f3e946236f02f32c2cc552db8ee492ca9ad444c88e7",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 0.9995223632
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1979.4812,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x2772d1e0d3aa4c9bfa171f3e946236f02f32c2cc552db8ee492ca9ad444c88e7",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / ZIK 1%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x2ff2ad74368781893507a9dbb9224d286fec86ba67c98eac085c959e8a239065",
+   "counter_asset": {
+    "symbol": "ZIK",
+    "address": "0xd4419c2d3daa986dc30444fa333a846be44fd1eb",
+    "decimals": 18,
+    "price_usd": 0.0001218490385
+   },
+   "role": "other_pair",
+   "tvl_usd": 1957.9204,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x2ff2ad74368781893507a9dbb9224d286fec86ba67c98eac085c959e8a239065",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 88%",
+   "chain": "optimism",
+   "dex": "uniswap-v4-optimism",
+   "kind": "swap",
+   "address": "0x0f6cb981631da2457af2d3d276bd6616376b63a2de8c649c69032a62e97e9b95",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",
+    "decimals": 6,
+    "price_usd": 0.9998357224
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1926.5991,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/optimism/pools/0x0f6cb981631da2457af2d3d276bd6616376b63a2de8c649c69032a62e97e9b95",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 0.003%",
+   "chain": "eth",
+   "dex": "ekubo-v3-ethereum",
+   "kind": "swap",
+   "address": "0x00000000000014aa86c5d3c41765bb24e11bd701-0xc86d5ef108fd6b856187b4cfa42662c61535f28683d9793e40be6a1441326f27",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 1.00052717939192
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1904.788,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 1298.2683656898,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x00000000000014aa86c5d3c41765bb24e11bd701-0xc86d5ef108fd6b856187b4cfa42662c61535f28683d9793e40be6a1441326f27",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 0.01%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x9840e028092b92490e3894fab0efe81e2991baca48f619fb70c9fe366c69ca04",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 1.0004389019
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1897.9914,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x9840e028092b92490e3894fab0efe81e2991baca48f619fb70c9fe366c69ca04",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / ZIK",
+   "chain": "eth",
+   "dex": "uniswap_v2",
+   "kind": "swap",
+   "address": "0xeace0f1fdd098c40d824c31f2aead78fc36bd2e1",
+   "counter_asset": {
+    "symbol": "ZIK",
+    "address": "0xd4419c2d3daa986dc30444fa333a846be44fd1eb",
+    "decimals": 18,
+    "price_usd": 0.00012912114746177
+   },
+   "role": "other_pair",
+   "tvl_usd": 1889.7691,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 4.0487164808,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xeace0f1fdd098c40d824c31f2aead78fc36bd2e1",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT0",
+   "chain": "plasma",
+   "dex": "lithos",
+   "kind": "swap",
+   "address": "0x01b968c1b663c3921da5be3c99ee3c9b89a40b54",
+   "counter_asset": {
+    "symbol": "USDT0",
+    "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+    "decimals": 6,
+    "price_usd": 0.996502729714482
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1661.6559,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 8.2518230151,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/plasma/pools/0x01b968c1b663c3921da5be3c99ee3c9b89a40b54",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 80%",
+   "chain": "optimism",
+   "dex": "uniswap-v4-optimism",
+   "kind": "swap",
+   "address": "0x48dd325954983558236bd4b32eb81fc04859185fe6c11d4b7c25d324fe34029f",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0x7f5c764cbc14f9669b88837ca1490cca17c31607",
+    "decimals": 6,
+    "price_usd": 0.9987621314
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1528.9561,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/optimism/pools/0x48dd325954983558236bd4b32eb81fc04859185fe6c11d4b7c25d324fe34029f",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT0 83%",
+   "chain": "monad",
+   "dex": "uniswap-v4-monad",
+   "kind": "swap",
+   "address": "0x4c328f6e1979c213aae8d60ba04f5af6a1ac2210b6e2b8bf2713f60c62afb670",
+   "counter_asset": {
+    "symbol": "USDT0",
+    "address": "0xe7cd86e13ac4309349f30b3435a9d337750fc82d",
+    "decimals": 6,
+    "price_usd": 1.0001689538
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1514.3791,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/monad/pools/0x4c328f6e1979c213aae8d60ba04f5af6a1ac2210b6e2b8bf2713f60c62afb670",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDT 0.007%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0xc80fd73d4e0d780ab9704957711b75309f817537ce76017394640fd038b687e3",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 0.9990524843
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1320.3033,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xc80fd73d4e0d780ab9704957711b75309f817537ce76017394640fd038b687e3",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 0.01%",
+   "chain": "arbitrum",
+   "dex": "pancakeswap-v3-arbitrum",
+   "kind": "swap",
+   "address": "0x1caf100cd74792d4be6c64621c2e21c7830868c4",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+    "decimals": 6,
+    "price_usd": 0.999631253032396
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1279.1701,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0x1caf100cd74792d4be6c64621c2e21c7830868c4",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 1215.0513999114723,
+    "asset_usd": 1214.9895072587483,
+    "counter_symbol": "USDC",
+    "counter_units": 55.960332,
+    "counter_usd": 55.93969679726889,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "cmETH / USDe",
+   "chain": "mantle",
+   "dex": "merchant-moe-liquidity-book-mantle",
+   "kind": "swap",
+   "address": "0x38e2a053e67697e411344b184b3abae4fab42cc2",
+   "counter_asset": {
+    "symbol": "cmETH",
+    "address": "0xe6829d9a7ee3040e1276fa75293bde931859e8fa",
+    "decimals": 18,
+    "price_usd": 2748.6682449539
+   },
+   "role": "other_pair",
+   "tvl_usd": 1219.8746,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.1076030888,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/mantle/pools/0x38e2a053e67697e411344b184b3abae4fab42cc2",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "srUSDe / USDe 0.3%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x31456bfc1a006fe28bb4c61e6fcdf885d10d82299db28798662c54b7ca692521",
+   "counter_asset": {
+    "symbol": "srUSDe",
+    "address": "0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003",
+    "decimals": 18,
+    "price_usd": 0.9581660128
+   },
+   "role": "other_pair",
+   "tvl_usd": 1196.8803,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x31456bfc1a006fe28bb4c61e6fcdf885d10d82299db28798662c54b7ca692521",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / ZIK 0.3%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x6208452b63c8cdf08dc0dbc7a2f78158e8758f1d378247c77e755b41e51cfb82",
+   "counter_asset": {
+    "symbol": "ZIK",
+    "address": "0xd4419c2d3daa986dc30444fa333a846be44fd1eb",
+    "decimals": 18,
+    "price_usd": 0.000194973453
+   },
+   "role": "other_pair",
+   "tvl_usd": 1178.122,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x6208452b63c8cdf08dc0dbc7a2f78158e8758f1d378247c77e755b41e51cfb82",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 60%",
+   "chain": "optimism",
+   "dex": "uniswap-v4-optimism",
+   "kind": "swap",
+   "address": "0x660d874dca176cccae102b85768ed980a6b303bf6b842561703f1a9cbe10448e",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0x0b2c639c533813f4aa9d7837caf62653d097ff85",
+    "decimals": 6,
+    "price_usd": 0.998734011648492
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1172.9573,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/optimism/pools/0x660d874dca176cccae102b85768ed980a6b303bf6b842561703f1a9cbe10448e",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / FRAX/USDe / FRAX 0.01%",
+   "chain": "fraxtal",
+   "dex": "balancer-v2-fraxtal",
+   "kind": "swap",
+   "address": "0xa0af0b88796c1aa67e93db89fead2ab7aa3d6747",
+   "counter_asset": {
+    "symbol": "FRAX/USDe",
+    "address": "0xa0af0b88796c1aa67e93db89fead2ab7aa3d6747",
+    "decimals": 18,
+    "price_usd": null
+   },
+   "role": "other_pair",
+   "tvl_usd": 1081.2021,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/fraxtal/pools/0xa0af0b88796c1aa67e93db89fead2ab7aa3d6747",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC 84%",
+   "chain": "base",
+   "dex": "uniswap-v4-base",
+   "kind": "swap",
+   "address": "0xbfb71663c5d558be5bb892889f82e7dcc261d11f46d7f36ec43be93ca6e17522",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+    "decimals": 6,
+    "price_usd": 1.0011285806
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1050.05,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/base/pools/0xbfb71663c5d558be5bb892889f82e7dcc261d11f46d7f36ec43be93ca6e17522",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "USDe / USDC",
+   "chain": "arbitrum",
+   "dex": "curve_arbitrum",
+   "kind": "swap",
+   "address": "0x1c34204fcfe5314dcf53be2671c02c35db58b4e3",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+    "decimals": 6,
+    "price_usd": 0.999394039100882
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1026.0923,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.02759027124,
+   "as_of": "2026-10-10T17:57:30Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0x1c34204fcfe5314dcf53be2671c02c35db58b4e3",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "asset_units": 529.8453913589764,
+    "asset_usd": 529.8184019354777,
+    "counter_symbol": "USDC",
+    "counter_units": 493.18876,
+    "counter_usd": 492.8899068955555,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  }
+ ],
+ "absorbing_side": {
+  "buckets": {
+   "independent_exit": {
+    "pool_count": 16,
+    "counter_usd": 3174844.9543122225
+   },
+   "circular_counter": {
+    "pool_count": 0,
+    "counter_usd": 0.0
+   },
+   "family_swap": {
+    "pool_count": 0,
+    "counter_usd": 0.0
+   },
+   "other_pair": {
+    "pool_count": 15,
+    "counter_usd": 33664483.62800581
+   },
+   "not_read": {
+    "pool_count": 61,
+    "counter_usd": 25262707.01412777,
+    "semantics": "Whole-pool indexer TVL of pools whose balances could not be read: NOT counter-side."
+   }
+  },
+  "semantics": "Counter-asset units held by the pools, by what they are. Do NOT add circular_counter to independent_exit: a counter backed by this asset fails with it. None of this is depth."
+ },
+ "pendle": {
+  "source": "https://api-v2.pendle.finance/core/v1/{chainId}/markets/{active,inactive}, matched by exact underlying address",
+  "chains": {
+   "eth": {
+    "status": "queried",
+    "market_count": 13
+   },
+   "arbitrum": {
+    "status": "queried",
+    "market_count": 3
+   },
+   "base": {
+    "status": "queried",
+    "market_count": 1
+   },
+   "optimism": {
+    "status": "queried",
+    "market_count": 0
+   },
+   "bsc": {
+    "status": "queried",
+    "market_count": 2
+   },
+   "mantle": {
+    "status": "queried",
+    "market_count": 2
+   },
+   "blast": {
+    "status": "pendle_not_deployed"
+   },
+   "fraxtal": {
+    "status": "pendle_not_deployed"
+   },
+   "monad": {
+    "status": "queried",
+    "market_count": 0
+   },
+   "plasma": {
+    "status": "queried",
+    "market_count": 3
+   }
+  },
+  "markets": [
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0x6d98a2b6cdbf44939362a3e99793339ba2016af4",
+    "expiry": "2025-09-25",
+    "sy": "0xf3dbde762e5b67fad09d88da3dfd38a83f753ffe",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 257078.80871402856
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0x19588f29f9402bb508007feadd415c875ee3f19f",
+    "expiry": "2024-07-25",
+    "sy": "0x42862f48eade25661558afe0a630b132038553d0",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 199578.7283654802
+   },
+   {
+    "chain": "arbitrum",
+    "name": "USDe",
+    "market": "0x2dfaf9a5e4f293bceede49f2dba29aacdd88e0c4",
+    "expiry": "2024-08-29",
+    "sy": "0xb3c24d9dccc2ec5f778742389ffe448e295b84e0",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 183908.38343718447
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0x3d1e7312de9b8fc246dded971ee7547b0a80592a",
+    "expiry": "2024-10-24",
+    "sy": "0x3d99935c992cb9fb9d86acf9082aacf1bd5bcae4",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 112688.89649818305
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0xaadbc004dacf10e1fdbd87ca1a40ecaf77cc5b02",
+    "expiry": "2026-02-05",
+    "sy": "0x925a15bd6a1582fa7c0ebbfc3dbd29c34f58340e",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 101089.90738551541
+   },
+   {
+    "chain": "bsc",
+    "name": "USDe",
+    "market": "0xb5b56637810e4d090894785993f4cdd6875d927e",
+    "expiry": "2025-10-30",
+    "sy": "0x5719acdb9abbbc6ba414c9dbff5b2967342f465d",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 97908.96110170288
+   },
+   {
+    "chain": "mantle",
+    "name": "USDe",
+    "market": "0x7dc07c575a0c512422dcab82ce9ed74db58be30c",
+    "expiry": "2024-07-25",
+    "sy": "0x5b9e411c9e50164133de07fe1cac05a094000105",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 34313.40662333988
+   },
+   {
+    "chain": "plasma",
+    "name": "USDe",
+    "market": "0x4bab3368dedb3398664e845612d189666c6c3f5f",
+    "expiry": "2026-04-09",
+    "sy": "0x68930887e1318ef30653a4b7942ab07544ebed4d",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 27063.552491646213
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0xb4460e76d99ecad95030204d3c25fb33c4833997",
+    "expiry": "2024-04-04",
+    "sy": "0x248d83f7ac03cebcc06d5c1a52c9b5d0ebb9936e",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 16807.747226118863
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0x4eaa571eafcd96f51728756bd7f396459bb9b869",
+    "expiry": "2025-11-27",
+    "sy": "0x925a15bd6a1582fa7c0ebbfc3dbd29c34f58340e",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 12333.618078794443
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0xb451a36c8b6b2eac77ad0737ba732818143a0e25",
+    "expiry": "2025-03-27",
+    "sy": "0x4db99b79361f98865230f5702de024c69f629fec",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 5442.909832314656
+   },
+   {
+    "chain": "mantle",
+    "name": "USDe",
+    "market": "0x2ddd4808fbb2e08b563af99b8f340433c32c8cc2",
+    "expiry": "2024-12-26",
+    "sy": "0x9660ac0cb085f8fb39a6f383cf2067785364f924",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 5228.265648875657
+   },
+   {
+    "chain": "plasma",
+    "name": "USDe",
+    "market": "0xfd3eb62302fa3cbc3c7e59e887b92dbbc814285d",
+    "expiry": "2026-01-15",
+    "sy": "0xe10b8c2b029c3369f7a910710ed4fa2b25059674",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 2885.5444643354977
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0x8a49f2ac2730ba15ab7ea832edac7f6ba22289f8",
+    "expiry": "2024-12-26",
+    "sy": "0xd29a7d69cf5f06ccd777e53d6e437032804abf89",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 2616.2465829230136
+   },
+   {
+    "chain": "arbitrum",
+    "name": "USDe",
+    "market": "0x281fe15fd3e08a282f52d5cf09a4d13c3709e66d",
+    "expiry": "2024-11-28",
+    "sy": "0xa4ffe78ba40b7ec0c348ffe36a8de4f9d6198d2d",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 2515.8023750490365
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0x90c98ab215498b72abfec04c651e2e496ba364c0",
+    "expiry": "2024-06-27",
+    "sy": "0x293c6937d8d82e05b01335f7b33fba0c8e256e30",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 1931.5877629840147
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0x9df192d13d61609d1852461c4850595e1f56e714",
+    "expiry": "2025-07-31",
+    "sy": "0xb47cbf6697a6518222c7af4098a43aefe2739c8c",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 1288.7181934794075
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0xa3336f04f7afbf26714331e395054f33b77c9b8d",
+    "expiry": "2026-05-07",
+    "sy": "0xf0bacd9c3d94fc924dbcaaf644208c4e3f4d3bb4",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 174.43481494602906
+   },
+   {
+    "chain": "base",
+    "name": "USDe",
+    "market": "0x8991847176b1d187e403dd92a4e55fc8d7684538",
+    "expiry": "2025-12-11",
+    "sy": "0x5dfbeaea9e41f85c334075482a20afb7031207ae",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 119.35811930534223
+   },
+   {
+    "chain": "bsc",
+    "name": "USDe",
+    "market": "0xfa4b91d63e7cab716dd049a23c56f70237c6ddbb",
+    "expiry": "2025-08-07",
+    "sy": "0x5719acdb9abbbc6ba414c9dbff5b2967342f465d",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 103.73485718310077
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0xf148a0b15712f5bfeefadb4e6ef9739239f88b07",
+    "expiry": "2024-08-22",
+    "sy": "0xd24cfe2d0fa81369ca6291c28ac5426e16b6d57a",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 59.34770828713498
+   },
+   {
+    "chain": "arbitrum",
+    "name": "USDe",
+    "market": "0xf1700fc22beff50dedc9f18925aabf55a2d2db2b",
+    "expiry": "2025-12-11",
+    "sy": "0xa4ffe78ba40b7ec0c348ffe36a8de4f9d6198d2d",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 26.80248177779505
+   },
+   {
+    "chain": "eth",
+    "name": "USDe",
+    "market": "0x43c97094da0e894d3af2fda6f507d59a29888251",
+    "expiry": "2026-08-13",
+    "sy": "0xf0bacd9c3d94fc924dbcaaf644208c4e3f4d3bb4",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 1.1292070535810332
+   },
+   {
+    "chain": "plasma",
+    "name": "USDe",
+    "market": "0x94aa82ff12f872b4292b6b0548d978a9d263af81",
+    "expiry": "2026-06-18",
+    "sy": "0xaf8857ae2d2ddeaa23b2e8414d2031eb10621e19",
+    "status": "matured",
+    "tradable": false,
+    "liquidity_usd": 0.3998200010142265
+   }
+  ],
+  "sy_holdings": [
+   {
+    "chain": "eth",
+    "sy": "0x248d83f7ac03cebcc06d5c1a52c9b5d0ebb9936e",
+    "units": 24609.9236646993,
+    "status": "read"
+   },
+   {
+    "chain": "eth",
+    "sy": "0x42862f48eade25661558afe0a630b132038553d0",
+    "units": 379784.36813651375,
+    "status": "read"
+   },
+   {
+    "chain": "eth",
+    "sy": "0x293c6937d8d82e05b01335f7b33fba0c8e256e30",
+    "units": 0.0,
+    "status": "read"
+   },
+   {
+    "chain": "eth",
+    "sy": "0xd24cfe2d0fa81369ca6291c28ac5426e16b6d57a",
+    "units": 0.0,
+    "status": "read"
+   },
+   {
+    "chain": "eth",
+    "sy": "0xd29a7d69cf5f06ccd777e53d6e437032804abf89",
+    "units": 3342.396398454843,
+    "status": "read"
+   },
+   {
+    "chain": "eth",
+    "sy": "0x3d99935c992cb9fb9d86acf9082aacf1bd5bcae4",
+    "units": 113966.92344469536,
+    "status": "read"
+   },
+   {
+    "chain": "eth",
+    "sy": "0x4db99b79361f98865230f5702de024c69f629fec",
+    "units": 61494.703724452884,
+    "status": "read"
+   },
+   {
+    "chain": "eth",
+    "sy": "0xb47cbf6697a6518222c7af4098a43aefe2739c8c",
+    "units": 52713.89819198045,
+    "status": "read"
+   },
+   {
+    "chain": "eth",
+    "sy": "0xf3dbde762e5b67fad09d88da3dfd38a83f753ffe",
+    "units": 1471112.651314452,
+    "status": "read"
+   },
+   {
+    "chain": "eth",
+    "sy": "0x925a15bd6a1582fa7c0ebbfc3dbd29c34f58340e",
+    "units": 135424.6303474231,
+    "status": "read"
+   },
+   {
+    "chain": "eth",
+    "sy": "0xf0bacd9c3d94fc924dbcaaf644208c4e3f4d3bb4",
+    "units": 67071.14552743483,
+    "status": "read"
+   },
+   {
+    "chain": "arbitrum",
+    "sy": "0xb3c24d9dccc2ec5f778742389ffe448e295b84e0",
+    "units": 206624.09494801375,
+    "status": "read"
+   },
+   {
+    "chain": "arbitrum",
+    "sy": "0xa4ffe78ba40b7ec0c348ffe36a8de4f9d6198d2d",
+    "units": 7725.092539452225,
+    "status": "read"
+   },
+   {
+    "chain": "base",
+    "sy": "0x5dfbeaea9e41f85c334075482a20afb7031207ae",
+    "units": 1557.540847172004,
+    "status": "read"
+   },
+   {
+    "chain": "bsc",
+    "sy": "0x5719acdb9abbbc6ba414c9dbff5b2967342f465d",
+    "units": 98444.5533507683,
+    "status": "read"
+   },
+   {
+    "chain": "mantle",
+    "sy": "0x5b9e411c9e50164133de07fe1cac05a094000105",
+    "units": 51103.72916742277,
+    "status": "read"
+   },
+   {
+    "chain": "mantle",
+    "sy": "0x9660ac0cb085f8fb39a6f383cf2067785364f924",
+    "units": 13544.381700273818,
+    "status": "read"
+   },
+   {
+    "chain": "plasma",
+    "sy": "0xe10b8c2b029c3369f7a910710ed4fa2b25059674",
+    "units": 226745.3258823026,
+    "status": "read"
+   },
+   {
+    "chain": "plasma",
+    "sy": "0x68930887e1318ef30653a4b7942ab07544ebed4d",
+    "units": 27203.530939351127,
+    "status": "read"
+   },
+   {
+    "chain": "plasma",
+    "sy": "0xaf8857ae2d2ddeaa23b2e8414d2031eb10621e19",
+    "units": 171.66447092926927,
+    "status": "read"
+   }
+  ],
+  "semantics": "Pendle markets trade PT against SY, not this asset against dollars: a PT holder exits via the market or at maturity, a direct holder never touches it. A matured market is NOT a venue. liquidity_usd is Pendle's figure. sy_holdings is the asset actually wrapped in each SY contract, read on-chain; one SY serves every maturity on its chain."
+ },
+ "non_swap_listings": {
+  "status": "ok",
+  "source": "defillama:yields.llama.fi/pools",
+  "match": "by symbol, NOT by address: names may collide, treat as a pointer",
+  "kind_meanings": {
+   "lending": "Deposits in a lending market: concentration context, not spot depth.",
+   "issuer_vault": "The issuer's own vault TVL: not secondary liquidity.",
+   "pendle_market": "Pendle yield market: see `pendle` for live vs matured.",
+   "lp_wrapper": "A receipt for a DEX pool already counted in `venues`: double-counts the same tokens.",
+   "unclassified": "Not sorted: a pointer to read, not a category."
+  },
+  "listings": [
+   {
+    "project": "aave-v3",
+    "chain": "Plasma",
+    "symbol": "USDE",
+    "tvl_usd": 558094875,
+    "kind": "lending"
+   },
+   {
+    "project": "morpho-blue",
+    "chain": "Base",
+    "symbol": "USDE",
+    "tvl_usd": 393976228,
+    "kind": "lending"
+   },
+   {
+    "project": "morpho-blue",
+    "chain": "Robinhood Chain",
+    "symbol": "USDE",
+    "tvl_usd": 358593758,
+    "kind": "lending"
+   },
+   {
+    "project": "aave-v3",
+    "chain": "Ethereum",
+    "symbol": "USDE",
+    "tvl_usd": 314223492,
+    "kind": "lending"
+   },
+   {
+    "project": "kamino-lend",
+    "chain": "Solana",
+    "symbol": "USDE",
+    "tvl_usd": 169871862,
+    "kind": "lending"
+   },
+   {
+    "project": "aave-v3",
+    "chain": "Monad",
+    "symbol": "USDE",
+    "tvl_usd": 101240647,
+    "kind": "lending"
+   },
+   {
+    "project": "morpho-blue",
+    "chain": "Ethereum",
+    "symbol": "USDE",
+    "tvl_usd": 51952994,
+    "kind": "lending"
+   },
+   {
+    "project": "aave-v3",
+    "chain": "Mantle",
+    "symbol": "USDE",
+    "tvl_usd": 35943881,
+    "kind": "lending"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRAX-USDE",
+    "tvl_usd": 33934128,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "aave-v4",
+    "chain": "Ethereum",
+    "symbol": "USDE",
+    "tvl_usd": 26198738,
+    "kind": "lending"
+   },
+   {
+    "project": "jupiter-lend",
+    "chain": "Solana",
+    "symbol": "USDE",
+    "tvl_usd": 16734949,
+    "kind": "unclassified"
+   },
+   {
+    "project": "jupiter-lend",
+    "chain": "Solana",
+    "symbol": "USDE",
+    "tvl_usd": 4895934,
+    "kind": "unclassified"
+   },
+   {
+    "project": "accountable",
+    "chain": "Robinhood Chain",
+    "symbol": "USDE",
+    "tvl_usd": 2177954,
+    "kind": "unclassified"
+   },
+   {
+    "project": "berapaw",
+    "chain": "Berachain",
+    "symbol": "KODISAIL.R-USDE",
+    "tvl_usd": 1289621,
+    "kind": "unclassified"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "USDT-USDE",
+    "tvl_usd": 858425,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "USDT-USDE",
+    "tvl_usd": 776713,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "kamino-liquidity",
+    "chain": "Solana",
+    "symbol": "USDG-USDE",
+    "tvl_usd": 500567,
+    "kind": "unclassified"
+   },
+   {
+    "project": "morpho-blue",
+    "chain": "Ethereum",
+    "symbol": "USDE",
+    "tvl_usd": 364692,
+    "kind": "lending"
+   },
+   {
+    "project": "origin-arm",
+    "chain": "Ethereum",
+    "symbol": "ARM-SUSDE-USDE",
+    "tvl_usd": 204510,
+    "kind": "unclassified"
+   },
+   {
+    "project": "fusion-by-ipor",
+    "chain": "Ethereum",
+    "symbol": "USDE",
+    "tvl_usd": 140165,
+    "kind": "unclassified"
+   },
+   {
+    "project": "morpho-blue",
+    "chain": "Ethereum",
+    "symbol": "USDE",
+    "tvl_usd": 138268,
+    "kind": "lending"
+   },
+   {
+    "project": "hyperlend-pooled",
+    "chain": "Hyperliquid L1",
+    "symbol": "USDE",
+    "tvl_usd": 78464,
+    "kind": "unclassified"
+   },
+   {
+    "project": "gmx-v2-perps",
+    "chain": "Arbitrum",
+    "symbol": "WSTETH-USDE",
+    "tvl_usd": 74332,
+    "kind": "unclassified"
+   },
+   {
+    "project": "gmx-v2-perps",
+    "chain": "Arbitrum",
+    "symbol": "USDE-USDC",
+    "tvl_usd": 50074,
+    "kind": "unclassified"
+   },
+   {
+    "project": "camelot-v3",
+    "chain": "Arbitrum",
+    "symbol": "USDE-USDC",
+    "tvl_usd": 45755,
+    "kind": "unclassified"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "OUSD-USDE",
+    "tvl_usd": 35379,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "aave-v3",
+    "chain": "MegaETH",
+    "symbol": "USDE",
+    "tvl_usd": 33498,
+    "kind": "lending"
+   },
+   {
+    "project": "alandale-v3",
+    "chain": "Robinhood Chain",
+    "symbol": "USDE-USDG",
+    "tvl_usd": 31768,
+    "kind": "unclassified"
+   },
+   {
+    "project": "fluid-lending",
+    "chain": "Plasma",
+    "symbol": "USDE",
+    "tvl_usd": 31644,
+    "kind": "lending"
+   },
+   {
+    "project": "hypurrfi-pooled",
+    "chain": "Hyperliquid L1",
+    "symbol": "USDE",
+    "tvl_usd": 27011,
+    "kind": "unclassified"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "OUSD-USDE",
+    "tvl_usd": 25503,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "fusion-by-ipor",
+    "chain": "Ethereum",
+    "symbol": "USDE",
+    "tvl_usd": 14365,
+    "kind": "unclassified"
+   },
+   {
+    "project": "tydro",
+    "chain": "Ink",
+    "symbol": "USDE",
+    "tvl_usd": 13153,
+    "kind": "unclassified"
+   },
+   {
+    "project": "venus-core-pool",
+    "chain": "BSC",
+    "symbol": "USDE",
+    "tvl_usd": 13084,
+    "kind": "lending"
+   },
+   {
+    "project": "ekubo",
+    "chain": "Ethereum",
+    "symbol": "USDE-SUSDE",
+    "tvl_usd": 11000,
+    "kind": "unclassified"
+   },
+   {
+    "project": "euler-v2",
+    "chain": "Ethereum",
+    "symbol": "USDE",
+    "tvl_usd": 8267,
+    "kind": "lending"
+   },
+   {
+    "project": "dolomite",
+    "chain": "Berachain",
+    "symbol": "USDE",
+    "tvl_usd": 6421,
+    "kind": "lending"
+   },
+   {
+    "project": "evaa-protocol",
+    "chain": "TON",
+    "symbol": "USDE",
+    "tvl_usd": 1626,
+    "kind": "unclassified"
+   }
+  ]
+ },
+ "payload_revised_at": "2026-10-10T18:07:30Z"
+}
