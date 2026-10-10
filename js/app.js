@@ -348,6 +348,13 @@ async function renderAsset(slug) {
         // Tag the URL slug so findAssetRenderer can route to the sibling
         // view's renderer instead of falling through to the source asset's.
         data.view_slug = slug;
+        // Machine-readable publication scope for the generic venue renderer.
+        // Producers may enumerate bridge deployments for completeness; the
+        // page registry decides which of those deployments this dashboard is
+        // actually presenting.
+        if (assetMeta && assetMeta.venue_scope) {
+            data.dashboard_venue_scope = assetMeta.venue_scope;
+        }
         // Merge per-axis overlays over the embedded blocks, per FIELD, each
         // field keeping its origin. Runs before preRender so a bespoke renderer
         // reads the merged block rather than the pre-merge one — otherwise a

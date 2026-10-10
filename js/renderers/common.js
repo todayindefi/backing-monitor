@@ -1179,6 +1179,7 @@ const CommonRenderer = {
             else if (v.depth_role) p.role = String(v.depth_role);
             if (v.role && v.depth_role) p.role_note = String(v.depth_role);
             if (v.pool_id) p.pool_id = v.pool_id;
+            if (v.address) p.address = v.address;
             // Tri-state, carried as-is. `has_liveness` distinguishes "the producer
             // published null" from "this payload predates the field", which must not
             // render the same way: the first is an unresolved venue, the second is a
@@ -8628,7 +8629,53 @@ const CommonRenderer = {
         // column appears when at least one pool supplies it; a feed that gains
         // depth later gains the column with no change here, and a feed without
         // it shows a narrower table rather than a wall of dashes.
-        var pools = liq.pools || [];
+        var allPools = liq.pools || [];
+        var venueScope = data.dashboard_venue_scope || {};
+        var scopeChains = Array.isArray(venueScope.chains)
+            ? venueScope.chains.map(function(c) { return String(c).toLowerCase(); }) : [];
+        var outOfScopePools = [];
+        var pools = allPools.filter(function(p) {
+            if (!scopeChains.length) return true;
+            var inside = p && p.chain && scopeChains.indexOf(String(p.chain).toLowerCase()) !== -1;
+            if (!inside) outOfScopePools.push(p);
+            return inside;
+        });
+
+        // One fleet rule for venue legibility: preserve route-used venues, then
+        // rank direct exits ahead of multi-hop/family context, and rank within a
+        // role by trusted TVL. The default table is deliberately short; a second
+        // tranche is reader-expandable and the long tail is reconciled by count
+        // and TVL instead of becoming a hundred-row wall.
+        var routeIds = {};
+        var quoteMap = (liq.exit_mark && liq.exit_mark.quotes) || {};
+        Object.keys(quoteMap).forEach(function(k) {
+            var rs = quoteMap[k] && quoteMap[k].route_venues;
+            (Array.isArray(rs) ? rs : []).forEach(function(v) {
+                var id = typeof v === 'string' ? v : (v && (v.pool || v.address || v.pool_id));
+                if (id) routeIds[String(id).toLowerCase()] = true;
+            });
+        });
+        function poolId(p) { return String((p && (p.address || p.pool_id)) || '').toLowerCase(); }
+        function roleRank(p) {
+            var r = String((p && p.role) || '').toLowerCase();
+            if (/(^|\s)(eth|dollar|stable|direct) exit/.test(r)) return 0;
+            if (/family/.test(r)) return 2;
+            if (/other pair|multi.?hop|indirect/.test(r)) return 1;
+            return 1;
+        }
+        function trustedTvl(p) {
+            return p && p.tvl_status !== 'implausible' && typeof p.tvl_usd === 'number'
+                ? p.tvl_usd : -1;
+        }
+        pools = pools.slice().sort(function(a, b) {
+            var ar = !!routeIds[poolId(a)], br = !!routeIds[poolId(b)];
+            if (ar !== br) return ar ? -1 : 1;
+            var rr = roleRank(a) - roleRank(b);
+            return rr || trustedTvl(b) - trustedTvl(a);
+        });
+        var defaultPools = pools.slice(0, 10);
+        var additionalPools = pools.slice(10, 30);
+        var summarizedPools = pools.slice(30);
         function anyPool(key) {
             return pools.some(function(p) { return p && p[key] != null; });
         }
@@ -8709,11 +8756,13 @@ const CommonRenderer = {
         if (anyPool('role')) cols.push({ th: 'Role', cls: 'text-xs text-slate-500',
             get: function(p) { return p.role ? CommonRenderer._escapeAttr(p.role) : '—'; }});
 
-        var poolRows = pools.map(function(p) {
+        function poolRows(rows) { return rows.map(function(p) {
             return '<tr>' + cols.map(function(c) {
                 return '<td class="' + c.cls + '">' + c.get(p) + '</td>';
             }).join('') + '</tr>';
-        }).join('');
+        }).join(''); }
+        var primaryPoolRows = poolRows(defaultPools);
+        var additionalPoolRows = poolRows(additionalPools);
         // ⚠️ pools_note points at a number the page did not show: "Lending markets
         // are listed under asset_specific.lending_exposure: they are the LARGER
         // numbers." On syzUSD that is $1.83M of lending exposure against $554K of
@@ -8758,14 +8807,35 @@ const CommonRenderer = {
                       ' — a liquidation-risk figure, not exit depth.</div>' : '');
         }
 
+        var hiddenTrustedTvl = summarizedPools.reduce(function(sum, p) {
+            var v = trustedTvl(p); return sum + (v > 0 ? v : 0);
+        }, 0);
+        var venueSummary = (pools.length > 10 || outOfScopePools.length)
+            ? '<div class="text-xs text-slate-500 mt-2">Showing ' + defaultPools.length +
+                ' material venues from ' + pools.length + ' in dashboard scope' +
+                (outOfScopePools.length ? ' · ' + outOfScopePools.length + ' outside-scope venues excluded' : '') +
+                '.</div>' : '';
+        var additionalBlock = additionalPools.length
+            ? '<details class="mt-3"><summary class="text-xs font-semibold text-slate-600 cursor-pointer">Show ' +
+                additionalPools.length + ' additional material venues</summary>' +
+                '<div class="data-table-scroll mt-2"><table class="data-table"><thead><tr>' +
+                cols.map(function(c) { return '<th' + (/text-right/.test(c.cls) ? ' class="text-right"' : '') + '>' + c.th + '</th>'; }).join('') +
+                '</tr></thead><tbody>' + additionalPoolRows + '</tbody></table></div></details>'
+            : '';
+        var tailSummary = summarizedPools.length
+            ? '<div class="text-xs text-slate-500 mt-2">' + summarizedPools.length +
+                ' further venues summarized rather than listed' +
+                (hiddenTrustedTvl > 0 ? ' · ' + this.formatCurrencyExact(hiddenTrustedTvl) + ' combined trusted TVL' : '') +
+                '.</div>' : '';
         var poolBlock = pools.length
-            ? '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">Pools' +
+            ? '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">Material venues' +
                 this._venueClockHtml(liq) + '</div>' +
               '<div class="data-table-scroll"><table class="data-table">' +
                   '<thead><tr>' + cols.map(function(c) {
                       return '<th' + (/text-right/.test(c.cls) ? ' class="text-right"' : '') + '>' + c.th + '</th>';
                   }).join('') + '</tr></thead>' +
-                  '<tbody>' + poolRows + '</tbody></table></div>' +
+                  '<tbody>' + primaryPoolRows + '</tbody></table></div>' +
+                  venueSummary + additionalBlock + tailSummary +
                   this._tvlTrustHtml(pools)
             : '';
 

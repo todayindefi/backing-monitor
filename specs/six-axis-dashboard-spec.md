@@ -500,6 +500,34 @@ the venue stamp is more than 24h older. Silent where the two halves share a cloc
 carry pools under the block's own `as_of`, and a second identical date would assert a split the
 asset does not have. Shipped `2e351bc0f`.
 
+### Venue inventory presentation — one fleet rule
+
+The venue payload is an enumeration, not a demand that every discovered pool receive equal visual
+weight. The dashboard applies one presentation rule across all assets:
+
+1. **Declared deployment scope first.** If the asset registry supplies `venue_scope.chains`, only
+   those chains appear on that dashboard. Excluded-chain rows remain counted in the scope note;
+   they are not silently reclassified as dust. A canonical-chain page must not acquire bridge-chain
+   liquidity merely because the producer enumerates it.
+2. **Executable route preservation.** A venue named by the current exit ladder is retained ahead of
+   ranking whenever the inventory exposes the same address or pool identifier.
+3. **Exit usefulness before size.** Direct settlement/reference-asset exits rank first, indirect or
+   multi-hop pairs second, family-token swaps third, then unclassified venues. Within a role, sort
+   by trusted TVL descending. A TVL marked implausible never wins ranking as though trusted.
+4. **Ten rows by default.** Render at most ten material venues in the open table. The next twenty
+   ranked venues are available through progressive disclosure. The remaining long tail renders as
+   a reconciled count and combined trusted TVL, not as dozens of equal-weight rows.
+5. **Volume is context, never an exclusion gate.** A large pool with zero reported 24h volume may
+   still provide executable inventory. Keep it and show the zero; do not equate a quiet day with a
+   dead pool.
+6. **Completeness survives compression.** State displayed, additional, summarized, out-of-scope,
+   dust, rejected and unresolved counts wherever those states exist. Truncation/floor declarations
+   remain visible. Progressive disclosure may reduce reading cost; it may not turn an enumerated
+   floor into an apparent census.
+
+This rule is generic. Assets add structured scope data when needed; they do not receive bespoke
+TVL or volume thresholds in renderer code.
+
 ## ⚠️ Axis 3 ownership — one owner per PART, with a declared fallback
 
 **Owner decision 2026-10-01.** Axis 3 is not owned whole. Each part below has one owner, its own
