@@ -76,6 +76,54 @@ For each asset, in this order:
 
 ## Entries
 
+### peg and collateral charts — align both on the 7d window named by Axis 1
+```
+affects     apxusd, apyusd, bold, crvusd, dusd-alto, fxusd, ousd, syrupusdc, syrupusdt,
+            usdai, usdat, usde, usdm, usds, yzusd; also syzusd when coverage history lands
+raised      2026-10-10 after correcting wsteth
+what        crvusd, usds, yzusd and syzusd have daily peg histories: roughly 7–8 points in the
+            trailing seven-day cutoff. The shared renderer's 24-point floor widens those to 30
+            days even when Axis 1 says "7d peg performance". Across the broader `affects` list,
+            the shared collateral-ratio chart separately plots its full input file, so the two
+            charts on one page can cover different periods even when both feeds are hourly.
+why         A readable 30-day line is a different measurement from the seven-day claim in the
+            title and adjacent band. Peg and backing are meant to be compared over the same market
+            interval; the window must not change merely to make either line denser.
+reference   wsteth now sets `peg.chart_window_days = 7` and `peg.chart_min_points = 2`; local QA
+            measured 8 shown of 291 retained observations with `windowDays: 7`.
+owner       us, per asset during its next manual refresh
+closes when each refreshed asset plots both peg and collateral/coverage history over the same
+            trailing seven-day cutoff, declares each actual point count, and neither chart falls
+            back to 30d/full retention. If a series has fewer than two observations, it declares
+            insufficient history instead. The cross-asset item closes after every page with both
+            charts has been checked.
+status      wsteth peg is fixed; it publishes no dashboard-readable collateral history today, so
+            the paired-window condition is not yet exercised there. Remaining assets are queued
+            for their own refreshes.
+Last reviewed 2026-10-10
+```
+
+### wsteth — canonical wrapper coverage history is not emitted
+```
+raised      2026-10-10 while aligning peg and coverage chart windows
+what        The hourly canonical snapshot measures `backing.coverage_pct`, but the producer emits
+            only `wsteth_backing.json` and `wsteth_peg_history.json`. It never appends or exports
+            `wsteth_backing_history.json`, so the collateral-ratio chart has no input file.
+why         This is a producer-output gap, not a renderer bug. The dashboard sync already allows
+            `_backing_history`, and wstETH's renderer already maps canonical `coverage_pct` to the
+            shared collateral-ratio field. There is simply no retained series to plot.
+evidence    Seventeen hourly `wsteth_backing.json` snapshots are preserved in backing-monitor git
+            history for 2026-10-10. They can seed an honest forward-only series without inventing
+            older observations; each carries a timestamp, block and same-block wrapper ratio.
+owner       PegTracker
+closes when the analyzer uses the shared backing-history writer, the runner requires a fresh valid
+            `wsteth_backing_history.json`, the initial export is seeded only from preserved measured
+            snapshots, and the staged dashboard renders peg and wrapper coverage on the same 7d
+            cutoff. The coverage line must remain canonical Ethereum only.
+status      dispatched 2026-10-10; no historical coverage before retained snapshots is inferred.
+Last reviewed 2026-10-10
+```
+
 ### thusd — exit measurement never configured
 ```
 raised      2026-10-02

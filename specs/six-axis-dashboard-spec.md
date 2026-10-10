@@ -291,16 +291,25 @@ two things in the same order**, so a reader moving between assets is reading the
 their head; two price lines show the same thing directly — ⚠️ **the gap between the lines IS the
 premium.** The tiles carry the ratio for anyone who wants the number.
 
-**SEVEN DAYS, WITH A POINT FLOOR.** ⚠️ Revised from 30 the same day it was written — 30 days is
-unreadable on mobile, and the tiles beside the chart already quote a **7-day** range, so the panel
-was showing a month next to a week-long figure. `PEG_CHART_WINDOW_DAYS = 7`.
+**SEVEN DAYS, WITH AN HONEST SPARSE SERIES.** ⚠️ Revised from 30 the same day it was written — 30
+days is unreadable on mobile, and the tiles beside the chart already quote a **7-day** range, so
+the panel was showing a month next to a week-long figure. `PEG_CHART_WINDOW_DAYS = 7`.
 
-⚠️ **THE FLOOR IS NOT A REFINEMENT, IT IS WHAT STOPS 7 DAYS WRECKING FOUR PAGES.** Sampling is not
-uniform: most assets are hourly (~170 points a week) but **crvUSD, usds, yzUSD and syzUSD sample
-DAILY and get 8 points in 7 days.** An 8-point line is not a chart. So the window widens once when
-the slice is too sparse — `PEG_CHART_MIN_POINTS = 24`, `PEG_CHART_FALLBACK_DAYS = 30` — and the
-caption states the window **actually used**, never the one requested. Measured, not assumed:
-strcx draws 7d/213pts, crvUSD falls back to 30d/31pts.
+⚠️ **THE TITLE AND THE PLOTTED WINDOW MUST AGREE, AND PEG/BACKING WINDOWS MUST MATCH.** Sampling
+is not uniform: most assets are hourly (~170 points a week), while a daily feed normally yields
+7–8 observations. That daily line is sparse, but it is still the requested seven-day evidence. A
+chart headed `7d peg performance` must not silently widen to 30 days to satisfy a visual point
+floor. Assets may set
+`peg.chart_window_days = 7` and `peg.chart_min_points = 2` while the fleet migration is completed;
+the renderer must still declare the points and actual window shown. If fewer than two observations
+exist, render the history as unavailable/insufficient rather than substituting a differently timed
+claim under the 7d title. wstETH established this rule on 2026-10-10: its daily series renders the
+eight observations in the trailing seven-day cutoff instead of the generic 30-day fallback.
+**The collateral-ratio/coverage chart on the same page uses the identical trailing cutoff.** A
+reader comparing market behaviour with backing behaviour must not be shown 7d peg beside 30d (or
+full-retention) collateral history. Their point counts may differ because producer cadences differ;
+their start/end horizon may not. If only one series has enough observations, keep the common 7d
+horizon and declare the other insufficient rather than widening one chart independently.
 
 ⚠️ **CLIPPING MUST BE STATED.** Eight assets retain longer (crvUSD 535d, usds 347d, yzUSD 173d,
 syzUSD/usde/susde ~90d, susds 67d, strcx 108d). `_renderPegChart` returns
