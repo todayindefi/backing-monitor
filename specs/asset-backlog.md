@@ -1386,7 +1386,7 @@ Last reviewed 2026-10-03
 ### venue-payload assets — three chain-level facts published and unrendered
 ```
 affects     crvusd, apyusd, susde (no local dollar exit) · thusd (chain not queried) ·
-            wsteth, weeth (chains truncated — both UNREGISTERED, so no page today)
+            weeth (chains truncated — UNREGISTERED, so no page today)
 raised      2026-10-03 by DexTracker, with the venue batch
 what        Three keys inside `enumeration`, none read:
               chains_without_local_dollar_exit   apyusd: base, bsc, solana
@@ -1410,9 +1410,10 @@ owner       us — these are published fields, nothing is owed by the producer
             `enumeration.chains_without_local_*`, so confirm they agree on a shared asset
             before routing one into the other — two sources for one claim is how the
             axis-3 clock split started.
-⚠️ and the  weeth and wsteth are NOT registered (owner decision 2026-10-02: no weETH
-   two      dashboard yet), so chains_truncated has no reader today. Do not register an asset
-   truncated to render a field.
+⚠️ and the  weeth is NOT registered (owner decision 2026-10-02: no weETH dashboard yet), so its
+   two      chains_truncated finding has no reader today. wstETH is now registered and published;
+            its canonical-Ethereum `venue_scope` excludes bridge-chain venues while explicitly
+            counting them as outside scope. Do not register an asset merely to render a field.
 not done    deliberately, 2026-10-03: the same pass fixed a live wrong figure (crvUSD's
    in the   rejected $1.4M row) and mixing an enrichment into a correctness fix makes the A/B
    same pass unable to tell which change moved what. 12 panels moved for the fix alone.
