@@ -15,14 +15,14 @@
     "underlying_composition_subtotal_eth": 9679464.57159262,
     "underlying_uninterpreted_residual_eth": 6525.585627627756,
     "underlying_composition_block": 26155953,
-    "primary_exit_interpretation": "Any holder can call unwrap to receive stETH and can submit that stETH to Lido's withdrawal queue; neither step has an issuer whitelist or investor-eligibility gate. This establishes contract-call eligibility, not a guaranteed completion time: the queue is variable and no end-to-end transaction simulation was run.",
-    "primary_exit_status": "permissionless_contract_path; variable queue duration"
+    "primary_exit_interpretation": "Any holder can call unwrap to receive stETH and can submit that stETH to Lido's withdrawal queue; neither step has an issuer whitelist or investor-eligibility gate. A negative-control unwrap call reached the balance check rather than an access check. Permissionless eligibility is not uninterrupted availability: a live 3-of-6 CircuitBreaker Committee can pause new requests and finalization immediately for the configured 21-day safety period. The committee cannot seize balances or change code, and already-finalized claims remain claimable.",
+    "primary_exit_status": "permissionless eligibility; variable duration; bounded 21-day circuit-breaker gate"
   },
   "liquidity": {
     "liquidity_score": 9.0,
     "liquidity_score_source": "riskAnalyst:authored",
     "liquidity_score_generated_at": "2026-10-09T00:00:00Z",
-    "liquidity_score_basis": "Canonical holders have two exits. They can unwrap permissionlessly to stETH and enter Lido's withdrawal queue, typically 1–5 days, with no issuer whitelist or investor-eligibility gate; or sell through the deepest liquid-staking-token market in DeFi. The measured Ethereum WETH-exit venue set held at least $116.8M on 2026-10-03, a floor because the venue source truncated after ten pages. The 9.0 score reflects both a direct protocol exit and substantial secondary liquidity; it does not assume that the variable withdrawal queue completes instantly."
+    "liquidity_score_basis": "Canonical holders have two exits. They can unwrap permissionlessly to stETH and enter Lido's withdrawal queue, typically 1–5 days, with no holder whitelist; or sell through the deepest liquid-staking-token market in DeFi. The queue can be paused immediately for up to 21 days by a 3-of-6 CircuitBreaker Committee, so permissionless eligibility is not uninterrupted availability. The measured Ethereum WETH-exit venue set held at least $116.8M on 2026-10-03, a floor because the venue source truncated after ten pages. The 9.0 score holds because the primary gate is bounded and non-selective while substantial secondary liquidity remains available."
   },
   "dependencies": {
     "underlying_score": 6.0,

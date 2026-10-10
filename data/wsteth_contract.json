@@ -1,0 +1,402 @@
+{
+  "schema_version": "contract/1",
+  "asset": "wsteth",
+  "producer": "security_analyst",
+  "as_of": "2026-10-10",
+  "generated_at": "2026-10-10T03:11:15Z",
+  "contract": {
+    "headline": "Active undelayed core authority",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-10-10",
+    "source_file": "security_analyst/topology/assets/wsteth.yaml",
+    "publication_scope": {
+      "chains": [
+        "ethereum"
+      ],
+      "walked_by": "hand"
+    },
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-10-10",
+        "walked_by": "hand",
+        "target_name": "Wrapped stETH and canonical Lido V4 proxy stack",
+        "terminal_name": "Lido DAO through Dual Governance",
+        "topology": "token-voting",
+        "keys": [
+          "Aragon_AppProxy",
+          "proxy__getAdmin",
+          "Agent_EXECUTE_ROLE",
+          "conditional_emergency_execution"
+        ],
+        "timelock": "8d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x0000000000000000000000000000000000000000",
+            "name": "no wrapper-local controller",
+            "name_verified": true,
+            "via": "wstETH direct deployed code and fixed stETH() dependency",
+            "terminal": "no-controller",
+            "control_state": "absent",
+            "actionable": false,
+            "execution_delay": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "no wrapper-local controller",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "none",
+            "reach_bound": null,
+            "value_at_risk_scope": "wrapper",
+            "changeability": "immutable",
+            "terminal_kind": "no-controller",
+            "terminal_address": null,
+            "holder_kind": null,
+            "independent_canceller": "not-applicable",
+            "delay_floor": "not-applicable",
+            "hand_walk": "stETH() returned 0xae7ab96520de3a18e5e111b5eaab095312d7fe84. Runtime code is direct and the EIP-1967 implementation, admin, and beacon slots were zero. Source review found no pause, freeze, confiscation, arbitrary mint, parameter setter, upgrade, or rescue function. The positive control was the live stETH() getter."
+          },
+          {
+            "holder": "0x3e40d73eb977dc6a537af587d48316fee66e9c8c",
+            "name": "Lido DAO Agent",
+            "name_verified": true,
+            "via": "stETH Aragon app / OssifiableProxy admin -> Agent -> AdminExecutor -> EmergencyProtectedTimelock",
+            "terminal": "token-voting",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "8d",
+            "reaction_window": {
+              "type": "notice-period",
+              "basis": "5-day Aragon vote plus 3-day minimum Dual Governance timelock",
+              "minimum_window_seconds": 691200,
+              "maximum_window_seconds": 691200
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x2e59a20f205bb85a89c53f1936454680651e618e",
+            "holder_kind": "contract",
+            "independent_canceller": true,
+            "delay_floor": "8d",
+            "hand_walk": "stETH.kernel() returned 0xb8ffc3cd6e7cf5a098a1c92f48009765b24088dc. Accounting, StakingRouter, AccountingOracle and WithdrawalQueue each returned this Agent from proxy__getAdmin(), with nonzero live implementations. Aragon Voting returned voteTime=432000 seconds, supportRequiredPct=50%, and minAcceptQuorumPct=5%. EmergencyProtectedTimelock.MIN_EXECUTION_DELAY() returned 259200 seconds and getGovernance() returned DualGovernance. Conditional emergency execution is recorded as unresolved below rather than treated as an ordinary bypass."
+          },
+          {
+            "holder": "0xce0425301c85c5ea2a0873a2dee44d78e02d2316",
+            "name": "EmergencyProtectedTimelock conditional emergency execution",
+            "name_verified": true,
+            "via": "emergency activation and execution branches",
+            "terminal": "unresolved-authority",
+            "control_state": "unresolved",
+            "actionable": "unresolved",
+            "execution_delay": "unresolved",
+            "reaction_window": {
+              "type": "unresolved",
+              "basis": "complete emergency-state predicates and timing bounds were not resolved",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "unresolved",
+            "reach_bound": "ordinary governance is measured at five days of Aragon voting plus the three-day Dual Governance minimum; no emergency bypass, no-delay path, or global floor is inferred",
+            "value_at_risk_scope": "core",
+            "changeability": "unresolved",
+            "terminal_kind": "unresolved",
+            "terminal_address": null,
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "unresolved",
+            "hand_walk": "EmergencyProtectedTimelock exposes conditional emergency activation and execution machinery. The completed walk did not resolve every emergency-state predicate, the applicable committee threshold, or the conditional path's enforceable delay. This is an unresolved coverage edge, not evidence that a bypass is active or undelayed."
+          }
+        ]
+      },
+      {
+        "authority_layer": "oracle",
+        "chain": "ethereum",
+        "observed_at": "2026-10-10",
+        "walked_by": "hand",
+        "target_name": "AccountingOracle report acceptance",
+        "terminal_name": "HashConsensus oracle committee",
+        "topology": "nofm-multisig",
+        "n": 5,
+        "m": 9,
+        "keys": [
+          "submitReport",
+          "submitReportData"
+        ],
+        "timelock": "none",
+        "reach": "bounded",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xd624b08c83baecf0807dd2c6880c3154a5f0b288",
+            "name": "Accounting HashConsensus",
+            "name_verified": true,
+            "via": "5 matching member reports -> AccountingOracle -> Accounting -> stETH",
+            "terminal": "oracle-committee",
+            "threshold": 5,
+            "owners": 9,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "oracle reporting frame is not a holder reaction window",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "report hash and data must match the current frame and pass AccountingOracle, StakingRouter, withdrawal-queue, and OracleReportSanityChecker validations",
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xd624b08c83baecf0807dd2c6880c3154a5f0b288",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "hand_walk": "getMembers() returned nine addresses and getQuorum() returned five. This path can accept accounting inputs that rebase holder balances and drive withdrawal finalization, but cannot submit arbitrary values: source enforces consensus hash/version/frame checks and downstream sanity checks. The live member list and quorum getters are positive controls for the committee read."
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "observed_at": "2026-10-10",
+        "walked_by": "hand",
+        "target_name": "StakingRouter module allocation and deposit behavior",
+        "terminal_name": "Lido DAO through Dual Governance",
+        "topology": "token-voting",
+        "keys": [
+          "STAKING_MODULE_MANAGE_ROLE",
+          "REPORT_EXITED_VALIDATORS_ROLE",
+          "proxy__getAdmin"
+        ],
+        "timelock": "8d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x3e40d73eb977dc6a537af587d48316fee66e9c8c",
+            "name": "Lido DAO Agent",
+            "name_verified": true,
+            "via": "StakingRouter role administration and proxy admin",
+            "terminal": "token-voting",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "8d",
+            "reaction_window": {
+              "type": "notice-period",
+              "basis": "5-day vote plus 3-day minimum Dual Governance timelock",
+              "minimum_window_seconds": 691200,
+              "maximum_window_seconds": 691200
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x2e59a20f205bb85a89c53f1936454680651e618e",
+            "holder_kind": "contract",
+            "independent_canceller": true,
+            "delay_floor": "8d",
+            "hand_walk": "StakingRouter proxy__getImplementation() returned 0xdd76927045435c7605cf6f5f978cfb8cabdb5f80 and proxy__getAdmin() returned the DAO Agent. The active module-management role can add, update, pause or remove staking modules and alter target allocations; an implementation replacement has full reach."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-10-10",
+        "walked_by": "hand",
+        "target_name": "WithdrawalQueueERC721 redemption path",
+        "terminal_name": "Lido DAO through Dual Governance",
+        "topology": "token-voting",
+        "keys": [
+          "proxy__getAdmin",
+          "PAUSE_ROLE",
+          "RESUME_ROLE"
+        ],
+        "timelock": "8d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x3e40d73eb977dc6a537af587d48316fee66e9c8c",
+            "name": "Lido DAO Agent",
+            "name_verified": true,
+            "via": "WithdrawalQueue proxy admin and role administration",
+            "terminal": "token-voting",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "8d",
+            "reaction_window": {
+              "type": "notice-period",
+              "basis": "5-day vote plus 3-day minimum Dual Governance timelock",
+              "minimum_window_seconds": 691200,
+              "maximum_window_seconds": 691200
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x2e59a20f205bb85a89c53f1936454680651e618e",
+            "holder_kind": "contract",
+            "independent_canceller": true,
+            "delay_floor": "8d",
+            "hand_walk": "WithdrawalQueue proxy__getImplementation() returned 0xe42c659dc09109566720ea8b2de186c2be7d94d9 and proxy__getAdmin() returned the DAO Agent. Upgrade and role administration can change or gate request, finalization and claim behavior."
+          }
+        ]
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "observed_at": "2026-10-10",
+        "walked_by": "hand",
+        "target_name": "WithdrawalQueueERC721 emergency pause",
+        "terminal_name": "CircuitBreaker Committee",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 6,
+        "keys": [
+          "CircuitBreaker_pauseFor"
+        ],
+        "timelock": "none",
+        "reach": "bounded",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x8772e3a2d86b9347a2688f9bc1808a6d8917760c",
+            "name": "CircuitBreaker Committee Safe",
+            "name_verified": true,
+            "via": "CircuitBreaker -> WithdrawalQueue PAUSE_ROLE",
+            "terminal": "safe",
+            "threshold": 3,
+            "owners": 6,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "pause is immediate",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "can pause the queue for the configured 21-day circuit-breaker period; cannot change code or seize holder balances",
+            "value_at_risk_scope": "core",
+            "changeability": "fixed-at-construction",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x8772e3a2d86b9347a2688f9bc1808a6d8917760c",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "hand_walk": "Live Safe getThreshold() returned three and getOwners() returned six addresses. Official deployed-contract configuration binds this committee through CircuitBreaker 0x6019cb557978296ba3c08a7b73225c0975dfb2f7 to the WithdrawalQueue; the pause is immediate but time-limited."
+          }
+        ]
+      }
+    ],
+    "authority_summary": {
+      "schema": "actionable-path/1",
+      "state": "active-core-undelayed",
+      "headline": "Active undelayed core authority",
+      "total_layers": 5,
+      "total_paths": 7,
+      "inactive_layers": 0,
+      "unresolved_layers": 0,
+      "active_paths": 5,
+      "active_core_paths": 5,
+      "active_bounded_paths": 2,
+      "undelayed_core_paths": 2,
+      "undelayed_bounded_paths": 2,
+      "active": [
+        {
+          "authority_layer": "contract-upgrade",
+          "target_name": "Wrapped stETH and canonical Lido V4 proxy stack",
+          "name": "Lido DAO Agent",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "8d",
+          "reaction_window": {
+            "type": "notice-period",
+            "basis": "5-day Aragon vote plus 3-day minimum Dual Governance timelock",
+            "minimum_window_seconds": 691200,
+            "maximum_window_seconds": 691200
+          }
+        },
+        {
+          "authority_layer": "oracle",
+          "target_name": "AccountingOracle report acceptance",
+          "name": "Accounting HashConsensus",
+          "reach": "bounded",
+          "reach_bound": "report hash and data must match the current frame and pass AccountingOracle, StakingRouter, withdrawal-queue, and OracleReportSanityChecker validations",
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "oracle reporting frame is not a holder reaction window",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "parameter",
+          "target_name": "StakingRouter module allocation and deposit behavior",
+          "name": "Lido DAO Agent",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "8d",
+          "reaction_window": {
+            "type": "notice-period",
+            "basis": "5-day vote plus 3-day minimum Dual Governance timelock",
+            "minimum_window_seconds": 691200,
+            "maximum_window_seconds": 691200
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "WithdrawalQueueERC721 redemption path",
+          "name": "Lido DAO Agent",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "8d",
+          "reaction_window": {
+            "type": "notice-period",
+            "basis": "5-day vote plus 3-day minimum Dual Governance timelock",
+            "minimum_window_seconds": 691200,
+            "maximum_window_seconds": 691200
+          }
+        },
+        {
+          "authority_layer": "pause",
+          "target_name": "WithdrawalQueueERC721 emergency pause",
+          "name": "CircuitBreaker Committee Safe",
+          "reach": "bounded",
+          "reach_bound": "can pause the queue for the configured 21-day circuit-breaker period; cannot change code or seize holder balances",
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "pause is immediate",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        }
+      ]
+    },
+    "unresolved": [],
+    "authority_shared_with": [],
+    "review": null,
+    "walk_notes": [
+      "Dashboard publication scope: {'chains': ['ethereum'], 'walked_by': 'hand'}"
+    ]
+  }
+}
