@@ -55,6 +55,7 @@ var ASSET_RENDERERS = {
     crvusd:    typeof CrvUSDRenderer    !== 'undefined' ? CrvUSDRenderer    : null,
     usg:       typeof USGRenderer       !== 'undefined' ? USGRenderer       : null,
     bold:      typeof BOLDRenderer      !== 'undefined' ? BOLDRenderer      : null,
+    wsteth:    typeof WstETHRenderer    !== 'undefined' ? WstETHRenderer    : null,
     'msusd-metronome': typeof MsUSDMetronomeRenderer !== 'undefined' ? MsUSDMetronomeRenderer : null,
     usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
     syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,

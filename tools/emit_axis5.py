@@ -28,6 +28,7 @@ import re
 import yaml
 
 TOPOLOGY_DIR = '/home/danger/security_analyst/topology/assets'
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # ⚠️ NO HAND-TYPED SLUG LIST. This was `{'reusd_re': 'reusd-re.yaml'}` and it
 # served exactly one asset while FIFTEEN registered assets had a walk on disk.
@@ -279,12 +280,17 @@ def derive_actionable_summary(layers):
             return None
         paths.extend((layer, p) for p in lp)
         states = [p.get('actionable') for p in lp]
-        if any(v is True for v in states):
-            continue
-        if any(v == 'unresolved' or p.get('control_state') == 'unresolved' or
-               p.get('reach') == 'unresolved' for p, v in zip(lp, states)):
+        has_unresolved = any(
+            v == 'unresolved' or p.get('control_state') == 'unresolved' or
+            p.get('reach') == 'unresolved' for p, v in zip(lp, states)
+        )
+        # Unresolved coverage is not mutually exclusive with an active path.
+        # wstETH's upgrade layer has both: the ordinary governance route is
+        # active and delayed, while conditional emergency execution remains
+        # unresolved. Counting only wholly-unresolved layers erased that edge.
+        if has_unresolved:
             unresolved_layers += 1
-        else:
+        if not any(v is True for v in states) and not has_unresolved:
             inactive_layers += 1
 
     active = [(l, p) for l, p in paths if p.get('actionable') is True]
@@ -334,6 +340,7 @@ def derive_actionable_summary(layers):
         'total_paths': len(paths),
         'inactive_layers': inactive_layers,
         'unresolved_layers': unresolved_layers,
+        'unresolved_paths': len(unresolved),
         'active_paths': len(active),
         'active_core_paths': len(core),
         'active_bounded_paths': len(bounded),
@@ -347,6 +354,38 @@ def registered_slugs(repo_root):
     """Underscored slugs from the dashboard's own registry."""
     with open(os.path.join(repo_root, 'data/assets.json'), encoding='utf-8') as fh:
         return [a['slug'].replace('-', '_') for a in json.load(fh)]
+
+
+def publication_scope(repo_root, slug):
+    """Optional dashboard-owned row filter for a deliberately narrow release.
+
+    The producer may retain observations for several deployments in one asset
+    file. A canonical-only dashboard must not silently widen its authority
+    headline merely because those rows share the file. The scope is kept in the
+    asset registry so widening it is an explicit publication decision.
+    """
+    with open(os.path.join(repo_root, 'data/assets.json'), encoding='utf-8') as fh:
+        assets = json.load(fh)
+    public_slug = slug.replace('_', '-')
+    asset = next((a for a in assets if a.get('slug') == public_slug), None)
+    return (asset or {}).get('axis5_scope') or None
+
+
+def scoped_layers(layers, scope):
+    if not scope:
+        return layers
+    chains = {str(v).lower() for v in (scope.get('chains') or [])}
+    walked_by = scope.get('walked_by')
+    out = []
+    for layer in layers:
+        if chains and str(layer.get('chain', '')).lower() not in chains:
+            continue
+        if walked_by and layer.get('walked_by') != walked_by:
+            continue
+        out.append(layer)
+    if not out:
+        raise SystemExit(f'PUBLICATION SCOPE matched no Axis 5 layers: {scope!r}')
+    return out
 
 
 def emit(slug):
@@ -374,7 +413,8 @@ def emit(slug):
     if not observed:
         raise SystemExit(f'{path} declares no observed_at — refusing to stamp a run time in its place')
 
-    layers = doc.get('layers') or []
+    scope = publication_scope(REPO_ROOT, slug)
+    layers = scoped_layers(doc.get('layers') or [], scope)
     authority_summary = derive_actionable_summary(layers)
     return {
         'schema_version': 'contract/1',
@@ -396,6 +436,7 @@ def emit(slug):
             'method': 'hand-walk',
             'observed_at': str(observed),
             'source_file': f'security_analyst/topology/assets/{fn}',
+            **({'publication_scope': scope} if scope else {}),
             'layers': layers,
             **({'authority_summary': authority_summary} if authority_summary else {}),
             # verbatim — carries its own attribution
@@ -424,7 +465,10 @@ def emit(slug):
             # one possible output, that all five were the producer's own. The bound
             # goes on the FACE for the same reason the finding does.
             'review': doc.get('review') or None,
-            'walk_notes': header_notes(path),
+            # A scoped canonical release must not carry header prose describing
+            # excluded legacy deployments back into its reader-facing artifact.
+            'walk_notes': ([f"Dashboard publication scope: {scope}"]
+                           if scope else header_notes(path)),
         },
     }
 

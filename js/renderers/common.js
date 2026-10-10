@@ -695,8 +695,12 @@ const CommonRenderer = {
                     // `exit_mark.quotes = {}` — a ladder container with no rungs — so a
                     // bare truthiness test read it as a measurement the base had made.
                     var baseQuotes = (base.exit_mark || {}).quotes;
+                    var baseDepth50 = base.depth_50bps && typeof base.depth_50bps === 'object'
+                        ? base.depth_50bps : {};
                     var baseClaims = base.band_score != null ||
                                      typeof base.total_2pct_depth === 'number' ||
+                                     typeof baseDepth50.depth_usd === 'number' ||
+                                     typeof baseDepth50.value_usd === 'number' ||
                                      !!(baseQuotes && Object.keys(baseQuotes).length);
                     if (axis === 'liquidity' && !overlayClaims && baseClaims) {
                         var carried = [];
@@ -4665,7 +4669,8 @@ const CommonRenderer = {
     // guard for the case the producer explicitly predicted.
     _backingAuthoredDeclared(b) {
         return !!(b && typeof b.backing_score === 'number' &&
-            b.backing_score_applies_when === 'collateral_ratio_declared_underivable' &&
+            (b.backing_score_applies_when === 'collateral_ratio_declared_underivable' ||
+             b.backing_score_display === 'authored') &&
             b.collateral_ratio_basis);
     },
 
@@ -6087,14 +6092,25 @@ const CommonRenderer = {
             var inactive = Number(a.inactive_layers || 0);
             var active = Number(a.active_paths || 0);
             var activeRows = Array.isArray(a.active) ? a.active : [];
+            // `active_core_paths` describes value-at-risk scope, not authority
+            // reach. Split the reader summary by reach so bounded oracle/pause
+            // powers are not presented as full core-control paths.
+            var activeBounded = activeRows.filter(function(r) { return r.reach === 'bounded'; }).length;
+            var activeCore = activeRows.length
+                ? activeRows.length - activeBounded
+                : Number(a.active_core_paths || 0);
             var allocator = activeRows.length && activeRows.every(function(r) {
                 return r.value_at_risk_scope === 'bounded-pool' &&
                     /allocat/i.test(String(r.target_name || '') + ' ' + String(r.reach_bound || ''));
             });
             var parts = [];
             if (inactive) parts.push(inactive + ' immutable/renounced layer' + (inactive === 1 ? '' : 's'));
-            if (active) parts.push(active + ' active bounded ' + (allocator ? 'allocator' : 'path') +
-                                   (active === 1 ? '' : 's'));
+            if (activeCore) parts.push(activeCore + ' active core path' + (activeCore === 1 ? '' : 's'));
+            if (activeBounded) parts.push(activeBounded + ' active bounded ' +
+                (allocator ? 'allocator' : 'path') + (activeBounded === 1 ? '' : 's'));
+            if (active && !activeCore && !activeBounded) {
+                parts.push(active + ' active path' + (active === 1 ? '' : 's'));
+            }
             if (a.unresolved_layers) parts.push(a.unresolved_layers + ' unresolved');
             return parts.join(' · ') || 'structured authority paths';
         }
@@ -6437,8 +6453,9 @@ const CommonRenderer = {
             if (rw.basis) tip += ' ' + rw.basis;
             tip += ' This is a reaction window, not an execution timelock.';
         }
+        var isAllocator = /allocat/i.test(String(r.target_name || '') + ' ' + String(r.reach_bound || ''));
         return '<span class="axis-rating r-warn" title="' + this._escapeAttr(tip) +
-            '">Allocator · no execution timelock</span>';
+            '">' + (isAllocator ? 'Allocator' : 'Bounded path') + ' · no execution timelock</span>';
     },
 
     _issuerBadgeHtml(issuer) {
@@ -6608,10 +6625,7 @@ const CommonRenderer = {
         // exists to prevent, reintroduced one element away from where it was
         // fixed.
         var bAuth = (data.backing || {});
-        var backingAuthored = bAuth.collateral_ratio == null &&
-            typeof bAuth.backing_score === 'number' &&
-            bAuth.backing_score_applies_when === 'collateral_ratio_declared_underivable' &&
-            bAuth.collateral_ratio_basis;
+        var backingAuthored = this._backingAuthoredDeclared(bAuth);
         // ⚠️ THE LABEL MOVES WITH THE VALUE (spec §3). "live reserves & collateral ratio"
         // is wrong on an asset whose producer has DECLARED that no per-token ratio is
         // derivable — it promises two things the section then cannot show. Keyed off the
