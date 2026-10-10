@@ -419,6 +419,51 @@ status      raised with riskAnalyst 2026-10-04
 Last reviewed 2026-10-04
 ```
 
+### susdai — the liquidity band measures pool-size-to-AUM, and the page shows it beside a depth figure
+```
+raised      2026-10-10, from a PegTracker message. ⚠️ NOT from our own review — I had failed to
+            trace this twice and reported it as unexplained both times.
+what        sUSDai's liquidity band is PRODUCER-SET (`liquidity.band_score: 1`), and
+            `liquidityRating()` short-circuits on it before any derivation. Its published
+            `band_score_basis` says what it measures:
+              metric          pool_tvl / total_assets_usd
+              cutoffs_pct_aum [25, 15, 8, 4]   (descending, best-first; [0] is the 5/5 floor)
+            So it scores pool TVL RELATIVE TO VAULT SIZE — a concentration statement — and not
+            depth in dollars. PegTracker's "credit-vault escape hatch",
+            usdai_backing_analyzer ~L1668-1735.
+⚠️ the page The card renders `≥$10.0M 0.5% depth (floor) · vol $3.1M (indexer) · exit unprobed
+            (declared)` and then `Stress · 2/10`, with nothing bridging them. A reader reconciles
+            the two and concludes the $10M is bad. It is not: the 2/10 says the pool is small
+            against the vault's AUM. The two numbers are not comparable.
+two defects BOTH ours:
+            1. `band_score_basis` is PUBLISHED and read NOWHERE in js/. The sentence that would
+               explain the band exists in our own served payload.
+            2. `_liquidityBandBasisNote`'s "— NOT from 2% depth" clause is gated on
+               `total_2pct_depth == null`. So it fires only when there is NO depth figure to be
+               confused with, and is SUPPRESSED exactly when both are present. ⚠️ The gate is
+               backwards: the warning is most needed when a depth figure sits beside a band that
+               was not derived from it.
+               Net effect on susdai: `free_liquidity_pct` is also absent, so the rendered note is
+               the bare sentence "This band is the producer's published band_score."
+blast       3 assets publish `band_score`, and only one can conflate:
+radius        susdai      band 1, depth $10,000,000, basis PUBLISHED, free_liquidity_pct absent
+              syrupusdc   band 2, no depth, basis absent, free_liquidity_pct 4.14
+              syrupusdt   band 2, no depth, basis absent, free_liquidity_pct 3.68
+            The syrup pair have no depth figure, so the clause ALREADY fires for them. Inverting
+            the gate changes susdai only.
+triage      DEFAULT, and it is the strongest DEFAULT case in this file. Neither number is FALSE —
+            the band is the producer's own and the depth is a real floor — so it does not meet the
+            escalation bar. What misleads is the juxtaposition with no label.
+owner       ours
+closes when the published `band_score_basis` renders, AND the "not a depth reading" statement
+            appears whenever a producer-set band sits beside a depth figure
+⚠️ stale     My own earlier observation of this card said "Stress · 4/10" — that was 2026-10-04
+figure      data; it reads 2/10 today and the volume moved $5.7M -> $3.1M. Do not chase the 4/10.
+⚠️ also      PegTracker flagged that the METRIC being TVL rather than depth is worth riskAnalyst's
+            eye. That is their call, not ours, and it is a separate question from our labelling.
+Last reviewed 2026-10-10
+```
+
 ## Cross-asset — belongs to the axis, not to one slug
 
 ⚠️ **These are invisible to a per-asset sweep.** Recorded here because an item that no single asset
