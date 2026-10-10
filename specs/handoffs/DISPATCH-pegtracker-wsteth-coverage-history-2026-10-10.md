@@ -1,11 +1,12 @@
 ---
 target_repo: PegTracker (~/PegTracker)
 target_claude: pegtracker
-status: ready
+status: completed
 from: backing-monitor
 to: codex
 date: 2026-10-10
 output: data/wsteth_backing_history.json
+result_commit: c5708da2a9827e530b13eb727f4444cd5eace600
 ---
 
 # Canonical wstETH: retain wrapper coverage history

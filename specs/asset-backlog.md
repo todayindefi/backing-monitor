@@ -130,8 +130,8 @@ closes when the analyzer uses the shared backing-history writer, the runner requ
             `wsteth_backing_history.json`, the initial export is seeded only from preserved measured
             snapshots, and the staged dashboard renders peg and wrapper coverage on the same 7d
             cutoff. The coverage line must remain canonical Ethereum only.
-status      ✅ DELIVERED by PegTracker 2026-10-10 (their c5708da) and rendering here. 18 rows
-            synced, seeded from exactly the 17 preserved snapshots plus live appends, every row
+status      ✅ DELIVERED by PegTracker 2026-10-10 (their c5708da) and rendering here. The series
+            was seeded from exactly the 17 preserved snapshots and now receives live appends; every row
             `collateral_ratio_scale: "percent"` with block and canonical-Ethereum provenance.
 result      ⚠️ THE SERIES ARRIVED AND THE FRAME AROUND IT WAS WRONG, which is not something the
             producer could have seen. The fleet's collateral bands describe an OVER-collateralised
