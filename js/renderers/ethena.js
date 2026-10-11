@@ -1006,7 +1006,7 @@ var EthenaRenderer = {
                 '<div class="panel-title">DeFi Protocol Breakdown <span class="text-xs font-normal text-slate-400">— drill-down of Coinbase Onchain Wallets</span></div>' +
                 '<div class="risk-flag mb-3" style="background:#eff6ff;color:#1e40af;border-left:4px solid #3b82f6;">' +
                     'Of the <span class="font-mono">' + EthenaRenderer._money(walletsTotal) + '</span> held across the ' + (fam.coinbase_wallets || []).length + ' Coinbase Onchain Wallets, ' +
-                    '<span class="font-mono">' + EthenaRenderer._money(defiTotal) + '</span> is deployed in DeFi protocols (resolved via DeBank). ' +
+                    '<span class="font-mono">' + EthenaRenderer._money(defiTotal) + '</span> is deployed in DeFi protocols (resolved per position from on-chain reads). ' +
                     'This is a <strong>drill-down of one custody slice</strong> — not additive to total backing.</div>' +
                 (concWarn ? '<div class="risk-flag risk-warning mb-3">Aave V3 is ' + aavePct.toFixed(1) + '% of wallet DeFi positions (> ' + ETHENA_THRESHOLDS.defi_aave_concentration_warn + '% concentration threshold).</div>' : '') +
                 '<div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">' +
@@ -1163,7 +1163,7 @@ var EthenaRenderer = {
                     ((fam.summary || {}).total_backing_usd != null
                         ? ' of ' + EthenaRenderer._money(fam.summary.total_backing_usd) + ' backing'
                         : '') +
-                ') — the only custody DeBank can track per-position. ' +
+                ') — the only custody that can be read per-position on-chain. ' +
                     'Off-exchange custodians and the CEX hedge stay attestation / LlamaRisk-sourced. Wallet positions refresh <span class="font-medium">daily</span> (headline coverage above is hourly).</div>' +
                 walletSetLine + bucketComparison + attributionNote + namingNote +
                 EthenaRenderer._reserveTrendSection(hist) +
@@ -1208,7 +1208,8 @@ var EthenaRenderer = {
                     '</div>' +
                 '</div>' +
                 '<div class="chart-container" style="height:240px;position:relative;"><canvas id="ethena-reserve-trend"></canvas></div>' +
-                '<div class="text-xs text-slate-400 mt-2">By protocol: Aave / Morpho deposits + raw tokens stacked to the wallet total. By wallet: per-address totals. Daily from FarmTracker.</div>' +
+                '<div class="text-xs text-slate-400 mt-2">By protocol: DeFi positions per protocol + raw tokens, stacked to the wallet total. By wallet: per-address totals. Daily from FarmTracker.</div>' +
+                EthenaRenderer._walletSetChangeNote(hist) +
             '</div>';
         }
         if (hist.length === 1) {
@@ -1244,6 +1245,46 @@ var EthenaRenderer = {
             '<div class="text-sm font-semibold text-slate-700 mb-2">Position drift <span class="text-xs font-normal text-slate-400">— ' + drift.length + ' event' + (drift.length === 1 ? '' : 's') + ' (daily)</span></div>' +
             flags + more +
         '</div>';
+    },
+
+    // ⚠️ THE WALLET SET IS NOT CONSTANT ACROSS THIS HISTORY. FarmTracker's
+    // export went from 6 wallets to 13 on 2026-10-11 (incl. the second Solana
+    // wallet), and the stacked total stepped $1.89B → $2.33B that day. $288M of
+    // that step is wallets read for the first time, not reserve growth — the
+    // rest is movement inside the six that were already tracked. A reader of
+    // the chart alone sees one jump, so each day whose wallet set differs from
+    // the day before is marked on the chart and split out here. Derived from
+    // `wallet_totals` keys: a wallet absent one day and present the next.
+    _walletSetChanges: function(hist) {
+        var out = [];
+        for (var i = 1; i < hist.length; i++) {
+            var prev = hist[i - 1].wallet_totals || {}, cur = hist[i].wallet_totals || {};
+            var added = Object.keys(cur).filter(function(a) { return !(a in prev); });
+            var removed = Object.keys(prev).filter(function(a) { return !(a in cur); });
+            if (!added.length && !removed.length) continue;
+            var addedUsd = added.reduce(function(t, a) { return t + (cur[a] || 0); }, 0);
+            var removedUsd = removed.reduce(function(t, a) { return t + (prev[a] || 0); }, 0);
+            var step = ((hist[i].group_totals || {}).total_usd || 0) - ((hist[i - 1].group_totals || {}).total_usd || 0);
+            out.push({ date: hist[i].date, from: Object.keys(prev).length, to: Object.keys(cur).length,
+                       added: added.length, removed: removed.length, addedUsd: addedUsd, removedUsd: removedUsd, step: step });
+        }
+        return out;
+    },
+
+    _walletSetChangeNote: function(hist) {
+        var changes = EthenaRenderer._walletSetChanges(hist);
+        if (!changes.length) return '';
+        return changes.map(function(c) {
+            var dateLabel = new Date(c.date + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+            var setPart = (c.added ? EthenaRenderer._money(c.addedUsd) + ' is ' + c.added + ' wallet' + (c.added === 1 ? '' : 's') + ' read for the first time' : '') +
+                (c.added && c.removed ? ' and ' : '') +
+                (c.removed ? EthenaRenderer._money(c.removedUsd) + ' left with ' + c.removed + ' wallet' + (c.removed === 1 ? '' : 's') + ' no longer read' : '');
+            var rest = c.step - c.addedUsd + c.removedUsd;
+            return '<div class="text-xs text-slate-500 mt-1"><span class="font-medium">Wallet set changed ' + dateLabel + '</span> (' +
+                c.from + ' → ' + c.to + ' wallets, dashed line). Of that day\u2019s ' + (c.step >= 0 ? '+' : '\u2212') + EthenaRenderer._money(Math.abs(c.step)) +
+                ' step, ' + setPart + ', not a change in reserves; ' + (rest >= 0 ? '+' : '\u2212') + EthenaRenderer._money(Math.abs(rest)) +
+                ' is movement in the wallets tracked on both days.</div>';
+        }).join('');
     },
 
     // Draw / redraw the reserve-trend chart for the active mode from cached
@@ -1299,6 +1340,16 @@ var EthenaRenderer = {
             });
         }
 
+        var setAnn = {};
+        EthenaRenderer._walletSetChanges(hist).forEach(function(c, i) {
+            setAnn['walletset' + i] = {
+                type: 'line', xMin: new Date(c.date + 'T00:00:00Z'), xMax: new Date(c.date + 'T00:00:00Z'),
+                borderColor: '#64748b', borderWidth: 1, borderDash: [4, 4],
+                label: { display: true, content: c.from + '→' + c.to + ' wallets', position: 'start',
+                         backgroundColor: 'rgba(100,116,139,0.85)', font: { size: 10 } }
+            };
+        });
+
         if (window._ethenaReserveTrend) window._ethenaReserveTrend.destroy();
         window._ethenaReserveTrend = new Chart(ctx, {
             type: 'line',
@@ -1310,7 +1361,11 @@ var EthenaRenderer = {
                     y: { stacked: stacked, grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 }, callback: function(v) { return '$' + (v / 1e9).toFixed(1) + 'B'; } } }
                 },
                 plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
-                    tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + (c.parsed.y != null ? EthenaRenderer._money(c.parsed.y) : '—'); } } } },
+                    tooltip: { callbacks: {
+                        label: function(c) { return c.dataset.label + ': ' + (c.parsed.y != null ? EthenaRenderer._money(c.parsed.y) : '—'); },
+                        footer: function(items) { var h = items.length ? hist[items[0].dataIndex] : null; return h ? Object.keys(h.wallet_totals || {}).length + ' wallets tracked' : ''; }
+                    } },
+                    annotation: { annotations: setAnn } },
                 interaction: { intersect: false, mode: 'index' }
             }
         });
