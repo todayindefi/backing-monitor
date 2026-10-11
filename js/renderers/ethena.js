@@ -1150,7 +1150,20 @@ var EthenaRenderer = {
                     '<div class="panel-title" style="margin-bottom:0">Coinbase Onchain Wallets <span class="text-xs font-normal text-slate-400">— ' + EthenaRenderer._money(fam.coinbase_wallets_total_usd) + ' across ' + (fam.coinbase_wallets || []).length + ' tracked wallets</span></div>' +
                     EthenaRenderer._walletFreshnessBadge(fam) +
                 '</div>' +
-                '<div class="text-xs text-slate-500 mt-1 mb-3">The on-chain reserve slice (≈$2.0B of ≈$4.5B backing) — the only custody DeBank can track per-position. ' +
+                '<div class="text-xs text-slate-500 mt-1 mb-3">The on-chain reserve slice (' +
+                    // ⚠️ WAS "(≈$2.0B of ≈$4.5B backing)", HARDCODED. The tracked total moved to
+                    // $2.15B the day FarmTracker's export went from 6 wallets to 13, and the
+                    // sentence sat two lines under a panel header already printing the new figure.
+                    // A rounded number in prose has the same shelf life as a precise one; it just
+                    // takes longer to notice. Both ends now come from the same values the panel
+                    // and the custody table are drawing.
+                    (fam.coinbase_wallets_total_usd != null
+                        ? EthenaRenderer._money(fam.coinbase_wallets_total_usd)
+                        : 'the tracked wallets') +
+                    ((fam.summary || {}).total_backing_usd != null
+                        ? ' of ' + EthenaRenderer._money(fam.summary.total_backing_usd) + ' backing'
+                        : '') +
+                ') — the only custody DeBank can track per-position. ' +
                     'Off-exchange custodians and the CEX hedge stay attestation / LlamaRisk-sourced. Wallet positions refresh <span class="font-medium">daily</span> (headline coverage above is hourly).</div>' +
                 walletSetLine + bucketComparison + attributionNote + namingNote +
                 EthenaRenderer._reserveTrendSection(hist) +
