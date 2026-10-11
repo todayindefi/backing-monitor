@@ -1,0 +1,88 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "frxusd",
+  "as_of": "2026-10-11T16:03:47Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "WisdomTree WTGXX",
+        "unresolved": [
+          "wtgxx"
+        ],
+        "unresolved_note": "$67.49M, 62.22% of issuer-reported assets. No internal asset report; this dominant leg leaves frxUSD's 4.5 dependency score unanchored."
+      },
+      {
+        "name": "Superstate USTB",
+        "unresolved": [
+          "ustb"
+        ],
+        "unresolved_note": "$23.12M, 21.32% of issuer-reported assets. No internal asset report."
+      },
+      {
+        "name": "BlackRock BUIDL",
+        "unresolved": [
+          "buidl"
+        ],
+        "unresolved_note": "$15.84M, 14.61% of issuer-reported assets. No internal asset report."
+      },
+      {
+        "name": "Erebor Bank segregated reserve account",
+        "unresolved": [
+          "erebor-usd"
+        ],
+        "unresolved_note": "$2.00M, 1.85% of issuer-reported assets. Off-chain cash line; no internal asset report or independent reconciliation in this assessment."
+      },
+      {
+        "name": "Agora AUSD",
+        "slug": "ausd",
+        "note": "$29.48 of issuer-reported assets; economically immaterial at the observation time."
+      },
+      {
+        "name": "Circle USDC",
+        "slug": "usdc",
+        "note": "$5.19 of issuer-reported assets; economically immaterial at the observation time."
+      },
+      {
+        "name": "Bridge USDB",
+        "unresolved": [
+          "usdb"
+        ],
+        "unresolved_note": "$3.70 of issuer-reported assets; economically immaterial at the observation time and no internal asset report."
+      },
+      {
+        "name": "sfrxUSD concentration",
+        "terminal": true,
+        "kind": "protocol",
+        "note": "Downstream concentration rather than backing: a large share of frxUSD can sit inside sfrxUSD, so a wrapper unwind can transmit market pressure to frxUSD."
+      }
+    ],
+    "upstream_resolution_rule": "Every upstream entry carries exactly one resolution: slug, terminal plus kind, or unresolved. Unresolved means an internal report is owed, not that the asset is absent.",
+    "edge_kind_rule": "backing means solvency depends on the leg; venue means exit price does.",
+    "coverage_note": "Whole-body refresh 2026-10-12 using Frax Facts balance sheet as of 2026-10-11T16:03:47Z. The issuer-reported composition is established, but five of seven direct legs lack internal reports; the score is explicitly unanchored rather than derived from the two immaterial scoreable legs.",
+    "downstream_tracked": [
+      "dusd-alto",
+      "reusd-resupply",
+      "sfrxusd",
+      "stakedao-frxusd-v2",
+      "usdp-parallel",
+      "usg"
+    ],
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "dusd-alto",
+        "reusd-resupply",
+        "sfrxusd",
+        "stakedao-frxusd-v2",
+        "usdp-parallel",
+        "usg"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
+  }
+}
