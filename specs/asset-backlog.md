@@ -97,11 +97,14 @@ closes when each refreshed asset plots both peg and collateral/coverage history 
             back to 30d/full retention. If a series has fewer than two observations, it declares
             insufficient history instead. The cross-asset item closes after every page with both
             charts has been checked.
-status      wsteth is fixed on BOTH charts and the paired-window condition is now exercised:
+status      wsteth and usde are fixed on BOTH charts and the paired-window condition is now exercised:
             PegTracker shipped wsteth_backing_history.json (their c5708da) and the coverage chart
             takes the same trailing cutoff as the peg chart. The mechanism shipped here
             2026-10-10: renderCRChart accepts `window_days`, app.js feeds it the SAME
             `peg.chart_window_days` the peg chart reads, so one declaration moves both charts.
+            USDe opted in during its 2026-10-11 refresh: its bespoke peg chart clips the retained
+            daily series to 7d with a two-point minimum, and the same declaration clips its common
+            coverage chart. Neither falls back to 30d/full retention.
             ⚠️ It is opt-in by that declaration and NOT fleet-wide — handing every asset 7d
             would re-horizon eight long-retention histories (crvUSD 535d, usds 347d, yzUSD 173d,
             syzusd/usde/susde ~90d, susds 67d, strcx 108d) in one line. Each remaining asset
