@@ -286,7 +286,7 @@ var EthenaRenderer = {
         html += '<div id="ethena-wallets-panel"></div>';
         html += '<div id="ethena-cex-panel"></div>';
         if (slug === 'susde') {
-            html += anc('panel-vault', EthenaRenderer._renderSusdeVaultPanel(specific, s));
+            html += anc('panel-vault', EthenaRenderer._renderSusdeVaultPanel(specific, s, data));
         }
         html += '<div id="ethena-attestation-panel"></div>';
         // ⚠️ AXIS 4 WAS ENTIRELY ABSENT FROM THESE TWO PAGES. This renderer hides
@@ -514,11 +514,96 @@ var EthenaRenderer = {
     // ============================================================
     // §6a sUSDe vault panel (sUSDe only)
     // ============================================================
-    _renderSusdeVaultPanel: function(specific, s) {
+    _renderSusdeVaultPanel: function(specific, s, data) {
         var vs = specific.vault_state || {};
         var nav = (vs.nav_usde_per_share != null) ? vs.nav_usde_per_share : s.nav;
         var assets = (vs.total_assets_usde != null) ? vs.total_assets_usde : s.total_assets_usde;
         var shares = (vs.total_supply_shares != null) ? vs.total_supply_shares : s.total_supply;
+
+        // ⚠️ THE PANEL SAID "COOLDOWN-QUEUE DEPTH IS NOT EXPOSED IN THE CURRENT
+        // FEED" AND THAT STOPPED BEING TRUE ON 2026-10-11. PegTracker's hourly
+        // vault read publishes the silo balance — the USDe actually sitting in
+        // cooldown — along with the live cooldownDuration and the contract's
+        // maximum. A stated reason is the least-verified sentence on a page: a
+        // wrong number gets re-measured, a wrong explanation closes the question.
+        //
+        // ⚠️ AND THE OLD NUMBER WAS WRONG BY A FACTOR OF SEVEN. Everything here
+        // said "7-day cooldown" from an undated producer string; the contract
+        // reads 86,400 s. That is why the duration is rendered WITH its block —
+        // cooldownDuration is a settable parameter, not a constant, so a figure
+        // without a block is a claim about the past.
+        var meas = specific.measurements || {};
+        var vault = meas.vault || {};
+        var growth = meas.realized_nav_growth || {};
+        var liq = (data && data.liquidity) || {};
+        var cdSec = vault.cooldown_seconds, maxSec = vault.max_cooldown_seconds;
+        function dur(sec) {
+            if (sec == null) return null;
+            if (sec % 86400 === 0) { var d = sec / 86400; return d + (d === 1 ? ' day' : ' days'); }
+            if (sec % 3600 === 0) { var h = sec / 3600; return h + (h === 1 ? ' hour' : ' hours'); }
+            return sec + ' s';
+        }
+        var cdCard = '';
+        if (cdSec != null) {
+            cdCard =
+                '<div class="summary-card"><div class="card-label">Cooldown</div>' +
+                    '<div class="card-value">' + dur(cdSec) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">live cooldownDuration' +
+                    (maxSec != null ? '; contract max ' + dur(maxSec) : '') +
+                    (vault.block != null ? ' · block ' + vault.block : '') + '</div></div>';
+        }
+        var siloCard = '';
+        if (vault.silo_usde != null) {
+            siloCard =
+                '<div class="summary-card"><div class="card-label">In cooldown</div>' +
+                    '<div class="card-value">' + EthenaRenderer._money(vault.silo_usde) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">USDe held in the cooldown silo' +
+                    (assets ? ' · ' + (vault.silo_usde / assets * 100).toFixed(2) + '% of vault assets' : '') +
+                    '</div></div>';
+        }
+        // ⚠️ REALIZED, NOT ADVERTISED — the producer's own label, kept verbatim in
+        // the sub-line. This is `convertToAssets` measured between two archive
+        // blocks; printing it beside an APY figure without that word is how a
+        // backward-looking number becomes a forward-looking promise.
+        var growthCard = '';
+        var g30 = growth['30d'] || {};
+        if (g30.annualized_pct != null) {
+            growthCard =
+                '<div class="summary-card"><div class="card-label">Realized NAV growth</div>' +
+                    '<div class="card-value">' + g30.annualized_pct.toFixed(2) + '%</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">30d realized, annualized' +
+                    (growth['7d'] && growth['7d'].annualized_pct != null
+                        ? ' · 7d ' + growth['7d'].annualized_pct.toFixed(2) + '%' : '') +
+                    (growth['90d'] && growth['90d'].annualized_pct != null
+                        ? ' · 90d ' + growth['90d'].annualized_pct.toFixed(2) + '%' : '') +
+                    '</div></div>';
+        }
+        var extraCards = cdCard + siloCard + growthCard;
+
+        // The exit sentence, in order of what is actually published. The old copy
+        // is kept ONLY for the case where the vault block is absent, and even then
+        // it no longer asserts what the feed does or does not expose.
+        var exitNote;
+        if (liq.primary_redemption_note) {
+            exitNote = CommonRenderer._escapeAttr(liq.primary_redemption_note) +
+                ' NAV rises as staking yield accrues; the cooldown is the primary exit, the secondary market the instant one.';
+        } else if (cdSec != null) {
+            exitNote = 'NAV rises as staking yield accrues; sUSDe\u2192USDe unstaking waits ' + dur(cdSec) +
+                ' in the silo above.';
+        } else {
+            exitNote = 'NAV rises as staking yield accrues; sUSDe\u2192USDe unstaking is subject to a cooldown. ' +
+                'This snapshot carries no vault measurement, so the current cooldown and silo balance are not stated.';
+        }
+        var navCheck = vault.nav_check || {};
+        // ⚠️ The raw diff is ~1e-12 bps; printing it in exponential notation reads
+        // as a defect to anyone who does not expect float dust. State the check as
+        // a check — it exists to catch a stale share denominator, not to be a
+        // measurement in its own right.
+        var checkNote = (navCheck.diff_bps != null)
+            ? ' NAV cross-check at the same block: convertToAssets agrees with totalAssets/totalSupply to ' +
+              (Math.abs(navCheck.diff_bps) < 0.01 ? 'under 0.01 bps'
+                                                  : Math.abs(navCheck.diff_bps).toFixed(2) + ' bps') + '.'
+            : '';
 
         return '<div class="panel">' +
             '<div class="panel-title">sUSDe Vault</div>' +
@@ -532,10 +617,10 @@ var EthenaRenderer = {
                 '<div class="summary-card"><div class="card-label">Shares</div>' +
                     '<div class="card-value">' + (shares != null ? (shares / 1e6).toFixed(1) + 'M' : '-') + '</div>' +
                     '<div class="text-xs text-slate-400 mt-1">sUSDe outstanding</div></div>' +
+                extraCards +
             '</div>' +
             '<div class="chart-container" style="height:240px;position:relative;"><canvas id="ethena-susde-nav-chart"></canvas></div>' +
-            '<div class="text-xs text-slate-400 mt-2">NAV rises as staking yield accrues; sUSDe→USDe unstaking is subject to a cooldown. ' +
-            'Cooldown-queue depth is not exposed in the current feed.</div>' +
+            '<div class="text-xs text-slate-400 mt-2">' + exitNote + checkNote + '</div>' +
         '</div>';
     },
 
@@ -1154,6 +1239,61 @@ var EthenaRenderer = {
             return '<tr><td class="font-medium">' + k + '</td><td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(custodians[k]) + '</td></tr>';
         }).join('');
 
+        // ⚠️ THE TABLE WAS CUSTODY ONLY AND THE ATTESTATION IS NOT. September 2026
+        // added an exchange-margin line (Ripple Prime FCM, CME/CDE) that the
+        // producer deliberately keeps OUT of `custodians` so it cannot
+        // double-count against the CEX hedge-margin bucket — and nothing here read
+        // it, so the one line explaining the classification reached no reader.
+        //
+        // ⚠️ Rendered as its own labelled group, never appended to the custody
+        // table: merging them would undo the separation the producer made on
+        // purpose. The reconciliation line below is what makes the omission
+        // visible — custody + Coinbase on-chain + mint/redeem + margin is the
+        // attested total, and a reader who adds the table alone comes up short.
+        var margins = a.margin_accounts || {};
+        var marginNames = Object.keys(margins);
+        var marginRows = marginNames.map(function(k) {
+            return '<tr><td class="font-medium">' + k + '</td><td class="text-right font-mono">' +
+                CommonRenderer.formatCurrencyExact(margins[k]) + '</td></tr>';
+        }).join('');
+        var marginTable = marginNames.length
+            ? '<table class="data-table mt-3"><thead><tr><th>Exchange margin (not custody)</th>' +
+              '<th class="text-right">Attested (USD)</th></tr></thead><tbody>' + marginRows + '</tbody></table>'
+            : '';
+
+        function sumOf(obj) {
+            return Object.keys(obj || {}).reduce(function(t, k) {
+                var v = obj[k];
+                return t + (typeof v === 'number' ? v : 0);
+            }, 0);
+        }
+        var reconHtml = '';
+        if (a.total_backing_at_snapshot != null) {
+            var parts = [];
+            var custSum = sumOf(custodians);
+            if (custSum) parts.push('custody ' + EthenaRenderer._money(custSum));
+            if (a.coinbase_total_at_snapshot != null) parts.push('Coinbase on-chain ' + EthenaRenderer._money(a.coinbase_total_at_snapshot));
+            if (a.mintredeem_at_snapshot != null) parts.push('mint/redeem ' + EthenaRenderer._money(a.mintredeem_at_snapshot));
+            var marginSum = sumOf(margins);
+            if (marginSum) parts.push('margin ' + EthenaRenderer._money(marginSum));
+            // ⚠️ The gap is REPORTED, not hidden and not explained away. These are
+            // the post's own rounded lines, so a residual of a few million is
+            // rounding — but an arithmetic claim that silently absorbs its own
+            // remainder is the kind that stays wrong after the figures move.
+            var recon = custSum + (a.coinbase_total_at_snapshot || 0) + (a.mintredeem_at_snapshot || 0) + marginSum;
+            var gap = a.total_backing_at_snapshot - recon;
+            var gapPct = Math.abs(gap) / a.total_backing_at_snapshot * 100;
+            reconHtml = '<div class="text-xs text-slate-500 mt-2">' +
+                parts.join(' + ') + ' = ' + EthenaRenderer._money(recon) +
+                ' against ' + EthenaRenderer._money(a.total_backing_at_snapshot) + ' attested total backing' +
+                (gapPct >= 0.5
+                    ? ' \u2014 <span class="text-amber-700">' + EthenaRenderer._money(Math.abs(gap)) +
+                      ' unreconciled (' + gapPct.toFixed(1) + '%)</span>.'
+                    : ' (the post publishes rounded lines; the ' + EthenaRenderer._money(Math.abs(gap)) +
+                      ' difference is that rounding).') +
+                '</div>';
+        }
+
         EthenaRenderer._set('ethena-attestation-panel',
             '<div id="ethena-attestation-panel-inner" class="panel" style="' + borderStyle + '">' +
                 '<div class="panel-title">Custodian Attestation <span class="text-xs font-normal text-slate-400">— anchors the off-chain custody slices</span></div>' +
@@ -1166,6 +1306,8 @@ var EthenaRenderer = {
                 '</div>' +
                 '<table class="data-table"><thead><tr><th>Custodian (off-chain)</th><th class="text-right">Attested (USD)</th></tr></thead>' +
                 '<tbody>' + custRows + '</tbody></table>' +
+                marginTable +
+                reconHtml +
                 '<div class="text-xs text-slate-500 mt-3">' +
                     'Supply at snapshot ' + EthenaRenderer._money(a.supply_usd) + '. Off-chain custody figures refresh monthly; on-chain slices above are live. ' +
                     (a.source_url ? '<a href="' + a.source_url + '" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">Full attestation post ↗</a>' : '') +

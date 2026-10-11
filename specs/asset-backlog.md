@@ -145,6 +145,56 @@ result      ⚠️ THE SERIES ARRIVED AND THE FRAME AROUND IT WAS WRONG, which i
 Last reviewed 2026-10-10
 ```
 
+### usde · susde — the measurements block is published hourly and mostly unrendered
+```
+raised      2026-10-11 on PegTracker's Ethena integration (their cc92deb)
+what        Both feeds now carry `asset_specific.measurements` with its own cadence_map, a
+            daily_status/daily_age_hours staleness stamp, and per-block as_of + block number.
+            Rendered here on 2026-10-11: sUSDe's vault block (cooldown, silo, NAV cross-check) and
+            realized NAV growth. NOT rendered: usde supply_by_chain, mint_redeem (caps, supported
+            collateral, live access counts, 30d realized RFQ spreads), fee_switch, price_distribution,
+            and susde price_distribution_vs_nav.
+why         supply_by_chain is the one a holder would ask for first: USDe on Aptos, TON and Ethereal
+            is UNMEASURED and its share shows only as bridged_unattributed, ~534.9M — 23.5% of
+            adapter-locked supply with no figure assigned to any chain. That is a scope statement a
+            reader should see, not a producer-side footnote.
+            ⚠️ The oracle series need their own care: both price_distribution blocks mark off a
+            Chainlink feed that updates ~daily, so the hourly samples repeat. The producer says it
+            outright — read `distinct_values`, not `n`. Rendering `n` as an observation count would
+            overstate the evidence by roughly 24x.
+owner       us, next Ethena refresh
+closes when each block is either rendered with its cadence and as_of, or named in the page's unread
+            marker. The daily blocks must show their own staleness (daily_status, daily_age_hours),
+            since they come from a separate 03:05 cron and the hourly producer only reads the cache.
+status      open. The reader-facing corrections from this handoff are already shipped: the cooldown
+            is 1 day (the page had asserted a 7-day one from an undated producer string), the
+            "cooldown-queue depth is not exposed" sentence was retired against a published silo
+            balance, and the attestation's new exchange-margin line now renders with the
+            reconciliation to attested total backing.
+Last reviewed 2026-10-11
+```
+
+### susde — a venue-only liquidity overlay was deleting the primary exit — ✅ FIXED 2026-10-11
+```
+raised      2026-10-11, found because PegTracker's new cooldown sentence reached no reader
+what        `liquidity/1` is a `replace` overlay with a default-on carry-forward, and the carry only
+            fires when the BASE made a depth claim. sUSDe's base makes a redemption claim instead —
+            its primary exit is a gated cooldown, deliberately not expressed as a depth rung — so
+            the carry stayed shut and replace took the whole base block: primary_redemption_note,
+            primary_redemption_depth(+status), market_scope, denomination, aggregation and both
+            thresholds. DexTracker's own payload declares `does_not_publish: ['depth',
+            'primary_exit', 'rating']`, so the dropped field is the one they explicitly disclaim.
+why         The asset whose exit is NOT a market is exactly the asset whose exit path a reader
+            cannot reconstruct from venue depth. The page kept a liquidity score and lost the
+            sentence saying how a holder actually gets out.
+fix         `baseClaims` now also counts a declared primary-exit/redemption path.
+            ⚠️ Measured by A/B through the renderer, not by reasoning: susde changes, reusde-re is
+            byte-identical (its overlay DOES claim a figure once `_adaptSchema` has run — a Python
+            scan over the raw overlay said otherwise and was wrong). No depth figure is restored
+            anywhere; both affected feeds publish depth as null with a stated reason.
+Last reviewed 2026-10-11
+```
+
 ### thusd — exit measurement never configured
 ```
 raised      2026-10-02

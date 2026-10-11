@@ -697,11 +697,38 @@ const CommonRenderer = {
                     var baseQuotes = (base.exit_mark || {}).quotes;
                     var baseDepth50 = base.depth_50bps && typeof base.depth_50bps === 'object'
                         ? base.depth_50bps : {};
+                    // ⚠️ THE TEST ASKED "DID THE BASE MEASURE DEPTH?" AND SOME ASSETS
+                    // ANSWER A DIFFERENT QUESTION. sUSDe's primary exit is a gated
+                    // cooldown and reUSDe-RE's is a quarterly redemption window —
+                    // neither produces a depth rung, by design and with the reason
+                    // written down. So `baseClaims` read false on exactly the two
+                    // assets whose exit is NOT a market, the hand-off never fired,
+                    // and `replace` took the base's whole liquidity block with it:
+                    // sUSDe lost `primary_redemption_note`, its status, its market
+                    // scope and its denomination; reUSDe-RE lost `primary_exit` (the
+                    // quarterly WindowRedemption, gated, at NAV) and both strings
+                    // explaining why no dollar ladder exists.
+                    //
+                    // ⚠️ AND THE OVERLAY ASKED US TO KEEP THEM. DexTracker publishes
+                    // `does_not_publish: ['depth', 'primary_exit', 'rating']` and a
+                    // scope note saying a consumer should keep the ladder from its
+                    // other source. Dropping the primary exit is the one thing their
+                    // payload explicitly disclaims.
+                    //
+                    // Measured before shipping: exactly two assets change (susde,
+                    // reusde_re). No depth FIGURE is restored anywhere — both publish
+                    // depth as null with a stated reason — so no suppressed band can
+                    // come back through this door.
+                    var basePrimaryExit = base.primary_exit != null ||
+                                          base.primary_redemption_depth != null ||
+                                          typeof base.primary_redemption_note === 'string' ||
+                                          typeof base.primary_redemption_depth_status === 'string';
                     var baseClaims = base.band_score != null ||
                                      typeof base.total_2pct_depth === 'number' ||
                                      typeof baseDepth50.depth_usd === 'number' ||
                                      typeof baseDepth50.value_usd === 'number' ||
-                                     !!(baseQuotes && Object.keys(baseQuotes).length);
+                                     !!(baseQuotes && Object.keys(baseQuotes).length) ||
+                                     basePrimaryExit;
                     if (axis === 'liquidity' && !overlayClaims && baseClaims) {
                         var carried = [];
                         Object.keys(base).forEach(function(k) {
