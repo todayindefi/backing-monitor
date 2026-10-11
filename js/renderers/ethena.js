@@ -15,6 +15,7 @@
  *   - data/ethena_family.json  (async — custody breakdown, DeFi drill-down,
  *                               Coinbase wallets, CEX hedge, attestation,
  *                               risk flags; shared by both pages)
+ *   - asset_specific.measurements (hourly on-chain + daily analytical blocks)
  *
  * Modeled on js/renderers/apyx.js — same _suppressCommonPanels approach,
  * same preRender backfill, same async family-panel + anchor-nav patterns.
@@ -288,6 +289,7 @@ var EthenaRenderer = {
         if (slug === 'susde') {
             html += anc('panel-vault', EthenaRenderer._renderSusdeVaultPanel(specific, s));
         }
+        html += anc('panel-measurements', EthenaRenderer._renderMeasurementsPanel(specific, slug));
         html += '<div id="ethena-attestation-panel"></div>';
         // ⚠️ AXIS 4 WAS ENTIRELY ABSENT FROM THESE TWO PAGES. This renderer hides
         // every numbered section — correctly, since a lone "5 Contract & Admin"
@@ -408,6 +410,7 @@ var EthenaRenderer = {
         items.push({ id: 'ethena-wallets-panel', label: 'Wallets' });
         items.push({ id: 'ethena-cex-panel',     label: 'CEX hedge' });
         if (slug === 'susde') items.push({ id: 'panel-vault', label: 'Vault' });
+        items.push({ id: 'panel-measurements', label: 'Measurements' });
         items.push({ id: 'ethena-attestation-panel', label: 'Attestation' });
         items.push({ id: 'panel-contract',            label: 'Contract' });
         items.push({ id: 'panel-issuer',              label: 'Issuer' });
@@ -537,6 +540,70 @@ var EthenaRenderer = {
             '<div class="text-xs text-slate-400 mt-2">NAV rises as staking yield accrues; sUSDe→USDe unstaking is subject to a cooldown. ' +
             'Cooldown-queue depth is not exposed in the current feed.</div>' +
         '</div>';
+    },
+
+    // Producer-owned measurement blocks. Keep cadence and scope visible: the
+    // hourly payload embeds the latest daily cache, so a fresh file does not
+    // imply every measurement was recomputed that hour.
+    _renderMeasurementsPanel: function(specific, slug) {
+        var m = specific.measurements || {};
+        if (!Object.keys(m).length) return '';
+        var daily = m.daily_status || 'unavailable';
+        var dailyAge = m.daily_age_hours != null ? m.daily_age_hours.toFixed(1) + 'h old' : 'age unavailable';
+        var cards = '';
+        var details = '';
+
+        if (slug === 'usde') {
+            var supply = m.supply_by_chain || {};
+            var chains = (supply.chains || []).filter(function(c) { return c.status === 'ok'; })
+                .sort(function(a, b) { return (b.supply || 0) - (a.supply || 0); });
+            var unattributed = supply.bridged_unattributed;
+            cards += EthenaRenderer._measurementCard('Measured chains', chains.length,
+                'hourly · unmeasured chains stay explicit');
+            cards += EthenaRenderer._measurementCard('Unattributed bridge supply',
+                unattributed != null ? EthenaRenderer._money(unattributed) : '—',
+                supply.bridged_unattributed_pct != null ? supply.bridged_unattributed_pct.toFixed(1) + '% of adapter-locked' : 'not assigned by estimate');
+            var mr = m.mint_redeem || {};
+            var active = (mr.assets || []).filter(function(a) { return a.supported && a.is_active; });
+            cards += EthenaRenderer._measurementCard('Active RFQ collateral', active.length || '—',
+                mr.access || 'daily configuration read');
+            var fs = m.fee_switch || {};
+            cards += EthenaRenderer._measurementCard('Fee-switch milestone',
+                fs.status === 'ok' ? (fs.milestone_met ? 'Met' : 'Not met') : 'Unavailable',
+                fs.usde_supply_14d_ma_usd != null ? EthenaRenderer._money(fs.usde_supply_14d_ma_usd) + ' 14d mean vs ' + EthenaRenderer._money(fs.threshold_usd) : 'daily');
+            if (chains.length) {
+                details = '<div class="text-xs text-slate-500 mt-3">Largest measured bridged supplies: ' +
+                    chains.slice(0, 6).map(function(c) { return c.chain + ' ' + EthenaRenderer._money(c.supply); }).join(' · ') +
+                    '. Ethereum total supply includes adapter-locked tokens; chain values are a split, not additive.</div>';
+            }
+        } else {
+            var vault = m.vault || {};
+            var growth = m.realized_nav_growth || {};
+            var dist = m.price_distribution_vs_nav || {};
+            cards += EthenaRenderer._measurementCard('Cooldown',
+                vault.cooldown_seconds != null ? (vault.cooldown_seconds / 86400).toFixed(0) + ' day' : '—',
+                vault.block != null ? 'on-chain at block ' + vault.block.toLocaleString() : 'hourly');
+            cards += EthenaRenderer._measurementCard('Cooldown silo',
+                vault.silo_usde != null ? EthenaRenderer._money(vault.silo_usde) : '—', 'USDe awaiting withdrawal');
+            cards += EthenaRenderer._measurementCard('Realized NAV growth (7d)',
+                growth['7d'] && growth['7d'].growth_pct != null ? growth['7d'].growth_pct.toFixed(3) + '%' : '—',
+                growth['7d'] && growth['7d'].annualized_pct != null ? growth['7d'].annualized_pct.toFixed(2) + '% annualized; realized, not advertised APY' : 'daily');
+            cards += EthenaRenderer._measurementCard('7d market vs NAV',
+                dist['7d'] && dist['7d'].mean != null ? dist['7d'].mean.toFixed(2) + ' bps mean' : '—',
+                dist['7d'] && dist['7d'].distinct_values != null ? dist['7d'].distinct_values + ' distinct oracle marks' : 'daily oracle/index marks');
+        }
+
+        return '<div class="panel"><div class="panel-title">Live Measurements ' +
+            '<span class="text-xs font-normal text-slate-400">— hourly state + daily analytics</span></div>' +
+            '<div class="flex items-center gap-2 mb-3">' +
+                EthenaRenderer._statusPill('Daily cache', daily === 'ok' ? 'ok' : 'warn', dailyAge) +
+            '</div><div class="grid grid-cols-2 md:grid-cols-4 gap-3">' + cards + '</div>' + details + '</div>';
+    },
+
+    _measurementCard: function(label, value, note) {
+        return '<div class="summary-card"><div class="card-label">' + label + '</div>' +
+            '<div class="card-value">' + value + '</div>' +
+            '<div class="text-xs text-slate-400 mt-1" style="overflow-wrap:anywhere;">' + note + '</div></div>';
     },
 
 

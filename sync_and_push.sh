@@ -263,7 +263,7 @@ fi
 # Files whose names are not <registered-slug><suffix> — family rollups shared by
 # several assets, and the Strategy event log. These stay explicit because there
 # is no slug to derive them from.
-for f in apyx_family.json cap_family.json ethena_family.json frax_backing.json frax_backing_history.json saturn_family.json strategy_events.json syrup_family.json; do
+for f in apyx_family.json cap_family.json ethena_family.json ethena_measurements_daily.json frax_backing.json frax_backing_history.json saturn_family.json strategy_events.json syrup_family.json; do
     [ -f "/home/danger/PegTracker/data/$f" ] && cp "/home/danger/PegTracker/data/$f" data/
 done
 
