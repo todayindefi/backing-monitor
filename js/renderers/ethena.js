@@ -969,23 +969,53 @@ var EthenaRenderer = {
             '<div class="text-xs text-slate-500 mt-1">Wallet set: <span class="font-mono">' + tracked + '/' + disclosed + '</span> disclosed accounts tracked.</div>' : '';
         // ⚠️ TWO TRUE LINES, STACKED, MAKING A THIRD CLAIM NEITHER OF THEM MAKES.
         // "6/13 accounts tracked" sat directly above "our read $1.91B vs $2.62B
-        // attested", and a reader joins them into "the seven we don't track are
-        // the $713M". PegTracker checked that on 2026-10-11 and it is false: the
-        // six EVM accounts FarmTracker added hold about $26.8M between them, so
-        // the divergence barely moves. The rest is not attributed to anything.
+        // attested", and a reader joins them into "the ones we don't track are
+        // the $713M". PegTracker measured it and it is false: the six EVM accounts
+        // FarmTracker added hold about $26.8M between them, so the divergence
+        // barely moves. The rest is not attributed to anything.
         //
         // ⚠️ THE MAGNITUDE IS DELIBERATELY NOT PRINTED HERE. That $26.8M reached
-        // us in a message, not in a feed this page reads; rendering it would put a
-        // figure on a public page with no served source behind it. What this says
-        // instead is what our own data supports — the untracked balances are not
-        // published, so the gap is unattributed — and it stays true when the
-        // tracked count changes underneath it.
-        var attributionNote = (untracked && bucket.delta_usd != null) ?
-            '<div class="text-xs text-slate-500 mt-1">The ' + untracked + ' disclosed account' +
-            (untracked === 1 ? '' : 's') + ' we do not track sit inside Ethena\u2019s attested total and ' +
-            'outside ours, and their balances are not published here \u2014 so the ' +
-            EthenaRenderer._money(Math.abs(bucket.delta_usd)) + ' difference is <span class="font-medium">unattributed</span>, ' +
-            'not shown to be those accounts.</div>' : '';
+        // us in a message, not in a feed this page reads. It is also TODAY's
+        // balance against a 2026-09-27 attestation, so it would not measure the
+        // gap even if it were served.
+        //
+        // ⚠️ AND THE COUNT IN THE LINE ABOVE IS NOT THE COUNT IN THE COMPARISON.
+        // FarmTracker's export went from 6 wallets to 12 on 2026-10-11, so the
+        // panel says "12/13 tracked" — while the aligned figure beside it is a
+        // read of the SIX accounts that had a reading on the snapshot date. The
+        // six added today have none: unmeasured on 09-27, not zero. The producer
+        // publishes that as `aligned_accounts` (+ the missing list), so this
+        // states the comparison's own denominator rather than the panel's.
+        var alignedN = bucket.aligned_accounts;
+        var missingList = Array.isArray(bucket.aligned_accounts_missing) ? bucket.aligned_accounts_missing : null;
+        var missingN = missingList ? missingList.length
+                     : (alignedN != null && disclosed != null ? disclosed - alignedN : null);
+        var gapStr = bucket.delta_usd != null ? EthenaRenderer._money(Math.abs(bucket.delta_usd)) : null;
+        var attributionNote = '';
+        if (alignedN != null && disclosed != null && gapStr) {
+            attributionNote =
+                '<div class="text-xs text-slate-500 mt-1">That comparison reads <span class="font-mono">' +
+                alignedN + '</span> of the <span class="font-mono">' + disclosed + '</span> disclosed accounts \u2014 ' +
+                'the ones with a balance on ' + (bucket.aligned_date || 'the snapshot date') + '. ' +
+                (missingN
+                    ? (missingN === 1
+                        ? 'The remaining account is unmeasured on that date rather than zero, and nothing ' +
+                          'published here says how much of the ' + gapStr + ' it holds. '
+                        : 'The other ' + missingN + ' are unmeasured on that date rather than zero, and nothing ' +
+                          'published here says how much of the ' + gapStr + ' they hold. ')
+                    : '') +
+                'The difference is <span class="font-medium">unattributed</span>.</div>';
+        } else if (untracked && gapStr) {
+            // Pre-`aligned_accounts` shape. Says the same thing from the one count
+            // that exists, and still refuses the causal reading.
+            attributionNote =
+                '<div class="text-xs text-slate-500 mt-1">The ' + untracked + ' disclosed account' +
+                (untracked === 1 ? '' : 's') + ' we do not track ' + (untracked === 1 ? 'sits' : 'sit') +
+                ' inside Ethena\u2019s attested total and outside ours, and ' +
+                (untracked === 1 ? 'its balance is' : 'their balances are') + ' not published here \u2014 so the ' +
+                gapStr + ' difference is <span class="font-medium">unattributed</span>, not shown to be ' +
+                (untracked === 1 ? 'that account' : 'those accounts') + '.</div>';
+        }
         var namingNote = fam.notes && fam.notes.coinbase_wallets_naming ?
             '<div class="text-xs text-slate-500 mt-1">' + fam.notes.coinbase_wallets_naming + '</div>' : '';
 

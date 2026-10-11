@@ -161,9 +161,22 @@ fix         A sentence under the bucket check saying the untracked balances are 
             is deliberately NOT rendered: it reached us in a message, not in any feed this page
             reads, and a figure on a public page needs a served source.
 owner       us (shipped) · PegTracker for the feed string
-open        ⚠️ Their `reserve_wallet_untracked` FLAG still ends "...and the 'Unattributed' residual
-            absorbs the gap" — the correction landed in their handoff file, not in the message we
-            render verbatim. Raised with them; re-read the flag text at the next refresh.
+resolved    ⚠️ Their `reserve_wallet_untracked` FLAG had kept the retracted wording ("...the
+            'Unattributed' residual absorbs the gap") after the handoff file was corrected — the
+            string we render verbatim is a separate artifact from their prose. Raised; fixed in
+            their eb2be3d (now "how much of the on-chain bucket difference they account for is not
+            measured") and live from the 11:35 run.
+            ⚠️ THAT RAISE SURFACED A SECOND ONE. FarmTracker's export went 6 -> 12 wallets at
+            11:17, so the panel reads "12/13 tracked" while the aligned figure beside it is a read
+            of the SIX accounts with a balance on 2026-09-27 — the six added today have none.
+            Their 619cacb adds `aligned_accounts` + `aligned_accounts_missing` (both null when a
+            history row carries no wallet breakdown) and restates the count; publishes with their
+            12:35 run, reaches us at 13:11.
+            Our line now states the COMPARISON's denominator, not the panel's, and falls back to
+            the pre-`aligned_accounts` shape until that lands. DATA_CACHE_REV bumped to 20261011c.
+            Verified by injection across four shapes: 7 missing, 1 missing (singular copy), the
+            fields null, and the whole reconciliation block absent (says nothing rather than
+            guessing).
 status      shipped 2026-10-11. The divergence flag itself needs no change: "scope, not drift" is
             computed from aligned dates and still holds.
 Last reviewed 2026-10-11
