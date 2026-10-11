@@ -56,6 +56,7 @@ var ASSET_RENDERERS = {
     usg:       typeof USGRenderer       !== 'undefined' ? USGRenderer       : null,
     bold:      typeof BOLDRenderer      !== 'undefined' ? BOLDRenderer      : null,
     wsteth:    typeof WstETHRenderer    !== 'undefined' ? WstETHRenderer    : null,
+    frxusd:    typeof FrxUSDRenderer    !== 'undefined' ? FrxUSDRenderer    : null,
     'msusd-metronome': typeof MsUSDMetronomeRenderer !== 'undefined' ? MsUSDMetronomeRenderer : null,
     usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
     syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
@@ -106,6 +107,80 @@ function findAssetRenderer(data) {
 function getAssetSlug() {
     var params = new URLSearchParams(window.location.search);
     return params.get('asset');
+}
+
+// Convert a producer's standalone executable ladder into the existing
+// liquidity/1 reader contract. This is transport adaptation only: every quote,
+// threshold and clock remains PegTracker's observation. Venue inventory still
+// arrives independently from DexTracker and is merged afterwards by the normal
+// ownership rules.
+function exitLadderOverlay(file, ladder) {
+    if (!ladder || !Array.isArray(ladder.rungs)) return null;
+    var quotes = {};
+    ladder.rungs.forEach(function (row) {
+        if (!row || row.status !== 'ok' || typeof row.size_usd !== 'number') return;
+        quotes[String(row.size_usd)] = {
+            size_usd: row.size_usd,
+            input_amount: row.input_frxusd,
+            output_amount: row.output_usdc,
+            amount_out_usdc: row.output_usdc,
+            amount_in_raw: row.amount_in_raw,
+            amount_out_raw: row.amount_out_raw,
+            // CommonRenderer uses signed slippage: negative is an exit cost.
+            slippage_bps: typeof row.size_impact_bps === 'number' ? -row.size_impact_bps : null,
+            all_in_exit_cost_bps: row.all_in_cost_bps,
+            marginal_impact_bps: row.marginal_impact_bps,
+            status: row.status,
+            route_venues: Array.isArray(row.swaps) ? row.swaps : [],
+            quote_timestamp: row.quote_timestamp,
+            block_number: row.ethereum_head_block_at_request,
+            expiry: row.expiry,
+            expiry_basis: row.expiry_basis
+        };
+    });
+    var h = ladder.headline || {};
+    var bracket = Array.isArray(h.bracket_usd) ? h.bracket_usd.slice() : null;
+    var depth50 = null;
+    if (typeof h.value_usd === 'number') {
+        depth50 = {
+            threshold_bps: Number(h.threshold_bps || 50),
+            depth_usd: h.value_usd,
+            bracket: bracket,
+            status: bracket ? 'bracketed' : (h.status || null),
+            is_floor: h.status === 'floor',
+            basis: h.value_basis || ladder.headline_basis || null
+        };
+    }
+    return {
+        axis: 'liquidity',
+        file: file,
+        json: {
+            schema_version: 'liquidity/1',
+            asset_slug: ladder.asset_slug,
+            producer: ladder.producer || 'PegTracker',
+            as_of: ladder.measured_at,
+            scope: ladder.scope || 'canonical_ethereum_exit_ladder',
+            publishes: ['depth'],
+            does_not_publish: ['venue_inventory', 'primary_exit', 'rating'],
+            chain: ladder.chain,
+            sell_into: ladder.sell_into,
+            depth_50bps: depth50,
+            depth_threshold_bps: depth50 ? depth50.threshold_bps : 50,
+            exit_mark: {
+                measured_at: ladder.measured_at,
+                chain: ladder.chain,
+                sell_into: ladder.sell_into,
+                quotes: quotes,
+                basis: ladder.headline_basis,
+                source: ladder.aggregator
+            },
+            slippage_reference_size_usd: ladder.reference_rung_usd,
+            cost_conventions: ladder.cost_conventions,
+            failed_rungs_usd: ladder.failed_rungs_usd,
+            route_venues: ladder.route_venues,
+            last_valid_headline: ladder.last_valid_headline
+        }
+    };
 }
 
 // ========================================
@@ -292,6 +367,15 @@ async function renderAsset(slug) {
         // overlay. Order is the contract: the replace runs before the merge, so
         // the merge lands on the walk rather than being wiped by it.
         var overlayFetches = [];
+        if (assetMeta && assetMeta.liquidity_ladder_ref) {
+            (function (file) {
+                overlayFetches.push(
+                    fetch(dataUrl('data/' + file))
+                        .then(function(r) { return r && r.ok ? r.json() : null; })
+                        .then(function(j) { return exitLadderOverlay('data/' + file, j); })
+                        .catch(function() { return null; }));
+            })(assetMeta.liquidity_ladder_ref);
+        }
         Object.keys(overlaySuffixes).forEach(function(axis) {
             var sufs = overlaySuffixes[axis];
             if (!Array.isArray(sufs)) sufs = [sufs];

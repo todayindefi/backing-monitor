@@ -52,6 +52,12 @@ SUFFIXES="_backing _backing_history _peg_history _critical_events _flow \
           _liquidity _contract _dependencies _issuer _backing_overlay _contract_overlay \
           _axis_basis _minters _peg_backfill"
 
+# A live ladder may be a standalone observation rather than part of the base
+# backing document. frxUSD is the first producer to use this block: DexTracker
+# owns venue inventory while PegTracker owns executable quotes, so folding the
+# ladder into either producer's file would erase that ownership boundary.
+SUFFIXES="$SUFFIXES _exit_ladder"
+
 SLUGS=$(python3 -c "import json;print(' '.join(a['slug'].replace('-','_') for a in json.load(open('data/assets.json'))))")
 
 # ⚠️ ONE SOURCE ROOT WAS THE OTHER HALF OF THE SAME BUG. Declaring `_liquidity`,

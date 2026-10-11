@@ -1,0 +1,46 @@
+{
+  "schema_version": "axis-basis/1",
+  "producer": "riskanalyst",
+  "asset": "frxusd",
+  "as_of": "2026-10-11T16:03:47Z",
+  "generated_at": "2026-10-11T17:23:17Z",
+  "overall_score": 5.5,
+  "overall_score_source": "riskAnalyst:authored",
+  "peg": {
+    "peg_mechanism_score": 6.5,
+    "peg_mechanism_score_source": "riskAnalyst:authored",
+    "peg_mechanism_score_generated_at": "2026-10-11T16:00:00Z",
+    "peg_mechanism_score_measurement": "Measures the strength and accessibility of the mechanism defending the dollar target, not only the current oracle deviation.",
+    "peg_mechanism_score_observations": "PegTracker's canonical frxUSD_Ethereum series contained 617 hourly observations from 2026-09-16 through 2026-10-11. The latest mark was $0.999669; the observed range was $0.999669-$1.000083 and the mean was $0.999906. Fraxtal reuses the canonical Chainlink mark rather than measuring a Fraxtal venue independently.",
+    "peg_mechanism_score_basis": "The 1:1 cash-equivalent custodian mechanism is stronger than a reflexive or algorithmic peg and has produced excellent observed stability. The score remains 6.5 because redemption is asset-selective: Frax documents that holders may redeem from custodian contracts with available collateral but are not guaranteed a particular reserve asset or custodian. The Chainlink history is an oracle observation, not executable exit evidence.",
+    "peg_mechanism_score_persistence": "Recheck after a material peg event, custodian redemption-policy change, or a change to the canonical price source."
+  },
+  "backing": {
+    "backing_score": 6.5,
+    "backing_score_source": "riskAnalyst:authored",
+    "backing_score_generated_at": "2026-10-11T16:00:00Z",
+    "backing_score_measurement": "Measures reserve quality, coverage, concentration and verifiability, not merely the existence of named collateral.",
+    "backing_score_observations": "Frax Facts reported $108.457m of assets against $105.479m of circulating liabilities at 2026-10-11T16:03:47Z, or 102.82% coverage and a $2.978m surplus. Reported assets were WTGXX 62.22%, USTB 21.32%, BUIDL 14.61%, Erebor Bank cash 1.85%, with AUSD, USDC and USDB collectively immaterial.",
+    "backing_score_basis": "The reserve assets are high-quality cash-equivalent instruments and the balance sheet is machine-readable. The score remains 6.5 because Frax produces the aggregate, this assessment has not independently reconciled every line to fund statements, the bank-cash line is off-chain, and a 62.22% WTGXX concentration makes one fund and custody route dominant.",
+    "backing_score_persistence": "Recheck whenever Frax Facts changes materially, a reserve line loses reporting, or independent reserve assurance changes."
+  },
+  "liquidity": {
+    "liquidity_score": 5.5,
+    "liquidity_score_source": "riskAnalyst:authored",
+    "liquidity_score_generated_at": "2026-10-11T16:00:00Z",
+    "liquidity_score_measurement": "Measures executable holder exit by size across market and primary-redemption routes, with chain-local evidence required where holders and supply sit.",
+    "liquidity_score_observations": "PegTracker measured Ethereum frxUSD-to-USDC at 2026-10-11T13:30:35Z: $1k returned $999.81, $10k returned $9,998.21, $50k returned $49,989.83 and $100k returned $99,978.09, approximately 1.8-2.2 bps all-in shortfall. The ladder did not locate the -50 bps crossing or test seven-figure size, queue time, redemption inventory, or remote-chain capacity.",
+    "liquidity_score_basis": "Ethereum execution is healthy through the measured $100k rung and Frax documents direct and cross-chain redemption routes. The score remains 5.5 because institutional-size capacity, redemption timing and inventory, and chain-local exit for Fraxtal and other remote deployments have not been demonstrated.",
+    "liquidity_score_persistence": "Recheck when the -50 bps crossing is located, seven-figure rungs are measured, or remote-chain and redemption-throughput evidence becomes available."
+  },
+  "dependencies": {
+    "underlying_score": 4.5,
+    "underlying_score_source": "riskAnalyst:authored",
+    "underlying_score_generated_at": "2026-10-11T16:00:00Z",
+    "underlying_score_measurement": "Measures the concentration, substitutability and failure modes of the upstream reserve and custody chain, not reserve coverage itself.",
+    "underlying_score_observations": "The current upstream set is WTGXX, USTB, BUIDL, the Erebor reserve account, AUSD, USDC and USDB. WTGXX is the binding 62.22% exposure. Five of seven direct legs lack internal reports; the two scoreable legs, AUSD and USDC, were economically immaterial at the observation time.",
+    "underlying_score_basis": "The score remains an explicitly unanchored authored judgment. Named managers provide some diversification, but the dominant WisdomTree exposure is not substitutable during a fund or custodian impairment, and deriving a clean ceiling from only the immaterial AUSD and USDC legs would misstate coverage. Detailed edges and unresolved states remain authoritative in frxusd_dependencies.json.",
+    "underlying_score_persistence": "Recheck when WTGXX, USTB, BUIDL, Erebor or USDB receives an internal report, or when reserve concentration changes materially."
+  },
+  "routing_note": "Axes 1-4 are packaged here from the reviewed 2026-10-12 assessment without rescoring. Axis 5 is deliberately omitted because frxusd_contract_overlay.json owns the authored 3.5 score and rendering basis. Axis 6 is transported through frxusd_issuer.json. Overall 5.5 is envelope metadata only and is not an axis score."
+}
