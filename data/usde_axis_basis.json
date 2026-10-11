@@ -1,43 +1,8 @@
 {
-  "schema_version": "axis-basis/1",
-  "producer": "riskanalyst",
-  "asset": "usde",
-  "as_of": "2026-09-10T12:00:00Z",
-  "peg": {
-    "peg_mechanism_score": 6.5,
-    "peg_mechanism_score_source": "riskAnalyst:authored",
-    "peg_mechanism_score_basis": "MEASURES THE MECHANISM UNDER STRESS, NOT TODAY'S DEVIATION. Hybrid backing — roughly 89% conventional credit-style assets and 11% residual perps — with a mint/burn primary path and arb-driven secondary peg. The score rests on a DEMONSTRATED event rather than a model: it held through a $1.5B+ single-event outflow in October 2025 without peg failure. A live band cannot show that; it shows only that today is calm.",
-    "peg_mechanism_score_persistence": "filtered — demonstrated stress performance, not spot deviation"
-  },
-  "backing": {
-    "backing_score": 6.5,
-    "backing_score_source": "riskAnalyst:authored",
-    "backing_score_basis": "MEASURES RESERVE COMPOSITION AND THE VERIFICATION STACK, not the live collateral ratio. Lifted on three structural developments — a reserve fund materially above its own floor, continuous third-party proof-of-reserves, and off-exchange institutional custody. ⚠️ The reserve fund's COVER falls as supply grows even when the fund does not move: it fell from 1.534% to 1.409% in fifteen days on dilution alone, which no live ratio surfaces.",
-    "backing_score_persistence": "filtered — composition and verification, not the live ratio"
-  },
-  "liquidity": {
-    "liquidity_score": 7.0,
-    "liquidity_score_source": "riskAnalyst:authored",
-    "liquidity_score_basis": "MEASURES DEPTH RELATIVE TO A SHRINKING BOOK. Genuinely deep across DEX and CEX venues with $100M+ daily volume — but HELD rather than raised, because absolute depth shrank in lockstep with a roughly 60% supply contraction from peak. ⚠️ A ratio that holds while both terms fall is not the same as depth that held. ⚠️⚠️ THIS BASIS CARRIES NO `liquidity_score_generated_at` AND ITS CLAIMS ARE DIRECTIONAL — \"roughly 60% supply contraction from peak\", \"$100M+ daily volume\". Flagged 2026-10-04 by backing-monitor, who correctly flagged the UNDATEDNESS rather than the content: neither claim is falsifiable from their side, and an undated directional claim is precisely the thing that cannot be audited later. ⚠️ NOT CORRECTED, because nothing here is known to be wrong — recorded so the next refresh re-derives both claims against a dated source instead of inheriting them. A directional claim rots differently from a figure: it never looks stale.",
-    "liquidity_score_persistence": "filtered — depth relative to book size, not absolute",
-    "liquidity_score_basis_undated": true,
-    "liquidity_score_basis_flagged_at": "2026-10-04T00:00:00Z"
-  },
-  "dependencies": {
-    "underlying_score": 6.0,
-    "underlying_score_source": "riskAnalyst:authored",
-    "underlying_score_generated_at": "2026-09-11T00:00:00Z",
-    "underlying_score_basis": "MEASURES THE COUNTERPARTY SET — HOW MANY, HOW CONCENTRATED, HOW SUBSTITUTABLE — WITH VERIFIABILITY LEFT TO BACKING SO THE TWO AXES DO NOT PRICE ONE FACT TWICE. ⚠️ AUTHORED 2026-09-10; this axis existed on NEITHER surface, and tidresearch needed it to publish the Contract & Admin 5.5 authored the same morning. ⚠️⚠️ MEASURED AGAINST THE AUGUST ATTESTATION, WHICH OUR OWN FEED HAS NOT INGESTED: backing-monitor embeds Ethena's JULY 23 snapshot at 48 days old while the AUGUST 26 attestation (its 21st, published 2026-09-03) is live, AND THE DIFFERENCE MOVES THE CENTRAL NUMBER SIXTEEN POINTS IN ETHENA'S FAVOUR. ⚠️ SO THIS SCORE IS MEASURED AGAINST BETTER DATA THAN THE DASHBOARD HOLDS — the unusual direction, and worth stating because a reader who assumes the stale side is the harsh side has it backwards here. ⚠️ THIS SCORE IS INHERITED BY susde, so any re-derivation moves both.",
-    "underlying_score_persistence": "filtered — counterparty set, not a daily balance",
-    "underlying_score_denominator": "⚠️ THE FEED'S ATTESTATION IS 48 DAYS OLD AT THE TIME OF THIS WRITING. Any dependency share computed from backing-monitor's embedded snapshot is a JULY figure. Re-date before quoting.",
-    "underlying_score_routing": "⚠️ Merges after backing-monitor's 49d0b4ca2 but axis 4 renders no score today — source-of-record."
-  },
-  "issuer": {
-    "issuer_score": 7.0,
-    "issuer_score_source": "riskAnalyst:authored",
-    "issuer_score_generated_at": "2026-09-11T00:00:00Z",
-    "issuer_score_basis": "MEASURES THE ENTITY AND ITS GOVERNANCE. ✅ WHAT THE 7.0 RESTS ON, UNCHANGED: doxxed team, top-tier investors, regulatory engagement, PROVEN THROUGH THE OCT 10 2025 STRESS EVENT (which is what raised it from 6.0), and a genuinely broad verification ecosystem — Reserve Fund subcommittee, LlamaRisk, Blockworks, Chaos Labs, Chainlink. ⚠️⚠️ HELD AT 7.0 ON 2026-09-10 BUT ITS REASONS WERE REWRITTEN, AND THE STRUCK CLAUSE MATTERS: the prior basis said 'ENA-token voting is still absent … but the Risk Committee structure provides functional governance review'. BOTH HALVES WERE FALSE. ENA-token voting EXISTS, and its first material use (Snapshot 0xcb6b9ed95bf0c64b6101ff7d3a770af86e07701d8419b541cf91a6894022f2a3, closed/final 2026-09-02) EXPLICITLY SUPERSEDED THE RISK COMMITTEE'S PARAMETER — so the body cited as the COMPENSATING CONTROL is the one that was OVERRIDDEN. ⚠️ A SCORE CAN BE RIGHT WHILE ITS STATED REASON IS FALSE, AND THE REASON IS WHAT A READER ACTS ON. ⚠️ THIS SCORE IS INHERITED BY susde.",
-    "issuer_score_persistence": "filtered — entity and governance, not spot-responsive",
-    "issuer_score_routing": "⚠️ UNROUTED — backing-monitor holding axis-6 registration pending the axis-4 render decision."
-  }
+  "schema_version": "axis-basis/1", "producer": "riskanalyst", "asset": "usde", "as_of": "2026-10-11T00:00:00Z",
+  "peg": {"peg_mechanism_score": 6.5, "peg_mechanism_score_source": "riskAnalyst:authored", "peg_mechanism_score_generated_at": "2026-10-11T00:00:00Z", "peg_mechanism_score_basis": "USDe held a tight 30-day Chainlink range of -7.79 to +0.22 bps with no -50 bps breach and has demonstrated resilience through the October 2025 outflow. Its primary peg loop is effective but permissioned and RFQ-based: 611 benefactors and 20 minter and redeemer role holders were live, while realized USDC orders priced near zero cost.", "peg_mechanism_score_persistence": "Recheck after a material peg event or primary-rail policy change."},
+  "backing": {"backing_score": 6.5, "backing_score_source": "riskAnalyst:authored", "backing_score_generated_at": "2026-10-11T00:00:00Z", "backing_score_basis": "The September 27 attestation reconciled $4.953bn of backing against $4.949bn supply plus a $62.095m Reserve Fund. The October 11 live feed measured 99.4781% before and 100.7690% after the fund. Custodians are named, but current look-through into institutional loans, individual RWAs and derivatives notional remains incomplete; CEX delta-hedge collateral was 20.39% of backing.", "backing_score_persistence": "Recheck with each monthly attestation and any Reserve Fund policy change."},
+  "liquidity": {"liquidity_score": 7.0, "liquidity_score_source": "riskAnalyst:authored", "liquidity_score_generated_at": "2026-10-11T00:00:00Z", "liquidity_score_basis": "The permissioned institutional mint and redemption rail is active, with median realized USDC mint and redeem spreads of +0.03 and -0.09 bps. The Ethereum USDe-to-USDC route cleared the full tested $5m inside 50 bps, so $5m is a floor rather than a located limit. Other-chain venue inventories are not treated as executable depth.", "liquidity_score_persistence": "Recheck when the Ethereum crossing is located or chain-local ladders are added."},
+  "dependencies": {"underlying_score": 6.0, "underlying_score_source": "riskAnalyst:authored", "underlying_score_generated_at": "2026-10-11T00:00:00Z", "underlying_score_basis": "USDe depends on named stablecoin settlement assets, institutional custodians and borrowers, tokenization platforms, off-exchange providers and CEX venues. The set is credible but overlaps across roles and is only partly substitutable. The September attestation refreshed custody totals without providing complete asset-level exposure weights.", "underlying_score_persistence": "Recheck when a full asset-level portfolio or counterparty concentration table is published."},
+  "issuer": {"issuer_score": 7.0, "issuer_score_source": "riskAnalyst:authored", "issuer_score_generated_at": "2026-10-11T00:00:00Z", "issuer_score_basis": "Ethena has a public team, institutional partners, repeated attestations, mature external monitoring and a demonstrated response to the October 2025 stress event. The offset is concentrated ENA governance: a fee-switch vote replaced the earlier Reserve-Fund-first policy, USDe holders do not vote, and one voter could clear quorum alone. The switch remains dormant below the $7.5bn supply milestone.", "issuer_score_persistence": "Recheck at fee-switch activation, a governance redesign or a material operational failure."}
 }
