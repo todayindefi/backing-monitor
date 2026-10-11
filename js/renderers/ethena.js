@@ -1129,8 +1129,11 @@ var EthenaRenderer = {
         }
 
         var rows = wallets.map(function(w) {
-            var tops = topProtocols(w.protocols);
-            var topStr = tops.length ? tops.map(function(p) { return p.name + ' (' + EthenaRenderer._money(p.usd) + ')'; }).join(' · ') : '<span class="text-slate-400">raw tokens only</span>';
+            var topStr = EthenaRenderer._topHoldings(w);
+            if (topStr == null) {
+                var tops = topProtocols(w.protocols);
+                topStr = tops.length ? tops.map(function(p) { return p.name + ' (' + EthenaRenderer._money(p.usd) + ')'; }).join(' · ') : '<span class="text-slate-400">raw tokens only</span>';
+            }
             var stale = (w.fetch_status && w.fetch_status !== 'ok') ? ' ' + EthenaRenderer._statusPill('stale', 'warn', w.fetch_status) : '';
             var d = deltaByAddr[w.address];
             var deltaLine = (d != null && deltaDays) ?
@@ -1167,7 +1170,7 @@ var EthenaRenderer = {
                     'Off-exchange custodians and the CEX hedge stay attestation / LlamaRisk-sourced. Wallet positions refresh <span class="font-medium">daily</span> (headline coverage above is hourly).</div>' +
                 walletSetLine + bucketComparison + attributionNote + namingNote +
                 EthenaRenderer._reserveTrendSection(hist) +
-                '<table class="data-table"><thead><tr><th>Address</th><th class="text-right">Total</th><th class="text-right">In DeFi</th><th>Top protocols</th><th></th></tr></thead>' +
+                '<table class="data-table"><thead><tr><th>Address</th><th class="text-right">Total</th><th class="text-right">In DeFi</th><th>Top holdings</th><th></th></tr></thead>' +
                 '<tbody>' + rows + '</tbody></table>' +
                 EthenaRenderer._reserveDriftCallouts(fam) +
             '</div>');
@@ -1175,6 +1178,31 @@ var EthenaRenderer = {
         // Stash history for the trend chart + its toggle (drawn post-DOM in
         // _loadFamily once the canvas exists).
         EthenaRenderer._reserveTrendCache = { history: hist, mode: 'protocol' };
+    },
+
+    // ⚠️ "raw tokens only" HID $261M OF FUND SHARES. Solana 2 has no DeFi
+    // protocols, so the protocol column called it raw tokens — true, and it read
+    // as idle stablecoins. It is STAC + JAAA (tokenized fund shares, NAV-priced).
+    // PegTracker 2d8ddbf passes FarmTracker's per-wallet `positions` through;
+    // this names the asset (and its protocol when it is a DeFi leg) from that.
+    // Three shapes, kept distinct: key ABSENT → older feed, caller falls back
+    // to the protocol view (return null); `positions: null` → the export had no
+    // holdings for this wallet, which is not the same as holding nothing;
+    // `[]` → none. Zero-value rows are published and dropped here.
+    _topHoldings: function(w) {
+        if (!('positions' in w)) return null;
+        if (w.positions === null) return '<span class="text-slate-400">holdings not published</span>';
+        var pos = (w.positions || []).filter(function(p) { return (p.usd || 0) >= 1; })
+            .sort(function(a, b) { return (b.usd || 0) - (a.usd || 0); });
+        if (!pos.length) return '<span class="text-slate-400">no holdings</span>';
+        var esc = CommonRenderer._escapeAttr;
+        var shown = pos.slice(0, 3).map(function(p) {
+            var proto = p.protocol && p.protocol !== '-' ? ' <span class="text-slate-400">in ' + esc(p.protocol) + '</span>' : '';
+            var tip = p.price_source ? ' title="Priced from: ' + esc(p.price_source) + '"' : '';
+            return '<span' + tip + '>' + esc(p.asset || '?') + proto + ' (' + EthenaRenderer._money(p.usd) + ')</span>';
+        }).join(' · ');
+        var more = pos.length > 3 ? ' <span class="text-slate-400">+' + (pos.length - 3) + ' more</span>' : '';
+        return shown + more;
     },
 
     // Freshness pill: "Wallet data as of {date} · daily", visually distinct
