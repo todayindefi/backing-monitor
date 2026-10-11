@@ -105,6 +105,8 @@ status      wsteth and usde are fixed on BOTH charts and the paired-window condi
             USDe opted in during its 2026-10-11 refresh: its bespoke peg chart clips the retained
             daily series to 7d with a two-point minimum, and the same declaration clips its common
             coverage chart. Neither falls back to 30d/full retention.
+            sUSDe's bespoke peg and vault-NAV charts now use the same 7d cutoff and two-point
+            minimum; the NAV caption states shown versus retained readings.
             ⚠️ It is opt-in by that declaration and NOT fleet-wide — handing every asset 7d
             would re-horizon eight long-retention histories (crvUSD 535d, usds 347d, yzUSD 173d,
             syzusd/usde/susde ~90d, susds 67d, strcx 108d) in one line. Each remaining asset

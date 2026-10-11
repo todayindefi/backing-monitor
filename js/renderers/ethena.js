@@ -630,7 +630,7 @@ var EthenaRenderer = {
                 extraCards +
             '</div>' +
             '<div class="chart-container" style="height:240px;position:relative;"><canvas id="ethena-susde-nav-chart"></canvas></div>' +
-            '<div class="text-xs text-slate-400 mt-2">' + exitNote + checkNote + '</div>' +
+            '<div class="text-xs text-slate-400 mt-2"><span id="ethena-susde-nav-window"></span>' + exitNote + checkNote + '</div>' +
         '</div>';
     },
 
@@ -842,8 +842,20 @@ var EthenaRenderer = {
             .then(function(r) { return r.ok ? r.json() : null; })
             .then(function(hist) {
                 var ctx = document.getElementById('ethena-susde-nav-chart');
-                if (!ctx || typeof Chart === 'undefined' || !hist || !Array.isArray(hist.entries) || hist.entries.length < 2) return;
-                var entries = EthenaRenderer._downsample(hist.entries, 200);
+                if (!ctx || typeof Chart === 'undefined' || !hist || !Array.isArray(hist.entries)) return;
+                var allEntries = hist.entries;
+                var cutoff = Date.now() - 7 * 24 * 3600 * 1000;
+                var entries = allEntries.filter(function(e) {
+                    var t = (e && e.timestamp)
+                        ? Date.parse(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z') : NaN;
+                    return !isNaN(t) && t >= cutoff;
+                });
+                var meta = document.getElementById('ethena-susde-nav-window');
+                if (entries.length < 2) {
+                    if (meta) meta.textContent = 'The trailing 7-day window has fewer than two NAV observations; a wider period is not substituted. ';
+                    return;
+                }
+                if (meta) meta.textContent = 'Last 7d — ' + entries.length + ' of ' + allEntries.length + ' retained readings. ';
                 var labels = entries.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });
                 var navSeries = entries.map(function(e) { return (e.nav != null) ? e.nav : e.theoretical_price; });
                 var mktSeries = entries.map(function(e) { return e.market_price; });
