@@ -1,12 +1,12 @@
 {
  "schema_version": "liquidity/1",
  "asset_slug": "dusd_alto",
- "as_of": "2026-10-09T23:47:17Z",
+ "as_of": "2026-10-10T23:46:43Z",
  "producer": "dextracker",
  "note": "Axis 3 (Liquidity & Exit), single producer. Measured exit evidence only; no risk score. Alto Protocol's DUSD 0x63d74d22E689C715a04F2C13962b1f77F443d35b -- NOT Dialectic USD, dTRINITY dUSD or DeFi Dollar, which share the ticker. The 2% crossing lies above the asset's ENTIRE supply, so `depth.depth_usd` is clamped to total supply (status clears_entire_supply) and the crossing is retained in `depth.curve_crossing_above_supply`. How much is held outside the pool, and by whom, is in `depth.holdings` -- distribution, not depth.",
  "depth": {
   "status": "clears_entire_supply",
-  "depth_usd": 1304821.249027706,
+  "depth_usd": 1304831.695569615,
   "depth_usd_semantics": "total_supply: the crossing lies ABOVE everything in existence, so every unit could be sold inside the threshold. Clamped to total supply; the crossing itself is in `curve_crossing_above_supply`.",
   "is_floor": false,
   "threshold_bps": -200.0,
@@ -15,8 +15,8 @@
   "tested_through_input_usd": 10000000.0,
   "baseline_rung": {
    "size_usd": 100.0,
-   "slippage_bps": 9.48170000000026,
-   "amount_out_tokens": 100.094817
+   "slippage_bps": 7.8582999999987635,
+   "amount_out_tokens": 100.078583
   },
   "rung_set": {
    "grid": "decade",
@@ -30,12 +30,12 @@
    "spec": "riskAnalyst liquidity-ladder-spec.md \u00a77 (178e54a)"
   },
   "slippage_convention": "Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. The dated external mid sizes the input notional and is NOT the impact reference.",
-  "basis": "The -200bps crossing sits at $3,197,266, ABOVE the asset's entire supply of $1,304,821: every unit in existence could be sold inside the threshold, so `depth_usd` is clamped to total supply. The crossing is retained in `curve_crossing_above_supply` as a property of the pool curve. How little reaches the market is a separate fact from depth: at most $27,107 sits outside curve DUSD/frxUSD pool 0x104d6a1b. Of that, ordinary holders have AT MOST about $2,809 (issuer holder list as of 2026-09-20, block 26,017,854); the rest sits with the issuer's own lending markets and fee accounts, which can be borrowed and sold.",
+  "basis": "The -200bps crossing sits at $3,214,844, ABOVE the asset's entire supply of $1,304,832: every unit in existence could be sold inside the threshold, so `depth_usd` is clamped to total supply. The crossing is retained in `curve_crossing_above_supply` as a property of the pool curve. How little reaches the market is a separate fact from depth: at most $27,153 sits outside curve DUSD/frxUSD pool 0x104d6a1b. Of that, ordinary holders have AT MOST about $2,855 (issuer holder list as of 2026-09-20, block 26,017,854); the rest sits with the issuer's own lending markets and fee accounts, which can be borrowed and sold.",
   "bracket": {
-   "last_clearing_size_usd": 3197265.625,
-   "last_clearing_marginal_impact_bps": -193.14592250262666,
-   "first_crossing_size_usd": 3214843.75,
-   "first_crossing_marginal_impact_bps": -222.71612369477612,
+   "last_clearing_size_usd": 3214843.75,
+   "last_clearing_marginal_impact_bps": -187.649165605831,
+   "first_crossing_size_usd": 3232421.875,
+   "first_crossing_marginal_impact_bps": -217.25129011828326,
    "width_usd": 17578.125,
    "monotonic_in_bracket": true,
    "threshold_bps": -200.0,
@@ -51,7 +51,7 @@
     "decimals": 18
    },
    "baseline_size_usd": 100.0,
-   "quoted_as_of": "2026-10-09T23:46:38Z",
+   "quoted_as_of": "2026-10-10T23:46:04Z",
    "token_out": {
     "symbol": "USDC",
     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -102,14 +102,6 @@
       "status": "quoted"
      },
      {
-      "venue": "lite-psm",
-      "status": "quoted"
-     },
-     {
-      "venue": "supernova-v4",
-      "status": "quoted"
-     },
-     {
       "venue": "uniswap-v4",
       "status": "quoted"
      }
@@ -122,7 +114,7 @@
    "fair_value": 1.0,
    "fair_value_basis": "par_input_sizing_only",
    "fair_value_source": "producer_declared_input_sizing",
-   "fair_value_as_of": "2026-10-09T23:46:32Z",
+   "fair_value_as_of": "2026-10-10T23:45:59Z",
    "fair_value_choice": "marginal_baseline",
    "fair_value_choice_mode": "producer_method",
    "market_price_cross_check": null,
@@ -133,98 +125,93 @@
     "size_usd": 1000.0,
     "status": "ok",
     "amount_in_tokens": 1000.0,
-    "amount_out_tokens": 1001.094342,
-    "slippage_bps": 10.943420000000259,
+    "amount_out_tokens": 1000.808019,
+    "slippage_bps": 8.080189999999376,
     "route_venues": [
      "curve-stable-ng",
-     "lite-psm",
-     "uniswap-v4"
+     "ekubo-v3"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.1597386864998958",
-    "router_price_in": 1.0006470603388864,
-    "router_price_out": 0.9995367207140381,
-    "slippage_bps_debiased": 1.4617199999999997,
-    "price_bias_bps": 9.48170000000026,
+    "gas_usd": "0.12548460803509953",
+    "router_price_in": 0.9999561221610115,
+    "router_price_out": 0.9945019007538098,
+    "slippage_bps_debiased": 0.22189000000061299,
+    "price_bias_bps": 7.8582999999987635,
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000.0,
     "status": "ok",
     "amount_in_tokens": 10000.0,
-    "amount_out_tokens": 10010.761013,
-    "slippage_bps": 10.761013000000208,
+    "amount_out_tokens": 10007.904363,
+    "slippage_bps": 7.904362999999748,
     "route_venues": [
      "curve-stable-ng",
-     "lite-psm",
-     "uniswap-v4"
+     "curve-stable-plain"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.1597386864998958",
-    "router_price_in": 1.0006470603388864,
-    "router_price_out": 0.9995367207140382,
-    "slippage_bps_debiased": 1.2793129999999486,
-    "price_bias_bps": 9.48170000000026,
+    "gas_usd": "0.11003702227654566",
+    "router_price_in": 0.9999561221610115,
+    "router_price_out": 0.9944393014239389,
+    "slippage_bps_debiased": 0.04606300000098429,
+    "price_bias_bps": 7.8582999999987635,
     "rung_kind": "decade"
    },
    {
     "size_usd": 100000.0,
     "status": "ok",
     "amount_in_tokens": 100000.0,
-    "amount_out_tokens": 100071.648478,
-    "slippage_bps": 7.164847800000818,
+    "amount_out_tokens": 100066.260618,
+    "slippage_bps": 6.626061799999139,
     "route_venues": [
      "curve-stable-ng",
-     "curve-stable-plain",
-     "lite-psm",
-     "uniswap-v4"
+     "curve-stable-plain"
     ],
-    "route_leg_count": 8,
-    "gas_usd": "0.346593222949423",
-    "router_price_in": 1.0006470603388862,
-    "router_price_out": 0.9995367207140381,
-    "slippage_bps_debiased": -2.316852199999442,
-    "price_bias_bps": 9.48170000000026,
+    "route_leg_count": 1,
+    "gas_usd": "0.11003702227654566",
+    "router_price_in": 0.9999561221610113,
+    "router_price_out": 0.9945019007538098,
+    "slippage_bps_debiased": -1.2322381999996246,
+    "price_bias_bps": 7.8582999999987635,
     "rung_kind": "decade"
    },
    {
     "size_usd": 1000000.0,
     "status": "ok",
     "amount_in_tokens": 1000000.0,
-    "amount_out_tokens": 999737.860663,
-    "slippage_bps": -2.6213933699992253,
+    "amount_out_tokens": 999746.570921,
+    "slippage_bps": -2.5342907900005596,
     "route_venues": [
      "curve-stable-ng",
      "curve-stable-plain"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.15112889145542466",
-    "router_price_in": 1.001004974606401,
-    "router_price_out": 0.9999617372651843,
-    "slippage_bps_debiased": -12.103093369999485,
-    "price_bias_bps": 9.48170000000026,
+    "gas_usd": "0.11003702227654566",
+    "router_price_in": 0.9999561221610115,
+    "router_price_out": 0.9943399944549733,
+    "slippage_bps_debiased": -10.392590789999323,
+    "price_bias_bps": 7.8582999999987635,
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000000.0,
     "status": "ok",
     "amount_in_tokens": 10000000.0,
-    "amount_out_tokens": 3185035.855051,
-    "slippage_bps": -6814.964144949001,
+    "amount_out_tokens": 3204819.470894,
+    "slippage_bps": -6795.180529106,
     "route_venues": [
      "curve-stable-ng",
      "curve-stable-plain",
      "ekubo-v3",
      "kyberswap-limit-order-v2",
-     "supernova-v4",
      "uniswap-v4"
     ],
-    "route_leg_count": 6,
-    "gas_usd": "0.818975699040883",
-    "router_price_in": 1.0006470603388864,
-    "router_price_out": 0.9995887952433525,
-    "slippage_bps_debiased": -6824.445844949001,
-    "price_bias_bps": 9.48170000000026,
+    "route_leg_count": 5,
+    "gas_usd": "0.5708682784238416",
+    "router_price_in": 0.9999561221610114,
+    "router_price_out": 0.9939960363839851,
+    "slippage_bps_debiased": -6803.038829105999,
+    "price_bias_bps": 7.8582999999987635,
     "rung_kind": "decade"
    }
   ],
@@ -244,9 +231,9 @@
      "check": "quote_economically_plausible",
      "passed": true,
      "blocking": false,
-     "detail": "Quote is 10.9bps against the reference rate.",
+     "detail": "Quote is 8.1bps against the reference rate.",
      "evidence": {
-      "loss_bps": 10.943420000000259
+      "loss_bps": 8.080189999999376
      }
     },
     {
@@ -272,7 +259,7 @@
    },
    "observed_peak": {
     "input_size_usd": 10000000.0,
-    "output_value_usd": 3185035.855051
+    "output_value_usd": 3204819.470894
    },
    "basis": "Peak is the maximum successful routed output among tested rungs, not a claim that the exact global maximum was located."
   },
@@ -311,26 +298,26 @@
     "probe_count": 9
    },
    "bracket": {
-    "last_clearing_size_usd": 2880859.375,
-    "last_clearing_marginal_impact_bps": -49.07266290494982,
-    "first_crossing_size_usd": 2898437.5,
-    "first_crossing_marginal_impact_bps": -50.73483220657815,
+    "last_clearing_size_usd": 2898437.5,
+    "last_clearing_marginal_impact_bps": -48.723746134338164,
+    "first_crossing_size_usd": 2916015.625,
+    "first_crossing_marginal_impact_bps": -50.40532116350804,
     "width_usd": 17578.125,
     "monotonic_in_bracket": true,
     "threshold_bps": -50.0,
     "meets_precision_obligation": true
    },
-   "depth_usd": 1304821.249027706,
+   "depth_usd": 1304831.695569615,
    "is_floor": false,
    "basis": "The 0.5% crossing also lies above total supply: every unit in existence clears inside 0.5%. Clamped to total supply; curve property in curve_crossing_above_supply.",
    "note": "Primary figure for a STABLE asset per spec \u00a77.8; the 2% bracket above is retained for comparison across the corpus. Widths are independent: this one may be wider than the 2% bracket where it coincides with a router split boundary (\u00a77.7).",
    "curve_crossing_above_supply": {
-    "depth_usd": 2880859.375,
+    "depth_usd": 2898437.5,
     "bracket": {
-     "last_clearing_size_usd": 2880859.375,
-     "last_clearing_marginal_impact_bps": -49.07266290494982,
-     "first_crossing_size_usd": 2898437.5,
-     "first_crossing_marginal_impact_bps": -50.73483220657815,
+     "last_clearing_size_usd": 2898437.5,
+     "last_clearing_marginal_impact_bps": -48.723746134338164,
+     "first_crossing_size_usd": 2916015.625,
+     "first_crossing_marginal_impact_bps": -50.40532116350804,
      "width_usd": 17578.125,
      "monotonic_in_bracket": true,
      "threshold_bps": -50.0,
@@ -340,16 +327,16 @@
   },
   "holdings": {
    "semantics": "Distribution, NOT a bound on depth: how much of the supply is held outside the quoted pool right now.",
-   "supply_outside_pool_usd": 27106.835628745845,
-   "supply_outside_pool_units": 27106.835628745845,
+   "supply_outside_pool_usd": 27152.732326691505,
+   "supply_outside_pool_units": 27152.732326691505,
    "supply_outside_pool_is_upper_bound": true,
    "excluded_pool_holders": {
-    "curve DUSD/frxUSD pool 0x104d6a1b": 1277714.4133989601
+    "curve DUSD/frxUSD pool 0x104d6a1b": 1277678.9632429236
    },
    "third_party_float": {
     "status": "measured",
-    "units": 2809.142566401548,
-    "usd": 2809.142566401548,
+    "units": 2855.039264347208,
+    "usd": 2855.039264347208,
     "protocol_holders": {
      "AltoBorrowMarket 0x5d8fa5e1 (DUSD lenders)": 18002.00055600871,
      "AltoTimelockController 0xb9F06fEF (fee recipient)": 3424.5049306018827,
@@ -364,23 +351,23 @@
     "holder_list_as_of": "2026-09-20, block 26,017,854"
    },
    "lp_withdrawal_caveat": "Newly minted supply in users' hands would sell at the depth shown. Supply freed by an LP withdrawing from the quoted pool would NOT: that raises float and shallows the pool at the same time.",
-   "basis": "How little reaches the market is a separate fact from depth: at most $27,107 sits outside curve DUSD/frxUSD pool 0x104d6a1b. Of that, ordinary holders have AT MOST about $2,809 (issuer holder list as of 2026-09-20, block 26,017,854); the rest sits with the issuer's own lending markets and fee accounts, which can be borrowed and sold."
+   "basis": "How little reaches the market is a separate fact from depth: at most $27,153 sits outside curve DUSD/frxUSD pool 0x104d6a1b. Of that, ordinary holders have AT MOST about $2,855 (issuer holder list as of 2026-09-20, block 26,017,854); the rest sits with the issuer's own lending markets and fee accounts, which can be borrowed and sold."
   },
   "supply_check": {
    "status": "clamped_to_total_supply",
    "token": "0x63d74d22E689C715a04F2C13962b1f77F443d35b",
-   "total_supply_units": 1304821.249027706,
-   "total_supply_usd": 1304821.249027706,
+   "total_supply_units": 1304831.695569615,
+   "total_supply_usd": 1304831.695569615,
    "non_float_holders": {
-    "curve DUSD/frxUSD pool 0x104d6a1b": 1277714.4133989601
+    "curve DUSD/frxUSD pool 0x104d6a1b": 1277678.9632429236
    },
-   "float_units": 27106.835628745845,
-   "float_usd": 27106.835628745845,
-   "read_as_of": "2026-10-09T23:47:16Z",
+   "float_units": 27152.732326691505,
+   "float_usd": 27152.732326691505,
+   "read_as_of": "2026-10-10T23:46:42Z",
    "third_party_float": {
     "status": "measured",
-    "units": 2809.142566401548,
-    "usd": 2809.142566401548,
+    "units": 2855.039264347208,
+    "usd": 2855.039264347208,
     "protocol_holders": {
      "AltoBorrowMarket 0x5d8fa5e1 (DUSD lenders)": 18002.00055600871,
      "AltoTimelockController 0xb9F06fEF (fee recipient)": 3424.5049306018827,
@@ -399,27 +386,27 @@
     "passed": false,
     "detail": "Claimed depth is 2.5x the asset's supply on this chain, which is arithmetically impossible.",
     "evidence": {
-     "depth_usd": 3197265.625,
-     "supply_usd": 1304821.249027706,
-     "ratio": 2.4503476069097267
+     "depth_usd": 3214843.75,
+     "supply_usd": 1304831.695569615,
+     "ratio": 2.463799554314614
     }
    }
   },
   "curve_crossing_above_supply": {
    "status": "bracketed",
-   "depth_usd": 3197265.625,
+   "depth_usd": 3214843.75,
    "is_floor": true,
    "bracket": {
-    "last_clearing_size_usd": 3197265.625,
-    "last_clearing_marginal_impact_bps": -193.14592250262666,
-    "first_crossing_size_usd": 3214843.75,
-    "first_crossing_marginal_impact_bps": -222.71612369477612,
+    "last_clearing_size_usd": 3214843.75,
+    "last_clearing_marginal_impact_bps": -187.649165605831,
+    "first_crossing_size_usd": 3232421.875,
+    "first_crossing_marginal_impact_bps": -217.25129011828326,
     "width_usd": 17578.125,
     "monotonic_in_bracket": true,
     "threshold_bps": -200.0,
     "meets_precision_obligation": true
    },
-   "basis": "The -200bps crossing is BRACKETED between $3,197,265.62 and $3,214,843.75. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor."
+   "basis": "The -200bps crossing is BRACKETED between $3,214,843.75 and $3,232,421.88. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor."
   }
  },
  "primary_exit": {
@@ -1116,7 +1103,7 @@
   "risk_score": null
  },
  "refresh_cadence": "daily",
- "payload_revised_at": "2026-10-09T23:47:17Z",
+ "payload_revised_at": "2026-10-10T23:46:43Z",
  "superseded_basis": [
   {
    "field": "note",

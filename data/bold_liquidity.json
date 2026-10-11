@@ -1,12 +1,12 @@
 {
  "schema_version": "liquidity/1",
  "asset_slug": "bold",
- "as_of": "2026-10-09T23:46:32Z",
+ "as_of": "2026-10-10T23:45:59Z",
  "producer": "dextracker",
  "note": "Axis 3 (Liquidity & Exit), single producer. This payload contains measured exit evidence only and does not author a risk score. Pool TVL, wrapper TVL, and Stability Pool deposits are not substituted for executable depth.",
  "depth": {
   "status": "bracketed",
-  "depth_usd": 4445312.5,
+  "depth_usd": 4480468.75,
   "depth_usd_semantics": "lower_bound_of_bracket: a size that cleared the threshold, never the crossing itself. Read `bracket` for the located range and `bracket.meets_precision_obligation` for whether it is within 1% of midpoint; a false there with a wide bracket means depth_usd may understate the crossing by the bracket's width.",
   "is_floor": true,
   "threshold_bps": -200.0,
@@ -15,8 +15,8 @@
   "tested_through_input_usd": 20000000.0,
   "baseline_rung": {
    "size_usd": 100.0,
-   "slippage_bps": -51.53739999999907,
-   "amount_out_tokens": 99.484626
+   "slippage_bps": -50.74599999999929,
+   "amount_out_tokens": 99.49254
   },
   "rung_set": {
    "grid": "decade",
@@ -30,16 +30,16 @@
    "spec": "riskAnalyst liquidity-ladder-spec.md \u00a77 (178e54a)"
   },
   "slippage_convention": "Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. The dated external mid sizes the input notional and is NOT the impact reference.",
-  "basis": "The -200bps crossing is BRACKETED between $4,445,312.50 and $4,515,625.00. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor.",
+  "basis": "The -200bps crossing is BRACKETED between $4,480,468.75 and $4,515,625.00. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor.",
   "bracket": {
-   "last_clearing_size_usd": 4445312.5,
-   "last_clearing_marginal_impact_bps": -186.90599078748704,
+   "last_clearing_size_usd": 4480468.75,
+   "last_clearing_marginal_impact_bps": -198.91592100324428,
    "first_crossing_size_usd": 4515625.0,
-   "first_crossing_marginal_impact_bps": -219.78665721467115,
-   "width_usd": 70312.5,
+   "first_crossing_marginal_impact_bps": -215.38850991169699,
+   "width_usd": 35156.25,
    "monotonic_in_bracket": true,
    "threshold_bps": -200.0,
-   "meets_precision_obligation": false
+   "meets_precision_obligation": true
   },
   "quote": {
    "method": "KyberSwap GET /api/v1/routes exact-input BOLD -> USDC; the router discovers and split-optimises Curve, Uniswap V3/V4, and any other executable venues at each size",
@@ -51,7 +51,7 @@
     "decimals": 18
    },
    "baseline_size_usd": 100.0,
-   "quoted_as_of": "2026-10-09T23:45:24Z",
+   "quoted_as_of": "2026-10-10T23:45:12Z",
    "token_out": {
     "symbol": "USDC",
     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -98,7 +98,11 @@
       "status": "quoted"
      },
      {
-      "venue": "erc4626",
+      "venue": "ekubo",
+      "status": "quoted"
+     },
+     {
+      "venue": "kipseli-prop",
       "status": "quoted"
      },
      {
@@ -106,7 +110,7 @@
       "status": "quoted"
      },
      {
-      "venue": "metric-propamm/uniswap-v4-stable-stable",
+      "venue": "maverick-v1",
       "status": "quoted"
      },
      {
@@ -115,6 +119,10 @@
      },
      {
       "venue": "uniswap-v4",
+      "status": "quoted"
+     },
+     {
+      "venue": "uniswap-v4-stable-stable",
       "status": "quoted"
      },
      {
@@ -130,7 +138,7 @@
    "fair_value": 1.0,
    "fair_value_basis": "par_input_sizing_only",
    "fair_value_source": "producer_declared_input_sizing",
-   "fair_value_as_of": "2026-10-09T23:45:01Z",
+   "fair_value_as_of": "2026-10-10T23:45:01Z",
    "fair_value_choice": "marginal_baseline",
    "fair_value_choice_mode": "producer_method",
    "market_price_cross_check": null,
@@ -141,121 +149,120 @@
     "size_usd": 1000.0,
     "status": "ok",
     "amount_in_tokens": 1000.0,
-    "amount_out_tokens": 994.75432,
-    "slippage_bps": -52.4568000000003,
+    "amount_out_tokens": 994.516174,
+    "slippage_bps": -54.83825999999969,
     "route_venues": [
-     "curve-stable-ng",
-     "lite-psm",
-     "uniswap-v4"
+     "curve-stable-ng"
     ],
     "route_leg_count": 1,
-    "gas_usd": "0.18077382141942328",
-    "router_price_in": 0.9947567210905304,
-    "router_price_out": 0.9997802875203168,
-    "slippage_bps_debiased": -0.9194000000012323,
-    "price_bias_bps": -51.53739999999907,
+    "gas_usd": "0.05352152228764933",
+    "router_price_in": 0.8832746140984662,
+    "router_price_out": 0.9946243529016587,
+    "slippage_bps_debiased": -4.092260000000401,
+    "price_bias_bps": -50.74599999999929,
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000.0,
     "status": "ok",
     "amount_in_tokens": 10000.0,
-    "amount_out_tokens": 9944.998505,
-    "slippage_bps": -55.001494999999956,
+    "amount_out_tokens": 9945.084413,
+    "slippage_bps": -54.91558699999955,
     "route_venues": [
      "curve-stable-ng",
-     "lite-psm",
-     "uniswap-v4"
+     "ekubo",
+     "maverick-v1"
     ],
-    "route_leg_count": 2,
-    "gas_usd": "0.21348455440417582",
-    "router_price_in": 0.9945768605045868,
-    "router_price_out": 0.9997802875203167,
-    "slippage_bps_debiased": -3.4640950000008885,
-    "price_bias_bps": -51.53739999999907,
+    "route_leg_count": 3,
+    "gas_usd": "0.19945639002560664",
+    "router_price_in": 0.8831874769221532,
+    "router_price_out": 0.9946243529016586,
+    "slippage_bps_debiased": -4.169587000000256,
+    "price_bias_bps": -50.74599999999929,
     "rung_kind": "decade"
    },
    {
     "size_usd": 100000.0,
     "status": "ok",
     "amount_in_tokens": 100000.0,
-    "amount_out_tokens": 99443.511786,
-    "slippage_bps": -55.64882139999949,
-    "route_venues": [
-     "curve-stable-ng",
-     "lite-psm",
-     "uniswap-v4",
-     "uniswapv3"
-    ],
-    "route_leg_count": 4,
-    "gas_usd": "0.289963571522829",
-    "router_price_in": 0.9945768605045866,
-    "router_price_out": 0.9994302821400054,
-    "slippage_bps_debiased": -4.111421400000424,
-    "price_bias_bps": -51.53739999999907,
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 1000000.0,
-    "status": "ok",
-    "amount_in_tokens": 1000000.0,
-    "amount_out_tokens": 994016.92948,
-    "slippage_bps": -59.830705199999116,
+    "amount_out_tokens": 99444.432276,
+    "slippage_bps": -55.55677239999945,
     "route_venues": [
      "curve-stable-ng",
      "uniswap-v4",
      "uniswapv3"
     ],
     "route_leg_count": 3,
-    "gas_usd": "0.17963829482929425",
-    "router_price_in": 0.9947567210905304,
-    "router_price_out": 0.9994302821400055,
-    "slippage_bps_debiased": -8.293305200000049,
-    "price_bias_bps": -51.53739999999907,
+    "gas_usd": "0.0987497505946555",
+    "router_price_in": 0.8832746140984661,
+    "router_price_out": 0.9946243529016587,
+    "slippage_bps_debiased": -4.810772400000161,
+    "price_bias_bps": -50.74599999999929,
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 1000000.0,
+    "status": "ok",
+    "amount_in_tokens": 1000000.0,
+    "amount_out_tokens": 994028.24865,
+    "slippage_bps": -59.71751350000054,
+    "route_venues": [
+     "curve-stable-ng",
+     "uniswap-v4",
+     "uniswapv3"
+    ],
+    "route_leg_count": 3,
+    "gas_usd": "0.12587497982621723",
+    "router_price_in": 0.8827772858116689,
+    "router_price_out": 0.9946243529016586,
+    "slippage_bps_debiased": -8.971513500001251,
+    "price_bias_bps": -50.74599999999929,
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000000.0,
     "status": "ok",
     "amount_in_tokens": 10000000.0,
-    "amount_out_tokens": 4820424.07168,
-    "slippage_bps": -5179.57592832,
+    "amount_out_tokens": 4835465.508937,
+    "slippage_bps": -5164.534491063,
     "route_venues": [
      "curve",
      "curve-stable-ng",
      "curve-stable-plain",
-     "metric-propamm/uniswap-v4-stable-stable",
+     "lite-psm",
      "uniswap-v4",
+     "uniswap-v4-stable-stable",
      "uniswapv3"
     ],
     "route_leg_count": 8,
-    "gas_usd": "0.7310611129825766",
-    "router_price_in": 0.9945768605045868,
-    "router_price_out": 0.9994302821400055,
-    "slippage_bps_debiased": -5128.03852832,
-    "price_bias_bps": -51.53739999999907,
+    "gas_usd": "0.5037112336516498",
+    "router_price_in": 0.8831875111086287,
+    "router_price_out": 0.9947120079633848,
+    "slippage_bps_debiased": -5113.788491063001,
+    "price_bias_bps": -50.74599999999929,
     "rung_kind": "decade"
    },
    {
     "size_usd": 8000000.0,
     "status": "ok",
     "amount_in_tokens": 8000000.0,
-    "amount_out_tokens": 4427129.59692,
-    "slippage_bps": -4466.088003849999,
+    "amount_out_tokens": 4432206.616348,
+    "slippage_bps": -4459.741729565,
     "route_venues": [
      "curve",
      "curve-stable-ng",
      "curve-stable-plain",
-     "metric-propamm/uniswap-v4-stable-stable",
+     "lite-psm",
      "uniswap-v4",
+     "uniswap-v4-stable-stable",
      "uniswapv3"
     ],
     "route_leg_count": 8,
-    "gas_usd": "0.7634405540769282",
-    "router_price_in": 0.9946532371983932,
-    "router_price_out": 0.9998080503475528,
-    "slippage_bps_debiased": -4414.55060385,
-    "price_bias_bps": -51.53739999999907,
+    "gas_usd": "0.5167392162756141",
+    "router_price_in": 0.8831875111086287,
+    "router_price_out": 0.9946243529016586,
+    "slippage_bps_debiased": -4408.995729565001,
+    "price_bias_bps": -50.74599999999929,
     "rung_kind": "envelope_probe",
     "excluded_from_bracket": true,
     "exclusion_reason": "Execution-envelope probe only. The crossing bracket is classified from the ascending decade grid; this post-crossing probe measures proceeds turnover and is not a refinement rung."
@@ -264,24 +271,25 @@
     "size_usd": 20000000.0,
     "status": "ok",
     "amount_in_tokens": 20000000.0,
-    "amount_out_tokens": 4826849.115773,
-    "slippage_bps": -7586.5754421135,
+    "amount_out_tokens": 4841345.902792,
+    "slippage_bps": -7579.327048604,
     "route_venues": [
      "curve",
      "curve-stable-ng",
      "curve-stable-plain",
-     "erc4626",
-     "metric-propamm/uniswap-v4-stable-stable",
+     "kipseli-prop",
+     "lite-psm",
      "tamaswap-v2",
      "uniswap-v4",
+     "uniswap-v4-stable-stable",
      "uniswapv3"
     ],
-    "route_leg_count": 19,
-    "gas_usd": "0.9756760352512236",
-    "router_price_in": 0.9945768605045868,
-    "router_price_out": 0.9998080503475528,
-    "slippage_bps_debiased": -7535.0380421135005,
-    "price_bias_bps": -51.53739999999907,
+    "route_leg_count": 9,
+    "gas_usd": "0.6119703419603393",
+    "router_price_in": 0.8831874769221532,
+    "router_price_out": 0.9939960363839851,
+    "slippage_bps_debiased": -7528.581048604001,
+    "price_bias_bps": -50.74599999999929,
     "rung_kind": "envelope_probe",
     "excluded_from_bracket": true,
     "exclusion_reason": "Execution-envelope probe only. The crossing bracket is classified from the ascending decade grid; this post-crossing probe measures proceeds turnover and is not a refinement rung."
@@ -303,18 +311,18 @@
      "check": "quote_economically_plausible",
      "passed": true,
      "blocking": false,
-     "detail": "Quote is -52.5bps against the reference rate.",
+     "detail": "Quote is -54.8bps against the reference rate.",
      "evidence": {
-      "loss_bps": -52.4568000000003
+      "loss_bps": -54.83825999999969
      }
     },
     {
      "check": "depth_against_supply",
      "passed": true,
      "blocking": false,
-     "detail": "Depth is 11.7% of chain supply.",
+     "detail": "Depth is 11.8% of chain supply.",
      "evidence": {
-      "ratio": 0.11685732780995861
+      "ratio": 0.11806262139596138
      }
     }
    ]
@@ -331,7 +339,7 @@
    },
    "observed_peak": {
     "input_size_usd": 20000000.0,
-    "output_value_usd": 4826849.115773
+    "output_value_usd": 4841345.902792
    },
    "basis": "Peak is the maximum successful routed output among tested rungs, not a claim that the exact global maximum was located."
   },
@@ -348,7 +356,7 @@
      "phase": "before_refinement",
      "sample": 1,
      "status": "ok",
-     "output_value_usd": 4319108.827247,
+     "output_value_usd": 4320828.321821,
      "failure_kind": null,
      "http_status": null
     },
@@ -356,7 +364,7 @@
      "phase": "before_refinement",
      "sample": 2,
      "status": "ok",
-     "output_value_usd": 4319108.979694,
+     "output_value_usd": 4320828.575004,
      "failure_kind": null,
      "http_status": null
     },
@@ -364,7 +372,7 @@
      "phase": "after_refinement",
      "sample": 1,
      "status": "ok",
-     "output_value_usd": 4316814.574748,
+     "output_value_usd": 4315559.310661,
      "failure_kind": null,
      "http_status": null
     },
@@ -372,14 +380,14 @@
      "phase": "after_refinement",
      "sample": 2,
      "status": "ok",
-     "output_value_usd": 4316814.574748,
+     "output_value_usd": 4315559.310661,
      "failure_kind": null,
      "http_status": null
     }
    ],
-   "output_spread_usd": 2294.4049460003152,
-   "output_spread_bps": 5.313629588164101,
-   "precision_floor_usd": 2294.4049460003152,
+   "output_spread_usd": 5269.264343000017,
+   "output_spread_bps": 12.202472637307409,
+   "precision_floor_usd": 5269.264343000017,
    "basis": "Same-size routed output spread across samples immediately before and after refinement. The published bracket must not be narrower than this observed spread."
   },
   "refinement": {
@@ -389,10 +397,10 @@
    "precision_target": "<=1% of bracket midpoint",
    "validation_cooldown_seconds": 8.0,
    "salvage": {
-    "basis": "Re-quoting the refined bracket ends did not reproduce the search: clearing end -173.00728700286982 bps, crossing end -186.90607495254864 bps against a -200 bps threshold. A bracket whose ends do not straddle the threshold on re-quote is an artefact of the search, not a measurement. The FIRST crossing was salvaged from the search's own probes and both ends re-quoted; they straddle.",
-    "probes_considered": 9,
+    "basis": "Re-quoting the refined bracket ends did not reproduce the search: clearing end -183.6082104205272 bps, crossing end -198.91711322001737 bps against a -200 bps threshold. A bracket whose ends do not straddle the threshold on re-quote is an artefact of the search, not a measurement. The FIRST crossing was salvaged from the search's own probes and both ends re-quoted; they straddle.",
+    "probes_considered": 8,
     "tightened_after_salvage": false,
-    "validation_requotes": 2,
+    "validation_requotes": 1,
     "wobble_above_crossing": [],
     "wobble_note": null
    }
@@ -412,9 +420,9 @@
    },
    "bracket": {
     "last_clearing_size_usd": 3566406.25,
-    "last_clearing_marginal_impact_bps": -48.946121558993696,
+    "last_clearing_marginal_impact_bps": -49.14954795110726,
     "first_crossing_size_usd": 3601562.5,
-    "first_crossing_marginal_impact_bps": -50.69702147956767,
+    "first_crossing_marginal_impact_bps": -50.86782299210446,
     "width_usd": 35156.25,
     "monotonic_in_bracket": true,
     "threshold_bps": -50.0,
@@ -428,12 +436,12 @@
   "supply_check": {
    "status": "passed",
    "token": "0x6440f144b7e50D6a8439336510312d2F54beB01D",
-   "total_supply_units": 38040511.30819345,
-   "total_supply_usd": 38040511.30819345,
+   "total_supply_units": 37949934.50952856,
+   "total_supply_usd": 37949934.50952856,
    "non_float_holders": {},
-   "float_units": 38040511.30819345,
-   "float_usd": 38040511.30819345,
-   "read_as_of": "2026-10-09T23:46:31Z"
+   "float_units": 37949934.50952856,
+   "float_usd": 37949934.50952856,
+   "read_as_of": "2026-10-10T23:45:58Z"
   }
  },
  "primary_exit": {
@@ -441,7 +449,7 @@
   "contract": "0xf949982B91C8c61e952B3bA942cbbfaef5386684",
   "contract_role": "CollateralRegistry",
   "method": "getEffectiveRedemptionFeeInBold(uint256)",
-  "measured_as_of": "2026-10-09T23:46:32Z",
+  "measured_as_of": "2026-10-10T23:45:59Z",
   "at_nav": false,
   "gated": false,
   "gated_basis": "Permissionless protocol redemption with a size-dependent fee.",
@@ -453,26 +461,26 @@
    {
     "size_usd": 100000.0,
     "status": "ok",
-    "effective_redemption_fee_pct": 0.9908764988026626,
-    "effective_redemption_fee_bps": 99.08764988026627
+    "effective_redemption_fee_pct": 0.9230303222223704,
+    "effective_redemption_fee_bps": 92.30303222223704
    },
    {
     "size_usd": 1000000.0,
     "status": "ok",
-    "effective_redemption_fee_pct": 3.356775297345234,
-    "effective_redemption_fee_bps": 335.6775297345234
+    "effective_redemption_fee_pct": 3.2945759167846638,
+    "effective_redemption_fee_bps": 329.4575916784664
    },
    {
     "size_usd": 2000000.0,
     "status": "ok",
-    "effective_redemption_fee_pct": 5.9855517401703136,
-    "effective_redemption_fee_bps": 598.5551740170313
+    "effective_redemption_fee_pct": 5.929626577409434,
+    "effective_redemption_fee_bps": 592.9626577409434
    },
    {
     "size_usd": 10000000.0,
     "status": "ok",
-    "effective_redemption_fee_pct": 27.015763282770948,
-    "effective_redemption_fee_bps": 2701.576328277095
+    "effective_redemption_fee_pct": 27.010031862407597,
+    "effective_redemption_fee_bps": 2701.0031862407595
    }
   ]
  },
@@ -657,5 +665,5 @@
   "risk_score": null
  },
  "refresh_cadence": "daily",
- "payload_revised_at": "2026-10-09T23:46:32Z"
+ "payload_revised_at": "2026-10-10T23:45:59Z"
 }
