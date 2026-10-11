@@ -2,19 +2,19 @@
   "schema_version": "contract/1",
   "asset": "susde",
   "producer": "security_analyst",
-  "as_of": "2026-09-09",
-  "generated_at": "2026-10-11T02:11:13Z",
+  "as_of": "2026-10-11",
+  "generated_at": "2026-10-11T02:58:49Z",
   "contract": {
-    "headline": "Delayed: parameter 24h. NO established delay: pause, asset-permission.",
+    "headline": "Delayed: parameter 24h, asset-permission 24h (owner, setPeer). NO established delay: pause, asset-permission (REWARDER_ROLE, transferInRewards), asset-permission (owner, setPeer).",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
     "method": "hand-walk",
-    "observed_at": "2026-09-09",
+    "observed_at": "2026-10-11",
     "source_file": "security_analyst/topology/assets/susde.yaml",
     "layers": [
       {
         "authority_layer": "parameter",
         "chain": "ethereum",
-        "observed_at": "2026-09-09",
+        "observed_at": "2026-10-11",
         "walked_by": "hand",
         "target_name": "Staked USDe cooldown and vault administration",
         "terminal_name": "Ethena TimelockController",
@@ -43,14 +43,33 @@
             "timelock_floor": "24h",
             "delay_applies": true,
             "reach": "full",
-            "hand_walk": "Live owner() and hasRole(DEFAULT_ADMIN_ROLE, owner) independently returned this TimelockController. getMinDelay()=86400; its sole checked proposer/executor/canceller is the live 5-of-10 Dev Safe. Verified source allows DEFAULT_ADMIN to set cooldownDuration anywhere from zero to MAX_COOLDOWN_DURATION (7776000 seconds), grant/revoke every vault role, rescue non-USDe tokens, and redistribute a fully restricted holder's shares. Current cooldownDuration is 86400 seconds. There is no global pause function: the holder-facing gate is this configurable cooldown plus address-specific restriction roles. Reducing either the governance delay or cooldown first requires the current 24h governance delay because TimelockController.updateDelay is onlySelf."
+            "timelock_roles": {
+              "PROPOSER": [
+                "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862"
+              ],
+              "CANCELLER": [
+                "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862"
+              ],
+              "EXECUTOR": [
+                "0x352040dc5f272563a2d6e0ef7abcd567a7440e8f",
+                "0xa07591b02fbd07d03df21ed9a574f058bf45c344",
+                "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862"
+              ],
+              "WHITELISTED_EXECUTOR": [
+                "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862"
+              ],
+              "DEFAULT_ADMIN": [
+                "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94"
+              ]
+            },
+            "hand_walk": "At Ethereum block 26163598, owner and DEFAULT_ADMIN_ROLE resolve to this timelock, cooldownDuration() is 86400, and getMinDelay() is 86400. The same 5-of-10 Dev Safe is proposer and sole canceller, so no independent veto exists. Cooldown, role administration, rescue, and admin redistribution take the delayed path. No global pause exists."
           }
         ]
       },
       {
         "authority_layer": "pause",
         "chain": "ethereum",
-        "observed_at": "2026-09-09",
+        "observed_at": "2026-10-11",
         "walked_by": "hand",
         "target_name": "sUSDe address restrictions",
         "terminal_name": "Ethena Dev Safe",
@@ -58,7 +77,8 @@
         "n": 5,
         "m": 10,
         "keys": [
-          "BLACKLIST_MANAGER_ROLE"
+          "BLACKLIST_MANAGER_ROLE",
+          "WHITELISTED_EXECUTOR_ROLE"
         ],
         "timelock": "none",
         "timelock_floor": "none",
@@ -69,24 +89,23 @@
             "holder": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
             "name": "Ethena Dev Safe",
             "name_verified": true,
-            "via": "BLACKLIST_MANAGER_ROLE",
+            "via": "BLACKLIST_MANAGER_ROLE and executeWhitelisted",
             "terminal": "safe",
             "holder_kind": "safe",
             "terminal_address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
             "threshold": 5,
             "owners": 10,
             "timelock": "none",
-            "timelock_floor": "none",
             "delay_applies": false,
             "reach": "bounded",
-            "hand_walk": "Live hasRole(BLACKLIST_MANAGER_ROLE, Dev Safe) returned true and the Safe returned threshold 5 and ten owners. Source permits this role to add or remove soft/full restrictions for chosen addresses; it cannot globally pause the vault. DEFAULT_ADMIN can grant the same role after 24h and can redistribute fully restricted balances, represented in the separate full-reach administration path."
+            "hand_walk": "The Safe directly holds BLACKLIST_MANAGER_ROLE. The timelock also whitelists sUSDe.addToBlacklist(address,bool), allowing the same Safe to execute that selector immediately. Restrictions are per-address, not global; full role administration and redistribution stay delayed."
           }
         ]
       },
       {
         "authority_layer": "asset-permission",
         "chain": "ethereum",
-        "observed_at": "2026-09-09",
+        "observed_at": "2026-10-11",
         "walked_by": "hand",
         "target_name": "sUSDe reward inflow",
         "terminal_name": "Current REWARDER_ROLE holders",
@@ -139,21 +158,297 @@
             "timelock": "none",
             "delay_applies": false,
             "reach": "bounded",
-            "hand_walk": "Live hasRole checks returned true for these three current rewarder addresses. The distributor owner is the Dev Safe and its current operator is the stated EOA. Verified vault logic only pulls the caller's approved USDe into sUSDe and vests it; rewarders cannot remove vault assets or set the cooldown through this role. DEFAULT_ADMIN can change the rewarder set after 24h."
+            "hand_walk": "All three role checks were true at block 26163598. The distributor is Dev-Safe-owned and delegates to the stated EOA. transferInRewards can only pull approved USDe from its caller and cannot alter cooldown."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "arbitrum",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "sUSDe OFT 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "terminal_name": "Owner timelock 0x89bad41d3307072cfd3118b5fd08101e23b2e129",
+        "topology": "timelocked",
+        "keys": [
+          "owner",
+          "setPeer",
+          "setDelegate",
+          "setBlackLister"
+        ],
+        "timelock": "24h",
+        "timelock_floor": "24h",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x89bad41d3307072cfd3118b5fd08101e23b2e129",
+            "name": "Arbitrum owner timelock",
+            "name_verified": true,
+            "via": "OFT.owner",
+            "terminal": "timelock",
+            "holder_kind": "timelock",
+            "terminal_address": "0x89bad41d3307072cfd3118b5fd08101e23b2e129",
+            "timelock": "24h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "At block 513688890 owner returned this contract and getMinDelay returned 86400; current role holders were not re-enumerated."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "base",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "sUSDe OFT 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "terminal_name": "Owner timelock 0xd896f26f76ed089a1711284a00af497b19d65171",
+        "topology": "timelocked",
+        "keys": [
+          "owner",
+          "setPeer",
+          "setDelegate",
+          "setBlackLister"
+        ],
+        "timelock": "24h",
+        "timelock_floor": "24h",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0xd896f26f76ed089a1711284a00af497b19d65171",
+            "name": "Base owner timelock",
+            "name_verified": true,
+            "via": "OFT.owner",
+            "terminal": "timelock",
+            "holder_kind": "timelock",
+            "terminal_address": "0xd896f26f76ed089a1711284a00af497b19d65171",
+            "timelock": "24h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "At block 52447676 owner returned this contract and getMinDelay returned 86400; current role holders were not re-enumerated."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "optimism",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "sUSDe OFT 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "terminal_name": "Owner timelock 0xbb4db1dd2851a4c06afbc2c115de874d103090b4",
+        "topology": "timelocked",
+        "keys": [
+          "owner",
+          "setPeer",
+          "setDelegate",
+          "setBlackLister"
+        ],
+        "timelock": "24h",
+        "timelock_floor": "24h",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0xbb4db1dd2851a4c06afbc2c115de874d103090b4",
+            "name": "Optimism owner timelock",
+            "name_verified": true,
+            "via": "OFT.owner",
+            "terminal": "timelock",
+            "holder_kind": "timelock",
+            "terminal_address": "0xbb4db1dd2851a4c06afbc2c115de874d103090b4",
+            "timelock": "24h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "At block 158042964 owner returned this contract and getMinDelay returned 86400; current role holders were not re-enumerated."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "bsc",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "sUSDe OFT 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "terminal_name": "Owner timelock 0x89bad41d3307072cfd3118b5fd08101e23b2e129",
+        "topology": "timelocked",
+        "keys": [
+          "owner",
+          "setPeer",
+          "setDelegate",
+          "setBlackLister"
+        ],
+        "timelock": "24h",
+        "timelock_floor": "24h",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x89bad41d3307072cfd3118b5fd08101e23b2e129",
+            "name": "BSC owner timelock",
+            "name_verified": true,
+            "via": "OFT.owner",
+            "terminal": "timelock",
+            "holder_kind": "timelock",
+            "terminal_address": "0x89bad41d3307072cfd3118b5fd08101e23b2e129",
+            "timelock": "24h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "At block 126937530 owner returned this contract and getMinDelay returned 86400; current role holders were not re-enumerated."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "mantle",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "sUSDe OFT 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "terminal_name": "Owner timelock 0xcd4769571095e66c96d9c86b16610217b4184a0b",
+        "topology": "timelocked",
+        "keys": [
+          "owner",
+          "setPeer",
+          "setDelegate",
+          "setBlackLister"
+        ],
+        "timelock": "24h",
+        "timelock_floor": "24h",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x799a2cd46cbc7fb53949072257e6331054a060bb",
+            "name": "Mantle Ethena governance Safe",
+            "name_verified": true,
+            "via": "PROPOSER_ROLE / CANCELLER_ROLE -> owner timelock",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x799a2cd46cbc7fb53949072257e6331054a060bb",
+            "threshold": 5,
+            "owners": 10,
+            "timelock": "24h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "At block 101761994 owner returned timelock 0xcd4769571095e66c96d9c86b16610217b4184a0b with 86400 delay. Creation block 96570335 grants proposer/canceller to this live 5-of-10 Safe. This supersedes the prior direct-Safe observation."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "blast",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "sUSDe OFT 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "terminal_name": "Blast Ethena governance Safe",
+        "topology": "nofm-multisig",
+        "n": 5,
+        "m": 10,
+        "keys": [
+          "owner",
+          "setPeer",
+          "setDelegate",
+          "setBlackLister"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x689272b1d2b2f37a0b3fe1f5af0420c64f6cc9e3",
+            "name": "Blast Ethena governance Safe",
+            "name_verified": true,
+            "via": "OFT.owner",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x689272b1d2b2f37a0b3fe1f5af0420c64f6cc9e3",
+            "threshold": 5,
+            "owners": 10,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "At block 41422247 owner returned this live 5-of-10 Safe; getMinDelay is absent. Owner can set peer/delegate/blacklister without delay."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "fraxtal",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "sUSDe OFT 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "terminal_name": "Fraxtal Ethena governance Safe",
+        "topology": "nofm-multisig",
+        "n": 5,
+        "m": 10,
+        "keys": [
+          "owner",
+          "setPeer",
+          "setDelegate",
+          "setBlackLister"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0xc66bbbf821f2cfb3a85683acf0326eac92c160bd",
+            "name": "Fraxtal Ethena governance Safe",
+            "name_verified": true,
+            "via": "OFT.owner",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xc66bbbf821f2cfb3a85683acf0326eac92c160bd",
+            "threshold": 5,
+            "owners": 10,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "At block 42421797 owner returned this live 5-of-10 Safe; getMinDelay is absent. Owner can set peer/delegate/blacklister without delay."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "monad",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "sUSDe OFT 0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+        "terminal_name": "Owner timelock 0xf0527f03479bb6d467102ad90c77ef424ac1f2c7",
+        "topology": "timelocked",
+        "keys": [
+          "owner",
+          "setPeer",
+          "setDelegate",
+          "setBlackLister"
+        ],
+        "timelock": "24h",
+        "timelock_floor": "24h",
+        "reach": "full",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0xf0527f03479bb6d467102ad90c77ef424ac1f2c7",
+            "name": "Monad sUSDe owner timelock",
+            "name_verified": true,
+            "via": "OFT.owner",
+            "terminal": "timelock",
+            "holder_kind": "timelock",
+            "terminal_address": "0xf0527f03479bb6d467102ad90c77ef424ac1f2c7",
+            "timelock": "24h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "At block 112245384 owner returned this contract and getMinDelay returned 86400. Archive state calls locate creation at 110598510, but the RPC caps logs at 100-block windows and no indexed explorer route was usable. The proposer remains unresolved; known Ethereum/Mantle candidates failed hasRole, and no threshold is inferred by analogy."
           }
         ]
       }
     ],
     "unresolved": [
-      "ethereum contract-upgrade: measured absence, not an unresolved authority. sUSDe is direct bytecode, its EIP-1967 implementation/admin/beacon slots are zero, and verified source contains no upgrade mechanism.",
-      "arbitrum: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "base: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "optimism: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "bsc: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "mantle: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "blast: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "fraxtal: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "monad: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum; this wrapper-only ninth chain is not assumed to match USDe's footprint."
+      "ethereum contract-upgrade: measured absence at block 26163598. Direct bytecode, zero EIP-1967 implementation/admin/beacon slots, and no verified source upgrade mechanism.",
+      "arbitrum/base/optimism/bsc role terminals: owner and 24-hour delay were refreshed at the stated blocks, but proposer/canceller/executor membership was not replayed and remains unresolved rather than copied cross-chain.",
+      "monad proposer: unresolved for the endpoint/log-index reason in its path; archive state availability alone does not enumerate roles."
     ],
     "authority_shared_with": [
       {
@@ -175,8 +470,9 @@
             "m": 10,
             "roles": [
               "timelock-proposer",
-              "timelock-executor",
-              "timelock-canceller"
+              "timelock-canceller",
+              "whitelisted-executor",
+              "blacklist-manager"
             ]
           }
         ]
@@ -184,10 +480,7 @@
     ],
     "review": null,
     "walk_notes": [
-      "sUSDe Ethereum authority topology, hand-walked with read-only live calls on",
-      "2026-09-09. No transaction was signed or broadcast. The vault was established",
-      "independently from USDe; its wider declared chain footprint is not copied from",
-      "the underlying token."
+      "sUSDe authority topology, refreshed with fixed-block read-only calls. No transaction was signed."
     ]
   }
 }

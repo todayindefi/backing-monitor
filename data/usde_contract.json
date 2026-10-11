@@ -2,27 +2,31 @@
   "schema_version": "contract/1",
   "asset": "usde",
   "producer": "security_analyst",
-  "as_of": "2026-09-09",
-  "generated_at": "2026-10-11T02:11:13Z",
+  "as_of": "2026-10-11",
+  "generated_at": "2026-10-11T02:58:49Z",
   "contract": {
     "headline": "No authority layer is fully delayed — every measured layer contains at least one path with no established delay. Delays of 24h are measured on OTHER paths inside those same layers, and do not bound the undelayed ones.",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
     "method": "hand-walk",
-    "observed_at": "2026-09-09",
+    "observed_at": "2026-10-11",
     "source_file": "security_analyst/topology/assets/usde.yaml",
     "layers": [
       {
         "authority_layer": "asset-permission",
         "chain": "ethereum",
-        "observed_at": "2026-09-09",
+        "observed_at": "2026-10-11",
         "walked_by": "hand",
         "target_name": "USDe",
-        "terminal_name": "Ethena TimelockController / Mint and Redeem V2 operators",
+        "terminal_name": "Ethena TimelockController / EthenaMintingV2",
         "topology": "mixed",
         "keys": [
           "owner",
           "minter",
-          "MINTER_ROLE"
+          "DEFAULT_ADMIN_ROLE",
+          "MINTER_ROLE",
+          "REDEEMER_ROLE",
+          "COLLATERAL_MANAGER_ROLE",
+          "GATEKEEPER_ROLE"
         ],
         "timelock": "none",
         "timelock_floor": "none",
@@ -33,7 +37,7 @@
             "holder": "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94",
             "name": "Ethena TimelockController",
             "name_verified": true,
-            "via": "USDe.owner -> setMinter",
+            "via": "USDe.owner -> setMinter; EthenaMintingV2 owner / DEFAULT_ADMIN_ROLE",
             "terminal": "timelock",
             "holder_kind": "timelock",
             "terminal_address": "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94",
@@ -45,43 +49,57 @@
               "PROPOSER": [
                 "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862"
               ],
-              "EXECUTOR": [
+              "CANCELLER": [
                 "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862"
               ],
-              "CANCELLER": [
+              "EXECUTOR": [
+                "0x352040dc5f272563a2d6e0ef7abcd567a7440e8f",
+                "0xa07591b02fbd07d03df21ed9a574f058bf45c344",
+                "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862"
+              ],
+              "WHITELISTED_EXECUTOR": [
                 "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862"
               ],
               "DEFAULT_ADMIN": [
                 "0xe8dc0fab349ea169283c48ccfd09d797e6db7c94"
               ]
             },
-            "hand_walk": "Live owner() returned this TimelockController and pendingOwner() was zero. getMinDelay() returned 86400 seconds. The timelock itself holds DEFAULT_ADMIN; live hasRole checks show the same Dev Safe holds PROPOSER, EXECUTOR and CANCELLER, while the zero address holds none. The Safe is currently 5-of-10. Verified USDe source lets owner replace minter with any non-owner address; that replacement then has unrestricted token-level mint reach. TimelockController updateDelay is onlySelf, so reducing the delay must first clear the current 24h delay."
+            "hand_walk": "At Ethereum block 26163598, owner() returned this timelock, minter() returned 0xe3490297a08d6fc8da46edb7b6142e4f461b62d3, and getMinDelay() returned 86400. The proposer and sole canceller are the same live 5-of-10 Dev Safe, so no independent veto exists. Executors are that Safe, the live 3-of-6 Safe 0xa07591b02fbd07d03df21ed9a574f058bf45c344, and EOA 0x352040dc5f272563a2d6e0ef7abcd567a7440e8f. Full-reach setMinter and non-whitelisted configuration require 24 hours; updateDelay is onlySelf and preserves that floor for its reduction."
+          },
+          {
+            "holder": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+            "name": "Ethena Dev Safe",
+            "name_verified": true,
+            "via": "EthenaTimelockController.WHITELISTED_EXECUTOR_ROLE",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x3b0aaf6e6fcd4a7ceef8c92c32dfea9e64dc1862",
+            "threshold": 5,
+            "owners": 10,
+            "timelock": "none",
+            "delay_applies": false,
+            "reach": "bounded",
+            "hand_walk": "The custom executeWhitelisted path bypasses delay only for listed target-selector pairs. Current EthenaMintingV2 selectors include disableMintRedeem(), add/removeWhitelistedBenefactor(address), revokeRole(bytes32,address), and removeMinterRole, removeRedeemerRole and removeCollateralManagerRole. This is bounded immediate negative-control/benefactor authority. Whitelist changes themselves require a delayed timelock self-call."
           },
           {
             "holder": "0xe3490297a08d6fc8da46edb7b6142e4f461b62d3",
-            "name": "Ethena Mint and Redeem V2",
+            "name": "EthenaMintingV2 role set",
             "name_verified": true,
-            "via": "USDe.minter -> EthenaMintingV2.MINTER_ROLE",
+            "via": "USDe.minter -> operational roles",
             "terminal": "contract-role-set",
             "holder_kind": "role-gated-operators",
             "terminal_address": "0xe3490297a08d6fc8da46edb7b6142e4f461b62d3",
             "timelock": "none",
             "delay_applies": false,
             "reach": "bounded",
-            "hand_walk": "Live minter() returned this direct, non-proxy contract. Its owner() and DEFAULT_ADMIN_ROLE both resolve to the same 24h TimelockController. Current MINTER_ROLE operators can submit mint orders without that governance delay, but verified V2 logic constrains issuance by supported assets, signed orders, oracle tolerances and on-chain per-block limits; this path is therefore not represented as the full arbitrary token-level mint reach held by setMinter governance. The mutable operator set was not promoted to a fixed signer topology."
+            "hand_walk": "Role members act without governance delay. Mint/redeem is bounded by signed orders, benefactor eligibility, supported collateral, route ratios, oracle/tolerance checks, and global/per-asset per-block caps. GATEKEEPER can disable mint/redeem and remove operational roles. AccessControl is non-enumerable, so a complete current operator list cannot be proven from fixed-block state calls; no historic grant is treated as current without a complete grant/revoke replay."
           }
         ]
       }
     ],
     "unresolved": [
-      "ethereum contract-upgrade: measured absence, not an unresolved authority. USDe is direct bytecode, its EIP-1967 implementation/admin/beacon slots are zero, and verified source contains no upgrade mechanism. setMinter authority is represented under asset-permission.",
-      "arbitrum: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "base: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "optimism: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "bsc: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "mantle: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "blast: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
-      "fraxtal: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum."
+      "ethereum contract-upgrade: measured absence. At block 26163598 the direct bytecode answered owner/minter, all EIP-1967 implementation/admin/beacon slots were zero, and verified source exposes no upgrade path.",
+      "arbitrum, base, optimism, bsc, mantle, blast, fraxtal: declared deployments, but this repository has no independently registered USDe target addresses for this handoff. The no-reconstruction rule prevents deriving them from bridge traffic or analogy, so no authority is inferred."
     ],
     "authority_shared_with": [
       {
@@ -103,8 +121,8 @@
             "m": 10,
             "roles": [
               "timelock-proposer",
-              "timelock-executor",
-              "timelock-canceller"
+              "timelock-canceller",
+              "whitelisted-executor"
             ]
           }
         ]
@@ -112,10 +130,7 @@
     ],
     "review": null,
     "walk_notes": [
-      "USDe Ethereum authority topology, hand-walked with read-only live calls on",
-      "2026-09-09. No transaction was signed or broadcast. Ethereum was selected for",
-      "the deep walk; the feed provides no chain supply split, so no coverage fraction",
-      "is inferred for the other declared deployments."
+      "USDe authority topology, refreshed with fixed-block read-only calls. No transaction was signed."
     ]
   }
 }
