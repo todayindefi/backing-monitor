@@ -674,11 +674,31 @@ const CommonRenderer = {
                     // and missed the three live ones — which are the payloads that
                     // caused the damage. Prefix-matched, with the explicit
                     // does_not_publish list as the other accepted form.
-                    var declaredVenueOnly =
-                        (typeof pay.scope === 'string' &&
-                         pay.scope.indexOf('venue_inventory') === 0) ||
-                        (Array.isArray(pay.does_not_publish) &&
-                         pay.does_not_publish.indexOf('depth') >= 0);
+                    // ⚠️ A SCOPE PREFIX IS A GUESS ABOUT A STRING SOMEONE ELSE OWNS,
+                    // AND IT WENT WRONG THE FIRST TIME THAT STRING GREW. DexTracker
+                    // coined `venue_inventory_and_canonical_ethereum_exit_ladder` for
+                    // sUSDe — a payload that DOES publish depth (a refined 0.5% bracket
+                    // and a 10-rung ladder) — and the prefix test read it as venue-only.
+                    // The page then showed a hand-off that never should have fired:
+                    // "0.5% depth $1.0M – $10.0M · ladder exhausted" (neither figure is
+                    // theirs) over the line "the depth feed publishes none for this
+                    // asset", about the very feed the ladder came from. Three false
+                    // statements, from one string getting longer.
+                    //
+                    // So the EXPLICIT declarations win and the prefix is the last
+                    // resort: `publishes` naming depth settles it, then
+                    // `does_not_publish`, then the shape of the scope string.
+                    var publishesList = Array.isArray(pay.publishes) ? pay.publishes : null;
+                    var disclaims = Array.isArray(pay.does_not_publish) ? pay.does_not_publish : [];
+                    var declaredVenueOnly;
+                    if (publishesList && publishesList.indexOf('depth') >= 0) {
+                        declaredVenueOnly = false;
+                    } else if (disclaims.indexOf('depth') >= 0) {
+                        declaredVenueOnly = true;
+                    } else {
+                        declaredVenueOnly = (typeof pay.scope === 'string' &&
+                                             pay.scope.indexOf('venue_inventory') === 0);
+                    }
                     var ovDepth = (pay.depth && typeof pay.depth === 'object') ? pay.depth : {};
                     var self2 = self;
                     var declaredNoCurve = function(st) {
@@ -776,6 +796,51 @@ const CommonRenderer = {
                             owner_reason: (ov.depth && typeof ov.depth === 'object' &&
                                            typeof ov.depth.basis === 'string') ? ov.depth.basis : null
                         };
+                    }
+                    // ⚠️ THE CARRY IS ALL-OR-NOTHING AND sUSDe NEEDS BOTH HALVES.
+                    // Once DexTracker's payload publishes a ladder, the hand-off
+                    // correctly does NOT fire — the overlay owns depth, it measured it.
+                    // But the same payload still disclaims `primary_exit`, and sUSDe's
+                    // primary exit is the whole question: a gated cooldown, published by
+                    // the base feed with the live cooldownDuration in it. Without this,
+                    // the asset gets its secondary ladder back and loses the sentence
+                    // saying how a holder actually redeems — the regression fixed
+                    // yesterday, re-entered through the other door.
+                    //
+                    // ⚠️ NARROW AND DECLARATION-DRIVEN, not a second general carry. Only
+                    // the field family the overlay itself names in `does_not_publish`,
+                    // and only where the overlay said nothing. A producer disclaiming a
+                    // field is the clearest statement available that it is not replacing
+                    // it.
+                    //
+                    // ⚠️ `rating` IS IN THIS LIST BECAUSE LEAVING IT OUT FLIPPED sUSDe'S
+                    // HEADLINE THE FLATTERING WAY, AND THE A/B IS WHAT SAID SO. With only
+                    // the primary-exit family carried, the base's
+                    // `derived_score_status: 'not_computed'` stayed dropped —
+                    // `_depthNonDerivable` went false, the authored 7.0 was replaced by a
+                    // computed "Healthy · 10/10" off the secondary ladder, and an asset
+                    // whose primary exit is a GATED COOLDOWN read as the best possible
+                    // liquidity on the page. That is the exact defect 7bab81979 exists to
+                    // prevent, re-entered through a door that commit could not see.
+                    //
+                    // The producer disclaims `rating` in the same breath as `primary_exit`.
+                    // A payload that says "I do not publish a rating" must not take the
+                    // rating down with it.
+                    var DISCLAIM_CARRY = {
+                        primary_exit: ['primary_exit', 'primary_redemption_depth',
+                                       'primary_redemption_depth_status', 'primary_redemption_note'],
+                        rating: ['derived_score', 'derived_score_status', 'band_score',
+                                 'liquidity_score', 'liquidity_score_source', 'liquidity_score_status',
+                                 'liquidity_score_generated_at', 'liquidity_score_age_hours']
+                    };
+                    if (axis === 'liquidity' && !handedOff) {
+                        disclaims.forEach(function(topic) {
+                            (DISCLAIM_CARRY[topic] || []).forEach(function(k) {
+                                if (has(pay, k) && pay[k] != null) return;
+                                if (base[k] == null) return;
+                                pay[k] = base[k];
+                            });
+                        });
                     }
                     // ⚠️ THE UNREAD MARKER WAS WIRED TO MERGE-MODE ONLY, so a block
                     // published by a REPLACE-mode overlay vanished with nothing on the
@@ -3805,8 +3870,33 @@ const CommonRenderer = {
     // loss the replace-mode note on AXIS_OVERLAY_SCHEMAS warns about. My first
     // attempt keyed on the base feed's flag and changed nothing on the page; the
     // browser said so and the diff would not have.
+    // ⚠️ THE SECOND VOCABULARY FOR THE SAME FACT, AND IT COST sUSDe ITS RATING THE
+    // DAY A LADDER ARRIVED. This helper reads `primary_exit.gate/gated`. sUSDe says
+    // the same thing in different words — `primary_redemption_depth_status:
+    // 'not_measured_as_depth'`, with a note reading "a time-delayed primary path,
+    // not an executable depth rung" — because its primary exit is a GATED COOLDOWN,
+    // which has no rung to publish.
+    //
+    // So when DexTracker's secondary ladder landed on 2026-10-12, this returned
+    // false, the band computed off venue depth, and the asset went to
+    // "Healthy · 10/10" against riskAnalyst's authored 7.0 — a holder reading the
+    // best liquidity score on the dashboard for a token they cannot leave for a day.
+    // The flattering direction, on the leg that is not binding: exactly what
+    // 7bab81979 was written to stop, reached through a field name it did not know.
+    //
+    // ⚠️ Counted before adding: `primary_redemption_depth_status` is published by
+    // sUSDe ALONE across every served feed and overlay, so this moves one asset.
+    // The statuses are listed rather than matched loosely — a status meaning "we
+    // measured it and it is fine" must never trip this.
+    PRIMARY_REDEMPTION_UNSCORABLE: ['not_measured_as_depth', 'not_measured', 'gated'],
+
     _primaryExitNotScorable(lq) {
-        var pe = (lq || {}).primary_exit;
+        lq = lq || {};
+        if (typeof lq.primary_redemption_depth_status === 'string' &&
+            this.PRIMARY_REDEMPTION_UNSCORABLE.indexOf(lq.primary_redemption_depth_status) >= 0) {
+            return true;
+        }
+        var pe = lq.primary_exit;
         if (!pe || typeof pe !== 'object') return false;
         // Declared unmeasured: the worse of two legs is not computable.
         if (pe.gate === 'not_measured') return true;
@@ -4037,6 +4127,20 @@ const CommonRenderer = {
     _exitScopeHtml(liq) {
         liq = liq || {};
         var pe = liq.primary_exit;
+        // ⚠️ "UNDECLARED" WAS FALSE ON THE ONE ASSET THAT DECLARES IT DIFFERENTLY.
+        // sUSDe's payload carries `primary_redemption_depth_status`, a status and a
+        // note describing a gated cooldown — three published fields saying the leg
+        // exists — and this branch, which only knows `primary_exit`, told the reader
+        // the payload "represents no redemption leg at all". Unknown scope and
+        // known-narrow scope are opposite findings, and this said the worse one
+        // about a leg the producer had spelled out.
+        if (!pe && typeof liq.primary_redemption_depth_status === 'string') {
+            var prTip = (typeof liq.primary_redemption_note === 'string' && liq.primary_redemption_note)
+                ? liq.primary_redemption_note
+                : 'The payload declares a primary redemption leg and states that it is not expressible as depth.';
+            return ' · <span class="text-amber-700" title="' + this._escapeAttr(prTip) + '">primary exit: ' +
+                this._escapeAttr(String(liq.primary_redemption_depth_status).replace(/_/g, ' ')) + '</span>';
+        }
         if (!pe) {
             // Not "unmeasured" — UNREPRESENTED. Nothing in the payload says a
             // redemption leg exists, so the scope of the score is unknown rather

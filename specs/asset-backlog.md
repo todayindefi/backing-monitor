@@ -187,6 +187,42 @@ status      shipped 2026-10-11. The divergence flag itself needs no change: "sco
 Last reviewed 2026-10-11
 ```
 
+### susde — a ladder arrived in the venue file and the axis flipped to its best possible score
+```
+raised      2026-10-12, DexTracker's note that another session (cca437f) wrote a sUSDe exit ladder
+            into susde_liquidity.json
+what        Three separate failures, each from a rule meeting a vocabulary it did not know:
+            1. The payload's new scope string, `venue_inventory_and_canonical_ethereum_exit_ladder`,
+               starts with the venue-only prefix our merge keys on — so a payload that DOES publish
+               depth was read as publishing none. The page showed "0.5% depth $1.0M – $10.0M ·
+               ladder exhausted" (neither figure theirs) above the line "the depth feed publishes
+               none for this asset", about the feed the ladder came from.
+            2. With that fixed, the overlay correctly claims depth, the hand-off stops firing, and
+               the base's `derived_score_status: not_computed` stopped being carried. The authored
+               7.0 was replaced by a computed Healthy 10/10 off the SECONDARY ladder — the best
+               liquidity score on the dashboard, for a token whose primary exit is a gated cooldown.
+            3. `_primaryExitNotScorable` reads `primary_exit.gate/gated`. sUSDe says the same thing
+               as `primary_redemption_depth_status: not_measured_as_depth`, so the withholding rule
+               from 7bab81979 never fired for it. And `_exitScopeHtml` told the reader the payload
+               "represents no redemption leg at all" while three published fields described one.
+why         ⚠️ The flattering direction, on the leg that is not binding, on a page tidresearch
+            serves. A depth number is evidence; it is not the exit when the exit is time-gated.
+fix         Declarations beat prefixes (`publishes` / `does_not_publish` first, scope string last);
+            a narrow carry for the field families the overlay itself disclaims (`primary_exit`,
+            `rating`); the gated-exit rule learns sUSDe's field names; the scope line describes the
+            declared leg instead of calling it undeclared.
+            Measured: `primary_redemption_depth_status` is published by sUSDe ALONE, and the
+            venue-only predicate changes for sUSDe alone. A/B through the renderer over 9 assets —
+            usde, wsteth, reusde-re, crvusd, syrupusdc, usdm, fxusd, usg, dusd-alto — all identical
+            but for age strings ticking between runs.
+open        ⚠️ OWNERSHIP IS UNSETTLED UPSTREAM. DexTracker blocked their daily venue step from
+            overwriting the ladder, so sUSDe's venue blocks stop refreshing until their user decides
+            who owns that file. Our rendering is correct either way: if the ladder moves to the base
+            feed, `publishes` stops naming depth and the hand-off resumes.
+status      shipped 2026-10-12. Band reads Authored 7/10 with the measured ≥$3.3M bracket beside it.
+Last reviewed 2026-10-12
+```
+
 ### usde · susde — the measurements block is published hourly and mostly unrendered
 ```
 raised      2026-10-11 on PegTracker's Ethena integration (their cc92deb)
