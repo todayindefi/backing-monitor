@@ -967,6 +967,25 @@ var EthenaRenderer = {
             (bucket.aligned_delta_pct != null ? ' · <span class="font-mono">' + bucket.aligned_delta_pct.toFixed(1) + '%</span>' : '') + '.</div>' : '';
         var walletSetLine = disclosed != null ?
             '<div class="text-xs text-slate-500 mt-1">Wallet set: <span class="font-mono">' + tracked + '/' + disclosed + '</span> disclosed accounts tracked.</div>' : '';
+        // ⚠️ TWO TRUE LINES, STACKED, MAKING A THIRD CLAIM NEITHER OF THEM MAKES.
+        // "6/13 accounts tracked" sat directly above "our read $1.91B vs $2.62B
+        // attested", and a reader joins them into "the seven we don't track are
+        // the $713M". PegTracker checked that on 2026-10-11 and it is false: the
+        // six EVM accounts FarmTracker added hold about $26.8M between them, so
+        // the divergence barely moves. The rest is not attributed to anything.
+        //
+        // ⚠️ THE MAGNITUDE IS DELIBERATELY NOT PRINTED HERE. That $26.8M reached
+        // us in a message, not in a feed this page reads; rendering it would put a
+        // figure on a public page with no served source behind it. What this says
+        // instead is what our own data supports — the untracked balances are not
+        // published, so the gap is unattributed — and it stays true when the
+        // tracked count changes underneath it.
+        var attributionNote = (untracked && bucket.delta_usd != null) ?
+            '<div class="text-xs text-slate-500 mt-1">The ' + untracked + ' disclosed account' +
+            (untracked === 1 ? '' : 's') + ' we do not track sit inside Ethena\u2019s attested total and ' +
+            'outside ours, and their balances are not published here \u2014 so the ' +
+            EthenaRenderer._money(Math.abs(bucket.delta_usd)) + ' difference is <span class="font-medium">unattributed</span>, ' +
+            'not shown to be those accounts.</div>' : '';
         var namingNote = fam.notes && fam.notes.coinbase_wallets_naming ?
             '<div class="text-xs text-slate-500 mt-1">' + fam.notes.coinbase_wallets_naming + '</div>' : '';
 
@@ -1014,7 +1033,7 @@ var EthenaRenderer = {
                 '</div>' +
                 '<div class="text-xs text-slate-500 mt-1 mb-3">The on-chain reserve slice (≈$2.0B of ≈$4.5B backing) — the only custody DeBank can track per-position. ' +
                     'Off-exchange custodians and the CEX hedge stay attestation / LlamaRisk-sourced. Wallet positions refresh <span class="font-medium">daily</span> (headline coverage above is hourly).</div>' +
-                walletSetLine + bucketComparison + namingNote +
+                walletSetLine + bucketComparison + attributionNote + namingNote +
                 EthenaRenderer._reserveTrendSection(hist) +
                 '<table class="data-table"><thead><tr><th>Address</th><th class="text-right">Total</th><th class="text-right">In DeFi</th><th>Top protocols</th><th></th></tr></thead>' +
                 '<tbody>' + rows + '</tbody></table>' +

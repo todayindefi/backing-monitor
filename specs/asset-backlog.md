@@ -145,6 +145,30 @@ result      ⚠️ THE SERIES ARRIVED AND THE FRAME AROUND IT WAS WRONG, which i
 Last reviewed 2026-10-10
 ```
 
+### usde — the on-chain bucket gap is unattributed, and two true lines implied otherwise
+```
+raised      2026-10-11, PegTracker's own correction to their acceptance note
+what        The wallets panel printed "Wallet set: 6/13 disclosed accounts tracked" directly above
+            "our read $1.91B vs $2.62B attested · -27.3%". Neither line claims the untracked seven
+            ARE the gap; stacked, they say it. PegTracker measured it and it is false — FarmTracker
+            added the six EVM accounts and they hold ~$26.8M between them, moving the divergence
+            -27.3% -> ~-27.2%. ~$713M stays unexplained. Their stated candidate (not established)
+            is Solana account 4FaQc6…NrbtN, holding essentially all of Solana's JAAA and STAC —
+            tokenized AAA CLO fund shares with no market price, needing an issuer NAV nobody
+            publishes.
+fix         A sentence under the bucket check saying the untracked balances are not published here,
+            so the difference is UNATTRIBUTED rather than shown to be those accounts. ⚠️ The $26.8M
+            is deliberately NOT rendered: it reached us in a message, not in any feed this page
+            reads, and a figure on a public page needs a served source.
+owner       us (shipped) · PegTracker for the feed string
+open        ⚠️ Their `reserve_wallet_untracked` FLAG still ends "...and the 'Unattributed' residual
+            absorbs the gap" — the correction landed in their handoff file, not in the message we
+            render verbatim. Raised with them; re-read the flag text at the next refresh.
+status      shipped 2026-10-11. The divergence flag itself needs no change: "scope, not drift" is
+            computed from aligned dates and still holds.
+Last reviewed 2026-10-11
+```
+
 ### usde · susde — the measurements block is published hourly and mostly unrendered
 ```
 raised      2026-10-11 on PegTracker's Ethena integration (their cc92deb)
