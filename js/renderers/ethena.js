@@ -211,6 +211,13 @@ var EthenaRenderer = {
         var s = data.summary;
         if (!s) return;
 
+        // One declaration drives both charts. app.js passes this same value to
+        // the common coverage chart, while the bespoke peg chart below reads it
+        // directly. Keep the two views on the identical trailing cutoff.
+        data.peg = data.peg || {};
+        data.peg.chart_window_days = 7;
+        data.peg.chart_min_points = 2;
+
         if (!s.collateral_ratio_alt) {
             s.collateral_ratio_alt = { label: '_ethenaAlt', value: 0, is_currency: false };
         }
@@ -722,7 +729,7 @@ var EthenaRenderer = {
         var navLabel = (slug === 'susde') ? 'NAV (USDe/share)' : 'NAV / theoretical';
 
         return '<div class="panel">' +
-            '<div class="panel-title">Peg Performance ' +
+            '<div class="panel-title">7d Peg Performance ' +
                 '<span class="text-xs font-normal text-slate-500">(market vs ' +
                 (slug === 'susde' ? 'vault NAV' : 'par') + ')</span></div>' +
             '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">' +
@@ -744,7 +751,7 @@ var EthenaRenderer = {
         '</div>';
     },
 
-    // Long-record peg chart. ⚠️ Missing theoretical points are plotted as GAPS,
+    // Seven-day view over the retained long record. ⚠️ Missing theoretical points are plotted as GAPS,
     // not interpolated: the envelope publishes `points_missing_theoretical` and a
     // line drawn through them would invent a NAV the producer does not have.
     _loadPegHistoryChart: function(slug) {
@@ -754,15 +761,20 @@ var EthenaRenderer = {
             .then(function(r) { return r.ok ? r.json() : null; })
             .then(function(h) {
                 var ctx = document.getElementById('ethena-peg-chart');
-                var entries = (h && Array.isArray(h.entries)) ? h.entries.filter(function(e) {
+                var allEntries = (h && Array.isArray(h.entries)) ? h.entries.filter(function(e) {
                     return e && e.timestamp && e.peg_market_price != null;
                 }) : [];
+                var cutoff = Date.now() - 7 * 24 * 3600 * 1000;
+                var entries = allEntries.filter(function(e) {
+                    var t = Date.parse(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z');
+                    return !isNaN(t) && t >= cutoff;
+                });
                 if (!ctx || typeof Chart === 'undefined' || entries.length < 2) {
                     var slot = document.getElementById('ethena-peg-source');
-                    if (slot) slot.textContent = 'No peg history series is available for this asset.';
+                    if (slot) slot.textContent = 'The trailing 7-day window has fewer than two peg observations; a wider period is not substituted.';
                     return;
                 }
-                EthenaRenderer._fillPegMeta(h, entries, slug);
+                EthenaRenderer._fillPegMeta(h, entries, allEntries.length, slug);
                 var labels = entries.map(function(e) {
                     return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z');
                 });
@@ -786,8 +798,8 @@ var EthenaRenderer = {
                         responsive: true, maintainAspectRatio: false,
                         interaction: { intersect: false, mode: 'index' },
                         scales: {
-                            x: { type: 'time', time: { unit: 'month', displayFormats: { month: 'MMM yy' } },
-                                 grid: { display: false }, ticks: { maxTicksLimit: 10, font: { size: 11 } } },
+                            x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                                 grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
                             y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } }
                         },
                         plugins: {
@@ -805,25 +817,23 @@ var EthenaRenderer = {
     // The provenance line under the chart: which file, how many points, what the
     // downsample rule was, how many carry no theoretical, and ⚠️ that the feed's
     // own `history_ref` names a different (shorter, denser) series.
-    _fillPegMeta: function(h, entries, slug) {
+    _fillPegMeta: function(h, entries, total, slug) {
         var pts = document.getElementById('ethena-peg-points');
         var span = document.getElementById('ethena-peg-span');
         var src = document.getElementById('ethena-peg-source');
         var first = entries[0].timestamp.slice(0, 10), last = entries[entries.length - 1].timestamp.slice(0, 10);
         if (pts) pts.textContent = String(entries.length);
-        if (span) span.textContent = first + ' → ' + last;
+        if (span) span.textContent = 'last 7d · ' + first + ' → ' + last;
         if (!src) return;
         var missing = h.points_missing_theoretical;
         src.innerHTML =
             'Series: <span class="font-mono">' + CommonRenderer._escapeAttr(slug + '_peg_history.json') +
-            '</span>' + (h.downsample ? ' · ' + CommonRenderer._escapeAttr(h.downsample) : '') +
+            '</span> · trailing 7d · ' + entries.length + ' of ' + total + ' retained readings' +
+            (h.downsample ? ' · ' + CommonRenderer._escapeAttr(h.downsample) : '') +
             (h.generated_at ? ' · generated ' + CommonRenderer._escapeAttr(h.generated_at) : '') +
             (missing ? ' · ⚠️ ' + missing + ' point' + (missing === 1 ? '' : 's') +
                 ' carry no theoretical price and are drawn as gaps rather than interpolated' : '') +
-            '. ⚠️ The feed declares <span class="font-mono">history_ref: ' +
-            CommonRenderer._escapeAttr(slug + '_backing_history.json') + '</span>, which is a denser ' +
-            'but much shorter slice (hourly, from 2026-06-27). This chart plots the long daily record ' +
-            'instead; the two are the same two quantities at different cadences.';
+            '. The retained daily record is clipped to the same trailing seven-day horizon as the coverage chart.';
     },
 
     _loadSusdeNavChart: function(slug) {
