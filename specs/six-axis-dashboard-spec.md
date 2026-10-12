@@ -94,6 +94,32 @@ axis 6  riskAnalyst       issuer/1 — score, entity, regulator, summary, facts[
         tidr              the published report the axis links to
 ```
 
+### Primary backing versus independent verification
+
+**Axis 2's primary backing producer is always PegTracker.** The canonical
+`{slug}_backing.json` measurement, its backing history, and any figure used to
+score Axis 2 belong there. Do not create an asset-specific backing producer in
+`backing-monitor` merely because this repository consumes the result.
+
+`backing-monitor` may own a separately named **consumer-side verification** feed
+only when all of the following are true:
+
+- it independently re-reads or reconciles a primary backing claim rather than
+  replacing it;
+- it is built for this dashboard's validation or evidence display and is not a
+  reusable primary feed for other consumers;
+- its schema, filename and UI attribution say `verification`, never `backing`,
+  so it cannot silently win the Axis 2 producer slot;
+- it does not publish the Axis 2 score or fill a value PegTracker declined to
+  derive; and
+- the exception and its schedule are documented in an asset-specific spec.
+
+If the measurement is intended to become the canonical backing view or to serve
+multiple consumers, build it in PegTracker instead. `frxUSD`'s
+`frxusd_backing_verification.json` is the first explicit precedent for the
+consumer-side case: PegTracker remains the primary Axis 2 producer, while this
+repository independently reconciles selected reserve and liability claims.
+
 ### What each producer will refuse, and why it is right
 
 - ⚠️ **security_analyst will not publish prose findings or scores.** They emit OBSERVATIONS —

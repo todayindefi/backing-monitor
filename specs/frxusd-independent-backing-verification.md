@@ -1,5 +1,10 @@
 # frxUSD independent backing verification
 
+Ownership: consumer-side verification in `backing-monitor`, under the exception
+defined by **Primary backing versus independent verification** in the live
+six-axis spec. PegTracker remains frxUSD's primary Axis 2 backing producer; this
+feed neither replaces that block nor supplies the Axis 2 score.
+
 Producer: `frxusd_backing_verifier.py`, run at the start of the existing hourly
 `sync_and_push.sh` schedule.
 
