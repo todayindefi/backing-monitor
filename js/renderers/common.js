@@ -7326,7 +7326,10 @@ const CommonRenderer = {
         var raw = b.usdc_raw_held, den = b.usdc_denominated;
         var hasUsdcSplit = (raw && raw.value != null) || (den && den.value != null);
         var stars = Array.isArray(b.stars) ? b.stars : [];
-        if (!hasUsdcSplit && !stars.length) { slot.innerHTML = altHtml; return; }
+        var hasUsdsEvidence = b.surplus_buffer_history || b.integrity ||
+            b.share_of_usds_supply_pct != null || Array.isArray(data.coverage_by_chain) ||
+            Array.isArray((data.liquidity || {}).exit_legs);
+        if (!hasUsdcSplit && !stars.length && !hasUsdsEvidence) { slot.innerHTML = altHtml; return; }
 
         var fmt = this.formatCurrencyExact.bind(this);
         var pct1 = function(v) { return v != null ? CommonRenderer.formatPercent(v, 1) : '—'; };
@@ -7430,11 +7433,70 @@ const CommonRenderer = {
             html +=
                 '<div class="panel">' +
                     '<div class="panel-title">Per-Star composition</div>' +
+                    '<p class="text-xs text-slate-500 mb-3">Debt share uses combined USDS + DAI supply; each asset mix uses that Star\'s BlockAnalitica-backed value. The denominators are deliberately separate.</p>' +
                     '<div class="dep-grid">' + cards + '</div>' +
                 '</div>';
         }
 
-        slot.innerHTML = html;
+        // ---- USDS/sUSDS evidence that must move with the measurements ----
+        var hist = b.surplus_buffer_history;
+        if (hist) {
+            var directionClass = hist.direction === 'improving' ? 'text-green-600' :
+                hist.direction === 'worsening' ? 'text-red-600' : 'text-slate-500';
+            var executive = b.executive_observations || {};
+            var pre = executive.pre_execution || {}, post = executive.post_execution || {};
+            html += '<div class="panel">' +
+                '<div class="panel-title">Vow surplus buffer — retained history</div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
+                    '<div><div class="card-label">Current level</div><div class="card-value">' + fmt(b.surplus_buffer_usd) + '</div>' +
+                        '<div class="text-xs text-slate-500">' + pct1(b.surplus_buffer_pct) + ' of supply</div></div>' +
+                    '<div><div class="card-label">Window range</div><div class="text-sm font-mono">' +
+                        fmt(hist.minimum_usd) + ' to ' + fmt(hist.maximum_usd) + '</div>' +
+                        '<div class="text-xs text-slate-500">' + esc(hist.window) + ' · ' + esc(hist.observations) + ' observations</div></div>' +
+                    '<div><div class="card-label">Direction</div><div class="text-lg font-semibold ' + directionClass + '">' +
+                        esc(hist.direction) + '</div><div class="text-xs text-slate-500">change ' + fmt(hist.change_usd) + '</div></div>' +
+                '</div>' +
+                (pre.timestamp && post.timestamp ? '<div class="mt-4 text-sm"><span class="font-semibold">October 8 executive observation:</span> buffer ' +
+                    fmt(pre.surplus_buffer_usd) + ' at ' + esc(pre.timestamp) + ' → ' + fmt(post.surplus_buffer_usd) +
+                    ' at ' + esc(post.timestamp) + '. <span class="text-slate-500">Adjacent snapshots are retained; timestamps are observations, not an inferred transaction time. Allocator readings are preserved in the feed.</span></div>' : '') +
+            '</div>';
+        }
+
+        var integrity = b.integrity;
+        if (integrity || b.share_of_usds_supply_pct != null) {
+            html += '<div class="panel">' +
+                '<div class="panel-title">sUSDS vault integrity</div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
+                    '<div><div class="card-label">USDS balanceOf</div><div class="card-value">' + fmt(integrity && integrity.usds_held) + '</div></div>' +
+                    '<div><div class="card-label">totalAssets()</div><div class="card-value">' + fmt(integrity && integrity.total_assets_reported) + '</div>' +
+                        '<div class="text-xs text-slate-500">divergence ' + pct1(integrity && integrity.divergence_pct) + ' · ' + esc(integrity && integrity.direction) + '</div></div>' +
+                    '<div><div class="card-label">NAV / USDS supply share</div><div class="text-lg font-semibold font-mono">' +
+                        (b.nav_usds_per_share != null ? Number(b.nav_usds_per_share).toFixed(6) + ' USDS' : '—') + '</div>' +
+                        '<div class="text-xs text-slate-500">' + pct1(b.share_of_usds_supply_pct) + ' of Ethereum USDS supply</div></div>' +
+                '</div>' +
+                (integrity && integrity.note ? '<div class="text-xs text-slate-500 mt-3">' + esc(integrity.note) + '</div>' : '') +
+            '</div>';
+        }
+
+        var capacity = (data.liquidity || {}).fixed_rate_exit_capacity;
+        var legs = (data.liquidity || {}).exit_legs;
+        if (capacity || (Array.isArray(legs) && legs.length)) {
+            var exitRows = capacity ? '<tr><td>USDS → USDC</td><td>LitePSM fixed rate</td><td class="text-right font-mono">' + fmt(capacity.inventory_usd) + '</td><td>inventory bounded</td></tr>' :
+                legs.map(function(leg) { return '<tr><td>' + esc(leg.from) + ' → ' + esc(leg.to) + '</td><td>' + esc(leg.mechanism) + '</td><td class="text-right font-mono">' +
+                    (leg.capacity_usd != null ? fmt(leg.capacity_usd) : esc(leg.capacity || '—')) + '</td><td>' + esc(leg.status) + '</td></tr>'; }).join('');
+            html += '<div class="panel"><div class="panel-title">Exit path — distinct legs and capacity</div>' +
+                '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Leg</th><th>Mechanism</th><th class="text-right">Capacity</th><th>Status</th></tr></thead><tbody>' + exitRows + '</tbody></table></div>' +
+                '<div class="text-xs text-slate-500 mt-3">The quote ladder remains explicitly non-size-responsive. LitePSM USDC inventory, not the deepest quoted rung, bounds the fixed-rate dollar exit.</div></div>';
+        }
+
+        var chainCoverage = data.coverage_by_chain;
+        if (Array.isArray(chainCoverage) && chainCoverage.length) {
+            html += '<div class="panel"><div class="panel-title">Per-chain measurement coverage</div><div class="data-table-scroll"><table class="data-table"><tbody>' +
+                chainCoverage.map(function(c) { return '<tr><td class="font-semibold">' + esc(c.chain) + '</td><td>' + esc(c.status).replace(/_/g, ' ') + '</td><td class="text-xs text-slate-500">' + esc((c.covers || []).join(' · ') || c.note || 'No backing fields measured') + '</td></tr>'; }).join('') +
+                '</tbody></table></div></div>';
+        }
+
+        slot.innerHTML = altHtml + html;
     },
 
     _renderPegSection(data, history) {

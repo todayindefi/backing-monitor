@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "asset": "USDS",
   "asset_slug": "usds",
   "chain": "ethereum",
@@ -225,7 +225,20 @@
     "liquidity_score_source": "risk-feed@2026-10-12T01:45:02Z",
     "liquidity_score_status": "ok",
     "liquidity_score_generated_at": "2026-10-12T01:45:02Z",
-    "liquidity_score_age_hours": 7.1
+    "liquidity_score_age_hours": 7.1,
+    "fixed_rate_exit_capacity": {
+      "venue": "LitePSM",
+      "asset": "USDC",
+      "inventory_usd": 4377803829.85,
+      "rate": "1:1",
+      "fees": {
+        "tin": 0,
+        "tout": 0
+      },
+      "capacity_basis": "USDC balanceOf(LitePSM pocket)",
+      "as_of": "2026-10-12T08:50:58Z",
+      "note": "Inventory is exit capacity. The non-size-responsive quote ladder is not a depth measurement."
+    }
   },
   "backing": {
     "collateral_ratio": 99.55,
@@ -280,6 +293,18 @@
         "trust": {
           "size": "onchain",
           "mix": "blockanalitica"
+        },
+        "debt_share": {
+          "value_pct": 43.8072,
+          "denominator": "combined_usds_and_dai_supply",
+          "denominator_usd": 11709777215.52,
+          "source": "onchain"
+        },
+        "mix_denominator": {
+          "kind": "blockanalitica_per_star_backed_value",
+          "value_usd": 5009721915.94,
+          "source": "blockanalitica",
+          "note": "Mix percentages use the Star's BlockAnalitica-backed value, not the on-chain debt-share denominator."
         }
       },
       {
@@ -311,6 +336,18 @@
         "trust": {
           "size": "onchain",
           "mix": "blockanalitica"
+        },
+        "debt_share": {
+          "value_pct": 32.4456,
+          "denominator": "combined_usds_and_dai_supply",
+          "denominator_usd": 11709777215.52,
+          "source": "onchain"
+        },
+        "mix_denominator": {
+          "kind": "blockanalitica_per_star_backed_value",
+          "value_usd": 3037721925.94,
+          "source": "blockanalitica",
+          "note": "Mix percentages use the Star's BlockAnalitica-backed value, not the on-chain debt-share denominator."
         }
       },
       {
@@ -350,6 +387,18 @@
         "trust": {
           "size": "onchain",
           "mix": "blockanalitica"
+        },
+        "debt_share": {
+          "value_pct": 14.5895,
+          "denominator": "combined_usds_and_dai_supply",
+          "denominator_usd": 11709777215.52,
+          "source": "onchain"
+        },
+        "mix_denominator": {
+          "kind": "blockanalitica_per_star_backed_value",
+          "value_usd": 1737012943.56,
+          "source": "blockanalitica",
+          "note": "Mix percentages use the Star's BlockAnalitica-backed value, not the on-chain debt-share denominator."
         }
       },
       {
@@ -373,6 +422,18 @@
         "trust": {
           "size": "onchain",
           "mix": "blockanalitica"
+        },
+        "debt_share": {
+          "value_pct": 3.4515,
+          "denominator": "combined_usds_and_dai_supply",
+          "denominator_usd": 11709777215.52,
+          "source": "onchain"
+        },
+        "mix_denominator": {
+          "kind": "blockanalitica_per_star_backed_value",
+          "value_usd": 406183039.74,
+          "source": "blockanalitica",
+          "note": "Mix percentages use the Star's BlockAnalitica-backed value, not the on-chain debt-share denominator."
         }
       }
     ],
@@ -481,7 +542,52 @@
     "backing_score_source": "risk-feed@2026-10-12T01:45:02Z",
     "backing_score_status": "ok",
     "backing_score_generated_at": "2026-10-12T01:45:02Z",
-    "backing_score_age_hours": 7.1
+    "backing_score_age_hours": 7.1,
+    "surplus_buffer_history": {
+      "history_ref": "usds_backing_history.json",
+      "field": "surplus_deficit",
+      "window": "last_30_days_or_available",
+      "observations": 720,
+      "start_timestamp": "2026-09-12T10:34:12Z",
+      "start_usd": -58476833.75,
+      "latest_usd": -52242342.56,
+      "minimum_usd": -60664887.94,
+      "maximum_usd": -47572950.9,
+      "change_usd": 6234491.19,
+      "direction": "improving",
+      "direction_basis": "latest minus first observation in the declared window; a less-negative buffer is improving"
+    },
+    "executive_observations": {
+      "event": "Sky October 8 executive \u2014 September settlement cycle",
+      "execution_effect_first_observed_at": "2026-10-08T14:50:16Z",
+      "pre_execution": {
+        "timestamp": "2026-10-08T13:49:56Z",
+        "surplus_buffer_usd": -60664887.94,
+        "allocator_debt_usd": {
+          "spark": 3754281102.07,
+          "grove": 1719889475.65,
+          "obex": 404163469.0
+        }
+      },
+      "post_execution": {
+        "timestamp": "2026-10-08T14:50:16Z",
+        "surplus_buffer_usd": -49968665.33,
+        "allocator_debt_usd": {
+          "spark": 3755215361.19,
+          "grove": 1723282450.14,
+          "obex": 404163469.0
+        }
+      },
+      "change": {
+        "surplus_buffer_usd": 10696222.61,
+        "allocator_debt_usd": {
+          "spark": 934259.12,
+          "grove": 3392974.49,
+          "obex": 0.0
+        }
+      },
+      "basis": "Adjacent retained hourly snapshots; timestamps are observations, not an inferred transaction timestamp."
+    }
   },
   "dependencies": {
     "upstream": [
@@ -611,5 +717,25 @@
       "Freeze / emergency-shutdown functions exist \u2014 watch for activation",
       "Allocator (Star) deployments hold off-chain / other-chain assets not verifiable on Ethereum; composition sourced from BlockAnalitica"
     ]
-  }
+  },
+  "coverage_by_chain": [
+    {
+      "chain": "ethereum",
+      "status": "measured",
+      "covers": [
+        "supply",
+        "vow_surplus_buffer",
+        "ilk_debt",
+        "allocator_debt",
+        "litepsm_usdc_inventory"
+      ],
+      "as_of": "2026-10-12T08:50:58Z"
+    },
+    {
+      "chain": "other",
+      "status": "not_measured",
+      "covers": [],
+      "note": "This feed makes no backing or exit-capacity claim for other chains."
+    }
+  ]
 }

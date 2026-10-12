@@ -277,6 +277,14 @@ for f in apyx_family.json cap_family.json ethena_family.json ethena_measurements
     [ -f "/home/danger/PegTracker/data/$f" ] && cp "/home/danger/PegTracker/data/$f" data/
 done
 
+# USDS/sUSDS are measured by PegTracker, but the dashboard owns several
+# cross-file semantics: retained pre/post executive observations, distinct
+# fixed-rate capacity and quote-ladder meanings, and sUSDS's two-leg exit.  Run
+# this only after every producer copy so an hourly refresh cannot erase them.
+if [ -f tools/enrich_usds_feeds.py ]; then
+    PYTHONPYCACHEPREFIX=/tmp/backing-monitor-pycache python3 tools/enrich_usds_feeds.py
+fi
+
 # Integrate any remote changes first (e.g. dashboard claude's commits) so our
 # data-only push fast-forwards. Without this, a non-fast-forward push is
 # rejected, the cron silently strands data commits, and dashboards go stale.

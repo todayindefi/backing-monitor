@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "asset": "sUSDS",
   "asset_slug": "susds",
   "chain": "ethereum",
@@ -40,7 +40,10 @@
     "backing_score_source": "risk-feed@2026-10-12T01:45:02Z",
     "backing_score_status": "ok",
     "backing_score_generated_at": "2026-10-12T01:45:02Z",
-    "backing_score_age_hours": 7.09
+    "backing_score_age_hours": 7.09,
+    "share_of_usds_supply_pct": 70.2751,
+    "share_of_usds_supply_basis": "sUSDS totalAssets() / Ethereum USDS totalSupply()",
+    "nav_usds_per_share": 1.112536285039
   },
   "dependencies": {
     "upstream": [
@@ -178,7 +181,28 @@
     "liquidity_score_source": "risk-feed@2026-10-12T01:45:02Z",
     "liquidity_score_status": "ok",
     "liquidity_score_generated_at": "2026-10-12T01:45:02Z",
-    "liquidity_score_age_hours": 7.09
+    "liquidity_score_age_hours": 7.09,
+    "exit_legs": [
+      {
+        "leg": 1,
+        "from": "sUSDS",
+        "to": "USDS",
+        "mechanism": "ERC-4626 redeem()",
+        "status": "measured_open",
+        "as_of": "2026-10-12T08:50:31Z",
+        "capacity": "uncapped_by_contract_probe"
+      },
+      {
+        "leg": 2,
+        "from": "USDS",
+        "to": "USDC",
+        "mechanism": "LitePSM fixed-rate exit",
+        "status": "inventory_bounded",
+        "capacity_usd": 4377803829.85,
+        "capacity_as_of": "2026-10-12T08:50:58Z",
+        "capacity_basis": "USDC balanceOf(LitePSM pocket)"
+      }
+    ]
   },
   "asset_specific": {
     "type": "susds",
@@ -270,5 +294,34 @@
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-10-12T01:45:02Z",
     "issuer_score_age_hours": 7.09
-  }
+  },
+  "coverage_by_chain": [
+    {
+      "chain": "ethereum",
+      "status": "measured",
+      "covers": [
+        "totalSupply",
+        "totalAssets",
+        "USDS_balanceOf",
+        "NAV",
+        "redeem_simulation"
+      ],
+      "as_of": "2026-10-12T08:50:31Z"
+    },
+    {
+      "chain": "base",
+      "status": "contract_known_backing_not_measured",
+      "covers": []
+    },
+    {
+      "chain": "arbitrum",
+      "status": "contract_known_backing_not_measured",
+      "covers": []
+    },
+    {
+      "chain": "optimism",
+      "status": "contract_known_backing_not_measured",
+      "covers": []
+    }
+  ]
 }
