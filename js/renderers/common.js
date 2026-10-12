@@ -258,6 +258,12 @@ const CommonRenderer = {
     // beats adding a second, subtler rule.
     AUTHORED_BLOCK_KNOWN: [
         'code_facts', 'cross_axis', 'segments', 'unmeasured',
+        // contract/1 hand-walk envelope. The authority renderer consumes these
+        // into its scope, path table, unresolved disclosures and verification
+        // trail; listing them prevents the generic unread-block sentinel from
+        // contradicting the rendered panel directly beneath it.
+        'publication_scope', 'layers', 'authority_summary', 'unresolved',
+        'review', 'walk_notes',
         'float_split', 'measurement_clocks',
         // ⚠️ THE LIQUIDITY AXIS'S OWN BLOCKS, added when the marker was extended to
         // replace-mode overlays. Without them it named eleven blocks on DexTracker's
@@ -337,7 +343,11 @@ const CommonRenderer = {
     AUTHORED_NOTE_IGNORE: [
         'as_of', 'source', 'producer', 'collateral_ratio_basis',
         'coverage_note', 'coverage_summary', 'cross_axis',
-        'is_seized_note'
+        'is_seized_note',
+        // Read by the frxUSD contract panel. These are deliberately scoped
+        // there rather than globally adopted as authored notes: the same keys
+        // occur on other assets whose bespoke layouts have not accepted them.
+        'provenance_note', 'custody_disclosure', 'custody_disclosure_sources'
     ],
 
     // `overlays` is [{axis, file, json}] — nulls (404s) already filtered by the

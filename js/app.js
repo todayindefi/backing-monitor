@@ -124,6 +124,7 @@ function exitLadderOverlay(file, ladder) {
             input_amount: row.input_frxusd,
             output_amount: row.output_usdc,
             amount_out_usdc: row.output_usdc,
+            output_usd: row.output_usdc,
             amount_in_raw: row.amount_in_raw,
             amount_out_raw: row.amount_out_raw,
             // CommonRenderer uses signed slippage: negative is an exit cost.

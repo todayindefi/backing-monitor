@@ -1,0 +1,757 @@
+{
+  "schema_version": "contract/1",
+  "asset": "frxusd",
+  "producer": "security_analyst",
+  "as_of": "2026-10-11T16:39:23Z",
+  "generated_at": "2026-10-12T01:01:17Z",
+  "contract": {
+    "headline": "Active undelayed core authority",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-10-11T16:39:23Z",
+    "source_file": "security_analyst/topology/assets/frxusd.yaml",
+    "publication_scope": {
+      "chains": [
+        "ethereum"
+      ],
+      "walked_by": "hand"
+    },
+    "layers": [
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "frxUSD TransparentUpgradeableProxy",
+        "terminal_name": "Frax 4-of-7 Safe",
+        "topology": "nofm-multisig",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "owner",
+          "minters",
+          "freezers"
+        ],
+        "unfollowed_authority": {
+          "eip1967_admin": "0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6"
+        },
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "role_admin": {
+          "via": "owner",
+          "holder": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+          "kind": "safe"
+        },
+        "paths": [
+          {
+            "holder": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "name": "Frax 4-of-7 Safe",
+            "name_verified": true,
+            "via": "owner -> role administration, burn, freeze, and thaw",
+            "terminal": "safe",
+            "timelock": "none",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "owner calls execute immediately",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "hand_walk": "owner() returned this Safe; getThreshold() returned 4 and getOwners() returned seven addresses. Calls simulated from the Safe succeeded for addMinter, addFreezer, burn(address,0), freeze, and thaw; matching unrelated-sender calls reverted. The implementation exposes no token-wide mint cap, so an owner-added minter is unrestricted."
+          },
+          {
+            "holder": "0x5fbaa3a3b489199338fbd85f7e3d444dc0504f33",
+            "name": "USTB custodian",
+            "via": "minters[2] -> mutable 5,000,000 frxUSD module cap -> owner",
+            "terminal": "safe",
+            "timelock": "none",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "module and owner calls execute immediately",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "USTB reserves and mutable module cap; owner can change cap, fees, oracle, and recover tokens",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable"
+          },
+          {
+            "holder": "0xe827abf9f462ac4f147753d86bc5f91e186e4e9c",
+            "name": "BUIDL custodian",
+            "via": "minters[3] -> mutable 100,000 frxUSD module cap -> owner",
+            "terminal": "safe",
+            "timelock": "none",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "module and owner calls execute immediately",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "BUIDL reserves and mutable module cap; owner can change cap and fees and recover tokens",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable"
+          },
+          {
+            "holder": "0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c",
+            "name": "USDC custodian",
+            "via": "minters[4] -> mutable 400,000,000 frxUSD module cap -> owner",
+            "terminal": "safe",
+            "timelock": "none",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "module and owner calls execute immediately",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "USDC reserves and mutable module cap; owner can change cap, fees, operators, and shuffle threshold and recover tokens",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable"
+          },
+          {
+            "holder": "0xfe2ea8de262d956e852f12de108fda57171a0a29",
+            "name": "USDB custodian",
+            "via": "minters[5] -> mutable 100,000 frxUSD module cap -> owner",
+            "terminal": "safe",
+            "timelock": "none",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "module and owner calls execute immediately",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "USDB reserves and mutable module cap; owner can change cap and fees and recover tokens",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable"
+          },
+          {
+            "holder": "0x860cc723935fc9a15ff8b1a94237a711dfef7857",
+            "name": "WTGXX custodian",
+            "via": "minters[6] -> mutable 25,000,000 frxUSD module cap -> owner",
+            "terminal": "safe",
+            "timelock": "none",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "module and owner calls execute immediately",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "WTGXX reserves and mutable module cap; owner can change cap, fees, and shuffle threshold and recover tokens",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable"
+          },
+          {
+            "holder": "0x566a6442a5a6e9895b9dca97cc7879d632c6e4b0",
+            "name": "Ethereum OFT mintable adapter",
+            "via": "minters[7] -> LayerZero endpoint and configured remote peers",
+            "terminal": "unresolved-authority",
+            "timelock": "unresolved",
+            "control_state": "unresolved",
+            "actionable": "unresolved",
+            "execution_delay": "unresolved",
+            "reaction_window": {
+              "type": "unresolved",
+              "basis": "remote peer and verifier paths are outside this canonical-only phase",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "unresolved",
+            "reach_bound": "live canonical minter; remote peers, executors, verifier configuration, and pointer-back authentication require a later walk",
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "unresolved",
+            "terminal_address": null,
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "unresolved"
+          },
+          {
+            "holder": "0xb898ad2976b4d8f2e21521c9db16b7497825e503",
+            "name": "Frax Timelock direct minter",
+            "via": "minters[8] -> Timelock -> admin Safe",
+            "terminal": "timelock",
+            "timelock": "1d",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "queue delay is the execution delay",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "2h"
+          },
+          {
+            "holder": "0x537bed9200fc5a14ab56e554016753676eff12b0",
+            "name": "additional capped custodian",
+            "name_verified": false,
+            "via": "minters[9] -> mutable 100,000 frxUSD module cap -> owner",
+            "terminal": "safe",
+            "timelock": "none",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "module and owner calls execute immediately",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "0x00000000efe3...9012 reserves and mutable module cap; owner can change cap and fees and recover tokens",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable"
+          }
+        ]
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "frxUSD TransparentUpgradeableProxy",
+        "terminal_name": "Frax 4-of-7 Safe",
+        "topology": "nofm-multisig",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "owner"
+        ],
+        "unfollowed_authority": {
+          "eip1967_admin": "0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6"
+        },
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "name": "Frax 4-of-7 Safe",
+            "name_verified": true,
+            "via": "owner -> pause/unpause",
+            "terminal": "safe",
+            "timelock": "none",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "pause and unpause execute immediately",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "hand_walk": "isPaused() returned false. Calls simulated from the owner Safe succeeded for pause() and unpause(); pause() from an unrelated address reverted. The successful isPaused() read is the positive control for the present-state observation."
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "canonical frxUSD and mint/redemption proxy set",
+        "terminal_name": "Frax Timelocks and Safes",
+        "topology": "timelocked",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "eip1967_admin"
+        ],
+        "unfollowed_authority": {
+          "eip1967_admin": "0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6"
+        },
+        "timelock": "1d",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x0b2c3df006b2bd43cbcc60075e7a0bf314474ed6",
+            "name": "frxUSD ProxyAdmin",
+            "name_verified": true,
+            "via": "frxUSD EIP-1967 admin -> ProxyAdmin owner -> Timelock admin",
+            "terminal": "timelock",
+            "timelock": "1d",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "queue delay is the execution delay",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "2h",
+            "slots_checked": [
+              "owner",
+              "admin",
+              "governance",
+              "authority",
+              "pendingOwner",
+              "eip1967_admin",
+              "eip1967_beacon",
+              "zos_admin"
+            ],
+            "hand_walk": "frxUSD implementation was 0x0000000048d2c8baf31742f6765383278bada4d5 and the admin slot returned this ProxyAdmin. ProxyAdmin.owner() returned Timelock 0xb898...e503. delay() returned 86400 seconds, MINIMUM_DELAY() 7200, pendingAdmin() zero, and admin() the 4-of-7 Safe. setDelay and setPendingAdmin require timelock self-calls."
+          },
+          {
+            "holder": "0x3046a74ff708774efbabba685b5b93fa1d134aeb",
+            "name": "five documented custodian ProxyAdmins",
+            "name_verified": true,
+            "via": "five EIP-1967 admins -> ProxyAdmin owners -> Frax Timelock admin",
+            "terminal": "timelock",
+            "timelock": "1d",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "queue delay is the execution delay",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "five distinct ProxyAdmins (listed in the audit note) share the same Timelock owner",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "2h"
+          },
+          {
+            "holder": "0xf655414bfcd6f2b984474fe5d71ac62d19c98899",
+            "name": "additional custodian ProxyAdmin",
+            "name_verified": true,
+            "via": "0x537b...12b0 proxy -> ProxyAdmin owner -> 2-day Timelock admin",
+            "terminal": "timelock",
+            "timelock": "2d",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "2d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "queue delay is the execution delay",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "code replacement is confined to the additional capped custodian module",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "2d",
+            "hand_walk": "Proxy implementation was 0xb418...5da6. ProxyAdmin.owner() returned Timelock 0x8412...39ca, whose delay and MINIMUM_DELAY both returned 172800 seconds. Its admin was Safe 0xb174...3f27; getThreshold() returned 3 and getOwners() returned five addresses."
+          },
+          {
+            "holder": "0x223a681fc5c5522c85c96157c0efa18cd6c5405c",
+            "name": "Ethereum OFT adapter ProxyAdmin",
+            "name_verified": true,
+            "via": "OFT adapter EIP-1967 admin -> ProxyAdmin owner -> Frax Timelock admin",
+            "terminal": "timelock",
+            "timelock": "1d",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "queue delay is the execution delay",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "canonical mintable adapter code; remote peer authority remains unresolved",
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "2h"
+          }
+        ]
+      },
+      {
+        "authority_layer": "custody",
+        "chain": "ethereum",
+        "observed_at": "2026-10-11",
+        "walked_by": "hand",
+        "target_name": "six live canonical mint/redemption custodians",
+        "terminal_name": "Frax 4-of-7 Safe",
+        "topology": "nofm-multisig",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "setMintCap",
+          "setMintRedeemFee",
+          "recoverERC20",
+          "reserve-management"
+        ],
+        "timelock": "none",
+        "reach": "bounded",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "name": "Frax 4-of-7 Safe",
+            "name_verified": true,
+            "via": "owner of all six live canonical custodian modules",
+            "terminal": "safe",
+            "timelock": "none",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "owner parameter and recovery calls execute immediately",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "can change module caps and fees, recover module ERC-20 holdings, and exercise module-specific oracle/operator/shuffle controls; bounded to custodian reserves and redemption availability",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xffffff4f3bac444b2c0ecf2a1840d018be783937",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "hand_walk": "All six owner() calls returned this Safe. The five documented modules held USTB, BUIDL, USDC, USDB, and WTGXX; minter[9] held token 0x00000000efe3...9012. All exposed mutable caps and fee setters plus recoverERC20. USTB also exposed mutable oracle settings; USDC and WTGXX exposed reserve-shuffle controls. No live implementation exposed a separate pause selector; working owner(), asset(), cap, and fee getters were positive controls for each selector inventory."
+          }
+        ]
+      }
+    ],
+    "authority_summary": {
+      "schema": "actionable-path/1",
+      "state": "active-core-undelayed",
+      "headline": "Active undelayed core authority",
+      "total_layers": 4,
+      "total_paths": 15,
+      "inactive_layers": 0,
+      "unresolved_layers": 1,
+      "unresolved_paths": 1,
+      "active_paths": 14,
+      "active_core_paths": 7,
+      "active_bounded_paths": 7,
+      "undelayed_core_paths": 2,
+      "undelayed_bounded_paths": 7,
+      "active": [
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "frxUSD TransparentUpgradeableProxy",
+          "name": "Frax 4-of-7 Safe",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "owner calls execute immediately",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "frxUSD TransparentUpgradeableProxy",
+          "name": "USTB custodian",
+          "reach": "bounded",
+          "reach_bound": "USTB reserves and mutable module cap; owner can change cap, fees, oracle, and recover tokens",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "module and owner calls execute immediately",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "frxUSD TransparentUpgradeableProxy",
+          "name": "BUIDL custodian",
+          "reach": "bounded",
+          "reach_bound": "BUIDL reserves and mutable module cap; owner can change cap and fees and recover tokens",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "module and owner calls execute immediately",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "frxUSD TransparentUpgradeableProxy",
+          "name": "USDC custodian",
+          "reach": "bounded",
+          "reach_bound": "USDC reserves and mutable module cap; owner can change cap, fees, operators, and shuffle threshold and recover tokens",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "module and owner calls execute immediately",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "frxUSD TransparentUpgradeableProxy",
+          "name": "USDB custodian",
+          "reach": "bounded",
+          "reach_bound": "USDB reserves and mutable module cap; owner can change cap and fees and recover tokens",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "module and owner calls execute immediately",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "frxUSD TransparentUpgradeableProxy",
+          "name": "WTGXX custodian",
+          "reach": "bounded",
+          "reach_bound": "WTGXX reserves and mutable module cap; owner can change cap, fees, and shuffle threshold and recover tokens",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "module and owner calls execute immediately",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "frxUSD TransparentUpgradeableProxy",
+          "name": "Frax Timelock direct minter",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "1d",
+          "reaction_window": {
+            "type": "none",
+            "basis": "queue delay is the execution delay",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "frxUSD TransparentUpgradeableProxy",
+          "name": "additional capped custodian",
+          "reach": "bounded",
+          "reach_bound": "0x00000000efe3...9012 reserves and mutable module cap; owner can change cap and fees and recover tokens",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "module and owner calls execute immediately",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "pause",
+          "target_name": "frxUSD TransparentUpgradeableProxy",
+          "name": "Frax 4-of-7 Safe",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "pause and unpause execute immediately",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "contract-upgrade",
+          "target_name": "canonical frxUSD and mint/redemption proxy set",
+          "name": "frxUSD ProxyAdmin",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "1d",
+          "reaction_window": {
+            "type": "none",
+            "basis": "queue delay is the execution delay",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "contract-upgrade",
+          "target_name": "canonical frxUSD and mint/redemption proxy set",
+          "name": "five documented custodian ProxyAdmins",
+          "reach": "full",
+          "reach_bound": "five distinct ProxyAdmins (listed in the audit note) share the same Timelock owner",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "1d",
+          "reaction_window": {
+            "type": "none",
+            "basis": "queue delay is the execution delay",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "contract-upgrade",
+          "target_name": "canonical frxUSD and mint/redemption proxy set",
+          "name": "additional custodian ProxyAdmin",
+          "reach": "full",
+          "reach_bound": "code replacement is confined to the additional capped custodian module",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "2d",
+          "reaction_window": {
+            "type": "none",
+            "basis": "queue delay is the execution delay",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "contract-upgrade",
+          "target_name": "canonical frxUSD and mint/redemption proxy set",
+          "name": "Ethereum OFT adapter ProxyAdmin",
+          "reach": "full",
+          "reach_bound": "canonical mintable adapter code; remote peer authority remains unresolved",
+          "value_at_risk_scope": "bridge",
+          "execution_delay": "1d",
+          "reaction_window": {
+            "type": "none",
+            "basis": "queue delay is the execution delay",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "custody",
+          "target_name": "six live canonical mint/redemption custodians",
+          "name": "Frax 4-of-7 Safe",
+          "reach": "bounded",
+          "reach_bound": "can change module caps and fees, recover module ERC-20 holdings, and exercise module-specific oracle/operator/shuffle controls; bounded to custodian reserves and redemption availability",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "owner parameter and recovery calls execute immediately",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        }
+      ]
+    },
+    "unresolved": [
+      "Remote OFT peers, bridge executors, verifier configuration, and non-Ethereum deployments are outside this canonical-only walk. The canonical OFT adapter remains a live minter, so remote mint authority is unresolved rather than absent.",
+      "The token exposes a non-enumerable freezer mapping. Candidate reads were negative and owner freeze/thaw authority is proven, but the complete delegated freezer set was not established from fixed-block logs."
+    ],
+    "authority_shared_with": [],
+    "review": {
+      "scope": "canonical-ethereum",
+      "authored_by": "security_analyst",
+      "observed_block": 26170459,
+      "observed_at_utc": "2026-10-11T16:39:23Z",
+      "legacy_evidence": "topology/legacy/frxusd-v2.1-mixed-snapshot-2026-10-12.yaml"
+    },
+    "walk_notes": [
+      "Dashboard publication scope: {'chains': ['ethereum'], 'walked_by': 'hand'}"
+    ]
+  }
+}

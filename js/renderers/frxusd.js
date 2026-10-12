@@ -70,6 +70,20 @@ var FrxUSDRenderer = {
                 '</div></div>';
         }
 
+        var contract = data.contract || {};
+        var contractSlot = document.getElementById('contract-extra-panels');
+        if (contractSlot && (contract.custody_disclosure || contract.provenance_note)) {
+            contractSlot.innerHTML =
+                '<div class="panel"><div class="panel-title">Custody and scoring disclosure</div>' +
+                (contract.custody_disclosure ? '<p class="text-sm text-slate-600">' +
+                    this.esc(contract.custody_disclosure) + '</p>' : '') +
+                (contract.custody_disclosure_sources ? '<p class="text-xs text-slate-500 mt-2">' +
+                    this.esc(contract.custody_disclosure_sources) + '</p>' : '') +
+                (contract.provenance_note ? '<p class="text-xs text-slate-500 mt-3">' +
+                    this.esc(contract.provenance_note) + '</p>' : '') +
+                '</div>';
+        }
+
         var liq = data.liquidity || {};
         var probe = liq.redemption_probe;
         var liqSlot = document.getElementById('liquidity-extra-panels');
