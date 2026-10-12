@@ -76,6 +76,36 @@ For each asset, in this order:
 
 ## Entries
 
+### frxusd — independent backing verification remains partial
+```
+affects     frxusd
+raised      2026-10-12 after the first independent-verification run
+what        The verification feed successfully reads all six requested Ethereum reserve balances
+            and independently values USTB, but it correctly withholds independent global coverage.
+            Four evidence gaps remain for the next frxUSD refresh:
+              1. enumerate every remote OFT deployment, read its supply and reconstruct global
+                 circulating liabilities without counting bridge escrow twice;
+              2. obtain an eligible bank statement or attestation for the approximately $2.004M
+                 Erebor reserve, or keep it explicitly offchain_unverified;
+              3. obtain signed-address or eligible BitGo account evidence connecting Frax to the
+                 observed WTGXX balance, or retain custody_dependent_unverified ownership; and
+              4. add independent timestamped NAV sources for WTGXX, BUIDL, USDC and USDB where
+                 reliable sources exist. Until then, preserve their declared par-value conventions
+                 and do not relabel them as independently valued.
+current     status partial at Ethereum block 26,173,067 (2026-10-12T01:22:23Z); all address reads
+            succeeded; $106.454M of on-chain assets represents 98.1524% of issuer-reported assets.
+            `independent_coverage_pct` is null because the liability denominator is incomplete.
+owner       backing-monitor for the consumer-side verification feed; request evidence from Frax or
+            its custodians where the missing fact cannot be established on-chain. PegTracker remains
+            the canonical Axis 2 backing and asset-price producer.
+guard       Failed or unavailable reads remain null/unmeasured, never zero. Do not turn issuer API
+            values, custody balances or par conventions into independent evidence by inference.
+closes when remote OFT liabilities are complete enough to publish independent global coverage, and
+            each of the three evidence gaps is either independently resolved or explicitly reviewed
+            and retained with its current limitation at the next asset refresh
+Last reviewed 2026-10-12
+```
+
 ### peg and collateral charts — align both on the 7d window named by Axis 1
 ```
 affects     apxusd, apyusd, bold, crvusd, dusd-alto, fxusd, ousd, syrupusdc, syrupusdt,
