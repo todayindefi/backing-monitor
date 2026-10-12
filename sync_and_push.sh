@@ -18,6 +18,10 @@ fi
 # snapshot, last-good preservation, history and dashboard are one atomic
 # monitor. A failed attempt is loud but must not prevent the sync from serving
 # the prior successful snapshot.
+if ! PYTHONPYCACHEPREFIX=/tmp/backing-monitor-pycache python3 frxusd_backing_verifier.py >/tmp/frxusd-backing-verifier.log; then
+    echo "$(date): ERROR frxUSD independent backing verifier failed; see /tmp/frxusd-backing-verifier.log" >&2
+fi
+
 if ! PYTHONPYCACHEPREFIX=/tmp/backing-monitor-pycache python3 msusd_metronome_backing_analyzer.py; then
     echo "$(date): ERROR Metronome msUSD analyzer failed; retaining the last published snapshot" >&2
 fi
@@ -50,13 +54,13 @@ SUFFIXES="_backing _backing_history _peg_history _critical_events _flow \
           _nav_history _coverage_history _reserve_known_destinations _family \
           _treasury _treasury_history _backing_last_attempt \
           _liquidity _contract _dependencies _issuer _backing_overlay _contract_overlay \
-          _axis_basis _minters _peg_backfill"
+          _axis_basis _minters _peg_backfill _exit_ladder \
+          _backing_verification _backing_verification_history"
 
 # A live ladder may be a standalone observation rather than part of the base
 # backing document. frxUSD is the first producer to use this block: DexTracker
 # owns venue inventory while PegTracker owns executable quotes, so folding the
 # ladder into either producer's file would erase that ownership boundary.
-SUFFIXES="$SUFFIXES _exit_ladder"
 
 SLUGS=$(python3 -c "import json;print(' '.join(a['slug'].replace('-','_') for a in json.load(open('data/assets.json'))))")
 
@@ -164,7 +168,7 @@ for slug in $SLUGS; do
         # the seven are restored.
         if [ -z "$found" ] && [ -f "data/${slug}${suf}.json" ]; then
             case "$suf" in
-                _contract) ;;
+                _contract|_backing_verification|_backing_verification_history) ;;
                 *)
                     case "${slug}${suf}.json" in
                         bmnr_backing.json|bmnr_backing_history.json|msusd_metronome_backing.json|msusd_metronome_backing_history.json) ;;

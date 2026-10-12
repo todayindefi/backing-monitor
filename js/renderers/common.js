@@ -263,7 +263,7 @@ const CommonRenderer = {
         // trail; listing them prevents the generic unread-block sentinel from
         // contradicting the rendered panel directly beneath it.
         'publication_scope', 'layers', 'authority_summary', 'unresolved',
-        'review', 'walk_notes',
+        'review', 'walk_notes', 'verification',
         'float_split', 'measurement_clocks',
         // ⚠️ THE LIQUIDITY AXIS'S OWN BLOCKS, added when the marker was extended to
         // replace-mode overlays. Without them it named eleven blocks on DexTracker's

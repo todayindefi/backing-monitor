@@ -184,6 +184,21 @@ function exitLadderOverlay(file, ladder) {
     };
 }
 
+function backingVerificationOverlay(file, verification) {
+    if (!verification || verification.schema_version !== 'frxusd-backing-verification/1') return null;
+    return {
+        axis: 'backing',
+        file: file,
+        json: {
+            schema_version: 'backing-overlay/1',
+            producer: verification.producer,
+            asset: verification.asset,
+            as_of: (verification.observation || {}).block_timestamp || verification.generated_at,
+            backing: { verification: verification }
+        }
+    };
+}
+
 // ========================================
 // Index view
 // ========================================
@@ -368,6 +383,15 @@ async function renderAsset(slug) {
         // overlay. Order is the contract: the replace runs before the merge, so
         // the merge lands on the walk rather than being wiped by it.
         var overlayFetches = [];
+        if (assetMeta && assetMeta.backing_verification_ref) {
+            (function (file) {
+                overlayFetches.push(
+                    fetch(dataUrl('data/' + file))
+                        .then(function(r) { return r && r.ok ? r.json() : null; })
+                        .then(function(j) { return backingVerificationOverlay('data/' + file, j); })
+                        .catch(function() { return null; }));
+            })(assetMeta.backing_verification_ref);
+        }
         if (assetMeta && assetMeta.liquidity_ladder_ref) {
             (function (file) {
                 overlayFetches.push(
