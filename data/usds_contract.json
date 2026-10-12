@@ -2,73 +2,82 @@
   "schema_version": "contract/1",
   "asset": "usds",
   "producer": "security_analyst",
-  "as_of": "2026-08-23",
-  "generated_at": "2026-10-12T10:11:47Z",
+  "as_of": "2026-10-12T10:40:23Z",
+  "generated_at": "2026-10-12T11:11:34Z",
   "contract": {
-    "headline": "All MEASURED authority sits behind a 2d timelock.",
+    "headline": "Active delayed core authority",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
     "method": "hand-walk",
-    "observed_at": "2026-08-23",
+    "observed_at": "2026-10-12T10:40:23Z",
     "source_file": "security_analyst/topology/assets/usds.yaml",
     "layers": [
       {
         "authority_layer": "contract-upgrade",
         "chain": "ethereum",
-        "observed_at": "2026-08-23",
+        "observed_at": "2026-10-12",
         "walked_by": "hand",
-        "target_name": "Usds",
-        "terminal_name": "DSPause",
+        "target_name": "USDS UUPS proxy",
+        "terminal_name": "DSPause through DSPauseProxy",
         "topology": "timelocked",
-        "m": 2,
         "keys": [
-          "wards"
+          "wards",
+          "upgradeToAndCall"
         ],
         "timelock": "2d",
         "timelock_floor": "none",
         "reach": "full",
         "impl_upgradeable": true,
+        "role_admin": {
+          "holder": "0x929d9a1435662357f54adcf64dcee4d6b867a6f9",
+          "kind": "contract",
+          "via": "DSAuth authority shared by plot and drop"
+        },
         "paths": [
           {
             "holder": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
             "name": "DSPauseProxy",
             "name_verified": true,
-            "via": "wards",
+            "via": "USDS ward -> DSPauseProxy -> DSPause -> DSChief authority",
             "terminal": "timelock",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x929d9a1435662357f54adcf64dcee4d6b867a6f9",
+            "holder_kind": "contract",
             "timelock": "2d",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "2d",
+            "reaction_window": {
+              "type": "notice-period",
+              "basis": "current DSPause delay() is 172800 seconds",
+              "minimum_window_seconds": 172800,
+              "maximum_window_seconds": 172800
+            },
             "reach": "full",
-            "terminal_address": "0xbe286431454714f511008713973d3b053a2d38f3",
-            "slots_checked": [
-              "eip1967_impl",
-              "eip1967_admin",
-              "eip1967_beacon",
-              "zos_admin",
-              "zos_impl"
-            ]
-          },
-          {
-            "holder": "0x3c0f895007ca717aa01c8693e59df1e8c3777feb",
-            "name": "UsdsJoin",
-            "name_verified": true,
-            "via": "wards",
-            "terminal": "contract",
-            "timelock": "none",
-            "reach": "full"
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "independent_canceller": false,
+            "delay_floor": "none",
+            "hand_walk": "wards(DSPauseProxy)=1. USDS is UUPS and the ward can upgrade and administer wards. DSPause delay() is 172800, but no minimum-delay accessor exists and setDelay is reachable through the same pause. plot and drop share the same DSAuth/DSChief authority."
           }
         ]
       },
       {
         "authority_layer": "asset-permission",
         "chain": "ethereum",
-        "observed_at": "2026-08-23",
+        "observed_at": "2026-10-12",
         "walked_by": "hand",
-        "target_name": "Usds",
-        "terminal_name": "DSPause",
-        "topology": "timelocked",
-        "m": 2,
+        "target_name": "USDS mint, burn and ward administration",
+        "terminal_name": "DSPause / fixed-function UsdsJoin",
+        "topology": "mixed",
         "keys": [
-          "wards"
+          "wards",
+          "mint",
+          "burn",
+          "rely",
+          "deny"
         ],
-        "timelock": "2d",
+        "timelock": "none",
         "timelock_floor": "none",
         "reach": "full",
         "impl_upgradeable": true,
@@ -77,49 +86,135 @@
             "holder": "0xbe8e3e3618f7474f8cb1d074a26affef007e98fb",
             "name": "DSPauseProxy",
             "name_verified": true,
-            "via": "wards",
+            "via": "USDS ward -> DSPauseProxy -> DSPause -> DSChief authority",
             "terminal": "timelock",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x929d9a1435662357f54adcf64dcee4d6b867a6f9",
+            "holder_kind": "contract",
             "timelock": "2d",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "2d",
+            "reaction_window": {
+              "type": "notice-period",
+              "basis": "current DSPause delay() is 172800 seconds",
+              "minimum_window_seconds": 172800,
+              "maximum_window_seconds": 172800
+            },
             "reach": "full",
-            "terminal_address": "0xbe286431454714f511008713973d3b053a2d38f3"
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "independent_canceller": false,
+            "delay_floor": "none"
           },
           {
             "holder": "0x3c0f895007ca717aa01c8693e59df1e8c3777feb",
             "name": "UsdsJoin",
             "name_verified": true,
-            "via": "wards",
+            "via": "fixed join/exit conversion surface using its USDS ward",
             "terminal": "contract",
+            "terminal_kind": "contract",
+            "terminal_address": "0x3c0f895007ca717aa01c8693e59df1e8c3777feb",
+            "holder_kind": "contract",
             "timelock": "none",
-            "reach": "full"
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "join and exit execute atomically",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "mint/burn only through fixed DAI-to-USDS conversion accounting; no arbitrary call, rely, deny, owner, authority, or upgrade entry point",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "fixed-at-construction",
+            "independent_canceller": "not-applicable",
+            "delay_floor": "not-applicable",
+            "hand_walk": "wards(UsdsJoin)=1, but selector and source review shows only fixed join/exit conversion behavior. The former full-reach and contract-upgrade classifications overstated this path."
           }
         ]
       }
     ],
-    "unresolved": [],
+    "authority_summary": {
+      "schema": "actionable-path/1",
+      "state": "active-core-delayed",
+      "headline": "Active delayed core authority",
+      "total_layers": 2,
+      "total_paths": 3,
+      "inactive_layers": 0,
+      "unresolved_layers": 0,
+      "unresolved_paths": 0,
+      "active_paths": 3,
+      "active_core_paths": 2,
+      "active_bounded_paths": 1,
+      "undelayed_core_paths": 0,
+      "undelayed_bounded_paths": 1,
+      "active": [
+        {
+          "authority_layer": "contract-upgrade",
+          "target_name": "USDS UUPS proxy",
+          "name": "DSPauseProxy",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "2d",
+          "reaction_window": {
+            "type": "notice-period",
+            "basis": "current DSPause delay() is 172800 seconds",
+            "minimum_window_seconds": 172800,
+            "maximum_window_seconds": 172800
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "USDS mint, burn and ward administration",
+          "name": "DSPauseProxy",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "2d",
+          "reaction_window": {
+            "type": "notice-period",
+            "basis": "current DSPause delay() is 172800 seconds",
+            "minimum_window_seconds": 172800,
+            "maximum_window_seconds": 172800
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "USDS mint, burn and ward administration",
+          "name": "UsdsJoin",
+          "reach": "bounded",
+          "reach_bound": "mint/burn only through fixed DAI-to-USDS conversion accounting; no arbitrary call, rely, deny, owner, authority, or upgrade entry point",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "join and exit execute atomically",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        }
+      ]
+    },
+    "unresolved": [
+      "DSChief voting participation and economic capture resistance are not reduced to a key or signer threshold. No synthetic m-of-n is reported."
+    ],
     "authority_shared_with": [],
-    "review": null,
+    "review": {
+      "scope": "canonical-ethereum",
+      "authored_by": "security_analyst",
+      "observed_block": 26175854,
+      "observed_block_hash": "0x584a30173e894b16d14b3793b6bafd2d7f45333c1da29927669402ed81e6f2f4"
+    },
     "walk_notes": [
-      "⚠️ HAND-WALKED, NOT GENERATED. This file previously carried the generator",
-      "trust warning AND a line saying it was written by hand — a contradiction that",
-      "told a reader to distrust rows no generator ever produced. The generator",
-      "warning is removed because it does not apply here; the provenance stays.",
-      "",
-      "It also carried `generator_version: hand`, which is a category error: that",
-      "field records WHICH GENERATOR VERSION produced a file, so \"hand\" means the",
-      "field should not be present at all. ⚠️ Not cosmetic — backing-monitor's emitter",
-      "refuses any truthy generator_version, so this hand-walk was refused as machine",
-      "output and its page froze. The correct encoding of \"hand-walked\" is the field's",
-      "ABSENCE plus `walked_by: hand` per layer, which was already here.",
-      "",
-      "tools/topology.py is retired — see tools/NEXT-VERSION.md. Judgment",
-      "(compromise_threshold, signer_independence, basis, note, severity_cap) stays in",
-      "riskAnalyst. See registry/schema.md.",
-      "",
-      "⚠ Walked 2026-08-23 to settle a PUBLISHED claim in tidresearch's usds-retail",
-      "report that riskAnalyst could not reproduce. It reproduces. Evidence below.",
-      "Ward set enumerated from Rely(address) logs at deployment via Etherscan V2",
-      "chainid 1, netted against Deny(address), then live wards() on every survivor,",
-      "with 0xdead returning 0 as a control."
+      "Fresh manual Ethereum authority walk at block 26,175,854",
+      "(2026-10-12T10:40:23Z). Evidence: audits/usds-susds-authority-refresh-2026-10-12.md.",
+      "Correction: UsdsJoin has wards()==1 but its fixed join/exit surface cannot",
+      "exercise general ward administration or upgrades."
     ]
   }
 }
