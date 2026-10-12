@@ -7438,6 +7438,29 @@ const CommonRenderer = {
                 '</div>';
         }
 
+        var sparkRecon = ((b.star_reconciliation || {}).spark);
+        if (sparkRecon) {
+            var srDebt = sparkRecon.allocator_debt || {};
+            var srExternal = sparkRecon.external_principal_lookthrough || {};
+            var srSusds = sparkRecon.direct_susds || {};
+            var residual = sparkRecon.residual_after_direct_susds_usd;
+            html += '<div class="panel">' +
+                '<div class="panel-title">Spark allocator reconciliation</div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-4 gap-3">' +
+                    '<div><div class="card-label">Allocator debt</div><div class="card-value">' + fmt(srDebt.value_usd) + '</div><div class="text-xs text-slate-500">on-chain vat</div></div>' +
+                    '<div><div class="card-label">External principal look-through</div><div class="card-value">' + fmt(srExternal.value_usd) + '</div><div class="text-xs text-slate-500">BlockAnalitica backed basis</div></div>' +
+                    '<div><div class="card-label">Direct sUSDS</div><div class="card-value">' + fmt(srSusds.value_usds) + '</div><div class="text-xs text-slate-500">' +
+                        (srSusds.shares != null ? Math.round(srSusds.shares).toLocaleString() + ' shares · ' : '') + 'reflexive USDS claim</div></div>' +
+                    '<div><div class="card-label">Remaining residual</div><div class="card-value ' +
+                        (residual < 0 ? 'text-red-600' : 'text-amber-700') + '">' + fmt(residual) + '</div><div class="text-xs text-slate-500">' +
+                        esc(sparkRecon.residual_status || 'unattributed') + '</div></div>' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 mt-3">' + esc(sparkRecon.note || '') + '</div>' +
+                (Array.isArray(sparkRecon.residual_possible_components) ? '<details class="mt-2 text-xs text-slate-500"><summary>Possible residual components — not established</summary><div class="mt-1">' +
+                    sparkRecon.residual_possible_components.map(esc).join(' · ') + '</div></details>' : '') +
+            '</div>';
+        }
+
         // ---- USDS/sUSDS evidence that must move with the measurements ----
         var hist = b.surplus_buffer_history;
         if (hist) {

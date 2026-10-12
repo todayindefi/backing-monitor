@@ -285,6 +285,16 @@ if [ -f tools/enrich_usds_feeds.py ]; then
     PYTHONPYCACHEPREFIX=/tmp/backing-monitor-pycache python3 tools/enrich_usds_feeds.py
 fi
 
+# Spark's BlockAnalitica `backed` basis omits its direct sUSDS treasury balance,
+# so comparing it alone with allocator debt creates a false shortfall.  Add the
+# independent balanceOf read after enrichment has established the two explicit
+# denominators.  Failure is loud and preserves the prior published observation.
+if [ -f tools/reconcile_spark_star.py ]; then
+    if ! PYTHONPYCACHEPREFIX=/tmp/backing-monitor-pycache python3 tools/reconcile_spark_star.py; then
+        echo "$(date): ERROR Spark Star reconciliation failed; retaining the last published observation" >&2
+    fi
+fi
+
 # Integrate any remote changes first (e.g. dashboard claude's commits) so our
 # data-only push fast-forwards. Without this, a non-fast-forward push is
 # rejected, the cron silently strands data commits, and dashboards go stale.

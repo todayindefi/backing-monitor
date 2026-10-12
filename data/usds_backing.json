@@ -587,6 +587,48 @@
         }
       },
       "basis": "Adjacent retained hourly snapshots; timestamps are observations, not an inferred transaction timestamp."
+    },
+    "star_reconciliation": {
+      "spark": {
+        "status": "partially_reconciled",
+        "as_of": "2026-10-12T16:36:11Z",
+        "allocator_debt": {
+          "value_usd": 3836025628.15,
+          "as_of": "2026-10-12T15:51:15Z",
+          "source": "onchain_vat"
+        },
+        "external_principal_lookthrough": {
+          "value_usd": 3078814827.27,
+          "basis": "BlockAnalitica backed principal",
+          "as_of": "2026-10-12T15:51:15Z",
+          "source": "blockanalitica",
+          "note": "Not a net-asset valuation; excludes Spark's direct sUSDS treasury balance."
+        },
+        "apparent_gap_before_direct_susds_usd": 757210800.88,
+        "direct_susds": {
+          "shares": 938219560.259826,
+          "nav_usds_per_share": 1.112569457761,
+          "value_usds": 1043834427.42,
+          "holder": "0x1601843c5e9bc251a3272907010afa41fa18347e",
+          "ethereum_block": 26177626,
+          "balance_observed_at": "2026-10-12T16:36:11Z",
+          "nav_as_of": "2026-10-12T15:50:45Z",
+          "source": "onchain balanceOf via ethereum-rpc.publicnode.com",
+          "classification": "reflexive_usds_claim"
+        },
+        "combined_observed_value_usd": 4122649254.69,
+        "residual_after_direct_susds_usd": 286623626.54,
+        "residual_pct_of_allocator_debt": 7.4719,
+        "residual_status": "unattributed_positive",
+        "residual_possible_components": [
+          "accumulated earnings",
+          "idle liquidity inside lending vaults",
+          "principal-versus-market-value differences",
+          "recursive accounting differences",
+          "cross-source timing"
+        ],
+        "note": "Direct sUSDS closes the apparent shortfall. The positive residual is published as unattributed; it is not asserted to be profit, surplus, or additional backing."
+      }
     }
   },
   "dependencies": {
