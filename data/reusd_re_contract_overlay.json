@@ -1,23 +1,24 @@
 {
- "schema_version": "contract-overlay/1",
- "producer": "riskanalyst",
- "asset": "reusd_re",
- "as_of": "2026-08-31T00:00:00Z",
- "contract": {
-  "structural_score": 4.0,
-  "structural_score_source": "riskAnalyst:authored",
-  "structural_score_generated_at": "2026-08-31T00:00:00Z",
-  "structural_score_basis": "Axis 5 = CONTRACT & ADMIN, both halves. \u26a0\ufe0f RE-SCOPED from an old-rubric 'Structural 6.0' that spanned three axes -- it also priced legal structure (axis 6) and the off-chain dependency stack (axis 4). A rescoping, not a deterioration. \u26a0\ufe0f The code half is strong and does NOT lift the score: audits do not offset an authority path. The number is set by the authority half.",
-  "code_facts": [
-   "Sherlock collaborative audit, July 2026. [published document]",
-   "Certora formal verification, September 2025. [published document]",
-   "Hacken x3 -- NAV Oracle Apr 2025, Core Contracts Dec 2024, DeFi Contracts Sept 2024: 0 Critical, 0 High, 4 Medium, 7 Low, 18 Observations. [published document]",
-   "ERC1967 proxy; UUPS + AccessControl, not Ownable -- beacon and admin slots read zero because authority is role-gated inside the implementation. \u26a0\ufe0f Zero slots here is manufactured immutability, not immutability. [riskAnalyst assessment]",
-   "\u26a0\ufe0f This supersedes an earlier 'stale audit' finding in this report -- the audit gap is CLOSED. [riskAnalyst assessment]"
-  ],
-  "authority_note": "\u26a0\ufe0f The authority half is security_analyst's hand-walk (2026-08-30) and is rendered from their file, not duplicated here. This overlay supplies only the code/audit half plus the score.",
-  "cross_axis": [
-   "\u26a0\ufe0f The NAV / share-price write path is NOT covered by the 48h timelock. It appears on axis 1 as the mark's provenance and here as an authority path outside the delay -- SAME FACT, TWO QUESTIONS. Sources: riskAnalyst this desk's internal reusd-re assessment \u00a7V; security_analyst unmeasured[]; PegTracker nav_basis."
-  ]
- }
+  "schema_version": "contract-overlay/1",
+  "producer": "riskanalyst",
+  "asset": "reusd_re",
+  "as_of": "2026-08-31T00:00:00Z",
+  "contract": {
+    "structural_score": 4,
+    "structural_score_source": "riskAnalyst:authored",
+    "structural_score_generated_at": "2026-08-31T00:00:00Z",
+    "structural_score_basis": "Contract & Admin 4.0 held. The 48-hour token-upgrade delay does not cover mint, ICL, redemption, oracle and CCIP paths. At Ethereum block 26181136, NAVOracle constrains updates with 50/150bp normal/force bands, a 200bp cumulative budget over 14 days, 36-hour staleness, a four-hour force interval and a hard 24-hour markdown delay. Alternative writers and complete role/selector authority remain unclosed.",
+    "code_facts": [
+      "Sherlock collaborative audit, July 2026. [published document]",
+      "Certora formal verification, September 2025. [published document]",
+      "ERC1967 proxy; UUPS + AccessControl, not Ownable -- beacon and admin slots read zero because authority is role-gated inside the implementation. ⚠️ Zero slots here is manufactured immutability, not immutability. [riskAnalyst assessment]",
+      "Canonical registry: Sherlock July 2026 collaborative review; Certora September 2025 formal verification; Hacken NAV Oracle March 2025, core November 2024 and DeFi August 2024. Current implementation/commit correspondence and component coverage remain unverified."
+    ],
+    "authority_note": "⚠️ The authority half is security_analyst's hand-walk (2026-08-30) and is rendered from their file, not duplicated here. This overlay supplies only the code/audit half plus the score.",
+    "cross_axis": [
+      "⚠️ The NAV / share-price write path is NOT covered by the 48h timelock. It appears on axis 1 as the mark's provenance and here as an authority path outside the delay -- SAME FACT, TWO QUESTIONS. Sources: riskAnalyst this desk's internal reusd-re assessment §V; security_analyst unmeasured[]; PegTracker nav_basis."
+    ]
+  },
+  "revised_at": "2026-10-13",
+  "revised_note": "Targeted canonical-report follow-up; original authority observation and score dates are preserved."
 }
