@@ -2,14 +2,32 @@
   "schema_version": "axis-basis/1",
   "producer": "riskanalyst",
   "asset": "syrupusdt",
-  "as_of": "2026-10-03T00:00:00Z",
+  "as_of": "2026-10-13T00:00:00Z",
+  "source_snapshot_as_of": "2026-10-13T09:44:22Z",
+  "evidence_ref": "specs/evidence/syrup-refresh-2026-10-13.json",
+  "peg": {
+    "volatility_score": 8.5,
+    "volatility_score_source": "riskAnalyst:authored",
+    "volatility_score_generated_at": "2026-10-13T00:00:00Z",
+    "volatility_score_basis": "NAV-accruing share; current market discount is small. No recognized impairment now; this is not a collateral-quality score.",
+    "volatility_score_persistence": "filtered — reviewed judgment; not a spot-derived band",
+    "market_observation": {
+      "market_price": 1.1467229254508187,
+      "nav": 1.147777,
+      "premium_discount_pct": -0.09183617977894798,
+      "source": "coingecko",
+      "history_ref": "syrupusdt_backing_history.json",
+      "history_field": "peg_market_price",
+      "note": "Primary redemption is full-size at NAV via Maple's withdrawal queue; secondary trades at a small discount (charted)."
+    },
+    "redemption_score_note": "Legacy field retained for compatibility; permissionless request submission with operator-processed settlement. No measured latency upgrade."
+  },
   "backing": {
     "backing_score": 6.0,
     "backing_score_source": "riskAnalyst:authored",
-    "backing_score_generated_at": "2026-09-24T09:40:00Z",
-    "backing_score_basis": "MEASURES THE LOAN BOOK'S EVIDENCE QUALITY, NOT A COVERAGE RATIO. ⚠️ AUTHORED 2026-09-06 AT 5.5 AND RE-DERIVED THE SAME DAY TO 6.0 ON THE PegTracker RECONCILIATION — the first figures were wrong-harsh, and the correction is recorded here rather than silently applied. ⚠️ SCORED HALF A POINT BELOW syrupUSDC (6.5) ON THE SAME ARCHITECTURE: same operator, same evidence method, smaller and less seasoned book. ⚠️⚠️ THE FEED'S `collateral_ratio: 100.0` IS AN ACCOUNTING IDENTITY, NOT A SOLVENCY MEASUREMENT, AND IT IS THE MOST MISREADABLE NUMBER ON THIS ASSET. The pool's backing IS its loan book: positions enumerate to `principalOut()` with a residual of $0.00, so backing equals supply BY CONSTRUCTION and the ratio cannot print anything but ~100. The published `surplus_deficit` of $5.98 against a $368,859,875.86 book is 0.0000016% of the book — that is rounding, NOT a buffer. ⚠️ A 100.0 here carries NO information about whether the loans are good. Read it as 'the books balance', never as 'the asset is fully covered'. The solvency question lives in LOAN QUALITY and BORROWER CONCENTRATION, which is axis 4.",
-    "backing_score_persistence": "filtered — loan-book evidence quality, not a spot ratio",
-    "backing_score_denominator": "⚠️ ASK WHAT THE RATIO DIVIDES BY. backing = the loan book = supply by construction, so the quotient is ~100 regardless of loan quality. There is no denominator here that would reveal impairment; only per-loan evidence does.",
+    "backing_score_generated_at": "2026-10-13T00:00:00Z",
+    "backing_score_basis": "Complete principal reconciliation, but numeric collateral valuations cover 62.07% of all principal and 78.30% of loan-classified principal. The $49.06M USDtb loan has no valuation; the seven priced crypto loans have no below-120% flag. Off-chain evidence and $0 delegate cover remain.",
+    "backing_score_persistence": "filtered — reviewed judgment; not a spot-derived band",
     "backing_score_change": {
       "from": 5.5,
       "to": 6.0,
@@ -18,23 +36,158 @@
       "basis": "RETRACTS the same-day 6.0 -> 5.5 cut. That cut compared top-1 24.19% (on a $392,718,462 book) with 37.79% (on a $244,037,062 book) -- different denominators. The book contracted 37.9% in 18 days, verified: PoolManager.totalAssets() = $252,592,289 at block 26,046,137. The share rose because the denominator fell and because a different borrower is now largest; the former top borrower repaid ~$70M. Nobody scaled up.",
       "not_load_bearing": "What IS established and unreported: the 37.9% contraction itself, borrowers 9->8, HHI 1876->2498, top-3 66.8%->80.9%, with impaired/called/default all 0. Separating concentration from contraction needs the 2026-09-06 per-borrower list, which we do not hold. Re-cut trigger: top-1 >30% / top-3 >75% across two consecutive reads whose principal is within 5%.",
       "inherited_from": null
-    }
+    },
+    "coverage": {
+      "record_count": 18,
+      "priced_count": 7,
+      "priced_principal_usd": 177052547.37,
+      "priced_pct_all_principal": 62.07,
+      "priced_loans_only_count": 7,
+      "priced_pct_loans_only_principal": 78.3,
+      "null_valuation_principal_usd": 108208165.0,
+      "sum_available_collateral_usd": 297779165.36
+    },
+    "coverage_basis": "Numeric collateral.usd coverage is availability, not custody verification. loans_missing_collateral=0 counts objects, not priced rows.",
+    "pcr_basis": "Agreement of independently read accounting components with totalAssets, not literally an identity. Does not independently value off-chain collateral.",
+    "reported_aggregate_collateral_ratio_pct": 142.13,
+    "aggregate_reconciliation_status": "Unreconciled with sum of numeric per-position collateral values; neither used as independently proved solvency buffer."
   },
   "liquidity": {
     "liquidity_score": 6.0,
     "liquidity_score_source": "riskAnalyst:authored",
-    "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
-    "liquidity_score_basis": "MEASURES ACCESS PATTERN AND ROUTE QUALITY, NOT POOL DEPTH. ⚠️ A FULL POINT AND A HALF BELOW syrupUSDC'S 7.5 ON THE SAME MECHANISM, and the reason is size not design: a smaller Ethereum pool TVL means higher aggregator slippage at the same notional and a longer queue cadence at institutional size. The permissionless mint/redeem advantage that lifted syrupUSDC applies here identically — it is the depth behind it that differs. ⚠️ Same normal-conditions caveat: stress-case redemption is a queue against an illiquid loan book.",
-    "liquidity_score_persistence": "filtered — access pattern and route quality, not spot depth",
-    "liquidity_score_depth_caveat": "⚠️ THE FEED COMPUTES NO DEPTH FOR THIS ASSET (`total_2pct_depth: null`), so this authored score has NOTHING beside it to agree or disagree with. An uncontested number reads as more settled than a contested one — it is not."
+    "liquidity_score_generated_at": "2026-10-13T00:00:00Z",
+    "liquidity_score_basis": "95 distinct quotes over 11.77 days; $250K median −12.04 bps, IQR 17.78 bps; $1M median −15.03 bps. The venue exists and the cost improved from the October 1 point read, but execution variability and an unmeasured primary route prevent a higher rating.",
+    "liquidity_score_persistence": "filtered — reviewed judgment; not a spot-derived band",
+    "quote_history": {
+      "first": "2026-10-01T13:09:32Z",
+      "last": "2026-10-13T07:31:15Z",
+      "elapsed_days": 11.7651,
+      "distinct_quote_count": 95,
+      "institutional_rungs": {
+        "150000": {
+          "n": 95,
+          "min_bps": -19.03,
+          "p25_bps": -17.19,
+          "median_bps": -11.64,
+          "p75_bps": 0.59,
+          "max_bps": 8.65,
+          "iqr_bps": 17.78
+        },
+        "250000": {
+          "n": 95,
+          "min_bps": -19.43,
+          "p25_bps": -17.58,
+          "median_bps": -12.04,
+          "p75_bps": 0.19,
+          "max_bps": 8.25,
+          "iqr_bps": 17.78
+        },
+        "500000": {
+          "n": 95,
+          "min_bps": -20.42,
+          "p25_bps": -18.58,
+          "median_bps": -13.04,
+          "p75_bps": -0.81,
+          "max_bps": 7.25,
+          "iqr_bps": 17.77
+        },
+        "1000000": {
+          "n": 95,
+          "min_bps": -22.41,
+          "p25_bps": -20.57,
+          "median_bps": -15.03,
+          "p75_bps": -2.81,
+          "max_bps": 5.25,
+          "iqr_bps": 17.77
+        }
+      }
+    },
+    "liquidity_score_ladder": {
+      "1000": {
+        "output_usd": 998.92,
+        "attempts": 1,
+        "provider": "kyberswap",
+        "fill_ratio": 0.99892,
+        "slippage_bps": 0.0
+      },
+      "10000": {
+        "output_usd": 9989.14,
+        "attempts": 1,
+        "provider": "kyberswap",
+        "fill_ratio": 0.998914,
+        "slippage_bps": 0.0
+      },
+      "50000": {
+        "output_usd": 49944.9,
+        "attempts": 1,
+        "provider": "kyberswap",
+        "fill_ratio": 0.998898,
+        "slippage_bps": -0.2
+      },
+      "100000": {
+        "output_usd": 99887.8,
+        "attempts": 1,
+        "provider": "kyberswap",
+        "fill_ratio": 0.998878,
+        "slippage_bps": -0.4
+      },
+      "150000": {
+        "output_usd": 149828.71,
+        "attempts": 1,
+        "provider": "kyberswap",
+        "fill_ratio": 0.998858,
+        "slippage_bps": -0.6
+      },
+      "250000": {
+        "output_usd": 249704.54,
+        "attempts": 1,
+        "provider": "kyberswap",
+        "fill_ratio": 0.998818,
+        "slippage_bps": -1.0
+      },
+      "500000": {
+        "output_usd": 499359.21,
+        "attempts": 1,
+        "provider": "kyberswap",
+        "fill_ratio": 0.998718,
+        "slippage_bps": -2.0
+      },
+      "1000000": {
+        "output_usd": 998519.03,
+        "attempts": 1,
+        "provider": "kyberswap",
+        "fill_ratio": 0.998519,
+        "slippage_bps": -4.0
+      }
+    },
+    "liquidity_score_ladder_as_of": "2026-10-13T07:31:15Z",
+    "cost_basis": "(fill_ratio-1)*10000; all-in against market-sized notional, not NAV. Price impact slippage_bps excludes smallest-rung spread. Successful quotes only; not realized fills or success rate.",
+    "ladder_scope": "Ethereum only; no measured destination-chain executable depth.",
+    "free_liquidity_history": {
+      "first_hour": "2026-09-13T09",
+      "last_hour": "2026-10-13T09",
+      "hour_buckets": 721,
+      "median_pct": 2.535,
+      "trailing_7d_median_pct": 4.3046
+    },
+    "queue_observation": {
+      "withdrawal_manager": "0x86eBDf902d800F2a82038290B6DBb2A5eE29eB8C",
+      "next_request_id": 7094,
+      "last_request_id": 7093,
+      "queue_depth_slots": 0,
+      "queue_depth_shares": null,
+      "queue_depth_usdc_est": null,
+      "is_empty": true
+    },
+    "queue_latency_status": "Not measured at size. Empty queue is current state, not latency. Current legal disclosure guarantees no maximum withdrawal period.",
+    "sibling_comparison": "October 1 six-times-cost statement is historical, not current. October 13 $150K costs: syrupUSDT -11.42bps / syrupUSDC -7.77bps against market notional; USDT retained $250K IQR is 17.78bps vs USDC 2.24bps."
   },
   "dependencies": {
     "underlying_score": 4.0,
     "underlying_score_source": "riskAnalyst:authored",
-    "underlying_score_generated_at": "2026-09-24T09:40:00Z",
-    "underlying_score_basis": "MEASURES THE COUNTERPARTY SET — how many, how concentrated, how SUBSTITUTABLE. ⚠️⚠️ CUT 5.0 → 4.0 ON 2026-10-03 (owner ruling) AND THIS IS A BOUND, NOT A NEW MEASUREMENT: syrupUSDT's counterparty set CONTAINS usdt's, so it may not score above it, and usdt carries 4.0 for unenumerability — no full audit has ever been completed, so not one custodian or banking counterparty is nameable for a $183.64B book. syrupUSDT inherits that whole set and adds its own unenumerable one: firm is null on all nine addresses, Maple publishes no borrower identities, and collateral is held off-chain by the delegate's custodian. Two unenumerable sets stacked, so 4.0 is the CEILING. ✅ IT SITS AT THE CEILING RATHER THAN BELOW IT ON TWO MEASURED OFFSETS: ~19.74% of the book is a $50M at-par USDC position (0x1Af652b5…BAA5, position_type liquidity), so Tether is ~80% of this set and not all of it, and that fifth is Circle at axis-4 7.0; and this pool's own added legs are address-enumerable with shares measured at 100% enumeration and $0.00 residual, where usdt's cannot be named at all. Those offsets cancel the added borrower set; they do not lift it past the ceiling. ⚠️ QUALITY IS NOT THE ARGUMENT. Circle scoring 7.0 is a reason the USDT weight is ~80%, not a reason this asset scores better — a good counterparty at 100% is still 100%, and the 154.45% pool collateral ratio is a Backing fact this axis does not price. ⚠️ LIQUIDITY CUSTODY EOAs ARE SHARED WITH syrupUSDC (PYUSD + USTB + AMM), so a holder of both pools does not hold two independent positions at the custody layer. ⚠️ THE CONCENTRATION MOVE IS NOT CHARGED HERE, DELIBERATELY. Live at 2026-10-02T16:45:40Z: top-1 36.42%, top-3 77.96%, HHI 2,328 against the 24.19% / 66.77% / 1,876 the report states. A cut on those figures was taken 2026-09-24 and retracted the same day as a moved denominator; eight days on they have not reverted. Left off this cut so the bound stays reviewable, and carried to the backlog for its own ruling. ⚠️ BASIS TRAP: the $253,242,712.37 denominator includes $59,150,015 of pool-owned liquidity wrapped as loans (10 of 18 positions). On third-party credit alone ($194,092,697) the top name is 47.52%, not 36.42%.",
-    "underlying_score_persistence": "filtered — borrower set and custody architecture, not a daily balance",
-    "underlying_score_routing": "⚠️ Merges after backing-monitor's 49d0b4ca2 but axis 4 RENDERS NO SCORE today — source-of-record pending their display decision.",
+    "underlying_score_generated_at": "2026-10-13T00:00:00Z",
+    "underlying_score_basis": "USDT dependency remains bounded at usdt's axis-4 score of 4.0. Loan-classified top-1/top-3 are 40.79%/86.89%; the at-par USDtb loan adds a distinct issuer/reserve dependency. The enumerated Circle position and measurable pool legs support the ceiling, not an upgrade above it.",
+    "underlying_score_persistence": "filtered — reviewed judgment; not a spot-derived band",
     "underlying_score_change": {
       "from": 5.0,
       "to": 4.0,
@@ -42,24 +195,120 @@
       "direction": "cut",
       "basis": "A BOUND, not a measurement. syrupUSDT's counterparty set contains usdt's, whose axis 4 is 4.0 for unenumerability, so 4.0 is the ceiling. Sits AT the ceiling because ~19.74% of the book is a Circle position and this pool's own shares are enumerated at 100% residual $0.00, which cancels the added borrower set without lifting past the ceiling. ⚠️ It had never been flagged: asset_refresh_check.py's child-above-parent loop omitted underlying_score entirely, and the PURE_WRAPPERS guard was never going to cover a pool holding a loan book. An enumeration of all declared dependent→underlying pairs across 153 reports returns this as the corpus's ONLY dependent-above-underlying pair.",
       "inherited_from": "usdt"
-    }
+    },
+    "all_enumerated_concentration": {
+      "denominator_usd": 285260712.37,
+      "addresses": 9,
+      "top_1_pct": 32.33,
+      "top_3_pct": 69.21,
+      "top_5_pct": 91.66,
+      "hhi": 2075,
+      "borrowers": {
+        "0x1af652b5e28fb0d113adf0803ccf8f34862bbaa5": 50000000.0,
+        "0x6c806a5f682243e5171a63bf49aa58b4153f93ac": 2636059.0,
+        "0x8669f3189ea2318d28c7183a971d65e0c352f1e9": 55186488.37,
+        "0x8df6721f643e796c456ee080929e01c7f18e6122": 49058165.0,
+        "0x8fee157cb621ac7484f8b218edd1c14ce8722628": 92230000.0,
+        "0xb62446a8981e7afc02094eac3140ffecea54d505": 12000000.0,
+        "0xb99a2c4c1c4f1fc27150681b740396f6ce1cbcf5": 15000000.0,
+        "0xd6891e15cba093ba1e13c43dbddf988d6f4347f5": 2200000.0,
+        "0xfba4bc924ba50c3b3dd0c1aa6d2f499b4fa55c81": 6950000.0
+      }
+    },
+    "loans_only_concentration": {
+      "denominator_usd": 226110697.37,
+      "addresses": 6,
+      "top_1_pct": 40.79,
+      "top_3_pct": 86.89,
+      "top_5_pct": 98.83,
+      "hhi": 2804,
+      "borrowers": {
+        "0x6c806a5f682243e5171a63bf49aa58b4153f93ac": 2636059.0,
+        "0x8669f3189ea2318d28c7183a971d65e0c352f1e9": 55186488.37,
+        "0x8df6721f643e796c456ee080929e01c7f18e6122": 49058150.0,
+        "0x8fee157cb621ac7484f8b218edd1c14ce8722628": 92230000.0,
+        "0xb62446a8981e7afc02094eac3140ffecea54d505": 12000000.0,
+        "0xb99a2c4c1c4f1fc27150681b740396f6ce1cbcf5": 15000000.0
+      }
+    },
+    "family_concentration": {
+      "timestamp": "2026-10-13T09:44:24Z",
+      "all_enumerated_concentration": {
+        "denominator_usd": 1318968486.21,
+        "addresses": 23,
+        "top_1_pct": 15.16,
+        "top_3_pct": 40.7,
+        "top_5_pct": 55.86,
+        "hhi": 871,
+        "borrowers": {
+          "0x09b845bbe555eaee93d9ed882964ee0371286b8a": 200000000.0,
+          "0x198aec3c39578d5a08c3a4304b63ad65440c529a": 185000000.0,
+          "0x1af652b5e28fb0d113adf0803ccf8f34862bbaa5": 50000000.0,
+          "0x1fcc47ee0f19ca0f07f8b987f0ad32ac204c03a7": 63000010.0,
+          "0x24b12457d3a68eca9daca48f0628276592bebcdd": 67000000.0,
+          "0x2570faf7c8a0da87d3f123b35cc722ec3fcc3e08": 20000000.0,
+          "0x282b6ccac8b7e062b73bbf0369e8cef9a895b30c": 100000000.0,
+          "0x2e9e44852ffb2a9edb5cb15262d31da9b2aa189d": 10000000.0,
+          "0x338220179a129b5be38dbaed6cd2ef9754089b5c": 25000000.0,
+          "0x36929250627c61977490a3919833a1429cebca97": 100000000.0,
+          "0x44d3c37eb8c974770737108ac55db868d8a54d49": 3000000.0,
+          "0x6c806a5f682243e5171a63bf49aa58b4153f93ac": 2636059.0,
+          "0x7642e44c3701db847b5f866d71d977bdab757ef2": 7183500.0,
+          "0x8669f3189ea2318d28c7183a971d65e0c352f1e9": 151796502.21,
+          "0x8df6721f643e796c456ee080929e01c7f18e6122": 49058165.0,
+          "0x8fee157cb621ac7484f8b218edd1c14ce8722628": 92230000.0,
+          "0xb62446a8981e7afc02094eac3140ffecea54d505": 77500000.0,
+          "0xb99a2c4c1c4f1fc27150681b740396f6ce1cbcf5": 65000000.0,
+          "0xc24b928b8f28ec560200bd46bfb84c1b7ae8f4a5": 3775000.0,
+          "0xd6891e15cba093ba1e13c43dbddf988d6f4347f5": 2200000.0,
+          "0xe4ab1f386c44ff7a88c5741c909b8c0a2aac50bb": 8225000.0,
+          "0xf1edd9ef78c6a1c46d70dfe107adc3c819bbb480": 29414250.0,
+          "0xfba4bc924ba50c3b3dd0c1aa6d2f499b4fa55c81": 6950000.0
+        }
+      },
+      "loans_only_concentration": {
+        "denominator_usd": 1176818466.21,
+        "addresses": 19,
+        "top_1_pct": 16.99,
+        "top_3_pct": 45.61,
+        "top_5_pct": 62.61,
+        "hhi": 1044,
+        "borrowers": {
+          "0x09b845bbe555eaee93d9ed882964ee0371286b8a": 200000000.0,
+          "0x198aec3c39578d5a08c3a4304b63ad65440c529a": 185000000.0,
+          "0x1fcc47ee0f19ca0f07f8b987f0ad32ac204c03a7": 5.0,
+          "0x24b12457d3a68eca9daca48f0628276592bebcdd": 67000000.0,
+          "0x282b6ccac8b7e062b73bbf0369e8cef9a895b30c": 100000000.0,
+          "0x2e9e44852ffb2a9edb5cb15262d31da9b2aa189d": 10000000.0,
+          "0x338220179a129b5be38dbaed6cd2ef9754089b5c": 25000000.0,
+          "0x36929250627c61977490a3919833a1429cebca97": 100000000.0,
+          "0x44d3c37eb8c974770737108ac55db868d8a54d49": 3000000.0,
+          "0x6c806a5f682243e5171a63bf49aa58b4153f93ac": 2636059.0,
+          "0x7642e44c3701db847b5f866d71d977bdab757ef2": 7183500.0,
+          "0x8669f3189ea2318d28c7183a971d65e0c352f1e9": 151796502.21,
+          "0x8df6721f643e796c456ee080929e01c7f18e6122": 49058150.0,
+          "0x8fee157cb621ac7484f8b218edd1c14ce8722628": 92230000.0,
+          "0xb62446a8981e7afc02094eac3140ffecea54d505": 77500000.0,
+          "0xb99a2c4c1c4f1fc27150681b740396f6ce1cbcf5": 65000000.0,
+          "0xc24b928b8f28ec560200bd46bfb84c1b7ae8f4a5": 3775000.0,
+          "0xe4ab1f386c44ff7a88c5741c909b8c0a2aac50bb": 8225000.0,
+          "0xf1edd9ef78c6a1c46d70dfe107adc3c819bbb480": 29414250.0
+        }
+      }
+    },
+    "classification_note": "Position_type loan/liquidity and Set A/Set B collateral quality are distinct; USDtb loan is at-par and not pool-owned liquidity. Borrower addresses are not independently identified firms."
   },
   "issuer": {
     "issuer_score": 5.5,
     "issuer_score_source": "riskAnalyst:authored",
-    "issuer_score_generated_at": "2026-09-11T00:00:00Z",
-    "issuer_score_basis": "MEASURES THE OPERATOR'S RECORD. ⚠️ AUTHORED 2026-08-01 — this axis had been PUBLISHED WITHOUT AN INTERNAL SOURCE, so the number existed on the public surface before it existed here. Maple Finance: v1 carried $50M+ of bad debt in 2022; v2 has run clean since. ⚠️ THE 2022 EVENT IS PRICED, NOT DISCOUNTED — a clean v2 record is three years of evidence against one realised failure of the same operator, not a reset.",
-    "issuer_score_persistence": "filtered — operator record, not spot-responsive",
-    "issuer_score_routing": "⚠️ UNROUTED — backing-monitor holding axis-6 registration until the axis-4 render decision lands."
+    "issuer_score_generated_at": "2026-10-13T00:00:00Z",
+    "issuer_score_basis": "Maple operator/entity judgment, shared across both pools; underwriting discretion and v1 history remain. No audit/bounty credit.",
+    "issuer_score_persistence": "filtered — reviewed judgment; not a spot-derived band"
   },
-  "peg": {
-    "volatility_score": 8.5,
-    "volatility_score_source": "riskAnalyst:authored",
-    "volatility_score_generated_at": "2026-09-11T00:00:00Z",
-    "volatility_score_basis": "MEASURES DISCOUNT-TO-NAV, NOT DEVIATION FROM $1. The unit trades at 1.13986 against NAV 1.142598, a −24.0bp DISCOUNT — WIDER THAN syrupUSDC's −17.8bp on the same mechanism, consistent with the thinner book. ⚠️ SCORED EQUAL TO syrupUSDC AT 8.5 DESPITE THE WIDER DISCOUNT because this axis measures NAV behaviour, not secondary-market spread; the spread difference is a liquidity fact and is priced there.",
-    "volatility_score_persistence": "filtered — NAV behaviour, not spot price",
-    "volatility_score_correction": "⚠️ THIS BLOCK PREVIOUSLY DECLARED 'ARGUMENT PRESENT, SCORE ABSENT' AND THAT WAS FALSE. I searched frontmatter for `peg_score`, found nothing, and reported a gap. THE FIELD DOES NOT EXIST IN THIS REPO: axis 1 is `volatility_score` for a vault share (present here at 8.5) and `peg_mechanism_score` for a stablecoin. backing-monitor's renderer reads BOTH — `_authoredAxisScore(data.peg, ['peg_mechanism_score','volatility_score'])` — and says so in a comment. An absence from a key I chose was reported as an absence in the world.",
-    "redemption_score_note": "⚠️ A SEPARATE `redemption_score` EXISTS AND IS 6.5 HERE — 105 assets carry it. It is NOT rendered through this envelope and is not restated in this file; noted so the next reader does not mistake its absence here for absence in the report."
+  "overall_review": {
+    "overall_score": 6.0,
+    "basis": "Held. Seven-field mean including legacy Redemption is 5.8571; gap +0.1429. Six-axis mean is 5.7500; gap +0.2500. 6.0 is the nearest half-point on the seven-field convention. The six-axis mean is exactly halfway between 5.5 and 6.0; it does not force either choice. Retain the existing seven-field convention and disclosed gap. Existing checker exception/premise remains valid; review by November 1, or sooner if an axis changes.",
+    "review_by": "2026-11-01"
   },
-  "routing_note": "⚠️ ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. ⚠️ NO `contract` BLOCK — the contract overlay already carries a rendering structural_score_basis. Two bases for one score drift apart, and both read as authoritative."
+  "routing_note": "Review updates the local source envelopes. External backing-monitor/tidresearch publishing not performed. Contract score/assurance remain in the dedicated contract overlay with dated observations."
 }

@@ -638,7 +638,7 @@ var SyrupUSDCRenderer = {
 
         if (backingSlot) {
             backingSlot.innerHTML =
-                this._renderBacking(specific, s, data.asset_slug) +
+                this._renderBacking(specific, s, data.asset_slug, data.backing) +
                 this._renderLoanBookHealth(specific) +
                 this._renderStrategySlots(specific, data.asset_slug) +
                 this._renderYield(specific);
@@ -1445,7 +1445,7 @@ var SyrupUSDCRenderer = {
     },
 
     // ----- §1 Backing -----------------------------------------------------
-    _renderBacking: function(specific, s, slug) {
+    _renderBacking: function(specific, s, slug, backing) {
         var v = specific.vault_state || {};
         var totalAssets = v.total_assets;
         var liquidityCap = v.liquidity_cap;
@@ -1562,9 +1562,21 @@ var SyrupUSDCRenderer = {
                 '</div>' +
             '</div>';
 
+        var coverage = backing && backing.coverage;
+        var coverageHtml = coverage && typeof coverage.priced_pct_all_principal === 'number'
+            ? '<div class="rounded border border-slate-200 p-3 mb-4 text-sm">' +
+                '<div class="font-semibold">Collateral valuation coverage: ' + coverage.priced_pct_all_principal.toFixed(2) + '% of enumerated principal</div>' +
+                '<div>' + coverage.priced_count + ' of ' + coverage.record_count + ' collateral records have numeric valuations; ' +
+                    CommonRenderer.formatCurrency(coverage.null_valuation_principal_usd) + ' of principal has no valuation.</div>' +
+                '<div class="text-xs text-slate-500">Valuation availability does not establish custody or recoverability. Missing-collateral record counts do not measure pricing coverage.</div>' +
+                '<details class="mt-2"><summary>Valuation scope and reconciliation</summary>' +
+                    '<div>Loan-classified principal coverage: ' + coverage.priced_pct_loans_only_principal.toFixed(2) + '%.</div>' +
+                    '<div>' + CommonRenderer._escapeAttr(backing.aggregate_reconciliation_status || '') + '</div></details></div>'
+            : '';
         return '<div class="panel">' +
             '<div class="panel-title">Backing</div>' +
             kpiHeader +
+            coverageHtml +
             '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-2">' +
                 '<div class="lg:col-span-2">' +
                     '<div class="text-sm font-semibold text-slate-700 mb-2">Asset composition</div>' +
