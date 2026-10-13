@@ -474,6 +474,13 @@ async function renderAsset(slug) {
         // view — the identity check exists precisely to refuse that.
         CommonRenderer.mergeAxisOverlays(data, overlays, axisSlug);
 
+        // A producer withdrawal supersedes alerts embedded in older base feeds.
+        if (data.backing && data.backing.attachment_point_status === 'withdrawn_by_producer') {
+            data.risk_flags = (data.risk_flags || []).filter(function (flag) {
+                return !/attachment point|attachment ratio/i.test(flag.message || '');
+            });
+        }
+
         // The issuer panel's "Read the full risk report" reads issuer.report_url.
         // On reUSD no producer supplies one — PegTracker's issuer block was
         // removed (it published the report's OVERALL score as the issuer axis)

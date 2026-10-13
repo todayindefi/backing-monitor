@@ -5849,7 +5849,7 @@ const CommonRenderer = {
         var el = document.createElement('div');
         el.className = 'issuer-reserves';
         el.innerHTML =
-            '<div class="irr-head">Issuer-reported reserves \u2014 protocol-wide</div>' +
+            '<div class="irr-head">Program TVL \u2014 protocol-wide</div>' +
             '<div class="irr-total">$' + (pt.total_usd / 1e6).toFixed(1) + 'M</div>' +
             '<div class="irr-scope">\u26a0\ufe0f ' +
                 this._escapeAttr(pt.scope || 'Scope not declared by the producer.') +
@@ -5865,7 +5865,9 @@ const CommonRenderer = {
                 : '') +
             '<div class="irr-note">' +
                 (pt.source ? 'Source: ' + this._escapeAttr(String(pt.source)) + '. ' : '') +
-                (pt.retrieved_at
+                (pt.as_of ? 'Observation: ' + this._escapeAttr(pt.as_of) + '. ' : '') +
+                (pt.basis ? this._escapeAttr(pt.basis) + ' ' : '') +
+                (pt.retrieved_at && !pt.as_of
                     ? '\u26a0\ufe0f Retrieved ' + this._escapeAttr(pt.retrieved_at) +
                       ' \u2014 that is when the page was FETCHED, not when the issuer computed these ' +
                       'figures. No source timestamp is published, so their true age is unknown.'
@@ -6460,7 +6462,7 @@ const CommonRenderer = {
             // different question — how much loss lands on someone else first —
             // and the sub text switches with it so the two cannot be confused.
             var ap = data.backing && data.backing.attachment_point_pct;
-            if (typeof ap === 'number') {
+            if (typeof ap === 'number' && data.backing.attachment_point_status !== 'withdrawn_by_producer') {
                 var below = data.backing.attachment_point_below_norm === true;
                 var apTitle = [data.backing.attachment_point_basis,
                                data.backing.attachment_point_vintage_note]
@@ -6557,7 +6559,8 @@ const CommonRenderer = {
         // exactly the kind this file keeps fixing elsewhere — a number rendered
         // under the name of a different quantity. 9.66% is not coverage; it is
         // how much loss lands on someone else before this tranche is touched.
-        if (b.collateral_ratio == null && typeof b.attachment_point_pct === 'number') {
+        if (b.collateral_ratio == null && typeof b.attachment_point_pct === 'number' &&
+            b.attachment_point_status !== 'withdrawn_by_producer') {
             return 'first-loss attachment' +
                 (b.attachment_point_norm_pct != null
                     ? ' \u00b7 ' + b.attachment_point_norm_pct + '% norm' : '') +
@@ -6568,7 +6571,7 @@ const CommonRenderer = {
         // the state IS (declared, with a basis) rather than naming the absent quantity.
         if (b.collateral_ratio == null && (data.summary && data.summary.collateral_ratio) == null &&
             b.on_chain_coverage_display_pct == null &&
-            typeof b.attachment_point_pct !== 'number' && b.collateral_ratio_basis) {
+            (typeof b.attachment_point_pct !== 'number' || b.attachment_point_status === 'withdrawn_by_producer') && b.collateral_ratio_basis) {
             return 'no single ratio — declared underivable';
         }
         var sd = (b.surplus_deficit != null)
