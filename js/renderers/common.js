@@ -2137,7 +2137,8 @@ const CommonRenderer = {
                     ? 'The ' + self._escapeAttr(ownerLabel) + ' publishes no depth figure for this ' +
                       'asset, so the figure shown is the base feed\u2019s'
                     : 'Depth not published') +
-                ' \u2014 ' + self._escapeAttr(String(l.depth.basis)) + '</div>');
+                '</div><details><summary>Depth scope and measurement limits</summary>' +
+                self._escapeAttr(String(l.depth.basis)) + '</details>');
         }
         if (ds && typeof ds === 'object') {
             bits.push('<div class="ds-line"><span class="ds-key">Measured leg:</span> ' +
@@ -4539,7 +4540,7 @@ const CommonRenderer = {
         // threshold is an assertion the reader cannot check.
         var headlineNote = data ? this._depthHeadlineNote(data) : '';
         var headlineLine = headlineNote
-            ? '<div class="text-[11px] text-slate-400">' + this._escapeAttr(headlineNote) + '</div>'
+            ? '<details class="text-[11px] text-slate-400"><summary>Depth threshold and quote methodology</summary>' + this._escapeAttr(headlineNote) + '</details>'
             : '';
         // ⚠️ THE STANDING COST, STATED, BECAUSE THE DEPTH FIGURE NO LONGER CONTAINS
         // IT. Depth is the impact of SIZE; what it costs to sell at the smallest
@@ -5863,7 +5864,7 @@ const CommonRenderer = {
                   '<th class="irr-num">Share</th><th class="irr-num">Chains</th></tr></thead>' +
                   '<tbody>' + body + '</tbody></table></div>'
                 : '') +
-            '<div class="irr-note">' +
+            '<details class="irr-note"><summary>TVL source and classification</summary>' +
                 (pt.source ? 'Source: ' + this._escapeAttr(String(pt.source)) + '. ' : '') +
                 (pt.as_of ? 'Observation: ' + this._escapeAttr(pt.as_of) + '. ' : '') +
                 (pt.basis ? this._escapeAttr(pt.basis) + ' ' : '') +
@@ -5872,7 +5873,7 @@ const CommonRenderer = {
                       ' \u2014 that is when the page was FETCHED, not when the issuer computed these ' +
                       'figures. No source timestamp is published, so their true age is unknown.'
                     : '') +
-            '</div>' +
+            '</details>' +
             (b.integrity && b.integrity.note
                 ? '<div class="irr-note"><span class="irr-key">Integrity' +
                   (b.integrity.status ? ' (' + this._escapeAttr(String(b.integrity.status)) + ')' : '') +
@@ -6043,9 +6044,10 @@ const CommonRenderer = {
             '</div>');
 
         if (b.attachment_point_withdrawn_reason) {
-            bits.push('<div class="ap-note ap-withdrawn-reason">' +
-                '<span class="ap-note-key">Why:</span> ' +
-                this._escapeAttr(String(b.attachment_point_withdrawn_reason)) + '</div>');
+            bits.push('<div class="ap-note">Current contractual first-loss capital is unestablished.</div>' +
+                '<details class="ap-note"><summary>Why the attachment ratio was withdrawn</summary>' +
+                '<div class="ap-withdrawn-reason">' +
+                this._escapeAttr(String(b.attachment_point_withdrawn_reason)) + '</div></details>');
         }
 
         // ⚠️ The historical notes are rendered UNDER ONE "Historical" heading rather
@@ -6074,9 +6076,8 @@ const CommonRenderer = {
                 labelled[i][1] + ':</span> ' + this._escapeAttr(val.trim()) + '</div>');
         }
         if (hist.length) {
-            bits.push('<div class="ap-hist"><div class="ap-note ap-hist-head">' +
-                'Historical \u2014 the record of the withdrawn reading, not current measurement' +
-                '</div>' + hist.join('') + '</div>');
+            bits.push('<details class="ap-hist"><summary>Revision history — withdrawn attachment readings</summary>' +
+                hist.join('') + '</details>');
         }
 
         el.innerHTML = bits.join('');
@@ -6492,7 +6493,7 @@ const CommonRenderer = {
             if (crBasis) {
                 return '<span class="text-slate-500" title="' +
                     this._escapeAttr(this._mdPlain(String(crBasis))) +
-                    '">not derivable</span>';
+                    '">' + this._escapeAttr(data.backing.coverage_display_label || 'Coverage not established') + '</span>';
             }
             return '—';
         }
@@ -6572,7 +6573,7 @@ const CommonRenderer = {
         if (b.collateral_ratio == null && (data.summary && data.summary.collateral_ratio) == null &&
             b.on_chain_coverage_display_pct == null &&
             (typeof b.attachment_point_pct !== 'number' || b.attachment_point_status === 'withdrawn_by_producer') && b.collateral_ratio_basis) {
-            return 'no single ratio — declared underivable';
+            return 'no verified reserve-to-claims ratio';
         }
         var sd = (b.surplus_deficit != null)
             ? b.surplus_deficit : (data.summary && data.summary.surplus_deficit);
@@ -6924,6 +6925,28 @@ const CommonRenderer = {
         // the page said why. Published by 11 feeds, rendered by none.
         var sdBasis = this._surplusBasis(data);
         var backingHead = document.getElementById('axis-backing-head');
+        if (backingHead && bAuth.assessment_summary) {
+            var assessment = document.createElement('div');
+            assessment.className = 'backing-assessment text-sm space-y-2 mt-3';
+            assessment.innerHTML = '<div class="font-semibold">' + this._escapeAttr(bAuth.assessment_summary) + '</div>' +
+                [['Protection', bAuth.assessment_strength], ['Limit', bAuth.assessment_limit],
+                 ['Next evidence', bAuth.assessment_next]].filter(function(row) { return row[1]; })
+                .map(function(row) { return '<div><span class="font-medium">' + CommonRenderer._escapeAttr(row[0]) +
+                    ':</span> ' + CommonRenderer._escapeAttr(row[1]) + '</div>'; }).join('');
+            backingHead.appendChild(assessment);
+        }
+        if (backingHead && Array.isArray(bAuth.loss_protection_layers)) {
+            var layers = document.createElement('div');
+            layers.className = 'loss-protection-layers mt-3 text-sm space-y-2';
+            layers.innerHTML = bAuth.loss_protection_layers.map(function(layer) {
+                return '<div><span class="font-medium">' + CommonRenderer._escapeAttr(layer.name) + '</span>: ' +
+                    CommonRenderer.formatCurrency(layer.value_usd) +
+                    (typeof layer.relative_to_senior_pct === 'number' ? ' · ' + layer.relative_to_senior_pct.toFixed(2) + '% of issuer reUSD TVL' : '') +
+                    ' <span class="text-xs text-slate-500">' + CommonRenderer._escapeAttr(layer.as_of || '') + '</span>' +
+                    '<div class="text-xs text-slate-600">' + CommonRenderer._escapeAttr(layer.basis || '') + '</div></div>';
+            }).join('') + '<div class="text-xs text-slate-500">Layers shown separately; no combined verified cushion is calculated.</div>';
+            backingHead.appendChild(layers);
+        }
         if ((basisText || sdBasis) && backingHead) {
             // ⚠️ textContent RENDERED PRODUCER MARKDOWN AS PUNCTUATION. These two
             // notes are the only reader-facing basis strings that went to the DOM as
@@ -6942,7 +6965,8 @@ const CommonRenderer = {
             if (basisText) {
                 var bNote = document.createElement('div');
                 bNote.className = 'axis-basis-note';
-                bNote.innerHTML = 'Basis: ' + this._mdInlineHtml(String(basisText));
+                bNote.innerHTML = '<details><summary>Coverage basis — claims versus reserves</summary>' +
+                    this._mdInlineHtml(String(basisText)) + '</details>';
                 backingHead.appendChild(bNote);
             }
             if (sdBasis) {
@@ -7104,8 +7128,8 @@ const CommonRenderer = {
                 liq.liquidity_score_depth_caveat.trim()
                 ? liq.liquidity_score_depth_caveat.trim() : null;
             if (depthCaveat) {
-                parts += '<div class="text-xs text-amber-700 mb-1">' +
-                    self._mdInlineHtml(depthCaveat) + '</div>';
+                parts += '<details class="text-xs text-amber-700 mb-1"><summary>Venue depth and primary-exit limits</summary>' +
+                    self._mdInlineHtml(depthCaveat) + '</details>';
             }
             var perChain = self._perChainScoreText(liq.liquidity_score_per_chain);
             if (perChain) {
@@ -10148,14 +10172,14 @@ const CommonRenderer = {
                 '</div>';
         }
         if (e.unread && e.unread.length) {
-            out += '<div class="sc-unread" title="' + this._escapeAttr(
+            out += '<details class="sc-unread"><summary>Additional overlay notes (' + e.unread.length + ')</summary><div title="' + this._escapeAttr(
                     'The axis-basis overlay carries ' + e.unread.length + ' prose field' +
                     (e.unread.length === 1 ? '' : 's') + ' this renderer has not adopted, so ' +
                     (e.unread.length === 1 ? 'it is' : 'they are') + ' NOT on the page. The name ' +
                     'is shown and the content is not: an unadopted field may be reader copy or may ' +
                     'be an internal note, and no renderer-side rule separates them.') +
                 '">\u26a0\ufe0f unread note' + (e.unread.length === 1 ? '' : 's') + ': ' +
-                e.unread.map(function(k) { return self._escapeAttr(k); }).join(', ') + '</div>';
+                e.unread.map(function(k) { return self._escapeAttr(k); }).join(', ') + '</div></details>';
         }
         return out;
     },

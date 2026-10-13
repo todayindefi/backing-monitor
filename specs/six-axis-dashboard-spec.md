@@ -915,6 +915,16 @@ The default-visible hierarchy is:
 4. **Disclosure:** sources, methodology, provenance, qualifications and longer explanations.
 5. **Report:** extended argument, narrative history and full risk analysis.
 
+The dashboard must explain itself through compact facts and small explanatory blocks. If a reader
+must read several paragraphs to understand an axis, redesign that section's default presentation.
+
+**Section reading budget:** assess the whole section as well as each paragraph. Repeated warnings,
+disclaimers and short notes must not accumulate into an article-length default view. Keep one
+concise statement of the material constraint, followed by compact evidence. Extended explanations
+belong in the canonical report, with a section-specific link when a published destination exists;
+otherwise retain necessary evidence in a labelled disclosure and declare report availability.
+Dated changes belong in a collapsed revision history, not the current assessment.
+
 **Default-visible prose target:** no individual prose block over roughly 240 characters. This is a
 review trigger, not permission to cut a producer's text at 240 characters. When a block exceeds it,
 either replace its face with a producer-backed structured headline/field or collapse the complete
