@@ -167,7 +167,7 @@ var MSTRRenderer = {
         html += MSTR_FRAMEWORK_CARD(data.digital_credit_framework);
         html += MSTRRenderer._renderPerShareNavTrajectory(tradfi, mv);
         html += MSTRRenderer._renderDilutionMaturityWall(mv);
-        html += '<div id="mstr-event-log-panel" class="panel"><div class="panel-title">Strategy Event Log <span class="text-xs font-normal text-slate-500">— EDGAR 8-K monitor</span></div><div class="text-xs text-slate-500 loading-pulse">Loading EDGAR feed…</div></div>';
+        html += '<div id="mstr-event-log-panel" class="panel"><div class="panel-title">Strategy Event Log <span class="text-xs font-normal text-slate-500">— issuer + EDGAR monitor</span></div><div class="text-xs text-slate-500 loading-pulse">Loading Strategy disclosures…</div></div>';
         html += MSTRRenderer._renderFreshness(data);
 
         container.innerHTML = html;

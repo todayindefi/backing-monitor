@@ -656,7 +656,7 @@ var STRCRenderer = {
         html += STRCRenderer._renderStrcxHandoffCard(wrapper);
         html += STRCRenderer._renderDownstreamExposure(downstream);
         html += STRCRenderer._renderDependencyStrategyFunding(tradfi, data.digital_credit_framework);
-        html += '<div id="strc-event-log-panel" class="panel"><div class="panel-title">Strategy Event Log <span class="text-xs font-normal text-slate-500">— EDGAR 8-K monitor</span></div><div class="text-xs text-slate-500 loading-pulse">Loading EDGAR feed…</div></div>';
+        html += '<div id="strc-event-log-panel" class="panel"><div class="panel-title">Strategy Event Log <span class="text-xs font-normal text-slate-500">— issuer + EDGAR monitor</span></div><div class="text-xs text-slate-500 loading-pulse">Loading Strategy disclosures…</div></div>';
         html += STRCRenderer._renderFreshness(data);
 
         container.innerHTML = html;
@@ -1703,8 +1703,8 @@ var STRCRenderer = {
 
     _renderStrategyEventLogHtml: function (events) {
         if (!events || !Array.isArray(events.events)) {
-            return '<div class="panel-title">Strategy Event Log <span class="text-xs font-normal text-slate-500">— EDGAR 8-K monitor</span></div>' +
-                '<div class="risk-flag risk-warning">EDGAR event monitor data not available in this snapshot.</div>';
+            return '<div class="panel-title">Strategy Event Log <span class="text-xs font-normal text-slate-500">— issuer + EDGAR monitor</span></div>' +
+                '<div class="risk-flag risk-warning">Strategy disclosure monitor data not available in this snapshot.</div>';
         }
 
         // Type-count badges across the top.
@@ -1751,7 +1751,7 @@ var STRCRenderer = {
                 '<span>EDGAR last polled ' + (lastPoll ? CommonRenderer.formatDate(lastPoll) : '—') + ' · ' + failures + ' consecutive failures</span>' +
             '</div>';
 
-        return '<div class="panel-title">Strategy Event Log <span class="text-xs font-normal text-slate-500">— EDGAR 8-K monitor</span></div>' +
+        return '<div class="panel-title">Strategy Event Log <span class="text-xs font-normal text-slate-500">— issuer + EDGAR monitor</span></div>' +
             '<div class="flex flex-wrap gap-2 mb-3">' + badges + '</div>' +
             '<div class="flex flex-wrap gap-1.5 mb-3">' + chips + '</div>' +
             '<div id="strc-event-timeline" class="space-y-2">' + rows + '</div>' +
@@ -1791,8 +1791,9 @@ var STRCRenderer = {
         }
         var title = e.title || '(untitled filing)';
         var titleTxt = title.length > 110 ? title.slice(0, 110) + '…' : title;
+        var sourceLabel = e.source_kind === 'issuer_release' ? 'issuer release' : 'filing';
         var linkHtml = e.filing_url ?
-            '<a href="' + e.filing_url + '" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline text-xs">filing ↗</a>' : '';
+            '<a href="' + e.filing_url + '" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline text-xs">' + sourceLabel + ' ↗</a>' : '';
 
         return '<div class="strc-event-row rounded border border-slate-200 dark:border-slate-700 p-3" data-type="' + type + '">' +
             '<div class="flex items-start justify-between gap-3">' +
