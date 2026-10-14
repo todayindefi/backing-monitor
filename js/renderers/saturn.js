@@ -184,8 +184,12 @@ var SaturnRenderer = {
                         ' of reserve tokens held; totalAssets() reports ' + CommonRenderer.formatCurrency(s.contract_total_assets_usd) +
                         '. Holdings are present; accounting and redemption compatibility need clarification.';
                 } else if (/^USDat implementation drifted from published:/.test(flag.message || '')) {
-                    updated.message = 'Ongoing implementation mismatch: deployed ' + s.implementation +
-                        ' differs from the monitored published baseline. Source and audit coverage need confirmation.';
+                    if (String(s.implementation).toLowerCase() === '0x496a4a33b6181f4536203488d9a05ac1429e702c') {
+                        updated.severity = 'warning';
+                        updated.message = 'Implementation baseline outdated: the deployed address matches Saturn’s official repository. Deployed-bytecode correspondence and audit coverage remain to be verified.';
+                    } else {
+                        updated.message = 'Implementation differs from the monitored baseline: ' + s.implementation + '. Source and audit coverage need confirmation.';
+                    }
                 }
                 return updated;
             });
