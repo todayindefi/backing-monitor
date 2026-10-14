@@ -2630,6 +2630,10 @@ const CommonRenderer = {
         // first non-stablecoin case of a working one.
         var self = this;
         container.innerHTML = data.risk_flags.map(function(f) {
+            if (f.code === 'RISK_FEED_STALE') {
+                return '<details class="text-xs text-slate-500 mt-2"><summary>Assessment freshness: last-known score</summary>' +
+                    self._escapeAttr(String(f.message || '')) + '</details>';
+            }
             // ⚠️ ESCAPED. Producer prose went into innerHTML raw. Counted before
             // changing it: 87 flags across the fleet and NOT ONE contains markup, so
             // nothing is being formatted deliberately and this changes no rendered

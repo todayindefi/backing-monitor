@@ -176,6 +176,24 @@ var SaturnRenderer = {
         if (!SaturnRenderer._isSaturn(specific.type)) return;
         var s = data.summary || {};
         data.summary = s;
+        if (specific.type === 'usdat') {
+            data.risk_flags = (data.risk_flags || []).map(function(flag) {
+                var updated = Object.assign({}, flag);
+                if (/^USDat accounting divergence:/.test(flag.message || '')) {
+                    updated.message = 'Ongoing accounting mismatch: ' + CommonRenderer.formatCurrency(s.backing_total_usd) +
+                        ' of reserve tokens held; totalAssets() reports ' + CommonRenderer.formatCurrency(s.contract_total_assets_usd) +
+                        '. Holdings are present; accounting and redemption compatibility need clarification.';
+                } else if (/^USDat implementation drifted from published:/.test(flag.message || '')) {
+                    updated.message = 'Ongoing implementation mismatch: deployed ' + s.implementation +
+                        ' differs from the monitored published baseline. Source and audit coverage need confirmation.';
+                }
+                return updated;
+            });
+            if (data.backing && typeof data.backing.collateral_ratio_basis === 'string') {
+                data.backing.collateral_ratio_basis = data.backing.collateral_ratio_basis.replace(
+                    /reports ~\$38/, 'reports ' + CommonRenderer.formatCurrency(s.contract_total_assets_usd));
+            }
+        }
 
         // Layer 1 (PegTracker) emits Saturn JSONs with `as_of` rather than the
         // legacy `timestamp` field, and omits `asset` / `chain` (single-chain
@@ -945,17 +963,13 @@ var SaturnRenderer = {
             // Quiet green state — one-line confirmation, low visual weight.
             return '<div class="panel">' +
                 '<div class="panel-title">Drift Probe <span class="text-xs font-normal text-slate-500">— composition watchdog</span></div>' +
-                '<div class="risk-flag" style="background:#dcfce7;color:#166534;border-left:4px solid #22c55e;">' +
-                    '<strong>✓ Treasury allowlist clean.</strong> ' +
-                    'Allowlist: <span class="font-mono">' + allowlist.join(', ') + '</span>. ' +
-                    'Any non-allowlist ERC20 (STRC, SATA, etc.) appearing in treasury would fire a tier-1 backing-composition-drift alert.' +
+                '<div class="text-sm text-slate-600">' +
+                    '<strong>No additional material token drift flagged.</strong> ' +
+                    'This scanner result does not verify the contract asset allowlist or underlying reserve coverage.' +
                 '</div>' +
-                '<div class="text-xs text-slate-500 italic leading-relaxed mt-3">' +
-                    'Saturn docs disclose a planned future rotation toward STRC (Strategy digital credit). ' +
-                    'Until that activates, any non-allowlist token in the USDat treasury is a tier-1 ' +
-                    'backing-composition-drift signal — both intentional rotation and unauthorized minting ' +
-                    'would surface here.' +
-                '</div>' +
+                '<details class="text-xs text-slate-500 mt-3"><summary>Scanner scope</summary>' +
+                    'Monitored baseline: ' + allowlist.join(', ') + '. Known reserve assets and sub-threshold dust are handled separately; a clear scanner result is not contract allowlist approval.' +
+                '</details>' +
                 dustNote +
             '</div>';
         }
