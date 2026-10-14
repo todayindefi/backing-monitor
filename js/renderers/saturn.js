@@ -305,7 +305,7 @@ var SaturnRenderer = {
             : 'reserve split and NAV trajectory');
         html += SaturnRenderer._renderSupplyScopeNote(s, data);
         if (slug === 'usdat') {
-            html += anc('panel-backing',   SaturnRenderer._renderUsdatBackingComposition(specific, s));
+            html += anc('panel-backing',   SaturnRenderer._renderUsdatBackingComposition(specific, s, data.backing));
             html += anc('panel-drift',     SaturnRenderer._renderUsdatDriftProbe(specific));
         } else {
             html += anc('panel-reserve',   SaturnRenderer._renderSusdatReserveSplit(specific, s));
@@ -611,7 +611,7 @@ var SaturnRenderer = {
     // ============================================================
     // §2u USDat Backing Composition  (USDat only — the marquee panel)
     // ============================================================
-    _renderUsdatBackingComposition: function(specific, s) {
+    _renderUsdatBackingComposition: function(specific, s, backing) {
         var comp = specific.composition || {};
         var rows = [];
 
@@ -813,6 +813,15 @@ var SaturnRenderer = {
         // Reveal-on-click verification commands — the Saturn USP made literal.
         var verifyBlock = SaturnRenderer._renderVerifyCommands();
 
+        var reserve = backing && backing.reserve_evidence;
+        var reserveHtml = reserve ? '<div class="mt-4 border-t border-slate-200 pt-3 text-sm space-y-2">' +
+            '<div class="font-semibold">Underlying PYUSD located · attribution pending</div>' +
+            '<div class="text-xs text-slate-500">Snapshot ' + CommonRenderer._escapeAttr(reserve.as_of) + ' · ' + CommonRenderer._escapeAttr(reserve.scope) + '</div>' +
+            '<div>Candidate PYUSD: ' + CommonRenderer.formatCurrency(reserve.main_candidate_pyusd) + ' / circulating PYUSDx: ' + CommonRenderer.formatCurrency(reserve.circulating_supply) +
+            ' · ' + reserve.main_candidate_coverage_pct.toFixed(3) + '%</div>' +
+            '<div>' + CommonRenderer._escapeAttr(reserve.limit) + '</div>' +
+            '<details><summary>Observed settlement and next evidence</summary><div>' + CommonRenderer._escapeAttr(reserve.settlement_note) +
+            '</div><div>' + CommonRenderer._escapeAttr(reserve.next) + '</div></details></div>' : '';
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
                 'USDat treasury holds $M and USDC at the token contract address. Every dollar is readable ' +
@@ -830,7 +839,7 @@ var SaturnRenderer = {
             '<div style="margin-bottom:1rem;"></div>' +
             donutBlock +
             verifyBlock +
-            methodology +
+            (reserve ? reserveHtml : methodology) +
         '</div>';
     },
 

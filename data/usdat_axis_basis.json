@@ -14,7 +14,7 @@
     "backing_score": 5.5,
     "backing_score_source": "riskAnalyst:authored",
     "backing_score_generated_at": "2026-09-11T00:00:00Z",
-    "backing_score_basis": "⚠️⚠️ MEASURES HOW MUCH OF THE RESERVE CAN BE INDEPENDENTLY VERIFIED — NOT WHETHER IT COVERS. THOSE DIVERGE COMPLETELY HERE, AND THE COVERAGE NUMBER IS PERFECT. PYUSDx held equals supply TO THE CENT; the feed reports collateral_ratio 100.0 with surplus_deficit −0.0 on $67,164,376.55. ⚠️ THAT IS A VERIFIABILITY COLLAPSE, NOT A SOLVENCY ONE, AND A READER SEEING 100.0 WILL CONCLUDE THE OPPOSITE OF THE FINDING. The 2026-08-19 upgrade rotated the reserve to PYUSDx, which VOIDED THE TWO THINGS THE PRIOR 6.5 WAS EXPLICITLY EARNED ON — 'every dollar matched by tokens you can verify with three on-chain calls' and 'all capital sits directly in the USDat smart contract address'. PYUSDx holds NOTHING at its own address: it is an issuer-minted M0-style earner extension whose reserves sit at a PORTAL LAYER THAT HAS NOT BEEN WALKED. So the chain of verification terminates one layer short of the assets. ⚠️ 6.5 -> 4.5 -> 5.5, BOTH MOVES ON 2026-08-23 — the intermediate 4.5 over-corrected. ⚠️ AND THIS ROW STATED THE 2026-08-11 POSITION WHILE ITS OWN FRONTMATTER HAD MOVED TWICE, i.e. it was TWO PASSES BEHIND ITSELF until 2026-09-08.",
+    "backing_score_basis": "Backing 5.5 held provisionally. Underlying PYUSD has been located in flow-linked candidate wallets and recent PYUSDx burns match subsequent PYUSD payments. Wallet ownership, reserve dedication, complete liabilities and insolvency protection remain unconfirmed.",
     "backing_score_persistence": "filtered — reserve structure and verifiability, not a spot ratio",
     "backing_score_denominator": "⚠️ collateral_ratio 100.0 IS AN IDENTITY, NOT EVIDENCE. Backing is defined as PYUSDx held, and PYUSDx held is minted against supply, so the ratio cannot print anything else. It says the two sides of one issuer's ledger agree. It says NOTHING about whether the portal-layer reserves exist. Never quote '100% collateralized' for this asset without the portal caveat attached.",
     "accounting_divergence_reading": "⚠️⚠️ CORRECTED AND NARROWED 2026-10-04, SAME DAY, AFTER backing-monitor CAUGHT ME DOING THE EXACT THING I HAD SPENT THE DAY CORRECTING IN OTHERS. My first emission of this field restated the backing figure from report prose as 80,461,171.08. ⚠️ THE LIVE FIELDS SAY 92,361,127.74 — my number was stale by ~$11.9M (14.8%), and I emitted it ONTO A PUBLICATION SURFACE WHILE FIXING A TRANSPORT PROBLEM. Hours earlier I had told backing-monitor the rule: \"a basis needing a status should CITE THE FIELD and let the consumer render the current value, never restate it in prose that must be kept in sync.\" I then restated a figure in prose. ✅ A RULE I STATE IS NOT A RULE I FOLLOW. ⚠️ ALSO REDUNDANT: `common.js:2176 _divergenceContextHtml` already existed and already reads `backing_total_usd` / `supply_usd` / `contract_total_assets_usd` LIVE. My emission duplicated a working function with a frozen copy. ✅ SO NO FIGURES ARE RESTATED HERE. Read `backing_total_usd`, `supply_usd`, `backing_ratio` and `contract_total_assets_usd` from the feed. WHAT THIS FIELD ADDS, and it is only the part no measured field carries: (1) ⚠️ `asset()` REVERTS, so this is NOT standard ERC-4626 and `totalAssets()` is bespoke — do not reason about it with ERC-4626 intuitions, and do not treat a zero `totalAssets()` as an ERC-4626 vault reporting empty. (2) ⚠️ USDAT IS 6 DECIMALS. Dividing by 1e18 reads `totalSupply` as 0.00 and turns a ~14% decline into a phantom total collapse. The author of this report did exactly that on 2026-08-29 and caught it only because the number was implausible. (3) ✅ The claim to AVOID is \"unbacked\"; the claim to KEEP is that `totalAssets()` reaching EXACTLY zero is a change of KIND — at 38.12 the accessor was merely wrong, at 0.00 anything dividing by it (a redemption path, a NAV path) DEGENERATES rather than mispricing. ⚠️ backing-monitor's banner already states both halves correctly as of 1f34c75bb; this field exists for the three traps above, not to re-say what they measure.",
@@ -22,7 +22,20 @@
     "accounting_divergence_reading_generated_at": "2026-08-29T00:00:00Z",
     "accounting_divergence_reading_emitted_at": "2026-10-04T00:00:00Z",
     "accounting_divergence_reading_figures": "NONE RESTATED — read backing_total_usd / supply_usd / backing_ratio / contract_total_assets_usd from the feed",
-    "accounting_divergence_reading_corrected_at": "2026-10-04T00:00:00Z"
+    "accounting_divergence_reading_corrected_at": "2026-10-04T00:00:00Z",
+    "reserve_evidence": {
+      "as_of": "2026-10-14T06:28:47Z",
+      "scope": "PYUSDx platform across Ethereum, Arbitrum, Base and Monad; not USDat-only reserves",
+      "circulating_supply": 99591445.416686,
+      "main_candidate_pyusd": 99496869.549865,
+      "main_candidate_address": "0xffBc24d96F9b08789b3b80562C0cE86F22D03C61",
+      "main_candidate_coverage_pct": 99.905,
+      "additional_candidate_pyusd": 200000,
+      "additional_candidate_address": "0xD87C0Def7BC8e4cBC7b31A6376B3Bb3345e961D9",
+      "settlement_note": "Six recent burns match subsequent PYUSD payments 11–29 Ethereum blocks later. Amount/time matching supports observed settlement; it does not prove access or future capacity for every holder.",
+      "limit": "Candidate wallet attribution and reserve scope are unconfirmed. The additional $200k is excluded from measured main-wallet coverage; the difference does not establish a deficit.",
+      "next": "Authenticate reserve wallets and reconcile all assets, liabilities, pending settlements and reserve-use restrictions."
+    }
   },
   "liquidity": {
     "liquidity_score": 5.5,
@@ -34,15 +47,15 @@
     "liquidity_score_basis_rechecked_at": "2026-10-04T01:46:43Z"
   },
   "dependencies": {
-    "underlying_score": 5.0,
+    "underlying_score": 5,
     "underlying_score_source": "riskAnalyst:authored",
     "underlying_score_generated_at": "2026-09-11T00:00:00Z",
-    "underlying_score_basis": "MEASURES THE COUNTERPARTY SET. ⚠️ AUTHORED 2026-09-09 — absent from this sheet until then. ⚠️⚠️ tidresearch PUBLISHES 5.5 AND THE HALF-POINT GAP IS NOT A DISAGREEMENT — IT IS TWO DIFFERENT QUESTIONS, AND THIS MUST NOT BE 'RECONCILED'. This report carries no `axis_frame: six`, so on their schema `underlying_score` is OFF-FRAME and means COLLATERAL QUALITY; ours means counterparty concentration. ✅ THEIR NUMBER IS WELL ARGUED, unlike sUSDat's unsourced 3.5: their line 75 separates Underlying ('what the collateral IS') from Backing ('the arrangement around it and how much you can check'), declines to charge the verifiability loss to both axes, and declines to credit PYUSD's quality upward because doing so would assert a pass-through through PYUSDx that nobody has verified. ⚠️ TREATING THIS AS A DIVERGENCE TO RESOLVE WOULD DESTROY A CORRECT DISTINCTION ON BOTH SURFACES.",
+    "underlying_score_basis": "Dependencies 5.0: USDat passes through PYUSDx, its issuance/settlement operator, PYUSD and Paxos reserves. Underlying PYUSD has now been located; wallet ownership, reserve dedication and legal recovery remain unconfirmed. Shared Saturn governance remains a dependency.",
     "underlying_score_persistence": "filtered — counterparty structure, not a daily balance",
     "underlying_score_routing": "⚠️ Merges after 49d0b4ca2 but axis 4 renders no score today — source-of-record."
   },
   "issuer": {
-    "issuer_score": 5.0,
+    "issuer_score": 5,
     "issuer_score_source": "riskAnalyst:authored",
     "issuer_score_generated_at": "2026-09-11T00:00:00Z",
     "issuer_score_basis": "MEASURES THE ENTITY. Held equal across the Saturn/Strata family, which shares an issuer and a terminal. ⚠️ NOT RE-DERIVED HERE — a second derivation of one entity judgement creates two surfaces that drift.",
@@ -50,5 +63,6 @@
     "issuer_score_routing": "⚠️ UNROUTED — backing-monitor holding axis-6 registration."
   },
   "contract_note": "⚠️ NO `contract` BLOCK, AND A DEFECT TO KNOW ABOUT: usdat's Scoring Rationale table carries TWO axis-5 rows — 'Contract & Admin' (2026-09-09, from security_analyst's walk) and 'Contract' (2026-09-10, from a re-measured SaturnTimelock getMinDelay of 432,000s = 5 days). Both score 4.0. The newer row originally opened by claiming to be the FIRST axis-5 rationale this asset had, which was false when written — the older row was directly above it. Corrected and declared 2026-09-11 (97707f2); neither deleted, because each carries evidence the other does not.",
-  "routing_note": "⚠️ ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as `peg_mechanism_score` — this is a stablecoin), backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted."
+  "routing_note": "⚠️ ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as `peg_mechanism_score` — this is a stablecoin), backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted.",
+  "revised_at": "2026-10-14"
 }
