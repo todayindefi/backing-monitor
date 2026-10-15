@@ -2,7 +2,7 @@
  "schema_version": "axis-basis/1",
  "producer": "riskanalyst",
  "asset": "hastra-prime",
- "as_of": "2026-09-11T00:00:00Z",
+ "as_of": "2026-10-15T00:00:00Z",
  "peg": {
   "volatility_score": 6.0,
   "volatility_score_source": "riskAnalyst:authored",
@@ -11,10 +11,10 @@
   "volatility_score_persistence": "filtered \u2014 accrual mechanism and credit exposure, not spot price"
  },
  "backing": {
-  "backing_score": 5.0,
+  "backing_score": 4.5,
   "backing_score_source": "riskAnalyst:authored",
-  "backing_score_generated_at": "2026-09-11T00:00:00Z",
-  "backing_score_basis": "MEASURES WHERE THE CERTIFICATES BACKING STAKED PRIME ARE ACTUALLY HELD \u2014 a different question from the certificate ISSUER'S balance sheet, and the two diverge BY THE ENTIRE DEMOCRATIZED PRIME LAYER. \u26a0\ufe0f AUTHORED 2026-09-08; this asset had NEVER carried a Backing axis on either surface. \u26a0\ufe0f THE STANDING REASON FOR THAT ABSENCE \u2014 'vault-share has no Backing axis' \u2014 IS NOT A SCHEMA FACT: 12 of 66 internal vault-shares carry `backing_score`, 9 carrying both fields, and 11 published vault-share/wrapped reports carry both. \u26a0\ufe0f AND THE PUBLISHED REPORT MAKES THIS EXACT DISTINCTION AND THEN SCORES UNDERLYING ON THE LAYER IT HAS JUST CALLED THE WRONG ONE \u2014 its own words: 'They describe the certificate issuer's own balance sheet. They do not describe where the certificates backing staked PRIME are held.' WHAT IS ACTUALLY BEHIND THE CLAIM (hastra_prime_backing.json 2026-09-08 11:51Z, breakdown summing EXACTLY to total_backing with NO residual): HEYLDS receipt claim on the Home Equity pool $592,808,642 = 97.59%, AUTOYLDS $8,529,592 = 1.40%, bare vault $5,407,289. \u26a0\ufe0f SO 97.59% IS A RECEIPT CLAIM ON A POOL, NOT DIRECT TITLE TO COLLATERAL.",
+  "backing_score_generated_at": "2026-10-15T00:00:00Z",
+  "backing_score_basis": "2026-10-15: 5.0 -> 4.5. Figure public API independently retrieved: $403,802,790.94 debt / $424,377,735.26 pledged collateral, 4.8483% cushion, below 5% implied by 95% advance rate. Separate 98% margin-call threshold not reached. This meets the September review trigger; does not establish contractual default or realized loss. Monitoring reconstruction: $681.950M backing / 680.683M wYLDS, 18.61bp wrapper surplus; HEYLDS 85.928%, AUTOYLDS 13.289%. Same-operator pool diversification does not remove Figure concentration. Scope and historical evidence: assets/hastra-prime.md October 15 refresh.",
   "backing_score_persistence": "filtered \u2014 claim structure and layer topology, not a spot ratio"
  },
  "liquidity": {
@@ -48,5 +48,6 @@
   "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration."
  },
  "redemption_note": "\u26a0\ufe0f A SEPARATE `redemption_score` EXISTS AT 6.0, RAISED 5.5 -> 6.0 on 2026-07-31, AND THE RAISE IS A RETRACTION WORTH KNOWING: the 5.5 rested explicitly on 'the liquid buffer is ~nil\u2026 nothing to draw in a run', AND THAT PREMISE IS FALSE. The redeem vault holds 493,169,948 HEYLDS = 92.8% of the DP pool's receipt supply; live coverage is 5.03x (1,880,859 YLDS against a 374,025 wYLDS queue across 6 requests) with ~$160M of pro-rata claim on pool idle liquidity behind it (536.8M supplied / 174.2M idle / 67.56% utilization). The DEX alternative also doubled and is measured on BOTH chains at ~$12.25M. \u26a0\ufe0f NOTED HERE BECAUSE THE LIQUIDITY BASIS ABOVE CITES 'the only route that does not pass through the redeem pipeline' \u2014 that framing predates this correction and must not be read as implying the pipeline is empty.",
- "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as `volatility_score`) and backing route and render. \u26a0\ufe0f LIQUIDITY ROUTES BUT IS REJECTED \u2014 see liquidity_score_render_status; the missing declaration is the producer's to supply and I have not manufactured it. dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` BLOCK \u2014 hastra-prime's contract overlay already carries a rendering basis at 5.0."
+ "routing_note": "\u26a0\ufe0f ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as `volatility_score`) and backing route and render. \u26a0\ufe0f LIQUIDITY ROUTES BUT IS REJECTED \u2014 see liquidity_score_render_status; the missing declaration is the producer's to supply and I have not manufactured it. dependencies merges but renders no score; issuer unrouted. \u26a0\ufe0f NO `contract` BLOCK \u2014 hastra-prime's contract overlay already carries a rendering basis at 5.0.",
+ "refresh_scope": "2026-10-15 backing remeasured; other axis timestamps retained. No new executable DEX ladder or recursive admin walk."
 }
