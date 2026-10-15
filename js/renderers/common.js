@@ -2282,6 +2282,7 @@ const CommonRenderer = {
     // (contract_total_assets_usd, backing_total_usd, supply_usd), not by parsing
     // the message. Generic: any asset emitting these fields gets it.
     _divergenceContextHtml(data) {
+        if (data.accounting_review && data.accounting_review.semantics === 'primary_pyusdx_separate_from_alternative_assets') return '';
         var s = data.summary || {};
         var contractTA = s.contract_total_assets_usd;
         var backing = s.backing_total_usd;

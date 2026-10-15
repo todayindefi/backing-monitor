@@ -171,12 +171,49 @@ var SaturnRenderer = {
     // (total_supply / total_backing / collateral_ratio / backing_breakdown).
     // We synthesize the minimum so common.js doesn't crash, then suppress
     // its panels in render() and paint the rich custom panels below.
+    _applyUsdatAccountingReview: function(data) {
+        var specific = data.asset_specific || {}, s = data.summary || {};
+        var implementation = '0x496a4a33b6181f4536203488d9a05ac1429e702c';
+        if (specific.type !== 'usdat' || String(data.chain || '').toLowerCase() !== 'ethereum' ||
+            String(s.implementation || '').toLowerCase() !== implementation ||
+            String((specific.trust_stack || {}).implementation || '').toLowerCase() !== implementation) return;
+        // October 14 TIDR technical reassessment: runtime matches Sourcify and
+        // the main USDat source matches Adevar's audit-final commit 26507265.
+        // Version-scoped consumer correction pending producer/overlay repair.
+        data.accounting_review = {
+            implementation: implementation,
+            semantics: 'primary_pyusdx_separate_from_alternative_assets',
+            as_of: '2026-10-14',
+            source: 'https://tidresearch.com/evidence/saturn/usdat-reassessment-2026-10-14.json'
+        };
+        data.risk_flags = (data.risk_flags || []).filter(function(flag) {
+            return !/^USDat accounting divergence:/.test(flag.message || '') &&
+                   !/^USDat implementation drifted from published:/.test(flag.message || '');
+        });
+        if (data.backing) {
+            data.backing.collateral_ratio_basis = 'Ethereum reserve-token holdings / supply, with PYUSDx marked at par. This verifies token-unit coverage, not MoonPay custody or ultimate dollar reserves. totalAssets() counts alternative assets only; primary PYUSDx is accounted separately, so zero is valid for an all-PYUSDx reserve.';
+            data.backing.accounting_divergence_reading = 'October 14 technical reassessment supersedes the legacy accounting diagnosis: totalAssets() excludes primary PYUSDx and isAllowedAsset(PYUSDx)=false is expected. Neither establishes missing reserves or a failed redemption denominator. Primary settlement eligibility and upstream reserves remain separately qualified.';
+            data.backing.accounting_divergence_reading_source = 'tidresearch:technical-reassessment-2026-10-14';
+        }
+    },
+
+    _usdatAccountingReviewHtml: function(data) {
+        if (!data.accounting_review) return '';
+        return '<div class="panel"><div class="panel-title">Reserve accounting scope</div>' +
+            '<p class="text-sm text-slate-600">totalAssets() measures alternative assets, excluding primary PYUSDx. Zero is expected for an all-PYUSDx reserve; it is not evidence of an accounting defect or missing backing.</p>' +
+            '<details class="text-xs text-slate-500 mt-2"><summary>Implementation verification and remaining limits</summary>' +
+            'October 14 reassessment matched the deployed runtime to verified source and the main USDat source to the audit-final version. Full dependency audit parity, upstream custody and eligible-holder redemption remain incompletely verified. ' +
+            '<a class="text-blue-600" target="_blank" rel="noopener noreferrer" href="' +
+            CommonRenderer._escapeAttr(data.accounting_review.source) + '">Technical evidence ↗</a></details></div>';
+    },
+
     preRender: function(data, history) {
         var specific = data.asset_specific || {};
         if (!SaturnRenderer._isSaturn(specific.type)) return;
         var s = data.summary || {};
         data.summary = s;
-        if (specific.type === 'usdat') {
+        this._applyUsdatAccountingReview(data);
+        if (specific.type === 'usdat' && !data.accounting_review) {
             data.risk_flags = (data.risk_flags || []).map(function(flag) {
                 var updated = Object.assign({}, flag);
                 if (/^USDat accounting divergence:/.test(flag.message || '')) {
@@ -306,6 +343,7 @@ var SaturnRenderer = {
         html += SaturnRenderer._renderSupplyScopeNote(s, data);
         if (slug === 'usdat') {
             html += anc('panel-backing',   SaturnRenderer._renderUsdatBackingComposition(specific, s, data.backing));
+            html += SaturnRenderer._usdatAccountingReviewHtml(data);
             html += anc('panel-drift',     SaturnRenderer._renderUsdatDriftProbe(specific));
         } else {
             html += anc('panel-reserve',   SaturnRenderer._renderSusdatReserveSplit(specific, s));
