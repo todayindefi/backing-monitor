@@ -1,11 +1,44 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
+  "schema_transition": {
+    "from": 1,
+    "to": 2,
+    "effective": "2026-10-15",
+    "reason": "Schema 1 compared all reserve holdings with totalAssets(), which counts alternative assets only under implementation 0x496a4A33\u2026702c (live since 2026-08-19), and so reported a 1:1 PYUSDx reserve as 100% unaccounted.",
+    "retired": {
+      "summary.accounting_divergence_usd": "Removed. Replaced by summary.backing_shortfall_usd.",
+      "summary.accounting_divergence_pct_of_supply": "Removed. Shortfall flags state their own % of supply.",
+      "summary.contract_total_assets_usd": "Renamed summary.alternative_assets_accounted_usd (same totalAssets() read).",
+      "backing.breakdown[].tags 'not_contract_allowlisted'": "Removed. Tags now carry the asset's role: 'primary_asset' or 'alternative_asset'. isAllowedAsset() remains in detail.allowed_by_contract with its meaning.",
+      "trust_stack.implementation_published": "Kept, now the reviewed baseline; see trust_stack.implementation_status / _history.",
+      "risk_flags 'USDat accounting divergence: \u2026'": "Retired. Replaced by 'USDat primary backing shortfall', 'USDat alternative backing shortfall', 'USDat alternative backing unidentified' and 'USDat accounting reads incomplete'.",
+      "risk_flags 'USDat implementation drifted from published: \u2026'": "Retired. Replaced by 'USDat implementation drifted from reviewed baseline' and 'USDat implementation runtime changed at reviewed address'."
+    },
+    "added": [
+      "accounting",
+      "coverage_qualifications",
+      "summary.accounting_status",
+      "summary.accounting_model",
+      "summary.implementation_status",
+      "summary.alternative_assets_accounted_usd",
+      "summary.alternative_assets_unidentified_usd",
+      "summary.primary_backing_required_usd",
+      "summary.primary_backing_held_usd",
+      "summary.primary_backing_shortfall_usd",
+      "summary.primary_backing_coverage_ratio",
+      "summary.backing_shortfall_usd",
+      "summary.backing_assets_unread",
+      "asset_specific.composition.*.role",
+      "asset_specific.composition.*.contract_asset_cap"
+    ],
+    "history": "usdat_backing_history.json no longer exports accounting_divergence_usd; raw rows in backing_history.json keep it. New shortfall columns are null before 2026-10-15 (not computed, not zero)."
+  },
   "asset": "USDat",
   "asset_slug": "usdat",
   "chain": "ethereum",
-  "timestamp": "2026-10-15T02:45:45Z",
-  "as_of": "2026-10-15T02:45:45Z",
-  "block_number": 26195008,
+  "timestamp": "2026-10-15T03:45:58Z",
+  "as_of": "2026-10-15T03:45:58Z",
+  "block_number": 26195302,
   "summary": {
     "supply_usd": 94198067.89,
     "backing_total_usd": 94198067.89,
@@ -16,12 +49,20 @@
     "supply_scope_note": "Supply and backing are both read on Ethereum. The rated ratio is an Ethereum statement. Global supply and the chains it spans are in asset_specific.multi_chain; the BSC leg exposes no backing accessor, so its backing is UNREAD, not absent.",
     "global_supply_usd": null,
     "global_supply_note": "Ethereum bridges by LockRelease and BSC by BurnMint, so Ethereum's totalSupply already contains the bridged portion and summing chains would double-count. See asset_specific.multi_chain for the locked balance and the per-chain figures that ARE measured.",
-    "contract_total_assets_usd": 0.0,
-    "accounting_divergence_usd": 94198067.89,
-    "accounting_divergence_pct_of_supply": 100.0,
+    "accounting_status": "assessed",
+    "accounting_model": "multimint_pyusdx_primary_v1",
+    "implementation_status": "reviewed",
+    "alternative_assets_accounted_usd": 0.0,
+    "alternative_assets_unidentified_usd": 0.0,
+    "primary_backing_required_usd": 94198067.885314,
+    "primary_backing_held_usd": 94198067.885314,
+    "primary_backing_shortfall_usd": 0.0,
+    "primary_backing_coverage_ratio": 1.0,
+    "backing_shortfall_usd": 0.0,
     "backing_assets_unpriceable": [],
-    "peg_curve_usdc": 0.999424,
-    "peg_deviation_pct": -0.0576,
+    "backing_assets_unread": [],
+    "peg_curve_usdc": 0.999374,
+    "peg_deviation_pct": -0.0626,
     "paused": false,
     "implementation": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
     "admin_role_holder": "0xfD5782E3BFF366601da3973aE30C583dE4F08A67",
@@ -29,16 +70,16 @@
     "admin_eoa_nonce": 39,
     "liquidity_depth_derived": {
       "score": 5.5,
-      "as_of": "2026-10-15T02:45:45Z",
+      "as_of": "2026-10-15T03:45:58Z",
       "components": {
         "depth_tier": 6.0,
-        "effective_max_under_25bps_usd": 223036,
+        "effective_max_under_25bps_usd": 223037,
         "peg_band_30d_bps": 9.38,
         "peg_band_30d_partial": false,
         "peg_adj": 0.5,
         "deep_venues_count": 1,
         "venue_adj": -1.0,
-        "turnover_ratio_24h": 0.2862,
+        "turnover_ratio_24h": 0.2919,
         "turnover_adj": 0.5,
         "pool_supply_ratio": 0.0474,
         "pool_adj": -0.5
@@ -48,17 +89,9 @@
   },
   "risk_flags": [
     {
-      "severity": "critical",
-      "message": "USDat accounting divergence: holds $94,198,067.89 but totalAssets() reports $0.00 (100.000000% of supply unaccounted by the contract)"
-    },
-    {
-      "severity": "critical",
-      "message": "USDat implementation drifted from published: now 0x496a4A33b6181F4536203488d9a05AC1429E702c"
-    },
-    {
       "code": "RISK_FEED_STALE",
       "severity": "warning",
-      "age_hours": 73.01,
+      "age_hours": 74.02,
       "message": "USDat issuer_score is from a STALE risk-feed \u2014 generated 2026-10-12T01:45:02Z (3+ days old, threshold 48h). Value shown is last known good, not confirmed current.",
       "risk_feed_key": [
         "usdat",
@@ -66,6 +99,88 @@
       ],
       "risk_feed_slug": "usdat",
       "risk_feed_status": "stale"
+    }
+  ],
+  "accounting": {
+    "implementation": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
+    "implementation_status": "reviewed",
+    "implementation_runtime_keccak256": "0x3714895307e431cc890645e430d74d07c4d5ac7d101ae763e5d16f2844f9aadc",
+    "implementation_runtime_matches_review": true,
+    "accounting_model": "multimint_pyusdx_primary_v1",
+    "status": "assessed",
+    "status_detail": null,
+    "unit": "USDat token units (6dp); par is not verified",
+    "semantics": {
+      "totalAssets()": "USDat units minted against ALTERNATIVE assets only. Primary PYUSDx is excluded by design, so 0 is the normal value for an all-PYUSDx reserve.",
+      "primary_backing_required": "totalSupply() - totalAssets(), floored at 0: the contract's _pyusdxBacking(), the PYUSDx it must hold. Unwraps beyond it revert.",
+      "isAllowedAsset(asset)": "assetCap(asset) != 0: whether an ALTERNATIVE asset may be wrapped. False for PYUSDx is expected; the primary asset has no cap.",
+      "assetBalanceOf(asset)": "Units of that alternative asset the contract records as backing.",
+      "yield()": "PYUSDx above primary_backing_required plus PYUSDx-level accrued yield; claimable by the yield recipient, not backing."
+    },
+    "evidence": [
+      "https://tidresearch.com/evidence/saturn/usdat-reassessment-2026-10-14.json",
+      "https://github.com/saturn-organization/saturn-dollar",
+      "riskAnalyst data/research/usdat-technical-2026-10-14/MultiMint.sol"
+    ],
+    "reviewed_at": "2026-10-15",
+    "primary": {
+      "asset": "0xeBDB0942cE16386Ab90718C7BD10C91CDb66b14d",
+      "symbol": "PYUSDx",
+      "held_units": 94198067.885314,
+      "required_units": 94198067.885314,
+      "required_basis": "totalSupply() - totalAssets(), floored at 0 (_pyusdxBacking)",
+      "excess_units": 0.0,
+      "shortfall_units": 0.0,
+      "coverage_ratio": 1.0,
+      "pending_yield_units": 54958.12321,
+      "pending_yield_note": "yield(): PYUSDx above required plus PYUSDx-level accrued yield, claimable by the yield recipient; not backing.",
+      "alternative_cap_raw": 0
+    },
+    "alternatives": {
+      "accounted_units": 0.0,
+      "accounted_basis": "totalAssets(): USDat minted against alternative assets",
+      "identified_units": 0.0,
+      "unidentified_units": 0.0,
+      "checked_assets": [
+        "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+        "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+      ],
+      "enumeration_note": "Alternatives are not enumerable on-chain; checked the contract-declared assets plus M and USDC.",
+      "assets": [
+        {
+          "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "symbol": "USDC",
+          "cap_units": 10000000.0,
+          "allowed_by_contract": true,
+          "recorded_units": 0.0,
+          "held_units": 0.0,
+          "shortfall_units": 0.0,
+          "excess_units": 0.0
+        }
+      ]
+    },
+    "shortfall_units": 0.0
+  },
+  "coverage_qualifications": [
+    {
+      "topic": "par_mark",
+      "statement": "Coverage is token units with every asset marked at par. It is not a verified dollar figure."
+    },
+    {
+      "topic": "upstream_reserves_custody",
+      "statement": "PYUSDx's reserves and custody sit upstream of USDat at the M^0/PYUSD layer, which this analyzer does not walk."
+    },
+    {
+      "topic": "primary_exit_eligibility",
+      "statement": "Wrap and unwrap go through the SwapFacility and, while isWhitelistEnabled() is true, require a whitelisted account. Unwrapping to PYUSDx is not a redemption route for every holder."
+    },
+    {
+      "topic": "bridge_reconciliation",
+      "statement": "Ethereum supply includes USDat locked in the CCIP pool for other chains. Remote supply has not been reconciled against the locked balance at a common time, so global coverage is unresolved."
+    },
+    {
+      "topic": "dependency_audit_parity",
+      "statement": "The USDat main file matches the audit-final commit. Audit parity for every dependency is not established."
     }
   ],
   "asset_specific": {
@@ -78,30 +193,30 @@
         "backing_readable_on_chain": true
       },
       "bsc": {
-        "supply": 197633.625937,
+        "supply": 192641.600559,
         "implementation": "0x65458213bb2398f968ca1760b806956966b9adac",
         "address": "0x0bB150dFA86ea5D7742f07feFcd8e8EdA81d64EF",
         "bridge": "ccip_burn_mint",
         "backing_readable_on_chain": false,
         "implementation_matches_baseline": true
       },
-      "ethereum_locked_in_bridge_pool": 54649969.46,
-      "ethereum_locked_pct_of_supply": 58.016,
+      "ethereum_locked_in_bridge_pool": 54651978.76,
+      "ethereum_locked_pct_of_supply": 58.0182,
       "global_supply": null,
       "holder_concentration": {
         "top_holders": [
           {
             "address": "0xa0de671eb84de9dee1d311d996d25c41f63a0d86",
-            "balance": 54649969.46,
-            "pct_of_supply": 58.016,
+            "balance": 54651978.76,
+            "pct_of_supply": 58.0182,
             "role": "CCIP LockRelease bridge pool",
             "is_contract": true,
             "unlabelled_contract": false
           },
           {
             "address": "0x7a7de491e1be5287874904e2b7c8488249a4d0a9",
-            "balance": 28556143.7,
-            "pct_of_supply": 30.315,
+            "balance": 28551951.9,
+            "pct_of_supply": 30.3105,
             "role": "Pendle SY-USDat wrapper",
             "is_contract": true,
             "unlabelled_contract": false
@@ -116,8 +231,8 @@
           },
           {
             "address": "0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
-            "balance": 2488336.63,
-            "pct_of_supply": 2.6416,
+            "balance": 2513797.14,
+            "pct_of_supply": 2.6686,
             "role": "Curve USDC/USDat pool",
             "is_contract": true,
             "unlabelled_contract": false
@@ -164,17 +279,17 @@
           },
           {
             "address": "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
-            "balance": 219766.16,
-            "pct_of_supply": 0.2333,
+            "balance": 195724.29,
+            "pct_of_supply": 0.2078,
             "role": null,
             "is_contract": true,
             "unlabelled_contract": true
           }
         ],
-        "holder_count": 1626,
+        "holder_count": 1627,
         "top_1_pct": 5.308,
         "top_5_pct": 7.4371,
-        "top_10_pct": 7.6704,
+        "top_10_pct": 7.6449,
         "structural_holders_excluded": [
           "0xa0de671eb84de9dee1d311d996d25c41f63a0d86",
           "0x7a7de491e1be5287874904e2b7c8488249a4d0a9",
@@ -184,7 +299,7 @@
         "unlabelled_contracts": [
           {
             "address": "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
-            "pct_of_supply": 0.2333
+            "pct_of_supply": 0.2078
           }
         ],
         "unlabelled_contract_note": "Contracts in the top holders with no role label. They are counted as POSITIONS here, which overstates concentration if they are in fact structural (a pool, a vault, a bridge). \u26a0\ufe0f KNOWN_ROLES is hardcoded and nothing else reports when it falls behind; this is the prompt.",
@@ -199,9 +314,12 @@
         "address": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
         "verifiable": "onchain",
         "par_assumed": true,
+        "role": "declared_inactive",
         "declared_by_contract": true,
         "allowed_by_contract": false,
-        "contract_asset_balance": 0.0
+        "allowed_by_contract_meaning": "isAllowedAsset(): alternative-asset cap is non-zero",
+        "contract_asset_balance": 0.0,
+        "contract_asset_cap": 0.0
       },
       "PYUSDx": {
         "balance": 94198067.89,
@@ -209,9 +327,12 @@
         "address": "0xeBDB0942cE16386Ab90718C7BD10C91CDb66b14d",
         "verifiable": "onchain",
         "par_assumed": true,
+        "role": "primary",
         "declared_by_contract": true,
         "allowed_by_contract": false,
-        "contract_asset_balance": 0.0
+        "allowed_by_contract_meaning": "isAllowedAsset(): alternative-asset cap is non-zero",
+        "contract_asset_balance": 0.0,
+        "contract_asset_cap": 0.0
       },
       "USDC": {
         "balance": 0.0,
@@ -219,9 +340,12 @@
         "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
         "verifiable": "onchain",
         "par_assumed": true,
+        "role": "alternative",
         "declared_by_contract": false,
         "allowed_by_contract": true,
-        "contract_asset_balance": 0.0
+        "allowed_by_contract_meaning": "isAllowedAsset(): alternative-asset cap is non-zero",
+        "contract_asset_balance": 0.0,
+        "contract_asset_cap": 10000000.0
       },
       "OTHER": [
         {
@@ -411,62 +535,87 @@
     "secondary": {
       "curve_usdat_usdc": {
         "address": "0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
-        "tvl_usd": 4460738.69,
-        "vol_24h_usd": 1276749.07359627,
-        "implied_price": 0.999424,
-        "deviation_pct": -0.0576
+        "tvl_usd": 4460753.97,
+        "vol_24h_usd": 1302072.00018421,
+        "implied_price": 0.999374,
+        "deviation_pct": -0.0626
       }
     },
     "slippage_tiers": {
       "usdat_to_usdc": {
         "1000": {
-          "output_token": 999.423673,
-          "output_usd": 999.42,
-          "slippage_bps": -5.76,
-          "gas_usd": "0.5396372058097344"
+          "output_token": 999.373707,
+          "output_usd": 999.37,
+          "slippage_bps": -6.26,
+          "gas_usd": "0.08485158075902714"
         },
         "10000": {
-          "output_token": 9994.148973,
-          "output_usd": 9994.15,
-          "slippage_bps": -5.85,
-          "gas_usd": "0.5396372058097344"
+          "output_token": 9993.647813,
+          "output_usd": 9993.65,
+          "slippage_bps": -6.35,
+          "gas_usd": "0.08846718697579313"
         },
         "100000": {
-          "output_token": 99932.511695,
-          "output_usd": 99932.51,
-          "slippage_bps": -6.75,
-          "gas_usd": "0.5396372058097344"
+          "output_token": 99927.329598,
+          "output_usd": 99927.33,
+          "slippage_bps": -7.27,
+          "gas_usd": "0.08846718697579313"
         },
         "500000": {
-          "output_token": 499427.439697,
-          "output_usd": 499427.44,
-          "slippage_bps": -11.45,
-          "gas_usd": "0.5396372058097344"
+          "output_token": 499394.704674,
+          "output_usd": 499394.7,
+          "slippage_bps": -12.11,
+          "gas_usd": "0.08485158075902714"
         },
         "1000000": {
-          "output_token": 997881.581645,
-          "output_usd": 997881.58,
-          "slippage_bps": -21.18,
-          "gas_usd": "0.5396372058097344"
+          "output_token": 997767.713654,
+          "output_usd": 997767.71,
+          "slippage_bps": -22.32,
+          "gas_usd": "0.08846718697579313"
         },
         "2000000": {
-          "output_token": 1916059.142873,
-          "output_usd": 1916059.14,
-          "slippage_bps": -419.7,
-          "gas_usd": "0.5396372058097344"
+          "output_token": 1899667.952244,
+          "output_usd": 1899667.95,
+          "slippage_bps": -501.66,
+          "gas_usd": "0.08485158075902714"
         },
         "5000000": {
-          "output_token": 1993437.924939,
-          "output_usd": 1993437.92,
-          "slippage_bps": -6013.12,
-          "gas_usd": "9.316959565688451"
+          "output_token": 1965795.188087,
+          "output_usd": 1965795.19,
+          "slippage_bps": -6068.41,
+          "gas_usd": "1.383125058949577"
         }
       }
     },
     "trust_stack": {
       "proxy_type": "TransparentUpgradeableProxy",
       "implementation": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
-      "implementation_published": "0x17cAC25c6d6bbcB592837feA083A5C8EB4d1E52E",
+      "implementation_published": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
+      "implementation_reviewed": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
+      "implementation_status": "reviewed",
+      "implementation_history": [
+        {
+          "implementation": "0x17cAC25c6D6BBcB592837FEA083A5c8Eb4D1E52E",
+          "status": "superseded",
+          "accounting_model": null,
+          "accounting_model_note": "Legacy M-backed JMIExtension; accounting not assessed by this analyzer.",
+          "active_until_block": 25789910
+        },
+        {
+          "implementation": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
+          "status": "reviewed",
+          "accounting_model": "multimint_pyusdx_primary_v1",
+          "adopted_at_block": 25789911,
+          "adopted_at": "2026-08-19T15:00:11Z",
+          "runtime_keccak256": "0x3714895307e431cc890645e430d74d07c4d5ac7d101ae763e5d16f2844f9aadc",
+          "reviewed_at": "2026-10-15",
+          "evidence": [
+            "https://tidresearch.com/evidence/saturn/usdat-reassessment-2026-10-14.json",
+            "https://github.com/saturn-organization/saturn-dollar",
+            "riskAnalyst data/research/usdat-technical-2026-10-14/MultiMint.sol"
+          ]
+        }
+      ],
       "proxy_admin_contract": "0xcf1072DA5f0D127AEf99136489BAd08bFa3D1A7D",
       "proxy_admin_owner": "0xfD5782E3BFF366601da3973aE30C583dE4F08A67",
       "proxy_admin_owner_kind": "timelock",
@@ -554,16 +703,16 @@
   },
   "report_url": "https://tidresearch.com/reports/usdat",
   "peg": {
-    "market_price": 0.999424,
+    "market_price": 0.999374,
     "nav": 1.0,
-    "premium_discount_pct": -0.0576,
+    "premium_discount_pct": -0.0626,
     "source": "curve",
     "history_ref": "usdat_backing_history.json",
     "history_field": "peg_curve_usdc"
   },
   "liquidity": {
-    "as_of": "2026-10-15T02:45:45Z",
-    "total_tvl": 4460738.69,
+    "as_of": "2026-10-15T03:45:58Z",
+    "total_tvl": 4460753.97,
     "total_2pct_depth": 1000000.0,
     "total_2pct_depth_is_floor": false,
     "two_pct_depth_status": "bracketed",
@@ -571,7 +720,7 @@
       1000000.0,
       2000000.0
     ],
-    "two_pct_depth_basis": "The 200bps crossing is BRACKETED between $1,000,000 (clears) and $2,000,000 (420bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
+    "two_pct_depth_basis": "The 200bps crossing is BRACKETED between $1,000,000 (clears) and $2,000,000 (502bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
     "primary_threshold_bps": 200.0,
     "depth_50bps": {
       "threshold_bps": 50.0,
@@ -582,49 +731,49 @@
         1000000.0,
         2000000.0
       ],
-      "basis": "The 50bps crossing is BRACKETED between $1,000,000 (clears) and $2,000,000 (420bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
+      "basis": "The 50bps crossing is BRACKETED between $1,000,000 (clears) and $2,000,000 (502bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
     },
     "volume_24h": null,
     "exit_mark": {
       "source": "kyberswap",
       "sell_into": "USDC",
-      "fair_value": 0.999424,
+      "fair_value": 0.999374,
       "fair_value_basis": "market",
       "quotes": {
         "1000": {
-          "slippage_bps": -5.76,
-          "output_usd": 999.42,
-          "fill_ratio": 0.99942
+          "slippage_bps": -6.26,
+          "output_usd": 999.37,
+          "fill_ratio": 0.99937
         },
         "10000": {
-          "slippage_bps": -5.85,
-          "output_usd": 9994.15,
-          "fill_ratio": 0.999415
+          "slippage_bps": -6.35,
+          "output_usd": 9993.65,
+          "fill_ratio": 0.999365
         },
         "100000": {
-          "slippage_bps": -6.75,
-          "output_usd": 99932.51,
-          "fill_ratio": 0.999325
+          "slippage_bps": -7.27,
+          "output_usd": 99927.33,
+          "fill_ratio": 0.999273
         },
         "500000": {
-          "slippage_bps": -11.45,
-          "output_usd": 499427.44,
-          "fill_ratio": 0.998855
+          "slippage_bps": -12.11,
+          "output_usd": 499394.7,
+          "fill_ratio": 0.998789
         },
         "1000000": {
-          "slippage_bps": -21.18,
-          "output_usd": 997881.58,
-          "fill_ratio": 0.997882
+          "slippage_bps": -22.32,
+          "output_usd": 997767.71,
+          "fill_ratio": 0.997768
         },
         "2000000": {
-          "slippage_bps": -419.7,
-          "output_usd": 1916059.14,
-          "fill_ratio": 0.95803
+          "slippage_bps": -501.66,
+          "output_usd": 1899667.95,
+          "fill_ratio": 0.949834
         },
         "5000000": {
-          "slippage_bps": -6013.12,
-          "output_usd": 1993437.92,
-          "fill_ratio": 0.398688
+          "slippage_bps": -6068.41,
+          "output_usd": 1965795.19,
+          "fill_ratio": 0.393159
         }
       },
       "slippage_bps_basis": "ALL-IN COST against notional: (output_usd - size) / size. Includes the venue's base spread, so it is not comparable rung-for-rung with a price-impact figure measured against a venue's own spot rung."
@@ -644,16 +793,16 @@
         "chain": "ethereum",
         "pair": "USDat/USDC",
         "address": "0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
-        "depth_usd": 4460738.69,
-        "volume_24h": 1276749.07359627,
-        "implied_price": 0.999424
+        "depth_usd": 4460753.97,
+        "volume_24h": 1302072.00018421,
+        "implied_price": 0.999374
       }
     ]
   },
   "backing": {
     "collateral_ratio": 100.0,
     "collateral_ratio_scale": "percent",
-    "collateral_ratio_basis": "Reserve holdings / supply, both read on-chain. \u26a0\ufe0f NOT the contract's totalAssets(), which reports ~$38 because PYUSDx is not contract-allowlisted \u2014 see asset_specific for that divergence. PYUSDx is marked at PAR and its own backing sits one layer down at the M^0 portal, unwalked here, so this is coverage against a mark rather than against verified collateral. USDat is 1:1 by design: par is the target, not a floor.",
+    "collateral_ratio_basis": "Ethereum reserve-token holdings / Ethereum USDat supply, read at one block, with every asset marked at PAR. Under the reviewed implementation, totalAssets() counts only alternative assets and PYUSDx must cover the rest of supply; each part is checked against its holding in `accounting`. This is token-unit coverage: PYUSDx's own reserves and custody sit upstream at the M^0 layer, unwalked here, and it is not a redemption route for every holder (see coverage_qualifications). USDat is 1:1 by design: par is the target, not a floor.",
     "total_backing": 94198067.89,
     "surplus_deficit": 0.0,
     "surplus_deficit_basis": "Reserve total minus USDat supply \u2014 the net buffer, which is ~0 by design on a 1:1 mint. \u26a0\ufe0f Whether a subordinated layer sits inside it is NOT ESTABLISHED: USDat itself has no tranche, but its backing moved to PYUSDx and this feed does not measure that structure's capital stack. There is also little to hide in a buffer this size \u2014 the exposure here is the MARK and the mint authority, not surplus composition.",
@@ -664,29 +813,32 @@
         "pct": 100.0,
         "tags": [
           "par_assumed",
-          "not_contract_allowlisted"
+          "primary_asset"
         ],
         "detail": {
           "verifiable": "onchain",
           "address": "0xeBDB0942cE16386Ab90718C7BD10C91CDb66b14d",
+          "role": "primary",
           "declared_by_contract": true,
           "allowed_by_contract": false,
+          "allowed_by_contract_meaning": "isAllowedAsset(): alternative-asset cap is non-zero",
           "contract_asset_balance": 0.0
         }
       },
       {
         "label": "M (M^0)",
-        "value": 0,
+        "value": 0.0,
         "pct": 0.0,
         "tags": [
-          "par_assumed",
-          "not_contract_allowlisted"
+          "par_assumed"
         ],
         "detail": {
           "verifiable": "onchain",
           "address": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+          "role": "declared_inactive",
           "declared_by_contract": true,
           "allowed_by_contract": false,
+          "allowed_by_contract_meaning": "isAllowedAsset(): alternative-asset cap is non-zero",
           "contract_asset_balance": 0.0
         }
       }
@@ -712,7 +864,7 @@
     "issuer_score_source": "risk-feed@2026-10-12T01:45:02Z",
     "issuer_score_status": "stale",
     "issuer_score_generated_at": "2026-10-12T01:45:02Z",
-    "issuer_score_age_hours": 73.01,
+    "issuer_score_age_hours": 74.02,
     "attestation_age_days": null
   }
 }
