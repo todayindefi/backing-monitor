@@ -2,10 +2,16 @@
 from: backing-monitor
 to: tidresearch
 date: 2026-10-15
-status: ready-for-manual-delivery
+status: verified-complete-on-production-2026-10-15
 ---
 
 # Reconcile the published USDAT report with its October 14 technical revision
+
+Verified October 15: a fresh production report fetch states that totalAssets
+counts non-PYUSDx alternative assets, zero is valid for an all-PYUSDx reserve,
+and the implementation matches verified source. The old degenerate-denominator
+explanation is absent. The report publication part of this handoff is complete;
+PegTracker and riskAnalyst source corrections remain separate work.
 
 The current local `src/content/reports/usdat.md` correctly says totalAssets counts
 alternative assets only and zero is valid for an all-PYUSDx reserve. Its technical

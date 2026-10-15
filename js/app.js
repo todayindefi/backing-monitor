@@ -55,6 +55,7 @@ var ASSET_RENDERERS = {
     crvusd:    typeof CrvUSDRenderer    !== 'undefined' ? CrvUSDRenderer    : null,
     usg:       typeof USGRenderer       !== 'undefined' ? USGRenderer       : null,
     bold:      typeof BOLDRenderer      !== 'undefined' ? BOLDRenderer      : null,
+    dola:      typeof DOLARenderer      !== 'undefined' ? DOLARenderer      : null,
     wsteth:    typeof WstETHRenderer    !== 'undefined' ? WstETHRenderer    : null,
     frxusd:    typeof FrxUSDRenderer    !== 'undefined' ? FrxUSDRenderer    : null,
     'msusd-metronome': typeof MsUSDMetronomeRenderer !== 'undefined' ? MsUSDMetronomeRenderer : null,
@@ -121,7 +122,7 @@ function exitLadderOverlay(file, ladder) {
         if (!row || row.status !== 'ok' || typeof row.size_usd !== 'number') return;
         quotes[String(row.size_usd)] = {
             size_usd: row.size_usd,
-            input_amount: row.input_frxusd,
+            input_amount: row.input_amount != null ? row.input_amount : row.input_frxusd,
             output_amount: row.output_usdc,
             amount_out_usdc: row.output_usdc,
             output_usd: row.output_usdc,
@@ -168,6 +169,8 @@ function exitLadderOverlay(file, ladder) {
             depth_50bps: depth50,
             depth_threshold_bps: depth50 ? depth50.threshold_bps : 50,
             exit_mark: {
+                producer: ladder.producer || 'PegTracker',
+                source_file: file,
                 measured_at: ladder.measured_at,
                 chain: ladder.chain,
                 sell_into: ladder.sell_into,

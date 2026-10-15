@@ -798,7 +798,9 @@ const CommonRenderer = {
                             delete pay.depth_threshold_bps;
                         }
                         handedOff = {
-                            producer: (typeof base.producer === 'string' && base.producer) || 'the asset feed',
+                            producer: (base.exit_mark || {}).producer ||
+                                      (typeof base.producer === 'string' && base.producer) || 'the asset feed',
+                            source_file: (base.exit_mark || {}).source_file || null,
                             fields: carried,
                             chain: (base.exit_mark || {}).chain || null,
                             as_of: base.as_of || null,
@@ -4054,11 +4056,12 @@ const CommonRenderer = {
         var paths = Array.isArray(l.paths) ? l.paths : [];
         if (paths.length < 2) return '';
         var shapes = {};
-        paths.forEach(function(p) { shapes[(p.reach || '?') + '|' + String(p.timelock)] = 1; });
+        paths.forEach(function(p) { shapes[(p.reach || '?') + '|' + String(p.execution_delay != null ? p.execution_delay : p.timelock)] = 1; });
         if (Object.keys(shapes).length < 2) return '';
         return paths.map(function(p) {
-            var tl = String(p.timelock == null ? '' : p.timelock);
-            var undelayed = !tl || tl === 'none';
+            var delay = p.execution_delay != null ? p.execution_delay : p.timelock;
+            var tl = String(delay == null ? 'unresolved' : delay);
+            var undelayed = tl === 'none';
             var unknown = tl === 'unresolved';
             // ⚠️ `terminal` distinguishes a PARTY from a CONTRACT, and conflating
             // them is how an architectural ward reads as a discretionary actor.
@@ -4443,6 +4446,11 @@ const CommonRenderer = {
         var p = (this.AXIS_PROVENANCE || {}).liquidity;
         var h = p && p.depth_handed_off;
         if (!h) return '';
+        if (h.source_file) {
+            return '<div class="text-[11px] text-slate-500 mt-1">Executable ladder: ' +
+                this._escapeAttr(h.producer) + ' · ' + this._escapeAttr(h.source_file) +
+                '. Venue inventory is measured separately.</div>';
+        }
         // ⚠️ CREDITED BY ROLE, NOT BY REPO, BECAUSE THE BASE FEED NAMES NOBODY.
         // It carries no `producer` field at any level, so naming the repo here would
         // be the renderer asserting an authorship the data does not state — the same
@@ -5549,6 +5557,11 @@ const CommonRenderer = {
             : ((liq.total_2pct_depth != null)
                 ? (dFloor ? '\u2265' : '') + this.formatCurrency(liq.total_2pct_depth)
                 : this._exitCapacityHtml(liq));
+        // Standalone ladders can supply a bracket without the legacy scalar.
+        // Keep the tile consistent with the depth reader used by the axis body.
+        if (!liqIsFree && this.depthAtLimit(data).value != null) {
+            depthTxt = this._depthValueHtml(data);
+        }
         var dWord = '';
         // ⚠️ The label moves with the value — same rule the backing tile needed.
         // A capped periodic window shown under "2% depth" would read as depth.
@@ -7750,12 +7763,33 @@ const CommonRenderer = {
     PEG_CHART_WINDOW_DAYS: 7,
     PEG_CHART_FALLBACK_DAYS: 30,
     PEG_CHART_MIN_POINTS: 24,
+    _pegPlotRows(entries, gaps) {
+        if (!Array.isArray(gaps) || !gaps.length) return entries;
+        var ranges = gaps.map(function(gap) { return [Date.parse(gap.from), Date.parse(gap.to)]; });
+        var rows = [];
+        entries.forEach(function(entry, index) {
+            if (index) {
+                var left = Date.parse(entries[index - 1].timestamp), right = Date.parse(entry.timestamp);
+                if (ranges.some(function(range) { return range[0] < right && range[1] > left; })) {
+                    rows.push({ timestamp: new Date((left + right) / 2).toISOString() });
+                }
+            }
+            rows.push(entry);
+        });
+        return rows;
+    },
     _renderPegChart(data, history, canvasId, zeroLabel, windowDays, parLevel) {
         var ctx = document.getElementById(canvasId || 'peg-chart');
         if (!ctx) return null;
-        var field = data.peg.history_field || 'peg_market_price';
+        var field = data.peg.chart_history_field || data.peg.history_field || 'peg_market_price';
         var nav = data.peg.nav != null ? data.peg.nav : 1.0;
-        var all = history.entries.filter(function(e) { return e[field] != null; });
+        var chartArray = data.peg.chart_history_array;
+        var chartEntries = chartArray ? history[chartArray] : history.entries;
+        if (!Array.isArray(chartEntries) || !chartEntries.length) {
+            ctx.parentElement.innerHTML = '<p class="text-sm text-slate-400">No observations are published for the selected chart history.</p>';
+            return null;
+        }
+        var all = chartEntries.filter(function(e) { return e[field] != null; });
         var configuredWindow = data.peg && Number(data.peg.chart_window_days);
         var win = (windowDays === null) ? null
             : (typeof windowDays === 'number' ? windowDays
@@ -7787,8 +7821,25 @@ const CommonRenderer = {
                        windowDays: usedWindow, clipped: entries.length < all.length,
                        firstShown: entries.length ? entries[0].timestamp : null,
                        firstAvailable: all.length ? all[0].timestamp : null };
-        var labels = entries.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });
-        var series = entries.map(function(e) { return e[field]; });
+        if (chartArray) {
+            var noteId = (canvasId || 'peg-chart') + '-observation-note';
+            var previousNote = document.getElementById(noteId);
+            if (previousNote) previousNote.remove();
+            var observationNote = document.createElement('p');
+            observationNote.id = noteId;
+            observationNote.className = 'text-xs text-slate-500 mt-2';
+            observationNote.textContent = 'Chart: ' + entries.length + ' observations' +
+                (entries.length ? ' starting ' + entries[0].timestamp : '') +
+                '. Only the selected recent observation series is shown; archive points are excluded.';
+            ctx.parentElement.insertAdjacentElement('afterend', observationNote);
+        }
+        // Break the plotted line across producer-declared observation gaps.
+        // Keep the original observations for counts and ratings.
+        // coverage_gaps describes the daily entries archive, not a separately
+        // selected hourly array whose observations may fill the daily gap.
+        var plotRows = this._pegPlotRows(entries, chartArray ? null : history.coverage_gaps);
+        var labels = plotRows.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });
+        var series = plotRows.map(function(e) { return e[field] == null ? null : e[field]; });
 
         // ⚠️ THE REFERENCE LINE WAS TODAY'S NAV DRAWN FLAT ACROSS ALL HISTORY.
         //
@@ -7808,7 +7859,7 @@ const CommonRenderer = {
         // The last one matters: sUSDe is the asset that motivated this and it has
         // NO per-row theoretical in 2,159 rows, so the fix that works for apyUSD
         // cannot work for it. A wrong reference line is worse than none.
-        var theoSeries = entries.map(function(e) { return e.peg_theoretical_price; });
+        var theoSeries = plotRows.map(function(e) { return e.peg_theoretical_price == null ? null : e.peg_theoretical_price; });
         var theoCount = theoSeries.filter(function(v) { return v != null; }).length;
         var theoDistinct = {};
         theoSeries.forEach(function(v) { if (v != null) theoDistinct[v] = 1; });
@@ -7818,7 +7869,7 @@ const CommonRenderer = {
         // inferred from a value — but bound it anyway, so a mis-named price field
         // cannot silently move the reference to zero.
         var isPct = /_pct$/.test(field) && series.every(function(v) {
-            return typeof v === 'number' && Math.abs(v) <= 50;
+            return v == null || (typeof v === 'number' && Math.abs(v) <= 50);
         });
         // ⚠️ sUSDS plots `field: nav` — the SERIES IS the NAV curve, so a marker at
         // today's value is a legitimate "you are here" on its own line, not a
@@ -7847,7 +7898,8 @@ const CommonRenderer = {
                 // is dense and noisy; at equal weight it crosses the reference constantly and
                 // buries it. The market series is the subject but the reference is the
                 // BASELINE a reader measures against, so the baseline wins the visual weight.
-                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 1.4, order: 2
+                fill: true, tension: 0.3, spanGaps: false,
+                pointRadius: plotRows.length > entries.length ? 2 : 0, borderWidth: 1.4, order: 2
             }].concat(hasTheo ? [{
                 // ⚠️ THE REFERENCE LINE IS THE POINT OF THIS CHART AND IT WAS THE FAINTEST
                 // THING ON IT — 1.5px of slate-400 dashes under a filled indigo area, on a
@@ -7870,7 +7922,7 @@ const CommonRenderer = {
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: {
-                    x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                    x: { type: 'time', time: { unit: data.peg.chart_time_unit || 'day', displayFormats: { day: 'MMM d', hour: 'MMM d, HH:mm' } },
                          grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
                     y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 },
                          callback: function(v) { return v.toFixed(3); } } }
@@ -9307,6 +9359,23 @@ const CommonRenderer = {
     // `opts.withScoreChip` adds the authored score beside the title, for callers
     // that have no axis head rendering it already. Off by default so the shared
     // path does not print it twice.
+    _dependencyMetricHtml(metric) {
+        var self = this;
+        function valueHtml(value) {
+            if (value == null) return 'not measured';
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return self._escapeAttr(value.toLocaleString('en-US', { maximumFractionDigits: 2 }));
+            }
+            if (typeof value === 'object') {
+                return Object.keys(value).map(function(key) {
+                    return '<div>' + self._escapeAttr(key.replace(/_/g, ' ')) + ': ' + valueHtml(value[key]) + '</div>';
+                }).join('');
+            }
+            return self._escapeAttr(String(value));
+        }
+        return '<div class="dep-card-metric">' + valueHtml(metric) + '</div>';
+    },
+
     dependenciesPanelHtml(data, opts) {
         opts = opts || {};
         data = data || {};
@@ -9342,7 +9411,7 @@ const CommonRenderer = {
                 : circChip;
             var inner =
                 '<div class="dep-card-name">' + CommonRenderer._escapeAttr(String(d.name || '—')) + '</div>' +
-                (d.metric ? '<div class="dep-card-metric">' + CommonRenderer._escapeAttr(String(d.metric)) + '</div>' : '') +
+                (d.metric != null ? CommonRenderer._dependencyMetricHtml(d.metric) : '') +
                 context;
             var destination = '<div class="dep-card-link text-slate-400">No dashboard</div>';
             if (d.link && d.link_type === 'internal') {
