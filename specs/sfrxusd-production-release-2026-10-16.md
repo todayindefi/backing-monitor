@@ -47,4 +47,19 @@ dashboard link, rather than direct messaging from backing-monitor.
 
 Public target: https://todayindefi.github.io/backing-monitor/?asset=sfrxusd
 
-Deployment and live-browser verification results will be recorded after push.
+Release commit `a0cfab82bf23cf57d7918609fd8a608d1d9436e5` was pushed to `main`.
+GitHub Pages deployment run `38851029428` completed successfully. A cache-busted
+Chromium visit to the public target passed at 1440px and 390px in both body
+light/dark themes: six nonzero axis sections, issuer-coverage qualification,
+eligible authority, authored Dependencies 4.0, and market plus contemporaneous
+reference curves were visible. No uncaught JS errors or page overflow occurred.
+The public index includes the sfrxUSD card labeled Issuer coverage / Net claims.
+
+The copied source clocks and displayed values matched the reviewed release
+snapshots. Live browser evidence is in `/tmp/sfrxusd-production-*-*.json` and PNGs;
+each JSON records its public URL. The scheduled transport was rerun successfully
+without changing source observation clocks or the approved editorial revision.
+Only the pre-existing `sync.log` change was left outside the release commit.
+
+TIDResearch owner message:
+[live-dashboard link handoff](handoffs/SFRXUSD-live-dashboard-tidresearch-2026-10-16.md).

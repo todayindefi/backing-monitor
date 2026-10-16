@@ -2,7 +2,7 @@
 title: sfrxUSD dashboard — six-axis build plan
 repo: backing-monitor
 date: 2026-10-16
-status: Production approved 2026-10-16; release and live verification in progress
+status: LIVE — published and verified on GitHub Pages 2026-10-16
 ---
 
 # Scope and source
