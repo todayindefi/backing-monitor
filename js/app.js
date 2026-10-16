@@ -38,7 +38,7 @@ function isPublished(a) { return !!a && a.published === true; }
 // already landed. Keep SYNC_OFFSET_MIN ahead of the cron minute in
 // sync_and_push.sh if that ever moves.
 var SYNC_OFFSET_MIN = 10;
-var DATA_CACHE_REV = '20261011d';
+var DATA_CACHE_REV = '20261016a';
 function dataUrl(path) {
     var hour = Math.floor((Date.now() - SYNC_OFFSET_MIN * 60000) / 3600000);
     var sep = path.indexOf('?') >= 0 ? '&' : '?';
@@ -58,6 +58,7 @@ var ASSET_RENDERERS = {
     dola:      typeof DOLARenderer      !== 'undefined' ? DOLARenderer      : null,
     wsteth:    typeof WstETHRenderer    !== 'undefined' ? WstETHRenderer    : null,
     frxusd:    typeof FrxUSDRenderer    !== 'undefined' ? FrxUSDRenderer    : null,
+    sfrxusd:   typeof SfrxUSDRenderer   !== 'undefined' ? SfrxUSDRenderer   : null,
     'msusd-metronome': typeof MsUSDMetronomeRenderer !== 'undefined' ? MsUSDMetronomeRenderer : null,
     usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
     syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
@@ -176,7 +177,9 @@ function exitLadderOverlay(file, ladder) {
                 sell_into: ladder.sell_into,
                 quotes: quotes,
                 basis: ladder.headline_basis,
-                source: ladder.aggregator
+                source: ladder.aggregator,
+                // Preserve separately scoped diagnostics and clocks for asset detail.
+                source_observation: ladder
             },
             slippage_reference_size_usd: ladder.reference_rung_usd,
             cost_conventions: ladder.cost_conventions,
@@ -270,12 +273,19 @@ async function renderIndex() {
             // their analyzer emits a flat per-domain schema. Guard each access so
             // a single off-schema asset doesn't NPE the whole grid render.
             var s = d && d.summary;
+            var issuerCoverage = !!(s && typeof s.issuer_coverage_pct === 'number');
             var crRaw = s ? ((s.mint_cr != null && s.collateral_ratio_inclusive != null) ? s.mint_cr : s.collateral_ratio) : null;
-            var crNorm = CommonRenderer.normalizeCollateralRatio(crRaw, a.slug, s);
+            if (crRaw == null && issuerCoverage) crRaw = s.issuer_coverage_pct;
+            var crNorm = CommonRenderer.normalizeCollateralRatio(crRaw, a.slug,
+                issuerCoverage ? ((d && d.backing) || {}) : s);
             var cr = (crNorm != null) ? CommonRenderer.formatPercent(crNorm) : '-';
             var crClass = (crNorm != null && crNorm >= 100) ? 'text-green-600' : 'text-red-600';
             var supply = s ? CommonRenderer.formatCurrency(s.total_supply || s.real_supply) : '-';
             var ts = d ? CommonRenderer.formatDate(d.timestamp || d.timestamp_utc) : '';
+            if (issuerCoverage) {
+                supply = CommonRenderer.formatCurrency((d.backing || {}).liabilities_usd);
+                ts = CommonRenderer.formatDate((d.backing || {}).as_of);
+            }
             var flagCount = (d && Array.isArray(d.risk_flags)) ? d.risk_flags.length : 0;
             var flagBadge = flagCount > 0 ?
                 '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">' + flagCount + ' flag' + (flagCount > 1 ? 's' : '') + '</span>' : '';
@@ -287,8 +297,8 @@ async function renderIndex() {
                 '</div>' +
                 '<div class="text-xs text-slate-500 mb-3">' + a.chain + ' &middot; ' + a.description + '</div>' +
                 '<div class="grid grid-cols-2 gap-3">' +
-                    '<div><div class="text-xs text-slate-400 font-medium uppercase">CR</div><div class="text-lg font-bold ' + crClass + '">' + cr + '</div></div>' +
-                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Supply</div><div class="text-lg font-bold text-slate-700">' + supply + '</div></div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">' + (issuerCoverage ? 'Issuer coverage' : 'CR') + '</div><div class="text-lg font-bold ' + crClass + '">' + cr + '</div></div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">' + (issuerCoverage ? 'Net claims' : 'Supply') + '</div><div class="text-lg font-bold text-slate-700">' + supply + '</div></div>' +
                 '</div>' +
                 '<div class="text-xs text-slate-400 mt-3">' + ts + '</div>' +
                 '</a>';
@@ -457,6 +467,7 @@ async function renderAsset(slug) {
             throw new Error('Asset data not found (HTTP ' + dataResp.status + ')');
         }
         var data = await dataResp.json();
+        data.dashboard_published = isPublished(assetMeta);
         // Tag the URL slug so findAssetRenderer can route to the sibling
         // view's renderer instead of falling through to the source asset's.
         data.view_slug = slug;
@@ -538,23 +549,20 @@ async function renderAsset(slug) {
         // publish — the convention silently disagrees and nothing says so.
         var pegRef = data.peg && data.peg.history_ref;
         if (pegRef && pegRef !== sourceSlug + '_backing_history.json') {
-            var field = data.peg.history_field;
-            var haveField = !!(history && Array.isArray(history.entries) &&
-                history.entries.slice(-5).some(function(e) { return e && e[field] != null; }));
-            if (!haveField) {
-                try {
-                    var refResp = await fetch(dataUrl('data/' + pegRef));
-                    if (refResp && refResp.ok) {
-                        var refJson = await refResp.json();
-                        if (refJson && Array.isArray(refJson.entries) && refJson.entries.length) {
-                            // Keep the backing history reachable — chart code and
-                            // renderers still read collateral series off it.
-                            if (history) refJson._backing_history = history;
-                            history = refJson;
-                        }
+            // A backing history can contain a spot peg field without containing
+            // the declared peg series. Its presence must not suppress this fetch.
+            try {
+                var refResp = await fetch(dataUrl('data/' + pegRef));
+                if (refResp && refResp.ok) {
+                    var refJson = await refResp.json();
+                    if (refJson && Array.isArray(refJson.entries) && refJson.entries.length) {
+                        // Keep the backing history reachable — chart code and
+                        // renderers still read collateral series off it.
+                        if (history) refJson._backing_history = history;
+                        history = refJson;
                     }
-                } catch (e) { /* declared ref unreachable: keep the conventional file */ }
-            }
+                }
+            } catch (e) { /* declared ref unreachable: keep the conventional file */ }
         }
 
         // Asset-specific pre-render hook — lets the renderer patch top-card

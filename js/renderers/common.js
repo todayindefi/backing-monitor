@@ -7859,7 +7859,8 @@ const CommonRenderer = {
         // The last one matters: sUSDe is the asset that motivated this and it has
         // NO per-row theoretical in 2,159 rows, so the fix that works for apyUSD
         // cannot work for it. A wrong reference line is worse than none.
-        var theoSeries = plotRows.map(function(e) { return e.peg_theoretical_price == null ? null : e.peg_theoretical_price; });
+        var referenceField = data.peg.chart_reference_field || 'peg_theoretical_price';
+        var theoSeries = plotRows.map(function(e) { return e[referenceField] == null ? null : e[referenceField]; });
         var theoCount = theoSeries.filter(function(v) { return v != null; }).length;
         var theoDistinct = {};
         theoSeries.forEach(function(v) { if (v != null) theoDistinct[v] = 1; });

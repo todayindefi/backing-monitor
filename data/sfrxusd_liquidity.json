@@ -1,0 +1,2148 @@
+{
+  "schema_version": "liquidity/1",
+  "asset_slug": "sfrxusd",
+  "asset_symbol": "sfrxUSD",
+  "producer": "dextracker",
+  "as_of": "2026-10-16T03:26:08Z",
+  "refresh_cadence": "daily",
+  "scope": "venue_inventory_only",
+  "publishes": [
+    "venues",
+    "venues_by_role",
+    "chains",
+    "non_swap_listings",
+    "venues_by_role_outside_scope",
+    "venue_diagnostics",
+    "absorbing_side",
+    "lp_ownership"
+  ],
+  "does_not_publish": [
+    "depth",
+    "primary_exit",
+    "rating"
+  ],
+  "scope_note": "VENUE-ONLY BY DESIGN. This payload deliberately carries no depth, crossing, redemption path or rating; those belong to PegTracker's ladder. Absence of `depth` here is a declaration, not a failed write -- a consumer should keep the ladder from its other source. Primary redemption (the Fraxtal route) is NOT published here; its owner is not yet assigned. Pool ownership is in `lp_ownership`.",
+  "venues_by_role": {
+    "dollar_exit": {
+      "pool_count": 0,
+      "tvl_usd": 0,
+      "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
+    },
+    "family_swap": {
+      "pool_count": 1,
+      "tvl_usd": 12201215.419,
+      "meaning": "Swaps sfrxUSD for frxUSD, the token it pays out: an underlying swap, NOT a dollar exit. frxUSD still needs its own route or redemption to dollars."
+    },
+    "other_pair": {
+      "pool_count": 6,
+      "tvl_usd": 4257232.4503506245,
+      "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
+    }
+  },
+  "chains": {
+    "eth": {
+      "status": "queried",
+      "token": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+      "queried_at": "2026-10-16T03:26:11Z",
+      "finding": "venues_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 20,
+      "published_pool_count": 7,
+      "below_floor_count": 13,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "in_scope"
+    },
+    "fraxtal": {
+      "status": "queried",
+      "token": "0xfc00000000000000000000000000000000000008",
+      "queried_at": "2026-10-16T03:27:07Z",
+      "finding": "venues_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 41,
+      "published_pool_count": 2,
+      "below_floor_count": 39,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "arbitrum": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "queried_at": "2026-10-16T03:28:01Z",
+      "finding": "none_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 1,
+      "published_pool_count": 0,
+      "below_floor_count": 1,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "avax": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "queried_at": "2026-10-16T03:28:24Z",
+      "finding": "none_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "bsc": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "queried_at": "2026-10-16T03:28:41Z",
+      "finding": "none_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 1,
+      "published_pool_count": 0,
+      "below_floor_count": 1,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "hyperevm": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "finding": "none_found",
+      "token_indexed": false,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0.0,
+      "local_dollar_exit": false,
+      "basis": "The token is deployed here (symbol() read on-chain = sfrxUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed.",
+      "dashboard_scope": "outside_scope"
+    },
+    "ink": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "finding": "none_found",
+      "token_indexed": false,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0.0,
+      "local_dollar_exit": false,
+      "basis": "The token is deployed here (symbol() read on-chain = sfrxUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed.",
+      "dashboard_scope": "outside_scope"
+    },
+    "katana": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "queried_at": "2026-10-16T03:29:29Z",
+      "finding": "none_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 2,
+      "published_pool_count": 0,
+      "below_floor_count": 2,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "optimism": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "queried_at": "2026-10-16T03:29:52Z",
+      "finding": "none_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "plume-network": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "finding": "none_found",
+      "token_indexed": false,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0.0,
+      "local_dollar_exit": false,
+      "basis": "The token is deployed here (symbol() read on-chain = sfrxUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed.",
+      "dashboard_scope": "outside_scope"
+    },
+    "polygon_pos": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "queried_at": "2026-10-16T03:30:30Z",
+      "finding": "none_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 3,
+      "published_pool_count": 0,
+      "below_floor_count": 3,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "sei-evm": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "queried_at": "2026-10-16T03:30:53Z",
+      "finding": "none_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 3,
+      "published_pool_count": 0,
+      "below_floor_count": 3,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "sonic": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "queried_at": "2026-10-16T03:31:17Z",
+      "finding": "none_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 7,
+      "published_pool_count": 0,
+      "below_floor_count": 7,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "stable": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "finding": "none_found",
+      "token_indexed": false,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0.0,
+      "local_dollar_exit": false,
+      "basis": "The token is deployed here (symbol() read on-chain = sfrxUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed.",
+      "dashboard_scope": "outside_scope"
+    },
+    "unichain": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "finding": "none_found",
+      "token_indexed": false,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0.0,
+      "local_dollar_exit": false,
+      "basis": "The token is deployed here (symbol() read on-chain = sfrxUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed.",
+      "dashboard_scope": "outside_scope"
+    },
+    "world-chain": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "finding": "none_found",
+      "token_indexed": false,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0.0,
+      "local_dollar_exit": false,
+      "basis": "The token is deployed here (symbol() read on-chain = sfrxUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed.",
+      "dashboard_scope": "outside_scope"
+    },
+    "x-layer": {
+      "status": "queried",
+      "token": "0x5bff88ca1442c2496f7e475e9e7786383bc070c0",
+      "queried_at": "2026-10-16T03:32:25Z",
+      "finding": "none_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "abstract": {
+      "status": "queried",
+      "token": "0x9f87fbb47c33cd0614e43500b9511018116f79ee",
+      "queried_at": "2026-10-16T03:32:48Z",
+      "finding": "none_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 1,
+      "published_pool_count": 0,
+      "below_floor_count": 1,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "zksync": {
+      "status": "queried",
+      "token": "0x9f87fbb47c33cd0614e43500b9511018116f79ee",
+      "finding": "none_found",
+      "token_indexed": false,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0.0,
+      "local_dollar_exit": false,
+      "basis": "The token is deployed here (symbol() read on-chain = sfrxUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed.",
+      "dashboard_scope": "outside_scope"
+    },
+    "base": {
+      "status": "queried",
+      "token": "0x91a3f8a8d7a881fbdfcfecd7a2dc92a46dcfa14e",
+      "queried_at": "2026-10-16T03:33:26Z",
+      "finding": "none_found",
+      "token_indexed": true,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 7,
+      "published_pool_count": 0,
+      "below_floor_count": 7,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0,
+      "local_dollar_exit": false,
+      "dashboard_scope": "outside_scope"
+    },
+    "linea": {
+      "status": "queried",
+      "token": "0x592a48c0fb9c7f8bf1701cb0136b90dea2a5b7b6",
+      "finding": "none_found",
+      "token_indexed": false,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0.0,
+      "local_dollar_exit": false,
+      "basis": "The token is deployed here (symbol() read on-chain = sfrxUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed.",
+      "dashboard_scope": "outside_scope"
+    },
+    "monad": {
+      "status": "queried",
+      "token": "0x137643f7b2c189173867b3391f6629cab46f0f1a",
+      "finding": "none_found",
+      "token_indexed": false,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0.0,
+      "local_dollar_exit": false,
+      "basis": "The token is deployed here (symbol() read on-chain = sfrxUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed.",
+      "dashboard_scope": "outside_scope"
+    },
+    "robinhood": {
+      "status": "token_unverified",
+      "finding": "unknown",
+      "token": "0x00000000fd8c4b8a413a06821456801295921a71",
+      "verdict": "not_indexed",
+      "basis": "The configured address could not be confirmed as sfrxUSD on GeckoTerminal, so its pools were NOT read. Unknown, NOT empty.",
+      "dashboard_scope": "outside_scope"
+    },
+    "somnia": {
+      "status": "queried",
+      "token": "0x00000000fd8c4b8a413a06821456801295921a71",
+      "finding": "none_found",
+      "token_indexed": false,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0.0,
+      "local_dollar_exit": false,
+      "basis": "The token is deployed here (symbol() read on-chain = sfrxUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed.",
+      "dashboard_scope": "outside_scope"
+    },
+    "tempo": {
+      "status": "queried",
+      "token": "0x00000000fd8c4b8a413a06821456801295921a71",
+      "finding": "none_found",
+      "token_indexed": false,
+      "pool_list_truncated": false,
+      "truncation_note": null,
+      "pool_count": 0,
+      "published_pool_count": 0,
+      "below_floor_count": 0,
+      "dollar_exit_pool_count": 0,
+      "implausible_tvl_count": 0,
+      "dollar_exit_tvl_usd": 0.0,
+      "local_dollar_exit": false,
+      "basis": "The token is deployed here (symbol() read on-chain = sfrxUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed.",
+      "dashboard_scope": "outside_scope"
+    },
+    "solana": {
+      "status": "token_unverified",
+      "finding": "unknown",
+      "token": "DUvWQMyASSkLNJFwsMDA4kwxEvmfaqpPGrvUVKtitX45",
+      "verdict": "not_indexed",
+      "basis": "The configured address could not be confirmed as sfrxUSD on GeckoTerminal, so its pools were NOT read. Unknown, NOT empty.",
+      "dashboard_scope": "outside_scope"
+    }
+  },
+  "enumeration": {
+    "as_of": "2026-10-16T03:26:08Z",
+    "source": "GeckoTerminal token-pools API, paginated, by exact chain-specific address",
+    "venue_count": 86,
+    "published_venue_count": 9,
+    "tvl_floor_usd": 1000.0,
+    "chains_queried": [
+      "abstract",
+      "arbitrum",
+      "avax",
+      "base",
+      "bsc",
+      "eth",
+      "fraxtal",
+      "hyperevm",
+      "ink",
+      "katana",
+      "linea",
+      "monad",
+      "optimism",
+      "plume-network",
+      "polygon_pos",
+      "sei-evm",
+      "somnia",
+      "sonic",
+      "stable",
+      "tempo",
+      "unichain",
+      "world-chain",
+      "x-layer",
+      "zksync"
+    ],
+    "chains_query_failed": [
+      "robinhood",
+      "solana"
+    ],
+    "chains_not_queried": [],
+    "chains_truncated": [],
+    "chains_without_local_dollar_exit": [
+      "abstract",
+      "arbitrum",
+      "avax",
+      "base",
+      "bsc",
+      "eth",
+      "fraxtal",
+      "hyperevm",
+      "ink",
+      "katana",
+      "linea",
+      "monad",
+      "optimism",
+      "plume-network",
+      "polygon_pos",
+      "sei-evm",
+      "somnia",
+      "sonic",
+      "stable",
+      "tempo",
+      "unichain",
+      "world-chain",
+      "x-layer",
+      "zksync"
+    ],
+    "chains_none_found": [
+      "abstract",
+      "arbitrum",
+      "avax",
+      "base",
+      "bsc",
+      "hyperevm",
+      "ink",
+      "katana",
+      "linea",
+      "monad",
+      "optimism",
+      "plume-network",
+      "polygon_pos",
+      "sei-evm",
+      "somnia",
+      "sonic",
+      "stable",
+      "tempo",
+      "unichain",
+      "world-chain",
+      "x-layer",
+      "zksync"
+    ],
+    "finding_meanings": {
+      "venues_found": "Pools at or above the $1,000 TVL floor were found.",
+      "none_found": "Searched, and nothing at or above the floor was found: a market fact as far as the indexer reaches.",
+      "not_checked": "Not searched, for the stated reason: a gap in what this tool can reach, NOT a finding about the market.",
+      "unknown": "The search failed or the token could not be confirmed: NOT empty."
+    },
+    "chain_count_is_floor": true,
+    "chain_count_note": "FLOOR, not a census: chains are the asset's CoinGecko platforms. A deployment CoinGecko does not list is not queried here.",
+    "live_venue_count": 0,
+    "excluded_venue_count": 0,
+    "unestablished_venue_count": 9,
+    "live_venue_count_is_floor": true,
+    "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. ⚠️ 9 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead.",
+    "dashboard_scope_chains": [
+      "eth"
+    ],
+    "dashboard_scope_basis": "The first liquidity headline is Ethereum only. Other deployments are searched and labelled outside_scope: an Ethereum enumeration says nothing about exits there, and a pool there is no exit for an Ethereum holder."
+  },
+  "venues": [
+    {
+      "name": "sfrxUSD / frxUSD",
+      "chain": "eth",
+      "dex": "curve",
+      "kind": "swap",
+      "address": "0xf292eb6c5dcb693eaaf392d0562a01c3710e5978",
+      "counter_asset": {
+        "symbol": "frxUSD",
+        "address": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+        "decimals": 18,
+        "price_usd": 1.01984146716911
+      },
+      "role": "family_swap",
+      "tvl_usd": 12201215.419,
+      "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+      "tvl_caveat": null,
+      "volume_24h_usd": 128139.778790721,
+      "as_of": "2026-10-16T03:26:11Z",
+      "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xf292eb6c5dcb693eaaf392d0562a01c3710e5978",
+      "is_live": null,
+      "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+      "exclusion_reason": null,
+      "tvl_status": "reported",
+      "tvl_exclusion_basis": null,
+      "tvl_exclusion_code": null,
+      "custody_check": {
+        "token_units_in_pool": 4838779.486992744,
+        "counter_units_in_pool": 6020779.462554766,
+        "two_leg_usd_onchain": 12233224.95648535,
+        "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+      },
+      "counter_is_independent": true,
+      "counter_backing_note": null,
+      "onchain_balances": {
+        "status": "read",
+        "chain": "eth",
+        "block": 26202391,
+        "block_basis": null,
+        "read_at": "2026-10-16T03:26:24Z",
+        "asset_units": 4838779.486992744,
+        "asset_usd": 6092984.395891851,
+        "counter_symbol": "frxUSD",
+        "counter_units": 6020779.462554766,
+        "counter_usd": 6140240.560593498,
+        "absorbing_side": "counter",
+        "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+      },
+      "dashboard_scope": "in_scope"
+    },
+    {
+      "name": "reUSD / sfrxUSD",
+      "chain": "eth",
+      "dex": "curve",
+      "kind": "swap",
+      "address": "0xed785af60bed688baa8990cd5c4166221599a441",
+      "counter_asset": {
+        "symbol": "reUSD",
+        "address": "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+        "decimals": 18,
+        "price_usd": 1.0210737344
+      },
+      "role": "other_pair",
+      "tvl_usd": 3193201.6463,
+      "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+      "tvl_caveat": null,
+      "volume_24h_usd": 45665.4170346905,
+      "as_of": "2026-10-16T03:26:11Z",
+      "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xed785af60bed688baa8990cd5c4166221599a441",
+      "is_live": null,
+      "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+      "exclusion_reason": null,
+      "tvl_status": "reported",
+      "tvl_exclusion_basis": null,
+      "tvl_exclusion_code": null,
+      "custody_check": {
+        "token_units_in_pool": 592163.6717354179,
+        "counter_units_in_pool": 2397211.703068832,
+        "two_leg_usd_onchain": 3193381.577134933,
+        "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+      },
+      "counter_value_check": {
+        "status": "ok",
+        "counter_cap_usd": 51842936.1146012
+      },
+      "counter_is_independent": true,
+      "counter_backing_note": null,
+      "counter_note": "Resupply reUSD: a dollar exit only via reUSD's own route to dollars.",
+      "onchain_balances": {
+        "status": "read",
+        "chain": "eth",
+        "block": 26202391,
+        "block_basis": null,
+        "read_at": "2026-10-16T03:26:24Z",
+        "asset_units": 592163.6717354179,
+        "asset_usd": 745651.6713350563,
+        "counter_symbol": "reUSD",
+        "counter_units": 2397211.703068832,
+        "counter_usd": 2447729.9057998764,
+        "absorbing_side": "counter",
+        "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+      },
+      "dashboard_scope": "in_scope"
+    },
+    {
+      "name": "dUSD / sfrxUSD",
+      "chain": "eth",
+      "dex": "curve",
+      "kind": "swap",
+      "address": "0x2c2a700766886290359ccf39cb2173a39af1cef9",
+      "counter_asset": {
+        "symbol": "dUSD",
+        "address": "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+        "decimals": 18,
+        "price_usd": 0.99292139
+      },
+      "role": "other_pair",
+      "tvl_usd": 829153.6783,
+      "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+      "tvl_caveat": null,
+      "volume_24h_usd": 0.0,
+      "as_of": "2026-10-16T03:26:11Z",
+      "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x2c2a700766886290359ccf39cb2173a39af1cef9",
+      "is_live": null,
+      "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+      "exclusion_reason": null,
+      "tvl_status": "reported",
+      "tvl_exclusion_basis": null,
+      "tvl_exclusion_code": null,
+      "custody_check": {
+        "token_units_in_pool": 145742.57705411516,
+        "counter_units_in_pool": 678836.3843923693,
+        "two_leg_usd_onchain": 857550.0165700429,
+        "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+      },
+      "counter_value_check": {
+        "status": "ok",
+        "counter_cap_usd": 1091342.52639191
+      },
+      "counter_is_independent": true,
+      "counter_backing_note": null,
+      "counter_note": "dTRINITY dUSD (~$1M market cap): a dollar exit only via dUSD's own route.",
+      "onchain_balances": {
+        "status": "read",
+        "chain": "eth",
+        "block": 26202391,
+        "block_basis": null,
+        "read_at": "2026-10-16T03:26:24Z",
+        "asset_units": 145742.57705411516,
+        "asset_usd": 183518.8501965973,
+        "counter_symbol": "dUSD",
+        "counter_units": 678836.3843923693,
+        "counter_usd": 674031.1663734457,
+        "absorbing_side": "counter",
+        "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+      },
+      "dashboard_scope": "in_scope"
+    },
+    {
+      "name": "sfrxUSD / scrvUSD",
+      "chain": "eth",
+      "dex": "curve",
+      "kind": "swap",
+      "address": "0x15e4ff94b70a8f146b4e4afd069014d126035752",
+      "counter_asset": {
+        "symbol": "scrvUSD",
+        "address": "0x0655977feb2f289a4ab78af67bab0d17aab84367",
+        "decimals": 18,
+        "price_usd": 1.14515825434615
+      },
+      "role": "other_pair",
+      "tvl_usd": 210350.4065,
+      "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+      "tvl_caveat": null,
+      "volume_24h_usd": 13709.2884324031,
+      "as_of": "2026-10-16T03:26:11Z",
+      "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x15e4ff94b70a8f146b4e4afd069014d126035752",
+      "is_live": null,
+      "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+      "exclusion_reason": null,
+      "tvl_status": "reported",
+      "tvl_exclusion_basis": null,
+      "tvl_exclusion_code": null,
+      "custody_check": {
+        "token_units_in_pool": 54060.921384920315,
+        "counter_units_in_pool": 124307.71088656821,
+        "two_leg_usd_onchain": 210425.43817193573,
+        "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+      },
+      "counter_value_check": {
+        "status": "ok",
+        "counter_cap_usd": 16396753.5963765
+      },
+      "counter_is_independent": true,
+      "counter_backing_note": null,
+      "counter_note": "Savings crvUSD: needs a scrvUSD redemption, then a crvUSD route.",
+      "onchain_balances": {
+        "status": "read",
+        "chain": "eth",
+        "block": 26202391,
+        "block_basis": null,
+        "read_at": "2026-10-16T03:26:24Z",
+        "asset_units": 54060.921384920315,
+        "asset_usd": 68073.43697130737,
+        "counter_symbol": "scrvUSD",
+        "counter_units": 124307.71088656821,
+        "counter_usd": 142352.00120062835,
+        "absorbing_side": "counter",
+        "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+      },
+      "dashboard_scope": "in_scope"
+    },
+    {
+      "name": "dUSD / sFRAX",
+      "chain": "fraxtal",
+      "dex": "curve-fraxtal",
+      "kind": "swap",
+      "address": "0x5ecfa6940a33a2dad5c473896452f018c6c04577",
+      "counter_asset": {
+        "symbol": "dUSD",
+        "address": "0x788d96f655735f52c676a133f4dfc53cec614d4a",
+        "decimals": 6,
+        "price_usd": 0.9955796507
+      },
+      "role": "other_pair",
+      "tvl_usd": 87791.1668,
+      "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+      "tvl_caveat": null,
+      "volume_24h_usd": 0.169725381,
+      "as_of": "2026-10-16T03:27:07Z",
+      "source_url": "https://api.geckoterminal.com/api/v2/networks/fraxtal/pools/0x5ecfa6940a33a2dad5c473896452f018c6c04577",
+      "is_live": null,
+      "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+      "exclusion_reason": null,
+      "tvl_status": "reported",
+      "tvl_exclusion_basis": null,
+      "tvl_exclusion_code": null,
+      "custody_check": "not_checked",
+      "counter_is_independent": true,
+      "counter_backing_note": null,
+      "onchain_balances": {
+        "status": "read",
+        "chain": "fraxtal",
+        "block": 42655273,
+        "block_basis": null,
+        "read_at": "2026-10-16T03:27:38Z",
+        "asset_units": 20852.640302886226,
+        "asset_usd": 25405.28821550344,
+        "counter_symbol": "dUSD",
+        "counter_units": 62546.555703,
+        "counter_usd": 62270.07807928083,
+        "absorbing_side": "counter",
+        "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+      },
+      "dashboard_scope": "outside_scope"
+    },
+    {
+      "name": "sfrxUSD / rETH",
+      "chain": "eth",
+      "dex": "carbon-defi-ethereum",
+      "kind": "swap",
+      "address": "0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2343",
+      "counter_asset": {
+        "symbol": "rETH",
+        "address": "0xae78736cd615f374d3085123a210448e74fc6393",
+        "decimals": 18,
+        "price_usd": 1769.0340642342
+      },
+      "role": "other_pair",
+      "tvl_usd": 20243.8406,
+      "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+      "tvl_caveat": null,
+      "volume_24h_usd": 0.0,
+      "as_of": "2026-10-16T03:26:11Z",
+      "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2343",
+      "is_live": null,
+      "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+      "exclusion_reason": null,
+      "tvl_status": "reported",
+      "tvl_exclusion_basis": null,
+      "tvl_exclusion_code": null,
+      "custody_check": "not_checked",
+      "counter_is_independent": true,
+      "counter_backing_note": null,
+      "onchain_balances": {
+        "status": "not_read",
+        "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+      },
+      "dashboard_scope": "in_scope"
+    },
+    {
+      "name": "sfrxETH / sFRAX 0.05%",
+      "chain": "fraxtal",
+      "dex": "balancer-v2-fraxtal",
+      "kind": "swap",
+      "address": "0x1570315476480fa80cec1fff07a20c1df1adfd53",
+      "counter_asset": {
+        "symbol": "sfrxETH",
+        "address": "0xfc00000000000000000000000000000000000005",
+        "decimals": 18,
+        "price_usd": 2854.9606211591
+      },
+      "role": "other_pair",
+      "tvl_usd": 5877.0949,
+      "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+      "tvl_caveat": null,
+      "volume_24h_usd": 170.2602801902,
+      "as_of": "2026-10-16T03:27:07Z",
+      "source_url": "https://api.geckoterminal.com/api/v2/networks/fraxtal/pools/0x1570315476480fa80cec1fff07a20c1df1adfd53",
+      "is_live": null,
+      "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+      "exclusion_reason": null,
+      "tvl_status": "reported",
+      "tvl_exclusion_basis": null,
+      "tvl_exclusion_code": null,
+      "custody_check": "not_checked",
+      "counter_is_independent": true,
+      "counter_backing_note": null,
+      "onchain_balances": {
+        "status": "not_read",
+        "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+      },
+      "dashboard_scope": "outside_scope"
+    },
+    {
+      "name": "WFRAX / sfrxUSD",
+      "chain": "eth",
+      "dex": "carbon-defi-ethereum",
+      "kind": "swap",
+      "address": "0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2191",
+      "counter_asset": {
+        "symbol": "WFRAX",
+        "address": "0x04acaf8d2865c0714f79da09645c13fd2888977f",
+        "decimals": 18,
+        "price_usd": 0.31115194
+      },
+      "role": "other_pair",
+      "tvl_usd": 2935.4642,
+      "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+      "tvl_caveat": null,
+      "volume_24h_usd": 0.0,
+      "as_of": "2026-10-16T03:26:11Z",
+      "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xc537e898cd774e2dcba3b14ea6f34c93d5ea45e1-2191",
+      "is_live": null,
+      "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+      "exclusion_reason": null,
+      "tvl_status": "reported",
+      "tvl_exclusion_basis": null,
+      "tvl_exclusion_code": null,
+      "custody_check": "not_checked",
+      "counter_is_independent": true,
+      "counter_backing_note": null,
+      "onchain_balances": {
+        "status": "not_read",
+        "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+      },
+      "dashboard_scope": "in_scope"
+    },
+    {
+      "name": "sdUSD / sfrxUSD",
+      "chain": "eth",
+      "dex": "curve",
+      "kind": "swap",
+      "address": "0x4de61e58f5f1e495e3bc58516268bba25b5a57fd",
+      "counter_asset": {
+        "symbol": "sdUSD",
+        "address": "0x7cb20517776636ed76b68edb3d99dcce356abf02",
+        "decimals": 18,
+        "price_usd": 1.0156223387
+      },
+      "role": "other_pair",
+      "tvl_usd": 1347.4144506254,
+      "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+      "tvl_caveat": null,
+      "volume_24h_usd": 0.0,
+      "as_of": "2026-10-16T03:26:11Z",
+      "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x4de61e58f5f1e495e3bc58516268bba25b5a57fd",
+      "is_live": null,
+      "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+      "exclusion_reason": null,
+      "tvl_status": "reported",
+      "tvl_exclusion_basis": null,
+      "tvl_exclusion_code": null,
+      "custody_check": "not_checked",
+      "counter_is_independent": true,
+      "counter_backing_note": null,
+      "counter_note": "Staked dUSD: unstake to dUSD first, then dUSD's own route.",
+      "onchain_balances": {
+        "status": "read",
+        "chain": "eth",
+        "block": 26202391,
+        "block_basis": null,
+        "read_at": "2026-10-16T03:26:24Z",
+        "asset_units": 235.16146703994013,
+        "asset_usd": 296.11499202247893,
+        "counter_symbol": "sdUSD",
+        "counter_units": 1086.6805653569536,
+        "counter_usd": 1103.6570572076675,
+        "absorbing_side": "counter",
+        "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+      },
+      "dashboard_scope": "in_scope"
+    }
+  ],
+  "venues_by_role_outside_scope": {
+    "dollar_exit": {
+      "pool_count": 0,
+      "tvl_usd": 0,
+      "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
+    },
+    "family_swap": {
+      "pool_count": 0,
+      "tvl_usd": 0,
+      "meaning": "Swaps sfrxUSD for frxUSD, the token it pays out: an underlying swap, NOT a dollar exit. frxUSD still needs its own route or redemption to dollars."
+    },
+    "other_pair": {
+      "pool_count": 2,
+      "tvl_usd": 93668.2617,
+      "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
+    },
+    "semantics": "Pools on chains outside the dashboard's scope, summed apart. `venues_by_role` counts in-scope chains only; never add the two: a pool on another chain is not an exit for a holder of the in-scope token without a bridge."
+  },
+  "venue_diagnostics": {
+    "reason_meanings": {
+      "below_tvl_floor": "Reported TVL under $1,000: dust. Left out of `venues` and every total.",
+      "duplicate_listing": "The same pool address returned twice by the indexer; kept once in `venues`.",
+      "tvl_exceeds_supply": "Kept in `venues`, but its TVL is out of every total: it exceeds the token's whole value on the chain.",
+      "tvl_exceeds_onchain_custody": "Kept in `venues`, but its TVL is out of every total: it is far above what the pool holds on-chain.",
+      "counter_token_value_implausible": "Kept in `venues`, but its TVL is out of every total: it rests on a price for a token with no real market value."
+    },
+    "rejected_count": 77,
+    "rejected_by_reason": {
+      "below_tvl_floor": 77
+    },
+    "rejected": [
+      {
+        "chain": "katana",
+        "address": "0xbf22bbc5c9111ca953d26ed99c8f5017d2f1bf81",
+        "name": "sfrxUSD / frxUSD 0.01%",
+        "dex": "sushiswap-v3-katana",
+        "role": "dollar_exit",
+        "tvl_usd": 737.16905662,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xdbb5d821f661de5d504c71d513a88c498ef64fff",
+        "name": "sFRAX / wfrax 0.05%",
+        "dex": "velodrome-finance-slipstream-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 543.0129,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0x3bd1017929b43c1414be2aca39892590fba4d6e2",
+        "name": "sfrxUSD / sUSDe",
+        "dex": "curve",
+        "role": "other_pair",
+        "tvl_usd": 538.3265,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0x3d5a784eaeff3bd681378a7c990c3b2c2233cb3d121a3bb0470f862f7731665f",
+        "name": "sfrxUSD / USDC 98.54%",
+        "dex": "uniswap-v4-ethereum",
+        "role": "dollar_exit",
+        "tvl_usd": 317.0707,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "bsc",
+        "address": "0x838d45d5a94181eccd4105e40efa1f34427a379365f6092f8b19a2b5bb1c8804",
+        "name": "sfrxUSD / USDC 0.362%",
+        "dex": "pancakeswap-infinity-clmm",
+        "role": "dollar_exit",
+        "tvl_usd": 294.2239,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0xa090fc2652ef09912b4654f3aacbba9ab0344ebc4bbcfc04a3db7d0df7c63c0f",
+        "name": "sfrxUSD / USDT 99.91%",
+        "dex": "uniswap-v4-ethereum",
+        "role": "dollar_exit",
+        "tvl_usd": 291.8987,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "arbitrum",
+        "address": "0xdba0578c332aacf0b2688a748b10c202742b062f21b454ac34ca092d2e221587",
+        "name": "sfrxUSD / ETH 90%",
+        "dex": "uniswap-v4-arbitrum",
+        "role": "other_pair",
+        "tvl_usd": 196.8967,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0x2ee25299e8d90d6027575d6aecb6e40f6028107bb11f5cd9b63584ccbaae6f89",
+        "name": "USDC / sfrxUSD 80%",
+        "dex": "uniswap-v4-ethereum",
+        "role": "dollar_exit",
+        "tvl_usd": 190.203,
+        "volume_24h_usd": 0.01283589334,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x8ce48fe292f6a4973727e0619294b97f3eb94511",
+        "name": "DKDEFI / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 124.7565,
+        "volume_24h_usd": 2.4609313365,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x261c8df6904ce14f20728a8686e37adb39be8e5e",
+        "name": "sFRAX / FRAX 0.015%",
+        "dex": "ra-exchange",
+        "role": "family_swap",
+        "tvl_usd": 114.9560874334,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0x9f51e1d582d66078a0ea75e36b00d27ebfc090315a1d99b2ec76686078f9645d",
+        "name": "sfrxUSD / ETH 99.9%",
+        "dex": "uniswap-v4-ethereum",
+        "role": "other_pair",
+        "tvl_usd": 107.6472,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xacdc85afcd8b83eb171affcbe29fad204f6ae45c",
+        "name": "sfrxETH / sFRAX",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 81.23540094603977,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "polygon_pos",
+        "address": "0x977b1ba84bfa398fbd03379d5408b3195e33b991510c3636ebbc4f913fbb6073",
+        "name": "USDC / sfrxUSD 90%",
+        "dex": "uniswap-v4-polygon",
+        "role": "dollar_exit",
+        "tvl_usd": 42.3077,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "base",
+        "address": "0x9e5dc86c2eb488f5a5e675185a3fbbdf8b45a46150440ad18f4a5df01f533a52",
+        "name": "sfrxUSD / ETH 0.362%",
+        "dex": "pancakeswap-infinity-clmm-base",
+        "role": "other_pair",
+        "tvl_usd": 31.5875,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "sonic",
+        "address": "0xfc22fd98f582b929c0b16b9934f5402e63a0d110",
+        "name": "sfrxUSD / EQUAL",
+        "dex": "equalizer-sonic",
+        "role": "other_pair",
+        "tvl_usd": 23.3034,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0x14b395530d2e14909f8de81b5e120d77fecd72b9",
+        "name": "sfrxUSD / DOLA",
+        "dex": "curve",
+        "role": "other_pair",
+        "tvl_usd": 21.7284,
+        "volume_24h_usd": 0.003357790238,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "sonic",
+        "address": "0x7ac461385119f61178c79da1a9bded4f5b029435",
+        "name": "sfrxUSD / wS",
+        "dex": "equalizer-sonic",
+        "role": "other_pair",
+        "tvl_usd": 21.397,
+        "volume_24h_usd": 0.6225729945,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "base",
+        "address": "0xe08718cba37687a439202a2c46d58f2d7867eebb",
+        "name": "sfrxUSD / WETH",
+        "dex": "equalizer-base",
+        "role": "other_pair",
+        "tvl_usd": 21.2195,
+        "volume_24h_usd": 0.05751621638,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "base",
+        "address": "0x3a8a16a2e1d4e0333c17a8a0a27a2e9db0ace236",
+        "name": "ELITE / sfrxUSD",
+        "dex": "equalizer-base",
+        "role": "other_pair",
+        "tvl_usd": 15.5236,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "sonic",
+        "address": "0x7d709a567ba2fdbbb92e94e5fe74b9cbbc590835",
+        "name": "sfrxUSD / frxUSD 0.01%",
+        "dex": "swapx-algebra",
+        "role": "dollar_exit",
+        "tvl_usd": 11.683,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "sei-evm",
+        "address": "0xe4f166844b9d6519b12f63d3367137281694040e",
+        "name": "sFRAX / USDC-USDT-FRXUSD / sfrxUSD-(USDC-USDT-FRXUSD) 0.05%",
+        "dex": "jellyswap",
+        "role": "other_pair",
+        "tvl_usd": 9.7651,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0x640bc08845ea4bd89842d51d48c8f53eac84cfa6",
+        "name": "litUSD / sfrxUSD",
+        "dex": "curve",
+        "role": "other_pair",
+        "tvl_usd": 9.6452100114,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xbcad83b0a12dd11c6ab7c7c76a3ce9fdeeebc4cc",
+        "name": "dUSD / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 8.4194,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "sonic",
+        "address": "0x9255f31ef9b35d085ced6fe29f9e077eb1f513c6",
+        "name": "sfrxUSD / OS 0.3%",
+        "dex": "swapx-algebra",
+        "role": "other_pair",
+        "tvl_usd": 4.5454,
+        "volume_24h_usd": 0.1667733434,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x70d410b739da81303a76169cdd406a746bde8b34",
+        "name": "dUSD / sFRAX",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 4.486718396,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0x86fecb2f93c537397f9dfd894bcf6a95fa87a25e",
+        "name": "sfrxUSD / USDe",
+        "dex": "curve",
+        "role": "other_pair",
+        "tvl_usd": 3.9942107466,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0x8e93fcf26774fd739eedee66764dbbbe600e9ba147da71336136e6a8d1eb9d5f",
+        "name": "USDC / sfrxUSD 88.88%",
+        "dex": "uniswap-v4-ethereum",
+        "role": "dollar_exit",
+        "tvl_usd": 3.3463,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x513fd781e908540030fbffb88bebf0f21fffd4e0",
+        "name": "sFRAX / wfrax / sfrxETH",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 3.1676,
+        "volume_24h_usd": 0.02475832377,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x49c790d0eee5c841817f7a7fb0b90a84cb55e2ca",
+        "name": "sFRAX / FRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "family_swap",
+        "tvl_usd": 3.1676,
+        "volume_24h_usd": 0.02397257877,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "sei-evm",
+        "address": "0x24fcca41945f869a91d54398f614003358464c32",
+        "name": "sFRAX / WSEI 0.5%",
+        "dex": "jellyswap",
+        "role": "other_pair",
+        "tvl_usd": 2.3232,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "base",
+        "address": "0x8c69ea68e69fa86db137d388c044273e9084047c",
+        "name": "sfrxUSD / frxUSD",
+        "dex": "equalizer-base",
+        "role": "dollar_exit",
+        "tvl_usd": 1.9522,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xb158928d1e6e2d04e34c5eae7aa40bd7e091f842",
+        "name": "AUSD / sFRAX 0.25%",
+        "dex": "ra-exchange",
+        "role": "other_pair",
+        "tvl_usd": 1.1684097906,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "base",
+        "address": "0x7320645d81a3199f77a1fb640c0f8069470cc070",
+        "name": "sfrxUSD / SCALE",
+        "dex": "equalizer-base",
+        "role": "other_pair",
+        "tvl_usd": 0.9756,
+        "volume_24h_usd": 0.06633632038,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x1ab35116c3fa0b2f507d8c8c3261d42683c1e31e",
+        "name": "FRAX / sFRAX",
+        "dex": "curve-fraxtal",
+        "role": "family_swap",
+        "tvl_usd": 0.7571,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xedb623273f6f815b80cdc27aa9e7bb66ff125923",
+        "name": "DKDEFI / sFRAX 0.75%",
+        "dex": "ra-exchange",
+        "role": "other_pair",
+        "tvl_usd": 0.5544955771,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x74e9790a5f61a6c1f0799ce12d4cae41e8f02ba0",
+        "name": "IQ / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.4877,
+        "volume_24h_usd": 0.02340837154,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xf8f4aa78316b15d910003cbe855ce1457a242c4c",
+        "name": "sFRAX / wfrxETH",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0228896131863288,
+        "volume_24h_usd": 0.0001301085613,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "base",
+        "address": "0xd7effde70e050cd59cbb6035d369b7e3ec2321b5",
+        "name": "MILK / sfrxUSD 1%",
+        "dex": "thick_v1_base",
+        "role": "other_pair",
+        "tvl_usd": 0.01495469368,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xadecacad11589fbee18215dcffae0e186c53670c",
+        "name": "DKDEFI / sFRAX 0.25%",
+        "dex": "ra-exchange",
+        "role": "other_pair",
+        "tvl_usd": 0.008819077183,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x1dc8e49dffb7b57b8c250663a7e1421cc94db4fd",
+        "name": "FPIS / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.00696877751346846,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0x001d1d2f770a414754846ea8efee857f0d4b5324",
+        "name": "sfrxUSD / WETH",
+        "dex": "uniswap_v2",
+        "role": "other_pair",
+        "tvl_usd": 0.00576372229505259,
+        "volume_24h_usd": 0.03318630239,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x3c6ef30aee2f590b79089347bf9b1aa833bcf167",
+        "name": "AstralFXS / sFRAX 0.25%",
+        "dex": "ra-exchange",
+        "role": "other_pair",
+        "tvl_usd": 0.003616301525,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x59d4cc15b1478bba86e1d621337d77453c93ea51",
+        "name": "sfrxETH / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.001899457956,
+        "volume_24h_usd": 6.696066037e-05,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xcf018b8e0068ad282656b44f1a099f0ea7ba85bb",
+        "name": "DKDEFI / sFRAX 0.01%",
+        "dex": "ra-exchange",
+        "role": "other_pair",
+        "tvl_usd": 0.001788899188,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "sei-evm",
+        "address": "0x432605b4ebccd6b168274e03c43789f7f395992c",
+        "name": "sFRAX / USDT 0.01%",
+        "dex": "jellyswap",
+        "role": "dollar_exit",
+        "tvl_usd": 0.0014,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "polygon_pos",
+        "address": "0x9271571394ece9e4d04a9b61c0afa0e7c6a9a74b",
+        "name": "USDC / sfrxUSD",
+        "dex": "quickswap",
+        "role": "dollar_exit",
+        "tvl_usd": 0.001004115795,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "sonic",
+        "address": "0x07de4ec5fcbc5f0b60f700155c13417d69b548fe",
+        "name": "USDC.e / sfrxUSD",
+        "dex": "swapx-v2",
+        "role": "dollar_exit",
+        "tvl_usd": 0.001,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xd644a9ecaa8ecea13a5e928ec1c0e86ecc108675",
+        "name": "DKDEFI / sFRAX 1%",
+        "dex": "velodrome-finance-slipstream-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0007983582228,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "sonic",
+        "address": "0x1758bc16df1d7e969016a7e557292f390ab54a97",
+        "name": "sfrxUSD / scUSD 0.036%",
+        "dex": "swapx-algebra",
+        "role": "other_pair",
+        "tvl_usd": 0.0005,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x83242d1b2b71fa6592fb3f602529f429dc045390",
+        "name": "IQ / sFRAX 0.25%",
+        "dex": "ra-exchange",
+        "role": "other_pair",
+        "tvl_usd": 1.393550349e-05,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "abstract",
+        "address": "0x3c82ecf7fdb9519ce346745b7277f9195d0d416a",
+        "name": "sfrxUSD / USDC.e 0.01%",
+        "dex": "uniswap-v3-abstract",
+        "role": "dollar_exit",
+        "tvl_usd": 2.0016329146598723e-06,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "polygon_pos",
+        "address": "0x39d8caee50b5969f188ea6f5be1b77a1de25c7d9",
+        "name": "USDC / sfrxUSD 0.01%",
+        "dex": "quickswap_v3",
+        "role": "dollar_exit",
+        "tvl_usd": 2.000744196e-06,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x2389dd25ab475b05a90fae82bb1d01036a17a703",
+        "name": "sFRAX / wfrax",
+        "dex": "ra-exchange-v1",
+        "role": "other_pair",
+        "tvl_usd": 3.971787316e-15,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xd4b9b1ceffbd38d49475a52ed1c9765b18b4722b",
+        "name": "sFRAX / FRAX",
+        "dex": "ra-exchange-v1",
+        "role": "family_swap",
+        "tvl_usd": 3.506766938e-15,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "katana",
+        "address": "0x330afce22772e08d800de016fd800b0de401ece7",
+        "name": "sfrxUSD / avKAT 4%",
+        "dex": "sushiswap-v3-katana",
+        "role": "other_pair",
+        "tvl_usd": 5.590878836e-18,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0xe69bb2fc1acc777fbdb00b83fc8b910454cec617",
+        "name": "sfrxUSD / sGho",
+        "dex": "curve",
+        "role": "other_pair",
+        "tvl_usd": 2.21981984e-18,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0x7ebc128405a50253f8b2f0d073cf581e26e6cdd7",
+        "name": "stkGHO / sfrxUSD",
+        "dex": "curve",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "eth",
+        "address": "0x50d01484e569fe1e487849db3498f903c1dd9256",
+        "name": "sfrxUSD / WETH",
+        "dex": "dodo-pmm-ethereum",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.01147448592,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x5f9f487c39e814f88a9e8d7a37d9dab850ff7f1c",
+        "name": "NOIR / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xe757627684c8d0a2e0b54485e456b23faafc79b3",
+        "name": "AstralFXS / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xb2eae46253c5fe6d4ec0a11ce5d98f446c3442fa",
+        "name": "sFRAX / WBTC / DKDEFI",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x2f22711763debcbeb04773a9c5a8ff14da717772",
+        "name": "AstralSUSD / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x7158e868548e5b265a7effb234237e8659d756d2",
+        "name": "IQYIELD / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x4c86d266e969e186a2f197d859df2d91e5ea1ed2",
+        "name": "sdUSD / sFRAX",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xe6388e7b3ec8e95f48a9d1c5398f11dd05b7238c",
+        "name": "AUSD / sFRAX",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x880c20f1a94e30f912810fe048eefc4d373834aa",
+        "name": "AUSD / sFRAX",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x8652f139ba3a98fd868b68b3559a1ad6e6389c8b",
+        "name": "AUSD / sFRAX 0.75%",
+        "dex": "ra-exchange",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x8e001d4bac0eae1eea348dfc22f9b8bda67dd211",
+        "name": "IQ / sFRAX",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xbeb468beb5c72d8b4d4f076f473db398562769ed",
+        "name": "AUSD / sFRAX",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x94a5b3a7aaf67415b7f5973ed1adf542897a45f1",
+        "name": "AUSD / sFRAX",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xac5dd1861bcf660a788e5f1f3d4d09bcf661946c",
+        "name": "scrvUSD / sFRAX",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0xb7603e5ba1af01bb7ded13ded6889250cd70f432",
+        "name": "AUSD / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x06a2e1521afde7f7dc30d351dcf04408042f536e",
+        "name": "AUSD / sFRAX",
+        "dex": "curve-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x25d320f9f553252d31b92946636d42fff806fd3a",
+        "name": "BTCWITCH / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "fraxtal",
+        "address": "0x953bf8b37d81462d06d018f5322be6a956c5dfc2",
+        "name": "ASTRAL-X / sFRAX",
+        "dex": "fraxswap-fraxtal",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "sonic",
+        "address": "0x5fcdbc2ebf669314cb5e0208b9a412a89104f8a4",
+        "name": "sfrxUSD / frxUSD",
+        "dex": "curve-sonic",
+        "role": "dollar_exit",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      },
+      {
+        "chain": "base",
+        "address": "0xf86b8f19e9f559ac5ed8cf20c56d4dcb1e9f2c8b",
+        "name": "sfrxUSD / waBasUSDC",
+        "dex": "equalizer-base",
+        "role": "other_pair",
+        "tvl_usd": 0.0,
+        "volume_24h_usd": 0.0,
+        "reason": "below_tvl_floor"
+      }
+    ],
+    "published_zero_volume_count": 4,
+    "volume_policy": "24h volume is published as context and is never a reason to reject a pool: a quiet day is not a dead pool (backing-monitor's fleet venue rule 5).",
+    "dedup_basis": "One source (GeckoTerminal) keyed by pool address, so the same pool cannot enter twice. Liquidity wrappers that re-list a pool (Convex, Yearn, StakeDAO, Beefy, Aura) are kept out of `venues` and marked `lp_wrapper` in `non_swap_listings`."
+  },
+  "absorbing_side": {
+    "buckets": {
+      "independent_exit": {
+        "pool_count": 0,
+        "counter_usd": 0.0
+      },
+      "circular_counter": {
+        "pool_count": 0,
+        "counter_usd": 0.0
+      },
+      "family_swap": {
+        "pool_count": 1,
+        "counter_usd": 6140240.560593498
+      },
+      "other_pair": {
+        "pool_count": 4,
+        "counter_usd": 3265216.730431158
+      },
+      "not_read": {
+        "pool_count": 2,
+        "counter_usd": 23179.304799999998,
+        "semantics": "Whole-pool indexer TVL of pools whose balances could not be read: NOT counter-side."
+      }
+    },
+    "semantics": "Counter-asset units held by the pools, by what they are. Do NOT add circular_counter to independent_exit: a counter backed by this asset fails with it. None of this is depth.",
+    "scope": "in-scope chains only"
+  },
+  "lp_ownership": {
+    "chain": "eth",
+    "block": 26202433,
+    "read_at": "2026-10-16T03:34:41Z",
+    "source": "eth_call totalSupply/balanceOf on each LP token and on its Convex reward contract, at one block; Convex pools from the Booster's poolInfo for every pid at the same block.",
+    "holders_read": {
+      "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1": "Frax sfrxUSD controller (3-of-6 Safe, no delay)"
+    },
+    "convex_scan": {
+      "status": "ok",
+      "pool_count": 583,
+      "unread_pids": 0
+    },
+    "semantics": "Who owns the LP shares of each pool, read at one block. A pool whose LP is almost all one operator's is depth that operator can withdraw in one transaction: it is real at the block and not durable. Ownership is not depth, and owned inventory is never added to treasury cash, redemption inventory or strategy withdrawal limits: the same frxUSD would be counted twice.",
+    "limitations": [
+      "Only the named holder is read. The rest of each pool's LP is 'other holders', not broken down.",
+      "Convex is the only staking wrapper read; LP staked in a Curve gauge directly, StakeDAO, Yearn or elsewhere counts as other holders.",
+      "Ownership can change in any later block. A withdrawal needs one controller Safe transaction; no delay was established.",
+      "Coin units are the pool's balances(i); attributable units are a pro-rata claim, not what a withdrawal would return after fees."
+    ],
+    "pools": [
+      {
+        "pool": "0xf292eb6c5dcb693eaaf392d0562a01c3710e5978",
+        "name": "sfrxUSD / frxUSD",
+        "pool_role": "venue",
+        "venue_role": "family_swap",
+        "holds_asset": true,
+        "lp_token": "0xf292eb6c5dcb693eaaf392d0562a01c3710e5978",
+        "lp_total_supply": 11546865.340469537,
+        "status": "read",
+        "holders": [
+          {
+            "holder": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "label": "Frax sfrxUSD controller (3-of-6 Safe, no delay)",
+            "direct_lp": 0.0,
+            "convex_staked_lp": 11546843.105448665,
+            "pct_of_lp_supply": 99.99980743673527
+          }
+        ],
+        "named_holders_pct_of_lp_supply": 99.99980743673527,
+        "other_holders_pct_of_lp_supply": 0.0001925632647328257,
+        "convex": {
+          "pid": 499,
+          "crv_rewards": "0x206689daedd00c82870d616c2e49b9d601a3d292",
+          "gauge": "0x9a356132605ad599aba34651aa2a606730bacaaa",
+          "shutdown": false,
+          "total_staked_lp": 11546844.091348404
+        },
+        "coins": [
+          {
+            "coin": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+            "pool_units": 4838766.98750932,
+            "attributable_to_named_holders_units": 4838757.669821636
+          },
+          {
+            "coin": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+            "pool_units": 6020770.80698547,
+            "attributable_to_named_holders_units": 6020759.213192642
+          }
+        ],
+        "basis": "Holds the asset: a venue in `venues`."
+      },
+      {
+        "pool": "0xd6937ea8d33b0c21348f36f7895fde3054ba4927",
+        "name": "frxUSD / USDT (Curve)",
+        "pool_role": "downstream_route",
+        "venue_role": null,
+        "holds_asset": false,
+        "route_note": "Second leg of the sfrxUSD -> frxUSD -> USDT route riskAnalyst tested. Holds frxUSD and USDT, no sfrxUSD.",
+        "lp_token": "0xd6937ea8d33b0c21348f36f7895fde3054ba4927",
+        "lp_total_supply": 1004940.6875410161,
+        "status": "read",
+        "holders": [
+          {
+            "holder": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "label": "Frax sfrxUSD controller (3-of-6 Safe, no delay)",
+            "direct_lp": 1004888.8465933343,
+            "convex_staked_lp": 0.0,
+            "pct_of_lp_supply": 99.99484139230063
+          }
+        ],
+        "named_holders_pct_of_lp_supply": 99.99484139230063,
+        "other_holders_pct_of_lp_supply": 0.005158607699371487,
+        "convex": null,
+        "coins": [
+          {
+            "coin": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+            "pool_units": 106412.4775514627,
+            "attributable_to_named_holders_units": 106406.98814920263
+          },
+          {
+            "coin": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+            "pool_units": 898918.846108,
+            "attributable_to_named_holders_units": 898872.4744111936
+          }
+        ],
+        "basis": "Does NOT hold the asset. A downstream route pool, owned by the same operator; listed for its ownership, never as a venue."
+      },
+      {
+        "pool": "0x15e4ff94b70a8f146b4e4afd069014d126035752",
+        "name": "sfrxUSD / scrvUSD",
+        "pool_role": "venue",
+        "venue_role": "other_pair",
+        "holds_asset": true,
+        "lp_token": "0x15e4ff94b70a8f146b4e4afd069014d126035752",
+        "lp_total_supply": 185681.6855561511,
+        "status": "read",
+        "holders": [
+          {
+            "holder": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "label": "Frax sfrxUSD controller (3-of-6 Safe, no delay)",
+            "direct_lp": 180151.16762710517,
+            "convex_staked_lp": 0.0,
+            "pct_of_lp_supply": 97.02150596463997
+          }
+        ],
+        "named_holders_pct_of_lp_supply": 97.02150596463997,
+        "other_holders_pct_of_lp_supply": 2.978494035360029,
+        "convex": {
+          "pid": 433,
+          "crv_rewards": "0x6c4075355eea626cbfaeeacd9fd8f5016a08b2e0",
+          "gauge": "0xddcfb091f3fdcadee38465da9a73cb5e356e145b",
+          "shutdown": false,
+          "total_staked_lp": 4805.758325189874
+        },
+        "coins": [
+          {
+            "coin": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+            "pool_units": 54059.87342172971,
+            "attributable_to_named_holders_units": 52449.70331634031
+          },
+          {
+            "coin": "0x0655977feb2f289a4ab78af67bab0d17aab84367",
+            "pool_units": 124306.75225287418,
+            "attributable_to_named_holders_units": 120604.28305147256
+          }
+        ],
+        "basis": "Holds the asset: a venue in `venues`."
+      },
+      {
+        "pool": "0xed785af60bed688baa8990cd5c4166221599a441",
+        "name": "reUSD / sfrxUSD",
+        "pool_role": "venue",
+        "venue_role": "other_pair",
+        "holds_asset": true,
+        "lp_token": "0xed785af60bed688baa8990cd5c4166221599a441",
+        "lp_total_supply": 3036640.772869599,
+        "status": "read",
+        "holders": [
+          {
+            "holder": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "label": "Frax sfrxUSD controller (3-of-6 Safe, no delay)",
+            "direct_lp": 0.0,
+            "convex_staked_lp": 656850.3270747992,
+            "pct_of_lp_supply": 21.630820903918817
+          }
+        ],
+        "named_holders_pct_of_lp_supply": 21.630820903918817,
+        "other_holders_pct_of_lp_supply": 78.36917909608118,
+        "convex": {
+          "pid": 439,
+          "crv_rewards": "0x18574c2047a2d4786567a2c31b4f25ae291ed6bf",
+          "gauge": "0x5c0b03914f68f2717d779a0211fd98c2cc45a4dd",
+          "shutdown": false,
+          "total_staked_lp": 1964224.5474163564
+        },
+        "coins": [
+          {
+            "coin": "0x57ab1e0003f623289cd798b1824be09a793e4bec",
+            "pool_units": 2397196.9681273615,
+            "attributable_to_named_holders_units": 518533.38288980146
+          },
+          {
+            "coin": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+            "pool_units": 592141.407409761,
+            "attributable_to_named_holders_units": 128085.04733474967
+          }
+        ],
+        "basis": "Holds the asset: a venue in `venues`."
+      },
+      {
+        "pool": "0x2c2a700766886290359ccf39cb2173a39af1cef9",
+        "name": "dUSD / sfrxUSD",
+        "pool_role": "venue",
+        "venue_role": "other_pair",
+        "holds_asset": true,
+        "lp_token": "0x2c2a700766886290359ccf39cb2173a39af1cef9",
+        "lp_total_supply": 847852.4046970153,
+        "status": "read",
+        "holders": [
+          {
+            "holder": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "label": "Frax sfrxUSD controller (3-of-6 Safe, no delay)",
+            "direct_lp": 0.0,
+            "convex_staked_lp": 0.0,
+            "pct_of_lp_supply": 0.0
+          }
+        ],
+        "named_holders_pct_of_lp_supply": 0.0,
+        "other_holders_pct_of_lp_supply": 100.0,
+        "convex": {
+          "pid": 528,
+          "crv_rewards": "0x0ab0911b4c7bc10b6402cc06f2c96cbb7eedce87",
+          "gauge": "0x91c95bb84aa561d93d165ff24d0e54e6b006447c",
+          "shutdown": false,
+          "total_staked_lp": 0.0
+        },
+        "coins": [
+          {
+            "coin": "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+            "pool_units": 678836.3436535777,
+            "attributable_to_named_holders_units": 0.0
+          },
+          {
+            "coin": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+            "pool_units": 145742.57705411516,
+            "attributable_to_named_holders_units": 0.0
+          }
+        ],
+        "basis": "Holds the asset: a venue in `venues`."
+      },
+      {
+        "pool": "0x4de61e58f5f1e495e3bc58516268bba25b5a57fd",
+        "name": "sdUSD / sfrxUSD",
+        "pool_role": "venue",
+        "venue_role": "other_pair",
+        "holds_asset": true,
+        "lp_token": "0x4de61e58f5f1e495e3bc58516268bba25b5a57fd",
+        "lp_total_supply": 1382.192318943325,
+        "status": "read",
+        "holders": [
+          {
+            "holder": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "label": "Frax sfrxUSD controller (3-of-6 Safe, no delay)",
+            "direct_lp": 0.0,
+            "convex_staked_lp": 0.0,
+            "pct_of_lp_supply": 0.0
+          }
+        ],
+        "named_holders_pct_of_lp_supply": 0.0,
+        "other_holders_pct_of_lp_supply": 100.0,
+        "convex": {
+          "pid": 530,
+          "crv_rewards": "0x7210b77205c2bfc88250bddfca04548f232346f8",
+          "gauge": "0xf652cdfc38e1d2fb48d6ac022aadfc2501fd437b",
+          "shutdown": false,
+          "total_staked_lp": 2.998419549799455
+        },
+        "coins": [
+          {
+            "coin": "0x7cb20517776636ed76b68edb3d99dcce356abf02",
+            "pool_units": 1086.6259015747264,
+            "attributable_to_named_holders_units": 0.0
+          },
+          {
+            "coin": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+            "pool_units": 235.08569531575935,
+            "attributable_to_named_holders_units": 0.0
+          }
+        ],
+        "basis": "Holds the asset: a venue in `venues`."
+      }
+    ]
+  },
+  "non_swap_listings": {
+    "status": "ok",
+    "source": "defillama:yields.llama.fi/pools",
+    "match": "by symbol, NOT by address: names may collide, treat as a pointer",
+    "chains": [
+      "Ethereum"
+    ],
+    "kind_meanings": {
+      "lending": "Deposits in a lending market: concentration context, not spot depth.",
+      "issuer_vault": "The issuer's own vault TVL: not secondary liquidity.",
+      "pendle_market": "Pendle yield market: see `pendle` for live vs matured.",
+      "lp_wrapper": "A receipt for a DEX pool already counted in `venues`: double-counts the same tokens.",
+      "unclassified": "Not sorted: a pointer to read, not a category."
+    },
+    "listings": [
+      {
+        "project": "frax",
+        "chain": "Ethereum",
+        "symbol": "SFRXUSD",
+        "tvl_usd": 41277274,
+        "kind": "unclassified"
+      },
+      {
+        "project": "convex-finance",
+        "chain": "Ethereum",
+        "symbol": "SFRXUSD-FRXUSD",
+        "tvl_usd": 11899143,
+        "kind": "lp_wrapper"
+      },
+      {
+        "project": "convex-finance",
+        "chain": "Ethereum",
+        "symbol": "REUSD-SFRXUSD",
+        "tvl_usd": 1999388,
+        "kind": "lp_wrapper"
+      },
+      {
+        "project": "stake-dao-yield",
+        "chain": "Ethereum",
+        "symbol": "REUSD-SFRXUSD",
+        "tvl_usd": 954107,
+        "kind": "lp_wrapper"
+      },
+      {
+        "project": "fraxlend",
+        "chain": "Ethereum",
+        "symbol": "SFRXUSD",
+        "tvl_usd": 499787,
+        "kind": "lending"
+      },
+      {
+        "project": "beefy",
+        "chain": "Ethereum",
+        "symbol": "REUSD-SFRXUSD",
+        "tvl_usd": 50134,
+        "kind": "lp_wrapper"
+      },
+      {
+        "project": "asymmetry-usdaf",
+        "chain": "Ethereum",
+        "symbol": "SFRXUSD",
+        "tvl_usd": 33267,
+        "kind": "unclassified"
+      }
+    ]
+  },
+  "payload_revised_at": "2026-10-16T03:34:51Z",
+  "publication_authorization": {
+    "approved_on": "2026-10-16",
+    "basis": "Owner explicitly requested production publication",
+    "source": "/home/danger/DexTracker/data/liquidity_pending/sfrxusd_liquidity.json",
+    "editorial_commit": null
+  }
+}

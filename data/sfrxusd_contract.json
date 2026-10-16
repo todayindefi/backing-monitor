@@ -1,0 +1,634 @@
+{
+  "schema_version": "contract/1",
+  "asset": "sfrxusd",
+  "producer": "security_analyst",
+  "as_of": "2026-10-15",
+  "generated_at": "2026-10-16T04:29:12Z",
+  "contract": {
+    "headline": "Active undelayed core authority",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-10-15",
+    "source_file": "security_analyst/topology/assets/sfrxusd.yaml",
+    "publication_scope": {
+      "chains": [
+        "ethereum",
+        "fraxtal"
+      ],
+      "walked_by": "hand"
+    },
+    "layers": [
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-10-16",
+        "walked_by": "hand",
+        "target_name": "Ethereum sfrxUSD token",
+        "terminal_name": "Frax controller Safe and adapter upgrade Safe",
+        "topology": "mixed",
+        "keys": [
+          "timelockAddress",
+          "addMinter",
+          "removeMinter",
+          "minter_mint",
+          "minter_burn_from",
+          "setAllPricingParams"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "role_admin": {
+          "holder": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+          "kind": "safe",
+          "via": "timelockAddress"
+        },
+        "paths": [
+          {
+            "holder": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "name": "Frax controller Safe",
+            "name_verified": true,
+            "via": "timelockAddress -> pricing and minter administration; active minter",
+            "terminal": "safe",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "holder_kind": "contract",
+            "threshold": 3,
+            "owners": 6,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "the address named timelockAddress is a Safe with a direct call path and no on-chain delay",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "hand_walk": "timelockAddress returned this 3-of-6 Safe; pendingTimelockAddress was zero. It remains active minter index 0 and can appoint/remove minters and rewrite stored PPS/rate without a token-enforced delay."
+          },
+          {
+            "holder": "0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126",
+            "name": "Ethereum sfrxUSD mint/burn adapter",
+            "name_verified": true,
+            "via": "active minter index 1 -> adapter owner",
+            "terminal": "safe",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+            "holder_kind": "contract",
+            "threshold": 3,
+            "owners": 5,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "adapter owner is a direct 3-of-5 Safe",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable"
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-10-16",
+        "walked_by": "hand",
+        "target_name": "Ethereum sfrxUSD proxy",
+        "terminal_name": "Frax upgrade Safe",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 5,
+        "keys": [
+          "eip1967_admin",
+          "ProxyAdmin_owner"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xea0a6ec8114a0af6cf74ca0036ab31d892df13cb",
+            "name": "Ethereum sfrxUSD ProxyAdmin",
+            "name_verified": true,
+            "via": "EIP-1967 admin -> owner",
+            "terminal": "safe",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+            "holder_kind": "contract",
+            "threshold": 3,
+            "owners": 5,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "ProxyAdmin owner is a direct Safe; no enforced delay was found",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "hand_walk": "Proxy slots returned implementation 0xaad4…6700 and admin 0xea0a…13cb; ProxyAdmin owner returned the 3-of-5 Safe. All five owners are members of the controller's six-owner population."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "fraxtal",
+        "observed_at": "2026-10-16",
+        "walked_by": "hand",
+        "target_name": "Fraxtal sfrxUSD token",
+        "terminal_name": "Frax controller Safe",
+        "topology": "mixed",
+        "keys": [
+          "owner",
+          "minters",
+          "mint",
+          "burn"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "name": "Frax controller Safe",
+            "name_verified": true,
+            "via": "token owner and active minter index 2",
+            "terminal": "safe",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "holder_kind": "contract",
+            "threshold": 3,
+            "owners": 6,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "owner/minter calls execute directly from the 3-of-6 Safe",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable"
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "fraxtal",
+        "observed_at": "2026-10-16",
+        "walked_by": "hand",
+        "target_name": "Fraxtal token and mint/redeemer proxies",
+        "terminal_name": "Fraxtal upgrade Safe",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 5,
+        "keys": [
+          "token_ProxyAdmin",
+          "redeemer_eip1967_admin"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xfc0000000000000000000000000000000000000a",
+            "name": "Fraxtal token ProxyAdmin",
+            "name_verified": true,
+            "via": "token EIP-1967 admin -> ProxyAdmin owner; redeemer admin terminates at same Safe",
+            "terminal": "safe",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6",
+            "holder_kind": "contract",
+            "threshold": 3,
+            "owners": 5,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "both upgrade paths terminate directly at the 3-of-5 Safe",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "hand_walk": "Token slots returned implementation 0xba02…ca83 and ProxyAdmin 0xfc00…000a. Redeemer slots returned implementation 0xc13d…d0a6 and admin 0xc4eb…90e6."
+          }
+        ]
+      },
+      {
+        "authority_layer": "custody",
+        "chain": "fraxtal",
+        "observed_at": "2026-10-16",
+        "walked_by": "hand",
+        "target_name": "sfrxUSD mint/redeemer",
+        "terminal_name": "Frax controller Safe",
+        "topology": "nofm-multisig",
+        "n": 3,
+        "m": 6,
+        "keys": [
+          "owner",
+          "recoverERC20",
+          "setFee",
+          "setOracles"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "name": "Frax controller Safe",
+            "name_verified": true,
+            "via": "mint/redeemer owner -> fee/oracle configuration and recoverERC20",
+            "terminal": "safe",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "holder_kind": "contract",
+            "threshold": 3,
+            "owners": 6,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "owner calls execute directly and nominatedOwner is zero",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "hand_walk": "Owner remains the controller Safe. Fee is 1e11/1e18, underlying feed is zero ($1 getter path), vault feed is 0x1b68…f1ff, and tolerance is 86400 seconds. Verified source permits recovery of the underlying to owner."
+          }
+        ]
+      },
+      {
+        "authority_layer": "oracle",
+        "chain": "fraxtal",
+        "observed_at": "2026-10-16",
+        "walked_by": "hand",
+        "target_name": "sfrxUSD calculated pricing feed",
+        "terminal_name": "Controller and upgrade Safes",
+        "topology": "mixed",
+        "keys": [
+          "owner",
+          "allowed_writers",
+          "setPricePerShareStored",
+          "setPricePerShareIncPerSecond",
+          "upgrade"
+        ],
+        "timelock": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "name": "Frax controller Safe",
+            "name_verified": true,
+            "via": "feed owner and enabled pricing writer",
+            "terminal": "safe",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x4b45d73b83686e69d08e61105fdb7f7b51f41bc1",
+            "holder_kind": "contract",
+            "threshold": 3,
+            "owners": 6,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "enabled writer may update pricing parameters directly",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "hand_walk": "isAllowed returned true. lastSync is 1792087475 (2026-10-15T18:04:35Z) and the rate is 1516911764. A calculated latestRoundData timestamp is not independent valuation evidence."
+          },
+          {
+            "holder": "0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6",
+            "name": "Fraxtal upgrade Safe",
+            "name_verified": true,
+            "via": "enabled pricing writer and proxy admin",
+            "terminal": "safe",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xc4eb45d80dc1f079045e75d5d55de8ed1c1090e6",
+            "holder_kind": "contract",
+            "threshold": 3,
+            "owners": 5,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "enabled writer and upgrade calls are direct",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable"
+          }
+        ]
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "ethereum",
+        "observed_at": "2026-10-15",
+        "walked_by": "hand",
+        "target_name": "documented Ethereum-to-Fraxtal redemption route",
+        "terminal_name": "Adapter and Hop Safes",
+        "topology": "mixed",
+        "keys": [
+          "mint",
+          "burn",
+          "adapter_owner",
+          "hop_owner",
+          "message_configuration"
+        ],
+        "timelock": "none",
+        "reach": "unresolved",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x7311cea93ccf5f4f7b789ee31eba5d9b9290e126",
+            "name": "sfrxUSD savings-token adapter",
+            "name_verified": true,
+            "via": "Ethereum active minter -> 3-of-5 adapter owner",
+            "terminal": "safe",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xb1748c79709f4ba2dd82834b8c82d4a505003f27",
+            "holder_kind": "contract",
+            "threshold": 3,
+            "owners": 5,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "adapter owner executes directly",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable"
+          },
+          {
+            "holder": "0x99b5587ab54a49e3f827d10175caf69c0187bfa8",
+            "name": "documented Ethereum Hop",
+            "name_verified": true,
+            "via": "route Hop -> owner Safe; peer/DVN/executor configuration unresolved",
+            "terminal": "safe",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x6ccf3f2ca29591f90adb403d67e4dcb49cecc634",
+            "holder_kind": "contract",
+            "threshold": 3,
+            "owners": 6,
+            "control_state": "active",
+            "actionable": "unresolved",
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "2026-10-15 source record: Hop owner is a direct 3-of-6 Safe; zero describes only this known owner-call path, not unresolved messaging components",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "unresolved",
+            "reach_bound": "complete peer, DVN, executor, library and remote route authority unmeasured",
+            "value_at_risk_scope": "bridge",
+            "changeability": "unresolved",
+            "independent_canceller": "unresolved",
+            "delay_floor": "not-applicable",
+            "hand_walk": "Hop ownership is inherited from routes.json at block 26196137, retrieved 2026-10-15T06:32:04.199311Z; threshold, owners and no-enabled-module checks are inherited from redeemer-and-controls.json at block 26196141, retrieved 2026-10-15T06:33:17.525364Z. October 16 commissioned checks do not refresh those source dates. Peer, DVN, executor and message-library authority remains unresolved."
+          }
+        ]
+      }
+    ],
+    "authority_summary": {
+      "schema": "actionable-path/1",
+      "state": "active-core-undelayed",
+      "headline": "Active undelayed core authority",
+      "total_layers": 7,
+      "total_paths": 10,
+      "inactive_layers": 0,
+      "unresolved_layers": 1,
+      "unresolved_paths": 1,
+      "active_paths": 9,
+      "active_core_paths": 9,
+      "active_bounded_paths": 0,
+      "undelayed_core_paths": 9,
+      "undelayed_bounded_paths": 0,
+      "active": [
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "Ethereum sfrxUSD token",
+          "name": "Frax controller Safe",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "the address named timelockAddress is a Safe with a direct call path and no on-chain delay",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "Ethereum sfrxUSD token",
+          "name": "Ethereum sfrxUSD mint/burn adapter",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "bridge",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "adapter owner is a direct 3-of-5 Safe",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "contract-upgrade",
+          "target_name": "Ethereum sfrxUSD proxy",
+          "name": "Ethereum sfrxUSD ProxyAdmin",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "ProxyAdmin owner is a direct Safe; no enforced delay was found",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "asset-permission",
+          "target_name": "Fraxtal sfrxUSD token",
+          "name": "Frax controller Safe",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "owner/minter calls execute directly from the 3-of-6 Safe",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "contract-upgrade",
+          "target_name": "Fraxtal token and mint/redeemer proxies",
+          "name": "Fraxtal token ProxyAdmin",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "both upgrade paths terminate directly at the 3-of-5 Safe",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "custody",
+          "target_name": "sfrxUSD mint/redeemer",
+          "name": "Frax controller Safe",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "owner calls execute directly and nominatedOwner is zero",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "oracle",
+          "target_name": "sfrxUSD calculated pricing feed",
+          "name": "Frax controller Safe",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "enabled writer may update pricing parameters directly",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "oracle",
+          "target_name": "sfrxUSD calculated pricing feed",
+          "name": "Fraxtal upgrade Safe",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "enabled writer and upgrade calls are direct",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "bridge",
+          "target_name": "documented Ethereum-to-Fraxtal redemption route",
+          "name": "sfrxUSD savings-token adapter",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "bridge",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "adapter owner executes directly",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        }
+      ]
+    },
+    "unresolved": [
+      "Complete adapter peer, DVN, executor, message-library and remote-deployment configuration was not walked.",
+      "Safe guards, fallback handlers and off-chain signer custody were not comprehensively audited; enabled-module checks are inherited comparison evidence, not refreshed in this walk.",
+      "The Fraxtal auxiliary minter 0x88aa…a361 implementation reach was not fully classified."
+    ],
+    "authority_shared_with": [],
+    "review": {
+      "scope": "ethereum-fraxtal-primary-redemption-route",
+      "authored_by": "security_analyst",
+      "observed_blocks": {
+        "ethereum": 26202298,
+        "fraxtal": 42654678
+      },
+      "eligibility": "eligible-reviewed",
+      "commissioned_walk_at": "2026-10-16T03:07:47Z",
+      "observation_clock_basis": "Conservative mixed-source date; retained Hop observations are October 15, commissioned Ethereum/Fraxtal pins are October 16.",
+      "inherited_hop_sources": {
+        "ownership": {
+          "block": 26196137,
+          "retrieved_at": "2026-10-15T06:32:04.199311Z",
+          "source": "routes.json"
+        },
+        "safe_configuration": {
+          "block": 26196141,
+          "retrieved_at": "2026-10-15T06:33:17.525364Z",
+          "source": "redeemer-and-controls.json"
+        }
+      }
+    },
+    "walk_notes": [
+      "Dashboard publication scope: {'chains': ['ethereum', 'fraxtal'], 'walked_by': 'hand'}"
+    ]
+  }
+}

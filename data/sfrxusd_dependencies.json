@@ -1,0 +1,232 @@
+{
+  "producer": "riskanalyst",
+  "asset": "sfrxusd",
+  "as_of": "2026-10-15",
+  "revised_at": "2026-10-16",
+  "assessment_status": "provisional",
+  "publication_status": "published",
+  "sources": {
+    "report": {
+      "path": "assets/sfrxusd.md",
+      "as_of": "2026-10-16",
+      "kind": "authored_research",
+      "baseline_commit": "04fac3f",
+      "observation_as_of": "2026-10-15",
+      "revision_note": "October 16 editorial reconciliation finalizes Dependencies 4.0 and distinguishes Convex custody from direct LP. October 15 observations and later producer clocks are not refreshed."
+    },
+    "issuer_snapshot": {
+      "path": "data/reviews/sfrxusd-2026-10-15/sfrx-balance-sheet.json",
+      "source": "https://api.frax.finance/v2/sfrxusd/balance-sheet/latest",
+      "as_of": "2026-10-15T06:23:47.000Z",
+      "kind": "issuer_reported",
+      "block_numbers": {
+        "ethereum": 26196098,
+        "fraxtal": 42617358
+      }
+    },
+    "derived_metrics": {
+      "path": "data/reviews/sfrxusd-2026-10-15/derived-metrics.json",
+      "as_of": "2026-10-15T06:23:47.000Z",
+      "kind": "historical_reconstruction",
+      "scope": "issuer-listed book, not independently complete global assets/liabilities"
+    },
+    "vault-core": {
+      "path": "data/reviews/sfrxusd-2026-10-15/vault-core.json",
+      "block_numbers": {
+        "ethereum": 26196126,
+        "fraxtal": 42617528
+      },
+      "retrieved_at": "2026-10-15T06:29:32.528852+00:00",
+      "observed_at": null,
+      "clock_basis": "RPC block pins are authoritative; saved retrieval time is not substituted for block time. Individual records can override envelope blocks."
+    },
+    "authority": {
+      "path": "data/reviews/sfrxusd-2026-10-15/authority.json",
+      "block_numbers": {
+        "ethereum": 26196128,
+        "fraxtal": 42617540
+      },
+      "retrieved_at": "2026-10-15T06:30:11.922720+00:00",
+      "observed_at": null,
+      "clock_basis": "RPC block pins are authoritative; saved retrieval time is not substituted for block time. Individual records can override envelope blocks."
+    },
+    "strategy-reads": {
+      "path": "data/reviews/sfrxusd-2026-10-15/strategy-reads.json",
+      "block_numbers": {
+        "ethereum": 26196098,
+        "fraxtal": 42617358
+      },
+      "retrieved_at": "2026-10-15T06:31:58.443912+00:00",
+      "observed_at": null,
+      "clock_basis": "RPC block pins are authoritative; saved retrieval time is not substituted for block time. Individual records can override envelope blocks."
+    },
+    "redeemer-and-controls": {
+      "path": "data/reviews/sfrxusd-2026-10-15/redeemer-and-controls.json",
+      "block_numbers": {
+        "ethereum": 26196141,
+        "fraxtal": 42617629
+      },
+      "retrieved_at": "2026-10-15T06:33:17.525364+00:00",
+      "observed_at": null,
+      "clock_basis": "RPC block pins are authoritative; saved retrieval time is not substituted for block time. Individual records can override envelope blocks."
+    },
+    "aave-reads": {
+      "path": "data/reviews/sfrxusd-2026-10-15/aave-reads.json",
+      "block_numbers": {
+        "ethereum": 26196098,
+        "fraxtal": 42617672
+      },
+      "retrieved_at": "2026-10-15T06:34:29.437126+00:00",
+      "observed_at": null,
+      "clock_basis": "RPC block pins are authoritative; saved retrieval time is not substituted for block time. Individual records can override envelope blocks."
+    },
+    "oracle-authority": {
+      "path": "data/reviews/sfrxusd-2026-10-15/oracle-authority.json",
+      "block_numbers": {
+        "ethereum": 26196196,
+        "fraxtal": 42617953
+      },
+      "retrieved_at": "2026-10-15T06:43:42.067858+00:00",
+      "observed_at": null,
+      "clock_basis": "RPC block pins are authoritative; saved retrieval time is not substituted for block time. Individual records can override envelope blocks."
+    }
+  },
+  "clock_note": "October 16 is editorial reconciliation, not a new chain observation. October 15 research numbers retain their original source/record blocks. Later producer returns are separately dated candidates, not a refreshed riskAnalyst live feed.",
+  "schema_version": "dependencies/1",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "frxUSD",
+        "slug": "frxusd",
+        "edge_kind": "backing",
+        "materiality": "dominant",
+        "source": "assets/sfrxusd.md sections 2–3; data/reviews/sfrxusd-2026-10-15/derived-metrics.json and same-block strategy reads",
+        "as_of": "2026-10-15T06:23:47.000Z",
+        "note": "Redemption payout and principal strategy denomination. Serial dependence on frxUSD reserves, custody and primary eligibility; not a 100% direct-cash allocation. Parent axis-4 4.5 is an authored ceiling with dominant unresolved upstream reports."
+      },
+      {
+        "name": "Aave V4 supplied frxUSD",
+        "terminal": true,
+        "kind": "protocol",
+        "edge_kind": "backing",
+        "source": "assets/sfrxusd.md sections 2–3; data/reviews/sfrxusd-2026-10-15/derived-metrics.json and same-block strategy reads",
+        "as_of": "2026-10-15T06:23:47.000Z",
+        "note": "Two custody positions, supplied rather than internally levered: no reported frxUSD debt at either. The ~$2.519M position is a 1-of-1 Safe owned by the 3-of-6 controller Safe; effective control requires three controller signers, not one EOA.",
+        "metric": {
+          "value": 42.8,
+          "unit": "percent of issuer-reported assets",
+          "basis": "October 15 issuer valuation; historical, non-additive across overlapping dependencies"
+        }
+      },
+      {
+        "name": "Fraxlend, five frxUSD pairs",
+        "terminal": true,
+        "kind": "protocol",
+        "edge_kind": "backing",
+        "source": "assets/sfrxusd.md sections 2–3; data/reviews/sfrxusd-2026-10-15/derived-metrics.json and same-block strategy reads",
+        "as_of": "2026-10-15T06:23:47.000Z",
+        "note": "Reflexive dependency: the strategy supplies the sfrxUSD/frxUSD lending pair against its own sfrxUSD collateral. Other collateral includes sfrxETH, WBTC, WFRAX and sUSDe; venue counts do not imply independent failure domains.",
+        "metric": {
+          "value": 14.73,
+          "unit": "percent of issuer-reported assets",
+          "basis": "October 15 issuer valuation; historical, non-additive across overlapping dependencies"
+        }
+      },
+      {
+        "name": "Convex-staked Curve external legs",
+        "terminal": true,
+        "kind": "protocol",
+        "edge_kind": "backing",
+        "source": "assets/sfrxusd.md sections 2–3; data/reviews/sfrxusd-2026-10-15/derived-metrics.json and same-block strategy reads",
+        "as_of": "2026-10-15T06:23:47.000Z",
+        "note": "16.91% external LP legs; own sfrxUSD sides are liability offsets. At the October 15 research snapshot, the controller Convex stake owns ~99.9998% of sfrxUSD/frxUSD LP supply. reUSD is Re Protocol reUSD and brings its own issuer dependence.",
+        "metric": {
+          "value": 16.91,
+          "unit": "percent of issuer-reported assets",
+          "basis": "October 15 issuer valuation; historical, non-additive across overlapping dependencies"
+        },
+        "venue_dependency": true,
+        "venue_note": "Also affects exit pricing; same treasury-owned capital, not an independent extra venue or additive exit capacity."
+      },
+      {
+        "name": "Unstaked Curve external legs",
+        "terminal": true,
+        "kind": "protocol",
+        "edge_kind": "backing",
+        "source": "assets/sfrxusd.md sections 2–3; data/reviews/sfrxusd-2026-10-15/derived-metrics.json and same-block strategy reads",
+        "as_of": "2026-10-15T06:23:47.000Z",
+        "note": "External legs only; scrvUSD imports its own issuer/protocol exposure and its unit valuation discrepancy remains unresolved. At the October 15 research snapshot, the controller directly holds ~99.9948% of frxUSD/USDT LP supply; this position is not Convex-staked. Same liquidity cannot be counted again as independent backing or exit inventory.",
+        "metric": {
+          "value": 2.97,
+          "unit": "percent of issuer-reported assets",
+          "basis": "October 15 issuer valuation; historical, non-additive across overlapping dependencies"
+        },
+        "venue_dependency": true,
+        "venue_note": "Also affects exit pricing; same treasury-owned capital, not an independent extra venue or additive exit capacity."
+      },
+      {
+        "name": "Gearbox institutional RWA frxUSD pool",
+        "terminal": true,
+        "kind": "protocol",
+        "edge_kind": "backing",
+        "source": "assets/sfrxusd.md sections 2–3; data/reviews/sfrxusd-2026-10-15/derived-metrics.json and same-block strategy reads",
+        "as_of": "2026-10-15T06:23:47.000Z",
+        "note": "Actual supplied claim ~$1.001M, not the old $5M authorization. Institutional pool access and withdrawal limits add dependencies.",
+        "metric": {
+          "value": 2.63,
+          "unit": "percent of issuer-reported assets",
+          "basis": "October 15 issuer valuation; historical, non-additive across overlapping dependencies"
+        }
+      },
+      {
+        "name": "Fraxtal chain",
+        "terminal": true,
+        "kind": "protocol",
+        "edge_kind": "backing",
+        "source": "assets/sfrxusd.md sections 2–3; data/reviews/sfrxusd-2026-10-15/derived-metrics.json and same-block strategy reads",
+        "as_of": "2026-10-15T06:23:47.000Z",
+        "note": "19.21% of issuer assets is frxUSD held by the Fraxtal mint/redeemer; chain/sequencer plus primary settlement dependency. Overlaps the frxUSD payout leg rather than diversifying it.",
+        "metric": {
+          "value": 19.21,
+          "unit": "percent of issuer-reported assets",
+          "basis": "October 15 issuer valuation; historical, non-additive across overlapping dependencies"
+        }
+      },
+      {
+        "name": "Hop and LayerZero mesh",
+        "terminal": true,
+        "kind": "protocol",
+        "edge_kind": "backing",
+        "source": "assets/sfrxusd.md sections 2–3; data/reviews/sfrxusd-2026-10-15/derived-metrics.json and same-block strategy reads",
+        "as_of": "2026-10-15T06:23:47.000Z",
+        "note": "Documented Ethereum primary exit carrier through adapters and Fraxtal. This is settlement/custody dependence, not a separately valued asset allocation. Full peer/DVN/executor and remote-chain walk remains incomplete."
+      }
+    ],
+    "upstream_resolution_rule": "Exactly one resolution per entry: slug/slugs, terminal+kind, or unresolved.",
+    "edge_kind_rule": "backing = solvency dependency; venue = exit price dependency.",
+    "coverage_note": "Issuer-listed book only. 60.17% lending and 19.88% external LP legs. Share metrics overlap payout, protocol and chain layers: never sum them or render as a partition. Wrapper pricing and admin discretion are assessed on Axis 5, not duplicated here. Downstream is generated only in an isolated graph build; pending file is not loaded by serving graph.",
+    "collateral_as_of": "2026-10-15T06:23:47.000Z",
+    "upstream_unanchored_note": "frxUSD has a numeric 4.5 ceiling but dominant WTGXX/USTB/BUIDL and bank-cash dependency reports remain unresolved; terminal protocol labels do not establish exhaustive external risk assessment.",
+    "downstream_tracked": [
+      "usdp-parallel"
+    ],
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "usdp-parallel"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
+  },
+  "source_publication_status": "pending_approval",
+  "publication_authorization": {
+    "approved_on": "2026-10-16",
+    "basis": "Owner explicitly requested production publication",
+    "source": "riskAnalyst@c62a9672da0a40d51adbad0999c197467353b806:data/axes_pending/sfrxusd_dependencies.json",
+    "editorial_commit": "c62a9672da0a40d51adbad0999c197467353b806"
+  }
+}

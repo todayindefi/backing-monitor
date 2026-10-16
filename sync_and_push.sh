@@ -125,6 +125,16 @@ PYEOF
 }
 
 for slug in $SLUGS; do
+    # Owner approved sfrxUSD production on 2026-10-16. Its producers still use
+    # isolated candidate directories. Consume only this asset's reviewed file
+    # set; never add a whole pending directory to fleet SOURCE_ROOTS. Editorial
+    # copies are pinned to the approved commit by this transport adapter.
+    if [ "$slug" = "sfrxusd" ]; then
+        if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/sync_sfrxusd_feeds.py; then
+            echo "$(date): ERROR sfrxUSD transport failed; retaining prior serving snapshots" >&2
+        fi
+        continue
+    fi
     for suf in $SUFFIXES; do
         found=""
         for root in $SOURCE_ROOTS; do
