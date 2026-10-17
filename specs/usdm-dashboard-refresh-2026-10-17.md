@@ -27,8 +27,8 @@ restatement or trigger inference is claimed. Custodian allocation is not
 reconciled for the narrower measured scope; the allocation table and pie instead
 use reserve buckets that sum to the measured total.
 
-Bespoke panels now slot inside the six axes. Dependencies are unscored and carry
-metric/source attribution. Today’s issuer assessment supersedes the older
+Bespoke panels now slot inside the six axes. Dependencies retain the authored score under the later Axis 4 amendment
+and carry metric/source attribution. Today’s issuer assessment supersedes the older
 issuer-score stale alert; measured risk flags remain. Added the public report
 link, current Monad explorer, and scroll containers for wide tables.
 
