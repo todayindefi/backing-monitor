@@ -135,6 +135,12 @@ for slug in $SLUGS; do
         fi
         continue
     fi
+    if [ "$slug" = "scrvusd" ]; then
+        if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/sync_scrvusd_feeds.py; then
+            echo "$(date): ERROR scrvUSD transport failed; retaining prior serving snapshots" >&2
+        fi
+        continue
+    fi
     for suf in $SUFFIXES; do
         found=""
         for root in $SOURCE_ROOTS; do

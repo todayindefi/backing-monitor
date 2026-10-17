@@ -38,7 +38,7 @@ function isPublished(a) { return !!a && a.published === true; }
 // already landed. Keep SYNC_OFFSET_MIN ahead of the cron minute in
 // sync_and_push.sh if that ever moves.
 var SYNC_OFFSET_MIN = 10;
-var DATA_CACHE_REV = '20261016a';
+var DATA_CACHE_REV = '20261017b';
 function dataUrl(path) {
     var hour = Math.floor((Date.now() - SYNC_OFFSET_MIN * 60000) / 3600000);
     var sep = path.indexOf('?') >= 0 ? '&' : '?';
@@ -59,6 +59,7 @@ var ASSET_RENDERERS = {
     wsteth:    typeof WstETHRenderer    !== 'undefined' ? WstETHRenderer    : null,
     frxusd:    typeof FrxUSDRenderer    !== 'undefined' ? FrxUSDRenderer    : null,
     sfrxusd:   typeof SfrxUSDRenderer   !== 'undefined' ? SfrxUSDRenderer   : null,
+    scrvusd:   typeof ScrvUSDRenderer   !== 'undefined' ? ScrvUSDRenderer   : null,
     'msusd-metronome': typeof MsUSDMetronomeRenderer !== 'undefined' ? MsUSDMetronomeRenderer : null,
     usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
     syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
@@ -593,6 +594,14 @@ async function renderAsset(slug) {
                 reportLink.classList.add('hidden');
                 reportLink.removeAttribute('href');
             }
+        }
+
+        var related = assetMeta && assetMeta.related_dashboard;
+        var relatedLink = document.getElementById('header-companion-link');
+        if (relatedLink && related && typeof related.slug === 'string') {
+            relatedLink.href = '?asset=' + encodeURIComponent(related.slug);
+            relatedLink.textContent = related.label || 'Related dashboard →';
+            relatedLink.classList.remove('hidden');
         }
 
         // Feed staleness — rendered for EVERY asset from here, not per-renderer.
