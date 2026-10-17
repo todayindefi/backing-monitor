@@ -1,129 +1,129 @@
 {
- "schema_version": "liquidity/1",
- "asset_slug": "usdm",
- "as_of": "2026-10-16T23:51:48Z",
- "producer": "dextracker",
- "note": "Axis 3 executable-depth measurement for Mento Labs USDm on Celo. Celo and Monad are separate, non-fungible exit markets while NTT is not operational; no cross-chain liquidity is pooled.",
- "identity": {
-  "symbol": "USDm",
-  "issuer": "Mento Labs",
-  "chain": "celo",
-  "chain_id": 42220,
-  "address": "0x765DE816845861e75A25fCA122bb6898B8B1282a",
-  "identity_note": "This is the former cUSD contract renamed in place to USDm, not Mountain Protocol USDM or Monetrix USDM."
- },
- "depth": {
-  "status": "not_size_responsive",
-  "depth_usd": null,
-  "is_floor": null,
-  "threshold_bps": -200.0,
-  "size_response": "not_size_responsive",
-  "basis": "No depth figure is published. The venue is a fixed-price market maker: it returns an identical rate at every size, so there is no slippage curve to locate a 2% crossing on. The exit constraint is inventory and is reported in `exit_capacity` (currently $24,436.35), not as a depth figure with a different basis.",
-  "see": "exit_capacity",
-  "rungs": []
- },
- "primary_exit": {
-  "venue": "Mento V3 USDm/USDC FPMM",
-  "kind": "oracle-priced swap",
-  "gated": false,
-  "gated_basis": "public router route; circuit breaker enabled and current trading limits have capacity",
-  "note": "This venue is constrained by stateful trading limits. It should not be interpreted as conventional reserve-bounded secondary-market depth."
- },
- "enumeration": {
-  "source": "Mento SDK canonical Celo route cache plus live Router and trading-limit reads",
-  "as_of": "2026-09-07T01:00:50Z",
-  "venue_count": 1,
-  "chain_count": 1,
-  "chain_scope": "celo_only",
-  "chain_scope_note": "Monad USDm liquidity is excluded because NTT is not operational and the markets cannot be combined into an executable exit.",
-  "live_venue_count": 1,
-  "excluded_venue_count": 0,
-  "unestablished_venue_count": 0,
-  "live_venue_count_is_floor": false,
-  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it."
- },
- "venues": [
-  {
-   "name": "Mento V3 USDm/USDC",
-   "project": "mento",
-   "chain": "celo",
-   "kind": "oracle_priced_swap",
-   "pool_id": "0x462fe04b4FD719Cbd04C0310365D421D02AaA19E",
-   "depth_role": "Canonical Celo exit route measured above; pool balance/TVL is not substituted for depth.",
-   "is_live": true,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "The Mento fixed-price maker this payload's capacity block was measured on; getAmountOut and getReserves both answered."
-  }
- ],
- "separate_market_observation": {
-  "chain": "monad",
-  "included_in_depth_usd": false,
-  "token_address": "0xbc69212b8e4d445b2307c9d32dd68e2a4df00115",
-  "source": "data/mento_pools_latest.json",
-  "source_as_of": "2026-09-07T00:05:10Z",
-  "observation": "The existing Monad USDm/USDC getAmountOut ladder is flat at -3.9 bps through its largest $100,000 quote, but this is not pooled with or substituted for Celo depth."
- },
- "exit_capacity": {
-  "venue_type": "fixed_price_mm",
-  "status": "reserve_bounded",
-  "binding_constraint": "counter_asset_inventory",
-  "capacity_usd": 24436.348879,
-  "capacity_basis": "The USDC side of the mento_fpmm book at block timestamp 1792190841. A fixed-price maker quotes one rate at every size, so the ceiling on an exit is inventory, not slippage: you cannot receive more USDC than the book holds.",
-  "cost_bps_flat": -0.6799,
-  "cost_is_flat": true,
-  "cost_note": "On a fixed-price venue ALL of the cost is in the level and NONE is in the curve. Marginal impact is 0 by construction, which is why no depth figure is published.",
-  "reserves": {
-   "USDm": 36650.16433682065,
-   "USDC": 24436.348879,
-   "block_timestamp": 1792190841,
-   "custody_verified": true
+  "schema_version": "liquidity/1",
+  "asset_slug": "usdm",
+  "as_of": "2026-10-16T23:51:48Z",
+  "producer": "dextracker",
+  "note": "Celo-only inventory observation. USDm-specific bridge manager, peers, limits and liveness are unverified; no cross-chain exit capacity is aggregated.",
+  "identity": {
+    "symbol": "USDm",
+    "issuer": "Mento Labs",
+    "chain": "celo",
+    "chain_id": 42220,
+    "address": "0x765DE816845861e75A25fCA122bb6898B8B1282a",
+    "identity_note": "This is the former cUSD contract renamed in place to USDm, not Mountain Protocol USDM or Monetrix USDM."
   },
-  "quoter_honours_inventory": false,
-  "quoter_evidence": {
-   "note": "The venue quote function does NOT bound on inventory: it returns the same rate for sizes far exceeding the counter asset it would have to pay out. A quote is therefore not an executability statement here.",
-   "probes": [
+  "depth": {
+    "status": "not_size_responsive",
+    "depth_usd": null,
+    "is_floor": null,
+    "threshold_bps": -200.0,
+    "size_response": "not_size_responsive",
+    "basis": "No depth figure is published. The venue is a fixed-price market maker: it returns an identical rate at every size, so there is no slippage curve to locate a 2% crossing on. The exit constraint is inventory and is reported in `exit_capacity` (currently $24,436.35), not as a depth figure with a different basis.",
+    "see": "exit_capacity",
+    "rungs": []
+  },
+  "primary_exit": {
+    "venue": "Mento V3 USDm/USDC FPMM",
+    "kind": "oracle-priced swap",
+    "gated": false,
+    "gated_basis": "Public router route. Inventory bounds do not prove executable capacity; remaining two-sided trading allowance and an at-size swap are not simulated.",
+    "note": "This venue is constrained by stateful trading limits. It should not be interpreted as conventional reserve-bounded secondary-market depth."
+  },
+  "enumeration": {
+    "source": "Mento SDK canonical Celo route cache plus live Router and trading-limit reads",
+    "as_of": "2026-09-07T01:00:50Z",
+    "venue_count": 1,
+    "chain_count": 1,
+    "chain_scope": "celo_only",
+    "chain_scope_note": "Celo-only venue enumeration, dated separately. Monad is outside this observation; USDm bridge executability has not been established.",
+    "live_venue_count": 1,
+    "excluded_venue_count": 0,
+    "unestablished_venue_count": 0,
+    "live_venue_count_is_floor": false,
+    "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it."
+  },
+  "venues": [
     {
-     "size_in_units": 100.0,
-     "status": "ok",
-     "amount_out_units": 99.993201,
-     "rate_out_per_in": 0.99993201,
-     "exceeds_counter_reserve": false
-    },
-    {
-     "size_in_units": 10000.0,
-     "status": "ok",
-     "amount_out_units": 9999.32011,
-     "rate_out_per_in": 0.9999320110000001,
-     "exceeds_counter_reserve": false
-    },
-    {
-     "size_in_units": 100000.0,
-     "status": "ok",
-     "amount_out_units": 99993.201102,
-     "rate_out_per_in": 0.9999320110200001,
-     "exceeds_counter_reserve": true
-    },
-    {
-     "size_in_units": 500430.0,
-     "status": "ok",
-     "amount_out_units": 500395.976276,
-     "rate_out_per_in": 0.9999320110225206,
-     "exceeds_counter_reserve": true
-    },
-    {
-     "size_in_units": 5000000.0,
-     "status": "ok",
-     "amount_out_units": 4999660.05512,
-     "rate_out_per_in": 0.999932011024,
-     "exceeds_counter_reserve": true
+      "name": "Mento V3 USDm/USDC",
+      "project": "mento",
+      "chain": "celo",
+      "kind": "oracle_priced_swap",
+      "pool_id": "0x462fe04b4FD719Cbd04C0310365D421D02AaA19E",
+      "depth_role": "Canonical Celo exit route measured above; pool balance/TVL is not substituted for depth.",
+      "is_live": true,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "The Mento fixed-price maker this payload's capacity block was measured on; getAmountOut and getReserves both answered."
     }
-   ]
+  ],
+  "separate_market_observation": {
+    "chain": "monad",
+    "included_in_depth_usd": false,
+    "token_address": "0xbc69212b8e4d445b2307c9d32dd68e2a4df00115",
+    "source": "data/mento_pools_latest.json",
+    "source_as_of": "2026-09-07T00:05:10Z",
+    "observation": "The existing Monad USDm/USDC getAmountOut ladder is flat at -3.9 bps through its largest $100,000 quote, but this is not pooled with or substituted for Celo depth."
   },
-  "pool": "0x462fe04b4FD719Cbd04C0310365D421D02AaA19E",
-  "chain": "celo",
-  "measured_at": "2026-10-16T23:51:48Z"
- },
- "refresh_cadence": "daily",
- "payload_revised_at": "2026-10-16T23:51:48Z"
+  "exit_capacity": {
+    "venue_type": "fixed_price_mm",
+    "status": "reserve_bounded",
+    "binding_constraint": "counter_asset_inventory",
+    "capacity_usd": 24436.348879,
+    "capacity_basis": "The USDC side of the mento_fpmm book at block timestamp 1792190841. A fixed-price maker quotes one rate at every size, so the ceiling on an exit is inventory, not slippage: you cannot receive more USDC than the book holds.",
+    "cost_bps_flat": -0.6799,
+    "cost_is_flat": true,
+    "cost_note": "On a fixed-price venue ALL of the cost is in the level and NONE is in the curve. Marginal impact is 0 by construction, which is why no depth figure is published.",
+    "reserves": {
+      "USDm": 36650.16433682065,
+      "USDC": 24436.348879,
+      "block_timestamp": 1792190841,
+      "custody_verified": true
+    },
+    "quoter_honours_inventory": false,
+    "quoter_evidence": {
+      "note": "The venue quote function does NOT bound on inventory: it returns the same rate for sizes far exceeding the counter asset it would have to pay out. A quote is therefore not an executability statement here.",
+      "probes": [
+        {
+          "size_in_units": 100.0,
+          "status": "ok",
+          "amount_out_units": 99.993201,
+          "rate_out_per_in": 0.99993201,
+          "exceeds_counter_reserve": false
+        },
+        {
+          "size_in_units": 10000.0,
+          "status": "ok",
+          "amount_out_units": 9999.32011,
+          "rate_out_per_in": 0.9999320110000001,
+          "exceeds_counter_reserve": false
+        },
+        {
+          "size_in_units": 100000.0,
+          "status": "ok",
+          "amount_out_units": 99993.201102,
+          "rate_out_per_in": 0.9999320110200001,
+          "exceeds_counter_reserve": true
+        },
+        {
+          "size_in_units": 500430.0,
+          "status": "ok",
+          "amount_out_units": 500395.976276,
+          "rate_out_per_in": 0.9999320110225206,
+          "exceeds_counter_reserve": true
+        },
+        {
+          "size_in_units": 5000000.0,
+          "status": "ok",
+          "amount_out_units": 4999660.05512,
+          "rate_out_per_in": 0.999932011024,
+          "exceeds_counter_reserve": true
+        }
+      ]
+    },
+    "pool": "0x462fe04b4FD719Cbd04C0310365D421D02AaA19E",
+    "chain": "celo",
+    "measured_at": "2026-10-16T23:51:48Z"
+  },
+  "refresh_cadence": "daily",
+  "payload_revised_at": "2026-10-16T23:51:48Z"
 }

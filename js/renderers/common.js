@@ -5410,7 +5410,15 @@ const CommonRenderer = {
 
     _depthValueHtml(data) {
         var d = this.depthAtLimit(data);
-        if (d.value == null) return 'n/a';
+        if (d.value == null) {
+            var ec = (data.liquidity || {}).exit_capacity;
+            if (this._ladderIsFlat(data.liquidity || {}) && ec &&
+                typeof ec.capacity_usd === 'number' && isFinite(ec.capacity_usd)) {
+                return '<span title="Counter-asset inventory bound; remaining trading limits and execution are not established">' +
+                    this.formatCurrency(ec.capacity_usd) + '</span>';
+            }
+            return 'n/a';
+        }
         var money = this.formatCurrency(d.value);
         if (d.shape === 'bracket') {
             return money + '<span class="text-sm font-normal text-slate-500"> \u2013 ' +
