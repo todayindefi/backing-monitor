@@ -36,3 +36,9 @@ c.mergeAxisOverlays(authored,[{axis:'backing',file:'candidate_axis_basis.json',j
 assert.equal(c._backingAuthoredDeclared(authored.backing),true);
 assert.equal(authored.backing.collateral_ratio,null);
 console.log('scrvUSD NAV, custody, scores, shutdown, owner-scope and escaping checks passed');
+assert.match(r.market({status:'ok',market_price:1.11,nav:1.10}),/0\.9091/);
+assert.match(r.market({status:'ok',market_price:1.09,nav:1.10}),/-0\.9091/);
+assert.match(r.market({status:'comparison_withheld',market_price:null,comparison_withheld_reasons:['stale quote']}),/unavailable: stale quote/);
+assert.match(r.market({}),/Market comparison unavailable/);
+assert.match(r.market({status:'ok',market_price:1.11,nav:1.10}),/parent feed does not publish the price observation time/);
+assert.equal(d.peg.chart_strict_window,true);

@@ -18,6 +18,7 @@ EDITORIAL=Path('/home/danger/riskAnalyst/data/axes_pending')
 def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--out-dir',type=Path,default=Path('/tmp/scrvusd-dashboard-preview'))
+    p.add_argument('--measurements-dir',type=Path,default=MEASUREMENTS)
     args=p.parse_args();preview=args.out_dir.resolve()
     if preview==REPO or REPO in preview.parents:
         raise SystemExit('Preview must be outside the serving repository')
@@ -32,7 +33,7 @@ def main():
        'description':'NAV-accruing ERC-4626 share over crvUSD. Custody reconciliation is not independent dollar solvency.',
        'report_status':'unpublished','venue_scope':{'chains':['eth']}})
     (preview/'data/assets.json').write_text(json.dumps(assets,indent=2,ensure_ascii=False)+'\n')
-    sources={**{f'scrvusd_{s}.json':MEASUREMENTS/f'scrvusd_{s}.json' for s in ('backing','backing_history','backing_last_attempt')},
+    sources={**{f'scrvusd_{s}.json':args.measurements_dir/f'scrvusd_{s}.json' for s in ('backing','backing_history','backing_last_attempt')},
              **{f'scrvusd_{s}.json':EDITORIAL/f'scrvusd_{s}.json' for s in ('axis_basis','dependencies','issuer','contract_overlay')}}
     for name,path in sources.items():
         d=json.loads(path.read_text())

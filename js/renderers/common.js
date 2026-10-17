@@ -7804,6 +7804,18 @@ const CommonRenderer = {
                 : (configuredWindow > 0 ? configuredWindow : this.PEG_CHART_WINDOW_DAYS));
         var configuredMin = data.peg && Number(data.peg.chart_min_points);
         var minPoints = configuredMin >= 2 ? configuredMin : this.PEG_CHART_MIN_POINTS;
+        var strictWindow = data.peg.chart_strict_window === true;
+        if (strictWindow) {
+            all = all.filter(function(e) {
+                var t=Date.parse(e.timestamp);
+                return Number.isFinite(e[field]) && Number.isFinite(e[data.peg.chart_reference_field || 'peg_theoretical_price']) &&
+                    Number.isFinite(t) && t<=Date.now() && (!win || t>=Date.now()-win*86400000);
+            });
+            if (all.length < minPoints) {
+                ctx.parentElement.innerHTML = '<p class="text-sm text-slate-400">Insufficient paired market-price and dollar-NAV observations: '+all.length+' of '+minPoints+' required within '+win+' days. Earlier unpaired NAV observations are excluded.</p>';
+                return null;
+            }
+        }
         var entries = all, usedWindow = null;
         if (win) {
             var self2 = this;
@@ -7816,7 +7828,7 @@ const CommonRenderer = {
             };
             var kept = slice(win);
             // Widen once if the requested window is too sparse to read as a line.
-            if (kept.length < minPoints && this.PEG_CHART_FALLBACK_DAYS > win) {
+            if (!strictWindow && kept.length < minPoints && this.PEG_CHART_FALLBACK_DAYS > win) {
                 var wider = slice(this.PEG_CHART_FALLBACK_DAYS);
                 if (wider.length > kept.length) { kept = wider; win = this.PEG_CHART_FALLBACK_DAYS; }
             }
@@ -7872,7 +7884,7 @@ const CommonRenderer = {
         var theoCount = theoSeries.filter(function(v) { return v != null; }).length;
         var theoDistinct = {};
         theoSeries.forEach(function(v) { if (v != null) theoDistinct[v] = 1; });
-        var hasTheo = theoCount >= entries.length * 0.9 && Object.keys(theoDistinct).length > 1;
+        var hasTheo = theoCount >= entries.length * 0.9 && (Object.keys(theoDistinct).length > 1 || strictWindow);
 
         // The `_pct` suffix is the producer's own naming of the field, not a unit
         // inferred from a value — but bound it anyway, so a mis-named price field

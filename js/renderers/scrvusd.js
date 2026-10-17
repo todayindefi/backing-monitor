@@ -21,6 +21,7 @@ var ScrvUSDRenderer = {
         data.backing.total_backing=null;
         data.peg.chart_window_days=7;
         data.peg.chart_min_points=2;
+        data.peg.chart_strict_window=true;
         data.asset_specific.chart_title='Independent dollar coverage is not derived for this wrapper';
         data.asset_specific.chart_dataset_label='No independent collateral ratio';
         var deps=data.dependencies || {};
@@ -28,6 +29,20 @@ var ScrvUSDRenderer = {
             deps.downstream=deps.downstream_tracked.map(function(slug){return {name:slug,slug:slug};});
             deps.downstream_tracked=true;
         }
+    },
+    market: function(peg) {
+        peg=peg || {};
+        var valid=peg.status==='ok' && Number.isFinite(peg.market_price) && Number.isFinite(peg.nav) && peg.nav>0;
+        return this.panel('Market price versus dollar NAV',valid ? this.metrics([
+            ['Market price',peg.market_price,'USD / share',9],
+            ['Contemporaneous dollar NAV',peg.nav,'USD / share',9],
+            ['Premium / discount',(peg.market_price/peg.nav-1)*100,'%',4]
+        ])+this.note('Market quote: '+peg.market_price_as_of+' · '+peg.market_price_source)+
+            this.note('Vault NAV: '+peg.nav_as_of+' · block '+peg.nav_block)+
+            this.note('crvUSD mark dated by its feed run: '+peg.underlying_price_as_of+'. The parent feed does not publish the price observation time.')+
+            this.note(peg.market_price_carried_forward ? 'Market quote carried forward with its original observation time.' : '')+
+            this.note('Both prices are USD per share. This comparison includes crvUSD’s dollar value; scrvUSD is not pegged to $1.') :
+            this.note('Market comparison unavailable'+((peg.comparison_withheld_reasons || []).length ? ': '+peg.comparison_withheld_reasons.join('; ') : '.') ,true));
     },
     nav: function(d) {
         var parent=d.parent || {}, y=d.yield_data || {}, r=d.rewards || {}, self=this;
@@ -128,7 +143,7 @@ var ScrvUSDRenderer = {
         if (!d || d.schema_version!=='scrvusd-detail/1') return;
         history=history || {entries:[]};
         var slot=function(id,html){var el=document.getElementById(id);if(el)el.innerHTML=html;};
-        slot('peg-extra-panels',this.nav(d)+this.historyPanel(history));
+        slot('peg-extra-panels',this.market(data.peg)+this.nav(d)+this.historyPanel(history));
         slot('backing-extra-panels',this.accounting(d)+this.accountingHistory(history));
         slot('liquidity-extra-panels',this.exit(d));
         slot('contract-extra-panels',this.controls(d));
@@ -153,7 +168,8 @@ var ScrvUSDRenderer = {
             card.querySelector('.card-value').textContent=value;
             var subtitle=card.querySelector('.text-xs');if(subtitle)subtitle.textContent=sub;
         }
-        tile(0,'NAV / price',this.n(d.nav_usd,6),'USD NAV / share · wrapper market quote unmeasured');
+        var priced=(data.peg || {}).status==='ok' && Number.isFinite(data.peg.market_price) && data.peg.nav>0;
+        tile(0,'NAV / price',this.n(priced ? data.peg.market_price : d.nav_usd,6),priced ? 'USD market / share · compared with dollar NAV' : 'USD NAV / share · market comparison unavailable');
         tile(1,'Backing',(d.accounting || {}).status==='reconciled' ? 'Reconciled' : 'Review accounting','crvUSD custody vs idle; dollar solvency inherited');
         var passed=(((d.exits || {}).primary || {}).rungs || []).filter(function(r){return r.status==='ok';});
         tile(2,'Liquidity & exit',passed.length ? this.n(Math.max.apply(null,passed.map(function(r){return r.target_crvusd;})),0)+' crvUSD' : 'Not measured','largest primary simulation · depth crossing unmeasured');
@@ -161,7 +177,7 @@ var ScrvUSDRenderer = {
         var depChip=cards[3] && cards[3].querySelector('a.axis-rating');
         if(depChip && typeof (data.dependencies || {}).underlying_score==='number')depChip.textContent='Authored '+data.dependencies.underlying_score+'/10';
         var bandNote=document.querySelector('.axis-band-note');
-        if(bandNote)bandNote.textContent='Observed: share NAV, custody and sampled exits. Authored scores retain the report’s assessment. Wrapper market-price deviation and full authority coverage are not established.';
+        if(bandNote)bandNote.textContent='Observed: share NAV, custody and sampled exits. Authored scores retain the report’s assessment. Market comparison uses separately dated USD prices when available. Full authority coverage is not established.';
         var chartPanel=document.getElementById('chart-panel');
         if(chartPanel && chartPanel.querySelector('.panel-title'))chartPanel.querySelector('.panel-title').textContent='Dollar collateral coverage — see crvUSD';
         var declared=document.getElementById('cr-chart-declared-note');
