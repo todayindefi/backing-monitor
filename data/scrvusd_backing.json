@@ -1,0 +1,338 @@
+{
+  "schema_version": 1,
+  "asset": "scrvUSD",
+  "asset_slug": "scrvusd",
+  "chain": "ethereum",
+  "timestamp": "2026-10-17T15:41:47Z",
+  "publication_status": "published",
+  "producer": "pegtracker",
+  "summary": {
+    "total_supply": 13441540.299507568,
+    "supply_unit": "shares",
+    "total_backing": 14899932.866625609,
+    "total_backing_basis": "NAV-marked crvUSD accounting assets, not a separate dollar reserve.",
+    "collateral_ratio": null,
+    "nav": 1.1084989171346287,
+    "paused": null
+  },
+  "risk_flags": [],
+  "peg": {
+    "as_of": "2026-10-17T15:41:47Z",
+    "nav": 1.1084989171346287,
+    "nav_source": "ERC-4626 convertToAssets × dated parent crvUSD price",
+    "nav_basis": "USD NAV is a reference, not an independent scrvUSD market quote. The share is not pegged to $1.",
+    "market_price": null,
+    "premium_discount_pct": null,
+    "status": "market_price_unmeasured",
+    "source": "Pinned Ethereum vault read; parent crvUSD mark separately dated",
+    "chart_window_days": 7,
+    "chart_min_points": 2
+  },
+  "backing": {
+    "as_of": "2026-10-17T15:41:47Z",
+    "collateral_ratio": null,
+    "collateral_ratio_basis": "No independent dollar collateral ratio: actual custody and accounting reconcile in crvUSD units; underlying solvency is assessed on crvUSD.",
+    "total_backing": null,
+    "total_supply": 13441540.299507568,
+    "supply_scope": "Ethereum scrvUSD shares; underlying assets are in crvUSD units.",
+    "derived_score": null,
+    "derived_score_status": "not_computed"
+  },
+  "liquidity": {
+    "as_of": "2026-10-17T15:41:47Z",
+    "total_2pct_depth": null,
+    "two_pct_depth_status": "unmeasured",
+    "two_pct_depth_basis": "Two-step redemption and underlying routes are sampled; no marginal-impact crossing is established.",
+    "derived_score": null,
+    "derived_score_status": "not_computed",
+    "primary_exit": {
+      "venue": "Ethereum scrvUSD ERC-4626 redeem",
+      "gated": false,
+      "gated_basis": "measured: Owner-scoped read-only redeem calls; failure may be inventory/owner/permission related, not proof of a universal gate.",
+      "into": "crvUSD",
+      "note": "Read-only eth_call from an actual share-owning pool; owner-specific balance and maxRedeem are not vault-wide capacity. No LP withdrawal tested."
+    },
+    "pools": [],
+    "pools_note": "No separate scrvUSD secondary-venue enumeration. Primary redemption is measured separately from crvUSD→USDC quotes."
+  },
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "crvUSD",
+        "metric": "Sole current underlying asset",
+        "source": "Pinned vault asset()/custody reads",
+        "link": "?asset=crvusd",
+        "link_type": "dashboard",
+        "slug": "crvusd"
+      }
+    ],
+    "downstream_tracked": false,
+    "as_of": "2026-10-17T15:41:47Z"
+  },
+  "contract": {
+    "as_of": "2026-10-17T15:41:47Z",
+    "observed_at": "2026-10-17T15:41:47Z",
+    "method": "partial live getters",
+    "layers": [],
+    "unresolved": [
+      "Full operational role inventory since deployment",
+      "DAO and delegated authority execution delays/floors",
+      "Audit parity of every deployed dependency",
+      "Strategies outside the current default queue"
+    ],
+    "headline": "Fixed-target clone observation; active operational roles, complete authority paths unestablished."
+  },
+  "issuer": {
+    "as_of": "2026-10-17T15:41:47Z",
+    "report_url_status": "unpublished",
+    "report_url_status_basis": "tidresearch scrvusd report remains production:false; public report link withheld."
+  },
+  "asset_specific": {
+    "type": "erc4626-savings-wrapper",
+    "scrvusd": {
+      "block": 26213238,
+      "block_hash": "0xbb4c10291e3b6671627a15e02aabfdd57f1096a399f471043abd305cf3c0ac5a",
+      "as_of": "2026-10-17T15:41:47Z",
+      "identity": {
+        "asset": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+        "decimals": 18,
+        "symbol": "scrvUSD"
+      },
+      "accounting": {
+        "idle_crvusd": 14919615.56276306,
+        "strategy_debt_crvusd": 0.0,
+        "total_assets_crvusd": 14919615.56276306,
+        "custody_crvusd": 14919615.56276306,
+        "custody_minus_idle_crvusd": 0.0,
+        "accounting_difference_crvusd": 0.0,
+        "status": "reconciled",
+        "strategy_status": "idle_only",
+        "custody_basis": "Actual crvUSD balance versus totalIdle; totalDebt is an accounting claim, not independently verified recovery.",
+        "dollar_solvency_basis": "Backing in crvUSD units does not establish dollar solvency. Parent crvUSD owns collateral analysis."
+      },
+      "nav_crvusd": 1.1099632356352525,
+      "preview_crvusd": 1.1099632356352525,
+      "effective_supply_shares": 13441540.299507568,
+      "preview_difference_crvusd": 0.0,
+      "controls": {
+        "role_manager": "0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+        "future_role_manager": "0x0000000000000000000000000000000000000000",
+        "accountant": "0x0000000000000000000000000000000000000000",
+        "withdraw_limit_module": "0x0000000000000000000000000000000000000000",
+        "deposit_limit_module": "0x0000000000000000000000000000000000000000",
+        "queue": [],
+        "isShutdown": false,
+        "deposit_limit_uncapped": true,
+        "deposit_limit_raw": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+        "clone_matches_fixed_target": true,
+        "implementation": "0xd8063123bba3b480569244ae66bfe72b6c84b00d",
+        "method": "Pinned getter observations; operational holder enumeration is bounded, not a full authority walk.",
+        "unestablished": [
+          "Full operational role inventory since deployment",
+          "DAO and delegated authority execution delays/floors",
+          "Audit parity of every deployed dependency",
+          "Strategies outside the current default queue"
+        ],
+        "shutdown_basis": "Yearn V3 shutdown stops deposits; withdrawal availability is established separately by simulation."
+      },
+      "rewards": {
+        "pending_crvusd": 2860.578751665391,
+        "requested_weight_bps": 1629,
+        "receiver_cap_bps": 5000,
+        "minimum_weight_bps": 500,
+        "scaling_factor": 10000,
+        "twa_window_seconds": 172800,
+        "min_snapshot_interval_seconds": 3600,
+        "supply_lens": "0xe24e2db9f6bb40bbe7c1c025bc87104f5401ecd7",
+        "lens_circulating_supply_crvusd": 100984457.56777585,
+        "last_snapshot_at": "2026-10-15T05:32:35Z",
+        "profit_unlock_seconds": 604800,
+        "profit_unlock_ends_at": "2026-10-18T02:41:38Z",
+        "last_profit_update_at": "2026-10-12T06:05:11Z",
+        "allocation_basis": "Requested fee weight and cap are not actual received allocation. Handler funds are outside current vault principal.",
+        "unlock_basis": "Profit unlocking is not an admin timelock."
+      },
+      "schema_version": "scrvusd-detail/1",
+      "nav_usd": 1.1084989171346287,
+      "parent": {
+        "asset": "crvusd",
+        "price_usd": 0.9986807504486527,
+        "as_of": "2026-10-17T15:36:16Z",
+        "source": "coingecko",
+        "status": "ok",
+        "timestamp_basis": "Parent mark clock; snapshot time only where parent publishes no mark-specific clock.",
+        "dashboard_url": "?asset=crvusd",
+        "backing_as_of": "2026-10-17T15:36:16Z",
+        "basis": "Parent collateral conventions remain on crvUSD; this wrapper does not create another reserve."
+      },
+      "yield_data": {
+        "projected_apy_pct": 2.574260855837207,
+        "as_of": "2026-10-17T15:40:59Z",
+        "block": 26213234,
+        "source": "https://prices.curve.finance/v1/crvusd/savings/statistics",
+        "status": "ok",
+        "basis": "Projected APY, not guaranteed or realized share return."
+      },
+      "events": {
+        "from_block": 26211190,
+        "through_block": 26213226,
+        "complete": true,
+        "cursor": 26213226,
+        "basis": "Confirmed recent event window only; no deployment-to-present role inventory.",
+        "last_distribution": {
+          "at": "2026-10-12T06:05:11Z",
+          "block": 26174479,
+          "block_hash": "0xe5884896feb9914a2c2cd4e6293e2e2035432e5a3c0c7383af2f4013821f5fb0",
+          "tx_hash": "0x11ea5ab11321681c1f0d1793684bdd223c8140abaa79cfbbe16864295a0bbf30",
+          "amount_crvusd": 4937.891855785827,
+          "basis": "crvUSD handler→vault transfer plus vault self StrategyReported in the same successful receipt."
+        },
+        "control_events": [],
+        "role_observations": [
+          {
+            "address": "0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+            "vault_role_mask": 0,
+            "handler_rate_manager": true
+          },
+          {
+            "address": "0xe8d1e2531761406af1615a6764b0d5ff52736f56",
+            "vault_role_mask": 2080,
+            "handler_rate_manager": false
+          }
+        ],
+        "distribution_hint_retry_after": null,
+        "distribution_hint_error": null,
+        "distribution_hint_provider": "canonical-archive"
+      },
+      "exits": {
+        "primary": {
+          "as_of": "2026-10-17T15:41:47Z",
+          "block": 26213238,
+          "owner": "0xE99810Cd5AdCD7b13455aE1BE678B382d61f2d1E",
+          "owner_share_balance": 456806.76311225566,
+          "owner_max_redeem_shares": 456806.76311225566,
+          "rungs": [
+            {
+              "target_crvusd": 1000,
+              "input_shares_raw": "900930740672398540776",
+              "input_shares": 900.9307406723985,
+              "owner_sender_receiver": "0xE99810Cd5AdCD7b13455aE1BE678B382d61f2d1E",
+              "status": "ok",
+              "output_crvusd_raw": "1000000000000000000589",
+              "output_crvusd": 1000.0
+            },
+            {
+              "target_crvusd": 10000,
+              "input_shares_raw": "9009307406723985407752",
+              "input_shares": 9009.307406723985,
+              "owner_sender_receiver": "0xE99810Cd5AdCD7b13455aE1BE678B382d61f2d1E",
+              "status": "ok",
+              "output_crvusd_raw": "10000000000000000005889",
+              "output_crvusd": 10000.0
+            },
+            {
+              "target_crvusd": 50000,
+              "input_shares_raw": "45046537033619927038756",
+              "input_shares": 45046.53703361993,
+              "owner_sender_receiver": "0xE99810Cd5AdCD7b13455aE1BE678B382d61f2d1E",
+              "status": "ok",
+              "output_crvusd_raw": "50000000000000000029445",
+              "output_crvusd": 50000.0
+            },
+            {
+              "target_crvusd": 100000,
+              "input_shares_raw": "90093074067239854077511",
+              "input_shares": 90093.07406723985,
+              "owner_sender_receiver": "0xE99810Cd5AdCD7b13455aE1BE678B382d61f2d1E",
+              "status": "ok",
+              "output_crvusd_raw": "100000000000000000058889",
+              "output_crvusd": 100000.0
+            },
+            {
+              "target_crvusd": 1000000,
+              "input_shares_raw": "900930740672398540775110",
+              "input_shares": 900930.7406723986,
+              "owner_sender_receiver": "0xE99810Cd5AdCD7b13455aE1BE678B382d61f2d1E",
+              "status": "failed",
+              "error": "ContractLogicError: ('execution reverted: insufficient shares to redeem', '0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001d696e73756666696369656e74207"
+            }
+          ],
+          "basis": "Read-only eth_call from an actual share-owning pool; owner-specific balance and maxRedeem are not vault-wide capacity. No LP withdrawal tested."
+        },
+        "underlying": {
+          "as_of": "2026-10-17T15:42:26.985509Z",
+          "source": "KyberSwap Ethereum route API",
+          "rungs": [
+            {
+              "target_crvusd": 1000,
+              "input_crvusd_raw": "1000000000000000000589",
+              "input_crvusd": 1000.0,
+              "primary_status": "ok",
+              "combined_tested": true,
+              "status": "ok",
+              "usdc_out": 998.872287,
+              "nominal_deviation_bps": -11.277129999999191,
+              "as_of": "2026-10-17T15:42:10.806230Z"
+            },
+            {
+              "target_crvusd": 10000,
+              "input_crvusd_raw": "10000000000000000005889",
+              "input_crvusd": 10000.0,
+              "primary_status": "ok",
+              "combined_tested": true,
+              "status": "ok",
+              "usdc_out": 9988.562927,
+              "nominal_deviation_bps": -11.437072999999076,
+              "as_of": "2026-10-17T15:42:17.838683Z"
+            },
+            {
+              "target_crvusd": 50000,
+              "input_crvusd_raw": "50000000000000000029445",
+              "input_crvusd": 50000.0,
+              "primary_status": "ok",
+              "combined_tested": true,
+              "status": "ok",
+              "usdc_out": 49941.776195,
+              "nominal_deviation_bps": -11.644761000000337,
+              "as_of": "2026-10-17T15:42:18.439900Z"
+            },
+            {
+              "target_crvusd": 100000,
+              "input_crvusd_raw": "100000000000000000058889",
+              "input_crvusd": 100000.0,
+              "primary_status": "ok",
+              "combined_tested": true,
+              "status": "ok",
+              "usdc_out": 99883.838653,
+              "nominal_deviation_bps": -11.616134699999892,
+              "as_of": "2026-10-17T15:42:26.316783Z"
+            },
+            {
+              "target_crvusd": 1000000,
+              "input_crvusd_raw": "1000000000000000000000000",
+              "input_crvusd": 1000000.0,
+              "primary_status": "failed",
+              "combined_tested": false,
+              "status": "ok",
+              "usdc_out": 998809.997858,
+              "nominal_deviation_bps": -11.900021420000462,
+              "as_of": "2026-10-17T15:42:26.985468Z"
+            }
+          ],
+          "basis": "USDC quotes use the primary leg’s actual crvUSD output when that leg succeeds. Different clocks; quotes exclude gas and are not submitted transactions or a depth crossing."
+        }
+      },
+      "refresh_attempt": {
+        "status": "ok",
+        "attempted_at": "2026-10-17T15:41:51.720304Z"
+      }
+    }
+  },
+  "source_publication_status": "candidate",
+  "publication_authorization": {
+    "approved_on": "2026-10-17",
+    "basis": "User approved the six-axis scrvUSD implementation scope and requested proceeding",
+    "source": "/home/danger/PegTracker/data/dashboard_pending/scrvusd/scrvusd_backing.json",
+    "editorial_commit": null
+  }
+}
