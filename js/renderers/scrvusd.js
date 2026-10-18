@@ -25,6 +25,9 @@ var ScrvUSDRenderer = {
         data.asset_specific.chart_title='Independent dollar coverage is not derived for this wrapper';
         data.asset_specific.chart_dataset_label='No independent collateral ratio';
         var deps=data.dependencies || {};
+        (deps.upstream || []).forEach(function(edge){
+            if(edge.slug==='crvusd' && edge.link==='?asset=crvusd')edge.link_type='internal';
+        });
         if (Array.isArray(deps.downstream_tracked)) {
             deps.downstream=deps.downstream_tracked.map(function(slug){return {name:slug,slug:slug};});
             deps.downstream_tracked=true;
@@ -71,7 +74,7 @@ var ScrvUSDRenderer = {
     },
     accounting: function(d) {
         var a=d.accounting || {};
-        return this.panel('Vault health — crvUSD units',this.note(a.status==='reconciled' ? 'Custody and accounting reconcile in crvUSD units.' : 'Custody/accounting requires review.',a.status!=='reconciled')+
+        return this.panel('Vault health — crvUSD units',this.note('Custody and accounting observed at '+d.as_of+' · block '+d.block)+this.note(a.status==='reconciled' ? 'Custody and accounting reconcile in crvUSD units.' : 'Custody/accounting requires review.',a.status!=='reconciled')+
             this.metrics([
                 ['Actual crvUSD custody',a.custody_crvusd,'crvUSD'],['Idle accounting',a.idle_crvusd,'crvUSD'],
                 ['Strategy debt (accounting claim)',a.strategy_debt_crvusd,'crvUSD'],['Total assets',a.total_assets_crvusd,'crvUSD'],
@@ -86,15 +89,17 @@ var ScrvUSDRenderer = {
     exit: function(d) {
         var x=d.exits || {}, p=x.primary || {}, q=x.underlying || {}, self=this;
         var ps=p.rungs || [],qs=q.rungs || [];
-        var primary=ps.map(function(r){return [self.value(r.target_crvusd,'crvUSD'),self.value(r.input_shares,'shares',6),self.value(r.output_crvusd,'crvUSD',6),self.e(r.status)];});
-        var quotes=qs.map(function(r){return [self.value(r.input_crvusd,'crvUSD',6),self.value(r.usdc_out,'USDC',6),self.value(r.nominal_deviation_bps,'bps',2),self.e(r.combined_tested ? 'Both legs observed separately' : 'Underlying quote only')];});
+        var primary=ps.map(function(r){return [self.value(r.target_crvusd,'crvUSD'),self.value(r.input_shares,'shares',6),self.value(r.output_crvusd,'crvUSD',6),self.e(r.status==='failed' && r.input_shares>p.owner_share_balance ? 'Failed: test owner has insufficient shares' : r.status)];});
+        var quotes=qs.map(function(r){return [self.value(r.input_crvusd,'crvUSD',6),self.value(r.status==='ok' ? r.usdc_out : null,'USDC',6),self.value(r.status==='ok' ? r.nominal_deviation_bps : null,'bps',2),self.e(r.status==='ok' ? (r.combined_tested && r.primary_status!=='failed' ? 'Both legs observed separately' : 'Underlying quote only') : 'Quote unavailable'),self.e(r.as_of || q.as_of || 'time unavailable')];});
         var passed=ps.filter(function(r){return r.status==='ok';});
         var top=passed.length ? Math.max.apply(null,passed.map(function(r){return r.target_crvusd;})) : null;
         return this.panel('Two-step exit — shares → crvUSD → USDC',
             this.note(top==null ? 'Primary redemption has no successful measured size.' : 'Read-only primary redemption passed through '+this.n(top)+' crvUSD-equivalent; no whole-vault exit was established.',top==null)+
             this.note('Primary simulation: '+(p.as_of || 'not measured')+'. Underlying routes: '+(q.as_of || 'not measured')+'.')+
             this.table(['Target','Input shares','Redemption output','Simulation'],primary)+
-            this.details('Underlying cash-out quotes and owner-specific limits',this.table(['Actual/nominal input','USDC quote','From nominal par','Evidence'],quotes)+
+            this.note('Underlying cash-out quotes — crvUSD → USDC. Deviation is from nominal $1 per crvUSD, not marginal price impact. USDC is counted at $1; quotes exclude gas and are not submitted trades.')+
+            this.table(['Actual/nominal input','USDC quote','From nominal par','Evidence','Quote time'],quotes)+
+            this.details('Test owner and simulation limits',
                 this.metrics([['Test owner shares',p.owner_share_balance,'shares'],['Owner maxRedeem',p.owner_max_redeem_shares,'shares']])+
                 this.note(p.basis)+this.note(q.basis)+
                 this.note('A failed larger redeem from this owner can mean insufficient owner shares, not a vault-wide gate. No scrvUSD secondary-market venue enumeration or marginal-impact depth crossing is established. Our held LP withdrawal is a separate path.')));
@@ -145,13 +150,14 @@ var ScrvUSDRenderer = {
         var slot=function(id,html){var el=document.getElementById(id);if(el)el.innerHTML=html;};
         slot('peg-extra-panels',this.market(data.peg)+this.nav(d)+this.historyPanel(history));
         slot('backing-extra-panels',this.accounting(d)+this.accountingHistory(history));
+        slot('axis-liquidity-body',this.panel('Exit measurement scope',this.note('Primary redemption and crvUSD cash-out quotes are sampled below. Secondary-market depth, pool TVL and trading volume are not measured for this wrapper. Authored liquidity scores are dated assessments, not measured exit capacity.')));
         slot('liquidity-extra-panels',this.exit(d));
         slot('contract-extra-panels',this.controls(d));
         slot('dependencies-extra-panels',this.panel('Underlying collateral reference',this.note('crvUSD owns the collateral and upstream credit model. No duplicate parent asset graph or dollar reserve is maintained here.')+'<p class="text-sm mt-2"><a href="?asset=crvusd">Open crvUSD’s six-axis dashboard →</a></p>'));
         var legacy=document.getElementById('asset-specific-panels');if(legacy)legacy.innerHTML='';
         var cap=document.getElementById('breakdown-caption');
         var table=document.getElementById('breakdown-table');
-        if(table){table.closest('.panel').style.display='';table.querySelector('tbody').innerHTML='<tr><td colspan="4">Custody is held in crvUSD units; no independent dollar collateral allocation is established. See vault accounting below.</td></tr>';}
+        if(table)table.closest('.panel').style.display='none';
         if(cap)cap.textContent='Underlying custody is not a second dollar reserve.';
         var companion=document.getElementById('header-companion-link');
         if(companion){companion.href='?asset=crvusd';companion.textContent='crvUSD underlying →';companion.classList.remove('hidden');}
@@ -178,7 +184,12 @@ var ScrvUSDRenderer = {
         if(depChip && typeof (data.dependencies || {}).underlying_score==='number')depChip.textContent='Authored '+data.dependencies.underlying_score+'/10';
         var bandNote=document.querySelector('.axis-band-note');
         if(bandNote)bandNote.textContent='Observed: share NAV, custody and sampled exits. Authored scores retain the report’s assessment. Market comparison uses separately dated USD prices when available. Full authority coverage is not established.';
+        ['backing','liquidity'].forEach(function(axis){
+            var subtitle=document.querySelector('#axis-'+axis+'-head .axis-sub');
+            if(subtitle)subtitle.textContent=axis==='backing' ? 'crvUSD custody reconciliation · dollar solvency inherited' : 'sampled redemption and underlying cash-out · depth unmeasured';
+        });
         var chartPanel=document.getElementById('chart-panel');
+        if(chartPanel)chartPanel.style.display='none';
         if(chartPanel && chartPanel.querySelector('.panel-title'))chartPanel.querySelector('.panel-title').textContent='Dollar collateral coverage — see crvUSD';
         var declared=document.getElementById('cr-chart-declared-note');
         if(declared)declared.textContent='Independent dollar coverage is not established for this wrapper. Custody history below is in crvUSD units; the parent dashboard owns collateral analysis.';

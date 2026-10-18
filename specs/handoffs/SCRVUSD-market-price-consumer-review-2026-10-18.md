@@ -11,3 +11,13 @@ Validation: PegTracker 31 tests passed; backing-monitor renderer assertions pass
 The central PegTracker peg row still mixes USD price and crvUSD/share; this review does not approve that row. Parent provider-price observation timestamps remain unavailable. Neither limitation should be described as solved by the wrapper dashboard.
 
 Repository-state discrepancy: return instructions described an unmerged branch, but read-only verification found the reviewed commit on both local main and remote refs/heads/main. No producer merge or push was performed during this review. Consumer changes are ready for publication separately.
+
+## Publication and six-axis follow-up
+
+User requested publication and review of the other sections, particularly axes 2 and 3. Reviewed the current hourly feed (2026-10-18T01:36:11Z): custody/idle/assets each 14,924,011.41 crvUSD, debt zero, exact accounting reconciliation; primary simulations pass through 100K crvUSD. The 1M simulation fails because its test owner lacks sufficient shares; the 1M underlying quote does not establish primary redemption at that size.
+
+Removed the empty independent-dollar coverage chart/breakdown and blank generic secondary-market liquidity cards from this wrapper page. Custody reconciliation has an explicit block/time. Both redemption and cash-out tables are visible, with per-quote times, nominal-par basis and owner-specific failure wording. Failed quotes cannot display stale numeric outputs as successful observations. Dated authored scores and their original input clocks remain unchanged.
+
+The crvUSD dependency card now opens the parent dashboard. Public report availability was verified (HTTP 200 and tidresearch production:true); registry and transport metadata now link the published report rather than restoring the old unpublished state every sync. No producer repository was edited.
+
+Renderer and four adapter tests pass, as do existing USDM/sfrxUSD/DOLA/USDat renderer checks. Desktop and 390px mobile checks show no page errors or document overflow; visible text confirms custody units, visible quote results, owner-scoped failure, parent link and published report link.

@@ -12,7 +12,7 @@ const detail={schema_version:'scrvusd-detail/1',as_of:'2026-10-17T09:00:00Z',blo
  parent:{price_usd:0.95,source:'parent',as_of:'2026-10-17T08:30:00Z'},yield_data:{status:'ok',projected_apy_pct:2.59},
  rewards:{pending_crvusd:5},controls:{clone_matches_fixed_target:true,isShutdown:true,queue:[],unestablished:['Delegates not enumerated']},
  events:{complete:false},exits:{primary:{rungs:[{target_crvusd:100000,input_shares:90909,output_crvusd:100000,status:'ok'},
- {target_crvusd:1000000,input_shares:909090,status:'failed'}]},underlying:{rungs:[{input_crvusd:1000000,usdc_out:998000,combined_tested:false}]}}};
+ {target_crvusd:1000000,input_shares:909090,status:'failed'}]},underlying:{rungs:[{input_crvusd:1000000,usdc_out:998000,combined_tested:false,status:'ok'}]}}};
 const d={summary:{total_backing:100,collateral_ratio:100},peg:{nav:1.045},backing:{collateral_ratio:100,total_backing:100},
  asset_specific:{scrvusd:detail},dependencies:{downstream_tracked:false}};
 r.preRender(d);
@@ -42,3 +42,11 @@ assert.match(r.market({status:'comparison_withheld',market_price:null,comparison
 assert.match(r.market({}),/Market comparison unavailable/);
 assert.match(r.market({status:'ok',market_price:1.11,nav:1.10}),/parent feed does not publish the price observation time/);
 assert.equal(d.peg.chart_strict_window,true);
+
+const failedQuotes={...detail,exits:{primary:{rungs:[]},underlying:{rungs:[{input_crvusd:1000,usdc_out:999,status:'failed',combined_tested:true}]}}};
+assert.match(r.exit(failedQuotes),/Quote unavailable/);
+assert.doesNotMatch(r.exit(failedQuotes),/999 USDC|Both legs observed separately/);
+const insufficient={...detail,exits:{...detail.exits,primary:{owner_share_balance:100000,rungs:detail.exits.primary.rungs}}};
+assert.match(r.exit(insufficient),/Failed: test owner has insufficient shares/);
+assert.match(r.accounting(detail),/Custody and accounting observed at/);
+assert.match(r.exit(detail),/USDC is counted at \$1/);

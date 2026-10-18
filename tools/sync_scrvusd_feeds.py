@@ -35,7 +35,13 @@ def validated_inputs():
                 raise ValueError('Unexpected wrapper schema or underlying identity')
             if d.get('backing',{}).get('collateral_ratio') is not None:
                 raise ValueError('Wrapper custody must not become a dollar collateral ratio')
+        if name=='scrvusd_issuer.json':
+            issuer=d.setdefault('issuer',{})
+            issuer['report_url']='https://tidresearch.com/reports/scrvusd/'
+            issuer['report_url_status']='published'
+            issuer['report_url_status_basis']='Publication verified by backing-monitor on 2026-10-18: public report HTTP 200 and tidresearch production:true.'
         if 'publication_status' in d:
+
             d['source_publication_status']=d['publication_status'];d['publication_status']='published'
         d['publication_authorization']={'approved_on':'2026-10-17',
             'basis':'User approved the six-axis scrvUSD implementation scope and requested proceeding',

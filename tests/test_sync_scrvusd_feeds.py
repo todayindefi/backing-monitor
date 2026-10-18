@@ -36,6 +36,9 @@ def test_transport_preserves_measurement_clock_and_candidate_provenance(setup):
     assert d['publication_status']=='published'
     assert d['backing']['collateral_ratio'] is None
     assert len(list((repo/'data').glob('scrvusd_*.json')))==7
+    issuer=json.loads((repo/'data/scrvusd_issuer.json').read_text())['issuer']
+    assert issuer['report_url_status']=='published'
+    assert issuer['report_url']=='https://tidresearch.com/reports/scrvusd/'
 
 
 @pytest.mark.parametrize('corrupt',[{'backing':{'collateral_ratio':100}},{'asset_slug':'usdm'}])
