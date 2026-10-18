@@ -86,6 +86,31 @@ var ScrvUSDRenderer = {
             this.details('Accounting scope and allocation limits',this.note(a.custody_basis)+
                 this.note('Ethereum vault shares and crvUSD assets have different units. No standalone dollar reserve ratio, dollar allocation pie or independent attestations are established. New strategy debt requires strategy-level review.')));
     },
+    matchedExits: function(d) {
+        var l=(d.exits || {}).ladders;
+        if (!l || l.schema!=='scrvusd-exit-ladders/1') return null;
+        var self=this, rows=Array.isArray(l.rungs) ? l.rungs : [];
+        var age=(Date.now()-Date.parse(l.as_of))/1000;
+        var stale=!Number.isFinite(age) || age>((l.clock_limits || {}).ladder_max_age_s || 14400);
+        var context=this.note('Vault block '+l.vault_block+' · '+l.vault_as_of+' · parent mark '+l.parent_price_as_of)+
+            this.note(stale ? 'Historical observations: this ladder is older than its freshness limit. It does not establish current exit availability.' : '',true)+
+            this.note(l.status!=='ok' ? 'Comparison withheld: '+(l.withheld_reasons || []).join('; ') : '',true);
+        function routePanel(key,title) {
+            var summary=(l.summary || {})[key] || {}, threshold=summary.threshold_50bps || {};
+            var body=self.table(['Input NAV, USD','Input shares','USDC quoted','Cost vs NAV, bps','Size impact, bps','Result'],rows.map(function(r){
+                var v=r[key] || {}, valid=l.status==='ok' && v.valid===true;
+                if(key==='direct' && (v.route || []).some(function(h){return /erc4626/i.test(h.exchange || '') || String(h.pool).toLowerCase()==='0x0655977feb2f289a4ab78af67bab0d17aab84367';}))valid=false;
+                var state=valid ? (stale ? 'Historical quote' : 'Quoted') : ((v.withheld_reasons || []).join('; ') || v.combined_status || v.status || 'unavailable');
+                return [self.value(r.input_nav_usd,'USD'),self.value(r.input_shares,'shares',6),self.value(valid ? v.usdc_out : null,'USDC',6),self.value(valid ? v.all_in_cost_bps : null,'bps',2),self.value(valid ? v.size_impact_bps : null,'bps',2),self.e(state)];
+            }));
+            var limit='';
+            if(l.status==='ok' && threshold.largest_tested_within_usd!=null)limit='50 bps cost: tested through $'+self.n(threshold.largest_tested_within_usd,0)+(threshold.smallest_tested_exceeding_usd!=null ? '; exceeded at $'+self.n(threshold.smallest_tested_exceeding_usd,0) : '; threshold not crossed in tested sizes')+'. Tested floor, not an exact crossing.';
+            return self.panel(title,context+self.note(key==='direct' ? 'Secondary venues only; vault-redemption hops excluded. Unrestricted router quotes that redeem the vault are diagnostic only.' : 'Read-only redemption with a synthetic share balance verified by readback, followed by a quote of actual crvUSD output. No trade was submitted.')+self.note(limit)+body+
+                self.note('Positive cost is below dollar NAV; negative cost is a premium. USDC counted at $1; gas excluded. Size impact is additional cost relative to this route’s $'+self.n(summary.size_impact_reference_usd,0)+' rung.')+
+                self.details('Observation clocks and route evidence',self.table(['Input NAV, USD','Quote time','Evidence'],rows.map(function(r){var v=r[key] || {}, q=key==='redeem' ? (v.underlying || {}) : v;return [self.value(r.input_nav_usd,'USD'),self.e(q.as_of || 'time unavailable'),self.e(key==='redeem' ? ((v.primary || {}).holder_basis || 'primary leg unestablished') : (q.route || []).map(function(h){return h.exchange;}).join(' → '))];}))+self.note(l.cost_basis)+self.note(l.size_impact_basis)+self.note((l.primary_bound || {}).basis)));
+        }
+        return routePanel('direct','Swap — scrvUSD → USDC')+routePanel('redeem','Redeem — scrvUSD → crvUSD → USDC');
+    },
     exitCost: function(shares, output, quoteTime, d) {
         var skew=Math.abs(Date.parse(quoteTime)-Date.parse(d.as_of));
         if (!(shares>0 && output>=0 && d.nav_usd>0) || !Number.isFinite(skew) || skew>7200000) return null;
@@ -174,8 +199,9 @@ var ScrvUSDRenderer = {
         var slot=function(id,html){var el=document.getElementById(id);if(el)el.innerHTML=html;};
         slot('peg-extra-panels',this.market(data.peg)+this.nav(d)+this.historyPanel(history));
         slot('backing-extra-panels',this.accounting(d)+this.accountingHistory(history));
-        slot('axis-liquidity-body',this.panel('Exit measurement scope',this.note('Primary redemption and crvUSD cash-out quotes are sampled below. Secondary-market depth, pool TVL and trading volume are not measured for this wrapper. Authored liquidity scores are dated assessments, not measured exit capacity.')));
-        slot('liquidity-extra-panels',this.swap(d)+this.exit(d));
+        var matched=this.matchedExits(d);
+        slot('axis-liquidity-body',this.panel('Exit measurement scope',this.note(matched ? 'Swap and redeem ladders use identical share inputs valued at the dated dollar NAV. Route costs and additional size impact are shown separately. Authored liquidity scores are dated assessments, not measured exit capacity.' : 'Primary redemption and crvUSD cash-out quotes are sampled below. Secondary-market depth, pool TVL and trading volume are not measured for this wrapper. Authored liquidity scores are dated assessments, not measured exit capacity.')));
+        slot('liquidity-extra-panels',matched || (this.swap(d)+this.exit(d)));
         slot('contract-extra-panels',this.controls(d));
         slot('dependencies-extra-panels',this.panel('Underlying collateral reference',this.note('crvUSD owns the collateral and upstream credit model. No duplicate parent asset graph or dollar reserve is maintained here.')+'<p class="text-sm mt-2"><a href="?asset=crvusd">Open crvUSD’s six-axis dashboard →</a></p>'));
         var legacy=document.getElementById('asset-specific-panels');if(legacy)legacy.innerHTML='';
@@ -203,6 +229,7 @@ var ScrvUSDRenderer = {
         tile(1,'Backing',(d.accounting || {}).status==='reconciled' ? 'Reconciled' : 'Review accounting','crvUSD custody vs idle; dollar solvency inherited');
         var passed=(((d.exits || {}).primary || {}).rungs || []).filter(function(r){return r.status==='ok';});
         tile(2,'Liquidity & exit',passed.length ? this.n(Math.max.apply(null,passed.map(function(r){return r.target_crvusd;})),0)+' crvUSD' : 'Not measured','largest primary simulation · depth crossing unmeasured');
+        if(matched)tile(2,'Liquidity & exit','Two routes','matched swap and redeem ladders · see observation times');
         tile(4,'Smart contract & admin','Partial coverage','live getters; complete authority paths unestablished');
         var depChip=cards[3] && cards[3].querySelector('a.axis-rating');
         if(depChip && typeof (data.dependencies || {}).underlying_score==='number')depChip.textContent='Authored '+data.dependencies.underlying_score+'/10';
@@ -210,7 +237,7 @@ var ScrvUSDRenderer = {
         if(bandNote)bandNote.textContent='Observed: share NAV, custody and sampled exits. Authored scores retain the report’s assessment. Market comparison uses separately dated USD prices when available. Full authority coverage is not established.';
         ['backing','liquidity'].forEach(function(axis){
             var subtitle=document.querySelector('#axis-'+axis+'-head .axis-sub');
-            if(subtitle)subtitle.textContent=axis==='backing' ? 'crvUSD custody reconciliation · dollar solvency inherited' : 'sampled redemption and underlying cash-out · depth unmeasured';
+            if(subtitle)subtitle.textContent=axis==='backing' ? 'crvUSD custody reconciliation · dollar solvency inherited' : (matched ? 'matched swap and redeem ladders · USD NAV sizes' : 'sampled redemption and underlying cash-out · depth unmeasured');
         });
         var chartPanel=document.getElementById('chart-panel');
         if(chartPanel)chartPanel.style.display='none';

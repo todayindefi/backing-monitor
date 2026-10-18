@@ -43,3 +43,8 @@ for (const mutation of [
     assert.equal(JSON.stringify(data), mutated, 'Unreviewed implementation, chain or sibling must remain untouched');
 }
 console.log('USDAT reviewed accounting scope and alert preservation checks passed');
+const staleIssuer={asset_slug:'usdat',risk_flags:[{code:'RISK_FEED_STALE',severity:'warning',message:'USDat issuer_score stale <tag>'},{code:'RISK_FEED_STALE',severity:'critical',message:'USDat issuer_score critical'},{code:'OTHER',severity:'critical',message:'Paused'}]};
+assert.match(renderer._issuerFeedWarningsHtml(staleIssuer),/issuer_score stale &lt;tag&gt;/);
+assert.doesNotMatch(renderer._issuerFeedWarningsHtml(staleIssuer),/critical|Paused/);
+assert.equal(staleIssuer.risk_flags.length,3);
+assert.equal(renderer._issuerFeedWarningsHtml({...staleIssuer,asset_slug:'susdat'}),'');

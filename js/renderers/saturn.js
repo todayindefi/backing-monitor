@@ -365,7 +365,7 @@ var SaturnRenderer = {
         html += anc('panel-trust',     SaturnRenderer._renderTrustStack(specific, slug));
 
         html += head(6, 'Issuer', 'editorial \u2014 subjective axis');
-        html += CommonRenderer.issuerPanelHtml(data) + CommonRenderer._issuerContextHtml(data);
+        html += CommonRenderer.issuerPanelHtml(data) + SaturnRenderer._issuerFeedWarningsHtml(data) + CommonRenderer._issuerContextHtml(data);
         html += '<div id="saturn-family-panel"></div>';
 
         container.innerHTML = html;
@@ -382,6 +382,14 @@ var SaturnRenderer = {
         }
         SaturnRenderer._loadPegHistoryChart(slug, s);
         SaturnRenderer._loadFamilyPanel(slug);
+    },
+
+    _issuerFeedWarningsHtml: function(data) {
+        if (data.asset_slug!=='usdat') return '';
+        var flags=(data.risk_flags || []).filter(function(f){
+            return f.code==='RISK_FEED_STALE' && f.severity!=='critical' && /issuer_score/.test(f.message || '');
+        });
+        return flags.map(function(f){return '<p class="text-sm text-amber-700 mb-4" data-usdat-issuer-warning="true">'+CommonRenderer._escapeAttr(f.message)+'</p>';}).join('');
     },
 
     _suppressCommonPanels: function(data) {
@@ -2568,9 +2576,9 @@ var SaturnRenderer = {
                 '<span class="text-sm font-semibold text-slate-700">Control paths</span>' +
                 headline +
             '</div>' +
-            '<table class="data-table"><thead><tr>' +
+            '<div style="max-width:100%;overflow-x:auto"><table class="data-table"><thead><tr>' +
                 '<th>Path</th><th>Holder</th><th>Kind</th>' +
-            '</tr></thead><tbody>' + rows + '</tbody></table>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
             note +
             caveat +
         '</div>';
