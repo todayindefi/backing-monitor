@@ -50,3 +50,13 @@ const insufficient={...detail,exits:{...detail.exits,primary:{owner_share_balanc
 assert.match(r.exit(insufficient),/Failed: test owner has insufficient shares/);
 assert.match(r.accounting(detail),/Custody and accounting observed at/);
 assert.match(r.exit(detail),/USDC is counted at \$1/);
+assert.ok(Math.abs(r.exitCost(100,103.455,'2026-10-17T09:00:00Z',detail)-100)<1e-8);
+assert.equal(r.exitCost(100,100,'2026-10-17T12:00:01Z',detail),null);
+assert.match(r.swap(detail),/Direct swap quote unavailable/);
+const paired={...detail,market_crosscheck:{status:'ok',input_shares:100,usdc_out:104,as_of:detail.as_of},exits:{primary:{rungs:[{target_crvusd:110,input_shares:100,output_crvusd:110,status:'ok'}]},underlying:{rungs:[{target_crvusd:110,input_crvusd:110,status:'ok',combined_tested:true,usdc_out:104,as_of:detail.as_of},{target_crvusd:1000000,input_crvusd:1000000,status:'ok',combined_tested:false,usdc_out:998000}]}}};
+assert.match(r.swap(paired),/one small corroborative quote/);
+assert.match(r.exit(paired),/Underlying quote only — redemption not established/);
+assert.match(r.exit(paired),/Both legs observed separately/);
+assert.match(r.exit(paired),/All-in cost vs dollar NAV/);
+paired.exits.underlying.rungs[0].input_crvusd=111;
+assert.doesNotMatch(r.exit(paired),/Both legs observed separately/);

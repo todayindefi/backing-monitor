@@ -86,19 +86,43 @@ var ScrvUSDRenderer = {
             this.details('Accounting scope and allocation limits',this.note(a.custody_basis)+
                 this.note('Ethereum vault shares and crvUSD assets have different units. No standalone dollar reserve ratio, dollar allocation pie or independent attestations are established. New strategy debt requires strategy-level review.')));
     },
+    exitCost: function(shares, output, quoteTime, d) {
+        var skew=Math.abs(Date.parse(quoteTime)-Date.parse(d.as_of));
+        if (!(shares>0 && output>=0 && d.nav_usd>0) || !Number.isFinite(skew) || skew>7200000) return null;
+        return (1-output/(shares*d.nav_usd))*10000;
+    },
+    swap: function(d) {
+        var q=d.market_crosscheck || {}, ok=q.status==='ok' && q.input_shares>0 && Number.isFinite(q.usdc_out);
+        var cost=ok ? this.exitCost(q.input_shares,q.usdc_out,q.as_of,d) : null;
+        return this.panel('Swap — scrvUSD → USDC',
+            this.note('Direct market route · one small corroborative quote; a full size ladder and swap capacity are not established.')+
+            (ok ? this.table(['Input shares','USDC quoted','All-in cost vs dollar NAV','Observed'],[[
+                this.value(q.input_shares,'shares',6),this.value(q.usdc_out,'USDC',6),this.value(cost,'bps',2),this.e(q.as_of)
+            ]])+this.note(q.source)+this.note(q.conversion_basis) : this.note('Direct swap quote unavailable.',true))+
+            this.note('No best-route recommendation: swap and redemption observations do not yet cover matching share inputs.'));
+    },
     exit: function(d) {
         var x=d.exits || {}, p=x.primary || {}, q=x.underlying || {}, self=this;
         var ps=p.rungs || [],qs=q.rungs || [];
         var primary=ps.map(function(r){return [self.value(r.target_crvusd,'crvUSD'),self.value(r.input_shares,'shares',6),self.value(r.output_crvusd,'crvUSD',6),self.e(r.status==='failed' && r.input_shares>p.owner_share_balance ? 'Failed: test owner has insufficient shares' : r.status)];});
-        var quotes=qs.map(function(r){return [self.value(r.input_crvusd,'crvUSD',6),self.value(r.status==='ok' ? r.usdc_out : null,'USDC',6),self.value(r.status==='ok' ? r.nominal_deviation_bps : null,'bps',2),self.e(r.status==='ok' ? (r.combined_tested && r.primary_status!=='failed' ? 'Both legs observed separately' : 'Underlying quote only') : 'Quote unavailable'),self.e(r.as_of || q.as_of || 'time unavailable')];});
+        var quotes=qs.map(function(r){
+            var leg=ps.find(function(v){return v.target_crvusd===r.target_crvusd;});
+            var paired=!!(leg && leg.status==='ok' && r.status==='ok' && r.combined_tested && r.primary_status!=='failed' &&
+                Number.isFinite(leg.output_crvusd) && Number.isFinite(r.input_crvusd) && Math.abs(leg.output_crvusd-r.input_crvusd)<0.000001);
+            var cost=paired ? self.exitCost(leg.input_shares,r.usdc_out,r.as_of || q.as_of,d) : null;
+            return [self.value(r.target_crvusd || r.input_crvusd,'crvUSD'),self.value(leg && leg.input_shares,'shares',6),
+                self.value(paired ? leg.output_crvusd : null,'crvUSD',6),self.value(r.status==='ok' ? r.usdc_out : null,'USDC',6),
+                self.value(cost,'bps',2),self.e(r.status==='ok' ? (paired ? 'Both legs observed separately' : 'Underlying quote only — redemption not established') : 'Quote unavailable')];
+        });
         var passed=ps.filter(function(r){return r.status==='ok';});
         var top=passed.length ? Math.max.apply(null,passed.map(function(r){return r.target_crvusd;})) : null;
-        return this.panel('Two-step exit — shares → crvUSD → USDC',
+        return this.panel('Redeem — scrvUSD → crvUSD → USDC',
             this.note(top==null ? 'Primary redemption has no successful measured size.' : 'Read-only primary redemption passed through '+this.n(top)+' crvUSD-equivalent; no whole-vault exit was established.',top==null)+
             this.note('Primary simulation: '+(p.as_of || 'not measured')+'. Underlying routes: '+(q.as_of || 'not measured')+'.')+
-            this.table(['Target','Input shares','Redemption output','Simulation'],primary)+
-            this.note('Underlying cash-out quotes — crvUSD → USDC. Deviation is from nominal $1 per crvUSD, not marginal price impact. USDC is counted at $1; quotes exclude gas and are not submitted trades.')+
-            this.table(['Actual/nominal input','USDC quote','From nominal par','Evidence','Quote time'],quotes)+
+            this.table(['Target underlying','Input shares','crvUSD redeemed','USDC quoted','All-in cost vs dollar NAV','Result'],quotes)+
+            this.note('USDC is counted at $1; quotes exclude gas and are not submitted trades. Positive cost means less than dollar NAV; negative cost means more. Size impact and a depth crossing are not measured.')+
+            this.details('Primary simulations and quote evidence',this.table(['Target','Input shares','Redemption output','Simulation'],primary)+
+                this.table(['Underlying input','From nominal crvUSD par','Quote time'],qs.map(function(r){return [self.value(r.input_crvusd,'crvUSD',6),self.value(r.status==='ok' ? r.nominal_deviation_bps : null,'bps',2),self.e(r.as_of || q.as_of || 'time unavailable')];}))+this.note('Nominal crvUSD-par deviation is distinct from all-in cost versus dollar share NAV. Cost is withheld if quote and vault clocks differ by more than two hours.'))+
             this.details('Test owner and simulation limits',
                 this.metrics([['Test owner shares',p.owner_share_balance,'shares'],['Owner maxRedeem',p.owner_max_redeem_shares,'shares']])+
                 this.note(p.basis)+this.note(q.basis)+
@@ -151,7 +175,7 @@ var ScrvUSDRenderer = {
         slot('peg-extra-panels',this.market(data.peg)+this.nav(d)+this.historyPanel(history));
         slot('backing-extra-panels',this.accounting(d)+this.accountingHistory(history));
         slot('axis-liquidity-body',this.panel('Exit measurement scope',this.note('Primary redemption and crvUSD cash-out quotes are sampled below. Secondary-market depth, pool TVL and trading volume are not measured for this wrapper. Authored liquidity scores are dated assessments, not measured exit capacity.')));
-        slot('liquidity-extra-panels',this.exit(d));
+        slot('liquidity-extra-panels',this.swap(d)+this.exit(d));
         slot('contract-extra-panels',this.controls(d));
         slot('dependencies-extra-panels',this.panel('Underlying collateral reference',this.note('crvUSD owns the collateral and upstream credit model. No duplicate parent asset graph or dollar reserve is maintained here.')+'<p class="text-sm mt-2"><a href="?asset=crvusd">Open crvUSD’s six-axis dashboard →</a></p>'));
         var legacy=document.getElementById('asset-specific-panels');if(legacy)legacy.innerHTML='';
