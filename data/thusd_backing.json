@@ -3,13 +3,13 @@
   "asset": "thUSD",
   "asset_slug": "thusd",
   "chain": "Ethereum",
-  "timestamp": "2026-10-18T21:39:30Z",
+  "timestamp": "2026-10-18T22:40:29Z",
   "summary": {
     "circulating_supply": 132209670.657227,
     "total_supply": 132209670.657227,
     "sthusd_supply": 21522450.319955,
     "staking_ratio": 0.16279,
-    "sthusd_share_price": 1.018994,
+    "sthusd_share_price": 1.019,
     "total_backing": null,
     "collateral_ratio": null,
     "backing_provenance": "off_chain_undisclosed",
@@ -73,16 +73,16 @@
     },
     {
       "severity": "critical",
-      "message": "Ethereum Mainnet event scan LOST ground: 266,184 blocks behind head, +300 since last run \u2014 the gap is not closing, so 'no new events' on this chain reflects the cursor, not the contracts"
+      "message": "Ethereum Mainnet event scan LOST ground: 266,487 blocks behind head, +303 since last run \u2014 the gap is not closing, so 'no new events' on this chain reflects the cursor, not the contracts"
     },
     {
       "severity": "warning",
-      "message": "Arbitrum Mainnet event scan is 7,696,819 blocks behind head (-17,003 this run, ~452 runs to catch up) \u2014 the event feed is not current for this chain"
+      "message": "Arbitrum Mainnet event scan is 7,682,567 blocks behind head (-14,252 this run, ~539 runs to catch up) \u2014 the event feed is not current for this chain"
     },
     {
       "code": "RISK_FEED_STALE",
       "severity": "warning",
-      "age_hours": 163.97,
+      "age_hours": 164.98,
       "message": "thUSD issuer_score is from a STALE risk-feed \u2014 generated 2026-10-12T01:45:02Z (6+ days old, threshold 48h). Value shown is last known good, not confirmed current.",
       "risk_feed_key": [
         "thusd",
@@ -93,37 +93,37 @@
     }
   ],
   "peg": {
-    "as_of": "2026-10-18T21:43:01Z",
-    "market_price": 0.999323443173535,
+    "as_of": "2026-10-18T22:44:02Z",
+    "market_price": 0.9984909181749798,
     "nav": 1.0,
     "nav_basis": "phase0_par_assumption",
     "nav_basis_note": "Theo discloses no thUSD NAV oracle, so the reference is a $1.00 assumption. This deviation is market-vs-par, NOT market-vs-redemption.",
-    "premium_discount_pct": -0.067656,
-    "discount_bp_vs_one_dollar": 6.77,
+    "premium_discount_pct": -0.150908,
+    "discount_bp_vs_one_dollar": 15.09,
     "headline_venue": "ethereum",
     "source": "geckoterminal_pools_volume_weighted",
     "market_price_self_referential": false,
     "market_price_self_referential_basis": "The mark is a GeckoTerminal pool price; liquidity.exit_mark is a KyberSwap-routed sell ladder \u2014 a different apparatus, so it can contradict the mark. exit_mark.fair_value still borrows this mark, but only to size the rungs in tokens.",
     "sthusd_nav_integrity": {
-      "share_price_quoted": 1.018994,
-      "share_price_implied_from_assets": 1.0189941285470163,
-      "agreement_bp": 0.0013,
+      "share_price_quoted": 1.019,
+      "share_price_implied_from_assets": 1.0190000808091937,
+      "agreement_bp": 0.0008,
       "independent": true,
       "note": "Quoted convertToAssets vs totalAssets/totalSupply recomputed. Agreement is evidence; divergence would mean the vault's own accounting disagrees with its share price."
     },
-    "history_rows_with_mark": 1281,
-    "history_coverage_pct": 58.2,
-    "history_note": "Peg marks are persisted into thusd_coverage_history.json on 1281 of 2200 rows (58.2%). The gate needs 48 rows AND 60% coverage, so no history_field is declared \u2014 a sparse series renders as a broken chart rather than an absent one. TO ESTABLISH IT: the coverage file retains ~90 days of hourly rows and marks began 2026-08-27, so the ratio rises on its own as unmarked rows age out; no code change is needed, only time.",
+    "history_rows_with_mark": 1282,
+    "history_coverage_pct": 58.3,
+    "history_note": "Peg marks are persisted into thusd_coverage_history.json on 1282 of 2200 rows (58.3%). The gate needs 48 rows AND 60% coverage, so no history_field is declared \u2014 a sparse series renders as a broken chart rather than an absent one. TO ESTABLISH IT: the coverage file retains ~90 days of hourly rows and marks began 2026-08-27, so the ratio rises on its own as unmarked rows age out; no code change is needed, only time.",
     "peg_mechanism_score": 4.0,
     "peg_mechanism_score_source": "risk-feed@2026-10-12T01:45:02Z",
     "peg_mechanism_score_status": "stale",
     "peg_mechanism_score_generated_at": "2026-10-12T01:45:02Z",
-    "peg_mechanism_score_age_hours": 163.97
+    "peg_mechanism_score_age_hours": 164.98
   },
   "liquidity": {
-    "as_of": "2026-10-18T21:43:01Z",
-    "total_tvl": 3570188.1342,
-    "volume_24h": 9943.1989157347,
+    "as_of": "2026-10-18T22:44:02Z",
+    "total_tvl": 3615219.6803,
+    "volume_24h": 9956.8909352839,
     "pool_count": 22,
     "total_2pct_depth": 100000.0,
     "total_2pct_depth_is_floor": false,
@@ -132,7 +132,7 @@
       100000.0,
       1000000.0
     ],
-    "two_pct_depth_basis": "The 200bps crossing is BRACKETED between $100,000 (clears) and $1,000,000 (8,832bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
+    "two_pct_depth_basis": "The 200bps crossing is BRACKETED between $100,000 (clears) and $1,000,000 (8,835bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
     "primary_threshold_bps": 200.0,
     "depth_50bps": {
       "threshold_bps": 50.0,
@@ -143,65 +143,65 @@
         100000.0,
         1000000.0
       ],
-      "basis": "The 50bps crossing is BRACKETED between $100,000 (clears) and $1,000,000 (8,832bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
+      "basis": "The 50bps crossing is BRACKETED between $100,000 (clears) and $1,000,000 (8,835bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
     },
     "total_2pct_depth_note": "Measured on ONE LEG \u2014 the Ethereum KyberSwap sell ladder into USDC (liquidity.exit_mark). Arbitrum is dust and Stable is not reachable by the aggregator, so this is not a cross-chain figure. \u26a0\ufe0f TVL is not depth: the swept TVL sits almost entirely in one ONE-SIDED Uniswap v4 pool that holds thUSD, not the USDC a seller receives \u2014 see exit_mark.quotes for the fill at each size.",
     "exit_mark": {
       "source": "kyberswap",
       "chain": "ethereum",
-      "timestamp": "2026-10-18T21:39:54Z",
+      "timestamp": "2026-10-18T22:40:54Z",
       "sell_into": "USDC",
-      "fair_value": 0.999323443173535,
+      "fair_value": 0.9984909181749798,
       "fair_value_basis": "market",
       "quotes": {
         "1000": {
-          "output_usd": 1000.08,
+          "output_usd": 1002.24,
           "attempts": 1,
           "provider": "kyberswap",
           "slippage_bps": 0.0,
-          "fill_ratio": 1.00008
+          "fill_ratio": 1.00224
         },
         "2500": {
-          "output_usd": 2500.2,
+          "output_usd": 2503.98,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": 0.0,
-          "fill_ratio": 1.00008
+          "slippage_bps": -6.5,
+          "fill_ratio": 1.001592
         },
         "5000": {
-          "output_usd": 5000.39,
+          "output_usd": 5006.38,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": 0.0,
-          "fill_ratio": 1.000078
+          "slippage_bps": -9.6,
+          "fill_ratio": 1.001276
         },
         "10000": {
-          "output_usd": 10000.78,
+          "output_usd": 10010.99,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": 0.0,
-          "fill_ratio": 1.000078
+          "slippage_bps": -11.4,
+          "fill_ratio": 1.001099
         },
         "50000": {
-          "output_usd": 50003.64,
+          "output_usd": 50047.15,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": -0.1,
-          "fill_ratio": 1.000073
+          "slippage_bps": -12.9,
+          "fill_ratio": 1.000943
         },
         "100000": {
-          "output_usd": 100006.66,
+          "output_usd": 100091.89,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": -0.1,
-          "fill_ratio": 1.000067
+          "slippage_bps": -13.2,
+          "fill_ratio": 1.000919
         },
         "1000000": {
-          "output_usd": 116782.68,
+          "output_usd": 116796.51,
           "attempts": 1,
           "provider": "kyberswap",
-          "slippage_bps": -8832.3,
-          "fill_ratio": 0.116783
+          "slippage_bps": -8834.6,
+          "fill_ratio": 0.116797
         }
       },
       "status": "ok",
@@ -229,7 +229,7 @@
           100000.0,
           1000000.0
         ],
-        "two_pct_depth_basis": "The 200bps crossing is BRACKETED between $100,000 (clears) and $1,000,000 (8,832bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
+        "two_pct_depth_basis": "The 200bps crossing is BRACKETED between $100,000 (clears) and $1,000,000 (8,835bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
         "primary_threshold_bps": 200.0,
         "depth_50bps": {
           "threshold_bps": 50.0,
@@ -240,15 +240,15 @@
             100000.0,
             1000000.0
           ],
-          "basis": "The 50bps crossing is BRACKETED between $100,000 (clears) and $1,000,000 (8,832bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
+          "basis": "The 50bps crossing is BRACKETED between $100,000 (clears) and $1,000,000 (8,835bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
         }
       }
     },
     "venues": [
       {
         "chain": "ethereum",
-        "tvl_usd": 3570188.1342,
-        "volume_24h_usd": 9943.1989157347,
+        "tvl_usd": 3615219.6803,
+        "volume_24h_usd": 9956.8909352839,
         "role": "headline"
       },
       {
@@ -266,10 +266,10 @@
     "liquidity_score_source": "risk-feed@2026-10-12T01:45:02Z",
     "liquidity_score_status": "stale",
     "liquidity_score_generated_at": "2026-10-12T01:45:02Z",
-    "liquidity_score_age_hours": 163.97
+    "liquidity_score_age_hours": 164.98
   },
   "backing": {
-    "as_of": "2026-10-18T21:43:01Z",
+    "as_of": "2026-10-18T22:44:02Z",
     "collateral_ratio": null,
     "collateral_ratio_basis": "Deliberately null. Total backing is NOT OBSERVABLE: only the on-chain reserve Safe can be read, and >30% of supply is backed off-chain where this repo has no evidence at all. A ratio computed from the observable part would report 42.84% coverage as though it were the whole answer. Use backing.on_chain_coverage_pct, which measures what can actually be seen, and note it is a FRACTION.",
     "collateral_ratio_note": "Deliberately null. Total backing is not observable: only the on-chain reserve Safe can be read, and the remainder is off-chain and unverifiable here. Use on_chain_coverage_pct, which measures what can actually be seen.",
@@ -336,7 +336,7 @@
     "backing_score_source": "risk-feed@2026-10-12T01:45:02Z",
     "backing_score_status": "stale",
     "backing_score_generated_at": "2026-10-12T01:45:02Z",
-    "backing_score_age_hours": 163.97
+    "backing_score_age_hours": 164.98
   },
   "dependencies": {
     "upstream": [
@@ -458,12 +458,12 @@
     },
     "tier2_peg_nav": {
       "sthusd_nav": {
-        "share_price": 1.018994,
-        "share_price_implied_from_assets": 1.0189941285470163,
-        "total_assets_thusd": 21931250.507979,
+        "share_price": 1.019,
+        "share_price_implied_from_assets": 1.0190000808091937,
+        "total_assets_thusd": 21931378.615246,
         "total_supply_sthusd": 21522450.319955,
-        "previous_share_price": 1.018988,
-        "previous_timestamp": "2026-10-18T20:39:42Z",
+        "previous_share_price": 1.018994,
+        "previous_timestamp": "2026-10-18T21:39:48Z",
         "regression": false,
         "regression_bp": 0.0589,
         "error": null
@@ -475,11 +475,11 @@
           "arbitrum": "0x9aa9aa0530a6af70ee7bc47cf1240100f514b065"
         },
         "anchor_note": "Phase-0 anchor of $1.00. Replace with NAV oracle if Theo discloses one.",
-        "weighted_price_usd": 0.999323443173535,
-        "discount_bp_vs_one_dollar": 6.77,
+        "weighted_price_usd": 0.9984909181749798,
+        "discount_bp_vs_one_dollar": 15.09,
         "alert_threshold_bp": 75.0,
-        "total_tvl_usd": 3570188.1342,
-        "total_volume_h24_usd": 9943.1989157347,
+        "total_tvl_usd": 3615219.6803,
+        "total_volume_h24_usd": 9956.8909352839,
         "pool_count": 22,
         "pools": [
           {
@@ -487,10 +487,10 @@
             "pool_address": "0xb30bf32e26a35328286df33c17dd01e1051b5e3a0ec55a4a211e6957594b5a0d",
             "dex_id": "uniswap-v4-ethereum",
             "pair": "thUSD/USDC",
-            "thusd_price_usd": 0.9994019933,
-            "tvl_usd": 3534196.8623,
-            "volume_h24_usd": 9943.1989157347,
-            "price_change_h24_pct": -0.08
+            "thusd_price_usd": 0.9985601085,
+            "tvl_usd": 3579228.4084,
+            "volume_h24_usd": 9956.8909352839,
+            "price_change_h24_pct": -0.16
           },
           {
             "chain": "arbitrum",
@@ -707,10 +707,10 @@
           "ethereum": {
             "canonical_token": "0xa3fe5c7596024e6811e14f029937d5bd8ae485b3",
             "network_slug": "eth",
-            "weighted_price_usd": 0.9994009996015205,
-            "discount_bp_vs_one_dollar": 5.99,
-            "total_tvl_usd": 3536554.2104,
-            "total_volume_h24_usd": 9943.1989157347,
+            "weighted_price_usd": 0.9985596814118017,
+            "discount_bp_vs_one_dollar": 14.4,
+            "total_tvl_usd": 3581585.7565,
+            "total_volume_h24_usd": 9956.8909352839,
             "pool_count": 2
           },
           "arbitrum": {
@@ -1030,34 +1030,34 @@
     "events_scan_summary": {
       "chains_scanned": {
         "Ethereum Mainnet": {
-          "head": 26222199,
+          "head": 26222502,
           "from_block": 25956016,
           "scanned_to": 25956015,
           "early_abort": true,
-          "blocks_behind": 266184,
+          "blocks_behind": 266487,
           "blocks_gained_this_run": 0,
-          "gap_change_this_run": 300,
+          "gap_change_this_run": 303,
           "logs_found": 0,
           "baseline_run": false
         },
         "Arbitrum Mainnet": {
-          "head": 516091529,
-          "from_block": 508364711,
-          "scanned_to": 508394710,
+          "head": 516105777,
+          "from_block": 508394711,
+          "scanned_to": 508423210,
           "early_abort": true,
-          "blocks_behind": 7696819,
-          "blocks_gained_this_run": 30000,
-          "gap_change_this_run": -17003,
+          "blocks_behind": 7682567,
+          "blocks_gained_this_run": 28500,
+          "gap_change_this_run": -14252,
           "logs_found": 0,
           "baseline_run": false
         },
         "Stable Mainnet": {
-          "head": 43556830,
-          "from_block": 43551703,
-          "scanned_to": 43556830,
+          "head": 43562043,
+          "from_block": 43556831,
+          "scanned_to": 43562043,
           "early_abort": false,
           "blocks_behind": 0,
-          "blocks_gained_this_run": 5128,
+          "blocks_gained_this_run": 5213,
           "gap_change_this_run": 0,
           "logs_found": 0,
           "baseline_run": false
@@ -1147,27 +1147,27 @@
       }
     ],
     "reserve_outflow_scan": {
-      "head_block": 26222202,
+      "head_block": 26222505,
       "per_token": {
         "thBILL": {
           "scanned": 0,
           "new_destinations_seen": 0,
-          "from_block": 26221903,
-          "to_block": 26222202,
+          "from_block": 26222203,
+          "to_block": 26222505,
           "baseline_run": false
         },
         "USDC": {
           "scanned": 0,
           "new_destinations_seen": 0,
-          "from_block": 26221903,
-          "to_block": 26222202,
+          "from_block": 26222203,
+          "to_block": 26222505,
           "baseline_run": false
         },
         "USDT": {
           "scanned": 0,
           "new_destinations_seen": 0,
-          "from_block": 26221903,
-          "to_block": 26222202,
+          "from_block": 26222203,
+          "to_block": 26222505,
           "baseline_run": false
         }
       },
@@ -1549,7 +1549,7 @@
     "issuer_score_source": "risk-feed@2026-10-12T01:45:02Z",
     "issuer_score_status": "stale",
     "issuer_score_generated_at": "2026-10-12T01:45:02Z",
-    "issuer_score_age_hours": 163.97,
+    "issuer_score_age_hours": 164.98,
     "facts": [
       "Elite team and hardened admin chain; unlicensed, non-bankruptcy-remote Panama issuer holding ~57% of backing off-chain and unattested. [riskAnalyst assessment]",
       "Issuer: Theo Network, Panama \u2014 unlicensed and NOT bankruptcy-remote. [riskAnalyst assessment]",
