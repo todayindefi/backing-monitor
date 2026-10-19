@@ -335,11 +335,13 @@ var SaturnRenderer = {
         html += anc('panel-headline', SaturnRenderer._renderHeadlineCard(specific, s, slug));
 
         html += head(1, 'Peg', pegSub);
+        html += SaturnRenderer._axisRationaleSlot('peg',slug);
         html += SaturnRenderer._renderPegPanel(specific, s, slug);
 
         html += head(2, 'Backing', (slug === 'usdat')
             ? 'composition and the drift watchdog'
             : 'reserve split and NAV trajectory');
+        html += SaturnRenderer._axisRationaleSlot('backing',slug);
         html += SaturnRenderer._renderSupplyScopeNote(s, data);
         if (slug === 'usdat') {
             html += anc('panel-backing',   SaturnRenderer._renderUsdatBackingComposition(specific, s, data.backing));
@@ -351,10 +353,12 @@ var SaturnRenderer = {
         }
 
         html += head(3, 'Liquidity & Exit', 'exit depth, venue spread and slippage');
+        html += SaturnRenderer._axisRationaleSlot('liquidity',slug);
         html += anc('panel-liquidity', SaturnRenderer._renderLiquidityPanel(specific, s, slug));
 
         html += head(4, 'Dependencies', 'what this depends on, and what depends on it',
             CommonRenderer.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies'));
+        html += SaturnRenderer._axisRationaleSlot('dependencies',slug);
         html += SaturnRenderer._renderDependenciesPanel(data);
 
         // ⚠️ This head said "Issuer" while the panel under it is admin topology —
@@ -362,13 +366,16 @@ var SaturnRenderer = {
         // Contract & Admin. USDat is the case the split exists for: 4-of-6 behind
         // 72h at token level, and a 3-of-6 with NO timelock owning the CCIP pools.
         html += head(5, 'Contract & Admin', 'trust stack \u2014 admin topology and attestation');
+        html += SaturnRenderer._axisRationaleSlot('contract',slug);
         html += anc('panel-trust',     SaturnRenderer._renderTrustStack(specific, slug));
 
         html += head(6, 'Issuer', 'editorial \u2014 subjective axis');
+        html += SaturnRenderer._axisRationaleSlot('issuer',slug);
         html += CommonRenderer.issuerPanelHtml(data) + SaturnRenderer._issuerFeedWarningsHtml(data) + CommonRenderer._issuerContextHtml(data);
         html += '<div id="saturn-family-panel"></div>';
 
         container.innerHTML = html;
+        if(slug==='usdat')SaturnRenderer._placeAxisRationales();
 
         SaturnRenderer._setupAnchorNav(slug);
         SaturnRenderer._setupCompanionLink(slug);
@@ -382,6 +389,36 @@ var SaturnRenderer = {
         }
         SaturnRenderer._loadPegHistoryChart(slug, s);
         SaturnRenderer._loadFamilyPanel(slug);
+    },
+
+    _axisRationaleSlot: function(axis,slug) {
+        if(slug!=='usdat')return '';
+        return '<details class="score-basis mb-4" id="usdat-rationale-'+axis+'" hidden><summary class="score-basis-toggle">Score rationale</summary><div class="score-basis-body" data-axis-rationale-body></div></details>';
+    },
+
+    _placeAxisRationales: function() {
+        // Move the original notes before the shared fallback lifts hidden notes
+        // above the summary. Keep each explanation with its own custom axis.
+        ['peg','backing','liquidity','dependencies','contract','issuer'].forEach(function(axis){
+            var source=document.getElementById('section-'+axis);
+            var target=document.getElementById('usdat-rationale-'+axis);
+            if(!source || !target)return;
+            var body=target.querySelector('[data-axis-rationale-body]');
+            source.querySelectorAll('.axis-basis-note, details.score-basis').forEach(function(note){
+                var wrapper=note.closest('.axis-basis-note');
+                if(wrapper && wrapper!==note)return;
+                var disclosures=note.matches('details.score-basis') ? [note] : Array.from(note.querySelectorAll('details.score-basis'));
+                disclosures.forEach(function(detail){
+                    // One click opens the rationale; do not require a second
+                    // click on the old "Why this score" disclosure inside it.
+                    detail.open=true;
+                    var summary=detail.querySelector(':scope > summary');
+                    if(summary)summary.hidden=true;
+                });
+                body.appendChild(note);
+            });
+            target.hidden=!body.children.length;
+        });
     },
 
     _issuerFeedWarningsHtml: function(data) {
@@ -413,7 +450,7 @@ var SaturnRenderer = {
             // empty Contract & Admin axis under the bespoke one on all five pages.
             ['section-peg', 'section-liquidity', 'section-contract', 'section-backing', 'section-dependencies', 'section-issuer']
                 .forEach(function(id) { var s = document.getElementById(id); if (s) s.style.display = 'none'; });
-            var bh = document.getElementById('axis-backing-head'); if (bh) bh.innerHTML = '';
+            var bh = document.getElementById('axis-backing-head'); if (bh && data.asset_slug!=='usdat') bh.innerHTML = '';
             // ⚠️ OPT IN TO HAVING THE AXIS-BASIS NOTES LIFTED BACK OUT. Hiding these
             // sections is about the duplicate per-axis PANELS; the "Why the report
             // scores X differently" disclosure lines live in the section HEADS and were
