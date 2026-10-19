@@ -1,52 +1,65 @@
 {
- "schema_version": "axis-basis/1",
- "producer": "riskanalyst",
- "asset": "strc",
- "as_of": "2026-09-13T00:00:00Z",
- "peg": {
-  "volatility_score": 5.0,
-  "volatility_score_source": "riskAnalyst:authored",
-  "volatility_score_generated_at": "2026-09-11T00:00:00Z",
-  "volatility_score_basis": "\u26a0\ufe0f MEASURES REALIZED DEVIATION FROM PAR ON A PAR-ANCHORED PREFERRED \u2014 AND THE 'TIGHT BAND' THESIS IS DECISIVELY BROKEN. CUT 5.5 -> 5.0 on 2026-06-26; from 6.5 on 2026-06-07. The first-June de-anchor to ~$93.4 (\u22126.6%) that caused the 5.5 DEEPENED INTO AN ALL-TIME LOW: $79.85 intraday on 06-24 and ~$80.84 (\u221219%) sustained, roughly 2.4x that stress, with the security trading sub-$95 FOR ABOUT THREE WEEKS. \u26a0\ufe0f THE DESIGNED CORRECTIVE OPERATES WITH A LONG LAG: the rate reset (July +50bp locked) is cumulative and works, but it adjusts a coupon while the secondary price has already fallen a fifth below par \u2014 a mechanism that is functioning and too slow to be a band. \u2705 STILL PAR-*ANCHORED* WITH A WORKING CUMULATIVE RESET, WHICH IS WHAT KEEPS IT ABOVE COMMON EQUITY and why the cut was to 5.0 rather than lower. \u26a0\ufe0f THIS IS THE ASSET AT THE BOTTOM OF THE apxUSD/apyUSD/usdat CHAIN, so this de-anchoring is the origin of marks carried upward through three wrappers.",
-  "volatility_score_persistence": "filtered \u2014 anchor mechanism and realized draw, not a spot quote"
- },
- "liquidity": {
-  "liquidity_score": 7.0,
-  "liquidity_score_source": "riskAnalyst:authored",
-  "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
-  "liquidity_score_basis": "MEASURES EXIT ON A NASDAQ-LISTED PERPETUAL PREFERRED, AND IT IS SCORED ON THE SAME SCALE AS THE DeFi CORPUS DELIBERATELY. Daily volume is material; standard equity-market depth means institutional sizes execute at SUB-100BP IMPACT in normal markets; and it is WIDE OPEN TO US PERSONS VIA ANY BROKER-DEALER \u2014 no KYC gate peculiar to the instrument, no onboarding, no queue. \u26a0\ufe0f IT SITS FAR ABOVE ANY WRAPPER OF ITSELF BECAUSE IT CARRIES NEITHER A WRAPPER-ISSUER NOR A DEX-POOL CONSTRAINT, and the report's own wrapper table prices that at \u22123 to \u22125 points. \u26a0\ufe0f USEFUL AS A CALIBRATION ANCHOR: when a tokenised wrapper scores near this, ask what it has that a NASDAQ listing does not. \u26a0\ufe0f AND NOTE THE SPLIT WITH AXIS 1 \u2014 this instrument is HIGHLY LIQUID AND BADLY DE-ANCHORED AT THE SAME TIME. Depth says you can sell; it says nothing about the price.",
-  "liquidity_score_persistence": "filtered \u2014 venue class and access, not spot depth",
-  "liquidity_score_depth_caveat": "\u26a0\ufe0f NO 2% DEPTH LADDER APPLIES \u2014 this is an exchange-listed security, not a DEX pool, and no feed computes depth for it. The 7.0 rests on listing class and access, not on a probe."
- },
- "redemption_note": "\u26a0\ufe0f A separate `redemption_score` of 5.0 exists and is not rendered through this envelope.",
- "coverage_note": "\u26a0\ufe0f tradfi-preferred: this asset carries TWO scored axes (volatility, liquidity) plus redemption, and no backing, dependencies, issuer or contract score. \u26a0\ufe0f IT WAS INITIALLY GROUPED WITH mstr AND bmnr AS 'tradfi, scored on overall only' AND THAT WAS WRONG \u2014 those two carry ZERO axes, this one carries two. Checking the category and inferring the rest is what produced the error.",
- "routing_note": "\u26a0\ufe0f\u26a0\ufe0f ROUTING CLAIM CORRECTED 2026-09-13 \u2014 THE PRIOR VERSION WAS TRUE AND INCOMPLETE, AND ITS INCOMPLETENESS RENDERED PROSE FROM THIS FILE ONTO A DIFFERENT ASSET. It read: 'ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as volatility_score) and liquidity route and render.' \u2705 That is correct for ?asset=strc and common.js is not at fault. \u26a0\ufe0f BUT backing-monitor measured that THIS FILE ALSO RENDERS ON ?asset=mstr: app.js:235 sets sourceSlug from assets.json's data_source, and app.js:254 builds the overlay URL as 'data/' + sourceSlug + suffix, so the MSTR view fetches strc_axis_basis.json. hasAxisBlocks() is !!data.peg, so THIS OVERLAY CREATES THE peg BLOCK THAT UNHIDES THE SIX-AXIS FRAME on a common-equity page that carries ZERO axes. Reader-facing result: 'MEASURES REALIZED DEVIATION FROM PAR ON A PAR-ANCHORED PREFERRED' and 'EXIT ON A NASDAQ-LISTED PERPETUAL PREFERRED' attributed to MSTR, which is neither. Mitigated but not excused by the prose sitting in a collapsed <details> and the chips reading 'Not rated'. \u26a0\ufe0f WHY THE ORIGINAL CHECK COULD NOT SEE IT: I verified against the CONSUMER'S MERGE CODE, and the merge code is right. The defect is in URL CONSTRUCTION plus a SECOND REGISTERED SLUG I had no reason to know existed. A ROUTING CLAIM VERIFIED AGAINST THE MERGE CANNOT SEE A SECOND CONSUMER OF THE SAME FILE. Any future routing note must state WHICH VIEWS read the file, not merely that the fields merge. \u26a0\ufe0f SCOPE OF THIS FILE, STATED SO IT IS NOT INFERRED: it is authored for STRC ONLY. Its volatility 5.0 and liquidity 7.0 are NOT valid for MSTR (common equity, zero axes by design) and NOT valid for STRCx (the Backed wrapper, which scores liquidity 2.5 \u2014 4.5 points lower \u2014 precisely for the wrapper layer). DO NOT RENDER THIS FILE UNDER EITHER LABEL.",
- "family_overalls": {
-  "as_of": "2026-09-13T00:00:00Z",
-  "source": "riskanalyst:authored",
-  "assets": [
-   {
-    "slug": "mstr",
-    "label": "MSTR",
-    "overall_score": 4.5,
-    "last_verified": "2026-08-26",
-    "movement": "held since 2026-06-25"
-   },
-   {
-    "slug": "strc",
-    "label": "STRC",
-    "overall_score": 4.0,
-    "last_verified": "2026-08-24",
-    "movement": "held since 2026-06-25"
-   },
-   {
-    "slug": "strcx",
-    "label": "STRCx",
-    "overall_score": 3.0,
-    "last_verified": "2026-08-18",
-    "movement": "held since 2026-05-30"
-   }
-  ],
-  "producer_note": "\u26a0\ufe0f PER-ASSET last_verified, NOT one date for the block \u2014 these three are 08-26 / 08-24 / 08-18 and they diverge by design. A block-level date would render at least one of them false, and a wrong date is what nobody re-measures. \u26a0\ufe0f `movement` is authored here rather than left to the renderer: the word 'held' is itself a claim that the score did not move this period, and it needs a producer. Verified 2026-09-13 by walking each report's overall_score through git history \u2014 MSTR 5.0\u21924.5 and STRC 5.0\u21924.0 both on 2026-06-25, STRCx 4.0\u21923.0 on 2026-05-30; none has moved since. \u26a0\ufe0f If this block is ABSENT the clause must render as NOTHING, never as a remembered constant \u2014 backing-monitor has wired it that way deliberately and I endorse it. A parenthetical a reader loses is better than a 2026 number read in 2027."
- }
+  "schema_version": "axis-basis/1",
+  "producer": "riskanalyst",
+  "asset": "strc",
+  "as_of": "2026-10-19T16:33:50Z",
+  "peg": {
+    "volatility_score": 5.0,
+    "volatility_score_source": "riskAnalyst:authored",
+    "volatility_score_generated_at": "2026-09-11T00:00:00Z",
+    "volatility_score_basis": "⚠️ MEASURES REALIZED DEVIATION FROM PAR ON A PAR-ANCHORED PREFERRED — AND THE 'TIGHT BAND' THESIS IS DECISIVELY BROKEN. CUT 5.5 -> 5.0 on 2026-06-26; from 6.5 on 2026-06-07. The first-June de-anchor to ~$93.4 (−6.6%) that caused the 5.5 DEEPENED INTO AN ALL-TIME LOW: $79.85 intraday on 06-24 and ~$80.84 (−19%) sustained, roughly 2.4x that stress, with the security trading sub-$95 FOR ABOUT THREE WEEKS. ⚠️ THE DESIGNED CORRECTIVE OPERATES WITH A LONG LAG: the rate reset (July +50bp locked) is cumulative and works, but it adjusts a coupon while the secondary price has already fallen a fifth below par — a mechanism that is functioning and too slow to be a band. ✅ STILL PAR-*ANCHORED* WITH A WORKING CUMULATIVE RESET, WHICH IS WHAT KEEPS IT ABOVE COMMON EQUITY and why the cut was to 5.0 rather than lower. ⚠️ THIS IS THE ASSET AT THE BOTTOM OF THE apxUSD/apyUSD/usdat CHAIN, so this de-anchoring is the origin of marks carried upward through three wrappers.",
+    "volatility_score_persistence": "filtered — anchor mechanism and realized draw, not a spot quote"
+  },
+  "liquidity": {
+    "liquidity_score": 7.0,
+    "liquidity_score_source": "riskAnalyst:authored",
+    "liquidity_score_generated_at": "2026-09-11T00:00:00Z",
+    "liquidity_score_basis": "MEASURES EXIT ON A NASDAQ-LISTED PERPETUAL PREFERRED, AND IT IS SCORED ON THE SAME SCALE AS THE DeFi CORPUS DELIBERATELY. Daily volume is material; standard equity-market depth means institutional sizes execute at SUB-100BP IMPACT in normal markets; and it is WIDE OPEN TO US PERSONS VIA ANY BROKER-DEALER — no KYC gate peculiar to the instrument, no onboarding, no queue. ⚠️ IT SITS FAR ABOVE ANY WRAPPER OF ITSELF BECAUSE IT CARRIES NEITHER A WRAPPER-ISSUER NOR A DEX-POOL CONSTRAINT, and the report's own wrapper table prices that at −3 to −5 points. ⚠️ USEFUL AS A CALIBRATION ANCHOR: when a tokenised wrapper scores near this, ask what it has that a NASDAQ listing does not. ⚠️ AND NOTE THE SPLIT WITH AXIS 1 — this instrument is HIGHLY LIQUID AND BADLY DE-ANCHORED AT THE SAME TIME. Depth says you can sell; it says nothing about the price.",
+    "liquidity_score_persistence": "filtered — venue class and access, not spot depth",
+    "liquidity_score_depth_caveat": "⚠️ NO 2% DEPTH LADDER APPLIES — this is an exchange-listed security, not a DEX pool, and no feed computes depth for it. The 7.0 rests on listing class and access, not on a probe."
+  },
+  "redemption_note": "⚠️ A separate `redemption_score` of 5.0 exists and is not rendered through this envelope.",
+  "coverage_note": "⚠️ tradfi-preferred: this asset carries TWO scored axes (volatility, liquidity) plus redemption, and no backing, dependencies, issuer or contract score. ⚠️ IT WAS INITIALLY GROUPED WITH mstr AND bmnr AS 'tradfi, scored on overall only' AND THAT WAS WRONG — those two carry ZERO axes, this one carries two. Checking the category and inferring the rest is what produced the error.",
+  "routing_note": "⚠️⚠️ ROUTING CLAIM CORRECTED 2026-09-13 — THE PRIOR VERSION WAS TRUE AND INCOMPLETE, AND ITS INCOMPLETENESS RENDERED PROSE FROM THIS FILE ONTO A DIFFERENT ASSET. It read: 'ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as volatility_score) and liquidity route and render.' ✅ That is correct for ?asset=strc and common.js is not at fault. ⚠️ BUT backing-monitor measured that THIS FILE ALSO RENDERS ON ?asset=mstr: app.js:235 sets sourceSlug from assets.json's data_source, and app.js:254 builds the overlay URL as 'data/' + sourceSlug + suffix, so the MSTR view fetches strc_axis_basis.json. hasAxisBlocks() is !!data.peg, so THIS OVERLAY CREATES THE peg BLOCK THAT UNHIDES THE SIX-AXIS FRAME on a common-equity page that carries ZERO axes. Reader-facing result: 'MEASURES REALIZED DEVIATION FROM PAR ON A PAR-ANCHORED PREFERRED' and 'EXIT ON A NASDAQ-LISTED PERPETUAL PREFERRED' attributed to MSTR, which is neither. Mitigated but not excused by the prose sitting in a collapsed <details> and the chips reading 'Not rated'. ⚠️ WHY THE ORIGINAL CHECK COULD NOT SEE IT: I verified against the CONSUMER'S MERGE CODE, and the merge code is right. The defect is in URL CONSTRUCTION plus a SECOND REGISTERED SLUG I had no reason to know existed. A ROUTING CLAIM VERIFIED AGAINST THE MERGE CANNOT SEE A SECOND CONSUMER OF THE SAME FILE. Any future routing note must state WHICH VIEWS read the file, not merely that the fields merge. ⚠️ SCOPE OF THIS FILE, STATED SO IT IS NOT INFERRED: it is authored for STRC ONLY. Its volatility 5.0 and liquidity 7.0 are NOT valid for MSTR (common equity, zero axes by design) and NOT valid for STRCx (the Backed wrapper, which scores liquidity 2.5 — 4.5 points lower — precisely for the wrapper layer). DO NOT RENDER THIS FILE UNDER EITHER LABEL.",
+  "family_overalls": {
+    "as_of": "2026-10-19T16:33:50Z",
+    "source": "riskanalyst:authored",
+    "assets": [
+      {
+        "slug": "mstr",
+        "label": "MSTR",
+        "overall_score": 4.0,
+        "last_verified": "2026-08-26",
+        "movement": "Cut 4.5 → 4.0 on 2026-10-20: USD Cash crossed $500M.",
+        "last_revised": "2026-10-20"
+      },
+      {
+        "slug": "strc",
+        "label": "STRC",
+        "overall_score": 3.5,
+        "last_verified": "2026-08-24",
+        "movement": "Cut 4.0 → 3.5 on 2026-10-20: cash-funded support gate.",
+        "last_revised": "2026-10-20"
+      },
+      {
+        "slug": "strcx",
+        "label": "STRCx",
+        "overall_score": 3.0,
+        "last_verified": "2026-10-13",
+        "movement": "Held at 3.0 on 2026-10-20 after upstream credit reassessment.",
+        "last_revised": "2026-10-20"
+      }
+    ],
+    "producer_note": "Per-asset last_verified is full scope; last_revised identifies this targeted pass. Movement is authored from current report score decisions, not inferred from freshness."
+  },
+  "filing_review": {
+    "reviewed_at": "2026-10-19T16:33:50Z",
+    "filing_date": "2026-10-19",
+    "period_end": "2026-10-18",
+    "accession": "0001193125-26-424688",
+    "report": "assets/strc.md",
+    "scope": "Targeted filing/dependency pass; per-axis dates not touched unless basis updated; full last_verified unchanged.",
+    "credit_note": "October 19 8-K 0001193125-26-424688, period October 12–18: USD Cash $447.3 M crosses the explicit $500 M gate; Reserve $4.83 B, $193.1 M STRC buybacks. MSTR Funding 3.5 / Overall 4.0; raw STRC Counterparty and Overall 3.5 after the October 20 review. The $3 B authorization is spending authority, not liquidity. No preferred issuance funded the week.",
+    "dividend_note": "October16 filing 0001193125-26-423400: proposed November daily dividends at12% are conditional on shareholder approval and effective designation; no automatic wrapper pass-through or double-counted November15 dividend."
+  }
 }
