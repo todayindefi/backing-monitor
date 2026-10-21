@@ -210,6 +210,9 @@ var EthenaRenderer = {
         if (!EthenaRenderer._isEthena(specific.type)) return;
         var s = data.summary;
         if (!s) return;
+        ((data.dependencies || {}).upstream || []).forEach(function(edge){
+            if(/Basis trade/.test(edge.name || ''))edge.note='September 30, 2026 Risk Committee snapshot: 17% hedged BTC/ETH positions, alongside 74% liquid cash and 6% JAAA/STAC RWAs. These dated allocations are not current positions, posted hedge collateral or derivatives notional. Current borrower-level and asset-level look-through remains incomplete.';
+        });
 
         // One declaration drives both charts. app.js passes this same value to
         // the common coverage chart, while the bespoke peg chart below reads it
@@ -260,6 +263,28 @@ var EthenaRenderer = {
     // ============================================================
     // entry point
     // ============================================================
+    _reviewSnapshotsHtml: function() {
+        return '<div class="panel" id="ethena-review-snapshots"><div class="panel-title">Dated backing snapshots — historical, not live coverage</div>'+
+            '<p class="text-sm mb-3">USDe is a managed reserve portfolio with a derivatives overlay. sUSDe inherits its backing risk; vault NAV does not establish underlying dollar coverage.</p>'+
+            '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Source / observation date</th><th>Dated measurements</th></tr></thead><tbody>'+
+            '<tr><td>Custodian attestation · September 27, 2026</td><td>$4.953bn backing against $4.949bn supply, plus a $62.095m Reserve Fund. Historical custody snapshot.</td></tr>'+
+            '<tr><td>Risk Committee · October 12, 2026</td><td>101.43% coverage including a $62.57m Reserve Fund; recommended fund size $45.7m, approximately 1.4×. Published October 13.</td></tr>'+
+            '<tr><td>Risk Committee backing mix · September 30, 2026</td><td>74% liquid cash; 17% hedged BTC/ETH positions; 6% JAAA/STAC RWAs. Published categories total 97%; no allocation is inferred for the remainder.</td></tr>'+
+            '</tbody></table></div><p class="text-sm text-slate-500 mt-3">These differently dated sources do not replace the failed hourly feed. Posted hedge collateral, hedge positions and derivatives notional have different scopes.</p>'+
+            '<p class="text-sm mt-2"><a href="https://gov.ethenafoundation.com/t/ethena-s-july-september-2026-governance-update/857" target="_blank" rel="noopener noreferrer">Risk Committee update ↗</a></p></div>';
+    },
+
+    _liveCoverageHtml: function(fam,slug) {
+        var s=fam.summary || {}, status=(fam.source_status || {}).llamarisk || 'unavailable';
+        var failed=status!=='ok';
+        function amount(v){return !failed && Number.isFinite(v) ? EthenaRenderer._money(v) : 'Unavailable';}
+        var coverage=!failed && Number.isFinite(s.coverage_ratio_with_reserve_fund) ? (s.coverage_ratio_with_reserve_fund*100).toFixed(2)+'%' : 'Unavailable';
+        return '<div class="panel" id="ethena-live-coverage"><div class="panel-title">'+(slug==='susde' ? 'Inherited USDe live coverage' : 'Live USDe supply and backing')+'</div>'+
+            '<p class="text-sm text-amber-700 mb-3">LlamaRisk overview source: '+CommonRenderer._escapeAttr(status)+'. '+(failed ? 'Live supply, backing coverage and Reserve Fund values are unavailable. Historical snapshots below are not substituted.' : 'Live values retain the producer observation clock.')+'</p>'+
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3"><div>USDe supply<br><strong>'+amount(s.usde_supply_usd)+'</strong></div><div>Backing<br><strong>'+amount(s.total_backing_usd)+'</strong></div><div>Coverage including fund<br><strong>'+coverage+'</strong></div><div>Reserve Fund<br><strong>'+amount(s.reserve_fund_usd)+'</strong></div></div>'+
+            '<p class="text-xs text-slate-500 mt-3">Feed run: '+CommonRenderer._escapeAttr(fam.timestamp || 'time unavailable')+'. '+(slug==='susde' ? 'Hourly sUSDe vault NAV and cooldown measurements are separate from these unavailable upstream reserve values.' : '')+'</p></div>';
+    },
+
     render: function(data) {
         var container = document.getElementById('asset-specific-panels');
         if (!container) return;
@@ -274,6 +299,8 @@ var EthenaRenderer = {
         var anc = EthenaRenderer._anchor;
         var html = '';
         html += anc('panel-headline', EthenaRenderer._renderHeadlineCard(data, slug));
+        html += '<div id="ethena-live-coverage-slot"></div>';
+        html += EthenaRenderer._reviewSnapshotsHtml();
         // ⚠️ ethena clears axis-backing-head, so neither generic basis line can
         // reach usde/susde. sUSDe's basis — "sUSDe is a wrapper over USDe, so its
         // backing ratio is USDe's coverage including the reserve fund" — was
@@ -343,6 +370,7 @@ var EthenaRenderer = {
         html += '<div id="ethena-family-panel"></div>';
 
         container.innerHTML = html;
+        EthenaRenderer._containTables(container);
 
         EthenaRenderer._setupAnchorNav(slug);
         EthenaRenderer._setupCompanionLink(slug);
@@ -428,6 +456,8 @@ var EthenaRenderer = {
                 'class="text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 px-2 py-0.5 rounded transition-colors">' +
                 item.label + '</a>';
         }).join('');
+        inner.style.flexWrap='wrap';inner.style.whiteSpace='normal';
+        navEl.style.minWidth='0';navEl.style.maxWidth='100%';
         navEl.classList.remove('hidden');
     },
 
@@ -457,27 +487,27 @@ var EthenaRenderer = {
         if (slug === 'usde') {
             var covWithRf = (s.coverage_ratio_with_reserve_fund != null) ? s.coverage_ratio_with_reserve_fund * 100 : null;
             var covBase = (s.coverage_ratio != null) ? s.coverage_ratio * 100 : null;
-            var covCls = (covWithRf != null && covWithRf >= ETHENA_THRESHOLDS.coverage_floor) ? 'text-green-600' : 'text-red-600';
+            var covCls = covWithRf==null ? 'text-slate-500' : (covWithRf >= ETHENA_THRESHOLDS.coverage_floor ? 'text-green-600' : 'text-red-600');
             var pegPct = (specific.peg && specific.peg.premium_discount_pct != null) ? specific.peg.premium_discount_pct : null;
             var pegState = EthenaRenderer._pegState(pegPct);
 
             titleRow = '<div class="text-xl font-bold text-slate-800">USDe</div>' +
-                '<div class="text-xs text-slate-500 mt-1">Ethena · Synthetic dollar (delta-hedged ETH/BTC + stables)</div>';
+                '<div class="text-xs text-slate-500 mt-1">Ethena · Managed reserve portfolio with a derivatives overlay</div>';
             metricsRow =
                 '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Supply</div>' +
-                        '<div class="text-lg font-bold text-slate-800">' + EthenaRenderer._money(s.total_supply) + '</div></div>' +
+                        '<div class="text-lg font-bold text-slate-800">' + (s.total_supply==null ? 'Unavailable' : EthenaRenderer._money(s.total_supply)) + '</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Coverage (incl. RF)</div>' +
-                        '<div class="text-lg font-bold ' + covCls + '">' + CommonRenderer.formatPercent(covWithRf, 2) + '</div>' +
-                        '<div class="text-xs text-slate-500 mt-0.5">' + CommonRenderer.formatPercent(covBase, 2) + ' without RF</div></div>' +
+                        '<div class="text-lg font-bold ' + covCls + '">' + (covWithRf==null ? 'Unavailable' : CommonRenderer.formatPercent(covWithRf, 2)) + '</div>' +
+                        '<div class="text-xs text-slate-500 mt-0.5">' + (covBase==null ? 'Unavailable' : CommonRenderer.formatPercent(covBase, 2)) + ' without RF</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Peg</div>' +
                         '<div class="text-lg font-bold ' + CommonRenderer.pegPctClass(pegState) + '">$' + (s.price != null ? s.price.toFixed(4) : '-') + '</div>' +
                         '<div class="text-xs ' + CommonRenderer.pegPctClass(pegState) + ' mt-0.5">' + CommonRenderer.pegPctText(pegPct) + ' · ' + CommonRenderer.pegStatusLabel(pegState) + '</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
                         '<div class="text-lg">' + EthenaRenderer._statusPill(pausedLabel, pausedState) + '</div></div>' +
                 '</div>';
-            sub = 'Total backing ' + EthenaRenderer._money(s.total_backing) +
-                ' · Reserve Fund ' + EthenaRenderer._money(s.reserve_fund_usd);
+            sub = 'Total backing ' + (s.total_backing==null ? 'Unavailable' : EthenaRenderer._money(s.total_backing)) +
+                ' · Reserve Fund ' + (s.reserve_fund_usd==null ? 'Unavailable' : EthenaRenderer._money(s.reserve_fund_usd));
         } else {
             // sUSDe — vault / NAV frame
             var vs = specific.vault_state || {};
@@ -556,10 +586,10 @@ var EthenaRenderer = {
         var cdCard = '';
         if (cdSec != null) {
             cdCard =
-                '<div class="summary-card"><div class="card-label">Cooldown</div>' +
+                '<div class="summary-card"><div class="card-label">Live cooldown</div>' +
                     '<div class="card-value">' + dur(cdSec) + '</div>' +
                     '<div class="text-xs text-slate-400 mt-1">live cooldownDuration' +
-                    (maxSec != null ? '; contract max ' + dur(maxSec) : '') +
+                    '' +
                     (vault.block != null ? ' · block ' + vault.block : '') + '</div></div>';
         }
         var siloCard = '';
@@ -588,7 +618,8 @@ var EthenaRenderer = {
                         ? ' · 90d ' + growth['90d'].annualized_pct.toFixed(2) + '%' : '') +
                     '</div></div>';
         }
-        var extraCards = cdCard + siloCard + growthCard;
+        var maximumCard=maxSec!=null ? '<div class="summary-card"><div class="card-label">Contract maximum cooldown</div><div class="card-value">'+dur(maxSec)+'</div><div class="text-xs text-slate-400 mt-1">Administrative maximum, not the current waiting period</div></div>' : '';
+        var extraCards = cdCard + maximumCard + siloCard + growthCard;
 
         // The exit sentence, in order of what is actually published. The old copy
         // is kept ONLY for the case where the vault block is absent, and even then
@@ -604,6 +635,7 @@ var EthenaRenderer = {
             exitNote = 'NAV rises as staking yield accrues; sUSDe\u2192USDe unstaking is subject to a cooldown. ' +
                 'This snapshot carries no vault measurement, so the current cooldown and silo balance are not stated.';
         }
+        exitNote += ' Hourly vault observation: '+CommonRenderer._escapeAttr(vault.as_of || 'time unavailable')+'; NAV '+(vault.nav!=null ? vault.nav.toFixed(9)+' USDe / share' : 'unavailable')+'. This conversion rate is separate from underlying dollar coverage.';
         var navCheck = vault.nav_check || {};
         // ⚠️ The raw diff is ~1e-12 bps; printing it in exponential notation reads
         // as a defect to anyone who does not expect float dust. State the check as
@@ -892,6 +924,7 @@ var EthenaRenderer = {
             .then(function(r) { return r.ok ? r.json() : null; })
             .then(function(fam) {
                 if (!fam) { EthenaRenderer._familyUnavailable(); return; }
+                EthenaRenderer._set('ethena-live-coverage-slot',EthenaRenderer._liveCoverageHtml(fam,slug));
                 EthenaRenderer._fillCustody(fam);
                 EthenaRenderer._fillDefi(fam);
                 EthenaRenderer._fillWallets(fam);
@@ -909,15 +942,30 @@ var EthenaRenderer = {
     },
 
     _familyUnavailable: function() {
+        EthenaRenderer._set('ethena-live-coverage-slot','<div class="panel text-amber-700">Live USDe supply, backing coverage and Reserve Fund: unavailable. Shared source status could not be loaded; dated snapshots are not live substitutes.</div>');
         var el = document.getElementById('ethena-custody-panel');
         if (el) el.innerHTML = '<div class="panel"><div class="panel-title">Backing Composition</div>' +
             '<div class="risk-flag risk-warning">Shared backing data (ethena_family.json) is not available in this snapshot.</div></div>';
     },
 
-    _set: function(id, html) { var el = document.getElementById(id); if (el) el.innerHTML = html; },
+    _containTables: function(root) {
+        root.style.minWidth='0';root.style.maxWidth='100%';root.style.overflowX='auto';
+        root.querySelectorAll('.panel, .grid > *').forEach(function(el){el.style.minWidth='0';el.style.maxWidth='100%';el.style.overflowWrap='anywhere';});
+        root.querySelectorAll('table').forEach(function(table){
+            var existing=table.closest('.data-table-scroll');
+            if(existing){existing.style.minWidth='0';existing.style.maxWidth='100%';existing.style.overflowX='auto';return;}
+            var wrap=document.createElement('div');wrap.className='data-table-scroll';wrap.style.maxWidth='100%';wrap.style.overflowX='auto';
+            table.parentNode.insertBefore(wrap,table);wrap.appendChild(table);
+        });
+    },
+    _set: function(id, html) { var el = document.getElementById(id); if (el) {el.innerHTML = html;EthenaRenderer._containTables(el);} },
 
     // ----- §2 Custody breakdown -----
     _fillCustody: function(fam) {
+        if((fam.source_status || {}).llamarisk==='http_404') {
+            EthenaRenderer._set('ethena-custody-panel','<div class="panel"><div class="panel-title">Current backing composition — unavailable</div><p class="text-sm">The LlamaRisk overview returns http_404. A blend of older custodian attestations and current wallet balances is not a live reserve total, coverage ratio or complete Reserve Fund valuation. Dated custody evidence is shown in the attestation panel; separately measured wallet positions remain below.</p></div>');
+            return;
+        }
         var rows = (fam.custody_breakdown || []).slice();
         var asOf = EthenaRenderer._attestAsOf(fam);
         var total = rows.reduce(function(a, r) { return a + (r.usd || 0); }, 0);
@@ -1419,6 +1467,7 @@ var EthenaRenderer = {
 
     // ----- §5 CEX hedge breakdown -----
     _fillCex: function(fam) {
+        if((fam.source_status || {}).llamarisk==='http_404'){EthenaRenderer._set('ethena-cex-panel','<div class="panel"><div class="panel-title">Live CEX hedge collateral — unavailable</div><p class="text-sm">The LlamaRisk overview returns http_404. Missing hedge balances are not zero exposure; the September 30 portfolio mix above is a dated snapshot.</p></div>');return;}
         var venues = (fam.cex_hedge_breakdown || []).slice().sort(function(a, b) { return (b.usd || 0) - (a.usd || 0); });
         var total = fam.cex_hedge_total_usd || 0;
         var top = venues[0];
@@ -1534,7 +1583,7 @@ var EthenaRenderer = {
                 '<div class="flex flex-wrap items-center gap-2 mb-3">' +
                     EthenaRenderer._statusPill(a.month || 'Latest', 'neutral') +
                     EthenaRenderer._statusPill('Snapshot', 'neutral', asOf || '—') +
-                    EthenaRenderer._statusPill(stale ? 'Snapshot stale' : 'Snapshot current', ageState, (embeddedAge != null ? Math.round(embeddedAge) + 'd old' : '')) +
+                    EthenaRenderer._statusPill(stale ? 'Historical snapshot — aged' : 'Historical snapshot', ageState, (embeddedAge != null ? Math.round(embeddedAge) + 'd old' : '')) +
                     (latestAge != null ? EthenaRenderer._statusPill('Latest published', 'neutral', Math.round(latestAge) + 'd ago') : '') +
                     '<span class="ml-auto text-xs text-slate-500">Coverage at snapshot: <span class="font-mono text-base font-bold text-green-600">' + (a.coverage_pct_with_rf != null ? a.coverage_pct_with_rf.toFixed(2) + '%' : '—') + '</span> <span class="text-slate-400">(incl. RF)</span></span>' +
                 '</div>' +
@@ -1575,8 +1624,8 @@ var EthenaRenderer = {
                 '<div class="text-xs text-slate-400 uppercase font-medium">' + name + '</div>' + lines + '</a>';
         }
         var usdeCard = card('usde', 'USDe',
-            '<div class="text-base font-bold text-slate-800 mt-1">' + EthenaRenderer._money(s.usde_supply_usd) + ' supply</div>' +
-            '<div class="text-xs text-slate-500">Coverage ' + (s.coverage_ratio_with_reserve_fund != null ? (s.coverage_ratio_with_reserve_fund * 100).toFixed(2) + '%' : '—') + ' incl. RF · $' + (s.usde_price != null ? s.usde_price.toFixed(4) : '—') + '</div>');
+            '<div class="text-base font-bold text-slate-800 mt-1">' + (s.usde_supply_usd==null ? 'Unavailable' : EthenaRenderer._money(s.usde_supply_usd)) + ' supply</div>' +
+            '<div class="text-xs text-slate-500">Coverage ' + (s.coverage_ratio_with_reserve_fund != null ? (s.coverage_ratio_with_reserve_fund * 100).toFixed(2) + '%' : 'Unavailable') + ' incl. RF · $' + (s.usde_price != null ? s.usde_price.toFixed(4) : '—') + '</div>');
         var susdeCard = card('susde', 'sUSDe',
             '<div class="text-base font-bold text-slate-800 mt-1">' + EthenaRenderer._money(s.usde_staked_usd) + ' staked</div>' +
             '<div class="text-xs text-slate-500">' + (s.susde_supply_shares != null ? (s.susde_supply_shares / 1e6).toFixed(1) + 'M shares' : '—') + ' · $' + (s.susde_price != null ? s.susde_price.toFixed(4) : '—') + '</div>');
