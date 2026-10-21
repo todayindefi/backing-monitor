@@ -2,23 +2,23 @@
   "schema_version": "dependencies/1",
   "producer": "riskanalyst",
   "asset": "fxusd",
-  "as_of": "2026-09-22T10:31:09Z",
+  "as_of": "2026-10-21T05:54:39Z",
   "dependencies": {
     "upstream": [
       {
-        "name": "WBTC (BitGo) — 89.7% of all debt",
-        "metric": "1,292.12 WBTC collateral against 76,591,690 fxUSD debt; pool CR 143.8%",
-        "source": "PoolManager pools on-chain, 2026-09-22",
+        "name": "WBTC (BitGo) — 88.2% of all debt",
+        "metric": "1,122.21 WBTC raw collateral against 70,178,542.70 fxUSD debt; pool CR 132.19%",
+        "source": "PegTracker fxUSD producer, Ethereum block 26239007, 2026-10-21",
         "note": "⚠️ THE FRAMING \"backed by wstETH and WBTC\" IMPLIES A BALANCE THAT DOES NOT EXIST. The WBTC leg carries nearly all the debt at the LOWER ratio, and it is the CUSTODIAL one — an off-chain counterparty sits under 90% of the book.",
         "unresolved": [
           "WBTC"
         ],
-        "unresolved_note": "89.7% of fxUSD's debt and NO REPORT. The single largest unscored exposure in these six files; the custodial leg sits under 90% of the book."
+        "unresolved_note": "88.2% of fxUSD's October 21 pool debt and no separate WBTC report in this graph; the custodial leg dominates the book."
       },
       {
-        "name": "wstETH (Lido) — 10.3% of debt",
-        "metric": "6,661.71 wstETH against 8,786,912 fxUSD debt; pool CR 257.1%",
-        "source": "PoolManager pools on-chain, 2026-09-22",
+        "name": "wstETH (Lido) — 11.8% of debt",
+        "metric": "6,550.01 stETH-equivalent raw collateral against 9,348,793.50 fxUSD debt; pool CR 170.95%",
+        "source": "PegTracker fxUSD producer, Ethereum block 26239007, 2026-10-21",
         "note": "Comfortably collateralised, but a small share of the book.",
         "slug": "wsteth"
       },
@@ -32,8 +32,8 @@
       },
       {
         "name": "Curve USDC/fxUSD 0x5018BE882DccE5E3F2f3B0913AE2096B9b3fB61f",
-        "metric": "$10.0M TVL, USDC side $4.0M; the only direct USDC venue of 33 pools holding fxUSD",
-        "source": "Curve stable-ng + DexTracker enumeration, 2026-09-22",
+        "metric": "USDC side 3.793m at the October 20 DexTracker read; one major direct dollar exit venue",
+        "source": "DexTracker fxUSD-to-USDC ladder, 2026-10-20T23:47:50Z",
         "note": "⚠️ Doubles as a peg mechanism: isRedeemAllowed() reads this pool's EMA price, so the redemption gate and the exit venue are the SAME dependency.",
         "terminal": true,
         "kind": "venue"
@@ -42,7 +42,7 @@
     "downstream": [
       {
         "name": "fxSAVE",
-        "metric": "ERC-4626 over fxSP; 90.55% of fxUSD supply sits inside that pool",
+        "metric": "ERC-4626 over fxSP; 90.44% of fxUSD supply sat inside the pool on October 21; fxSP redeems for fxUSD plus USDC",
         "note": "⚠️ NOT an independent leg — shares fxUSD's ProxyAdmin and timelock exactly."
       },
       {
@@ -62,7 +62,7 @@
       "reusd-resupply",
       "usg"
     ],
-    "note": "⚠️ THE DEPENDENCY THAT MATTERS IS NOT A TOKEN. 90.55% of fxUSD supply is locked inside the f(x) Stability Pool, so the free float is ~2.2% — and fxSAVE redemption converts that locked supply into float on demand. The contingent seller pool is the whole book against a $4.65M realisable ceiling. ⚠️ TRANSPORT BUT NO CONSUMER AS OF 2026-09-22 — backing-monitor has no dashboard page for this asset yet; they are building one and requested these overlays. Nothing renders this file today, so it cannot yet reach a reader.",
+    "note": "At Ethereum block 26239007, 90.44% of fxUSD supply sat in the f(x) Stability Pool. fxSAVE redemption can release that locked supply into circulation and pays a smaller USDC leg directly. DexTracker's October 20 fxUSD-to-USDC quote observed USDC proceeds peaking near $4.27M; this is a dated limit on the fxUSD route, not a ceiling on the entire fxSAVE redemption basket. Consumer registration should be checked before assuming this overlay renders.",
     "upstream_resolution_rule": "⚠️ EVERY upstream entry MUST carry exactly one resolution: `slug` (one asset we score), `slugs` (a set entry naming several), `terminal: true` + `kind` (never scoreable — oracle, venue, contract, authority, incentive, real-world), or `unresolved` (scoreable, no report yet = COVERAGE GAP). ⚠️ TERMINAL AND UNRESOLVED ARE DIFFERENT CLAIMS and must never be merged: terminal means nothing is missing, unresolved means a report is owed. `address` is REQUIRED wherever the ticker collides in this corpus (DUSD x4, msUSD x3, reUSD x2, USD3 x2, BOLD x2) — a ticker-keyed graph would merge Resupply's reUSD (3.5) with Re Protocol's (5.0).",
     "downstream_basis": {
       "derived_by_inversion": [
