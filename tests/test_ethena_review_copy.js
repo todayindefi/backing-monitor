@@ -8,3 +8,7 @@ const h=r._renderSusdeVaultPanel(d.asset_specific,d.summary,d);assert.match(h,/L
 console.log('Ethena null-state, dated snapshots and separate vault/cooldown copy checks passed');
 function scores(v,path='',out={}){if(v&&typeof v==='object')for(const [k,x] of Object.entries(v)){if(/_score$/.test(k))out[path+'.'+k]=x;else scores(x,path+'.'+k,out);}return out;}
 for(const slug of ['usde','susde']){const input=JSON.parse(fs.readFileSync('data/'+slug+'_backing.json'));const before=JSON.stringify(scores(input));r.preRender(input,{entries:[]});assert.equal(JSON.stringify(scores(input)),before,'Authored scores must remain unchanged');}
+
+assert.match(snapshots,/05:59:44 UTC/);assert.match(snapshots,/100\.0978%/);assert.match(snapshots,/101\.4290%/);assert.match(snapshots,/not independently verified live coverage/);assert.match(snapshots,/not a separate sUSDe reserve portfolio/);
+
+const oldFact=JSON.parse(fs.readFileSync('data/usde_backing.json'));oldFact.issuer.facts=['The live Reserve Fund was $62.078m, or about 1.29% of current supply.'];r.preRender(oldFact,{entries:[]});assert.doesNotMatch(oldFact.issuer.facts.join(' '),/live Reserve Fund was/);assert.match(oldFact.issuer.facts.join(' '),/not independently verified/);

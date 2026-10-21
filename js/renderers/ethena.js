@@ -210,6 +210,9 @@ var EthenaRenderer = {
         if (!EthenaRenderer._isEthena(specific.type)) return;
         var s = data.summary;
         if (!s) return;
+        if(data.issuer && Array.isArray(data.issuer.facts))data.issuer.facts=data.issuer.facts.map(function(fact){
+            return typeof fact==='string' && /^The live Reserve Fund was /.test(fact) ? 'Reserve Fund figures must retain their source and observation date. The separately labelled issuer-reported snapshot is not independently verified live reserve coverage.' : fact;
+        });
         ((data.dependencies || {}).upstream || []).forEach(function(edge){
             if(/Basis trade/.test(edge.name || ''))edge.note='September 30, 2026 Risk Committee snapshot: 17% hedged BTC/ETH positions, alongside 74% liquid cash and 6% JAAA/STAC RWAs. These dated allocations are not current positions, posted hedge collateral or derivatives notional. Current borrower-level and asset-level look-through remains incomplete.';
         });
@@ -269,8 +272,9 @@ var EthenaRenderer = {
             '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Source / observation date</th><th>Dated measurements</th></tr></thead><tbody>'+
             '<tr><td>Custodian attestation · September 27, 2026</td><td>$4.953bn backing against $4.949bn supply, plus a $62.095m Reserve Fund. Historical custody snapshot.</td></tr>'+
             '<tr><td>Risk Committee · October 12, 2026</td><td>101.43% coverage including a $62.57m Reserve Fund; recommended fund size $45.7m, approximately 1.4×. Published October 13.</td></tr>'+
+            '<tr><td>Ethena issuer-reported snapshot · October 21, 2026, 05:59:44 UTC</td><td>100.0978% coverage before and 101.4290% after the Reserve Fund. Issuer-reported offchain backing, not independently verified live coverage. sUSDe inherits USDe exposure; this is not a separate sUSDe reserve portfolio.</td></tr>'+
             '<tr><td>Risk Committee backing mix · September 30, 2026</td><td>74% liquid cash; 17% hedged BTC/ETH positions; 6% JAAA/STAC RWAs. Published categories total 97%; no allocation is inferred for the remainder.</td></tr>'+
-            '</tbody></table></div><p class="text-sm text-slate-500 mt-3">These differently dated sources do not replace the failed hourly feed. Posted hedge collateral, hedge positions and derivatives notional have different scopes.</p>'+
+            '</tbody></table></div><p class="text-sm text-slate-500 mt-3">These differently dated sources do not replace unavailable hourly coverage. Posted hedge collateral, hedge positions and derivatives notional have different scopes.</p>'+
             '<p class="text-sm mt-2"><a href="https://gov.ethenafoundation.com/t/ethena-s-july-september-2026-governance-update/857" target="_blank" rel="noopener noreferrer">Risk Committee update ↗</a></p></div>';
     },
 
