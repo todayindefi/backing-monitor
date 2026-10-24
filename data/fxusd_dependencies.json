@@ -2,38 +2,38 @@
   "schema_version": "dependencies/1",
   "producer": "riskanalyst",
   "asset": "fxusd",
-  "as_of": "2026-10-21T05:54:39Z",
+  "as_of": "2026-10-24T01:56:26Z",
   "dependencies": {
     "upstream": [
       {
-        "name": "WBTC (BitGo) — 88.2% of all debt",
-        "metric": "1,122.21 WBTC raw collateral against 70,178,542.70 fxUSD debt; pool CR 132.19%",
-        "source": "PegTracker fxUSD producer, Ethereum block 26239007, 2026-10-21",
+        "name": "WBTC (BitGo) — 87.61% of all debt",
+        "metric": "1,092.00 WBTC raw collateral against 68,527,240 fxUSD debt; pool CR 128.35%",
+        "source": "PegTracker fxUSD producer, Ethereum block 26259353, 2026-10-24",
         "note": "⚠️ THE FRAMING \"backed by wstETH and WBTC\" IMPLIES A BALANCE THAT DOES NOT EXIST. The WBTC leg carries nearly all the debt at the LOWER ratio, and it is the CUSTODIAL one — an off-chain counterparty sits under 90% of the book.",
         "unresolved": [
           "WBTC"
         ],
-        "unresolved_note": "88.2% of fxUSD's October 21 pool debt and no separate WBTC report in this graph; the custodial leg dominates the book."
+        "unresolved_note": "87.61% of fxUSD pool debt on October 24 and no separate WBTC report in this graph; the custodial leg dominates the book."
       },
       {
-        "name": "wstETH (Lido) — 11.8% of debt",
-        "metric": "6,550.01 stETH-equivalent raw collateral against 9,348,793.50 fxUSD debt; pool CR 170.95%",
-        "source": "PegTracker fxUSD producer, Ethereum block 26239007, 2026-10-21",
+        "name": "wstETH (Lido) — 12.39% of debt",
+        "metric": "6,609.49 stETH-equivalent raw collateral against 9,692,707 fxUSD debt; pool CR 161.96%",
+        "source": "PegTracker fxUSD producer, Ethereum block 26259353, 2026-10-24",
         "note": "Comfortably collateralised, but a small share of the book.",
         "slug": "wsteth"
       },
       {
         "name": "Collateral price oracles",
         "metric": "wstETH 0x0C5C61025f047cB7e3e85852dC8eAFd7b9a4Abfb · WBTC 0xb3c90e64EB6f456A5F5C17Aa99b6aecA6f4a6390",
-        "source": "pool.priceOracle() on-chain, 2026-09-22",
-        "note": "⚠️ REPOINTABLE UNDELAYED at three keys on every pool and at ONE key on the WBTC pool. Also carries OZ M-06's pre-fix formula: both are non-upgradeable and predate the fix marked resolved. ⚠️ The deployment manifest names a DIFFERENT oracle (PriceOracle#StETHPriceOracle 0x3716352d…) that no pool reads — a manifest is a deployment record, not a wiring record.",
+        "source": "pool.priceOracle() and role/ownership reads on-chain, 2026-10-24",
+        "note": "Both collateral oracles are owned by the 72-hour timelock since October 5, and the WBTC deployer EOA emergency role was revoked October 10. The main 6-of-9 Safe and emergency 3-of-4 Safe retain undelayed EMERGENCY_ROLE on both pools, permitting updatePriceOracle(address) without validation. OZ M-06 pre-fix formula remains on both non-upgradeable live oracles. The deployment manifest names a different oracle that no pool reads.",
         "terminal": true,
         "kind": "oracle"
       },
       {
         "name": "Curve USDC/fxUSD 0x5018BE882DccE5E3F2f3B0913AE2096B9b3fB61f",
-        "metric": "USDC side 3.793m at the October 20 DexTracker read; one major direct dollar exit venue",
-        "source": "DexTracker fxUSD-to-USDC ladder, 2026-10-20T23:47:50Z",
+        "metric": "USDC side about 4.30m at the October 23 read; major direct dollar exit venue",
+        "source": "DexTracker fxUSD-to-USDC ladder, 2026-10-23T23:48:22Z",
         "note": "⚠️ Doubles as a peg mechanism: isRedeemAllowed() reads this pool's EMA price, so the redemption gate and the exit venue are the SAME dependency.",
         "terminal": true,
         "kind": "venue"
@@ -42,7 +42,7 @@
     "downstream": [
       {
         "name": "fxSAVE",
-        "metric": "ERC-4626 over fxSP; 90.44% of fxUSD supply sat inside the pool on October 21; fxSP redeems for fxUSD plus USDC",
+        "metric": "ERC-4626 over fxSP; 90.12% of fxUSD supply sat inside the pool on October 24; fxSP redeems for fxUSD plus USDC",
         "note": "⚠️ NOT an independent leg — shares fxUSD's ProxyAdmin and timelock exactly."
       },
       {
@@ -62,7 +62,7 @@
       "reusd-resupply",
       "usg"
     ],
-    "note": "At Ethereum block 26239007, 90.44% of fxUSD supply sat in the f(x) Stability Pool. fxSAVE redemption can release that locked supply into circulation and pays a smaller USDC leg directly. DexTracker's October 20 fxUSD-to-USDC quote observed USDC proceeds peaking near $4.27M; this is a dated limit on the fxUSD route, not a ceiling on the entire fxSAVE redemption basket. Consumer registration should be checked before assuming this overlay renders.",
+    "note": "At Ethereum block 26259353, 90.12% of fxUSD supply sat in the f(x) Stability Pool. fxSAVE redemption can release that locked supply and pays a smaller USDC leg directly. The October 23 routed fxUSD-to-USDC quote bracketed the -50 bps crossing at $4.445M-$4.480M, much smaller than the 26.13M fxUSD leg previewed for a full Morpho Blue fxSAVE queued exit on October 21. Current fxUSD overall score is 5.0; consumer scores require separate review.",
     "upstream_resolution_rule": "⚠️ EVERY upstream entry MUST carry exactly one resolution: `slug` (one asset we score), `slugs` (a set entry naming several), `terminal: true` + `kind` (never scoreable — oracle, venue, contract, authority, incentive, real-world), or `unresolved` (scoreable, no report yet = COVERAGE GAP). ⚠️ TERMINAL AND UNRESOLVED ARE DIFFERENT CLAIMS and must never be merged: terminal means nothing is missing, unresolved means a report is owed. `address` is REQUIRED wherever the ticker collides in this corpus (DUSD x4, msUSD x3, reUSD x2, USD3 x2, BOLD x2) — a ticker-keyed graph would merge Resupply's reUSD (3.5) with Re Protocol's (5.0).",
     "downstream_basis": {
       "derived_by_inversion": [
