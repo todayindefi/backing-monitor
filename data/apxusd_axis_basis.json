@@ -2,7 +2,7 @@
   "schema_version": "axis-basis/1",
   "producer": "riskanalyst",
   "asset": "apxusd",
-  "as_of": "2026-10-19T16:33:50Z",
+  "as_of": "2026-10-26T15:37:10Z",
   "peg": {
     "peg_mechanism_score": 3.5,
     "peg_mechanism_score_source": "riskAnalyst:authored",
@@ -19,55 +19,85 @@
   "backing": {
     "backing_score": 3.0,
     "backing_score_source": "riskAnalyst:authored",
-    "backing_score_generated_at": "2026-10-19T16:33:50Z",
-    "backing_score_basis": "Held at 3.0. October 19 attestation: netted CR 101.1991%, net collateral $156,374,740.16, net liabilities $154,521,829.38 and cushion $1,852,910.78. STRC bucket $129,423,919.27 is 44.09% gross, 58.29% excluding inventory and 82.77% excluding inventory and POL. Its $70,740,233.28 STRCx portion is market-valued; $58,683,685.99 raw STRC is an implied residual, not a newly verified brokerage balance. With fixed liabilities and other buckets, a 5% STRC markdown takes netted CR to 97.01%; about 1.4317% exhausts the stated cushion. This is a scenario, not an observed loss.",
+    "backing_score_generated_at": "2026-10-26T15:37:10Z",
+    "backing_score_basis": "Held 3.0. October 26 14:47:09 UTC: gross reserves $289,398,701.50 / supply $289,073,514.82 = 100.1125%. Netted inventory $70,086,365.30 and POL $67,445,338.96 on both sides yields assets $151,866,997.24 / liabilities $151,541,810.56 = attested CR 100.2146%; surplus $325,186.68. STRC bucket $127,437,270.44; 1%/5% haircut gives netted CR 99.3736%/96.0099%. Surplus absorbs only 0.2552% STRC-bucket loss. Raw STRC mark/custody remains unverified; no realized deficit established.",
     "backing_score_live_fields": [
       "summary.collateral_ratio",
       "summary.collateral_ratio_independent_lb",
       "asset_specific.backing_attestation.strcx_safe.coverage_pct_of_strc_bucket"
     ],
-    "backing_score_measured": {
-      "collateral_ratio_netted_pct": 101.5602,
-      "collateral_ratio_independent_lb_pct": 100.909075,
-      "surplus_usd": 2749709.77,
-      "total_reserves_usd": 305223224.59,
-      "total_supply_usd": 302473514.82,
-      "netted_strc_share_pct": 85.845,
-      "strc_bucket_usd": 153652247.32,
-      "strcx_onchain_usd_live_mark": 70758597.77,
-      "strc_offchain_issuer_stated_usd": 80171763.0,
-      "ge_100_since": "2026-09-17T19:49:54Z",
-      "consecutive_readings_ge_100": 393,
-      "attestation_timestamp": "2026-10-04T04:44:35Z",
-      "signing_key_match": true
-    }
+    "basis_history": [
+      {
+        "basis": "Held at 3.0. October 19 attestation: netted CR 101.1991%, net collateral $156,374,740.16, net liabilities $154,521,829.38 and cushion $1,852,910.78. STRC bucket $129,423,919.27 is 44.09% gross, 58.29% excluding inventory and 82.77% excluding inventory and POL. Its $70,740,233.28 STRCx portion is market-valued; $58,683,685.99 raw STRC is an implied residual, not a newly verified brokerage balance. With fixed liabilities and other buckets, a 5% STRC markdown takes netted CR to 97.01%; about 1.4317% exhausts the stated cushion. This is a scenario, not an observed loss.",
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ],
+    "measurement_history": [
+      {
+        "field": "backing_score_measured",
+        "value": {
+          "collateral_ratio_netted_pct": 101.5602,
+          "collateral_ratio_independent_lb_pct": 100.909075,
+          "surplus_usd": 2749709.77,
+          "total_reserves_usd": 305223224.59,
+          "total_supply_usd": 302473514.82,
+          "netted_strc_share_pct": 85.845,
+          "strc_bucket_usd": 153652247.32,
+          "strcx_onchain_usd_live_mark": 70758597.77,
+          "strc_offchain_issuer_stated_usd": 80171763.0,
+          "ge_100_since": "2026-09-17T19:49:54Z",
+          "consecutive_readings_ge_100": 393,
+          "attestation_timestamp": "2026-10-04T04:44:35Z",
+          "signing_key_match": true
+        },
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ]
   },
   "liquidity": {
     "liquidity_score": 3.5,
     "liquidity_score_source": "riskAnalyst:authored",
-    "liquidity_score_generated_at": "2026-10-04T04:48:42Z",
-    "liquidity_score_basis": "RAISED 3.0 -> 3.5 on 2026-10-04, AND ONLY THE PEG-LEG CONTAMINATION LIFTS -- DEPTH ITSELF DID NOT IMPROVE. The 3.0 was held on a ~20% 30-day peg band; it is now 302.94 bps, which un-crushes the derived score to 6.0. BUT THE DEPTH LEG MEASURED SEPARATELY IS FLAT: derived mean 5.613 (09-04->09-21) vs 5.570 (09-22->10-04), with sub-5.0 readings slightly MORE frequent after (38 vs 33). Only the floor rose, 1.00 -> 3.50. Half a notch for a removed distortion, not a liquidity recovery. DEPTH IS CENSORED, NOT MEASURED: total_2pct_depth and depth_50bps both report $100,000 with is_floor true and status ladder_exhausted -- the deepest rung quoted still clears inside 50bps, so the crossing is above where we look. A floor is a lower bound and MAY NOT LIFT A SCORE. TVL $16,632,175 vs $302,473,515 supply = 5.50%. THE WORSE LINK SETS THIS AXIS, NOT THE DEX: primary redemption is off-chain, gated to approved counterparties via RFQ, no atomic settlement, and the issuer's own post-mortem admits the manual plumbing was too slow to defend at scale. The retail DEX route (>=$100K inside 50bps) is the BETTER link. REDEMPTION IS FOLDED HERE PER SPEC -- this asset carries no redemption_score and must not acquire one. A DURABLE PRIOR FINDING IS NOT VISIBLE IN 30 DAYS AND IS DEMOTED TO A QUESTION: the claim that Apyx pulls Curve depth off-hours by design (RTH ~4.0 vs off-hours 2.0) does not appear -- weekend derived mean 5.922 vs weekday 5.449, and 9 of the 12 sub-2.0 readings fall on WEEKDAYS, with Sunday holding the highest floor of any day. NOT RECORDED AS REFUTED: the original was a June observation, the post-mortem promised overnight-liquidity infrastructure, and the 12 low readings are isolated single hours confined to 09-05 -> 09-21 that look like ladder degradations. A DELIVERED COMMITMENT AND A STALE CLAIM PRODUCE THE SAME DATA HERE.",
-    "liquidity_score_measured": {
-      "derived_score": 6.0,
-      "total_tvl_usd": 16632174.81,
-      "depth_2pct_usd": 100000.0,
-      "depth_2pct_is_floor": true,
-      "depth_2pct_status": "ladder_exhausted",
-      "depth_50bps_usd": 100000.0,
-      "depth_50bps_is_floor": true,
-      "peg_band_30d_bps": 302.9413,
-      "tvl_pct_of_supply": 5.4987
-    },
-    "liquidity_score_unmeasured": "depth above the $100,000 rung on both the 50bps and 200bps ladders; the crossing is uncensored nowhere"
+    "liquidity_score_generated_at": "2026-10-26T15:37:10Z",
+    "liquidity_score_basis": "Held 3.5. October 26 14:52:29 UTC market-based Kyber quotes: $50K -> $49,857.89, $100K -> $99,644.08. These are market-notional execution figures, not par recovery. Issuer redemption remains unmeasured.",
+    "liquidity_score_unmeasured": "depth above the $100,000 rung on both the 50bps and 200bps ladders; the crossing is uncensored nowhere",
+    "basis_history": [
+      {
+        "basis": "RAISED 3.0 -> 3.5 on 2026-10-04, AND ONLY THE PEG-LEG CONTAMINATION LIFTS -- DEPTH ITSELF DID NOT IMPROVE. The 3.0 was held on a ~20% 30-day peg band; it is now 302.94 bps, which un-crushes the derived score to 6.0. BUT THE DEPTH LEG MEASURED SEPARATELY IS FLAT: derived mean 5.613 (09-04->09-21) vs 5.570 (09-22->10-04), with sub-5.0 readings slightly MORE frequent after (38 vs 33). Only the floor rose, 1.00 -> 3.50. Half a notch for a removed distortion, not a liquidity recovery. DEPTH IS CENSORED, NOT MEASURED: total_2pct_depth and depth_50bps both report $100,000 with is_floor true and status ladder_exhausted -- the deepest rung quoted still clears inside 50bps, so the crossing is above where we look. A floor is a lower bound and MAY NOT LIFT A SCORE. TVL $16,632,175 vs $302,473,515 supply = 5.50%. THE WORSE LINK SETS THIS AXIS, NOT THE DEX: primary redemption is off-chain, gated to approved counterparties via RFQ, no atomic settlement, and the issuer's own post-mortem admits the manual plumbing was too slow to defend at scale. The retail DEX route (>=$100K inside 50bps) is the BETTER link. REDEMPTION IS FOLDED HERE PER SPEC -- this asset carries no redemption_score and must not acquire one. A DURABLE PRIOR FINDING IS NOT VISIBLE IN 30 DAYS AND IS DEMOTED TO A QUESTION: the claim that Apyx pulls Curve depth off-hours by design (RTH ~4.0 vs off-hours 2.0) does not appear -- weekend derived mean 5.922 vs weekday 5.449, and 9 of the 12 sub-2.0 readings fall on WEEKDAYS, with Sunday holding the highest floor of any day. NOT RECORDED AS REFUTED: the original was a June observation, the post-mortem promised overnight-liquidity infrastructure, and the 12 low readings are isolated single hours confined to 09-05 -> 09-21 that look like ladder degradations. A DELIVERED COMMITMENT AND A STALE CLAIM PRODUCE THE SAME DATA HERE.",
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ],
+    "measurement_history": [
+      {
+        "field": "liquidity_score_measured",
+        "value": {
+          "derived_score": 6.0,
+          "total_tvl_usd": 16632174.81,
+          "depth_2pct_usd": 100000.0,
+          "depth_2pct_is_floor": true,
+          "depth_2pct_status": "ladder_exhausted",
+          "depth_50bps_usd": 100000.0,
+          "depth_50bps_is_floor": true,
+          "peg_band_30d_bps": 302.9413,
+          "tvl_pct_of_supply": 5.4987
+        },
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ]
   },
   "dependencies": {
     "underlying_score": 3.0,
     "underlying_score_source": "riskAnalyst:authored",
-    "underlying_score_generated_at": "2026-10-19T16:33:50Z",
-    "underlying_score_basis": "Held at 3.0. STRC remains 82.77% of the collateral on the issuer netted-CR basis, with additional wrapper/custody and reflexive POL dependencies. Raw STRC Counterparty and Overall are now 3.5 after the issuer cash gate; that narrows headroom without establishing a collateral loss. The lower gross concentration does not diversify the netted reserve to the same extent. Raw STRC and STRCx portions sum to one preferred bucket and must not be counted twice.",
+    "underlying_score_generated_at": "2026-10-26T15:37:10Z",
+    "underlying_score_basis": "Held 3.0: raw STRC Overall now 3.0 and STRCx 3.0. October 26 total STRC bucket $127,437,270.44 includes $69,125,066.55 market-valued STRCx and $58,312,203.89 implied raw residual. No double count; STRC 44.04% gross / 58.11% ex-inventory. Other reserve instruments remain unresolved.",
     "underlying_score_persistence": "filtered — basket composition, not a daily balance",
     "underlying_score_denominator": "⚠️ ASK WHICH DENOMINATOR THE ATTESTED CR DIVIDES BY. It is NETTED of POL and inventory on both sides. A gross/netted inversion here flatters the coverage AND understates the concentration at the same time.",
-    "underlying_score_routing": "⚠️ Merges after backing-monitor's 49d0b4ca2 but axis 4 renders no score today — source-of-record."
+    "underlying_score_routing": "⚠️ Merges after backing-monitor's 49d0b4ca2 but axis 4 renders no score today — source-of-record.",
+    "basis_history": [
+      {
+        "basis": "Held at 3.0. STRC remains 82.77% of the collateral on the issuer netted-CR basis, with additional wrapper/custody and reflexive POL dependencies. Raw STRC Counterparty and Overall are now 3.5 after the issuer cash gate; that narrows headroom without establishing a collateral loss. The lower gross concentration does not diversify the netted reserve to the same extent. Raw STRC and STRCx portions sum to one preferred bucket and must not be counted twice.",
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ]
   },
   "issuer": {
     "issuer_score": 5.0,
@@ -122,13 +152,13 @@
     "above_mean": false
   },
   "filing_review": {
-    "reviewed_at": "2026-10-19T16:33:50Z",
-    "filing_date": "2026-10-19",
-    "period_end": "2026-10-18",
-    "accession": "0001193125-26-424688",
+    "reviewed_at": "2026-10-26T15:37:10Z",
+    "filing_date": "2026-10-26",
+    "period_end": "2026-10-25",
+    "accession": "0001193125-26-431146",
     "report": "assets/apxusd.md",
     "scope": "Targeted filing/dependency pass; per-axis dates not touched unless basis updated; full last_verified unchanged.",
-    "credit_note": "October 19 8-K 0001193125-26-424688, period October 12–18: USD Cash $447.3 M crosses the explicit $500 M gate; Reserve $4.83 B, $193.1 M STRC buybacks. MSTR Funding 3.5 / Overall 4.0; raw STRC Counterparty and Overall 3.5 after the October 20 review. The $3 B authorization is spending authority, not liquidity. No preferred issuance funded the week.",
+    "credit_note": "October 26 8-K 0001193125-26-431146 (period ends October 25): USD Cash $242.4M, down 45.8%; Reserve $4.83B flat; $204.9M STRC repurchases, $956.8M authorization remaining; zero ATM issuance and BTC activity. MSTR Funding 3.0 / Overall 3.5; STRC Counterparty/Overall 3.0. Cuts reflect severity of further depletion without refill, not repeat application of the $500M gate. Authorization is not cash.",
     "dividend_note": "October16 filing 0001193125-26-423400: proposed November daily dividends at12% are conditional on shareholder approval and effective designation; no automatic wrapper pass-through or double-counted November15 dividend."
   }
 }

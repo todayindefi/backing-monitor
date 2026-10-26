@@ -2,7 +2,7 @@
   "schema_version": "axis-basis/1",
   "producer": "riskanalyst",
   "asset": "susdat",
-  "as_of": "2026-10-19T16:33:50Z",
+  "as_of": "2026-10-26T15:37:10Z",
   "peg": {
     "volatility_score": 3.5,
     "volatility_score_source": "riskAnalyst:authored",
@@ -14,26 +14,44 @@
   "backing": {
     "backing_score": 2.5,
     "backing_score_source": "riskAnalyst:authored",
-    "backing_score_generated_at": "2026-10-19T16:33:50Z",
-    "backing_score_basis": "Held at 2.5. October 19 15:46 UTC assets $50,231,238.46 comprise $49,298,409.25 raw off-chain STRC (98.1429%, oracle_unverified) and $932,829.21 on-chain USDat (1.8571%). The displayed 104.1743% is NAV versus $1 issuance, not junior protection or independent overcollateralization. A 5% STRC markdown removes 4.9071% of gross assets. USDat has separate M0 backing and its reserve assessment cannot be inherited here.",
-    "backing_score_persistence": "filtered — reserve composition, not a spot ratio"
+    "backing_score_generated_at": "2026-10-26T15:37:10Z",
+    "backing_score_basis": "Held 2.5. October 26 14:48:53 UTC assets $45,634,615.25: off-chain STRC $45,309,060.27 / 99.2866% oracle_unverified, on-chain USDat $325,554.99 / 0.7134%; NAV 1.046447. A 5% STRC haircut removes 4.9643% of assets; no junior capital inside sUSDat.",
+    "backing_score_persistence": "filtered — reserve composition, not a spot ratio",
+    "basis_history": [
+      {
+        "basis": "Held at 2.5. October 19 15:46 UTC assets $50,231,238.46 comprise $49,298,409.25 raw off-chain STRC (98.1429%, oracle_unverified) and $932,829.21 on-chain USDat (1.8571%). The displayed 104.1743% is NAV versus $1 issuance, not junior protection or independent overcollateralization. A 5% STRC markdown removes 4.9071% of gross assets. USDat has separate M0 backing and its reserve assessment cannot be inherited here.",
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ]
   },
   "liquidity": {
     "liquidity_score": 2.0,
     "liquidity_score_source": "riskAnalyst:authored",
-    "liquidity_score_generated_at": "2026-10-19T16:33:50Z",
-    "liquidity_score_basis": "Held at 2.0. October 19 shared on-chain USDat buffer $932,829.21 is 1.8571% of Saturn assets and 17.64% of Strata senior claims. The October 4 $4.155M / 6.23% buffer is historical. Primary permissions remain unmeasured in the latest producer; a past successful redemption is not a current execution promise. Secondary all-in proceeds before gas: $10K → $9,948.37; $100K → $45,515.20; $500K → $65,379.48. Buffer capacity is shared and not earmarked for Strata or our PT position.",
+    "liquidity_score_generated_at": "2026-10-26T15:37:10Z",
+    "liquidity_score_basis": "Held 2.0. October 26 shared USDat buffer $325,554.99, down 65.1% from October 19. DEX $100K returns $56,305.48, $10K returns $10,008.29; cliff not interpolated. Primary router current gating unmeasured. Historical fills are not a current redemption probe. Do not use producer percentile=0 as exact ranking because its own 30-day minimum lies below today.",
     "liquidity_score_persistence": "filtered — buffer share and exit route, not spot depth",
-    "liquidity_score_depth_caveat": "October19:2%secondary-depth crossing bracketed[$10K,$100K];$10K clears,$100Kdoesnot. Distinct from primary redemption buffer."
+    "liquidity_score_depth_caveat": "October19:2%secondary-depth crossing bracketed[$10K,$100K];$10K clears,$100Kdoesnot. Distinct from primary redemption buffer.",
+    "basis_history": [
+      {
+        "basis": "Held at 2.0. October 19 shared on-chain USDat buffer $932,829.21 is 1.8571% of Saturn assets and 17.64% of Strata senior claims. The October 4 $4.155M / 6.23% buffer is historical. Primary permissions remain unmeasured in the latest producer; a past successful redemption is not a current execution promise. Secondary all-in proceeds before gas: $10K → $9,948.37; $100K → $45,515.20; $500K → $65,379.48. Buffer capacity is shared and not earmarked for Strata or our PT position.",
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ]
   },
   "dependencies": {
     "underlying_score": 2.5,
     "underlying_score_source": "riskAnalyst:authored",
-    "underlying_score_generated_at": "2026-10-19T16:33:50Z",
-    "underlying_score_basis": "Held at 2.5 for 98.1429% off-chain STRC plus Saturn reserve-mark and redemption dependence. The main path is sUSDat → STRC → MSTR → BTC; USDat is a small parallel reserve/exit leg, not an issuer of STRC. The older seven-link serial path is superseded. STRC credit is now 3.5; the existing dependency penalty remains material. Senior first-loss protection exists above sUSDat in Strata, not inside this reserve.",
+    "underlying_score_generated_at": "2026-10-26T15:37:10Z",
+    "underlying_score_basis": "Held 2.5. sUSDat -> raw STRC -> Strategy issuer; USDat is a separate M0-backed reserve/exit leg. Raw STRC Overall 3.0 does not improve this 2.5 concentration/verification assessment.",
     "underlying_score_persistence": "filtered — counterparty chain, not a daily balance",
     "underlying_score_routing": "⚠️ Merges after 49d0b4ca2 but axis 4 renders no score today — source-of-record.",
-    "underlying_score_wrapper_rule": "✅ NOT A WRAPPER-RULE VIOLATION DESPITE READING LIKE ONE. An axis-4 sweep flags susdat 2.5 against usdat 5.0, and the EQUAL rule DOES NOT APPLY: sUSDat is 99.00% off-chain STRC claim and 1.00% on-chain USDat, so it does NOT hold only its underlying. ⚠️ ITS NAME, ITS TICKER AND ITS `underlying_assets: [\"USDat\"]` ALL SAY OTHERWISE — this is the case the spec's 2026-09-11 discriminator exists for, and a rule keyed on the declared field would have forced this to 5.0 and destroyed a correct finding. Test the balance sheet, not the ticker."
+    "underlying_score_wrapper_rule": "✅ NOT A WRAPPER-RULE VIOLATION DESPITE READING LIKE ONE. An axis-4 sweep flags susdat 2.5 against usdat 5.0, and the EQUAL rule DOES NOT APPLY: sUSDat is 99.00% off-chain STRC claim and 1.00% on-chain USDat, so it does NOT hold only its underlying. ⚠️ ITS NAME, ITS TICKER AND ITS `underlying_assets: [\"USDat\"]` ALL SAY OTHERWISE — this is the case the spec's 2026-09-11 discriminator exists for, and a rule keyed on the declared field would have forced this to 5.0 and destroyed a correct finding. Test the balance sheet, not the ticker.",
+    "basis_history": [
+      {
+        "basis": "Held at 2.5 for 98.1429% off-chain STRC plus Saturn reserve-mark and redemption dependence. The main path is sUSDat → STRC → MSTR → BTC; USDat is a small parallel reserve/exit leg, not an issuer of STRC. The older seven-link serial path is superseded. STRC credit is now 3.5; the existing dependency penalty remains material. Senior first-loss protection exists above sUSDat in Strata, not inside this reserve.",
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ]
   },
   "issuer": {
     "issuer_score": 5.0,
@@ -46,13 +64,13 @@
   "redemption_note": "Redemption folded into Liquidity&Exit onOctober4; no independent redemption_score in the current sUSDat report.",
   "routing_note": "⚠️ ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as `volatility_score` — vault share), backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. ⚠️ NO `contract` BLOCK — susdat's contract overlay already carries a rendering basis at 4.0.",
   "filing_review": {
-    "reviewed_at": "2026-10-19T16:33:50Z",
-    "filing_date": "2026-10-19",
-    "period_end": "2026-10-18",
-    "accession": "0001193125-26-424688",
+    "reviewed_at": "2026-10-26T15:37:10Z",
+    "filing_date": "2026-10-26",
+    "period_end": "2026-10-25",
+    "accession": "0001193125-26-431146",
     "report": "assets/susdat.md",
     "scope": "Targeted filing/dependency pass; per-axis dates not touched unless basis updated; full last_verified unchanged.",
-    "credit_note": "October 19 8-K 0001193125-26-424688, period October 12–18: USD Cash $447.3 M crosses the explicit $500 M gate; Reserve $4.83 B, $193.1 M STRC buybacks. MSTR Funding 3.5 / Overall 4.0; raw STRC Counterparty and Overall 3.5 after the October 20 review. The $3 B authorization is spending authority, not liquidity. No preferred issuance funded the week.",
+    "credit_note": "October 26 8-K 0001193125-26-431146 (period ends October 25): USD Cash $242.4M, down 45.8%; Reserve $4.83B flat; $204.9M STRC repurchases, $956.8M authorization remaining; zero ATM issuance and BTC activity. MSTR Funding 3.0 / Overall 3.5; STRC Counterparty/Overall 3.0. Cuts reflect severity of further depletion without refill, not repeat application of the $500M gate. Authorization is not cash.",
     "dividend_note": "October16 filing 0001193125-26-423400: proposed November daily dividends at12% are conditional on shareholder approval and effective designation; no automatic wrapper pass-through or double-counted November15 dividend."
   }
 }

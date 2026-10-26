@@ -2,7 +2,7 @@
   "schema_version": "axis-basis/1",
   "producer": "riskanalyst",
   "asset": "apyusd",
-  "as_of": "2026-10-19T16:33:50Z",
+  "as_of": "2026-10-26T15:37:10Z",
   "peg": {
     "volatility_score": 5.5,
     "volatility_score_source": "riskAnalyst:authored",
@@ -37,37 +37,61 @@
   "backing": {
     "backing_score": 3.0,
     "backing_score_source": "riskAnalyst:authored",
-    "backing_score_generated_at": "2026-10-19T16:33:50Z",
-    "backing_score_basis": "Held equal to apxUSD Backing 3.0: it holds the same reserve indirectly. The October 19 parent netted CR is 101.1991%; reserve sensitivity and raw-claim uncertainty pass through unchanged. Own shares-times-NAV coverage is definitional, not an independent collateral check.",
-    "backing_score_equal_to": "apxusd"
+    "backing_score_generated_at": "2026-10-26T15:37:10Z",
+    "backing_score_basis": "Held 3.0, equal to apxUSD. October 26 attested underlying CR 100.2146%, netting inventory and POL from both sides; surplus $325,186.68. A 1%/5% haircut to the $127.437M STRC bucket gives netted CR 99.3736%/96.0099%. Own-share 100% ratio is definitional. See apxusd report for exact denominator.",
+    "backing_score_equal_to": "apxusd",
+    "basis_history": [
+      {
+        "basis": "Held equal to apxUSD Backing 3.0: it holds the same reserve indirectly. The October 19 parent netted CR is 101.1991%; reserve sensitivity and raw-claim uncertainty pass through unchanged. Own shares-times-NAV coverage is definitional, not an independent collateral check.",
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ]
   },
   "liquidity": {
     "liquidity_score": 3.5,
     "liquidity_score_source": "riskAnalyst:authored",
-    "liquidity_score_generated_at": "2026-10-04T05:49:04Z",
-    "liquidity_score_basis": "HELD at 3.5 on 2026-10-04. REDEMPTION IS NOW FOLDED INTO THIS AXIS PER SPEC and the fold is numerically a no-op: the legacy redemption_score was 3.5 against this 3.5, so the worse link was already here. The fold DID remove a seventh term from a six-axis mean -- the checker was dividing by 7, understating the mean and therefore every above-mean gap on this report. MEASURED: derived score 3.5 (status computed), TVL $16,626,428. DEPTH IS CENSORED, NOT MEASURED -- total_2pct_depth reports $100,000 with is_floor true and status ladder_exhausted, so the crossing is above where we look and a floor may not lift a score. THE COOLDOWN IS KNOWN RATHER THAN ASSUMED, the one place this asset is better documented than its parent: cooldown_days 20.0 with duration_known true AND duration_documented_days 20.0 -- measured and documented AGREE. AND THE QUEUE IS EFFECTIVELY EMPTY: queue_depth_apxusd 194.51 on a $167M asset, week_over_week_growth_x 1.0. THAT IS NOT PRICED AS COMFORT AND THE AMBIGUITY IS THE POINT -- an empty exit queue is equally consistent with holders being content and with the claim being unattractive to exit at a 1.34% discount to a NAV they cannot realise for 20 days. drain_rate_7d and implied_wait_days are both NULL, so the queue has never drained enough to measure a wait: the 20 days is a DOCUMENTED duration, not an OBSERVED one. Held at 3.5 and not above because the two exits fail together: the DEX two-hop runs through apxUSD's own thin book and the primary route through apxUSD's gated off-chain RFQ. A wrapper's exit cannot beat its underlying's, and apxUSD's is 3.5.",
-    "liquidity_score_measured": {
-      "derived_score": 3.5,
-      "total_tvl_usd": 16626427.8,
-      "depth_2pct_usd": 100000.0,
-      "depth_2pct_is_floor": true,
-      "cooldown_days": 20.0,
-      "cooldown_duration_known": true,
-      "cooldown_documented_days": 20.0,
-      "queue_depth_apxusd": 194.509881,
-      "queue_wow_growth_x": 1.0,
-      "drain_rate_7d": null,
-      "implied_wait_days": null
-    },
-    "liquidity_score_folded_note": "Legacy redemption axis FOLDED IN on 2026-10-04 at a value of 3.5 against this axis's 3.5 -- the fold moved no score. Retained as a struck body row; do NOT re-add redemption_score to frontmatter. WARNING TO THE NEXT AUTHOR: this note was originally written as a nested key literally named `redemption_score`, and check_score_surfaces.py correctly flagged it as an ORPHAN -- any *_score key in an overlay is read as a PUBLISHED score, so documenting the fold that way RE-PUBLISHED the very axis the fold removed, for an asset whose frontmatter deliberately has none. Describe a folded axis in PROSE under a _note key. The hook WARNS and does not BLOCK, so it would have shipped."
+    "liquidity_score_generated_at": "2026-10-26T15:37:10Z",
+    "liquidity_score_basis": "Held 3.5. October 26 CoinGecko NAV discount -2.6630%; Kyber $50K market-notional quote returns $49,759.98. Share NAV 1.448195. 20-day unlock is distinct from issuer settlement and queue depth; quotes do not prove par/NAV redemption.",
+    "liquidity_score_folded_note": "Legacy redemption axis FOLDED IN on 2026-10-04 at a value of 3.5 against this axis's 3.5 -- the fold moved no score. Retained as a struck body row; do NOT re-add redemption_score to frontmatter. WARNING TO THE NEXT AUTHOR: this note was originally written as a nested key literally named `redemption_score`, and check_score_surfaces.py correctly flagged it as an ORPHAN -- any *_score key in an overlay is read as a PUBLISHED score, so documenting the fold that way RE-PUBLISHED the very axis the fold removed, for an asset whose frontmatter deliberately has none. Describe a folded axis in PROSE under a _note key. The hook WARNS and does not BLOCK, so it would have shipped.",
+    "basis_history": [
+      {
+        "basis": "HELD at 3.5 on 2026-10-04. REDEMPTION IS NOW FOLDED INTO THIS AXIS PER SPEC and the fold is numerically a no-op: the legacy redemption_score was 3.5 against this 3.5, so the worse link was already here. The fold DID remove a seventh term from a six-axis mean -- the checker was dividing by 7, understating the mean and therefore every above-mean gap on this report. MEASURED: derived score 3.5 (status computed), TVL $16,626,428. DEPTH IS CENSORED, NOT MEASURED -- total_2pct_depth reports $100,000 with is_floor true and status ladder_exhausted, so the crossing is above where we look and a floor may not lift a score. THE COOLDOWN IS KNOWN RATHER THAN ASSUMED, the one place this asset is better documented than its parent: cooldown_days 20.0 with duration_known true AND duration_documented_days 20.0 -- measured and documented AGREE. AND THE QUEUE IS EFFECTIVELY EMPTY: queue_depth_apxusd 194.51 on a $167M asset, week_over_week_growth_x 1.0. THAT IS NOT PRICED AS COMFORT AND THE AMBIGUITY IS THE POINT -- an empty exit queue is equally consistent with holders being content and with the claim being unattractive to exit at a 1.34% discount to a NAV they cannot realise for 20 days. drain_rate_7d and implied_wait_days are both NULL, so the queue has never drained enough to measure a wait: the 20 days is a DOCUMENTED duration, not an OBSERVED one. Held at 3.5 and not above because the two exits fail together: the DEX two-hop runs through apxUSD's own thin book and the primary route through apxUSD's gated off-chain RFQ. A wrapper's exit cannot beat its underlying's, and apxUSD's is 3.5.",
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ],
+    "measurement_history": [
+      {
+        "field": "liquidity_score_measured",
+        "value": {
+          "derived_score": 3.5,
+          "total_tvl_usd": 16626427.8,
+          "depth_2pct_usd": 100000.0,
+          "depth_2pct_is_floor": true,
+          "cooldown_days": 20.0,
+          "cooldown_duration_known": true,
+          "cooldown_documented_days": 20.0,
+          "queue_depth_apxusd": 194.509881,
+          "queue_wow_growth_x": 1.0,
+          "drain_rate_7d": null,
+          "implied_wait_days": null
+        },
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ]
   },
   "dependencies": {
     "underlying_score": 3.0,
     "underlying_score_source": "riskAnalyst:authored",
-    "underlying_score_generated_at": "2026-10-19T16:33:50Z",
-    "underlying_score_basis": "Held equal to apxUSD Dependencies 3.0 under the pure-wrapper rule. The chain is apyUSD → apxUSD → raw STRC / STRCx → Strategy, with Backed on the tokenized portion. STRC is 82.77% of parent collateral excluding inventory and POL. Raw STRC credit fell to 3.5 after USD Cash crossed $500M. USDat is not part of this chain.",
+    "underlying_score_generated_at": "2026-10-26T15:37:10Z",
+    "underlying_score_basis": "Held 3.0, equal to apxUSD. STRC credit anchor now 3.0; custody and wrapper mechanics not reverified by filing. No automatic score cut through a dependency link.",
     "underlying_score_persistence": "filtered — counterparty chain, not a daily balance",
-    "underlying_score_routing": "⚠️ Merges after backing-monitor's 49d0b4ca2 but axis 4 renders no score today — source-of-record."
+    "underlying_score_routing": "⚠️ Merges after backing-monitor's 49d0b4ca2 but axis 4 renders no score today — source-of-record.",
+    "basis_history": [
+      {
+        "basis": "Held equal to apxUSD Dependencies 3.0 under the pure-wrapper rule. The chain is apyUSD → apxUSD → raw STRC / STRCx → Strategy, with Backed on the tokenized portion. STRC is 82.77% of parent collateral excluding inventory and POL. Raw STRC credit fell to 3.5 after USD Cash crossed $500M. USDat is not part of this chain.",
+        "superseded_at": "2026-10-26T15:37:10Z"
+      }
+    ]
   },
   "issuer": {
     "issuer_score": 5.0,
@@ -97,13 +121,13 @@
     "redemption_score_folded_out": true
   },
   "filing_review": {
-    "reviewed_at": "2026-10-19T16:33:50Z",
-    "filing_date": "2026-10-19",
-    "period_end": "2026-10-18",
-    "accession": "0001193125-26-424688",
+    "reviewed_at": "2026-10-26T15:37:10Z",
+    "filing_date": "2026-10-26",
+    "period_end": "2026-10-25",
+    "accession": "0001193125-26-431146",
     "report": "assets/apyusd.md",
     "scope": "Targeted filing/dependency pass; per-axis dates not touched unless basis updated; full last_verified unchanged.",
-    "credit_note": "October 19 8-K 0001193125-26-424688, period October 12–18: USD Cash $447.3 M crosses the explicit $500 M gate; Reserve $4.83 B, $193.1 M STRC buybacks. MSTR Funding 3.5 / Overall 4.0; raw STRC Counterparty and Overall 3.5 after the October 20 review. The $3 B authorization is spending authority, not liquidity. No preferred issuance funded the week.",
+    "credit_note": "October 26 8-K 0001193125-26-431146 (period ends October 25): USD Cash $242.4M, down 45.8%; Reserve $4.83B flat; $204.9M STRC repurchases, $956.8M authorization remaining; zero ATM issuance and BTC activity. MSTR Funding 3.0 / Overall 3.5; STRC Counterparty/Overall 3.0. Cuts reflect severity of further depletion without refill, not repeat application of the $500M gate. Authorization is not cash.",
     "dividend_note": "October16 filing 0001193125-26-423400: proposed November daily dividends at12% are conditional on shareholder approval and effective designation; no automatic wrapper pass-through or double-counted November15 dividend."
   }
 }

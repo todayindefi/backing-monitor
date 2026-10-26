@@ -2,7 +2,7 @@
   "schema_version": "axis-basis/1",
   "producer": "riskanalyst",
   "asset": "strc",
-  "as_of": "2026-10-19T16:33:50Z",
+  "as_of": "2026-10-26T15:37:10Z",
   "peg": {
     "volatility_score": 5.0,
     "volatility_score_source": "riskAnalyst:authored",
@@ -22,44 +22,44 @@
   "coverage_note": "⚠️ tradfi-preferred: this asset carries TWO scored axes (volatility, liquidity) plus redemption, and no backing, dependencies, issuer or contract score. ⚠️ IT WAS INITIALLY GROUPED WITH mstr AND bmnr AS 'tradfi, scored on overall only' AND THAT WAS WRONG — those two carry ZERO axes, this one carries two. Checking the category and inferring the rest is what produced the error.",
   "routing_note": "⚠️⚠️ ROUTING CLAIM CORRECTED 2026-09-13 — THE PRIOR VERSION WAS TRUE AND INCOMPLETE, AND ITS INCOMPLETENESS RENDERED PROSE FROM THIS FILE ONTO A DIFFERENT ASSET. It read: 'ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg (as volatility_score) and liquidity route and render.' ✅ That is correct for ?asset=strc and common.js is not at fault. ⚠️ BUT backing-monitor measured that THIS FILE ALSO RENDERS ON ?asset=mstr: app.js:235 sets sourceSlug from assets.json's data_source, and app.js:254 builds the overlay URL as 'data/' + sourceSlug + suffix, so the MSTR view fetches strc_axis_basis.json. hasAxisBlocks() is !!data.peg, so THIS OVERLAY CREATES THE peg BLOCK THAT UNHIDES THE SIX-AXIS FRAME on a common-equity page that carries ZERO axes. Reader-facing result: 'MEASURES REALIZED DEVIATION FROM PAR ON A PAR-ANCHORED PREFERRED' and 'EXIT ON A NASDAQ-LISTED PERPETUAL PREFERRED' attributed to MSTR, which is neither. Mitigated but not excused by the prose sitting in a collapsed <details> and the chips reading 'Not rated'. ⚠️ WHY THE ORIGINAL CHECK COULD NOT SEE IT: I verified against the CONSUMER'S MERGE CODE, and the merge code is right. The defect is in URL CONSTRUCTION plus a SECOND REGISTERED SLUG I had no reason to know existed. A ROUTING CLAIM VERIFIED AGAINST THE MERGE CANNOT SEE A SECOND CONSUMER OF THE SAME FILE. Any future routing note must state WHICH VIEWS read the file, not merely that the fields merge. ⚠️ SCOPE OF THIS FILE, STATED SO IT IS NOT INFERRED: it is authored for STRC ONLY. Its volatility 5.0 and liquidity 7.0 are NOT valid for MSTR (common equity, zero axes by design) and NOT valid for STRCx (the Backed wrapper, which scores liquidity 2.5 — 4.5 points lower — precisely for the wrapper layer). DO NOT RENDER THIS FILE UNDER EITHER LABEL.",
   "family_overalls": {
-    "as_of": "2026-10-19T16:33:50Z",
+    "as_of": "2026-10-26T15:37:10Z",
     "source": "riskanalyst:authored",
     "assets": [
       {
         "slug": "mstr",
         "label": "MSTR",
-        "overall_score": 4.0,
+        "overall_score": 3.5,
         "last_verified": "2026-08-26",
-        "movement": "Cut 4.5 → 4.0 on 2026-10-20: USD Cash crossed $500M.",
-        "last_revised": "2026-10-20"
+        "movement": "Cut 4.0 → 3.5: severe further cash depletion without refill.",
+        "last_revised": "2026-10-26"
       },
       {
         "slug": "strc",
         "label": "STRC",
-        "overall_score": 3.5,
+        "overall_score": 3.0,
         "last_verified": "2026-08-24",
-        "movement": "Cut 4.0 → 3.5 on 2026-10-20: cash-funded support gate.",
-        "last_revised": "2026-10-20"
+        "movement": "Cut 3.5 → 3.0: materially thinner funding of discretionary support.",
+        "last_revised": "2026-10-26"
       },
       {
         "slug": "strcx",
         "label": "STRCx",
         "overall_score": 3.0,
         "last_verified": "2026-10-13",
-        "movement": "Held at 3.0 on 2026-10-20 after upstream credit reassessment.",
-        "last_revised": "2026-10-20"
+        "movement": "Held 3.0, equal to raw STRC after upstream cut.",
+        "last_revised": "2026-10-26"
       }
     ],
     "producer_note": "Per-asset last_verified is full scope; last_revised identifies this targeted pass. Movement is authored from current report score decisions, not inferred from freshness."
   },
   "filing_review": {
-    "reviewed_at": "2026-10-19T16:33:50Z",
-    "filing_date": "2026-10-19",
-    "period_end": "2026-10-18",
-    "accession": "0001193125-26-424688",
+    "reviewed_at": "2026-10-26T15:37:10Z",
+    "filing_date": "2026-10-26",
+    "period_end": "2026-10-25",
+    "accession": "0001193125-26-431146",
     "report": "assets/strc.md",
     "scope": "Targeted filing/dependency pass; per-axis dates not touched unless basis updated; full last_verified unchanged.",
-    "credit_note": "October 19 8-K 0001193125-26-424688, period October 12–18: USD Cash $447.3 M crosses the explicit $500 M gate; Reserve $4.83 B, $193.1 M STRC buybacks. MSTR Funding 3.5 / Overall 4.0; raw STRC Counterparty and Overall 3.5 after the October 20 review. The $3 B authorization is spending authority, not liquidity. No preferred issuance funded the week.",
+    "credit_note": "October 26 8-K 0001193125-26-431146 (period ends October 25): USD Cash $242.4M, down 45.8%; Reserve $4.83B flat; $204.9M STRC repurchases, $956.8M authorization remaining; zero ATM issuance and BTC activity. MSTR Funding 3.0 / Overall 3.5; STRC Counterparty/Overall 3.0. Cuts reflect severity of further depletion without refill, not repeat application of the $500M gate. Authorization is not cash.",
     "dividend_note": "October16 filing 0001193125-26-423400: proposed November daily dividends at12% are conditional on shareholder approval and effective designation; no automatic wrapper pass-through or double-counted November15 dividend."
   }
 }
