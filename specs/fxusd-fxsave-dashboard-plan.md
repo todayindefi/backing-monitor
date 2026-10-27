@@ -6,6 +6,18 @@ status: PLAN rev 2, 2026-09-22. NOTHING BUILT, NOTHING REGISTERED.
   ⚠️ A SCOPE GO/NO-GO IS STILL OPEN WITH riskAnalyst's USER — see §6.
 ---
 
+
+> **FXSave superseded 2026-10-21:** The user authorized the FXSave dashboard build.
+> Follow [fxsave-feed-contract.md](fxsave-feed-contract.md) and the four
+> `specs/handoffs/FXSAVE-*-2026-10-21.md` handoffs. A report-snapshot preview is
+> implemented at `previews/fxsave/`; the live asset remains unregistered pending
+> producer integration. The September 2.4% fxSP shortfall and 4.3% FXSave gap below
+> were decoding errors: fxSP pays both fxUSD and USDC. Do not implement those
+> claims. fxUSD now has a registered dashboard and producer feeds. The remainder
+> is historical context, not the current implementation checklist.
+
+> **fxUSD superseded 2026-10-24:** Follow [fxusd-dashboard-completion-plan-2026-10-24.md](fxusd-dashboard-completion-plan-2026-10-24.md). The dashboard is already registered; the task is a complete data, chart and presentation upgrade, with producer correctness and staging-link gates.
+
 # 0 ▶ START HERE
 
 **Task:** six-axis dashboards for **fxUSD** (first) and **fxSAVE**, f(x) Protocol (AladdinDAO).

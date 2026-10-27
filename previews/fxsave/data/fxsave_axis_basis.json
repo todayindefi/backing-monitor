@@ -1,0 +1,185 @@
+{
+  "schema_version": "axis-basis/1",
+  "producer": "riskanalyst",
+  "asset": "fxsave",
+  "as_of": "2026-10-21T10:00:12.481785+00:00",
+  "publication_status": "candidate",
+  "assessment_status": "under_review",
+  "revision_at": "2026-10-21T10:20:55.400925+00:00",
+  "source_assessment": "assets/fxsave.md (revised 2026-10-21; last_verified 2026-09-22)",
+  "source_sha256": "3d7b45a7c0e0ee1ebac29b5331593796212e895a4ee9e834f8ebacab922ad3a2",
+  "identity": {
+    "chain": "ethereum",
+    "address": "0x7743e50F534a7f9F1791DdE7dCD89F7783Eefc39"
+  },
+  "score_as_of": "2026-09-22",
+  "recorded_scores": {
+    "stability": 5.0,
+    "backing": 4.5,
+    "liquidity": 3.5,
+    "dependencies": null,
+    "contract": 4.0,
+    "issuer": 5.5,
+    "overall": 4.5
+  },
+  "axis_order": [
+    "peg",
+    "backing",
+    "liquidity",
+    "dependencies",
+    "contract",
+    "issuer"
+  ],
+  "overall": {
+    "overall_score": 4.5,
+    "status": "held_after_limited_evidence_review",
+    "score_as_of": "2026-09-22",
+    "basis": "Authored judgement, never an arithmetic mean."
+  },
+  "peg": {
+    "volatility_score": 5.0,
+    "volatility_score_source": "riskAnalyst:authored",
+    "volatility_score_generated_at": "2026-09-22",
+    "volatility_score_basis": "Axis 1 maps report Volatility to NAV/stability for an accruing fxSAVE share. Compare a timestamp-matched share market price with dollar NAV, never $1. No price history, measured deviation, volatility band or fresh mark is inferred from this authored score.",
+    "mode": "nav",
+    "score_status": "dated_under_review"
+  },
+  "backing": {
+    "collateral_ratio_basis": "NO COLLATERAL RATIO IS DERIVABLE FOR fxSAVE ITSELF. It is an ERC-4626 share over fxSP, the f(x) Stability Pool, not a CDP; it has no collateral and debt numerator/denominator of its own. Do not substitute fxUSD's 136.74% October 21 system ratio here: that belongs to the leveraged CDP layer underneath.",
+    "backing_score": 4.5,
+    "backing_score_source": "riskAnalyst:authored",
+    "backing_score_generated_at": "2026-09-22T10:33:33Z",
+    "backing_score_applies_when": "collateral_ratio_declared_underivable",
+    "backing_score_applies_when_note": "Authored backing score retained for an asset with no independent collateral ratio. A recurring NAV/custody producer is requested by the October 21 feed contract; lack of a ratio does not imply lack of an analyzer.",
+    "backing_score_basis": "Dated authored 4.5 retained under review for loss-absorbing fxSP and underlying fxUSD risk. PegTracker block 26240203 confirms 72,498,799.7116395 fxSP against 65,092,675.669600785 shares, with gauge custody and totalAssets exactly equal as raw integers. Preview pays both fxUSD and USDC; the alleged September shortfall was a decoding error. No independent fxSAVE collateral ratio follows.",
+    "pass_through": {
+      "terminal_backing_score": 5.0,
+      "terminal_collateral_ratio_pct": 136.74300579452927,
+      "terminal_ratio_note": "PegTracker fxUSD producer read at Ethereum block 26239007 on 2026-10-21: aggregate 136.74%; 88.2% of pool debt on custodial WBTC at 132.19%. Pass-through context, not fxSAVE's own ratio.",
+      "redemption_assets": [
+        "fxusd",
+        "usdc"
+      ],
+      "terminal_backing_score_note": "Dated authored fxUSD context; not an independent fxSAVE collateral ratio or newly verified score."
+    },
+    "open_question": "Initial producer evidence reviewed. Morpho concentration is 37.439099002480496%, above 30%; final score re-verification remains limited by synchronized marks, coarse quotes and unproven whole-position execution.",
+    "coverage_note": "Candidate for backing-monitor preview integration; no live registration authorized.",
+    "collateral_ratio": null,
+    "total_backing": null
+  },
+  "liquidity": {
+    "liquidity_score": 3.5,
+    "liquidity_score_source": "riskAnalyst:authored",
+    "liquidity_score_generated_at": "2026-09-22",
+    "liquidity_score_status": "held_after_limited_evidence_review",
+    "liquidity_score_basis": "Hold dated 3.5 under review. Primary redemption and indicative alternate exit are supported, but direct depth is shallow relative to the concentrated position. Par marks, coarse endpoints, separate quote clocks and no settled whole-position execution do not justify a newly verified score. Direct 50 bps crossing is $10K-$100K share NAV; 200 bps $250K-$500K. Instant basket 50 bps is already exceeded at smallest tested $100; 200 bps bracket is $4.5M-$5M. fxUSD market-leg brackets have fxUSD input units and differ from basket share-NAV units. All indicative, gas excluded.",
+    "redemption_component": {
+      "historical_report_score": 7.0,
+      "score_as_of": "2026-09-22",
+      "headline_axis": false,
+      "note": "Evidence belongs in Axis 3, not a seventh axis. Preview and eth_call are not completed redemption."
+    }
+  },
+  "dependencies": {
+    "underlying_score": null,
+    "underlying_score_status": "deliberately_unscored_after_review",
+    "underlying_score_source": null,
+    "underlying_score_basis": "No underlying_score in the canonical riskAnalyst report or existing overlays. tidresearch 4.5 has not been reconciled to a RiskAnalyst author; do not import, average or infer it. October 21 evidence review explicitly retains null: custody and quote measurements do not themselves author a dependencies score. October 21 evidence review explicitly retains null: custody and quote measurements do not themselves author a dependencies score. October 21 evidence review explicitly retains null: custody and quote measurements do not themselves author a dependencies score.",
+    "coverage_policy": {
+      "status": "covered_within_fxsave",
+      "source": "assets/fxsave.md frontmatter comments and sections I, III, VII",
+      "separate_report_trigger": "A lending market prices fxSP directly",
+      "independent_fxsp_score": null,
+      "note": "Report coverage is resolved; numerical dependencies-score provenance remains absent."
+    },
+    "provenance_reconciliation": {
+      "status": "reconciled_not_riskanalyst_authored",
+      "tidresearch_initial_commit": "9d13ba409bb068fade847f5f41d8a8750ad116bc",
+      "tidresearch_initial_date": "2026-09-22",
+      "tidresearch_report_commit": "21e33b8a3ba1389ec019a1b0368e6bccfbe192c2",
+      "reported_value": 4.5,
+      "source": "Coordinator relayed tidresearch verification on 2026-10-21",
+      "decision": "tidresearch-origin staging score has no matching RiskAnalyst authoring basis; Dependencies remains null until explicitly authored."
+    }
+  },
+  "contract": {
+    "structural_score": 4.0,
+    "structural_score_source": "riskAnalyst:authored",
+    "structural_score_generated_at": "2026-09-22T10:32:04Z",
+    "structural_score_basis": "🔴 CUT 5.0 → 4.0 on 2026-09-22 when the shared admin surface turned out to carry FOUR UNDELAYED PATHS beside the 72h timelock — full table in the fxusd contract overlay, since it is literally the same contracts. ⚠️ fxSAVE ALSO HAS ITS OWN EXTRA HOLDER: DEFAULT_ADMIN on this contract is held by the timelock AND by Safe 0xa0fb1b11cca5871fb0225b64308e249b97804e99, a second 6-of-9 granted 2025-04-02 and UNTOUCHED by the 2026-04-20 hardening. updateTreasury(dEaD) succeeds from it. Reach is bounded — treasury/harvester, expense ratio ≤50% of rewards, and CLAIM_FOR_ROLE which can redirect a redeemer's UNLOCKED proceeds — with NO path to gauge or vault principal and no upgrade, which is why this is not cut further. ⚠️ Now LEVEL with fxUSD 4.0 rather than a notch below: fxUSD lost two notches on a surface fxSAVE shares, so the three-extra-contracts penalty is absorbed.",
+    "code_facts": [
+      "✅ SavingFxUSD implementation 0xe4031e271809d20074e4bef1caeefec5f710e8a6 is BYTE-IDENTICAL to OpenZeppelin's audited commit 56a47eab; the source file is unchanged in the repo since 2025-02-24.",
+      "Root address DERIVED, not guessed: coins(0) on Curve fxSAVE/scrvUSD 0xb6E4821c6fCABe32f5F452dfD3Ef20Ce2A3a48E2 returns 0x7743e50F534a7f9F1791DdE7dCD89F7783Eefc39.",
+      "ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4 and TimelockController 0x68863fb8855b04509a835082478D6E3D0bE4E61a — IDENTICAL to fxUSD, 72h delay.",
+      "⚠️ DEFAULT_ADMIN on fxSAVE has TWO holders: the timelock and Safe 0xa0fb1b11cca5871fb0225b64308e249b97804e99 (6-of-9, owners set-equal to the main Safe). Granted 2025-04-02, untouched by the hardening.",
+      "ERC-4626 redemption simulated: 10,000,000 fxSAVE → 11,081,416.68 fxSP, uncapped; 0x…dEaD reverts ERC4626ExceededMaxRedeem as control.",
+      "PegTracker block 26240203 raw gauge custody and totalAssets both equal 72498799711639499527241931, difference 0; no fresh governance enumeration follows."
+    ],
+    "authority_note": "Same reconciliation as fxUSD: ProxyAdmin and base pool AGREE in AladdinDAO/fx-protocol-contracts; the timelock, the Safe AND the fxSAVE token itself are SILENT — absent from the manifest. ⚠️ Note the split carefully: the CONTRACT (SavingFxUSD) is in the audit scope; the DEPLOYED ADDRESS is absent from the manifest. Those are two different statements and collapsing them either way would be wrong.",
+    "cross_axis": [
+      "OPEN THREAD, re-check 2026-12-22: fxSAVE's own implementation matches the audited commit, but public matching audit coverage for fxSP's later Ethereum rework has not been established.",
+      "CLOSED 2026-10-21: fxSP.previewRedeem returns TWO tokens. September block 26031531 returned 0.976412 fxUSD plus 0.033807 USDC per fxSP, about 1.0102 combined at par. The old 2.4% shortfall was a one-output decoding error, not evidence of fee or losses.",
+      "Candidate preview integration only; live consumer registration remains outside this delivery."
+    ],
+    "authority_observation_date": "2026-09-22",
+    "audit_scope_note": "Wrapper match and authority walk are dated research. Public matching audit for later Ethereum pool rework is not established. No claim of complete deployed-system or privileged-role audit coverage."
+  },
+  "issuer": {
+    "issuer_score": 5.5,
+    "issuer_score_source": "riskAnalyst:authored",
+    "issuer_score_generated_at": "2026-09-22T10:32:04Z",
+    "entity": "f(x) Protocol (AladdinDAO)",
+    "report_url": "https://staging.tidresearch.com/reports/fxsave/",
+    "report_url_status": "staged",
+    "summary": "f(x) Protocol (AladdinDAO), the same issuer as fxUSD. September 22 research recorded operation since 2023, $134.3M protocol TVL and two listed audits; these are historical observations. Wrapper code match does not establish full-system audit coverage.",
+    "facts": [
+      "Identical issuer to fxUSD — same score, same audits, same disclosure record. These are not independent issuer assessments.",
+      "OpenZeppelin f(x) v2 audit includes SavingFxUSD in scope BY NAME, and the deployed implementation matches that commit exactly.",
+      "⚠️ The audit does NOT cover the ProxyAdmin, the TimelockController or privileged-role configuration. No audit coverage of the authority axis.",
+      "Bug bounty present, self-hosted, Critical to $500,000.",
+      "Public matching audit coverage for the later Ethereum pool rework has not been established; shared control means fxUSD and fxSAVE are not independent counterparties."
+    ],
+    "summary_source": "riskAnalyst:authored",
+    "producer_note": "Staged report HTTP 200 and commit were relayed by coordinator; preserve staging with no promotion. Issuer 5.5 remains the September 22 authored judgment under review.",
+    "report_verification": {
+      "http_status": 200,
+      "commit": "21e33b8a3ba1389ec019a1b0368e6bccfbe192c2",
+      "source": "Coordinator relayed tidresearch verification 2026-10-21; no production promotion"
+    }
+  },
+  "review": {
+    "status": "evidence_review_complete_scores_held",
+    "morpho_pct": 37.439099002480496,
+    "trigger_pct": 30,
+    "observation_block": 26240203,
+    "observed_date": "2026-10-21",
+    "held_scores": [
+      "stability",
+      "backing",
+      "liquidity",
+      "contract",
+      "issuer",
+      "overall"
+    ],
+    "required_inputs": [
+      "Synchronized fxUSD/USDC USD marks and fxSAVE market mark unavailable; no premium/discount or exact dollar basket claim.",
+      "Crossings are coarse first-observed grid brackets; null lower endpoint is not zero.",
+      "Router caches and request times differ from basket block; no atomic or settled execution established.",
+      "No quote at the exact Morpho share balance; nearby ladder sizes do not prove whole-position execution.",
+      "Gas excluded; instant fee already applied once; queued path delays 3600 seconds and has no separately quoted queued market ladder.",
+      "DexTracker needs per-rung last-good retention, attempt sidecar and endpoint refinement before production registration.",
+      "Governance and audit facts remain September research; public matching audit for later Ethereum rework remains unestablished."
+    ],
+    "corrections": [
+      "September preview pays fxUSD AND USDC; alleged 2.4% loss and 4.3% gap withdrawn.",
+      "fxUSD route proceeds peak is not a ceiling on the complete basket.",
+      "fxUSD primary redemption EMA gate is not a holder price floor and is separate from fxSP exits."
+    ],
+    "scheduling_status": "No cron installed; next authored review after missing valuation/execution evidence or a material risk trigger.",
+    "reviewed_at": "2026-10-21T10:20:55.400925+00:00",
+    "evidence_review": "fxsave_evidence_review.json"
+  },
+  "evidence_review": "fxsave_evidence_review.json",
+  "review_disposition": "evidence_review_complete_scores_held",
+  "consumer_scope": "isolated dashboard preview; source candidate status preserved"
+}

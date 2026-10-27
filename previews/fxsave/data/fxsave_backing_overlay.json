@@ -1,0 +1,41 @@
+{
+  "schema_version": "backing-overlay/1",
+  "producer": "riskanalyst",
+  "asset": "fxsave",
+  "as_of": "2026-10-21T07:00:47Z",
+  "backing": {
+    "collateral_ratio_basis": "NO COLLATERAL RATIO IS DERIVABLE FOR fxSAVE ITSELF. It is an ERC-4626 share over fxSP, the f(x) Stability Pool, not a CDP; it has no collateral and debt numerator/denominator of its own. Do not substitute fxUSD's 136.74% October 21 system ratio here: that belongs to the leveraged CDP layer underneath.",
+    "backing_score": 4.5,
+    "backing_score_source": "riskAnalyst:authored",
+    "backing_score_generated_at": "2026-09-22T10:33:33Z",
+    "backing_score_applies_when": "collateral_ratio_declared_underivable",
+    "backing_score_applies_when_note": "Authored backing score retained for an asset with no independent collateral ratio. A recurring NAV/custody producer is requested by the October 21 feed contract; lack of a ratio does not imply lack of an analyzer.",
+    "backing_score_basis": "Dated authored 4.5 retained under review for loss-absorbing fxSP and underlying fxUSD risk. PegTracker block 26240203 confirms 72,498,799.7116395 fxSP against 65,092,675.669600785 shares, with gauge custody and totalAssets exactly equal as raw integers. Preview pays both fxUSD and USDC; the alleged September shortfall was a decoding error. No independent fxSAVE collateral ratio follows.",
+    "pass_through": {
+      "terminal_backing_score": 5.0,
+      "terminal_collateral_ratio_pct": 136.74300579452927,
+      "terminal_ratio_note": "PegTracker fxUSD producer read at Ethereum block 26239007 on 2026-10-21: aggregate 136.74%; 88.2% of pool debt on custodial WBTC at 132.19%. Pass-through context, not fxSAVE's own ratio.",
+      "redemption_assets": [
+        "fxusd",
+        "usdc"
+      ],
+      "terminal_backing_score_note": "Dated authored fxUSD context; not an independent fxSAVE collateral ratio or newly verified score."
+    },
+    "open_question": "Initial producer evidence reviewed. Morpho concentration is 37.439099002480496%, above 30%; final score re-verification remains limited by synchronized marks, coarse quotes and unproven whole-position execution.",
+    "coverage_note": "Candidate for backing-monitor preview integration; no live registration authorized.",
+    "collateral_ratio": null,
+    "total_backing": null
+  },
+  "publication_status": "candidate",
+  "assessment_status": "under_review",
+  "revision_at": "2026-10-21T10:20:55.400925+00:00",
+  "source_assessment": "assets/fxsave.md (revised 2026-10-21; last_verified 2026-09-22)",
+  "source_sha256": "3d7b45a7c0e0ee1ebac29b5331593796212e895a4ee9e834f8ebacab922ad3a2",
+  "identity": {
+    "chain": "ethereum",
+    "address": "0x7743e50F534a7f9F1791DdE7dCD89F7783Eefc39"
+  },
+  "evidence_review": "fxsave_evidence_review.json",
+  "review_disposition": "evidence_review_complete_scores_held",
+  "consumer_scope": "isolated dashboard preview; source candidate status preserved"
+}

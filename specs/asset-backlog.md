@@ -1146,7 +1146,16 @@ note        The other two orphans (fxsave backing 4.5, fxsave issuer 5.5) are NO
 Last reviewed 2026-10-02
 ```
 
-### fxsave — NOT registered; carries a live condition that can move two scores
+### fxsave — October 21 correction; build in progress
+
+The old fee-versus-loss question below is CLOSED by RiskAnalyst's October 21
+report: the decoder omitted USDC. The two-output preview did not establish a
+2.4% loss. User authorized building on October 21; a snapshot preview and four
+producer handoffs now exist. Current blockers are recurring measurements,
+current direct executable depth and authored score/dependency reconciliation.
+See `specs/fxsave-feed-contract.md`. Historical entry follows.
+
+### fxsave — historical October 2 entry (superseded)
 ```
 raised      2026-10-02 by riskAnalyst, recorded for if this asset is ever registered
 what        fxSP `previewRedeem(1e18)` returns 0.976407 — the pool redeems ~2.4% BELOW PAR — and

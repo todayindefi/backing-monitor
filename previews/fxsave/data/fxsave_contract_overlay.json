@@ -1,0 +1,40 @@
+{
+  "schema_version": "contract-overlay/1",
+  "producer": "riskanalyst",
+  "asset": "fxsave",
+  "as_of": "2026-10-21T07:00:47Z",
+  "contract": {
+    "structural_score": 4.0,
+    "structural_score_source": "riskAnalyst:authored",
+    "structural_score_generated_at": "2026-09-22T10:32:04Z",
+    "structural_score_basis": "🔴 CUT 5.0 → 4.0 on 2026-09-22 when the shared admin surface turned out to carry FOUR UNDELAYED PATHS beside the 72h timelock — full table in the fxusd contract overlay, since it is literally the same contracts. ⚠️ fxSAVE ALSO HAS ITS OWN EXTRA HOLDER: DEFAULT_ADMIN on this contract is held by the timelock AND by Safe 0xa0fb1b11cca5871fb0225b64308e249b97804e99, a second 6-of-9 granted 2025-04-02 and UNTOUCHED by the 2026-04-20 hardening. updateTreasury(dEaD) succeeds from it. Reach is bounded — treasury/harvester, expense ratio ≤50% of rewards, and CLAIM_FOR_ROLE which can redirect a redeemer's UNLOCKED proceeds — with NO path to gauge or vault principal and no upgrade, which is why this is not cut further. ⚠️ Now LEVEL with fxUSD 4.0 rather than a notch below: fxUSD lost two notches on a surface fxSAVE shares, so the three-extra-contracts penalty is absorbed.",
+    "code_facts": [
+      "✅ SavingFxUSD implementation 0xe4031e271809d20074e4bef1caeefec5f710e8a6 is BYTE-IDENTICAL to OpenZeppelin's audited commit 56a47eab; the source file is unchanged in the repo since 2025-02-24.",
+      "Root address DERIVED, not guessed: coins(0) on Curve fxSAVE/scrvUSD 0xb6E4821c6fCABe32f5F452dfD3Ef20Ce2A3a48E2 returns 0x7743e50F534a7f9F1791DdE7dCD89F7783Eefc39.",
+      "ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4 and TimelockController 0x68863fb8855b04509a835082478D6E3D0bE4E61a — IDENTICAL to fxUSD, 72h delay.",
+      "⚠️ DEFAULT_ADMIN on fxSAVE has TWO holders: the timelock and Safe 0xa0fb1b11cca5871fb0225b64308e249b97804e99 (6-of-9, owners set-equal to the main Safe). Granted 2025-04-02, untouched by the hardening.",
+      "ERC-4626 redemption simulated: 10,000,000 fxSAVE → 11,081,416.68 fxSP, uncapped; 0x…dEaD reverts ERC4626ExceededMaxRedeem as control.",
+      "PegTracker block 26240203 raw gauge custody and totalAssets both equal 72498799711639499527241931, difference 0; no fresh governance enumeration follows."
+    ],
+    "authority_note": "Same reconciliation as fxUSD: ProxyAdmin and base pool AGREE in AladdinDAO/fx-protocol-contracts; the timelock, the Safe AND the fxSAVE token itself are SILENT — absent from the manifest. ⚠️ Note the split carefully: the CONTRACT (SavingFxUSD) is in the audit scope; the DEPLOYED ADDRESS is absent from the manifest. Those are two different statements and collapsing them either way would be wrong.",
+    "cross_axis": [
+      "OPEN THREAD, re-check 2026-12-22: fxSAVE's own implementation matches the audited commit, but public matching audit coverage for fxSP's later Ethereum rework has not been established.",
+      "CLOSED 2026-10-21: fxSP.previewRedeem returns TWO tokens. September block 26031531 returned 0.976412 fxUSD plus 0.033807 USDC per fxSP, about 1.0102 combined at par. The old 2.4% shortfall was a one-output decoding error, not evidence of fee or losses.",
+      "Candidate preview integration only; live consumer registration remains outside this delivery."
+    ],
+    "authority_observation_date": "2026-09-22",
+    "audit_scope_note": "Wrapper match and authority walk are dated research. Public matching audit for later Ethereum pool rework is not established. No claim of complete deployed-system or privileged-role audit coverage."
+  },
+  "publication_status": "candidate",
+  "assessment_status": "under_review",
+  "revision_at": "2026-10-21T10:20:55.400925+00:00",
+  "source_assessment": "assets/fxsave.md (revised 2026-10-21; last_verified 2026-09-22)",
+  "source_sha256": "3d7b45a7c0e0ee1ebac29b5331593796212e895a4ee9e834f8ebacab922ad3a2",
+  "identity": {
+    "chain": "ethereum",
+    "address": "0x7743e50F534a7f9F1791DdE7dCD89F7783Eefc39"
+  },
+  "evidence_review": "fxsave_evidence_review.json",
+  "review_disposition": "evidence_review_complete_scores_held",
+  "consumer_scope": "isolated dashboard preview; source candidate status preserved"
+}

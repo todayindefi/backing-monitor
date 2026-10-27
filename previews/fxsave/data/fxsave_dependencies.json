@@ -1,0 +1,110 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "fxsave",
+  "as_of": "2026-10-21T07:00:47Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "fxSP — the f(x) Stability Pool",
+        "metric": "fxSAVE.asset() is fxSP; 1.113778147323839 fxSP/share at PegTracker block 26240203",
+        "source": "PegTracker fxsave_backing.json block 26240203, 2026-10-21T09:53:47Z",
+        "note": "⚠️ THE DIRECT UNDERLYING IS NOT fxUSD, despite every public description calling this \"saved fxUSD\". fxSP is the protocol's LIQUIDATION BACKSTOP — it absorbs liquidated CDP collateral. So this is a yield-bearing claim on a loss-absorbing pool, and its worst day arrives with its collateral's worst day.",
+        "slugs": [
+          "fxusd",
+          "usdc"
+        ],
+        "coverage_scope": "embedded_fxsp_assessment",
+        "resolution_note": "fxSP is assessed inside assets/fxsave.md, including loss absorption, share accounting and both redemption legs. No separate report is owed under the deliberate current policy. slugs resolve the lookthrough output assets; they do not rename fxSP or imply it is a risk-free terminal contract. Open a separate fxSP report if a lending market directly prices fxSP."
+      },
+      {
+        "name": "Custody vault 0x4bFc5292DA18e32ED2354350e07e417cE4796f9C",
+        "metric": "Custody gauge claim equals totalAssets: 72498799711639499527241931 raw fxSP units (18 decimals), difference 0 at block 26240203",
+        "source": "PegTracker raw custody and totalAssets calls, 2026-10-21T09:53:47Z",
+        "note": "Fresh exact reconciliation established; 76,974,259.94 is the separate September custody observation.",
+        "terminal": true,
+        "kind": "contract"
+      },
+      {
+        "name": "fxSP-Gauge 0xEd92dDe3214c24Ae04F5f96927E3bE8f8DbC3289",
+        "metric": "Gauge holds 74,269,811.07291801 fxSP, matching gauge supply at block 26240203",
+        "source": "PegTracker fxsave_backing.json, 2026-10-21T09:53:47Z",
+        "note": "Current gauge is fully backed by raw comparison; 99.68% fxSP coverage was a September observation and is not refreshed here.",
+        "terminal": true,
+        "kind": "contract"
+      },
+      {
+        "name": "fxUSD — dominant fxSP redemption leg",
+        "metric": "At block 26240203, queued preview per fxSAVE is 1.0885078089619677 FXUSD",
+        "source": "PegTracker independently timestamped two-output preview at 2026-10-21T09:53:47Z",
+        "note": "Market leg evidence now has observed peak 5,296,471.513931 USDC on the tested grid; not a global route or whole-basket ceiling. See evidence review for clocks and units.",
+        "slug": "fxusd",
+        "address": "0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+      },
+      {
+        "name": "USDC — direct fxSP redemption leg",
+        "metric": "At block 26240203, queued preview per fxSAVE is 0.036669 USDC",
+        "source": "PegTracker independently timestamped two-output preview at 2026-10-21T09:53:47Z",
+        "note": "The old one-output decoder omitted this leg and falsely reported a 2.4% fxSP shortfall and a 4.3% fxSAVE mark gap. USDC is the smaller but directly dollar-denominated output.",
+        "slug": "usdc",
+        "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+      }
+    ],
+    "downstream": [
+      {
+        "name": "Morpho Blue",
+        "metric": "Morpho holds 24370111.287305374 fxSAVE = 37.439099002480496% of supply at block 26240203",
+        "note": "Above 30% review trigger; exact holder-size market execution was not established. Old 26.13M fxUSD/1.29M USDC estimates belong to an earlier basket and are not current."
+      },
+      {
+        "name": "PT-fxSAVE-29OCT2026",
+        "metric": "Pendle market at 91.5% LLTV on Morpho",
+        "note": "Adds Pendle core, SY wrapper, maturity and oracle dependencies on top."
+      }
+    ],
+    "downstream_tracked": [],
+    "note": "The ERC-4626 asset is fxSP, held through a custody vault and gauge. fxSP redemption pays TWO tokens, fxUSD and USDC; do not omit the USDC leg or call fxUSD the sole terminal asset. fxSAVE shares fxUSD's ProxyAdmin and timelock, so scoring them as independent counterparties double-counts diversification. Consumer registration should be rechecked before assuming this overlay renders.",
+    "upstream_resolution_rule": "Each upstream has exactly one of slug, slugs, terminal+kind, or unresolved. The fxSP slugs set resolves lookthrough outputs under explicit embedded coverage; it does not assign an independent fxSP score.",
+    "downstream_basis": {
+      "derived_by_inversion": [],
+      "asserted_only": [],
+      "asserted_only_note": "downstream_tracked retained from the source generated graph; candidate does not rebuild the graph. Named downstream observations are report context, not proof of newly inverted graph edges.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    },
+    "fxsp_coverage_policy": {
+      "status": "covered_within_fxsave",
+      "source": "assets/fxsave.md frontmatter comments and sections I, III, VII",
+      "separate_report_trigger": "A lending market prices fxSP directly",
+      "independent_fxsp_score": null,
+      "note": "Report coverage is resolved; numerical dependencies-score provenance remains absent."
+    },
+    "underlying_score": null,
+    "underlying_score_source": null,
+    "underlying_score_status": "deliberately_unscored_after_review",
+    "underlying_score_basis": "No underlying_score in the canonical riskAnalyst report or existing overlays. tidresearch 4.5 has not been reconciled to a RiskAnalyst author; do not import, average or infer it. October 21 evidence review explicitly retains null: custody and quote measurements do not themselves author a dependencies score. October 21 evidence review explicitly retains null: custody and quote measurements do not themselves author a dependencies score. October 21 evidence review explicitly retains null: custody and quote measurements do not themselves author a dependencies score.",
+    "provenance_reconciliation": {
+      "status": "reconciled_not_riskanalyst_authored",
+      "tidresearch_initial_commit": "9d13ba409bb068fade847f5f41d8a8750ad116bc",
+      "tidresearch_initial_date": "2026-09-22",
+      "tidresearch_report_commit": "21e33b8a3ba1389ec019a1b0368e6bccfbe192c2",
+      "reported_value": 4.5,
+      "source": "Coordinator relayed tidresearch verification on 2026-10-21",
+      "decision": "tidresearch-origin staging score has no matching RiskAnalyst authoring basis; Dependencies remains null until explicitly authored."
+    }
+  },
+  "publication_status": "candidate",
+  "assessment_status": "under_review",
+  "revision_at": "2026-10-21T10:20:55.400925+00:00",
+  "source_assessment": "assets/fxsave.md (revised 2026-10-21; last_verified 2026-09-22)",
+  "source_sha256": "3d7b45a7c0e0ee1ebac29b5331593796212e895a4ee9e834f8ebacab922ad3a2",
+  "identity": {
+    "chain": "ethereum",
+    "address": "0x7743e50F534a7f9F1791DdE7dCD89F7783Eefc39"
+  },
+  "evidence_review": "fxsave_evidence_review.json",
+  "review_disposition": "evidence_review_complete_scores_held",
+  "consumer_scope": "isolated dashboard preview; source candidate status preserved"
+}

@@ -1,0 +1,20 @@
+const assert=require('node:assert/strict');
+const fs=require('node:fs'),vm=require('node:vm');
+const c=vm.createContext({});
+vm.runInContext(fs.readFileSync('js/renderers/common.js','utf8'),c);
+vm.runInContext(fs.readFileSync('js/renderers/fxusd.js','utf8'),c);
+const notice=c.FxUSDRenderer.reviewNotice;
+assert.equal(notice({}), '');
+assert.equal(notice({observed_at:'2026-10-24',structural_score_generated_at:'2026-09-22'}),'');
+assert.equal(notice({observed_at:'2026-10-24',structural_score_generated_at:'2026-10-24'}),'');
+const html=notice({observed_at:'2026-09-22',structural_score_generated_at:'2026-10-24',structural_score_basis:'<script>unsafe</script>',code_facts:['Revoked role']});
+assert.match(html,/historical observation from 2026-09-22/);
+assert.match(html,/not a fresh verification/);
+assert.match(html,/Revoked role/);
+assert.doesNotMatch(html,/<script>/);
+console.log('FXUSD review freshness, missing clocks and escaping passed');
+
+const refreshed=notice({observed_at:'2026-09-22',review:{refreshed_at_utc:'2026-10-24T07:00:47Z',refreshed_block:26260870,scope:'oracle ownership and emergency role'}});
+assert.match(refreshed,/partial refresh/);
+assert.match(refreshed,/Untouched observations retain their original dates/);
+assert.doesNotMatch(refreshed,/not a fresh verification of current permissions/);

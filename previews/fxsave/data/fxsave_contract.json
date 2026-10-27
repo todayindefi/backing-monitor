@@ -1,0 +1,526 @@
+{
+  "schema_version": "contract/1",
+  "asset": "fxsave",
+  "producer": "security_analyst",
+  "as_of": "2026-09-22",
+  "generated_at": "2026-10-27T16:13:42Z",
+  "contract": {
+    "headline": "Active undelayed core authority",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-22",
+    "source_file": "security_analyst/topology/assets/fxsave.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-09-22",
+        "walked_by": "hand",
+        "target_name": "fxSAVE TransparentUpgradeableProxy",
+        "terminal_name": "f(x) 6-of-9 Safe via 72h TimelockController",
+        "topology": "timelocked",
+        "n": 6,
+        "m": 9,
+        "keys": [
+          "eip1967_admin",
+          "owner",
+          "PROPOSER_ROLE",
+          "CANCELLER_ROLE",
+          "EXECUTOR_ROLE",
+          "TIMELOCK_ADMIN_ROLE"
+        ],
+        "timelock": "72h",
+        "timelock_floor": "72h",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "name": "f(x) Safe A (6 of 9)",
+            "name_verified": true,
+            "via": "PROPOSER_ROLE on TimelockController -> ProxyAdmin.owner -> upgrade",
+            "terminal": "timelock",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "threshold": 6,
+            "owners": 9,
+            "timelock": "72h",
+            "timelock_floor": "72h",
+            "delay_applies": true,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "72h",
+            "delay_floor": "72h",
+            "independent_canceller": false,
+            "reaction_window": {
+              "type": "notice-period",
+              "basis": "CallScheduled is emitted at least getMinDelay() = 259200 seconds before execution; cancel power sits with the same Safe that proposes",
+              "minimum_window_seconds": 259200,
+              "maximum_window_seconds": 259200
+            },
+            "reach": "full",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "timelock_roles": {
+              "TIMELOCK_ADMIN": [
+                "0x68863fb8855b04509a835082478d6e3d0be4e61a"
+              ],
+              "PROPOSER": [
+                "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf"
+              ],
+              "CANCELLER": [
+                "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf"
+              ],
+              "EXECUTOR": [
+                "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+                "0x0000000000000000000000000000000000000000"
+              ],
+              "DEFAULT_ADMIN": []
+            },
+            "canceller_independent": false,
+            "hand_walk": "The proxy's EIP-1967 implementation slot holds 0xe4031e271809d20074e4bef1caeefec5f710e8a6 (verified SavingFxUSD) and its admin slot holds ProxyAdmin 0x9b54b7703551d9d0ced177a78367560a8b2edda4, the same ProxyAdmin as fxUSD, the stability pool, the PoolManager and every pool; its owner() is TimelockController 0x68863fb8855b04509a835082478d6e3d0be4e61a with getMinDelay() = 259200. The timelock's role table, event history, sender-pair simulations of updateDelay(0) and ProxyAdmin.upgrade, and the floor reading are the fxUSD walk's, made once at the same block; this row repeats them rather than counting them twice. The Safe has no modules and a zero guard slot."
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "observed_at": "2026-09-22",
+        "walked_by": "hand",
+        "target_name": "fxSAVE admin settings and stability-pool redemption parameters",
+        "terminal_name": "Safe B (6 of 9, same nine owners as Safe A) undelayed; 72h timelock",
+        "topology": "nofm-multisig",
+        "n": 6,
+        "m": 9,
+        "keys": [
+          "DEFAULT_ADMIN_ROLE",
+          "updateThreshold",
+          "updateTreasury",
+          "updateHarvester",
+          "updateExpenseRatio",
+          "updateHarvesterRatio",
+          "grantRole",
+          "updateRedeemCoolDownPeriod",
+          "updateInstantRedeemFeeRatio"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "bounded",
+        "impl_upgradeable": true,
+        "role_admin": {
+          "via": "DEFAULT_ADMIN_ROLE",
+          "holder": "0xa0fb1b11cca5871fb0225b64308e249b97804e99",
+          "kind": "safe"
+        },
+        "paths": [
+          {
+            "holder": "0xa0fb1b11cca5871fb0225b64308e249b97804e99",
+            "name": "f(x) Safe B (6 of 9; owner set identical to Safe A)",
+            "name_verified": true,
+            "via": "DEFAULT_ADMIN_ROLE on fxSAVE",
+            "terminal": "safe",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0xa0fb1b11cca5871fb0225b64308e249b97804e99",
+            "threshold": 6,
+            "owners": 9,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Batch-deposit threshold, treasury and harvester addresses, expense ratio capped at 50% and harvester ratio capped at 10% of harvested rewards, and any role grant on fxSAVE including CLAIM_FOR_ROLE. No function reachable from this role withdraws principal from the gauge or the vault, and the role cannot upgrade the proxy.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "hand_walk": "fxSAVE's RoleGranted history shows DEFAULT_ADMIN_ROLE granted to this Safe on 2025-04-02 and never revoked; the 2026-04-20 hardening moved Safe A's admin to the timelock and left this grant in place. Live hasRole: true for this Safe and for the timelock, false for Safe A and for dEaD. Pair simulation of updateTreasury(dEaD): succeeds from this Safe and from the timelock, reverts AccessControlUnauthorizedAccount from Safe A and from dEaD. getThreshold() = 6 and getOwners() returned nine addresses that are set-equal to Safe A's nine; no modules, zero guard slot; created 2022-07-08 by the same owner that created Safe A's sibling. Live settings: expense ratio 0, harvester ratio 0.01%, treasury 0x0084c2e1b1823564e597ff4848a88d61ac63d703, harvester 0x0559a1b22409eef7559a5c88cbaa4e285e7b9c30."
+          },
+          {
+            "holder": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+            "name": "f(x) TimelockController (72h)",
+            "name_verified": true,
+            "via": "DEFAULT_ADMIN_ROLE on fxSAVE and on the stability pool",
+            "terminal": "timelock",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "threshold": 6,
+            "owners": 9,
+            "timelock": "72h",
+            "timelock_floor": "72h",
+            "delay_applies": true,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "72h",
+            "delay_floor": "72h",
+            "independent_canceller": false,
+            "reaction_window": {
+              "type": "notice-period",
+              "basis": "CallScheduled precedes execution by getMinDelay() = 259200 seconds",
+              "minimum_window_seconds": 259200,
+              "maximum_window_seconds": 259200
+            },
+            "reach": "bounded",
+            "reach_bound": "The same fxSAVE settings as Safe B, plus the stability pool's redemption cooldown (live 3600 seconds), instant-redeem fee (live 1%), stable depeg price (live 0.995) and strategy allocation.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "hand_walk": "The stability pool's DEFAULT_ADMIN_ROLE is held by the timelock only (live hasRole true; Safe A false after the 2026-04-20 revoke). Its NO_INSTANT_REDEEM_FEE_ROLE, a fee waiver on the holder's own instant redemptions, is held by Safe A, Safe B, the Diamond router and two further addresses and is recorded here as a bounded self-benefit, not a control over others' funds."
+          }
+        ]
+      },
+      {
+        "authority_layer": "custody",
+        "chain": "ethereum",
+        "observed_at": "2026-09-22",
+        "walked_by": "hand",
+        "target_name": "stability-pool tokens in the fxSAVE vault; redemption proceeds in cooldown; stability-pool USDC",
+        "terminal_name": "code-bound vault; Diamond router claim-for; Safe C / Safe A asset management",
+        "topology": "mixed",
+        "keys": [
+          "vault",
+          "withdraw",
+          "CLAIM_FOR_ROLE",
+          "claimFor",
+          "ASSET_MANAGER_ROLE",
+          "manage"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "bounded",
+        "impl_upgradeable": true,
+        "role_admin": {
+          "via": "DEFAULT_ADMIN_ROLE",
+          "holder": "0xa0fb1b11cca5871fb0225b64308e249b97804e99",
+          "kind": "safe"
+        },
+        "paths": [
+          {
+            "holder": "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39",
+            "name": "fxSAVE itself as vault owner",
+            "name_verified": true,
+            "via": "vault.owner() == fxSAVE; only fxSAVE calls withdraw and getReward on the Convex vault clone",
+            "terminal": "contract-role-set",
+            "holder_kind": "contract",
+            "terminal_kind": "contract",
+            "terminal_address": "0x4bfc5292da18e32ed2354350e07e417ce4796f9c",
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "vault withdrawals happen inside user deposit and redeem calls",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "The vault releases gauge tokens only to fxSAVE's own accounting paths; no discretionary caller exists on fxSAVE for the vault. Changeable only through the 72h upgrade path or by whoever administers the Convex booster behind the clone, which was not walked.",
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "hand_walk": "fxSAVE.vault() is 0x4bfc5292da18e32ed2354350e07e417ce4796f9c, an EIP-1167 clone of a Convex FXN StakingProxyERC20, and its owner() returned fxSAVE. totalAssets() read 77,179,754 stability-pool tokens against 69,643,850 fxSAVE shares. SavingFxUSD exposes no function that moves vault or gauge balances other than deposit, redeem and harvest accounting."
+          },
+          {
+            "holder": "0x33636d49fbefbe798e15e7f356e8dbef543cc708",
+            "name": "f(x) Diamond router (owner: Safe A)",
+            "name_verified": true,
+            "via": "CLAIM_FOR_ROLE -> claimFor(owner, receiver)",
+            "terminal": "safe",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "threshold": 6,
+            "owners": 9,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "the Diamond's owner can change facets and call claimFor without scheduling",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "claimFor makes a redeemer's locked proxy call the stability pool's redeem with an arbitrary receiver, so it reaches only assets that have finished the 3600-second cooldown and have not yet been claimed by their owner; it cannot touch shares, the gauge or the vault.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "hand_walk": "CLAIM_FOR_ROLE was granted to the Diamond on 2025-04-02 and live hasRole confirmed it. The verified _claim(owner, receiver) executes base.redeem(receiver, max) through the owner's LockedFxSaveProxy, which is the redirect. The role's admin is DEFAULT_ADMIN_ROLE, held undelayed by Safe B, so the set of holders can widen without notice."
+          },
+          {
+            "holder": "0x28c921adac4c1072658eb01a28da06b5f651ef62",
+            "name": "f(x) Safe C (3 of 4 from Safe A's nine)",
+            "name_verified": true,
+            "via": "ASSET_MANAGER_ROLE on the stability pool -> manage(USDC, amount)",
+            "terminal": "safe",
+            "holder_kind": "contract",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x28c921adac4c1072658eb01a28da06b5f651ef62",
+            "threshold": 3,
+            "owners": 4,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "delay_floor": "not-applicable",
+            "independent_canceller": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "manage can only move USDC into the strategy the timelock allocated, up to its capacity; the strategy's withdraw, kill and execute are onlyOperator where operator is the stability pool, so the funds stay recallable by the pool and cannot be redirected by the asset manager.",
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "hand_walk": "allocations(USDC) on the stability pool returned strategy 0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f with capacity 100,000,000 USDC against 2,676,765 USDC held; the fxUSD allocation is empty. ASSET_MANAGER_ROLE is held by Safe A, Safe C and the timelock, all confirmed by live hasRole; getThreshold() on Safe C is 3 over four owners, every one of them an owner of Safe A."
+          }
+        ]
+      }
+    ],
+    "authority_summary": {
+      "schema": "actionable-path/1",
+      "state": "active-core-undelayed",
+      "headline": "Active undelayed core authority",
+      "total_layers": 3,
+      "total_paths": 6,
+      "inactive_layers": 0,
+      "unresolved_layers": 0,
+      "unresolved_paths": 0,
+      "active_paths": 6,
+      "active_core_paths": 3,
+      "active_bounded_paths": 5,
+      "undelayed_core_paths": 2,
+      "undelayed_bounded_paths": 4,
+      "active": [
+        {
+          "authority_layer": "contract-upgrade",
+          "target_name": "fxSAVE TransparentUpgradeableProxy",
+          "name": "f(x) Safe A (6 of 9)",
+          "reach": "full",
+          "reach_bound": null,
+          "value_at_risk_scope": "core",
+          "execution_delay": "72h",
+          "reaction_window": {
+            "type": "notice-period",
+            "basis": "CallScheduled is emitted at least getMinDelay() = 259200 seconds before execution; cancel power sits with the same Safe that proposes",
+            "minimum_window_seconds": 259200,
+            "maximum_window_seconds": 259200
+          }
+        },
+        {
+          "authority_layer": "parameter",
+          "target_name": "fxSAVE admin settings and stability-pool redemption parameters",
+          "name": "f(x) Safe B (6 of 9; owner set identical to Safe A)",
+          "reach": "bounded",
+          "reach_bound": "Batch-deposit threshold, treasury and harvester addresses, expense ratio capped at 50% and harvester ratio capped at 10% of harvested rewards, and any role grant on fxSAVE including CLAIM_FOR_ROLE. No function reachable from this role withdraws principal from the gauge or the vault, and the role cannot upgrade the proxy.",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "parameter",
+          "target_name": "fxSAVE admin settings and stability-pool redemption parameters",
+          "name": "f(x) TimelockController (72h)",
+          "reach": "bounded",
+          "reach_bound": "The same fxSAVE settings as Safe B, plus the stability pool's redemption cooldown (live 3600 seconds), instant-redeem fee (live 1%), stable depeg price (live 0.995) and strategy allocation.",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "72h",
+          "reaction_window": {
+            "type": "notice-period",
+            "basis": "CallScheduled precedes execution by getMinDelay() = 259200 seconds",
+            "minimum_window_seconds": 259200,
+            "maximum_window_seconds": 259200
+          }
+        },
+        {
+          "authority_layer": "custody",
+          "target_name": "stability-pool tokens in the fxSAVE vault; redemption proceeds in cooldown; stability-pool USDC",
+          "name": "fxSAVE itself as vault owner",
+          "reach": "bounded",
+          "reach_bound": "The vault releases gauge tokens only to fxSAVE's own accounting paths; no discretionary caller exists on fxSAVE for the vault. Changeable only through the 72h upgrade path or by whoever administers the Convex booster behind the clone, which was not walked.",
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "vault withdrawals happen inside user deposit and redeem calls",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "custody",
+          "target_name": "stability-pool tokens in the fxSAVE vault; redemption proceeds in cooldown; stability-pool USDC",
+          "name": "f(x) Diamond router (owner: Safe A)",
+          "reach": "bounded",
+          "reach_bound": "claimFor makes a redeemer's locked proxy call the stability pool's redeem with an arbitrary receiver, so it reaches only assets that have finished the 3600-second cooldown and have not yet been claimed by their owner; it cannot touch shares, the gauge or the vault.",
+          "value_at_risk_scope": "bounded-pool",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "the Diamond's owner can change facets and call claimFor without scheduling",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        },
+        {
+          "authority_layer": "custody",
+          "target_name": "stability-pool tokens in the fxSAVE vault; redemption proceeds in cooldown; stability-pool USDC",
+          "name": "f(x) Safe C (3 of 4 from Safe A's nine)",
+          "reach": "bounded",
+          "reach_bound": "manage can only move USDC into the strategy the timelock allocated, up to its capacity; the strategy's withdraw, kill and execute are onlyOperator where operator is the stability pool, so the funds stay recallable by the pool and cannot be redirected by the asset manager.",
+          "value_at_risk_scope": "core",
+          "execution_delay": "none",
+          "reaction_window": {
+            "type": "none",
+            "basis": "a Safe transaction executes on signature collection with no on-chain scheduling",
+            "minimum_window_seconds": 0,
+            "maximum_window_seconds": 0
+          }
+        }
+      ]
+    },
+    "unresolved": [
+      "Who operates the nine Safe keys and whether any two share a person, device or vendor. Nine distinct EOAs with nine distinct first-funding sources were read; eight of nine signed at least one of the last sixty executed transactions of the main Safe and one has never signed; independence of the keys is not asserted from that.",
+      "The Convex FXN booster and fee registry behind the vault clone were not walked. The vault's owner is fxSAVE, but whoever administers the booster that created the clone is an authority over the staking wrapper that this file makes no claim about.",
+      "The Diamond router at 0x33636d49fbefbe798e15e7f356e8dbef543cc708 holds CLAIM_FOR_ROLE here and OPERATOR_ROLE on the PoolManager and is owned by the 6-of-9 Safe, which can change its facets without delay. Its facet set was not walked.",
+      "fxSAVE's backing is stability-pool tokens whose value moves with rebalances and liquidations run by the PoolManager against fxUSD's collateral pools. The undelayed pause, price-oracle and asset-management paths on those pools are recorded in the fxUSD walk and apply here by look-through; they are not repeated as rows.",
+      "Aave governance over the strategy destination and Curve governance over the fxUSD/USDC pool whose EMA gates fxUSD redemption were not walked.",
+      "The stability pool implementation is a later code generation than the audited commit and no public audit naming that Ethereum rework was located; the fxSAVE implementation itself matches the audited file."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "fxusd",
+        "shares": [
+          {
+            "kind": "proxy-admin",
+            "address": "0x9b54b7703551d9d0ced177a78367560a8b2edda4",
+            "roles": [
+              "eip1967_admin"
+            ]
+          },
+          {
+            "kind": "timelock",
+            "address": "0x68863fb8855b04509a835082478d6e3d0be4e61a",
+            "delay": "72h",
+            "roles": [
+              "proxy-admin-owner",
+              "DEFAULT_ADMIN_ROLE"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "n": 6,
+            "m": 9,
+            "delay": "72h",
+            "roles": [
+              "PROPOSER_ROLE",
+              "CANCELLER_ROLE",
+              "EXECUTOR_ROLE"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0x26b2ec4e02ebe2f54583af25b647b1d619e67bbf",
+            "n": 6,
+            "m": 9,
+            "delay": "none",
+            "roles": [
+              "EMERGENCY_ROLE",
+              "ASSET_MANAGER_ROLE",
+              "oracle-owner"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0x28c921adac4c1072658eb01a28da06b5f651ef62",
+            "n": 3,
+            "m": 4,
+            "delay": "none",
+            "roles": [
+              "EMERGENCY_ROLE",
+              "ASSET_MANAGER_ROLE"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xa0fb1b11cca5871fb0225b64308e249b97804e99",
+            "n": 6,
+            "m": 9,
+            "delay": "none",
+            "roles": [
+              "fxSAVE-DEFAULT_ADMIN_ROLE"
+            ]
+          },
+          {
+            "kind": "contract",
+            "address": "0x33636d49fbefbe798e15e7f356e8dbef543cc708",
+            "roles": [
+              "MIGRATOR_ROLE",
+              "OPERATOR_ROLE",
+              "CLAIM_FOR_ROLE"
+            ]
+          }
+        ]
+      }
+    ],
+    "review": null,
+    "walk_notes": [
+      "Hand-walked 2026-09-22 with read-only Ethereum calls at block 26,031,531,",
+      "plus the full role-event history and the verified sources of every contract",
+      "on the path. No transaction was signed or sent.",
+      "",
+      "fxSAVE and fxUSD are ONE authority surface emitted twice. They share the",
+      "ProxyAdmin, the 72-hour TimelockController, and the 6-of-9 Safe that proposes",
+      "and cancels on it; every key that appears in this file appears in fxUSD's.",
+      "Two rows side by side are the same people, not two controls. fxSAVE's asset",
+      "is the f(x) stability pool token, so the stability pool and the PoolManager",
+      "that draws on it are look-through authorities here, not a separate system.",
+      "",
+      "Result: upgrades sit behind the 72-hour timelock. fxSAVE's own admin role is",
+      "held by the timelock AND by a second 6-of-9 Safe whose nine owners are",
+      "exactly the nine of the main Safe, so every admin setting on fxSAVE is",
+      "reachable by the same quorum with no delay: batch threshold, treasury,",
+      "harvester, the reward expense ratio (capped at 50% in code), and the grant",
+      "of the role that can redirect a redeemer's unlocked proceeds to any address.",
+      "No path from that role reaches principal in the gauge or the vault. Below",
+      "fxSAVE, the same 6-of-9 and a 3-of-4 drawn from the same nine keys can move",
+      "the stability pool's USDC into a timelock-allocated Aave strategy without",
+      "delay. Neither fxSAVE nor the stability pool has a pause function.",
+      "",
+      "What this did NOT establish: who holds the nine keys or whether any two are",
+      "one operator; the Convex booster authority over the vault clone; the facet",
+      "set of the Diamond router that holds the claim-for role; Aave and Curve",
+      "governance behind the strategy and the fxUSD peg oracle."
+    ]
+  },
+  "consumer_scope": "isolated preview; committed hand-walk only",
+  "topology_commit": "94f8329f53696239f81d9f3896c7db8a0337cade"
+}

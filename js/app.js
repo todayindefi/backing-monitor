@@ -59,6 +59,8 @@ var ASSET_RENDERERS = {
     wsteth:    typeof WstETHRenderer    !== 'undefined' ? WstETHRenderer    : null,
     frxusd:    typeof FrxUSDRenderer    !== 'undefined' ? FrxUSDRenderer    : null,
     sfrxusd:   typeof SfrxUSDRenderer   !== 'undefined' ? SfrxUSDRenderer   : null,
+    fxusd:     typeof FxUSDRenderer !== 'undefined' ? FxUSDRenderer : null,
+    fxsave:    typeof FxSaveRenderer !== 'undefined' ? FxSaveRenderer : null,
     scrvusd:   typeof ScrvUSDRenderer   !== 'undefined' ? ScrvUSDRenderer   : null,
     'msusd-metronome': typeof MsUSDMetronomeRenderer !== 'undefined' ? MsUSDMetronomeRenderer : null,
     usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
@@ -210,6 +212,7 @@ function backingVerificationOverlay(file, verification) {
 // Index view
 // ========================================
 async function renderIndex() {
+    document.body.classList.remove('fxsave-dashboard');
     document.getElementById('index-view').classList.remove('hidden');
     document.getElementById('asset-view').classList.add('hidden');
     document.getElementById('error-view').classList.add('hidden');
@@ -317,6 +320,10 @@ async function renderAsset(slug) {
     document.getElementById('index-view').classList.add('hidden');
     document.getElementById('asset-view').classList.remove('hidden');
     document.getElementById('error-view').classList.add('hidden');
+
+    document.body.classList.remove('fxsave-dashboard');
+    var previousAxisNotes=document.getElementById('axis-notes-lifted');
+    if(previousAxisNotes)previousAxisNotes.innerHTML='';
 
     // Default-hide apyx-specific header/nav adornments — the apyx renderer
     // re-reveals them at the end of render() when applicable. Without this,

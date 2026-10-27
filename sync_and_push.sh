@@ -26,6 +26,15 @@ if ! PYTHONPYCACHEPREFIX=/tmp/backing-monitor-pycache python3 msusd_metronome_ba
     echo "$(date): ERROR Metronome msUSD analyzer failed; retaining the last published snapshot" >&2
 fi
 
+# Keep the isolated FXSave review snapshot aligned with its producers. This
+# writes only previews/fxsave/, never the serving registry or production data/.
+# Invalid input retains the prior snapshot; the renderer shows original clocks.
+if [ -f tools/prepare_fxsave_preview.py ]; then
+    if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/prepare_fxsave_preview.py --from-sync >/tmp/fxsave-preview-sync.log 2>&1; then
+        echo "$(date): ERROR FXSave preview refresh failed; prior snapshot retained (see /tmp/fxsave-preview-sync.log)" >&2
+    fi
+fi
+
 # Sync backing data from PegTracker
 # ============================================================================
 # ⚠️ WAS 76 HAND-TYPED cp LINES. A new analyzer output silently never reached the
