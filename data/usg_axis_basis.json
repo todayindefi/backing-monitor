@@ -2,19 +2,19 @@
   "schema_version": "axis-basis/1",
   "producer": "riskanalyst",
   "asset": "usg",
-  "as_of": "2026-10-28T03:37:27Z",
+  "as_of": "2026-10-28T05:37:14Z",
   "peg": {
     "peg_mechanism_score": 5.0,
     "peg_mechanism_score_source": "riskAnalyst:authored",
     "peg_mechanism_score_generated_at": "2026-10-28T03:37:27Z",
-    "peg_mechanism_score_basis": "crvUSD-derived design at $3.89M circulating scale; persistent $0.995732 peg, no collateral redemption and zero keeper debt. HEC/LEC economics respond to price; FIR is fixed-rate. Held at 5.0. October 28 feed and block 26,288,820 keeper reads.",
+    "peg_mechanism_score_basis": "Longer-term assessment from the same dashboard peg block and referenced history. All 717 retained observations are below par; 7-day mean $0.995792 and retained-month mean $0.995599. Five reported October 3 observations are below $0.99; pool-derived historical marks are not independently reconstructed fills. crvUSD-derived CDP/PegKeeper design without collateral redemption; HEC/LEC economics respond to price, FIR is fixed-rate. Short operating history and persistent discount limit confidence. Held at 5.0; a spot tick alone is not a reassessment.",
     "peg_mechanism_score_persistence": "filtered — mechanism design, not spot-responsive"
   },
   "backing": {
     "backing_score": 5.0,
     "backing_score_source": "riskAnalyst:authored",
     "backing_score_generated_at": "2026-10-28T03:37:27Z",
-    "backing_score_basis": "$5,015,608 borrower collateral / $3,891,517 debt = 128.89% conservative CR. Excludes $904,621 LP-owned keeper-pool stables. Zero bad debt across all 19 controllers independently read at block 26,288,820. 36.7% of debt in markets below 5% aggregate liquidation headroom, 69.8% below 10%; these are not borrower-level distances. Maximum dangerous oracle overvaluation 0.1886%; BTC oracle is 1.3441% below independent NAV. Held at 5.0.",
+    "backing_score_basis": "Real borrower overcollateralization, with shared-history mean conservative CR 129.10% over 7 days versus 130.45% over the retained month; no sampled bad debt. Recent softer CR warrants attention, not an extrapolated long-term decline. Recursive LP collateral and narrow liquidation margins remain structural constraints. Inclusive CR includes LP-owned pool inventory and is not borrower coverage. No market-headroom history is available, so dated headroom buckets are not presented as long-term averages. Held at 5.0.",
     "backing_score_persistence": "filtered — collateral composition, though the ratio itself is spot-responsive",
     "backing_score_denominator": "✅ ASK WHAT THE RATIO DIVIDES BY — and here the answer is the good one: borrower collateral over borrower debt, two independently determined quantities. Contrast usdat, susds and the syrup pools, where backing is DEFINED as the supply and the ratio is an accounting identity."
   },
@@ -22,28 +22,39 @@
     "liquidity_score": 3.0,
     "liquidity_score_source": "riskAnalyst:authored",
     "liquidity_score_generated_at": "2026-10-28T03:37:27Z",
-    "liquidity_score_basis": "Held at 3.0 after the October 16 cut. October 28 inventory $904,621 (+1.9%); USDC/frxUSD pool USG shares 72.06%/72.65%, keeper defense $0. Fresh get_dy at block 26,288,820: equal-split exit cost 0.49% at 10K, 0.55% at 100K, 0.68% at 250K, 1.11% at 500K, 2.64% at 750K, 13.04% at 1M. Costs versus nominal $1, pool fees included, gas excluded, frxUSD valued at par. Read-only independent scenarios, not optimized or executed fills. sUSG holds 30.9% of supply and shares the underlying exit. Modest inventory recovery does not remove the cliff.",
-    "liquidity_score_persistence": "filtered — keeper inventory, pool imbalance and venue structure, not spot depth. Re-check on a further fall in counter-side stables, either pool crossing 75% USG, or the measured 250K rung exceeding ~2%.",
-    "liquidity_score_depth_caveat": "Fresh read-only get_dy at block 26,288,820. Independent quote scenarios, equal split is feasible not optimized, output stablecoins valued at par. See data/reviews/usg-2026-10-28/onchain-probe.json.",
-    "liquidity_score_band_divergence": "A dashboard depth band measures crossing size relative to supply. The authored 3.0 also prices persistent discount, reliance on two increasingly imbalanced pools, and the steep cost curve: 1.11% at 500K, 2.64% at 750K, 13.04% at 1M on the measured equal split.",
-    "liquidity_score_ladder": "Equal split across USDC/frxUSD keeper pools at Ethereum block 26,288,820: 10,000 USG -> 0.49% cost, 50,000 USG -> 0.51% cost, 100,000 USG -> 0.55% cost, 250,000 USG -> 0.68% cost, 500,000 USG -> 1.11% cost, 750,000 USG -> 2.64% cost, 1,000,000 USG -> 13.04% cost. Sampled 2% crossing bracketed 500K–750K. Nominal dollar basis; pool fees included, gas excluded.",
-    "liquidity_score_ladder_as_of": "2026-10-28T03:37:27Z"
+    "liquidity_score_basis": "Longer-term assessment using the exact DexTracker source and definitions consumed by the dashboard. Limited venue diversity and large-size price impact constrain exits despite low small-trade impact. Shared-history counter-inventory averages $909,580 over 7 days and $872,047 over the retained month, with a sharp contraction in the reported October 3 stress episode. Inventory is context, not executable depth. Only one comparable DexTracker ladder snapshot is archived: no depth trend or average is established. Same market-sizing anchor, inventory-proportional split and slippage_bps_debiased; the dated numerical ladder is supporting evidence. The standing par discount belongs on Peg. Held at 3.0; improvement requires repeated comparable depth evidence.",
+    "liquidity_score_persistence": "Reassess on material deterioration in shared 50-bps depth or published impact rungs, reduced exit inventory or changing venue structure. Peg deviation is assessed on axis 1.",
+    "liquidity_score_depth_caveat": "Same published DexTracker rungs and slippage_bps_debiased as dashboard. USD sizes at dated market mark; added impact relative to $100 baseline; inventory-proportional allocation. Output stables at $1, quotes include fees and exclude gas. No independent replacement ladder.",
+    "liquidity_score_band_divergence": "Dashboard band and report score share the exact DexTracker measurement. Authored 3.0 additionally interprets venue concentration and the shape of the published impact curve; it is not a substitute calculation of market depth.",
+    "liquidity_score_ladder": "$1,000: 0.05 bps added impact, 4.94 bps total market-value cost; $10,000: 0.60 bps added impact, 5.48 bps total market-value cost; $100,000: 6.64 bps added impact, 11.53 bps total market-value cost; $1,000,000: 1252.56 bps added impact, 1257.44 bps total market-value cost",
+    "liquidity_score_ladder_as_of": "2026-10-27T23:51:16Z",
+    "liquidity_score_ladder_source": "https://todayindefi.github.io/backing-monitor/data/usg_liquidity.json"
   },
   "dependencies": {
     "underlying_score": 4.0,
     "underlying_score_source": "riskAnalyst:authored",
     "underlying_score_generated_at": "2026-10-28T03:37:27Z",
-    "underlying_score_basis": "Held at 4.0. Layered wrapper/Curve LP/constituent exposure; Resupply reUSD-linked debt $758,794 (19.5%) across three markets, reUSD price $0.990568. Stable-LP minimum-price marking limits diversification. 69.8% of debt in markets below 10% aggregate headroom. Two new listed markets, frxUSD/DUSD and frxUSD/crvUSD, have zero debt and add no current exposure. No falsely precise weighted score published.",
-    "underlying_score_persistence": "filtered — book composition, not a daily balance",
-    "underlying_score_routing": "⚠️ Merges after 49d0b4ca2 but axis 4 renders no score today — source-of-record."
+    "underlying_score_basis": "Persistent layered exposure through market contracts, StakeDAO/Convex/gauge wrappers, Curve LPs and constituent issuers. Resupply reUSD remains a recursive dependency at roughly one-fifth of debt in dated October observations, not a measured monthly average. Minimum-price collateral marking limits pair diversification. The weakest-exotic historical field does not identify the same constituent in every sample. No continuous composition/headroom history is available. Idle additions add no current debt exposure. Held at 4.0.",
+    "underlying_score_persistence": "filtered — book composition, not a daily balance"
   },
   "issuer": {
     "issuer_score": 4.0,
     "issuer_score_source": "riskAnalyst:authored",
     "issuer_score_generated_at": "2026-10-28T03:37:27Z",
-    "issuer_score_basis": "Held at 4.0. Approximately five-and-a-half-month operating history and sub-$5M supply; official USG docs still warn of beta status. Historical audit set retained, remediation unverified. Governance and audit pages returned headings without substantive content on October 28; current TGE/live-governance and new-audit status are not established. Contract authority is scored separately.",
-    "issuer_score_persistence": "filtered — entity, not spot-responsive",
-    "issuer_score_routing": "⚠️ UNROUTED — backing-monitor holding axis-6 registration."
+    "issuer_score_basis": "Small issuer, beta product and short operating record. Supply stays below $5M throughout retained dashboard history; the latest-week average is below the retained-month average. Historical audit coverage is recorded, while per-finding remediation and current token-governance status remain unverified. October governance/audit retrievals supplied insufficient content; absence of retrieved content does not establish absence of governance or audits. Administrative powers are scored on Contract & Admin. Held at 4.0.",
+    "issuer_score_persistence": "filtered — entity, not spot-responsive"
   },
-  "routing_note": "⚠️ ROUTING VERIFIED AGAINST backing-monitor/js/renderers/common.js. peg, backing and liquidity route and render; dependencies merges but renders no score; issuer unrouted. ⚠️ NO `contract` block — the contract overlay already carries a rendering structural_score_basis."
+  "routing_note": "The reviewed dashboard registers all six axis overlays. Source precedence and report interpretation are documented in specs/usg-shared-evidence.md. The dated saved payloads are evidence, not a live deployment verification.",
+  "report_evidence_policy": {
+    "source_map": "specs/usg-shared-evidence.md",
+    "history_source": "usg_backing_history.json",
+    "history_window_end": "2026-10-28T05:37:14Z",
+    "windows_days": [
+      7,
+      30
+    ],
+    "method": "arithmetic means of available samples; counts are observations, not exact time at a level",
+    "liquidity_history_limit": "one comparable canonical ladder snapshot; no depth trend established",
+    "rule": "dashboard and report share evidence and definitions; report scores assess sustained or structural conditions"
+  }
 }
