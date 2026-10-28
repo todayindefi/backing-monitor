@@ -1,0 +1,588 @@
+{
+  "reviewed_commit": "e8e50b09d0350ba05231f38438673e45382a90fd",
+  "audited_at_utc": "2026-10-28T07:35:25.291525+00:00",
+  "status": "Dashboard sources and generated score HTML verified; full report/history migration not certified. tidr propagation is next, not performed.",
+  "consumer_contract": {
+    "view_overlays": "js/app.js uses view slug (mstr/strc/strcx independently) for AXIS_OVERLAYS; merge order is CommonRenderer.AXIS_OVERLAYS declaration order. Base uses assets.json.data_source.",
+    "family_overalls": "strc_axis_basis.json.family_overalls.assets selected per slug; last_verified is full review, last_revised is targeted filing pass. No substitution of per-axis scores for overall.",
+    "venue_only": "apxusd/apyusd/susdat_liquidity.json scope=venue_inventory_only and does_not_publish includes depth, primary_exit, rating. common.js carries base exit_mark/depth/primary_exit into adapted liquidity; editorial axis_basis merges after.",
+    "rung_read": "CommonRenderer._ladderRungBps reads slippage_bps, else slippage_pct*100. _effectiveDepthAtBps subtracts baseline rung for added impact; fill_ratio/output_usd remain separate total-value outputs."
+  },
+  "views": {
+    "mstr": {
+      "base": "strc_backing.json",
+      "scope": "Issuer/common-equity holder lens; report assesses issuer dependency, not equity investment advice. No inherited STRC DeFi axes.",
+      "fields": [
+        "tradfi.mstr.price_usd",
+        "tradfi.mstr.market_cap_usd",
+        "tradfi.btc.price_usd",
+        "tradfi.strategy_btc_holdings.count",
+        "tradfi.mnav.value",
+        "tradfi.mnav.definition_version",
+        "tradfi.common_btc_coverage.value",
+        "mstr_view.btc_nav_per_share_basic_usd",
+        "mstr_view.btc_nav_per_share_diluted_usd",
+        "mstr_view.premium_discount_pct",
+        "mstr_view.share_count*",
+        "mstr_view.balance_sheet",
+        "mstr_view.capital_structure",
+        "mstr_view.convertible_maturity_wall",
+        "mstr_view.atm_cadence_90d",
+        "cash_service_waterfall",
+        "digital_credit_framework",
+        "strategy_events.json.events"
+      ],
+      "providers": {
+        "equity": "tradfi.mstr.source=yfinance",
+        "btc": "tradfi.btc.source=coingecko",
+        "holdings": "tradfi.strategy_btc_holdings.count_source=8-K 431146; count_scraped retained as cross-check"
+      },
+      "references": {
+        "mnav": "EV / BTC reserve; v2 = market cap + debt + preferred - Reserve cash, divided by BTC value. Not MktCap/BTC.",
+        "common_btc_coverage": "MktCap/BTC; leverage indicator, not mNAV",
+        "premium_discount_pct": "MSTR price / BTC NAV per share - 1; stored fraction, multiply by 100 for percent. Not STRCx premium.",
+        "cash": "digital_credit_framework.usd_reserve_policy.usd_cash_usd=$242.4M; balance_usd=$4.83B is separate Reserve. Legacy mstr_view.balance_sheet.cash_and_equivalents_usd means Reserve, not USD Cash."
+      },
+      "history": {
+        "file": "strc_backing_history.json",
+        "container": "series",
+        "timestamp_field": "ts",
+        "observations": 4142,
+        "start": "2026-05-29T05:49:34Z",
+        "end": "2026-10-28T06:50:13Z",
+        "field_observations": {
+          "mnav": 4142,
+          "mnav_definition_version": 4004,
+          "common_btc_coverage": 4004,
+          "mstr_price": 4142,
+          "btc_price": 4142,
+          "mstr_share_count": 4111,
+          "btc_nav_per_share_basic_usd": 4004,
+          "premium_discount_pct": 4111,
+          "usd_reserve_balance_usd": 1489,
+          "dcs_remaining_usd": 1489
+        },
+        "limit": "Observed samples; not time weighted. Missing fields remain missing; no replacement series or historical ladder is inferred."
+      },
+      "liquidity": "No DEX ladder; instrument-specific report funding assessment. Do not borrow STRC or wrapper depth.",
+      "overall": 3.5
+    },
+    "strc": {
+      "base": "strc_backing.json",
+      "scope": "Raw Nasdaq preferred credit instrument; not the wrapper.",
+      "fields": [
+        "tradfi.strc_secondary.price_usd",
+        "tradfi.strc_secondary.par_usd",
+        "tradfi.strc_secondary.discount_to_par_bps",
+        "tradfi.strc_secondary.source",
+        "tradfi.strc_secondary.quote_fetched_at",
+        "tradfi.strc_dividend",
+        "tradfi.strc_dividend.pending_terms",
+        "cash_service_waterfall",
+        "digital_credit_framework"
+      ],
+      "references": "STRC secondary yfinance price vs its $100 par; bps=(price/par-1)*10000. Source market session is closed in this snapshot: latest quote, not live fill.",
+      "history": {
+        "file": "strc_backing_history.json",
+        "container": "series",
+        "timestamp_field": "ts",
+        "observations": 4142,
+        "start": "2026-05-29T05:49:34Z",
+        "end": "2026-10-28T06:50:13Z",
+        "field_observations": {
+          "strc_price": 4142,
+          "strc_current_rate": 4136,
+          "annual_obligation_total_usd": 4138,
+          "cash_runway_months_total": 4093,
+          "runway_strc_only_years": 4138
+        },
+        "limit": "Observed samples; not time weighted. Missing fields remain missing; no replacement series or historical ladder is inferred."
+      },
+      "liquidity": "Authored 7.0 on Nasdaq listing/access; no measured institutional-size ladder. Do not claim a tested 2% crossing.",
+      "overall": 3.0,
+      "axes": "Volatility 5.0; Liquidity 7.0; instrument-specific counterparty/redemption assessments stay in report, not forced into DeFi axis schema."
+    },
+    "strcx": {
+      "base": "strc_backing.json",
+      "scope": "Backed tokenized wrapper. Own strcx_axis_basis.json and strcx_issuer.json; STRC axis envelope is not merged under STRCx.",
+      "fields": [
+        "wrapper_strcx.market_price_usd",
+        "wrapper_strcx.market_price_source",
+        "wrapper_strcx.underlying_strc_price_usd",
+        "wrapper_strcx.premium_to_underlying_bps",
+        "wrapper_strcx.multiplier",
+        "wrapper_strcx.prescaled_price_usd",
+        "wrapper_strcx.coingecko_scaled_price_usd",
+        "wrapper_strcx.price_crosscheck_bps",
+        "wrapper_strcx.jupiter_liquidity_usd",
+        "wrapper_strcx.total_supply_basis",
+        "wrapper_strcx.per_chain"
+      ],
+      "references": "Jupiter scaled wrapper mark / paired underlying STRC mark - 1. Prescaled CoinGecko price must be divided by multiplier before comparison. Never use strc history premium_discount_pct (MSTR/BTC NAV).",
+      "history": {
+        "file": "strc_backing_history.json",
+        "container": "series",
+        "timestamp_field": "ts",
+        "observations": 4142,
+        "start": "2026-05-29T05:49:34Z",
+        "end": "2026-10-28T06:50:13Z",
+        "field_observations": {
+          "strcx_market_price_usd": 4098,
+          "strcx_underlying_strc_usd": 4098,
+          "strcx_price_source": 4098,
+          "strcx_reconstructed": 2761,
+          "strcx_candle_ts": 2761,
+          "multiplier": 4142
+        },
+        "limit": "Observed samples; not time weighted. Missing fields remain missing; no replacement series or historical ladder is inferred."
+      },
+      "history_method": "Use each row stored pair. Pre-2026-09-14 history is reconstructed hourly pool close / stored multiplier against contemporaneous Yahoo STRC mark; later direct Jupiter observations distinguished by strcx_reconstructed. Do not describe reconstructed points as recovered Jupiter fills.",
+      "liquidity": "wrapper_strcx.jupiter_liquidity_usd is venue liquidity, not executable depth. Authored 2.5; derived_score_status=not_computed. No ladder or redemption-capacity substitute.",
+      "overall": 3.0
+    },
+    "apxusd": {
+      "base": "apxusd_backing.json",
+      "scope": "Non-yield Apyx liability with attested netted reserve coverage.",
+      "peg": {
+        "source": "oracle",
+        "history_ref": "apxusd_backing_history.json",
+        "history_field": "peg_market_price"
+      },
+      "peg_fields": [
+        "peg.market_price",
+        "peg.nav",
+        "peg.premium_discount_pct"
+      ],
+      "peg_reference": "$1 NAV",
+      "history": {
+        "file": "apxusd_backing_history.json",
+        "container": "entries",
+        "timestamp_field": "timestamp",
+        "observations": 720,
+        "start": "2026-09-28T06:53:30Z",
+        "end": "2026-10-28T06:49:57Z",
+        "field_observations": {
+          "peg_market_price": 720,
+          "peg_premium_discount_pct": 720,
+          "nav": 720,
+          "collateral_ratio": 718,
+          "pol_usd": 718,
+          "inventory_usd": 718
+        },
+        "limit": "Observed samples; not time weighted. Missing fields remain missing; no replacement series or historical ladder is inferred."
+      },
+      "liquidity": {
+        "owner": "PegTracker base.liquidity; venue-only DexTracker supplementary inventories",
+        "fields": [
+          "liquidity.exit_mark.source",
+          "liquidity.exit_mark.fair_value",
+          "liquidity.exit_mark.fair_value_basis",
+          "liquidity.exit_mark.quotes",
+          "liquidity.exit_mark.slippage_bps_basis",
+          "liquidity.two_pct_depth_basis",
+          "liquidity.depth_50bps",
+          "liquidity.primary_exit"
+        ],
+        "source": "kyberswap",
+        "sizing": "market",
+        "anchor": 0.992874115,
+        "quote_sizes": [
+          "1000",
+          "10000",
+          "50000",
+          "100000"
+        ],
+        "basis_declared_by_exit_mark": "ALL-IN COST against notional: (output_usd - size) / size. Includes the venue's base spread, so it is not comparable rung-for-rung with a price-impact figure measured against a venue's own spot rung.",
+        "basis_declared_by_depth": "A FLOOR, not a measurement. The deepest rung quoted ($100,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. ⚠️ That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost — which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
+        "display": "Reads quoted bps as published; added-impact depth subtracts smallest rung baseline. Total output/size is separate. Fees/provider route and observation time retained; no guaranteed redemption or gas-adjusted fill inferred.",
+        "primary_exit": {
+          "venue": "apyx issuer redemption",
+          "into": "reserve stables",
+          "gated": null,
+          "gated_basis": "unmeasured",
+          "gated_note": "⚠️ UNMEASURED, NOT OPEN. Redemption reachability is not probed for this asset, so the Liquidity axis currently rests on the DEX leg alone. TO ESTABLISH IT: a redeem() simulation against the issuer contract, or the documented redemption window and its current state."
+        },
+        "history_limit": "Backing history stores derived scores, not comparable full quote ladders. No 7/30-day depth average or trend certified."
+      },
+      "backing_fields": [
+        "backing.collateral_ratio",
+        "backing.collateral_ratio_basis",
+        "backing.total_backing",
+        "backing.net_backing_usd",
+        "backing.surplus_deficit",
+        "backing.breakdown",
+        "summary",
+        "asset_specific.backing_attestation"
+      ],
+      "family_file": "apyx_family.json",
+      "history_units": "peg_market_price is USD price. peg_premium_discount_pct is percent vs row NAV. apyUSD supplementary DEX market fields are distinct; do not silently replace the selected CoinGecko series.",
+      "backing_definition": "(total reserves-POL-inventory)/(total supply-POL-inventory)*100. Net both sides. Gross surplus remains gross. Quote October 26 100.2146% only as dated example, not current value."
+    },
+    "apyusd": {
+      "base": "apyusd_backing.json",
+      "scope": "Yielding ERC-4626 wrapper over apxUSD; NAV coverage identity is not independently verified reserves.",
+      "peg": {
+        "source": "coingecko",
+        "history_ref": "apyusd_backing_history.json",
+        "history_field": "peg_market_price"
+      },
+      "peg_fields": [
+        "peg.market_price",
+        "peg.nav",
+        "peg.premium_discount_pct"
+      ],
+      "peg_reference": "accruing NAV; market/NAV-1, percent",
+      "history": {
+        "file": "apyusd_backing_history.json",
+        "container": "entries",
+        "timestamp_field": "timestamp",
+        "observations": 720,
+        "start": "2026-09-28T06:53:30Z",
+        "end": "2026-10-28T06:49:57Z",
+        "field_observations": {
+          "peg_market_price": 702,
+          "peg_premium_discount_pct": 702,
+          "nav": 720,
+          "collateral_ratio": 720,
+          "pol_usd": 718,
+          "inventory_usd": 718
+        },
+        "limit": "Observed samples; not time weighted. Missing fields remain missing; no replacement series or historical ladder is inferred."
+      },
+      "liquidity": {
+        "owner": "PegTracker base.liquidity; venue-only DexTracker supplementary inventories",
+        "fields": [
+          "liquidity.exit_mark.source",
+          "liquidity.exit_mark.fair_value",
+          "liquidity.exit_mark.fair_value_basis",
+          "liquidity.exit_mark.quotes",
+          "liquidity.exit_mark.slippage_bps_basis",
+          "liquidity.two_pct_depth_basis",
+          "liquidity.depth_50bps",
+          "liquidity.primary_exit"
+        ],
+        "source": "kyberswap",
+        "sizing": "market",
+        "anchor": 1.4107995331745244,
+        "quote_sizes": [
+          "1000",
+          "10000",
+          "50000",
+          "100000"
+        ],
+        "basis_declared_by_exit_mark": "ALL-IN COST against notional: (output_usd - size) / size. Includes the venue's base spread, so it is not comparable rung-for-rung with a price-impact figure measured against a venue's own spot rung.",
+        "basis_declared_by_depth": "A FLOOR, not a measurement. The deepest rung quoted ($100,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. ⚠️ That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost — which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
+        "display": "Reads quoted bps as published; added-impact depth subtracts smallest rung baseline. Total output/size is separate. Fees/provider route and observation time retained; no guaranteed redemption or gas-adjusted fill inferred.",
+        "primary_exit": {
+          "venue": "apyx issuer redemption",
+          "into": "reserve stables",
+          "gated": null,
+          "gated_basis": "unmeasured",
+          "gated_note": "⚠️ UNMEASURED, NOT OPEN. Redemption reachability is not probed for this asset, so the Liquidity axis currently rests on the DEX leg alone. TO ESTABLISH IT: a redeem() simulation against the issuer contract, or the documented redemption window and its current state."
+        },
+        "history_limit": "Backing history stores derived scores, not comparable full quote ladders. No 7/30-day depth average or trend certified."
+      },
+      "backing_fields": [
+        "backing.collateral_ratio",
+        "backing.collateral_ratio_basis",
+        "backing.total_backing",
+        "backing.net_backing_usd",
+        "backing.surplus_deficit",
+        "backing.breakdown",
+        "summary",
+        "asset_specific.backing_attestation"
+      ],
+      "family_file": "apyx_family.json",
+      "history_units": "peg_market_price is USD price. peg_premium_discount_pct is percent vs row NAV. apyUSD supplementary DEX market fields are distinct; do not silently replace the selected CoinGecko series.",
+      "backing_definition": "Share coverage ratio may be accounting identity; underlying attested reserve coverage lives in backing.underlying and shared Apyx attestation."
+    },
+    "susdat": {
+      "base": "susdat_backing.json",
+      "scope": "Saturn vault over USDat; implied off-chain STRC separate from USDat M0 reserves and Strata protection.",
+      "peg": {
+        "source": "curve",
+        "history_ref": "susdat_backing_history.json",
+        "history_field": "discount_to_nav_pct"
+      },
+      "peg_fields": [
+        "peg.market_price",
+        "peg.nav",
+        "peg.premium_discount_pct"
+      ],
+      "peg_reference": "accruing NAV; market/NAV-1, percent",
+      "history": {
+        "file": "susdat_backing_history.json",
+        "container": "entries",
+        "timestamp_field": "timestamp",
+        "observations": 715,
+        "start": "2026-09-28T06:50:26Z",
+        "end": "2026-10-28T06:47:02Z",
+        "field_observations": {
+          "nav_per_share": 715,
+          "peg_curve_usdc": 715,
+          "discount_to_nav_pct": 715,
+          "buffer_ratio": 715,
+          "onchain_buffer_usd": 715,
+          "offchain_strc_usd_implied": 715
+        },
+        "limit": "Observed samples; not time weighted. Missing fields remain missing; no replacement series or historical ladder is inferred."
+      },
+      "liquidity": {
+        "owner": "PegTracker base.liquidity; venue-only DexTracker supplementary inventories",
+        "fields": [
+          "liquidity.exit_mark.source",
+          "liquidity.exit_mark.fair_value",
+          "liquidity.exit_mark.fair_value_basis",
+          "liquidity.exit_mark.quotes",
+          "liquidity.exit_mark.slippage_bps_basis",
+          "liquidity.two_pct_depth_basis",
+          "liquidity.depth_50bps",
+          "liquidity.primary_exit"
+        ],
+        "source": "kyberswap",
+        "sizing": "market",
+        "anchor": 1.040122,
+        "quote_sizes": [
+          "1000",
+          "10000",
+          "100000",
+          "500000"
+        ],
+        "basis_declared_by_exit_mark": "ALL-IN COST against notional: (output_usd - size) / size. Includes the venue's base spread, so it is not comparable rung-for-rung with a price-impact figure measured against a venue's own spot rung.",
+        "basis_declared_by_depth": "The 200bps crossing is BRACKETED between $10,000 (clears) and $100,000 (4,460bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. ⚠️ That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost — which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
+        "display": "Reads quoted bps as published; added-impact depth subtracts smallest rung baseline. Total output/size is separate. Fees/provider route and observation time retained; no guaranteed redemption or gas-adjusted fill inferred.",
+        "primary_exit": {
+          "venue": "Saturn redemption router",
+          "into": "USDat reserve assets",
+          "gated": null,
+          "gated_basis": "unmeasured",
+          "gated_note": "⚠️ UNMEASURED, NOT OPEN. Redemption reachability is not probed for this asset, so the Liquidity axis currently rests on the DEX leg alone. TO ESTABLISH IT: a redeem() simulation through the router. ⚠️ Note the router is DEMONSTRABLY reachable -- one EOA exited 15.6% of supply through it over 2026-08-21..27 in 108 transactions -- but a past fill is not a current probe, and size is not gating."
+        },
+        "history_limit": "Backing history stores derived scores, not comparable full quote ladders. No 7/30-day depth average or trend certified."
+      },
+      "backing_fields": [
+        "summary.nav_per_share",
+        "summary.total_assets_usd",
+        "summary.onchain_buffer_usd",
+        "summary.offchain_strc_usd_implied",
+        "summary.buffer_ratio",
+        "backing.collateral_ratio",
+        "backing.collateral_ratio_basis",
+        "backing.secondary"
+      ],
+      "family_file": "saturn_family.json",
+      "history_units": "discount_to_nav_pct is positive discount percent, not price. Bespoke Saturn _navDevDisplay uses (peg_curve_usdc/nav_per_share-1)*100 or negates stored discount. Generic abs-deviation band uses declared percent field."
+    }
+  },
+  "gaps_and_limits": [
+    "srusdat, pt-srusdat, pt-apxusd, pt-apyusd have no registered dedicated dashboard; srusdat_dependencies.json is synced as requested but no standalone reader consumes it.",
+    "srUSDat family reader: susdat dashboard loads saturn_family.json.tranche_coverage (junior_buffer_pct, coverage_pct, senior/junior/collateral, history). Separate from USDat redemption cash in its base feed. Do not call indirect STRC exposure direct USDat backing.",
+    "PT first-leg Pendle simulations are report evidence only; no matching dedicated dashboard or full dollar exit. Keep quote units, market and observation time.",
+    "Apyx exit_mark metadata says ALL-IN while apyUSD quoted bps have zero at smallest rung despite output/size below one; depth prose says baseline-relative. Preserve actual fields; flag metadata inconsistency before making cross-producer convention claims. Do not recalculate/substitute quote data.",
+    "STRC share-count base is aged/provisional; service and runway values are scenarios, not certified absolute obligations. Pending daily-dividend terms remain conditional; no vote outcome verified by this targeted pass.",
+    "No common archived comparable ladder history bundle across family. Backing histories exist, coverage recorded per field; no averages computed in this audit. Compare mNAV only across compatible definition versions.",
+    "Full last_verified dates preserved; filing_review and last_revised identify targeted October 26 update. basis_history stays archival and does not replace active rationale.",
+    "Generated HTML verification is not live browser/layout validation. Live published payload/renderer verification recorded separately."
+  ],
+  "sources": {
+    "assets.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/assets.json",
+      "sha256": "59be7914fc1414bca0fdf4d3c63a878647ad64c5fb9523b76a049b63f3be11f3",
+      "bytes": 17716,
+      "as_of": null
+    },
+    "strc_backing.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/strc_backing.json",
+      "sha256": "d8b564579d5d28a39e65f596458073e97c7af36ce367da7f225e6b3296175c5e",
+      "bytes": 47647,
+      "as_of": "2026-10-28T06:50:13Z"
+    },
+    "strc_backing_history.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/strc_backing_history.json",
+      "sha256": "24ac5d1e0205f45431c57bb8b3efba803820c0c09a843a4d8920a0ed0b9bf53e",
+      "bytes": 6285582,
+      "as_of": null
+    },
+    "strategy_events.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/strategy_events.json",
+      "sha256": "57fb5792dc92383e7055ce84ef1b32f1f482c9645d74f4e85e1490b1da943235",
+      "bytes": 103407,
+      "as_of": "2026-10-28T04:49:31Z"
+    },
+    "apyx_family.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apyx_family.json",
+      "sha256": "a3e2796d7e7ed45f613299449f5a9e354a3bc6be770a5020ec8be0da22e9a07c",
+      "bytes": 53675,
+      "as_of": "2026-10-28T06:50:01Z"
+    },
+    "saturn_family.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/saturn_family.json",
+      "sha256": "12d5da99ec23ccf2cac894ddab2909fd5ffae362a1465201890114fd630a1208",
+      "bytes": 31729,
+      "as_of": "2026-10-28T06:47:04Z"
+    },
+    "strc_axis_basis.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/strc_axis_basis.json",
+      "sha256": "3569ec877c19d20dc7d7785a0bcc763a8840bd96ab9a7c16cf229c27c81cf79e",
+      "bytes": 7245,
+      "as_of": "2026-10-26T15:37:10Z"
+    },
+    "strcx_axis_basis.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/strcx_axis_basis.json",
+      "sha256": "b9f3c00c59734b089f8c7ba56c0e8fae6aec0c773c3955f7c1f7a6d9c5c73805",
+      "bytes": 14780,
+      "as_of": "2026-10-26T15:37:10Z"
+    },
+    "strcx_issuer.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/strcx_issuer.json",
+      "sha256": "46b264557aed9a724c41173186d0efa56642c049b8245e2d0cb404fa1697e1eb",
+      "bytes": 3658,
+      "as_of": "2026-09-13T00:00:00Z"
+    },
+    "strcx_contract_overlay.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/strcx_contract_overlay.json",
+      "sha256": "bf50a7e58818f637c797f8bcee399e5f767be9bcbb979556e9a1c2b1415eb006",
+      "bytes": 4916,
+      "as_of": "2026-09-14T00:00:00Z"
+    },
+    "apxusd_axis_basis.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apxusd_axis_basis.json",
+      "sha256": "d38d14d03df0e0fd55d18c61d8818dfa771e37305bf917b311845e45d6887034",
+      "bytes": 15455,
+      "as_of": "2026-10-26T15:37:10Z"
+    },
+    "apxusd_dependencies.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apxusd_dependencies.json",
+      "sha256": "41218064d57bedb137e11a06fbc1d6b07f87e3ad3414623ebf1a65db0e311ba0",
+      "bytes": 2753,
+      "as_of": "2026-10-26T15:37:10Z"
+    },
+    "apxusd_issuer.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apxusd_issuer.json",
+      "sha256": "b5eca3939792fe4bb219ee64bce8b4acae1fbb8f7617e87c3147418d44a4b774",
+      "bytes": 5879,
+      "as_of": "2026-09-10T12:00:00Z"
+    },
+    "apxusd_contract.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apxusd_contract.json",
+      "sha256": "c24fcb30bbf87bda24f0cbd2b53648a807735a82d35e50b18deaaa258aa4f777",
+      "bytes": 10342,
+      "as_of": "2026-09-09"
+    },
+    "apxusd_contract_overlay.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apxusd_contract_overlay.json",
+      "sha256": "2f6201d1346ae2b92f4d86b89866e5c85e036660baf2d60e3dc180a239358031",
+      "bytes": 5456,
+      "as_of": "2026-09-10T00:00:00Z"
+    },
+    "apxusd_liquidity.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apxusd_liquidity.json",
+      "sha256": "be93a98c1d256322d95edd54b6c8c22cbbe3c94693ec2f9d8714292fffb1c87b",
+      "bytes": 150207,
+      "as_of": "2026-10-27T23:51:16Z"
+    },
+    "apyusd_axis_basis.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apyusd_axis_basis.json",
+      "sha256": "045fef665d7aa5fcb2ef88827c81d5efa2554749c3f0ed7e1714f56f6372303f",
+      "bytes": 14189,
+      "as_of": "2026-10-26T15:37:10Z"
+    },
+    "apyusd_issuer.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apyusd_issuer.json",
+      "sha256": "fbde395a60c3c31273cf8dd5c22befaff9b019f4c966caddb069d9931e5733d9",
+      "bytes": 5297,
+      "as_of": "2026-09-10T12:00:00Z"
+    },
+    "apyusd_contract.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apyusd_contract.json",
+      "sha256": "c442948b5c1c69466810d9f5cd7ad4552993e57fd36cdeb9db9538604d824446",
+      "bytes": 18041,
+      "as_of": "2026-09-10"
+    },
+    "apyusd_contract_overlay.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apyusd_contract_overlay.json",
+      "sha256": "1e02ddef493d93bbd64605300a86dea57410a1ed98f1cdac262d95b92e658539",
+      "bytes": 8754,
+      "as_of": "2026-09-10T00:00:00Z"
+    },
+    "apyusd_liquidity.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apyusd_liquidity.json",
+      "sha256": "ca335a58a89871dfc2c4ff294b827640d9a1e0da9ba407623400ace11487d622",
+      "bytes": 90296,
+      "as_of": "2026-10-27T23:54:38Z"
+    },
+    "susdat_axis_basis.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/susdat_axis_basis.json",
+      "sha256": "a6fae9fd08b74bce289637ef46adaeb413e7640b608bc487c351289e8fa5c0ae",
+      "bytes": 7070,
+      "as_of": "2026-10-26T15:37:10Z"
+    },
+    "susdat_issuer.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/susdat_issuer.json",
+      "sha256": "a324f58e55a87dd4922bfad32a590fa79026cdc3bd021cdeaceef863bfbea843",
+      "bytes": 4633,
+      "as_of": "2026-09-10T12:00:00Z"
+    },
+    "susdat_contract.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/susdat_contract.json",
+      "sha256": "78fe948f47b09c7cf4955ef4480e9e4b4705494346f9b6778297f92bce486023",
+      "bytes": 5080,
+      "as_of": "2026-09-09"
+    },
+    "susdat_contract_overlay.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/susdat_contract_overlay.json",
+      "sha256": "cb6318466a74f118f7b667ac4f09da5e5ecd74ee85684af8ab4807f18cc55d31",
+      "bytes": 12741,
+      "as_of": "2026-10-13T00:00:00Z"
+    },
+    "susdat_liquidity.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/susdat_liquidity.json",
+      "sha256": "cd3890463e42d53e0181b4a25fdc1db2581db47a02a51e8df3ca0a658c9af682",
+      "bytes": 58707,
+      "as_of": "2026-10-28T00:08:14Z"
+    },
+    "apxusd_backing.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apxusd_backing.json",
+      "sha256": "0cb4ead7cdf150484e57f4de9bc69add0723cbd1b61748f7bc573e7f18b3e830",
+      "bytes": 73278,
+      "as_of": "2026-10-28T06:49:57Z"
+    },
+    "apxusd_backing_history.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apxusd_backing_history.json",
+      "sha256": "a28730ca2896de76785daf60c4f3ad39b61b65ac94caa86fb30185f09899c47e",
+      "bytes": 380151,
+      "as_of": null
+    },
+    "apyusd_backing.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apyusd_backing.json",
+      "sha256": "301428514ee835e83567431526e39255b93b00656de23654d3fc6ff3009ba5c6",
+      "bytes": 73049,
+      "as_of": "2026-10-28T06:49:57Z"
+    },
+    "apyusd_backing_history.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/apyusd_backing_history.json",
+      "sha256": "80a600c49161f847b88534a3e902d208017472f94eb7486a596c146189f33f47",
+      "bytes": 514205,
+      "as_of": null
+    },
+    "susdat_backing.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/susdat_backing.json",
+      "sha256": "1df56904fdde4bc7e104752143050d45352a0d9a5b9a5848fef56e1da1cd9c8c",
+      "bytes": 14261,
+      "as_of": "2026-10-28T06:47:02Z"
+    },
+    "susdat_backing_history.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/susdat_backing_history.json",
+      "sha256": "633e7aa2621f1770184bda8efeab1dd9b12acd250068334dbdaa762aac836399",
+      "bytes": 496099,
+      "as_of": null
+    },
+    "srusdat_dependencies.json": {
+      "url": "https://todayindefi.github.io/backing-monitor/data/srusdat_dependencies.json",
+      "sha256": "e7064285501a0133819935fe6f1678c45be1879b9736fa9de5f0e0e2db7ff83b",
+      "bytes": 3407,
+      "as_of": "2026-10-26T15:37:10Z"
+    }
+  },
+  "tidr_requirement": "Consume these selected fields and the same shared histories; interpret longer-term trends and structural risks. Label point snapshots as dated support. Do not infer market improvement from methodology correction or replace missing coverage with another price/ladder."
+}
