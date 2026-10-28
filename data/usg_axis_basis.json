@@ -2,46 +2,46 @@
   "schema_version": "axis-basis/1",
   "producer": "riskanalyst",
   "asset": "usg",
-  "as_of": "2026-10-16T02:36:45Z",
+  "as_of": "2026-10-28T03:37:27Z",
   "peg": {
     "peg_mechanism_score": 5.0,
     "peg_mechanism_score_source": "riskAnalyst:authored",
-    "peg_mechanism_score_generated_at": "2026-09-11T00:00:00Z",
-    "peg_mechanism_score_basis": "MEASURES THE MECHANISM'S DESIGN AND ITS TRACK RECORD, NOT THE CURRENT −42bp DEVIATION. USG runs the crvUSD architecture, which is proven, and has held WITHOUT POL ISSUANCE AND WITHOUT BAD DEBT — both of which are the failure modes this design is usually docked for. ⚠️ THE SCORE IS CAPPED AT 5.0 NOT ON MECHANISM QUALITY BUT ON SCALE: an architecture proven at crvUSD's size is being run on a ~$5.8M book, and a mechanism's track record does not transfer across two orders of magnitude of depth.",
+    "peg_mechanism_score_generated_at": "2026-10-28T03:37:27Z",
+    "peg_mechanism_score_basis": "crvUSD-derived design at $3.89M circulating scale; persistent $0.995732 peg, no collateral redemption and zero keeper debt. HEC/LEC economics respond to price; FIR is fixed-rate. Held at 5.0. October 28 feed and block 26,288,820 keeper reads.",
     "peg_mechanism_score_persistence": "filtered — mechanism design, not spot-responsive"
   },
   "backing": {
     "backing_score": 5.0,
     "backing_score_source": "riskAnalyst:authored",
-    "backing_score_generated_at": "2026-09-11T00:00:00Z",
-    "backing_score_basis": "✅ MEASURES ACTUAL OVERCOLLATERALIZATION, AND UNLIKE MOST OF THIS CORPUS THE RATIO IS A REAL MEASUREMENT RATHER THAN AN IDENTITY. Borrower collateral ~$4.81M against ~$3.76M debt = ~128% CR; the feed reads collateral_ratio 129.02 on total_backing $5,758,937.73 with a surplus of $1,295,336.95. ✅ THESE ARE INDEPENDENT QUANTITIES — collateral posted by borrowers is not defined as equal to debt issued — so the ~129% CARRIES INFORMATION, which cannot be said of the 100.0 ratios on wrapper and PSM-style assets. POL debt $0 and bad debt $0. ⚠️ HELD AT 5.0 DESPITE A GENUINELY SOUND RATIO because the axis prices the COLLATERAL and the ORACLE behind it, not the arithmetic: this is a small book of borrower positions marked by oracle-NAV, and a 129% ratio on illiquid collateral is not equivalent to 129% on cash.",
+    "backing_score_generated_at": "2026-10-28T03:37:27Z",
+    "backing_score_basis": "$5,015,608 borrower collateral / $3,891,517 debt = 128.89% conservative CR. Excludes $904,621 LP-owned keeper-pool stables. Zero bad debt across all 19 controllers independently read at block 26,288,820. 36.7% of debt in markets below 5% aggregate liquidation headroom, 69.8% below 10%; these are not borrower-level distances. Maximum dangerous oracle overvaluation 0.1886%; BTC oracle is 1.3441% below independent NAV. Held at 5.0.",
     "backing_score_persistence": "filtered — collateral composition, though the ratio itself is spot-responsive",
     "backing_score_denominator": "✅ ASK WHAT THE RATIO DIVIDES BY — and here the answer is the good one: borrower collateral over borrower debt, two independently determined quantities. Contrast usdat, susds and the syrup pools, where backing is DEFINED as the supply and the ratio is an accounting identity."
   },
   "liquidity": {
     "liquidity_score": 3.0,
     "liquidity_score_source": "riskAnalyst:authored",
-    "liquidity_score_generated_at": "2026-10-16T02:36:45Z",
-    "liquidity_score_basis": "⚠️ CUT 3.5 → 3.0 ON 2026-10-16: ALL THREE SUB-METRICS DETERIORATED AND THE EXIT IS NOW MEASURED. Counter-side inventory in the two keeper pools is $887,947 (USDC $398,088 + frxUSD $489,860), DOWN 21% from ~$1.13M on 2026-08-05 and from ~$1.28M on 2026-06-10 — a two-step adverse trend, not a single read. Both pools are MORE USG-heavy than before, 72.91% and 70.81% against ~69% on both in August, which is the mechanical signature of a discount the mechanism cannot correct. Keeper defense capacity is $0 because debt() = 0 on both keepers, so none of that inventory is protocol-controlled. ⚠️ MEASURED get_dy LADDER (riskAnalyst, Ethereum block 26,202,522, fees in, gas out): USDC pool costs 0.51% at 10K USG, 0.68% at 100K, 1.36% at 250K, then 21.8% at 500K; frxUSD pool 0.43% / 0.54% / 0.90%, then 7.5% at 500K and 51.2% at 1M. SO ROUGHLY $500K — ABOUT 13% OF THE $3,823,946 SUPPLY — LEAVES AT ≤1.4% ACROSS BOTH POOLS, AND ESSENTIALLY NOTHING BEYOND IT. ⚠️ AND sUSG HOLDS A FURTHER 33.0% OF SUPPLY (1,262,646 USG) THAT WOULD HAVE TO TRANSIT THESE SAME TWO POOLS TO REACH DOLLARS. No CEX backstop. ⚠️ THIS IS THE AXIS TO READ FIRST ON THIS ASSET: backing is genuinely sound at 129.65% CR with zero bad debt, and a reader who stops there will conclude USG is well-positioned. Collateral adequacy and exit capacity are different questions, and only one of them is comfortable here.",
+    "liquidity_score_generated_at": "2026-10-28T03:37:27Z",
+    "liquidity_score_basis": "Held at 3.0 after the October 16 cut. October 28 inventory $904,621 (+1.9%); USDC/frxUSD pool USG shares 72.06%/72.65%, keeper defense $0. Fresh get_dy at block 26,288,820: equal-split exit cost 0.49% at 10K, 0.55% at 100K, 0.68% at 250K, 1.11% at 500K, 2.64% at 750K, 13.04% at 1M. Costs versus nominal $1, pool fees included, gas excluded, frxUSD valued at par. Read-only independent scenarios, not optimized or executed fills. sUSG holds 30.9% of supply and shares the underlying exit. Modest inventory recovery does not remove the cliff.",
     "liquidity_score_persistence": "filtered — keeper inventory, pool imbalance and venue structure, not spot depth. Re-check on a further fall in counter-side stables, either pool crossing 75% USG, or the measured 250K rung exceeding ~2%.",
-    "liquidity_score_depth_caveat": "The feed computes a ladder for this asset; this score additionally carries riskAnalyst's own get_dy measurement on both keeper pools, quoted in the basis with its block. Quotes are read-only route estimates including pool fees and excluding gas — they are not executed fills. (Supersedes the 2026-09-11 note that the feed computed no depth at all, and the pre-ladder inventory-only framing.)",
-    "liquidity_score_band_divergence": "⚠️⚠️ A DASHBOARD BAND AND THIS SCORE MEASURE DIFFERENT THINGS AND NEITHER IS WRONG. The band measures the SIZE OF THE 2% CROSSING RELATIVE TO SUPPLY, which is a defensible and more favourable question for a book this small. THIS SCORE MEASURES THE FRAGILITY OF THE SOURCE: one mechanism's declining, increasingly imbalanced, non-protocol-controlled inventory is the whole exit. ⚠️⚠️ AND THE SLOPE SUPPORTS THE LOWER NUMBER — on the measured ladder the USDC pool goes from 1.36% at 250K to 21.8% at 500K, a 16× cost increase across a 2× size increase. That is a cliff immediately above the crossing, not a gentle degradation, and a 2%-crossing figure cannot express it: the band reports WHERE the curve crosses 2%, not HOW STEEPLY it leaves.",
-    "liquidity_score_ladder": "⚠️⚠️ REVISED 2026-09-12, AND THE LADDER IS WORSE THAN THE SUPPLY FRAME MADE IT LOOK. MEASURED EXIT COST BY SIZE (even split across every PegKeeper pool): $10,000 → −50.4bps · $50,000 → −52.6bps · $100,000 → −55.7bps · $250,000 → −67.1bps · $500,000 → −99.6bps · $750,000 → −187.0bps · $1,000,000 → −657.3bps. ⚠️⚠️ IT COSTS FIFTY BASIS POINTS TO EXIT TEN THOUSAND DOLLARS. That is the smallest rung measured, and it is already expensive — this asset is costly at RETAIL size, not merely at scale. ⚠️ The curve then bends hard: ~100bps at half a million, ~187bps at $750k, and 657bps at $1M. 2% crossing BRACKETED $750,000–$1,000,000. ⚠️ THE EARLIER BASIS LED ON '~16.8% of supply exits at 2%' AND ON KEEPER INVENTORY AS A SHARE OF THE BOOK. Withdrawn as the measure: a holder does not care what fraction of supply clears, they care that their $10k costs 50bps. ✅ THE COUNTER-SIDE FIGURE IS STILL THE RIGHT SECOND INSTRUMENT and is kept: sell_side_counter_inventory_usd $1,049,612.88 — 'what a USG seller can actually execute into', which is why the ladder dies just past $1M. ⚠️ AND keeper_defense_capacity IS EXCLUDED BY THE PRODUCER as 'peg-defense capability, not observed market depth' — not re-imported here.",
-    "liquidity_score_ladder_as_of": "2026-09-12T00:00:00Z"
+    "liquidity_score_depth_caveat": "Fresh read-only get_dy at block 26,288,820. Independent quote scenarios, equal split is feasible not optimized, output stablecoins valued at par. See data/reviews/usg-2026-10-28/onchain-probe.json.",
+    "liquidity_score_band_divergence": "A dashboard depth band measures crossing size relative to supply. The authored 3.0 also prices persistent discount, reliance on two increasingly imbalanced pools, and the steep cost curve: 1.11% at 500K, 2.64% at 750K, 13.04% at 1M on the measured equal split.",
+    "liquidity_score_ladder": "Equal split across USDC/frxUSD keeper pools at Ethereum block 26,288,820: 10,000 USG -> 0.49% cost, 50,000 USG -> 0.51% cost, 100,000 USG -> 0.55% cost, 250,000 USG -> 0.68% cost, 500,000 USG -> 1.11% cost, 750,000 USG -> 2.64% cost, 1,000,000 USG -> 13.04% cost. Sampled 2% crossing bracketed 500K–750K. Nominal dollar basis; pool fees included, gas excluded.",
+    "liquidity_score_ladder_as_of": "2026-10-28T03:37:27Z"
   },
   "dependencies": {
     "underlying_score": 4.0,
     "underlying_score_source": "riskAnalyst:authored",
-    "underlying_score_generated_at": "2026-09-11T00:00:00Z",
-    "underlying_score_basis": "MEASURES THE COUNTERPARTY SET BEHIND THE LOAN BOOK. ⚠️ AUTHORED 2026-09-06 — PREVIOUSLY UNSCORED, and it is arguably USG's MOST LOAD-BEARING AXIS, because what backs USG is a book of borrower positions and the quality of that book is a dependency question rather than a ratio question. A 129% CR describes the arithmetic; this axis describes what is inside it.",
+    "underlying_score_generated_at": "2026-10-28T03:37:27Z",
+    "underlying_score_basis": "Held at 4.0. Layered wrapper/Curve LP/constituent exposure; Resupply reUSD-linked debt $758,794 (19.5%) across three markets, reUSD price $0.990568. Stable-LP minimum-price marking limits diversification. 69.8% of debt in markets below 10% aggregate headroom. Two new listed markets, frxUSD/DUSD and frxUSD/crvUSD, have zero debt and add no current exposure. No falsely precise weighted score published.",
     "underlying_score_persistence": "filtered — book composition, not a daily balance",
     "underlying_score_routing": "⚠️ Merges after 49d0b4ca2 but axis 4 renders no score today — source-of-record."
   },
   "issuer": {
     "issuer_score": 4.0,
     "issuer_score_source": "riskAnalyst:authored",
-    "issuer_score_generated_at": "2026-09-11T00:00:00Z",
-    "issuer_score_basis": "MEASURES THE ENTITY. ⚠️ RE-SCOPED 2026-09-06 — THE NUMBER DID NOT MOVE AND ITS COMPOSITION DID. Under the old four-axis stablecoin schema this row absorbed concerns that now belong on Dependencies and Contract & Admin. ⚠️ AN UNCHANGED SCORE ACROSS A SCHEMA CHANGE IS NOT EVIDENCE OF STABILITY — it is a coincidence of two different compositions landing on one number, and reading it as 'issuer risk unchanged since the old schema' would be wrong.",
+    "issuer_score_generated_at": "2026-10-28T03:37:27Z",
+    "issuer_score_basis": "Held at 4.0. Approximately five-and-a-half-month operating history and sub-$5M supply; official USG docs still warn of beta status. Historical audit set retained, remediation unverified. Governance and audit pages returned headings without substantive content on October 28; current TGE/live-governance and new-audit status are not established. Contract authority is scored separately.",
     "issuer_score_persistence": "filtered — entity, not spot-responsive",
     "issuer_score_routing": "⚠️ UNROUTED — backing-monitor holding axis-6 registration."
   },
