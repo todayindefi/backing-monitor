@@ -852,11 +852,11 @@ var SyrupUSDCRenderer = {
                 d.asset_specific.loan_book.collateral_summary || null;
         }
         function loansOnlyCR(p) {
-            var coll = p.pool_collateral_value_usd;
-            var liq = p.principal_liquidity_usd;
-            var loans = p.principal_loans_only_usd;
-            if (coll == null || liq == null || !loans) return null;
-            return (coll - liq) / loans * 100;
+            var d = p.slug === currentSlug ? data : siblingData;
+            var book = d && d.asset_specific && d.asset_specific.loan_book;
+            if (!book) return null;
+            if (book.credit_coverage) return book.credit_coverage.collateral_ratio_pct;
+            return (book.collateral_summary || {}).collateral_ratio_loans_only_pct;
         }
         function crCls(v) {
             if (v == null) return 'text-slate-400';
@@ -1999,7 +1999,7 @@ var SyrupUSDCRenderer = {
         });
 
         var cs = lb.collateral_summary || {};
-        var poolCR = cs.collateral_ratio_loans_only_pct;
+        var poolCR = lb.credit_coverage ? lb.credit_coverage.collateral_ratio_pct : cs.collateral_ratio_loans_only_pct;
         var rateText = (lb.weighted_avg_rate_pct != null) ? CommonRenderer.formatPercent(lb.weighted_avg_rate_pct, 2) : '—';
         var poolCRText = (poolCR != null) ? CommonRenderer.formatPercent(poolCR, 1) : '—';
 
@@ -2663,7 +2663,7 @@ var SyrupUSDCRenderer = {
 
     // ----- §3 Borrower Concentration (loans-only) -------------------------
     // Uses concentration_loans_only when present so the HHI / top-N stats
-    // describe third-party-credit concentration only — including liquidity
+    // describe producer-classified credit concentration only — including liquidity
     // custodies overstates loan-book concentration. Falls back to
     // book-wide concentration for older snapshots.
     _renderBorrowerConcentration: function(specific) {
@@ -3349,7 +3349,7 @@ var SyrupUSDCRenderer = {
                 '<td>Total' + (sumExceedsBase ? ' <span class="text-amber-700">(sum of legs)</span>' : '') + '</td>' +
                 '<td class="text-right font-mono' + (sumExceedsBase ? ' text-amber-700' : '') + '">' +
                     (totalSupply != null ? CommonRenderer.formatCurrency(totalSupply) : '-') + '</td>' +
-                '<td class="text-right font-mono">100%</td>' +
+                '<td class="text-right font-mono">' + (totalSupply != null ? '100%' : '—') + '</td>' +
                 '<td colspan="3"></td>' +
             '</tr>' +
             (sumExceedsBase
@@ -3417,8 +3417,8 @@ var SyrupUSDCRenderer = {
         if (isUSDT) {
             emptyStateFooter =
                 '<div class="text-xs text-slate-500 mt-3 italic">' +
-                    'syrupUSDT has limited cross-chain footprint vs syrupUSDC. ' +
-                    'Other-chain deployments not yet tracked.' +
+                    CommonRenderer._escapeAttr(mc.note || 'Chain observations do not establish global supply reconciliation.') +
+                    (mc.cross_chain_supply_reconciliation_complete === false ? ' Bridge reconciliation incomplete; canonical supply includes locked shares and remote representations are not additive.' : '') +
                 '</div>';
         }
 
