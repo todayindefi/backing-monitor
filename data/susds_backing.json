@@ -3,54 +3,54 @@
   "asset": "sUSDS",
   "asset_slug": "susds",
   "chain": "ethereum",
-  "timestamp": "2026-10-28T13:51:24Z",
+  "timestamp": "2026-10-28T14:51:29Z",
   "summary": {
-    "total_supply": 4193658319.53,
+    "total_supply": 4195583920.28,
     "supply_unit": "shares",
-    "total_assets_usds": 4673330742.75,
-    "nav": 1.114380425556,
+    "total_assets_usds": 4675496500.47,
+    "nav": 1.114385170052,
     "price": 1.11,
     "paused": null
   },
   "risk_flags": [],
   "vault_status": null,
   "backing": {
-    "collateral_ratio": 99.999989,
+    "collateral_ratio": 100.000176,
     "collateral_ratio_scale": "percent",
     "collateral_ratio_note": "Sub-0.001% residuals between these two independent reads reflect accrual/read timing precision, not a coverage gap.",
     "collateral_ratio_basis": "USDS balanceOf(sUSDS) / sUSDS totalAssets(). Two independent reads: the numerator is a token balance, the denominator is derived from the chi accumulator. 100% means the vault holds what its shares can claim.",
-    "total_backing": 4673330212.17,
-    "surplus_deficit": -530.58,
+    "total_backing": 4675504710.36,
+    "surplus_deficit": 8209.9,
     "breakdown": [
       {
         "label": "USDS held by vault",
-        "value": 4673330212.17,
+        "value": 4675504710.36,
         "pct": 100
       }
     ],
     "integrity": {
-      "total_assets_reported": 4673330742.75,
-      "usds_held": 4673330212.17,
-      "divergence_pct": -1.1e-05,
+      "total_assets_reported": 4675496500.47,
+      "usds_held": 4675504710.36,
+      "divergence_pct": 0.000176,
       "status": "ok",
-      "direction": "held_below_reported",
+      "direction": "held_above_reported",
       "note": "Signed (held - totalAssets) / totalAssets. A small NEGATIVE value is the expected state: interest accrues via chi continuously but is drawn from the vow periodically, so reported assets run slightly ahead of the balance."
     },
     "backing_score": 6.0,
     "backing_score_source": "risk-feed@2026-10-28T01:45:02Z",
     "backing_score_status": "ok",
     "backing_score_generated_at": "2026-10-28T01:45:02Z",
-    "backing_score_age_hours": 12.11,
-    "share_of_usds_supply_pct": 69.8421,
+    "backing_score_age_hours": 13.11,
+    "share_of_usds_supply_pct": 69.8632,
     "share_of_usds_supply_basis": "sUSDS totalAssets() / Ethereum USDS totalSupply()",
-    "nav_usds_per_share": 1.114380425556
+    "nav_usds_per_share": 1.114385170052
   },
   "dependencies": {
     "upstream": [
       {
         "name": "USDS",
-        "metric": "69.8% of USDS supply",
-        "value": 4673330742.75,
+        "metric": "69.9% of USDS supply",
+        "value": 4675496500.47,
         "source": "onchain",
         "link": "?asset=usds",
         "link_type": "internal",
@@ -146,9 +146,9 @@
     "primary_exit": {
       "venue": "sUSDS ERC-4626 redeem()",
       "into": "USDS",
-      "gated": true,
-      "gated_basis": "measured:erc4626_redeem_reverted",
-      "as_of": "2026-10-28T13:51:24Z",
+      "gated": false,
+      "gated_basis": "measured:erc4626_redeem_simulated",
+      "as_of": "2026-10-28T14:51:29Z",
       "probe": {
         "control_address": "0x000000000000000000000000000000000000dEaD",
         "vault": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
@@ -157,12 +157,12 @@
         "asset": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
         "positive_control_ok": true,
         "asset_matches_expected": true,
-        "preview_redeem_1e18": 1.1143804413710205,
-        "control_balance": null,
+        "preview_redeem_1e18": 1.11438518586663,
+        "control_balance": 14311327105968778,
         "control_max_redeem": 14311327105968778,
-        "max_redeem_uncapped": false,
-        "redeem_simulated": null,
-        "redeem_revert": "control holds no shares \u2014 nothing to simulate",
+        "max_redeem_uncapped": true,
+        "redeem_simulated": true,
+        "redeem_revert": null,
         "null_control_reverts": true,
         "rpcs_tried": [
           {
@@ -171,8 +171,6 @@
           }
         ]
       },
-      "gated_kind": "unclassified",
-      "gated_note": "\u26a0\ufe0f redeem() reverts for an arbitrary address, but WHY is not established: a permission gate and a time-lock both revert here. TO CLASSIFY: read the vault's cooldown interface \u2014 a cooldown that anyone may enter is a QUEUE, not a DOOR, and scoring it as a door overstates the constraint.",
       "cooldown_days": 0
     },
     "derived_score": null,
@@ -183,15 +181,15 @@
     "liquidity_score_source": "risk-feed@2026-10-28T01:45:02Z",
     "liquidity_score_status": "ok",
     "liquidity_score_generated_at": "2026-10-28T01:45:02Z",
-    "liquidity_score_age_hours": 12.11,
+    "liquidity_score_age_hours": 13.11,
     "exit_legs": [
       {
         "leg": 1,
         "from": "sUSDS",
         "to": "USDS",
         "mechanism": "ERC-4626 redeem()",
-        "status": "unresolved",
-        "as_of": "2026-10-28T13:51:24Z",
+        "status": "measured_open",
+        "as_of": "2026-10-28T14:51:29Z",
         "capacity": "uncapped_by_contract_probe"
       },
       {
@@ -200,8 +198,8 @@
         "to": "USDC",
         "mechanism": "LitePSM fixed-rate exit",
         "status": "inventory_bounded",
-        "capacity_usd": 3769628272.44,
-        "capacity_as_of": "2026-10-28T13:52:19Z",
+        "capacity_usd": 3761539309.61,
+        "capacity_as_of": "2026-10-28T14:52:03Z",
         "capacity_basis": "USDC balanceOf(LitePSM pocket)"
       }
     ]
@@ -209,19 +207,19 @@
   "asset_specific": {
     "type": "susds",
     "vault_state": {
-      "total_supply_shares": 4193658319.530262,
-      "total_assets_usds": 4673330742.754883,
-      "nav_usds_per_share": 1.114380425556,
+      "total_supply_shares": 4195583920.278791,
+      "total_assets_usds": 4675496500.465685,
+      "nav_usds_per_share": 1.114385170052,
       "asset": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
       "ssr_raw": 1000000001182641576793209935,
-      "chi_raw": 1114380299036464401824584237,
-      "rho": 1793195375
+      "chi_raw": 1114385185866630044727056747,
+      "rho": 1793199083
     },
     "yield": {
       "headline_apy_pct": 3.8,
       "headline_source": "onchain_ssr",
-      "realized_apy_24h_pct": 3.8003,
-      "realized_apy_7d_pct": 3.8,
+      "realized_apy_24h_pct": 3.7998,
+      "realized_apy_7d_pct": 3.7999,
       "nav_history_ref": "susds_backing_history.json"
     },
     "peg": {
@@ -229,10 +227,10 @@
       "market_price_source": "coingecko:susds",
       "premium_discount_is_measured": true,
       "theoretical_price_assumes_usds_par": false,
-      "nav_usds_per_share": 1.114380425556,
+      "nav_usds_per_share": 1.114385170052,
       "usds_peg_price": 0.999729,
-      "theoretical_price": 1.11407843,
-      "premium_discount_pct": -0.3661,
+      "theoretical_price": 1.11408317,
+      "premium_discount_pct": -0.3665,
       "source": "coingecko:susds + onchain_nav"
     },
     "history_ref": "susds_backing_history.json",
@@ -276,8 +274,8 @@
   },
   "peg": {
     "market_price": 1.11,
-    "nav": 1.11407843,
-    "premium_discount_pct": -0.3661,
+    "nav": 1.11408317,
+    "premium_discount_pct": -0.3665,
     "source": "coingecko:susds + onchain_nav",
     "history_ref": "susds_backing_history.json",
     "history_field": "market_price",
@@ -285,7 +283,7 @@
     "volatility_score_source": "risk-feed@2026-10-28T01:45:02Z",
     "volatility_score_status": "ok",
     "volatility_score_generated_at": "2026-10-28T01:45:02Z",
-    "volatility_score_age_hours": 12.11
+    "volatility_score_age_hours": 13.11
   },
   "issuer": {
     "report_url": "https://tidresearch.com/reports/susds",
@@ -295,7 +293,7 @@
     "issuer_score_source": "risk-feed@2026-10-28T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-10-28T01:45:02Z",
-    "issuer_score_age_hours": 12.11
+    "issuer_score_age_hours": 13.11
   },
   "coverage_by_chain": [
     {
@@ -308,7 +306,7 @@
         "NAV",
         "redeem_simulation"
       ],
-      "as_of": "2026-10-28T13:51:24Z"
+      "as_of": "2026-10-28T14:51:29Z"
     },
     {
       "chain": "base",
