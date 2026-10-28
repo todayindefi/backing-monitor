@@ -8677,6 +8677,22 @@ const CommonRenderer = {
             ' on the heading — that is the venue sweep ⓘ</div>';
     },
 
+    _routeBasisHtml(liq) {
+        var assurance = liq.route_assurance;
+        var current = assurance && assurance.checked_at &&
+            typeof liq.ladder_scope === 'string' && liq.ladder_scope.trim();
+        var note = current ? liq.ladder_scope.trim() :
+            (liq.exit_mark && typeof liq.exit_mark.basis_note === 'string'
+                ? liq.exit_mark.basis_note.trim() : '');
+        if (!note) return '';
+        var limits = current && Array.isArray(assurance.not_established)
+            ? assurance.not_established.join('; ') : '';
+        return '<div class="text-[11px] text-slate-500 mt-2" style="line-height:1.5">' +
+            '<span class="font-semibold">Route measured:</span> ' + this._escapeAttr(note) +
+            (current ? ' <span>Assurance checked: ' + this._escapeAttr(String(assurance.checked_at)) + '.</span>' : '') +
+            (limits ? ' <span>Not established: ' + this._escapeAttr(limits) + '.</span>' : '') + '</div>';
+    },
+
     _renderLiquiditySection(data) {
         var body = document.getElementById('axis-liquidity-body');
         if (!body) return;
@@ -8747,25 +8763,9 @@ const CommonRenderer = {
                 ? ''
                 : '<div class="text-sm text-slate-400">No exit-mark RFQ ladder in this snapshot.</div>');
 
-        // ⚠️ THE VENUE THE LADDER ACTUALLY RAN THROUGH, PUBLISHED AND UNRENDERED.
-        // `exit_mark.basis_note` names the route and its caveats, and on syrupUSDT
-        // those caveats qualify the figure directly above it: every rung from $1K to
-        // $1M routes through ONE Uniswap v4 pool (~$5.0M reserve, ~$190K 24h volume),
-        // whose v4 hook was NOT inspected, and the Plasma pools that exist traded ~$0
-        // and are not configured. A ">=$1.0M floor" read without that is a floor
-        // through a single uninspected pool presented as the asset's depth.
-        //
-        // ⚠️ Flagged to us by riskAnalyst, who had it from the producer's config while
-        // our page showed none of it. Live on both syrup assets only — the other 17
-        // ladders carry no basis_note, so this renders where it exists and is silent
-        // elsewhere rather than inventing a line.
-        var ladderBasis = (liq.exit_mark && typeof liq.exit_mark === 'object' &&
-                           typeof liq.exit_mark.basis_note === 'string' &&
-                           liq.exit_mark.basis_note.trim())
-            ? '<div class="text-[11px] text-slate-500 mt-2" style="line-height:1.5">' +
-              '<span class="font-semibold">Route measured:</span> ' +
-              this._escapeAttr(liq.exit_mark.basis_note.trim()) + '</div>'
-            : '';
+        // Later dated assurance can supersede an older route caveat without
+        // changing the producer's canonical quotes or cost conventions.
+        var ladderBasis = this._routeBasisHtml(liq);
         ladderBlock = ladderBlock + ladderBasis;
 
         // ⚠️ Four n/a's read as "we know nothing about this asset's liquidity".

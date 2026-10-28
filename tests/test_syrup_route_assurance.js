@@ -1,0 +1,16 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const ctx={console,window:{}};vm.createContext(ctx);
+vm.runInContext(fs.readFileSync('js/renderers/common.js','utf8')+'\nglobalThis.common=CommonRenderer',ctx);
+const basis=JSON.parse(fs.readFileSync('data/syrupusdt_axis_basis.json'));
+const base=JSON.parse(fs.readFileSync('data/syrupusdt_backing.json'));
+const liq={...base.liquidity,...basis.liquidity};
+const before=JSON.stringify(liq.exit_mark);
+const html=ctx.common._routeBasisHtml(liq);
+assert.match(html,/zero-hook/);assert.match(html,/Plasma/);
+assert.match(html,/exact built-route simulation/);assert.match(html,/trade\/fill\/settlement/);assert.match(html,/request-to-fill latency/);
+assert.doesNotMatch(html,/hook \(if any\) was not inspected|uninspected hook/);
+assert.equal(JSON.stringify(liq.exit_mark),before);
+assert.equal(ctx.common._routeBasisHtml({exit_mark:{basis_note:'Original <route>'}}).includes('Original &lt;route&gt;'),true);
+assert.equal(ctx.common._routeBasisHtml({}), '');
+assert.match(ctx.common._routeBasisHtml({ladder_scope:'undated assertion',exit_mark:{basis_note:'Original dated note'}}),/Original dated note/);
+console.log('PASS route assurance supersedes stale copy; execution limits, canonical quotes and legacy fallback preserved.');
