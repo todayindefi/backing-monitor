@@ -161,7 +161,7 @@
     "liquidity_score": 6.0,
     "liquidity_score_source": "riskAnalyst:authored",
     "liquidity_score_generated_at": "2026-10-28T00:00:00Z",
-    "liquidity_score_basis": "Held 6.0: 214 successful institutional quotes over 26.77 days, $250K all-in median -10.81bps/IQR 9.57bps versus market-sized notional; $1M median -13.80bps. Improved quoted distribution does not verify primary latency, live route/hook/custody or local Plasma exits. Seven-day cushion median 2.63%, 42/169 samples below 2%.",
+    "liquidity_score_basis": "Held 6.0: retained institutional quote distribution is unchanged. October 28 sampled Ethereum route and exact zero-hook key/state verified; no hook-specific security referral. Single-venue concentration, primary latency and exact route execution/fill/settlement remain unproved. Plasma quotes/state do not establish executed local exits.",
     "liquidity_score_persistence": "filtered — reviewed judgment; not a spot-derived band",
     "quote_history": {
       "150000": {
@@ -321,7 +321,7 @@
     },
     "liquidity_score_ladder_as_of": "2026-10-28T13:32:15Z",
     "cost_basis": "BM slippage_bps is impact vs smallest $1K rung; all-in signed return is (fill_ratio-1)*10000 vs market notional. Neither is NAV cost.",
-    "ladder_scope": "KyberSwap/Ethereum/sell into USDT. Route-specific note dates to October 1; no fresh route/hook inspection. Other chains have venue inventory but no equivalent executable-ladder proof.",
+    "ladder_scope": "Canonical cost ladder unchanged: KyberSwap/Ethereum/USDT market sizing. October 28 sampled route confirmed one exact zero-hook v4 pool; Plasma local quotes and fixed-block identity/state/custody observed separately, not a new canonical ladder or executed exit.",
     "free_liquidity_history": {
       "7": {
         "raw_n": 169,
@@ -429,7 +429,39 @@
       "unresponsive_note": null,
       "basis": "A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 50bps, so the crossing is somewhere above where we look. Publishing it as '0.5% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. ⚠️ That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost — which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
     },
-    "free_liquidity_history_scope": "Pre-correction 08:45 archive, not current spot buffer; current free liquidity 1.85%, cash+interest $5.91M, cash $5.33M."
+    "free_liquidity_history_scope": "Pre-correction 08:45 archive, not current spot buffer; current free liquidity 1.85%, cash+interest $5.91M, cash $5.33M.",
+    "route_assurance": {
+      "checked_at": "2026-10-28T15:56:49.726616+00:00",
+      "route_capture_hashes_verified": 16,
+      "route_counts": {
+        "ethereum": 8,
+        "plasma": 8
+      },
+      "ethereum": {
+        "pool_id": "0xd861038a98942312d1495dd1313fb66c7e7de48f549a15edf3a45decf7338e1d",
+        "zero_hook": true,
+        "block": 26292233,
+        "key_hash_stateview_storage_check": "passed by rerunning archived DexTracker verify.py",
+        "sampled_route": "one v4 pool at all eight sizes; not perpetual exclusivity"
+      },
+      "plasma": {
+        "pool": "0x6ba44eaed40e85bd4e5ff0636336ea35827a5939",
+        "block": 36261171,
+        "local_quotes_to_size_usd": 1000000,
+        "state_identity_custody": "verified in saved fixed-block reads",
+        "executable_exit": false,
+        "nested_route_metadata": "unresolved _ss/buffer semantics and mismatched block references"
+      },
+      "not_established": [
+        "exact built-route simulation",
+        "actual trade/fill/settlement",
+        "primary Maple request-to-fill latency",
+        "independent stablecoin USD parity",
+        "complete bridge settlement"
+      ],
+      "liquidity_score": 6.0,
+      "security_handoff": "not triggered for this exact zero-hook pool"
+    }
   },
   "dependencies": {
     "underlying_score": 4.0,
