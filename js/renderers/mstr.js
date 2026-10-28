@@ -896,6 +896,7 @@ var MSTRRenderer = {
         return '<div class="panel">' +
             '<div class="panel-title">Cash-Service Waterfall <span class="text-xs font-normal text-slate-500">— senior → junior preferred service + rate-ceiling overlay</span></div>' +
             headlineStrip +
+            STRCRenderer._renderOutstandingBasis(data) +
             // Seniority waterfall.
             '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-2 mb-2">Seniority waterfall</div>' +
             '<div class="data-table-scroll mb-4">' +

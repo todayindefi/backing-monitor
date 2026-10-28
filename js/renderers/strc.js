@@ -1484,6 +1484,26 @@ var STRCRenderer = {
         return 'text-red-700 dark:text-red-300';
     },
 
+    _renderOutstandingBasis: function (data) {
+        var div = ((data || {}).tradfi || {}).strc_dividend || {};
+        var deriv = div.outstanding_derivation;
+        if (!deriv || deriv.status !== 'derived') return '';
+        var esc = CommonRenderer._escapeAttr;
+        return '<div class="text-xs text-slate-500 mt-3 mb-3 leading-relaxed">' +
+            '<strong>Derived STRC outstanding:</strong> ' + STRCRenderer._fmtNum(div.outstanding_shares) +
+            ' shares; stated amount ' + STRCRenderer._fmtMoney(div.outstanding_par_usd, 0) +
+            '; annual dividends at ' + ((div.current_rate || 0) * 100).toFixed(2) + '%: ' +
+            STRCRenderer._fmtMoney(div.annual_dividend_obligation_usd, 0) + '. ' +
+            'Filed base: ' + STRCRenderer._fmtNum(deriv.base_shares) + ' shares as of ' +
+            esc(String(deriv.base_as_of || 'unknown')) + ', less ' +
+            STRCRenderer._fmtNum(deriv.shares_retired) + ' retirements through ' +
+            esc(String(deriv.shares_retired_as_of || 'unknown')) + '. ' +
+            (typeof deriv.base_age_days === 'number' ? 'Base age: ' + deriv.base_age_days + ' days. ' : '') +
+            'This is a roll-forward, not a new share-count filing. The calendar-age and subsequent-issuance checks still apply. ' +
+            'Service and runway remain provisional model outputs; this reconciliation does not certify the other stack inputs. ' +
+            '</div>';
+    },
+
     _renderStrcDividendObligation: function (data) {
         var csw = data.cash_service_waterfall;
         if (!csw) {
@@ -1676,6 +1696,7 @@ var STRCRenderer = {
         return '<div class="panel">' +
             '<div class="panel-title">STRC dividend obligation + runway <span class="text-xs font-normal text-slate-500">— STRC-slice cash service</span></div>' +
             headline +
+            STRCRenderer._renderOutstandingBasis(data) +
             cashSubPanel +
             ceilingSubPanel +
             footer +
