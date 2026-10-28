@@ -839,14 +839,8 @@ var SyrupUSDCRenderer = {
 
         // ---- Per-pool collateral health comparison ----
         // Side-by-side replacement for the dropped family-aggregate Loan CR.
-        // Loans-only CR uses family.json's per-pool fields:
-        //   (pool_collateral_value_usd − principal_liquidity_usd) / principal_loans_only_usd × 100
-        // Until syrupUSDT's loan-classification analyzer fix lands, its
-        // principal_loans_only_usd is 0 in family.json — the loans-only CR
-        // and counts cells render "pending classification fix" rather than
-        // a misleading number. Init-level CR (weighted-avg baseline) and
-        // loans-below-init (stress signal) come from each pool's
-        // collateral_summary directly and resolve independently.
+        // Use source-authored credit coverage; strategy principal cannot be
+        // subtracted from aggregate collateral to invent a credit-only ratio.
         function summaryFromBacking(d) {
             return d && d.asset_specific && d.asset_specific.loan_book &&
                 d.asset_specific.loan_book.collateral_summary || null;
@@ -879,7 +873,7 @@ var SyrupUSDCRenderer = {
             setACritPct + '% · WARN &lt; ' + setAWarnPct + '%)</span>';
 
         function pendingCell() {
-            return '<span class="text-slate-400 italic text-xs">pending classification fix</span>';
+            return '<span class="text-slate-400 italic text-xs">unavailable / incomplete scope</span>';
         }
         function pctCell(v) {
             if (v == null) return pendingCell();
@@ -1127,6 +1121,7 @@ var SyrupUSDCRenderer = {
 
         return '<div class="panel">' +
             '<div class="panel-title">Maple Syrup Family — Cross-Pool Snapshot</div>' +
+            (combined.classification_basis ? '<div class="text-xs text-amber-700 mb-3">' + CommonRenderer._escapeAttr(combined.classification_basis) + '</div>' : '') +
             aggCards +
             perPoolBlock +
             assetBlock +
