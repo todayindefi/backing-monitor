@@ -1,0 +1,33 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const vm = require('node:vm');
+const ctx = {console, window:{}};
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync('js/renderers/common.js','utf8') + '\nglobalThis.common = CommonRenderer;', ctx);
+vm.runInContext(fs.readFileSync('js/renderers/syrupusdc.js','utf8') + '\nglobalThis.syrup = SyrupUSDCRenderer;', ctx);
+const specific = JSON.parse(fs.readFileSync('data/syrupusdt_backing.json')).asset_specific;
+const lb = structuredClone(specific.loan_book);
+delete lb.concentration_loans_only;
+delete lb.collateral_summary.collateral_ratio_loans_only_pct;
+// Book-wide values must never leak into the loan-only status row.
+lb.concentration.total_borrowers = 987;
+lb.collateral_summary.pool_collateral_ratio_pct = 98765;
+let html = ctx.syrup._renderLBH_status(specific, lb);
+assert.match(html, /Loan-only borrower count unavailable/);
+assert.doesNotMatch(html, /987/);
+assert.match(html, /pool CR \(loans-only\).*—/);
+html = ctx.syrup._renderBorrowerConcentration({...specific,loan_book:lb});
+assert.match(html, /All enumerated positions/);
+assert.match(html, /includes loan and liquidity positions/);
+assert.match(html, /all-enumerated position principal/);
+assert.doesNotMatch(html, /how much of the loan book/);
+// Explicit companions, including zero, remain usable.
+lb.concentration_loans_only = {...lb.concentration,total_borrowers:0};
+lb.collateral_summary.collateral_ratio_loans_only_pct = 0;
+html = ctx.syrup._renderLBH_status(specific,lb);
+assert.match(html, /0 borrowers/);
+assert.doesNotMatch(html, /unavailable|987/);
+html = ctx.syrup._renderBorrowerConcentration({...specific,loan_book:lb});
+assert.match(html, /\(Loans-only\)/);
+assert.match(html, /producer-classified loan principal/);
+console.log('PASS syrup scope: absent companions stay unavailable; fallback concentration is book-wide; explicit zero values preserved.');

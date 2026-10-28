@@ -1999,13 +1999,13 @@ var SyrupUSDCRenderer = {
         });
 
         var cs = lb.collateral_summary || {};
-        var poolCR = (cs.collateral_ratio_loans_only_pct != null) ?
-            cs.collateral_ratio_loans_only_pct : cs.pool_collateral_ratio_pct;
+        var poolCR = cs.collateral_ratio_loans_only_pct;
         var rateText = (lb.weighted_avg_rate_pct != null) ? CommonRenderer.formatPercent(lb.weighted_avg_rate_pct, 2) : '—';
         var poolCRText = (poolCR != null) ? CommonRenderer.formatPercent(poolCR, 1) : '—';
 
-        var co = lb.concentration_loans_only || lb.concentration || {};
-        var borrowerCount = co.total_borrowers || co.borrower_count || lb.borrower_count || 0;
+        var co = lb.concentration_loans_only || {};
+        var borrowerCount = co.total_borrowers != null ? co.total_borrowers : co.borrower_count;
+        var borrowerText = borrowerCount != null ? borrowerCount + ' borrowers' : 'Loan-only borrower count unavailable';
 
         function statusPill(label, count, cls) {
             var color = count > 0 ? cls : 'text-slate-400';
@@ -2015,7 +2015,7 @@ var SyrupUSDCRenderer = {
         return '<div class="mt-4 mb-4">' +
             '<div class="text-sm text-slate-700 mb-1">' +
                 '<span class="font-semibold">' + loansCount + ' loans</span> · ' +
-                '<span class="font-semibold">' + borrowerCount + ' borrowers</span> · ' +
+                '<span class="font-semibold">' + borrowerText + '</span> · ' +
                 '<span class="font-mono">' + rateText + '</span> wtd-rate · ' +
                 'pool CR (loans-only) <span class="font-mono">' + poolCRText + '</span>' +
             '</div>' +
@@ -2720,8 +2720,8 @@ var SyrupUSDCRenderer = {
         }).join('');
 
         return '<div class="panel">' +
-            '<div class="panel-title">Borrower Concentration' + (isLoansOnly ? ' <span class="text-xs font-normal text-slate-500">(Loans-only)</span>' : '') + '</div>' +
-            (isLoansOnly ? '<p class="text-sm text-slate-500 mb-3">Loan-book concentration only. Liquidity-layer custodies surfaced separately above.</p>' : '') +
+            '<div class="panel-title">Borrower Concentration' + (isLoansOnly ? ' <span class="text-xs font-normal text-slate-500">(Loans-only)</span>' : ' <span class="text-xs font-normal text-slate-500">(All enumerated positions)</span>') + '</div>' +
+            (isLoansOnly ? '<p class="text-sm text-slate-500 mb-3">Producer-classified loan concentration. Membership follows the producer classification.</p>' : '<p class="text-sm text-slate-500 mb-3">Book-wide concentration includes loan and liquidity positions. Loan-only concentration is unavailable.</p>') +
             '<div class="flex items-center gap-3 mb-4">' +
                 '<span class="text-sm text-slate-700"><span class="font-semibold">' + (c.total_borrowers || 0) + '</span> ' + (isLoansOnly ? 'loan ' : '') + 'borrowers · HHI <span class="font-mono font-semibold">' + (c.hhi || 0) + '</span></span>' +
                 bucketBadge +
@@ -2731,7 +2731,7 @@ var SyrupUSDCRenderer = {
                 '<div>' + bars + '</div>' +
                 '<div class="text-xs text-slate-500">' +
                     '<p class="mb-2"><strong>HHI</strong> (Herfindahl-Hirschman Index) is the sum of squared market shares — a single dominant borrower with 100% gives HHI = 10,000; perfectly even distribution gives HHI close to 0.</p>' +
-                    '<p>Top-N shares show how much of the loan book is held by the largest 1, 3, 5, 10 borrowers — a fast read for diversification of credit risk.</p>' +
+                    '<p>Top-N shares show how much of the ' + (isLoansOnly ? 'producer-classified loan principal' : 'all-enumerated position principal') + ' is held by the largest 1, 3, 5, 10 addresses.</p>' +
                 '</div>' +
             '</div>' +
             '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
