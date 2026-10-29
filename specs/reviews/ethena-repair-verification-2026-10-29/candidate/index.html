@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Risk Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css?v=20261016a">
+    <link rel="stylesheet" href="css/fxusd.css?v=20261024a">
+    <link rel="stylesheet" href="css/fxsave.css?v=20261026b">
+</head>
+<body class="min-h-screen">
+
+    <!-- Header -->
+    <div class="page-header">
+        <div class="max-w-6xl mx-auto px-4 flex items-center justify-between">
+            <div>
+                <a href="?" class="text-lg font-bold text-slate-800 hover:text-blue-600 transition-colors">Risk Dashboard</a>
+                <span id="header-subtitle" class="ml-3 text-sm text-slate-500"></span>
+                <a id="header-report-link" class="hidden ml-3 text-xs text-slate-500 hover:text-blue-600 transition-colors" target="_blank" rel="noopener noreferrer">Full report &#8599;</a>
+                <a id="header-companion-link" class="hidden ml-3 text-xs text-slate-500 hover:text-blue-600 transition-colors">View companion &#8599;</a>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="header-timestamp" class="text-xs text-slate-400"></div>
+                <button id="theme-toggle" onclick="toggleTheme()" class="p-1.5 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors" title="Toggle dark mode">
+                    <svg id="theme-icon-light" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                    <svg id="theme-icon-dark" class="w-4 h-4 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anchor nav for asset detail pages — populated by asset renderer (currently apyx only). -->
+    <div id="asset-anchor-nav" class="hidden sticky top-0 z-10 bg-white border-b border-slate-200 dark:bg-slate-800 dark:border-slate-700">
+        <div class="max-w-6xl mx-auto px-4 py-2 overflow-x-auto">
+            <div class="flex gap-3 text-xs whitespace-nowrap" id="asset-anchor-nav-inner"></div>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <div class="max-w-6xl mx-auto px-4 py-6">
+        <!-- Index view (asset cards) -->
+        <div id="index-view" class="hidden">
+            <h1 class="text-2xl font-bold text-slate-800 mb-1">Asset Risk Dashboards</h1>
+            <p class="text-slate-500 mb-6">On-chain risk monitoring across peg, liquidity, backing, dependencies &amp; issuer</p>
+            <div id="asset-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="loading-pulse text-slate-400 text-sm p-8 text-center">Loading assets...</div>
+            </div>
+        </div>
+
+        <!-- Asset detail view -->
+        <div id="asset-view" class="hidden">
+            <!-- Back link -->
+            <a href="?" class="inline-flex items-center text-sm text-slate-500 hover:text-blue-600 mb-4">
+                &larr; All assets
+            </a>
+
+            <!-- Feed staleness. Rendered by CommonRenderer.renderStalenessBanner for
+                 EVERY asset from the common path, so it cannot be missed by a
+                 bespoke renderer. Sits outside #asset-specific-panels so nothing
+                 clears it. Empty (and invisible) whenever the feed is fresh. -->
+            <div id="staged-banner"></div>
+            <div id="staleness-banner"></div>
+            <!-- Risk flags that the page's own layout does not display anywhere
+                 visible. Sits here, outside #asset-specific-panels, so a bespoke
+                 renderer cannot overwrite it — same reason as the banners above. -->
+            <div id="unseen-flags-banner"></div>
+            <!-- Axis-basis disclosure lines lifted out of a section a bespoke
+                 renderer hides. Opt-in per renderer — see CommonRenderer.liftHiddenAxisNotes. -->
+            <div id="axis-notes-lifted"></div>
+
+            <!-- Risk summary band: 6 axis cards in axis mode, legacy CR cards otherwise.
+                 ID retained so existing renderers (and common.renderSummaryCards) keep working. -->
+            <div id="summary-cards" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6"></div>
+
+            <!-- ============ Axis 1 · PEG ============ -->
+            <!-- 5-axis sections only reveal when the asset carries Layer-1 blocks; legacy
+                 assets keep the old backing-only layout (summary cards + backing section). -->
+            <section id="section-peg" class="axis-section hidden">
+                <div class="axis-head" id="axis-peg-head"></div>
+                <div id="axis-peg-body"></div>
+                <div id="peg-extra-panels"></div>
+            </section>
+
+            <!-- ============ Axis 2 · BACKING ============ -->
+            <!-- Always rendered. Holds the original backing DOM (chart-panel, breakdown-table,
+                 risk-flags, pie-chart) by their original IDs so every existing renderer that
+                 targets them keeps working. The head div is only filled in 5-axis mode. -->
+            <section id="section-backing" class="axis-section">
+                <div class="axis-head" id="axis-backing-head"></div>
+
+                <!-- CR Trend Chart -->
+                <div class="panel" id="chart-panel">
+                    <div class="panel-title">Collateral Ratio History</div>
+                    <div class="chart-container">
+                        <canvas id="cr-chart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Two columns: breakdown + risk -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <!-- Backing breakdown -->
+                    <div class="panel lg:col-span-2">
+                        <div class="panel-title">Backing Breakdown</div>
+                        <table class="data-table" id="breakdown-table">
+                            <thead>
+                                <tr>
+                                    <th>Strategy</th>
+                                    <th class="text-right">Value (USD)</th>
+                                    <th class="text-right">%</th>
+                                    <th style="width: 120px"></th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                        <p id="breakdown-caption" class="text-xs text-slate-400 mt-2"></p>
+                    </div>
+
+                    <!-- Risk flags + pie -->
+                    <div>
+                        <div class="panel">
+                            <div class="panel-title">Risk Flags</div>
+                            <div id="risk-flags">
+                                <div class="text-slate-400 text-sm">Loading...</div>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-title">Allocation</div>
+                            <div style="height: 200px; position: relative;">
+                                <canvas id="pie-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="backing-extra-panels"></div>
+            </section>
+
+            <!-- ============ Axis 3 · LIQUIDITY & EXIT ============ -->
+            <section id="section-liquidity" class="axis-section hidden">
+                <div class="axis-head" id="axis-liquidity-head"></div>
+                <div id="axis-liquidity-body"></div>
+                <div id="liquidity-extra-panels"></div>
+            </section>
+
+            <!-- ============ Axis 4 · DEPENDENCIES ============ -->
+            <section id="section-dependencies" class="axis-section hidden">
+                <div class="axis-head" id="axis-dependencies-head"></div>
+                <div id="axis-dependencies-body"></div>
+                <div id="dependencies-extra-panels"></div>
+            </section>
+
+            <!-- ============ Axis 5 · CONTRACT & ADMIN ============ -->
+            <!-- MEASURED axis: quorum, timelock depth, upgrade authority, pause surface,
+                 deployed-vs-published bytecode. Deliberately separate from Issuer (axis 6),
+                 which is EDITORIAL — they fail independently, and one score spanning a
+                 checkable axis and a subjective one cannot be checked. -->
+            <section id="section-contract" class="axis-section hidden">
+                <div class="axis-head" id="axis-contract-head"></div>
+                <div id="axis-contract-body"></div>
+                <div id="contract-extra-panels"></div>
+            </section>
+
+            <!-- ============ Axis 6 · ISSUER ============ -->
+            <section id="section-issuer" class="axis-section hidden">
+                <div class="axis-head" id="axis-issuer-head"></div>
+                <div id="axis-issuer-body"></div>
+                <div id="issuer-extra-panels"></div>
+            </section>
+
+            <!-- Asset-specific panels (legacy bespoke dump for non-piloted renderers) -->
+            <div id="asset-specific-panels"></div>
+        </div>
+
+        <!-- Error state -->
+        <div id="error-view" class="hidden text-center py-12">
+            <div id="error-heading" class="text-slate-400 text-lg mb-2">Failed to load data</div>
+            <div id="error-message" class="text-slate-500 text-sm"></div>
+        </div>
+    </div>
+
+    <footer class="max-w-6xl mx-auto px-4 py-6 text-center text-xs text-slate-400">
+        <div>Data refreshes every hour. Dashboard auto-refreshes every 5 minutes.</div>
+        <div id="firestarter-credit" class="mt-2 hidden">This dashboard was created and maintained with support of a FireStarter Grant from ArbitrumDAO.</div>
+    </footer>
+
+    <script>
+    function toggleTheme() {
+        document.body.classList.toggle('dark');
+        var isDark = document.body.classList.contains('dark');
+        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        document.getElementById('theme-icon-light').classList.toggle('hidden', isDark);
+        document.getElementById('theme-icon-dark').classList.toggle('hidden', !isDark);
+    }
+    // Apply saved preference
+    if (localStorage.getItem('theme') === 'dark') {
+        document.body.classList.add('dark');
+        document.getElementById('theme-icon-light').classList.add('hidden');
+        document.getElementById('theme-icon-dark').classList.remove('hidden');
+    }
+    // FireStarter credit — only show on dashboards that were actually sponsored.
+    (function () {
+        var sponsored = ['syrupusdc', 'syrupusdt', 'thbill', 'thusd'];
+        var slug = new URLSearchParams(window.location.search).get('asset');
+        if (slug && sponsored.indexOf(slug.toLowerCase()) !== -1) {
+            document.getElementById('firestarter-credit').classList.remove('hidden');
+        }
+    })();
+    </script>
+    <script src="js/renderers/common.js?v=20261029a"></script>
+    <script src="js/renderers/ousd.js?v=20260824a"></script>
+    <script src="js/renderers/frax.js?v=20260402"></script>
+    <script src="js/renderers/crvusd.js?v=20260910c"></script>
+    <script src="js/renderers/usg.js?v=20260911a"></script>
+    <script src="js/renderers/bold.js?v=20260919b"></script>
+    <script src="js/renderers/dola.js?v=20261016a"></script>
+    <script src="js/renderers/wsteth.js?v=20261010c"></script>
+    <script src="js/renderers/frxusd.js?v=20261012c"></script>
+    <script src="js/renderers/sfrxusd.js?v=20261016a"></script>
+    <script src="js/renderers/fxusd.js?v=20261024b"></script>
+    <script src="js/renderers/fxsave.js?v=20261026b"></script>
+    <script src="js/renderers/scrvusd.js?v=20261018d"></script>
+    <script src="js/renderers/msusd-metronome.js?v=20260917b"></script>
+    <script src="js/renderers/dusd-alto.js?v=20261001b"></script>
+    <script src="js/renderers/usdd.js?v=20260824a"></script>
+    <script src="js/renderers/syrupusdc.js?v=20261029c"></script>
+    <script src="js/renderers/apyx.js?v=20260914e"></script>
+    <script src="js/renderers/strc.js?v=20261028a"></script>
+    <!-- Loads AFTER strc.js: STRCxRenderer reuses its shared formatters. -->
+    <script src="js/renderers/strcx.js?v=20260915a"></script>
+    <script src="js/renderers/mstr.js?v=20261028a"></script>
+    <script src="js/renderers/bmnr.js?v=20260914a"></script>
+    <script src="js/renderers/saturn.js?v=20261019a"></script>
+    <script src="js/renderers/usdm.js?v=20261017a"></script>
+    <script src="js/renderers/thusd.js?v=20260912a"></script>
+    <script src="js/renderers/ethena.js?v=20261029a"></script>
+    <script src="js/renderers/cap.js?v=20260827z"></script>
+    <script src="js/renderers/usdai.js?v=20260912d"></script>
+    <script src="js/renderers/hastra-prime.js?v=20260913a"></script>
+    <script src="js/app.js?v=20261024a"></script>
+</body>
+</html>

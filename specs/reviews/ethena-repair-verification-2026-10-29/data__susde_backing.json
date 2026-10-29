@@ -1,0 +1,489 @@
+{
+  "schema_version": 1,
+  "asset": "sUSDe",
+  "asset_slug": "susde",
+  "chain": "ethereum",
+  "timestamp": "2026-10-29T07:02:10Z",
+  "summary": {
+    "total_supply": 951705614.5658604,
+    "supply_unit": "shares",
+    "total_assets_usde": 1194804931.25,
+    "nav": 1.255435412974809,
+    "price": null,
+    "staked_usde_usd": null,
+    "paused": null,
+    "supply_source": {
+      "status": "ok",
+      "as_of": "2026-10-29T07:01:37Z",
+      "block": 26296767,
+      "block_time": "2026-10-29T07:01:23Z"
+    },
+    "supply_status": "ok"
+  },
+  "risk_flags": [],
+  "vault_status": null,
+  "asset_specific": {
+    "type": "susde",
+    "vault_state": {
+      "total_supply_shares": 951705614.5658604,
+      "total_assets_usde": 1194804931.2529356,
+      "nav_usde_per_share": 1.255435412974809
+    },
+    "peg": {
+      "market_price": null,
+      "nav_usde_per_share": 1.255435412974809,
+      "source": "unavailable executable market price; onchain NAV separate"
+    },
+    "history_ref": "susde_backing_history.json",
+    "axis_thresholds": {
+      "backing": {
+        "cr_pct": [
+          102,
+          100,
+          99,
+          98
+        ],
+        "basis": "Anchored on this analyzer's own flags: COVERAGE_WARN 1.0 (par) -> 4/5, COVERAGE_CRIT 0.98 -> 2/5, and par + COVERAGE_DRIFT_PP (2.0pp) -> 5/5. A delta-neutral synthetic targets par, not 130%, so the generic scale rates its design state 3/5 'Watch'. A WARN below par can no longer coexist with a 4/5.",
+        "expires": false,
+        "expires_reason": "Par and two flag thresholds; none drifts."
+      }
+    },
+    "measurements": {
+      "vault": {
+        "status": "ok",
+        "cadence": "hourly",
+        "as_of": "2026-10-29T07:01:37Z",
+        "susde": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "block": 26296767,
+        "block_time": "2026-10-29T07:01:23Z",
+        "total_supply": 951705614.5658604,
+        "total_assets": 1194804931.2529356,
+        "nav": 1.255435412974809,
+        "cooldown_seconds": 86400,
+        "max_cooldown_seconds": 7776000,
+        "silo": "0x7FC7c91D556B400AFa565013E3F32055a0713425",
+        "silo_usde": 9339804.329979364,
+        "vault_usde_balance": 1194833208.8381855,
+        "nav_check": {
+          "total_assets_over_total_supply": 1.2554354129748093,
+          "diff_bps": -1.7686660948880425e-12,
+          "note": "convertToAssets(1e18) vs totalAssets/totalSupply at the same block; a stale share denominator would show here."
+        },
+        "cooldown_note": "cooldownDuration() = 86400 s (1 d) at block 26296767; MAX_COOLDOWN_DURATION = 7776000 s (90 d), a contract constant.",
+        "pause_note": "StakedUSDe has no paused(); restriction is via restricted-staker roles."
+      },
+      "realized_nav_growth": {
+        "status": "ok",
+        "cadence": "daily",
+        "as_of": "2026-10-28T19:13:40Z",
+        "block": 26293250,
+        "nav": 1.255351918833877,
+        "label": "realized exchange-rate growth from on-chain convertToAssets; NOT advertised APY",
+        "7d": {
+          "from_block": 26242850,
+          "from_nav": 1.2541632649093752,
+          "days": 7.021,
+          "growth_pct": 0.09477664972015187,
+          "annualized_pct": 5.0484222649248345
+        },
+        "30d": {
+          "from_block": 26077250,
+          "from_nav": 1.2503648267974727,
+          "days": 30.101,
+          "growth_pct": 0.39885095369947,
+          "annualized_pct": 4.945245696502187
+        },
+        "90d": {
+          "from_block": 25645250,
+          "from_nav": 1.2413246501119741,
+          "days": 90.34,
+          "growth_pct": 1.1300241818800183,
+          "annualized_pct": 4.644646269731512
+        }
+      },
+      "price_distribution_vs_nav": {
+        "status": "ok",
+        "basis": "bps vs on-chain NAV (convertToAssets)",
+        "source": "peg_tracker_history.json hourly samples of Chainlink 0xe07f52971153dB2713ACe5ebAAf2eA8b0A9230B7",
+        "mark_type": "oracle/index mark, NOT an executable market price",
+        "cadence_note": "the oracle updates ~daily, so hourly samples repeat its last value: read distinct_values, not n, as the observation count",
+        "last_sample": "2026-10-28T18:18:20Z",
+        "1d": {
+          "n": 23,
+          "distinct_values": 2,
+          "current_bps": -5.43,
+          "min": -6.35,
+          "max": -4.25,
+          "mean": -4.97,
+          "median": -4.87,
+          "p1": -6.35,
+          "p5": -6.3,
+          "p95": -4.3,
+          "p99": -4.25,
+          "hours_below_minus_50bps": 0.0,
+          "hours_below_minus_100bps": 0.0,
+          "longest_breach_minus_50bps_h": 0.0,
+          "longest_breach_minus_100bps_h": 0.0,
+          "missing_intervals_over_1_5h": [
+            [
+              "2026-10-28T08:18Z",
+              2.0
+            ]
+          ]
+        },
+        "7d": {
+          "n": 167,
+          "distinct_values": 8,
+          "current_bps": -5.43,
+          "min": -6.95,
+          "max": -1.67,
+          "mean": -3.88,
+          "median": -3.16,
+          "p1": -6.84,
+          "p5": -6.49,
+          "p95": -1.96,
+          "p99": -1.78,
+          "hours_below_minus_50bps": 0.0,
+          "hours_below_minus_100bps": 0.0,
+          "longest_breach_minus_50bps_h": 0.0,
+          "longest_breach_minus_100bps_h": 0.0,
+          "missing_intervals_over_1_5h": [
+            [
+              "2026-10-25T02:18Z",
+              2.0
+            ],
+            [
+              "2026-10-28T08:18Z",
+              2.0
+            ]
+          ]
+        },
+        "30d": {
+          "n": 715,
+          "distinct_values": 31,
+          "current_bps": -5.43,
+          "min": -9.1,
+          "max": -1.67,
+          "mean": -5.21,
+          "median": -5.3,
+          "p1": -8.74,
+          "p5": -8.12,
+          "p95": -2.45,
+          "p99": -1.91,
+          "hours_below_minus_50bps": 0.0,
+          "hours_below_minus_100bps": 0.0,
+          "longest_breach_minus_50bps_h": 0.0,
+          "longest_breach_minus_100bps_h": 0.0,
+          "missing_intervals_over_1_5h": [
+            [
+              "2026-10-03T06:18Z",
+              3.0
+            ],
+            [
+              "2026-10-10T19:18Z",
+              2.0
+            ],
+            [
+              "2026-10-21T02:18Z",
+              2.0
+            ],
+            [
+              "2026-10-25T02:18Z",
+              2.0
+            ],
+            [
+              "2026-10-28T08:18Z",
+              2.0
+            ]
+          ]
+        }
+      },
+      "daily_computed_at": "2026-10-28T19:05:01Z",
+      "daily_status": "ok",
+      "daily_age_hours": 11.95,
+      "cadence_map": {
+        "hourly": [
+          "vault"
+        ],
+        "daily": [
+          "realized_nav_growth",
+          "price_distribution_vs_nav"
+        ]
+      }
+    }
+  },
+  "report_url": "https://tidresearch.com/reports/susde",
+  "peg": {
+    "market_price": null,
+    "nav": 1.255435412974809,
+    "premium_discount_pct": null,
+    "source": "unavailable executable market price; onchain NAV separate",
+    "history_ref": "susde_backing_history.json",
+    "history_field": "market_price",
+    "volatility_score": 6.5,
+    "volatility_score_source": "risk-feed@2026-10-29T01:45:02Z",
+    "volatility_score_status": "ok",
+    "volatility_score_generated_at": "2026-10-29T01:45:02Z",
+    "volatility_score_age_hours": 5.29
+  },
+  "liquidity": {
+    "as_of": "2026-10-29T04:30:37Z",
+    "market_scope": "secondary_market_only",
+    "denomination": "USD",
+    "aggregation": "none; evaluate per chain using the worse-leg rule",
+    "primary_threshold_bps": 50.0,
+    "secondary_threshold_bps": 200.0,
+    "primary_redemption_depth": null,
+    "primary_redemption_depth_status": "not_measured_as_depth",
+    "primary_redemption_note": "The gated cooldown (cooldownDuration() = 86400 s = 1 d at block 26296767; contract maximum 90 d) is a time-delayed primary path, not an executable depth rung.",
+    "chains": {
+      "ethereum": {
+        "status": "measured",
+        "chain": "ethereum",
+        "measured_at": "2026-10-29T04:30:37Z",
+        "venue": "kyberswap routed venues on ethereum",
+        "sell_into": "USDC",
+        "denomination": "USD",
+        "shape_basis": "discrete ladder rungs",
+        "cost_convention": "marginal impact of each incremental rung interval versus the first rung execution rate",
+        "first_rung_subtracted": true,
+        "standing_cost_bps": -2.4,
+        "standing_cost_basis": "smallest-rung all-in output_usd / notional_usd; stated separately from marginal impact",
+        "primary_threshold_bps": 50.0,
+        "depth_50bps": {
+          "threshold_bps": 50.0,
+          "shape": "floor",
+          "depth_usd": 2000000.0,
+          "basis": "marginal",
+          "note": "Ladder ended while still clearing; this is a lower bound, not a limit."
+        },
+        "depth_200bps": {
+          "threshold_bps": 200.0,
+          "shape": "floor",
+          "depth_usd": 2000000.0,
+          "basis": "marginal",
+          "note": "Ladder ended while still clearing; this is a lower bound, not a limit."
+        },
+        "rungs": [
+          {
+            "notional_usd": 1000.0,
+            "output_usd": 999.76,
+            "all_in_cost_bps": -2.4,
+            "impact_vs_first_rung_bps": 0.0,
+            "marginal_impact_bps": 0.0
+          },
+          {
+            "notional_usd": 10000.0,
+            "output_usd": 9997.29,
+            "all_in_cost_bps": -2.71,
+            "impact_vs_first_rung_bps": -0.31,
+            "marginal_impact_bps": -0.34
+          },
+          {
+            "notional_usd": 50000.0,
+            "output_usd": 49985.93,
+            "all_in_cost_bps": -2.81,
+            "impact_vs_first_rung_bps": -0.41,
+            "marginal_impact_bps": -0.44
+          },
+          {
+            "notional_usd": 100000.0,
+            "output_usd": 99970.3,
+            "all_in_cost_bps": -2.97,
+            "impact_vs_first_rung_bps": -0.57,
+            "marginal_impact_bps": -0.73
+          },
+          {
+            "notional_usd": 250000.0,
+            "output_usd": 249915.54,
+            "all_in_cost_bps": -3.38,
+            "impact_vs_first_rung_bps": -0.98,
+            "marginal_impact_bps": -1.25
+          },
+          {
+            "notional_usd": 500000.0,
+            "output_usd": 499804.68,
+            "all_in_cost_bps": -3.91,
+            "impact_vs_first_rung_bps": -1.51,
+            "marginal_impact_bps": -2.03
+          },
+          {
+            "notional_usd": 1000000.0,
+            "output_usd": 999445.43,
+            "all_in_cost_bps": -5.55,
+            "impact_vs_first_rung_bps": -3.15,
+            "marginal_impact_bps": -4.79
+          },
+          {
+            "notional_usd": 2000000.0,
+            "output_usd": 1997865.73,
+            "all_in_cost_bps": -10.67,
+            "impact_vs_first_rung_bps": -8.27,
+            "marginal_impact_bps": -13.4
+          }
+        ]
+      },
+      "arbitrum": {
+        "status": "unmeasured",
+        "chain": "arbitrum",
+        "reason": "no chain-local executable secondary-market ladder is collected"
+      },
+      "base": {
+        "status": "unmeasured",
+        "chain": "base",
+        "reason": "no chain-local executable secondary-market ladder is collected"
+      },
+      "optimism": {
+        "status": "unmeasured",
+        "chain": "optimism",
+        "reason": "no chain-local executable secondary-market ladder is collected"
+      },
+      "bsc": {
+        "status": "unmeasured",
+        "chain": "bsc",
+        "reason": "no chain-local executable secondary-market ladder is collected"
+      },
+      "mantle": {
+        "status": "unmeasured",
+        "chain": "mantle",
+        "reason": "no chain-local executable secondary-market ladder is collected"
+      },
+      "blast": {
+        "status": "unmeasured",
+        "chain": "blast",
+        "reason": "no chain-local executable secondary-market ladder is collected"
+      },
+      "fraxtal": {
+        "status": "unmeasured",
+        "chain": "fraxtal",
+        "reason": "no chain-local executable secondary-market ladder is collected"
+      },
+      "monad": {
+        "status": "unmeasured",
+        "chain": "monad",
+        "reason": "no chain-local executable secondary-market ladder is collected"
+      }
+    },
+    "derived_score": null,
+    "derived_score_status": "not_computed",
+    "liquidity_score": 7.0,
+    "liquidity_score_source": "risk-feed@2026-10-29T01:45:02Z",
+    "liquidity_score_status": "ok",
+    "liquidity_score_generated_at": "2026-10-29T01:45:02Z",
+    "liquidity_score_age_hours": 5.29
+  },
+  "backing": {
+    "collateral_ratio": 101.7467,
+    "collateral_ratio_scale": "percent",
+    "collateral_ratio_basis": "sUSDe is a wrapper over USDe, so its backing ratio is USDe's coverage including the reserve fund \u2014 a claim on USDe is worth what USDe is backed by. \u26a0\ufe0f NOT the share-to-USDe relationship, which is 1:1 by construction and published separately as usde_backing_per_share_pct: rating that would be rating a definition. See ?asset=usde for what stands behind the number.",
+    "usde_backing_per_share_pct": 100.0,
+    "usde_backing_per_share_note": "Definitional: every sUSDe share is a claim on staked USDe, so this is 100% by construction and carries no information about backing.",
+    "total_backing": null,
+    "surplus_deficit": null,
+    "underlying": "USDe",
+    "breakdown": [
+      {
+        "label": "USDe (staked)",
+        "value": null,
+        "pct": 100
+      }
+    ],
+    "backing_score": 6.5,
+    "backing_score_source": "risk-feed@2026-10-29T01:45:02Z",
+    "backing_score_status": "ok",
+    "backing_score_generated_at": "2026-10-29T01:45:02Z",
+    "backing_score_age_hours": 5.29
+  },
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "USDe",
+        "metric": "100% of backing",
+        "link": "?asset=usde",
+        "link_type": "internal"
+      }
+    ],
+    "downstream": [],
+    "downstream_tracked": false
+  },
+  "issuer": {
+    "report_url": "https://tidresearch.com/reports/susde",
+    "report_url_status": "published",
+    "badge": "Issuer 7.0/10",
+    "issuer_score": 7.0,
+    "issuer_score_source": "risk-feed@2026-10-29T01:45:02Z",
+    "issuer_score_status": "ok",
+    "issuer_score_generated_at": "2026-10-29T01:45:02Z",
+    "issuer_score_age_hours": 5.29,
+    "attestation_age_days": 31.3,
+    "attestation_age_inherited_from": "USDe",
+    "attestation_age_basis": "embedded_snapshot"
+  },
+  "source_metadata": {
+    "backing": {
+      "fetch_status": "ok",
+      "source": "ethena_issuer",
+      "definition": "ethena_issuer_status_v1",
+      "source_url": "https://app.ethena.fi/api/collateralization/status",
+      "source_timestamp": "2026-10-29T05:59:28.000000Z",
+      "retrieved_at": "2026-10-29T07:01:31.868228+00:00",
+      "source_kind": "issuer_reported",
+      "independent_custody_verification": false,
+      "allocation_status": "unknown",
+      "coverage_ratio_24h_status": "unavailable_source_break",
+      "source_age_hours": 1.035,
+      "total_backing_usd": 4560198405.35,
+      "reserve_fund_usd": 62059526.93997018,
+      "usde_supply": 4542907916.34008,
+      "arithmetic": {
+        "status": "ok",
+        "coverage_excluding_rf": 1.0038060399480537,
+        "coverage_including_rf": 1.0174667894245626,
+        "denominator": "issuer totalTokenSupplyInUsd at source_timestamp; not execution price"
+      },
+      "separate_views": {
+        "composition": {
+          "url": "https://app.ethena.fi/api/collateral-breakdown",
+          "retrieved_at": "2026-10-29T07:01:32.039326+00:00",
+          "status": "ok",
+          "source_timestamp": null,
+          "scope": "separate issuer view; not a same-snapshot balance-sheet allocation"
+        },
+        "positions": {
+          "url": "https://app.ethena.fi/api/positions/current/backing-assets",
+          "retrieved_at": "2026-10-29T07:01:32.239001+00:00",
+          "status": "ok",
+          "source_timestamp": 1793250097,
+          "scope": "separate issuer view; not a same-snapshot balance-sheet allocation"
+        }
+      }
+    },
+    "canonical_supply": {
+      "status": "ok",
+      "as_of": "2026-10-29T07:02:06Z",
+      "block": 26296767,
+      "block_time": "2026-10-29T07:01:23+00:00",
+      "unit": "USDe tokens",
+      "scope": "Ethereum totalSupply includes adapter locked; never add bridged supplies"
+    },
+    "vault": {
+      "status": "ok",
+      "as_of": "2026-10-29T07:01:37Z",
+      "block": 26296767,
+      "block_time": "2026-10-29T07:01:23Z"
+    },
+    "prices": {
+      "usde_price": {
+        "status": "unavailable_executable_market_price",
+        "upstream_timestamp": "2026-10-29T05:18:41.239529Z",
+        "note": "canonical source quotes remain in liquidity.exit_mark; no oracle/par substitution"
+      },
+      "susde_price": {
+        "status": "unavailable_executable_market_price",
+        "upstream_timestamp": "2026-10-29T05:18:41.239529Z",
+        "note": "canonical source quotes remain in liquidity.exit_mark; no oracle/par substitution"
+      }
+    }
+  },
+  "source_definition": "ethena_live_repair_v1"
+}

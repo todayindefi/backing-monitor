@@ -1,0 +1,10946 @@
+/**
+ * Common renderer — handles generic sections shared by all assets.
+ */
+
+// 5-axis rating thresholds. Namespaced top-level const (renderer files share JS
+// global scope — see the cross-file collision rule). Cutoffs map a metric to a
+// 1–5 rating; per-asset overrides come via data.asset_specific.axis_thresholds.
+var RISK_AXIS_THRESHOLDS = {
+    peg:       { abs_dev_pct: [0.15, 0.30, 0.50, 1.0] },  // 5/4/3/2 cutoffs (smaller = better); else 1
+    liquidity: { depth_usd:   [2e6, 1e6, 5e5, 1e5] },     // 5/4/3/2 cutoffs (larger = better); else 1
+    backing:   { cr_pct:      [130, 110, 100, 90] }       // 5/4/3/2 cutoffs (larger = better); else 1
+};
+
+const CommonRenderer = {
+
+    // ------ Per-axis overlay merge ------
+    //
+    // The six-axis pipeline is ONE PRODUCER PER AXIS, each publishing
+    // {slug}_<axis>.json in its own repo, the sync copying per block, NO
+    // ASSEMBLER. The no-assembler rule exists because an assembler RE-STAMPS:
+    // one file timestamp laid over six clocks reports "fresh" above a two-day-old
+    // block. So the merge happens HERE, at render time, per field, and every
+    // field keeps its own origin.
+    //
+    // ⚠️ AXIS 2 CANNOT HAVE AN OVERLAY AND THIS IS A NAME COLLISION, NOT A
+    // POLICY. Axis 2 is `backing`, so its overlay would be {slug}_backing.json —
+    // which is already the whole-file feed every asset loads. The convention
+    // {slug}_<axis>.json silently has one axis whose name is taken. Axis 2 stays
+    // inside the base file (PegTracker owns it, per the ownership table), and a
+    // second producer with axis-2 CONTENT — riskAnalyst's attachment point for
+    // reUSD is exactly this — has nowhere to put it under the current spelling.
+    // Resolve at the spec, not by inventing a name here.
+    //
+    // ⚠️ PREFERENCE IS BY OWNERSHIP, NOT BY FRESHNESS. DexTracker is canonical
+    // for axis 3 even when its file is older than the embedded block, because
+    // the alternative — preferring whichever number is newer — makes the page's
+    // source depend on cron timing and silently alternate between two bases.
+    // The cost is that a stale overlay can downgrade a fresh page, so the age
+    // is always shown and the origin always named.
+    AXIS_OVERLAYS: {
+        // ⚠️ AXIS 2 IS `_backing_overlay`, NOT `_backing`, AND THE REASON IS A
+        // NAME COLLISION RATHER THAN A DISTINCTION. {slug}_backing.json is
+        // already the whole-file feed every asset loads, so axis 2 is the one
+        // axis whose per-axis name was taken before the convention existed.
+        // riskAnalyst proposed the suffix rather than inventing a namespace, and
+        // it is honoured here — but a DIRECTORY namespace (axes/{slug}_backing.json)
+        // is the better general fix, because this collision recurs the moment two
+        // producers both emit the same block type. Deferred deliberately: it
+        // changes the sync's copy shape and every fetch path, so it is a
+        // coordinated rename done once, not mid-flight.
+        // ⚠️ ONE FILE, THREE AXES. `_axis_basis` carries peg / backing / liquidity
+        // blocks in one envelope, so it is listed under all three. It is ADDITIVE:
+        // it declares what each authored score MEASURES and whether that score is
+        // persistence-filtered — which the feed never said, so a reader saw a live
+        // band beside an authored score with no way to tell why they differ.
+        //
+        // ⚠️ `peg` had NO overlay entry before this. It is the first.
+        peg:          '_axis_basis',
+        backing:      ['_backing_overlay', '_axis_basis'],
+        liquidity:    ['_liquidity', '_axis_basis'],
+        // ⚠️ `_axis_basis` WAS REGISTERED ON THREE AXES AND THE FILE WRITES FOUR.
+        // The crvUSD pilot carries a `dependencies` block with a fully-argued
+        // underlying_score_basis, and nothing read it — the only *_dependencies.json
+        // files on disk belong to two STAGED assets, so that basis reached no reader
+        // at all. Mine to fix: I wired peg/backing/liquidity and stopped.
+        dependencies: ['_dependencies', '_axis_basis'],
+        // ⚠️ TWO PRODUCERS, TWO HALVES OF ONE AXIS — applied in this order.
+        // security_analyst's hand-walk supplies the AUTHORITY half and replaces
+        // the axis; riskAnalyst's overlay merges the CODE half plus the score on
+        // top. This is not the "two producers on one axis" the pipeline forbids:
+        // that rule exists because a split axis needs something to COMPUTE a
+        // merge, and here there is nothing to compute — the halves do not
+        // overlap and riskAnalyst's file says so in `authority_note` rather than
+        // restating the walk. The seam is declared by the producers, not
+        // inferred here.
+        contract:     ['_contract', '_contract_overlay'],
+        issuer:       '_issuer'
+    },
+
+    // ⚠️ PER-FIELD MERGE IS ONLY SAFE WHEN BOTH PRODUCERS SHARE A VOCABULARY,
+    // and the first real overlay proved they do not. DexTracker's liquidity/1
+    // and PegTracker's embedded liquidity block name almost nothing in common:
+    //
+    //   PegTracker   total_2pct_depth, two_pct_depth_status, pools, exit_mark
+    //   liquidity/1  depth{status,depth_usd,basis}, enumeration, venues[], swap_tvl_usd
+    //
+    // Merged per field, EVERY PegTracker field survives untouched because the new
+    // producer never names it — so the page would keep rendering
+    // total_2pct_depth while liquidity/1 says `depth.status: "unmeasured",
+    // basis: "Depth withheld: the anchor is missing"`. ⚠️ That is worse than
+    // showing nothing: it prints a number the axis's own canonical producer
+    // declined to publish, over a chip claiming the canonical producer as the
+    // source.
+    //
+    // So the rule is declared by the overlay itself:
+    //
+    //   schema_version PRESENT  -> the producer is claiming a NEW vocabulary.
+    //                              It must be adopted here before use. Adopted
+    //                              means the axis is REPLACED wholesale — one
+    //                              producer owns the axis, which is the pipeline
+    //                              rule; blending two producers inside one block
+    //                              is an assembler at field scale.
+    //   schema_version ABSENT   -> the producer is claiming the EXISTING
+    //                              vocabulary, so per-field merge is what it
+    //                              asked for and what it gets.
+    //
+    // An unknown schema is REFUSED and SAID SO on the page. Refusing silently
+    // would leave a producer emitting a file for hours into a dashboard that
+    // ignores it — which is exactly what happened: liquidity/1 has existed since
+    // 12:03 and reached nothing, because its commit message asserted the sync
+    // already carried it and nobody ran the copy.
+    // ⚠️ A SCHEMA IS ADOPTED WITH A MODE, NOT JUST A YES. The first cut had one
+    // rule — declared schema means the producer owns the axis, replace wholesale
+    // — and the second real overlay broke it. riskAnalyst's backing-overlay/1
+    // carries ONLY what this dashboard cannot compute (a report-derived
+    // attachment point). Replacing the backing block with it would discard the
+    // collateral ratio the dashboard measures for itself. Two legitimate kinds:
+    //
+    //   replace  the axis's canonical OWNER supplies the whole axis. Nothing of
+    //            the embedded block survives, so no field is a survivor of a
+    //            different source. (DexTracker's liquidity/1, when adopted.)
+    //   merge    a SUPPLEMENT: fields the dashboard cannot derive, added beside
+    //            the ones it computes. Per-field, each keeping its origin.
+    //
+    // `payload` is likewise per schema and this is NOT the both-spellings trap:
+    // an envelope vs a flat block is what a schema_version EXISTS to pin down.
+    // Accepting two spellings of one FIELD entrenches divergence; accepting two
+    // versioned schemas, each with a declared shape, is the versioning working.
+    //
+    //   envelope  { schema_version, asset, as_of, <axis>: { ...block } }
+    //   flat      { schema_version, asset_slug, as_of, ...block }
+    //
+    // ⚠️ ENVELOPE IS THE PREFERRED SHAPE FOR ANY NEW SCHEMA. It needs no
+    // reserved-key stripping, so a producer can never lose a data field to a
+    // meta name collision. `flat` is honoured because liquidity/1 shipped that
+    // way, not because it is equally good.
+    ADOPTED_OVERLAY_SCHEMAS: {
+        // ⚠️ `additive: true` — an issuer overlay contributes summary / summary_source
+        // / facts, which the asset feed never carries. Sharing no field with the feed
+        // is this schema's NORMAL state, not the ambiguous case the disjoint warning
+        // was written for, and without this every issuer overlay renders an amber
+        // ⚠️ chip saying it overrode nothing.
+        issuer:       { 'issuer/1':          { mode: 'merge', payload: 'envelope', identity: 'asset', additive: true } },
+        peg:          { 'axis-basis/1':      { mode: 'merge', payload: 'envelope', identity: 'asset', additive: true } },
+        backing:      { 'backing-overlay/1': { mode: 'merge', payload: 'envelope', identity: 'asset' },
+                        'axis-basis/1':      { mode: 'merge', payload: 'envelope', identity: 'asset', additive: true } },
+        dependencies: { 'dependencies/1':    { mode: 'merge', payload: 'envelope', identity: 'asset' },
+                        'axis-basis/1':      { mode: 'merge', payload: 'envelope', identity: 'asset', additive: true } },
+        // ⚠️ REPLACE, not merge: security_analyst owns axis 5 outright and the
+        // base feed publishes no contract block at all, so nothing is discarded.
+        // The mode still matters — it guarantees no field on this axis is a
+        // survivor of a different source, which for an authority walk is the
+        // difference between evidence and a composite nobody measured.
+        contract:     {
+            'contract/1':         { mode: 'replace', payload: 'envelope', identity: 'asset' },
+            // Merges ON TOP of the walk: adds the code half and the score,
+            // overrides nothing the walk established.
+            'contract-overlay/1': { mode: 'merge',   payload: 'envelope', identity: 'asset' }
+        },
+        // ⚠️ ADOPTED 2026-09-03. DexTracker owns axis 3 and replaces it whole.
+        // Its payload carries `primary_exit` as well as `depth`, so replacing
+        // does NOT drop the redemption leg — checked before adopting, because a
+        // wholesale replace that loses the primary window would have made the
+        // axis worse while looking richer.
+        // ⚠️ max_age_days IS DECLARED WHERE A PRODUCER WAS MEANT TO RE-MEASURE.
+        // ⚠️ NOTE THE CAUSE IS NOT A MISSING CRON LINE. I diagnosed it that way
+        // and asked DexTracker to schedule `liquidity_payload.py`; they refused,
+        // correctly. That script is an ASSEMBLER — it takes depth as an argument
+        // it cannot compute, its `main()` never passes one, and the CLI path
+        // therefore always emits an unmeasured stub. Scheduling it would have
+        // OVERWRITTEN every file holding real rungs with a 0-rung stub. Depth
+        // measurement is bespoke per asset and venue type (Curve get_dy, a
+        // Uniswap v3 tick simulator, a Mento FPMM floor) and generalises behind
+        // no flag. Axis 3 has no automated depth producer — that is a scope
+        // question, not a scheduling one.
+        // A replace overlay SUPPRESSES a live feed, so one that stops refreshing
+        // outranks fresh data forever rather than briefly. DexTracker's
+        // liquidity_payload.py is not on any cron — every overlay is a hand-run
+        // artifact frozen at its authoring date — so syzUSD's 13-day-old refusal
+        // to publish depth was hiding PegTracker's live ladder, which locates
+        // that crossing between $200K and $250K.
+        //
+        // ⚠️ DELIBERATELY NOT APPLIED TO contract/1, WHICH IS ALSO `replace`.
+        // That axis is a security_analyst HAND-WALK: being weeks old is its
+        // normal condition, not a stall, and ageing it out would blank axis 5
+        // across the estate. A staleness horizon is only meaningful for a
+        // producer that was supposed to re-measure. Whoever adds the next
+        // replace schema should ask which of the two it is.
+        liquidity: { 'liquidity/1':   { mode: 'replace', payload: 'flat', identity: 'asset_slug',
+                                        max_age_days: 7 },
+                     'axis-basis/1': { mode: 'merge',   payload: 'envelope', identity: 'asset', additive: true } }
+    },
+
+    // ⚠️ A KEPT FIELD THAT RENDERS AN OVERRIDDEN ONE IS STALE, AND IT WINS BY
+    // DEFAULT. Found on the first real reUSD render: PegTracker published the
+    // report's OVERALL score as the issuer badge ("Overall 6.0/10"), riskAnalyst's
+    // overlay overrode issuer_score to its authored 5.5 — and the page showed
+    // axis 6 TITLED "Overall" reading 6.0/10, because _issuerAxisInfo derives
+    // both the label and the value from `badge` when one is present. The merge
+    // was correct field-by-field and the result was wrong twice over: wrong axis
+    // name, wrong number.
+    //
+    // Per-field merge cannot see this on its own — `badge` and `issuer_score` are
+    // different keys, so nothing marks one as describing the other. It has to be
+    // declared. If the underlying value is overridden and its rendering is not,
+    // the rendering is dropped so the renderer rebuilds it from the live value.
+    //
+    // ⚠️ Keep this list SHORT and only for fields that are literally a rendering
+    // of another. It is not a general "recompute what looks derived" rule — that
+    // would start discarding producer-authored text on suspicion.
+    DERIVED_FIELDS: {
+        issuer: { badge: ['issuer_score', 'structural_score'] }
+    },
+
+    // Set by mergeAxisOverlays, read by _renderAxisHead. Mutable static, same
+    // idiom as KNOWN_ASSET_SLUGS. Reset on every merge so an SPA navigation
+    // cannot carry the previous asset's provenance onto this one.
+    AXIS_PROVENANCE: {},
+
+    // ⚠️ BLOCK-LEVEL PROSE, WHICH IS A DIFFERENT SHAPE FROM A SCORE SIBLING AND
+    // WAS REACHING NOBODY. riskAnalyst's axis-basis blocks carry arguments under
+    // their own key rather than as `<score>_<suffix>` — `authored_vs_band_note`
+    // (dusd-alto peg AND liquidity, fxusd liquidity), and on dusd-alto four more
+    // that are the whole reading of the asset: the deviation is a PREMIUM not a
+    // depeg, the premium cannot close by trading, the issuer's LP share moved on
+    // the denominator rather than by withdrawing, and pool composition is the
+    // leading signal. None of it rendered.
+    //
+    // ⚠️ AN ALLOWLIST, NOT A SWEEP, AND THE REASON IS MEASURED. A sweep over the
+    // merged axis block would re-print base-feed fields that already render
+    // elsewhere (peg.note, nav_basis, two_pct_depth_basis…) — duplication is its
+    // own defect. So notes are collected AT MERGE TIME from the axis-basis
+    // overlay's own block, where the vocabulary is one producer's and auditable:
+    // 11 block-level string keys across the whole corpus on 2026-09-25, every
+    // prose one reader-facing, and the internal `routing_note` sits at the FILE
+    // level rather than inside a block, so it is out of scope structurally.
+    //
+    // ⚠️ AND AN UNADOPTED KEY IS NAMED, NOT DROPPED — same rule as the score-move
+    // marker: the KEY renders, never the value, so a new note trips a visible
+    // flag instead of vanishing and gets adopted deliberately.
+    AXIS_AUTHORED_NOTES: {},
+
+    // ⚠️ BLOCKS WE READ. The sibling of AUTHORED_NOTE_KEYS, for object- and
+    // array-valued fields rather than prose — see _collectAuthoredNotes.
+    //
+    // ⚠️ A LIST, NOT A SCAN OF OUR OWN SOURCE. Introspecting the renderer text for
+    // each key name produced three false positives: `backing_score_change`,
+    // `liquidity_score_change` and `underlying_score_change` are reached by
+    // assembling the key at runtime (`blk[f + '_score_change']`), so the literal
+    // never appears. A detector that reads our source is as blind as one that reads
+    // a producer's — both answer "is this name written down" rather than "is this
+    // used".
+    //
+    // ⚠️ GLOBAL, WHILE THE READING IS PER-RENDERER, AND THAT IS A FLOOR ON
+    // DETECTION RATHER THAN A GUARANTEE. `float_split` and `measurement_clocks` are
+    // read by dusd-alto.js alone, so listing them here silences the marker for every
+    // other asset too. Same trade the prose adoption list already makes; matching it
+    // beats adding a second, subtler rule.
+    AUTHORED_BLOCK_KNOWN: [
+        'code_facts', 'cross_axis', 'segments', 'unmeasured',
+        // contract/1 hand-walk envelope. The authority renderer consumes these
+        // into its scope, path table, unresolved disclosures and verification
+        // trail; listing them prevents the generic unread-block sentinel from
+        // contradicting the rendered panel directly beneath it.
+        'publication_scope', 'layers', 'authority_summary', 'unresolved',
+        'review', 'walk_notes', 'verification',
+        'float_split', 'measurement_clocks',
+        // ⚠️ THE LIQUIDITY AXIS'S OWN BLOCKS, added when the marker was extended to
+        // replace-mode overlays. Without them it named eleven blocks on DexTracker's
+        // apxUSD sample, eight of which we read — `venues`, `pools`, `enumeration`,
+        // `exit_mark`, `primary_exit`, `depth_50bps` and the rest. A marker whose
+        // first output is mostly false positives trains a reader to ignore it, which
+        // is worse than the silence it replaced.
+        'venues', 'pools', 'enumeration', 'exit_mark', 'primary_exit', 'depth',
+        'by_chain', 'exit_capacity', 'two_pct_depth_bracket', 'slippage_reference',
+        'cost_conventions', 'quotes', 'distribution', 'token_registry',
+        'token_resolution', 'methodology', 'regimes', 'downstream_route_legs',
+        'excluded_liquidity', 'venue_enumeration',
+        // Payload metadata — a declaration ABOUT the payload, not content in it.
+        'publishes', 'does_not_publish'
+    ],
+
+    AUTHORED_NOTE_KEYS: [
+        // ⚠️ Both written FOR a consumer, in the imperative: "render the walk and
+        // this 5.0 side by side with both dates visible and do NOT reconcile
+        // them", and "a panel naming any one of these Safes beside another must
+        // state that four signatures reach both". Adopted on sight for that
+        // reason — a producer instruction that reaches no consumer is the same
+        // defect as an unrendered score.
+        'structural_score_rescore_pending',
+        'one_authority_three_safes',
+        // ⚠️ The split the chip cannot carry: four keys to move value, one to
+        // halt. Published after the three-Safes field was found wrong about pause.
+        'power_surface_by_delay',
+        // ⚠️ FOUND BY THE MARKER ITSELF, minutes after it was widened to
+        // backing-overlay/1: five of dusd-alto's six backing notes reached no
+        // reader — including "92.5% OF ALL COLLATERAL VALUE IS A SINGLE ASSET"
+        // and "THERE IS NO INSURANCE FUND, SURPLUS BUFFER" — while the sixth
+        // (`is_seized_note`) already rendered. Checked each against the DOM
+        // before adopting rather than trusting the marker.
+        'zero_buffer_note',
+        'no_backstop_note',
+        'blended_ratio_note',
+        'verifiability_note',
+        'concentration_note',
+        // ⚠️ ADOPTED 2026-10-02, both read in full first because adopting is
+        // publishing. sUSDe published six new prose fields and five reached no
+        // reader; these two are the ones that bound a figure already on the page.
+        //
+        // `coverage_limit`: the venue enumeration is DEX-only — neither source
+        // returns centralised exchanges — so every venue figure on the page is a
+        // FLOOR on coverage rather than a census. A reader comparing venue TVL
+        // across assets has no way to know that without this.
+        //
+        // `recheck_basis`: a $20.92M Pendle market, larger than every non-Ethereum
+        // chain's spot venues combined, MATURES 2026-10-22. For a PT maturity is
+        // binding rather than indicative, so a material exit route has a hard expiry
+        // inside the month. The producer's own reason for the field is the one that
+        // decided it: "a durable range with no re-check date still reads
+        // authoritative after it expires."
+        //
+        // ⚠️ NOT adopted: `threshold_tier_basis`. Its substance is correct and it is
+        // written for another producer, not a reader — it cites a spec section in
+        // another repo and contrasts an asset we declined to register. The unread
+        // marker names it, which is the right outcome rather than a silent drop.
+        'coverage_limit',
+        'recheck_basis',
+        'authored_vs_band_note',
+        'current_deviation_is_a_premium_note',
+        'premium_cannot_close_by_trading_note',
+        'treasury_share_refresh_note',
+        'treasury_exit_regime_refresh_note',
+        'venue_composition_is_the_leading_signal',
+        'producer_note'
+    ],
+
+    // Keys inside an axis-basis block that are META or already rendered by a
+    // dedicated slot — excluded from the marker so it stays a real signal.
+    // ⚠️ RENDERED ELSEWHERE, so the marker must not report them as unread. It
+    // fired on `coverage_note` the moment the collector was widened to
+    // contract-overlay/1 — a field with eleven read sites in this file. A false
+    // "unread" is worse than no marker: it teaches the reader to ignore it.
+    AUTHORED_NOTE_IGNORE: [
+        'as_of', 'source', 'producer', 'collateral_ratio_basis',
+        'coverage_note', 'coverage_summary', 'cross_axis',
+        'is_seized_note',
+        // Read by the frxUSD contract panel. These are deliberately scoped
+        // there rather than globally adopted as authored notes: the same keys
+        // occur on other assets whose bespoke layouts have not accepted them.
+        'provenance_note', 'custody_disclosure', 'custody_disclosure_sources'
+    ],
+
+    // `overlays` is [{axis, file, json}] — nulls (404s) already filtered by the
+    // caller. A missing overlay is the NORMAL case today: no producer emits one
+    // yet, so this must be a no-op on all 25 live assets.
+    mergeAxisOverlays(data, overlays, sourceSlug) {
+        this.AXIS_PROVENANCE = {};
+        this.AXIS_AUTHORED_NOTES = {};
+        if (!data || !Array.isArray(overlays)) return data;
+        var self = this;
+        var has = function(o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
+
+        // The identities this page will answer to. An overlay naming a DIFFERENT
+        // asset is refused rather than merged: a mis-copied file would otherwise
+        // paint one asset's data onto another's page silently, with a chip
+        // vouching for it.
+        //
+        // ⚠️ TWO SPELLINGS OF THE SLUG ARE IN PLAY AND BOTH ARE LEGITIMATE. The
+        // dashboard's URL slug is dashed (reusd-re); the data filename and every
+        // producer's identity field are underscored (reusd_re), because the sync
+        // derives filenames as slug.replace('-','_'). Accepting the feed's own
+        // asset_slug AND the resolved source slug is not laxity — they are the
+        // same identity in the two spellings the pipeline already uses.
+        var expected = [];
+        if (typeof data.asset_slug === 'string' && data.asset_slug) expected.push(data.asset_slug);
+        if (typeof sourceSlug === 'string' && sourceSlug) expected.push(sourceSlug);
+        // ⚠️ THE DASHED SPELLING WAS REFUSED DESPITE THE COMMENT ABOVE SAYING IT
+        // SHOULD NOT BE. The stated intent is that reusd-re and reusd_re are "the
+        // same identity in the two spellings the pipeline already uses" — but both
+        // entries pushed above are the UNDERSCORED form (asset_slug and the
+        // resolved source slug are derived the same way), so a producer writing the
+        // dashed URL slug in `asset` hit an identity refusal.
+        //
+        // ⚠️ Found on riskAnalyst's completed axis-basis rollout: they renamed
+        // three dashed FILENAMES so the sync would resolve them, deliberately left
+        // the `asset` field dashed — and verified that on purpose, because a rename
+        // that silently rewrote the payload would have been worse. The files then
+        // synced and merged into NOTHING. The trap one level deeper than the one we
+        // had just fixed.
+        //
+        // Normalising both sides closes it without loosening what identity means:
+        // a genuinely wrong slug still refuses.
+        expected.forEach(function(e) {
+            var alt = e.replace(/_/g, '-');
+            if (alt !== e && expected.indexOf(alt) === -1) expected.push(alt);
+        });
+
+        overlays.forEach(function(o) {
+            if (!o || !o.json || typeof o.json !== 'object' || Array.isArray(o.json)) return;
+            var axis = o.axis, ov = o.json;
+            var base = (data[axis] && typeof data[axis] === 'object' && !Array.isArray(data[axis]))
+                ? data[axis] : {};
+            var srcName = typeof ov.producer === 'string' ? ov.producer : null;
+
+            // Contributions accumulate: an axis served by two producers must name
+            // both, not just whichever file was fetched last.
+            function priorContributors() {
+                var e = self.AXIS_PROVENANCE[axis];
+                return (e && e.contributors) ? e.contributors.slice() : [];
+            }
+            // ⚠️ A REFUSAL MUST SURVIVE A LATER OVERLAY ON THE SAME AXIS.
+            // AXIS_PROVENANCE[axis] is wholly reassigned per overlay and only
+            // `contributors` was carried forward, so liquidity/1 being refused
+            // and then axis-basis/1 merging cleanly ERASED the refusal — the
+            // fallback happened, and the chip explaining it did not render.
+            // Found by checking the DOM rather than the merged object: the data
+            // was right and the reader was told nothing.
+            // ⚠️ CARRY EVERY VERDICT, NOT JUST THE ONE THAT BIT FIRST. The
+            // original version of this carried `refused` only — and the very
+            // next verdict added (stale_sole_source) was silently dropped by a
+            // later axis-basis/1 merge, reproducing the exact bug this function
+            // was written to fix, one field along. Fixing the symptom is not
+            // fixing the class: anything an earlier overlay concluded about this
+            // axis has to survive a later one.
+            // ⚠️ ADD TO THIS LIST OR THE FIELD IS SILENTLY DROPPED. Third time:
+            // `refused` was lost first, then `stale_sole_source`, now
+            // `superseded_depth`. The comment saying "add to this list" was
+            // already here and I still missed it — a later overlay on the same
+            // axis reassigns AXIS_PROVENANCE wholesale, so anything an earlier
+            // one concluded survives only by being named here. The symptom is
+            // always the same: the behaviour is right and the chip explaining it
+            // never appears.
+            var VERDICT_KEYS = ['refused', 'refused_detail', 'stale_sole_source',
+                                'superseded_depth', 'depth_handed_off'];
+            function priorVerdict() {
+                var e = self.AXIS_PROVENANCE[axis];
+                if (!e) return null;
+                var carried = null;
+                VERDICT_KEYS.forEach(function(k) {
+                    if (e[k] != null) { carried = carried || {}; carried[k] = e[k]; }
+                });
+                if (carried) { carried.file = e.file; carried.producer = e.producer; }
+                return carried;
+            }
+            function carryVerdict(entry) {
+                var r = priorVerdict();
+                if (!r) return entry;
+                VERDICT_KEYS.forEach(function(k) { if (r[k] != null) entry[k] = r[k]; });
+                // The chip names the file the verdict is ABOUT, not whichever
+                // overlay merged afterwards.
+                entry.file = r.file;
+                entry.producer = r.producer;
+                return entry;
+            }
+            function refuse(reason, detail) {
+                self.AXIS_PROVENANCE[axis] = {
+                    contributors: priorContributors(),
+                    file: o.file, producer: srcName, refused: reason, refused_detail: detail || null,
+                    overridden: [], added: [], kept: Object.keys(base),
+                    overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
+                };
+            }
+
+            var schema = typeof ov.schema_version === 'string' ? ov.schema_version : null;
+            var spec = schema ? ((self.ADOPTED_OVERLAY_SCHEMAS || {})[axis] || {})[schema] : null;
+            var staleSoleSource = null;
+
+            // Identity, checked under whichever key this schema declares. An
+            // UNADOPTED schema is refused on the schema before identity is even
+            // consulted — its identity field is by definition unknown to us.
+            var idKey = spec ? spec.identity : 'asset_slug';
+            var claimed = typeof ov[idKey] === 'string' ? ov[idKey] : null;
+            if (claimed && expected.length && expected.indexOf(claimed) === -1) {
+                refuse('asset mismatch',
+                       'The overlay names ' + claimed + '; this page is ' + expected.join(' / ') + '.');
+                return;
+            }
+
+            if (schema) {
+                if (!spec) { refuse('schema not adopted', schema); return; }
+
+                // ⚠️ A STALLED OWNER MUST NOT OUTRANK A LIVE FEED INDEFINITELY.
+                // Refusal is WHOLESALE — the base block renders untouched —
+                // because per-field merge across these two vocabularies is the
+                // documented-unsafe case that made this a `replace` axis to
+                // begin with. Either the overlay owns the axis or it does not.
+                //
+                // ⚠️ A REFUSAL HAS A SHELF LIFE TOO — where there IS one. For an
+                // overlay carrying measured rungs (usg 15, reusde-re 18, usdm 8)
+                // the block is a real measurement, and setting it aside past a
+                // horizon is the judgement call this threshold makes: it was
+                // sound when measured and is not evidence about today.
+                //
+                // ⚠️ BUT DO NOT ASSUME A WITHHELD DEPTH IS A JUDGEMENT AT ALL.
+                // I argued this guard was overriding DexTracker's considered
+                // decision not to publish syzUSD's depth, quoting its basis
+                // string back at them. That string is a HARDCODED FALLBACK in
+                // `build_liquidity_payload`, emitted whenever depth is absent —
+                // and `main()` never passes depth, so the CLI path always emits
+                // it. syzUSD's block is bare CLI output: depth was never measured
+                // for it at all. There was no refusal to have a shelf life.
+                // Corrected by DexTracker, who read their own code rather than
+                // accept my characterisation of it.
+                //
+                // The chip names exactly what was set aside — status and figure,
+                // read from the block — so a stub reads as a stub rather than as
+                // a suppressed judgement.
+                if (spec.max_age_days) {
+                    var stampStr = typeof ov.as_of === 'string' ? ov.as_of
+                        : (ov[axis] && typeof ov[axis].as_of === 'string' ? ov[axis].as_of : null);
+                    var stampT = stampStr ? Date.parse(
+                        /Z$|[+-]\d\d:?\d\d$/.test(stampStr) ? stampStr : stampStr + 'Z') : NaN;
+                    if (isFinite(stampT)) {
+                        var ageDays = (Date.now() - stampT) / 86400000;
+                        if (ageDays > spec.max_age_days) {
+                            // ⚠️ REFUSING A SOLE SOURCE LOSES THE MEASUREMENT
+                            // INSTEAD OF REPLACING IT. I shipped this guard
+                            // assuming a fallback always exists. It does not:
+                            // reusde-re and usdm have NO PegTracker ladder, so
+                            // refusing their overlay turned "$15.5K, crossing
+                            // solved" and "≥$500.4K floor" into "n/a" — a stale
+                            // figure that says it is stale replaced by silence,
+                            // which is strictly worse for a reader.
+                            //
+                            // So the horizon only bites where something fresher
+                            // can actually take over. Where the overlay is the
+                            // only source it is KEPT and marked instead, and the
+                            // existing age clock already states how old it is.
+                            if (!self._baseHasDepth(base, axis)) {
+                                staleSoleSource = {
+                                    age_days: ageDays, max_age_days: spec.max_age_days
+                                };
+                            } else {
+                            var said = self._overlayDepthSummary(ov, axis);
+                            refuse('overlay stale',
+                                'Its as_of is ' + stampStr + ' \u2014 ' + ageDays.toFixed(1) +
+                                ' days old, past the ' + spec.max_age_days +
+                                '-day limit declared for this schema. The axis owner\u2019s producer ' +
+                                'has not re-measured, so its block is NOT being used and the feed\u2019s ' +
+                                'own figures are rendered instead.' +
+                                (said ? ' What the stale overlay said: ' + said : ''));
+                            return;
+                            }
+                        }
+                    }
+                }
+
+                // Envelope schemas nest the block under the axis name; flat ones
+                // put it at top level beside the meta keys.
+                var payload = base, isEnvelope = spec.payload === 'envelope';
+                if (isEnvelope) {
+                    payload = ov[axis];
+                    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+                        refuse('envelope missing its block',
+                               'schema ' + schema + ' declares an envelope, so the block belongs under "' +
+                               axis + '" — that key is absent or not an object.');
+                        return;
+                    }
+                } else {
+                    payload = {};
+                    Object.keys(ov).forEach(function(k) {
+                        if (k === 'producer' || k === 'schema_version' || k === 'asset_slug' || k === 'asset') return;
+                        payload[k] = ov[k];
+                    });
+                }
+
+                // ⚠️ The envelope's own `as_of` becomes the block's clock only
+                // when the block declares none. That is NOT the re-stamping the
+                // no-assembler rule forbids: it is one producer's own clock for
+                // its own block, one level up — not a merged file's timestamp
+                // laid over six producers. And it never overwrites a stamp the
+                // block already declared, so a block that dates itself wins.
+                var pay = {};
+                Object.keys(payload).forEach(function(k) { pay[k] = payload[k]; });
+                // ⚠️ AN ENVELOPE-DERIVED CLOCK MUST NOT OVERWRITE A MEASURED ONE.
+                // riskAnalyst's axis-basis liquidity block carries no as_of, so it
+                // inherits the file's envelope stamp — and the merge then wrote that
+                // over DexTracker's `as_of`, the timestamp of the actual pool read.
+                // dusd-alto rendered its Curve balances "as of" riskAnalyst's
+                // authoring time, three days after the sweep that measured them.
+                // The fallback is still right where nothing else declared a clock;
+                // it is only wrong when it displaces one.
+                var asOfIsEnvelopeFallback = false;
+                if (!has(pay, 'as_of') && typeof ov.as_of === 'string') {
+                    pay.as_of = ov.as_of;
+                    asOfIsEnvelopeFallback = true;
+                }
+
+                if (spec.mode === 'replace') {
+                    var droppedKeys = Object.keys(base);
+                    self._adaptSchema(axis, schema, pay);
+                    // ⚠️ A STALE REFUSAL WAS HIDING A FRESH MEASUREMENT. reusd_re's
+                    // overlay publishes `depth_usd: null` — a considered refusal to
+                    // reduce four chains to one figure — and `replace` meant that
+                    // absence suppressed PegTracker's ladder entirely. The page read
+                    // "2% depth n/a" while a 9-rung ethereum ladder measured 20
+                    // minutes earlier sat underneath it. The staleness guard could
+                    // not help: the overlay was 4 days old, inside its 7-day window.
+                    //
+                    // ⚠️ NOT merged back in — that is the per-field mixing this axis
+                    // is `replace` to avoid. The superseded figure is STASHED so the
+                    // renderer can show it as what it is: the other producer's
+                    // measurement, attributed, beside the owner's reason for
+                    // declining. Both are real and they answer different questions.
+                    // ⚠️ AN OWNER WITH NOTHING TO SAY HANDS OFF. IT DOES NOT TAKE
+                    // THE AXIS DOWN WITH IT. Spec, §Axis 3 ownership table, the
+                    // "if absent or stale" column: no fallback is silence.
+                    //
+                    // The stash-and-explain this replaces was the wrong shape. It
+                    // kept `n/a` as the headline and offered the real figure as a
+                    // footnote, so the page asserted no depth was known while a
+                    // PegTracker measurement taken hours earlier sat underneath —
+                    // reUSD-RE ($10.0M, bracketed to $20.0M, ethereum) and syzUSD
+                    // ($100K, bracketed to $150K, monad). That is the FALSE case
+                    // rather than the missing case, which is why it was fixed ahead
+                    // of every other open item on this axis.
+                    // ⚠️ THE TRIGGER IS AN OUTCOME, NOT A SHAPE — the first cut of this
+                    // keyed on `base.total_2pct_depth` being a number and carried eight
+                    // named depth fields. Both halves were too narrow, and it cost two
+                    // registered assets their rating within a day.
+                    //
+                    // Syrup publishes `total_2pct_depth` as NULL BY DESIGN (its axis
+                    // rates instant exit at NAV, with the crossing nested under
+                    // `exit_mark.depth`), so the condition read false and nothing
+                    // carried. And its rating never came from depth at all — it came
+                    // from `band_score`, derived from free-liquidity, which was not in
+                    // the carry list. Both syrup pools went from a live band to
+                    // "Not rated · 0.5% depth n/a" when DexTracker's overlays arrived.
+                    //
+                    // So the test is now: does the overlay supply a rating or a figure
+                    // AT ALL? If it does, it is making a claim and replace is right. If
+                    // it does not, it has displaced one without replacing it.
+                    //
+                    // ⚠️ AND THE CARRY IS DEFAULT-ON, DENY-LISTED — not an allow-list.
+                    // Measured 2026-10-03: replace drops 50 DISTINCT base fields across
+                    // 8 assets, including `liquidity_score` on three. An allow-list
+                    // loses every field nobody thought of, silently, which is how this
+                    // defect recurred. Default-carry loses only what the overlay's own
+                    // vocabulary genuinely supersedes, and a NEW field from the base
+                    // producer survives instead of vanishing.
+                    var OVERLAY_OWNS = ['pools', 'venues', 'enumeration', 'total_tvl',
+                        'total_tvl_basis', 'swap_tvl_usd', 'volume_24h', 'volume_24h_usd',
+                        'volume_24h_scope', 'by_chain', 'by_chain_note',
+                        'unclassified_venues', 'venues_as_of', 'lending_exposure_usd'];
+                    var handedOff = null;
+                    // ⚠️ A DECLARED NON-ANSWER IS STILL A CLAIM. First cut tested only
+                    // for a band or a number, so usdm — whose overlay says
+                    // `status: not_size_responsive` and publishes an `exit_capacity`
+                    // block, i.e. "there is no depth curve here, and here is the real
+                    // ceiling instead" — read as silence. The hand-off fired, overrode
+                    // its status and dropped its threshold, and its tile went from a
+                    // capacity figure at 200 bps to nothing. Caught by the A/B, which
+                    // showed 3 assets changing where 2 should have.
+                    // ⚠️ "ANY STATUS" WAS ALSO WRONG, IN THE OTHER DIRECTION — a DECLINING
+                    // overlay still sets one. reUSD-RE and syzUSD both publish
+                    // `depth.status: "not_measured"`, so counting any status as a claim
+                    // undid yesterday's fix on exactly the two assets it was built for.
+                    // The A/B caught it: 4 assets moved where 2 should have.
+                    //
+                    // The distinction already exists in this file's own vocabulary.
+                    // DEPTH_NON_DERIVABLE_STATUSES is the set meaning "no curve exists
+                    // here, by design" — not_size_responsive, supply_capped. Those are
+                    // positive declarations. `not_measured` is a refusal to answer, which
+                    // is the silence the hand-off is for.
+                    //
+                    //   usdm       not_size_responsive + exit_capacity -> CLAIMS (no curve,
+                    //                                                   real ceiling given)
+                    //   reusd_re   not_measured                        -> declines
+                    //   syzusd     not_measured                        -> declines
+                    //   syrup      no depth block at all               -> declines
+                    // ⚠️ A DECLARED SCOPE IS THE PRIMARY SIGNAL, AND THE OUTCOME TEST
+                    // STAYS AS THE FALLBACK — not replaced by it. DexTracker asked us to
+                    // key the carry on `scope` rather than on absence, and they are right
+                    // that a deliberate omission and a failure to write look identical
+                    // from here. But the three payloads already live in their
+                    // data/liquidity/ carry NO scope, no as_of and no producer — and
+                    // those are the ones that blanked both syrup ladders at 22:11 on
+                    // 2026-10-02. A declaration-only rule would have done nothing for
+                    // exactly the case that caused the damage.
+                    // ⚠️ TWO SCOPE SPELLINGS ARE ALREADY IN THE WILD. The apxUSD sample
+                    // declares `venue_inventory_only`; the three payloads written
+                    // 2026-10-02 declare `venue_inventory_and_venue_tvl_only`. Matching
+                    // one exact string would have honoured the new asset's declaration
+                    // and missed the three live ones — which are the payloads that
+                    // caused the damage. Prefix-matched, with the explicit
+                    // does_not_publish list as the other accepted form.
+                    // ⚠️ A SCOPE PREFIX IS A GUESS ABOUT A STRING SOMEONE ELSE OWNS,
+                    // AND IT WENT WRONG THE FIRST TIME THAT STRING GREW. DexTracker
+                    // coined `venue_inventory_and_canonical_ethereum_exit_ladder` for
+                    // sUSDe — a payload that DOES publish depth (a refined 0.5% bracket
+                    // and a 10-rung ladder) — and the prefix test read it as venue-only.
+                    // The page then showed a hand-off that never should have fired:
+                    // "0.5% depth $1.0M – $10.0M · ladder exhausted" (neither figure is
+                    // theirs) over the line "the depth feed publishes none for this
+                    // asset", about the very feed the ladder came from. Three false
+                    // statements, from one string getting longer.
+                    //
+                    // So the EXPLICIT declarations win and the prefix is the last
+                    // resort: `publishes` naming depth settles it, then
+                    // `does_not_publish`, then the shape of the scope string.
+                    var publishesList = Array.isArray(pay.publishes) ? pay.publishes : null;
+                    var disclaims = Array.isArray(pay.does_not_publish) ? pay.does_not_publish : [];
+                    var declaredVenueOnly;
+                    if (publishesList && publishesList.indexOf('depth') >= 0) {
+                        declaredVenueOnly = false;
+                    } else if (disclaims.indexOf('depth') >= 0) {
+                        declaredVenueOnly = true;
+                    } else {
+                        declaredVenueOnly = (typeof pay.scope === 'string' &&
+                                             pay.scope.indexOf('venue_inventory') === 0);
+                    }
+                    var ovDepth = (pay.depth && typeof pay.depth === 'object') ? pay.depth : {};
+                    var self2 = self;
+                    var declaredNoCurve = function(st) {
+                        return typeof st === 'string' &&
+                               self2.DEPTH_NON_DERIVABLE_STATUSES.indexOf(st) >= 0;
+                    };
+                    var overlayClaims = !declaredVenueOnly &&
+                                       (pay.band_score != null ||
+                                        typeof pay.total_2pct_depth === 'number' ||
+                                        declaredNoCurve(pay.two_pct_depth_status) ||
+                                        declaredNoCurve(ovDepth.status) ||
+                                        !!pay.exit_capacity);
+                    // ⚠️ AND AN EMPTY `quotes` OBJECT IS TRUTHY. usdm publishes
+                    // `exit_mark.quotes = {}` — a ladder container with no rungs — so a
+                    // bare truthiness test read it as a measurement the base had made.
+                    var baseQuotes = (base.exit_mark || {}).quotes;
+                    var baseDepth50 = base.depth_50bps && typeof base.depth_50bps === 'object'
+                        ? base.depth_50bps : {};
+                    // ⚠️ THE TEST ASKED "DID THE BASE MEASURE DEPTH?" AND SOME ASSETS
+                    // ANSWER A DIFFERENT QUESTION. sUSDe's primary exit is a gated
+                    // cooldown and reUSDe-RE's is a quarterly redemption window —
+                    // neither produces a depth rung, by design and with the reason
+                    // written down. So `baseClaims` read false on exactly the two
+                    // assets whose exit is NOT a market, the hand-off never fired,
+                    // and `replace` took the base's whole liquidity block with it:
+                    // sUSDe lost `primary_redemption_note`, its status, its market
+                    // scope and its denomination; reUSDe-RE lost `primary_exit` (the
+                    // quarterly WindowRedemption, gated, at NAV) and both strings
+                    // explaining why no dollar ladder exists.
+                    //
+                    // ⚠️ AND THE OVERLAY ASKED US TO KEEP THEM. DexTracker publishes
+                    // `does_not_publish: ['depth', 'primary_exit', 'rating']` and a
+                    // scope note saying a consumer should keep the ladder from its
+                    // other source. Dropping the primary exit is the one thing their
+                    // payload explicitly disclaims.
+                    //
+                    // Measured before shipping: exactly two assets change (susde,
+                    // reusde_re). No depth FIGURE is restored anywhere — both publish
+                    // depth as null with a stated reason — so no suppressed band can
+                    // come back through this door.
+                    var basePrimaryExit = base.primary_exit != null ||
+                                          base.primary_redemption_depth != null ||
+                                          typeof base.primary_redemption_note === 'string' ||
+                                          typeof base.primary_redemption_depth_status === 'string';
+                    var baseClaims = base.band_score != null ||
+                                     typeof base.total_2pct_depth === 'number' ||
+                                     typeof baseDepth50.depth_usd === 'number' ||
+                                     typeof baseDepth50.value_usd === 'number' ||
+                                     !!(baseQuotes && Object.keys(baseQuotes).length) ||
+                                     basePrimaryExit;
+                    if (axis === 'liquidity' && !overlayClaims && baseClaims) {
+                        var carried = [];
+                        Object.keys(base).forEach(function(k) {
+                            if (has(pay, k) && pay[k] != null) return;      // overlay spoke
+                            if (OVERLAY_OWNS.indexOf(k) >= 0) return;       // its vocabulary
+                            if (base[k] == null) return;
+                            pay[k] = base[k]; carried.push(k);
+                        });
+                        // ⚠️ THESE THREE DESCRIBE THE FIGURE AND MUST OVERRIDE, NOT
+                        // DEFER. `_adaptSchema` sets them off the overlay's depth
+                        // block whenever that block EXISTS, regardless of whether it
+                        // published a figure — so they are present, and they describe
+                        // the REFUSAL. Carrying the base's number under them renders
+                        // "$10.0M" labelled status "not measured" with a basis
+                        // paragraph explaining why no measurement exists. A
+                        // present-on-the-overlay test would have skipped all three.
+                        // ⚠️ These describe the figure and `_adaptSchema` sets them off a
+                        // depth block that EXISTS even when it published no figure — so
+                        // they are present on the overlay and describe its REFUSAL. The
+                        // default-carry above skips anything the overlay defined, so
+                        // these two need the explicit override the old allow-list gave
+                        // them: without it, a carried $10.0M renders labelled
+                        // "not measured".
+                        ['two_pct_depth_status', 'two_pct_depth_basis'].forEach(function(k) {
+                            if (has(base, k) && base[k] != null) { pay[k] = base[k]; carried.push(k); }
+                            else { delete pay[k]; }
+                        });
+                        // ⚠️ AND THE THRESHOLD LABEL SAYS WHAT THE FIGURE MEASURES,
+                        // SO IT CANNOT KEEP THE OVERLAY'S. Dropped ONLY inside a
+                        // firing hand-off, and only where the base declares none:
+                        // usdm, tsm_rh and usdg also decline depth but have no base
+                        // figure to take over, and an unconditional drop would
+                        // silently relabel their empty tile from 2% to 0.5%.
+                        if (typeof base.depth_threshold_bps === 'number') {
+                            pay.depth_threshold_bps = base.depth_threshold_bps;
+                        } else {
+                            delete pay.depth_threshold_bps;
+                        }
+                        handedOff = {
+                            producer: (base.exit_mark || {}).producer ||
+                                      (typeof base.producer === 'string' && base.producer) || 'the asset feed',
+                            source_file: (base.exit_mark || {}).source_file || null,
+                            fields: carried,
+                            chain: (base.exit_mark || {}).chain || null,
+                            as_of: base.as_of || null,
+                            owner: srcName,
+                            owner_reason: (ov.depth && typeof ov.depth === 'object' &&
+                                           typeof ov.depth.basis === 'string') ? ov.depth.basis : null
+                        };
+                    }
+                    // ⚠️ THE CARRY IS ALL-OR-NOTHING AND sUSDe NEEDS BOTH HALVES.
+                    // Once DexTracker's payload publishes a ladder, the hand-off
+                    // correctly does NOT fire — the overlay owns depth, it measured it.
+                    // But the same payload still disclaims `primary_exit`, and sUSDe's
+                    // primary exit is the whole question: a gated cooldown, published by
+                    // the base feed with the live cooldownDuration in it. Without this,
+                    // the asset gets its secondary ladder back and loses the sentence
+                    // saying how a holder actually redeems — the regression fixed
+                    // yesterday, re-entered through the other door.
+                    //
+                    // ⚠️ NARROW AND DECLARATION-DRIVEN, not a second general carry. Only
+                    // the field family the overlay itself names in `does_not_publish`,
+                    // and only where the overlay said nothing. A producer disclaiming a
+                    // field is the clearest statement available that it is not replacing
+                    // it.
+                    //
+                    // ⚠️ `rating` IS IN THIS LIST BECAUSE LEAVING IT OUT FLIPPED sUSDe'S
+                    // HEADLINE THE FLATTERING WAY, AND THE A/B IS WHAT SAID SO. With only
+                    // the primary-exit family carried, the base's
+                    // `derived_score_status: 'not_computed'` stayed dropped —
+                    // `_depthNonDerivable` went false, the authored 7.0 was replaced by a
+                    // computed "Healthy · 10/10" off the secondary ladder, and an asset
+                    // whose primary exit is a GATED COOLDOWN read as the best possible
+                    // liquidity on the page. That is the exact defect 7bab81979 exists to
+                    // prevent, re-entered through a door that commit could not see.
+                    //
+                    // The producer disclaims `rating` in the same breath as `primary_exit`.
+                    // A payload that says "I do not publish a rating" must not take the
+                    // rating down with it.
+                    var DISCLAIM_CARRY = {
+                        primary_exit: ['primary_exit', 'primary_redemption_depth',
+                                       'primary_redemption_depth_status', 'primary_redemption_note'],
+                        rating: ['derived_score', 'derived_score_status', 'band_score',
+                                 'liquidity_score', 'liquidity_score_source', 'liquidity_score_status',
+                                 'liquidity_score_generated_at', 'liquidity_score_age_hours']
+                    };
+                    if (axis === 'liquidity' && !handedOff) {
+                        disclaims.forEach(function(topic) {
+                            (DISCLAIM_CARRY[topic] || []).forEach(function(k) {
+                                if (has(pay, k) && pay[k] != null) return;
+                                if (base[k] == null) return;
+                                pay[k] = base[k];
+                            });
+                        });
+                    }
+                    // ⚠️ THE UNREAD MARKER WAS WIRED TO MERGE-MODE ONLY, so a block
+                    // published by a REPLACE-mode overlay vanished with nothing on the
+                    // page admitting it — the exact failure the marker exists to stop,
+                    // in the one mode that discards the most. DexTracker's apxUSD sample
+                    // publishes `venues_by_role` (the per-role totals: $22.7M dollar
+                    // exit against $29.0M family swap), `chains`, `non_swap_listings`
+                    // and `scope_note`, and all four were silent.
+                    self._collectAuthoredNotes(axis, pay);
+                    data[axis] = pay;
+                    self.AXIS_PROVENANCE[axis] = carryVerdict({
+                        contributors: priorContributors().concat([
+                            { producer: srcName, file: o.file, schema: schema, half: 'replace' }]),
+                        file: o.file, producer: srcName, schema: schema, replaced: true,
+                        overridden: [], added: Object.keys(pay), kept: [], dropped: droppedKeys,
+                        overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null,
+                        stale_sole_source: staleSoleSource,
+                        superseded_depth: null,
+                        depth_handed_off: handedOff
+                    });
+                    return;
+                }
+
+                // mode 'merge': a SUPPLEMENT. Per field, base retained.
+                var m = {}, ovr = [], add = [], kpt = [];
+                Object.keys(base).forEach(function(k) { m[k] = base[k]; });
+                Object.keys(pay).forEach(function(k) {
+                    if (k === 'as_of' && asOfIsEnvelopeFallback && has(base, 'as_of')) {
+                        kpt.push(k);   // the measured clock stays
+                        return;
+                    }
+                    (has(base, k) ? ovr : add).push(k);
+                    m[k] = pay[k];
+                });
+                Object.keys(base).forEach(function(k) { if (!has(pay, k)) kpt.push(k); });
+                var stale = self._dropStaleDerived(axis, m, ovr, kpt);
+                var replacedArrays = self._recordArrayReplacements(base, pay, ovr);
+                // ⚠️ NOT axis-basis/1 ONLY. Both of riskAnalyst's new contract-overlay
+                // fields had zero read sites AND tripped no marker, because the
+                // collector was scoped to one schema — so the mechanism built to
+                // make an unread field visible was itself blind to the schema next
+                // door. Any merge-mode overlay carrying prose gets the same
+                // treatment now.
+                if (schema === 'axis-basis/1' || schema === 'contract-overlay/1' ||
+                    schema === 'backing-overlay/1') {
+                    self._collectAuthoredNotes(axis, pay);
+                }
+                data[axis] = m;
+                self.AXIS_PROVENANCE[axis] = carryVerdict({
+                    contributors: priorContributors().concat([
+                        { producer: srcName, file: o.file, schema: schema, half: 'merge' }]),
+                    file: o.file, producer: srcName, schema: schema,
+                    overridden: ovr, added: add, kept: kpt, stale_dropped: stale,
+                    replaced_arrays: replacedArrays,
+                    overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
+                });
+                return;
+            }
+
+            // The overlay file's top-level object IS the block. `producer` is the
+            // one reserved meta key — it names the emitting repo and must not
+            // land in the block as a data field.
+            //
+            // ⚠️ ONE SPELLING ONLY. Not `producer` OR `source` OR `emitted_by`:
+            // a consumer that accepts several spellings entrenches the
+            // divergence it is papering over, which is why the `name`/`label`
+            // fallback on dependency entries was dropped rather than kept.
+            var merged = {}, overridden = [], added = [], kept = [];
+            Object.keys(base).forEach(function(k) { merged[k] = base[k]; });
+            Object.keys(ov).forEach(function(k) {
+                if (k === 'producer' || k === 'asset_slug') return;
+                (has(base, k) ? overridden : added).push(k);
+                merged[k] = ov[k];
+            });
+            Object.keys(base).forEach(function(k) { if (!has(ov, k)) kept.push(k); });
+
+            var staleP = self._dropStaleDerived(axis, merged, overridden, kept);
+            var replacedP = self._recordArrayReplacements(base, ov, overridden);
+            data[axis] = merged;
+            self.AXIS_PROVENANCE[axis] = {
+                file: o.file,
+                producer: srcName,
+                stale_dropped: staleP,
+                replaced_arrays: replacedP,
+                overridden: overridden,
+                added: added,
+                kept: kept,
+                overlay_as_of: typeof ov.as_of === 'string' ? ov.as_of : null
+            };
+        });
+        return data;
+    },
+
+    // ⚠️ OVERRIDING AN ARRAY REPLACES THE WHOLE LIST, AND THAT IS NOT THE SAME
+    // EVENT AS OVERRIDING A SCALAR. On reUSD, riskAnalyst's 2-entry editorial
+    // `upstream` replaced PegTracker's 3-entry measured one, and the measured
+    // "Ethena sUSDe — 93.87% of reserves and Ethereum redemption payout asset"
+    // disappeared from the axis where a reader would look for it. Nothing on the
+    // page said a list had been swapped: the chip reported "3 fields" either way.
+    //
+    // Per-field merge cannot union two lists safely — the same dependency is
+    // named differently by each producer ("Ethena sUSDe" vs "sUSDe collateral
+    // layer"), so a union produces duplicates and a name-match produces false
+    // merges. So the list IS replaced, per axis ownership, and what was dropped
+    // is recorded and shown instead of being guessed at.
+    _recordArrayReplacements(base, pay, overridden) {
+        var out = [];
+        overridden.forEach(function(k) {
+            var b = base[k], o = pay[k];
+            if (!Array.isArray(b) || !b.length || !Array.isArray(o)) return;
+            var names = b.map(function(e) {
+                return e && typeof e === 'object' ? (e.name || e.label || null) : null;
+            }).filter(Boolean);
+            out.push({ field: k, from: b.length, to: o.length, dropped_names: names });
+        });
+        return out;
+    },
+
+    // ⚠️ A TRANSLATION, NOT A SECOND SOURCE OF TRUTH. liquidity/1 names the same
+    // quantities differently from the block this dashboard grew up reading, and
+    // rewriting every read site at once would be a large change with no way to
+    // verify it asset-by-asset. So the producer's fields stay authoritative and
+    // untouched, and the legacy names are ADDED beside them for the rating and
+    // tile paths.
+    //
+    // ⚠️ ONLY QUANTITIES THAT ARE GENUINELY THE SAME THING ARE MAPPED. Pool TVL
+    // is NOT mapped to depth under any circumstance: PegTracker withheld a depth
+    // figure for this very asset specifically to avoid that substitution, and
+    // $560K of pool TVL beside $15.5K of executable depth is exactly the pair a
+    // fallback would silently confuse.
+    _adaptSchema(axis, schema, block) {
+        if (axis !== 'liquidity' || schema !== 'liquidity/1') return;
+        // ⚠️ VENUES ARE ADAPTED BEFORE THE DEPTH GUARD, because they do not depend on
+        // depth and a venue-only payload has no `depth` block at all. The guard below
+        // used to return first, so DexTracker's apxUSD sample — 70 enumerated pools
+        // across four chains, $22.7M of dollar exits — rendered as ZERO venues. It
+        // would have hit all eight assets they are widening to; nothing about it was
+        // apxUSD-specific. Caught in their pre-live sample review, which is what a
+        // sample review is for.
+        this._adaptVenues(block);
+        var d = block.depth;
+        if (!d || typeof d !== 'object') return;
+
+        // ⚠️ THE HEADLINE THRESHOLD IS THE PRODUCER'S, NOT 2% BY ASSUMPTION.
+        //
+        // DexTracker publishes `primary_threshold_bps` saying which crossing is the
+        // HEADLINE for this asset: -50 (0.5%) for a stable, -200 (2%) for a volatile.
+        // For a stablecoin a 2% move is already a depeg, so the 2% crossing answers a
+        // question nobody holding it is asking. Owner decision 2026-09-22: follow the
+        // producer's threshold.
+        //
+        // ⚠️ THE CUTOFF BAND IS NOT RECALIBRATED, AND THAT IS DELIBERATE. Cutoffs are
+        // DOLLARS — "can my position exit" — and $500K leaving at 0.5% is genuinely
+        // better than $500K leaving at 2%. Holding the dollars while tightening the
+        // cost bound means the axis now answers a HARDER question, so a score that
+        // drops is the correct response rather than a regression. usg moves 3 -> 2 on
+        // this and nothing else does.
+        //
+        // ⚠️ RECALIBRATING WAS CONSIDERED AND IS NOT ACHIEVABLE. The 0.5%-to-2% ratio
+        // across the five assets carrying both runs 0.208 (reusde_re) to 1.000
+        // (dusd_alto) — 4.8x apart — because each book has a different curve shape
+        // between the thresholds. No single multiplier maps one band onto the other,
+        // so "new cutoffs that preserve relative standing" do not exist. And the
+        // existing cutoffs are hand-picked round numbers, not distribution-fitted, so
+        // there is no statistical meaning to preserve either.
+        //
+        // ⚠️ NAME/CONTENT MISMATCH, ACCEPTED KNOWINGLY. `total_2pct_depth` now carries
+        // whichever crossing is the headline — 0.5% for stables. It has 29 read sites
+        // here plus two bespoke renderers, and renaming them was more risk than the
+        // honesty is worth. `depth_threshold_bps` records what the figure ACTUALLY
+        // measures and the tile label reads it, so no rendered number is unlabelled.
+        // Whoever splits this later: the carrier is the legacy name, the truth is the
+        // threshold field.
+        var b50 = d.bracket_50bps;
+        var useHalf = d.primary_threshold_bps === -50 && b50 && typeof b50 === 'object' &&
+                      typeof b50.depth_usd === 'number';
+        var head = useHalf ? b50 : d;
+
+        if (typeof head.depth_usd === 'number') block.total_2pct_depth = head.depth_usd;
+        if (typeof head.is_floor === 'boolean') block.total_2pct_depth_is_floor = head.is_floor;
+        if (head.status) block.two_pct_depth_status = head.status;
+        if (head.basis) block.two_pct_depth_basis = head.basis;
+        // ⚠️ Absent on a feed that predates the field (PegTracker's embedded blocks,
+        // and the multi-chain payloads DexTracker has not migrated yet). Defaults to
+        // 200 so every existing asset keeps reading "2% depth" exactly as before.
+        block.depth_threshold_bps = typeof d.primary_threshold_bps === 'number'
+            ? Math.abs(d.primary_threshold_bps) : 200;
+        // The 2% block is RETAINED as secondary when the headline is the tighter one —
+        // the producer keeps publishing it and a reader asking "and at 2%?" should not
+        // have to open the payload.
+        if (useHalf && typeof d.depth_usd === 'number') {
+            block.secondary_depth_usd = d.depth_usd;
+            block.secondary_threshold_bps = 200;
+            if (d.status) block.secondary_depth_status = d.status;
+        }
+        if (typeof block.total_tvl_usd === 'number' && block.total_tvl == null) {
+            block.total_tvl = block.total_tvl_usd;
+        }
+
+        // ⚠️ FOUR FIELDS CROSSED AND THE MEASUREMENT ITSELF DID NOT.
+        //
+        // liquidity/1 is a `replace` axis — DexTracker owns axis 3 and the whole
+        // block is swapped — so anything this translation does not name is GONE,
+        // including PegTracker's bracket and its exit_mark ladder. The overlay
+        // carries both of its own, under different names, and neither was mapped.
+        // The result on USG: a bare "bracketed" with no range and "No exit-mark
+        // RFQ ladder in this snapshot", on the one asset where BOTH producers had
+        // just built a full ladder. 5b81e8703 taught the qualifier PegTracker's
+        // bracket shape for exactly this asset — the shape `replace` throws away.
+        //
+        // ⚠️ Anything ADDED to liquidity/1 from here on has the same problem by
+        // default. A field that reaches `data.liquidity` is not a field a reader
+        // sees, and on a replace axis an unmapped field is not merely unrendered,
+        // it is deleted.
+        // ⚠️ ONE SHAPE, DELIBERATELY — the dual-form reading here was a WORKAROUND
+        // and it has been retired at the producer's request. liquidity/1 briefly
+        // emitted three encodings (object with named ends, a bare [low, high]
+        // array, and a parallel `two_pct_depth_bracket` array), with tsm_rh
+        // carrying two of them for the same crossing. DexTracker converged on
+        // the object form, built in one place, with an idempotent migration over
+        // the historical payloads. Absorbing a producer's inconsistency here is
+        // what let it persist; reading one shape is what surfaces a regression.
+        //
+        // ⚠️ IF AN ARRAY EVER ARRIVES AGAIN the bracket will simply not be set,
+        // and the qualifier will render a bare "bracketed" with no range — the
+        // day-one USG symptom. That is the shape of the failure to look for.
+        //
+        // ⚠️ The ARRAY form is still read by `_depthQualifierHtml`, and must be:
+        // that is PegTracker's encoding on a different path entirely — crvusd,
+        // reusd_re and syzusd all publish `two_pct_depth_bracket` as [low, high]
+        // in their backing feeds today. Retiring it there would break them.
+        // ⚠️ THE BRACKET MUST FOLLOW THE HEADLINE. Rendering the 2% bracket under a
+        // 0.5% figure would put "crossing between $4.5M and $4.7M" beneath $3.2M —
+        // two thresholds in one sentence, which is worse than either alone.
+        var br = (useHalf && b50.bracket && typeof b50.bracket === 'object')
+            ? b50.bracket : d.bracket;
+        if (br && typeof br === 'object' && !Array.isArray(br) &&
+            typeof br.last_clearing_size_usd === 'number' &&
+            typeof br.first_crossing_size_usd === 'number') {
+            block.two_pct_depth_bracket = {
+                lower_size_usd: br.last_clearing_size_usd,
+                lower_slippage_bps: br.last_clearing_marginal_impact_bps,
+                upper_size_usd: br.first_crossing_size_usd,
+                upper_slippage_bps: br.first_crossing_marginal_impact_bps,
+                // Published now, so it is read rather than recomputed below.
+                width_usd: typeof br.width_usd === 'number' ? br.width_usd : undefined
+            };
+        }
+        this._adaptLadder(d, block);
+        // _adaptVenues already ran above, before the depth guard. It is idempotent
+        // (it returns early when `pools` is already populated) but calling it twice
+        // would be a second place to keep in step, so it is called once.
+    },
+
+    // ⚠️ SEVEN ASSETS PUBLISHED A VENUE ENUMERATION AND NOT ONE OF THEM RENDERED IT.
+    //
+    // The pools table reads `liq.pools`; liquidity/1 calls the same thing `venues`.
+    // NO liquidity/1 payload carries `pools` — checked all eight — so on a `replace`
+    // axis the table was empty for every one of bold, usg, usdm, syzusd, reusd-re,
+    // reusde-re and dusd-alto. The render manifest requires a venue breakdown
+    // wherever more than one venue exists; it could not fire. Same
+    // published-but-unrendered class the spec calls this repo's most repeated defect.
+    //
+    // ⚠️ THE ROW COUNT IS NOT THE VENUE COUNT, AND ON DUSD THAT IS THE WHOLE POINT.
+    // Four Ethereum pools hold Alto DUSD and ONE is live: the other three are a $99
+    // dust twin and two dead Uniswap pools, one of which `liquidity()=0` since block
+    // 25,329,865 while `slot0` still prints ~1.0000. Four rows with four TVL figures
+    // would read as four venues of liquidity.
+    //
+    // ✅ THE VERDICT IS NOW A STRUCTURED FIELD — `venues[].is_live`, shipped by
+    // DexTracker 2026-09-21 after riskAnalyst raised it. The previous note here said
+    // rendering `depth_role` verbatim was the least-bad available choice because the
+    // live/dead verdict existed only inside that prose; that is no longer true and the
+    // note is deleted rather than left to age. `depth_role` is still rendered — it is a
+    // sibling, not a replacement, and "slot0 still reports ~1.0000 and must not be
+    // quoted" is a warning no enum carries.
+    //
+    // ⚠️ `is_live` IS TRI-STATE AND BOTH SHORTCUTS ARE WRONG. `null` means the verdict
+    // was never established on-chain — enumerated from a feed and not resolved. That is
+    // UNKNOWN, not dead. `if (v.is_live)` renders unknown as dead (the harsh error);
+    // `if (v.is_live !== false)` renders it as live (the flattering one). It gets its
+    // own column state. Live today: syzUSD is 11 of 11 unknown, bold 2 of 8, reUSD 2 of 6.
+    //
+    // ⚠️ AND `venue_count` IS NOT THE ROW COUNT. bold enumerated 20 venues and publishes
+    // 8 rows, one of them an aggregate of 13 pools. The old line here read
+    // "live_venue_count of venue_count", which on bold said "6 of 20 ... are live" —
+    // comparing a confirmed-live count against an enumeration total, with 6 itself a
+    // FLOOR because 2 rows are unresolved. Never compare the two.
+    // ⚠️ WHAT CORROBORATES THE TVL COLUMN, AS A PROPORTION RATHER THAN A BADGE.
+    // DexTracker verifies a reported TVL two ways: a supply check (a pool claiming
+    // more than 5x the token's whole value on that chain is implausible) and an
+    // on-chain custody check reading BOTH named legs by balanceOf (reported more
+    // than 20x what the pool actually holds is implausible).
+    //
+    // ⚠️ The custody check applies ONLY to pool types that hold their own tokens —
+    // Curve, Uniswap v2/v3 and forks — and never to v4, Balancer or Fluid, which
+    // are marked `not_checked`. That is the state this line exists for: it is NOT a
+    // pass, and on most assets it is the majority of rows (64 of 71 on apxUSD, 49
+    // of 49 on syrupUSDC). Rendering it per-row would put a marker on nearly every
+    // line, which a reader learns to skip; the proportion is the fact.
+    //
+    // ⚠️ Reading only OUR leg was their first attempt and it condemned a real $13.5M
+    // weETH/WETH pool holding 5,033 WETH against 1.7 weETH — an all-counter-asset
+    // pool is the BEST place to sell into, so a one-sided read inverts the verdict.
+    // Kept here because it is the reason the column means what it means.
+    _tvlTrustHtml(pools) {
+        if (!Array.isArray(pools) || !pools.length) return '';
+        var rejected = 0, notChecked = 0, checked = 0;
+        pools.forEach(function(p) {
+            if (p.tvl_status === 'implausible') rejected++;
+            if (p.custody_check === 'not_checked') notChecked++;
+            else if (p.custody_check) checked++;
+        });
+        if (!rejected && !notChecked && !checked) return '';
+        var bits = [];
+        if (rejected) {
+            bits.push('<span class="text-amber-700 font-semibold">' + rejected +
+                ' row' + (rejected === 1 ? '' : 's') + ' rejected</span> — the indexer\u2019s ' +
+                'figure is contradicted by what the pool holds on-chain, and ' +
+                (rejected === 1 ? 'it is' : 'they are') + ' excluded from every total');
+        }
+        if (notChecked) {
+            bits.push(notChecked + ' of ' + pools.length +
+                ' not corroborated on-chain — pool types that do not custody their own ' +
+                'tokens (Uniswap v4, Balancer, Fluid) cannot be checked this way. ' +
+                '<span class="font-semibold">Not the same as verified.</span>');
+        }
+        if (checked && !notChecked) {
+            bits.push(checked + ' corroborated against on-chain balances');
+        }
+        return '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
+               bits.join(' · ') + '</div>';
+    },
+
+    _adaptVenues(block) {
+        var vs = Array.isArray(block.venues) ? block.venues : null;
+        if (!vs || !vs.length) return;
+        if (Array.isArray(block.pools) && block.pools.length) return;   // producer's own wins
+        // ⚠️ DUST IS COLLAPSED, NOT DELETED — 23 of fxUSD's 37 venues are dust.
+        //
+        // A 37-row table where 60% of rows hold under $1,000 is not a venue breakdown,
+        // it is a haystack: the $10.0M USDC pool that IS the asset's exit sits at the
+        // same visual weight as a $1 MIM pair. Owner decision 2026-09-22, and it
+        // applies to every asset rather than to fxUSD alone.
+        //
+        // ⚠️ BUT THE COUNT AND THE REASON STILL RENDER. DexTracker enumerates these
+        // deliberately so the holder census reconciles, and their `known_answer_check`
+        // exists precisely to prove a pool was SURFACED AND EXCLUDED rather than
+        // missed. Dropping them silently would discard that distinction and make a
+        // thorough enumeration indistinguishable from a lazy one.
+        //
+        // ⚠️ THE DISCRIMINATOR IS THE PRODUCER'S CLOSED ENUM, NEVER TVL MAGNITUDE.
+        // `exclusion_reason === 'dust_below_threshold'` is their judgement, already
+        // made and published. Picking a dollar floor here would be this renderer
+        // deciding what counts as immaterial — resolution by magnitude, which is what
+        // normalizeCollateralRatio exists to refuse.
+        //
+        // ⚠️ `dead_zero_liquidity` IS NOT COLLAPSED, and the difference matters. Dust
+        // is immaterial; DEAD is a warning. DUSD's dead Uniswap pool carries "slot0
+        // still reports ~1.0000 and must not be quoted" — a reader who cannot see that
+        // row could quote a price from a pool with zero liquidity.
+        // ⚠️ THE COLLAPSE ONLY FIRED ON A MARKER THE OLDER PAYLOADS DO NOT SET.
+        // It tested `exclusion_reason === 'dust_below_threshold'` alone. The three
+        // venue payloads written 2026-10-02 mark NO dust at all, and their medians are
+        // $246, $355 and $112 — so unblocking the adapter would have shipped a 219-row
+        // table on sUSDe with 148 rows under $1,000. That is exactly the haystack the
+        // owner decision of 2026-09-22 collapses, and it applies to every asset rather
+        // than to the ones whose producer happens to label it.
+        //
+        // So: the marker still wins where it exists, and where it does not we fall back
+        // to the producer's own declared floor (`enumeration.tvl_floor_usd`, $1,000 on
+        // the apxUSD sample) and then to $1,000. ⚠️ The fallback is NEVER applied to a
+        // row the producer explicitly kept — only to rows nobody classified.
+        var FLOOR_DEFAULT = 1000;
+        var declaredFloor = ((block.enumeration || {}).tvl_floor_usd);
+        var floorUsd = typeof declaredFloor === 'number' && declaredFloor > 0
+            ? declaredFloor : FLOOR_DEFAULT;
+        var anyMarked = vs.some(function(v) {
+            return v && v.exclusion_reason === 'dust_below_threshold';
+        });
+        var dust = vs.filter(function(v) {
+            if (!v) return false;
+            if (v.exclusion_reason === 'dust_below_threshold') return true;
+            if (anyMarked) return false;                 // producer classified; trust it
+            if (v.exclusion_reason) return false;        // kept for a stated reason
+            return typeof v.tvl_usd === 'number' && v.tvl_usd < floorUsd;
+        });
+        var dustTvl = dust.reduce(function(t, v) {
+            return t + (typeof v.tvl_usd === 'number' ? v.tvl_usd : 0);
+        }, 0);
+        vs = vs.filter(function(v) { return dust.indexOf(v) < 0; });
+        if (!vs.length) { vs = dust; dust = []; }   // never render an empty table
+        block.pools = vs.map(function(v) {
+            var p = {
+                // ⚠️ `name` FIRST. The table's Venue column resolves
+                // `venue || project || name`, so mapping straight through would have
+                // put `project` in front and printed "curve" on all four DUSD rows
+                // instead of "DUSD/frxUSD". syzUSD names its venues `symbol` instead.
+                venue: v.name || v.symbol || null,
+                pair: v.project || null,
+                chain: v.chain || null
+            };
+            if (typeof v.tvl_usd === 'number') p.tvl_usd = v.tvl_usd;
+            // ⚠️ AN UPPER BOUND MUST NOT RENDER AS A MEASUREMENT. bold's venues carry
+            // `tvl_is_upper_bound`, and printing that figure in a TVL column exactly
+            // like usg's measured one states a precision the producer disclaimed.
+            if (v.tvl_is_upper_bound === true) p.tvl_is_upper_bound = true;
+            // ⚠️ volume_24h_usd, not volume_24h — the pools table reads the second
+            // spelling. The same two-spelling split already bit the tile's volume
+            // figure, one layer up.
+            if (typeof v.volume_24h_usd === 'number') p.volume_24h = v.volume_24h_usd;
+            else if (typeof v.volume_24h === 'number') p.volume_24h = v.volume_24h;
+            if (typeof v.balance_ratio === 'number') p.balance_ratio = v.balance_ratio;
+            // ⚠️ TWO DIFFERENT FIELDS, AND ONLY ONE WAS READ. `depth_role` is PROSE
+            // about how to read the TVL — reUSD-RE's says "Routed ladder is canonical;
+            // TVL is context only." `role` is a CATEGORICAL classification of the venue
+            // — DexTracker's apxUSD sample uses dollar_exit / family_swap / other_pair.
+            //
+            // ⚠️ The category is the column that matters and it was invisible. On apxUSD
+            // $29.0M of family_swap (a swap into the SISTER TOKEN, not a way out) sat at
+            // the same visual weight as $22.7M of real dollar exits, and today's page
+            // sums both into one $16.6M figure. Their producer asked for this column
+            // specifically; we were reading the wrong key.
+            //
+            // Category wins the Role column where both are present, and the prose is
+            // kept beside it rather than displacing it.
+            if (v.role) p.role = String(v.role).replace(/_/g, ' ');
+            else if (v.depth_role) p.role = String(v.depth_role);
+            if (v.role && v.depth_role) p.role_note = String(v.depth_role);
+            if (v.pool_id) p.pool_id = v.pool_id;
+            if (v.address) p.address = v.address;
+            // Tri-state, carried as-is. `has_liveness` distinguishes "the producer
+            // published null" from "this payload predates the field", which must not
+            // render the same way: the first is an unresolved venue, the second is a
+            // schema gap.
+            if ('is_live' in v) { p.is_live = v.is_live; p.has_liveness = true; }
+            if (v.exclusion_reason) p.exclusion_reason = String(v.exclusion_reason);
+            if (v.exclusion_reason_note) p.exclusion_reason_note = String(v.exclusion_reason_note);
+            if (v.liveness_basis) p.liveness_basis = String(v.liveness_basis);
+            // ⚠️ THE INDEXER'S TVL IS NOT ALWAYS A TVL, and DexTracker added these
+            // three fields on 2026-10-03 after their first full venue run found
+            // GeckoTerminal reporting Curve crvUSD/WETH/CRV at $6.94B, then $964M an
+            // hour later, against ~$2-3M actually on-chain — a leg draining to ~0
+            // breaks the indexer's price maths. `tvl_status` is "reported" or
+            // "implausible"; an implausible row STAYS LISTED and drops out of every
+            // total on their side.
+            //
+            // ⚠️ `custody_check: "not_checked"` IS NOT A PASS. It means the check does
+            // not apply to this pool type — v4, Balancer and Fluid do not hold their
+            // own tokens — so nothing on-chain corroborates the figure. On apxUSD that
+            // is 64 of 71 rows and on syrupUSDC 49 of 49, which is why it renders as a
+            // count rather than a per-row badge: a marker on nearly every row is
+            // wallpaper, and the reader needs the PROPORTION.
+            if (v.tvl_status) p.tvl_status = String(v.tvl_status);
+            if (v.tvl_exclusion_basis) p.tvl_exclusion_basis = String(v.tvl_exclusion_basis);
+            if (v.custody_check) p.custody_check = v.custody_check;
+            return p;
+        });
+
+        // ⚠️ The count and the completeness statement are PUBLISHED FIELDS, not a
+        // reading of the rows. `live_venue_count` exists only on dusd-alto today, so
+        // the line is conditional rather than assumed — an absent count must not
+        // become "0 live".
+        var e = block.enumeration || {};
+        var bits = [];
+        if (typeof e.live_venue_count === 'number') {
+            // ⚠️ "CONFIRMED live", and a FLOOR when anything is unresolved. syzUSD
+            // publishes live_venue_count 0 with unestablished_venue_count 11 — that is
+            // "never checked", NOT "nowhere to sell", and a bare "0 live" states the
+            // second. The floor flag and the unresolved count are both published.
+            var n = e.live_venue_count;
+            var line = n + ' venue' + (n === 1 ? '' : 's') + ' confirmed live';
+            if (e.live_venue_count_is_floor === true) {
+                line += ' — a FLOOR, not a total';
+                if (typeof e.unestablished_venue_count === 'number') {
+                    line += ': ' + e.unestablished_venue_count + ' never resolved on-chain' +
+                            (n === 0 ? ', so this is "not checked" rather than "nowhere to sell"' : '');
+                }
+            }
+            bits.push(line);
+        }
+        // The collapsed rows, stated rather than vanished.
+        if (dust.length) {
+            bits.push(dust.length + ' further venue' + (dust.length === 1 ? '' : 's') +
+                ' enumerated and excluded as dust below the producer\u2019s threshold' +
+                (dustTvl > 0 ? ', ' + CommonRenderer.formatCurrencyExact(dustTvl) + ' between them' : '') +
+                ' \u2014 not omitted, and not a gap in the enumeration');
+        }
+        if (e.completeness) bits.push(String(e.completeness));
+        if (bits.length && !block.pools_note) block.pools_note = bits.join(' — ');
+    },
+
+    // liquidity/1 `depth.rungs` -> the `exit_mark.quotes` map the ladder table
+    // reads. Same translate-don't-replace rule as above: the producer's array is
+    // left untouched and the legacy shape is built beside it.
+    _adaptLadder(d, block) {
+        var rungs = Array.isArray(d.rungs) ? d.rungs : null;
+        if (!rungs || !rungs.length) return;
+        var em = block.exit_mark || {};
+        if (em.quotes && Object.keys(em.quotes).length) return;   // producer's own wins
+
+        // ⚠️ THE QUOTES MAP IS KEYED BY SIZE AND A MULTI-ROUTE LADDER IS NOT.
+        // reusd-re quotes the SAME size down several routes — $100 appears four
+        // times, $1,000 returns −84 bps on one venue and −6255 bps on another.
+        // Keying those into one object silently drops all but the last, and the
+        // survivor is whichever the producer happened to write last: a made-up
+        // number wearing a measured number's clothes. The table has no venue
+        // column to tell them apart, so the ladder is WITHHELD rather than
+        // collapsed. A missing ladder is a visible absence; a collapsed one is
+        // not. Revisit by giving the table a route column, not by picking one.
+        var seen = {}, duplicated = false;
+        rungs.forEach(function(r) {
+            if (!r || typeof r.size_usd !== 'number') return;
+            if (seen[r.size_usd]) duplicated = true;
+            seen[r.size_usd] = true;
+        });
+        if (duplicated) return;
+
+        var quotes = {};
+        rungs.forEach(function(r) {
+            if (!r || typeof r.size_usd !== 'number') return;
+            var q = {};
+            if (r.status && r.status !== 'ok') {
+                // The table's failed-quote branch keys off `error` and says, in
+                // the cell, that a failed read is not a measurement of zero.
+                q.error = r.reason || String(r.status).replace(/_/g, ' ');
+            } else {
+                // ⚠️ TWO SLIPPAGE FIELDS AND THE THRESHOLD USES THE SECOND ONE.
+                // usdm's `slippage_bps` is the TOTAL return against the dated
+                // mark and is a flat −9.56 bps at every rung — that is the price
+                // bias, which its own `bias_measures` says is excluded from the
+                // measurement. `slippage_bps_debiased` (~0.00) is the marginal
+                // impact the 2% crossing is actually graded on. Rendering the
+                // raw field would show a 9.6 bps exit cost the producer
+                // explicitly does not claim. usg publishes no debiased field
+                // because its rungs are already baseline-relative ($100 = 0.0).
+                var bps = typeof r.slippage_bps_debiased === 'number'
+                    ? r.slippage_bps_debiased : r.slippage_bps;
+                if (typeof bps === 'number') q.slippage_bps = bps;
+                // ⚠️ The out-leg field is named for the ASSET RECEIVED, and it is
+                // not always dollars: amount_out_usd (usg), amount_out_usdc
+                // (usdm) — but reusde-re's is amount_out_susde, a TOKEN amount.
+                // Printing that in a "Net out" column formatted as currency
+                // would price sUSDe at $1. Only the USD-denominated legs are
+                // carried; the rest leave the cell an em-dash, and size and
+                // slippage still render.
+                var out = typeof r.amount_out_usd === 'number' ? r.amount_out_usd
+                        : (typeof r.amount_out_usdc === 'number' ? r.amount_out_usdc : null);
+                if (out != null) q.output_usd = out;
+            }
+            quotes['' + r.size_usd] = q;
+        });
+        if (!Object.keys(quotes).length) return;
+        em.quotes = quotes;
+        // Header and convention line, so a get_dy ladder is not labelled "RFQ"
+        // and the reader is told which convention the bps column is in.
+        var qt = d.quote || {};
+        if (!em.measured_leg && qt.measured_leg) em.measured_leg = qt.measured_leg;
+        if (!em.slippage_convention && d.slippage_convention) {
+            em.slippage_convention = d.slippage_convention;
+        }
+        if (em.price_bias_bps == null && typeof d.price_bias_bps === 'number') {
+            em.price_bias_bps = d.price_bias_bps;
+            if (d.bias_measures) em.bias_measures = d.bias_measures;
+        }
+        block.exit_mark = em;
+    },
+
+    // Drop kept-but-stale renderings;    // Drop kept-but-stale renderings; mutates `block` and `kept`, returns what went.
+    // What a refused overlay had claimed, so the chip can name it rather than
+    // saying only that something was set aside. Reads only fields the schema
+    // declares, and returns '' when it cannot say anything specific instead of
+    // guessing at the block's shape.
+    // Does the block the overlay would REPLACE carry a depth reading of its own?
+    // This is the whole question behind keeping vs refusing a stale overlay: a
+    // horizon is only meaningful when something can take over past it.
+    _baseHasDepth(base, axis) {
+        if (axis !== 'liquidity' || !base || typeof base !== 'object') return false;
+        if (typeof base.total_2pct_depth === 'number') return true;
+        var q = (base.exit_mark || {}).quotes;
+        return !!(q && Object.keys(q).length);
+    },
+
+    _overlayDepthSummary(ov, axis) {
+        if (axis !== 'liquidity' || !ov || typeof ov !== 'object') return '';
+        var d = ov.depth;
+        if (!d || typeof d !== 'object') return '';
+        var bits = [];
+        if (d.status) bits.push('status "' + String(d.status).replace(/_/g, ' ') + '"');
+        bits.push(typeof d.depth_usd === 'number'
+            ? 'depth ' + CommonRenderer.formatCurrency(d.depth_usd)
+            : 'no depth figure');
+        // ⚠️ "NO DEPTH FIGURE" READS AS "NOTHING MEASURED", AND FOR ONE ASSET IT
+        // IS THE OPPOSITE. reusd_re's overlay carries 15 rungs across four
+        // chains and DECLINES to reduce them to one scalar, because those books
+        // do not share liquidity — a considered refusal. syzusd's carries zero
+        // rungs and was never measured at all. Identical chip text for both let
+        // a reader take the refusal for an absence, and the figure this page
+        // falls back to for reusd_re is precisely the cross-chain aggregate the
+        // axis owner rejects.
+        //
+        // The rung count is the discriminator, and it is published. Same one
+        // DexTracker uses to tell a real payload from a stub in its own guard.
+        var rungs = Array.isArray(d.rungs) ? d.rungs : [];
+        if (typeof d.depth_usd !== 'number' && rungs.length) {
+            var chains = {};
+            rungs.forEach(function(r) { if (r && r.chain) chains[r.chain] = 1; });
+            var nChains = Object.keys(chains).length;
+            bits.push('but ' + rungs.length + ' rungs were quoted' +
+                (nChains > 1 ? ' across ' + nChains + ' chains, which the producer declines to ' +
+                               'reduce to one figure because those books do not share liquidity'
+                             : ' \u2014 a measurement that withholds a scalar, not an absence of one'));
+        }
+        return bits.join(', ') + '.';
+    },
+
+    _dropStaleDerived(axis, block, overridden, kept) {
+        var map = (this.DERIVED_FIELDS || {})[axis];
+        if (!map) return [];
+        var gone = [];
+        Object.keys(map).forEach(function(field) {
+            if (kept.indexOf(field) === -1) return;          // producer supplied it, or absent
+            var sources = map[field] || [];
+            var overriddenSource = sources.some(function(sc) { return overridden.indexOf(sc) !== -1; });
+            if (!overriddenSource) return;
+            delete block[field];
+            var at = kept.indexOf(field);
+            if (at !== -1) kept.splice(at, 1);
+            gone.push(field);
+        });
+        return gone;
+    },
+
+    // The origin chip. Rendered ONLY when an overlay contributed — silence means
+    // the block came whole from the feed named in the page header, which is
+    // already stated there. Naming a source on all six axes on all 25 assets to
+    // say "same as the header" is noise that trains the eye to skip the chip,
+    // and the chip's whole job is to be read on the day it says something else.
+    // ⚠️ PRODUCER IDENTIFIERS ARE INTERNAL REPO NAMES AND WERE RENDERING TO
+    // EXTERNAL READERS. The crvUSD page showed "mixed · security_analyst +
+    // riskanalyst · 12 fields" on the face of axis 5 — two repo names, meaningless
+    // to a reader and an unnecessary disclosure of how this estate is wired.
+    //
+    // The provenance itself is worth keeping and is the whole point of the chip:
+    // a reader SHOULD know an authority walk and a judgement came from different
+    // places. What they should not get is our directory listing. So the identity
+    // is mapped to WHAT THE PRODUCER DOES, not what its repo is called.
+    //
+    // ⚠️ Unknown producers fall through to a de-underscored form rather than
+    // being dropped. A new producer must not silently lose attribution, and a
+    // name that looks slightly odd is a prompt to add it here — dropping it would
+    // credit an axis to nobody and nobody would notice.
+    PRODUCER_LABELS: {
+        // ⚠️ Labels must read in EVERY position they render, not just the chip.
+        // "contract walk" works in "mixed · contract walk + risk desk" and breaks
+        // in "reviewed by contract walk". "security desk" parallels "risk desk"
+        // and reads in both.
+        'security_analyst': 'security desk',
+        'securityanalyst':  'security desk',
+        'riskanalyst':      'risk desk',
+        'riskAnalyst':      'risk desk',
+        'pegtracker':       'peg feed',
+        'dextracker':       'depth feed',
+        'backing-monitor':  'this dashboard',
+        'backing_monitor':  'this dashboard',
+    },
+
+    // ⚠️ `*_score_per_chain` ARRIVES IN TWO SHAPES AND ONLY THE STRING WAS READ.
+    // yzUSD publishes a sentence ("⚠️ ethereum 3.0 · monad 2.5."); weETH publishes an
+    // OBJECT ({ethereum: 6.5, base: 5.0, arbitrum: 4.0, optimism: 2.0}). The string
+    // test dropped the object silently, so weETH's Optimism leg at 2.0 under a 6.5
+    // headline would have reached no reader — precisely the case the per-chain line
+    // exists for, on the asset that prompted it.
+    //
+    // ⚠️ Found before weETH was registered, so this lands ahead of the data rather
+    // than after a reader saw the wrong thing. riskAnalyst reports the same field is
+    // load-bearing in their own scoring and renders NOWHERE in two other repos — 81
+    // values across 14 reports — so a shape mismatch here would have been the third
+    // independent instance of the same layer going unread.
+    //
+    // ⚠️ KEY ORDER IS THE PRODUCER'S AND IS NOT SORTED. weETH's reads best-to-worst
+    // and that ordering is theirs to mean something by; re-sorting would be the
+    // renderer editorialising a judgement it did not make. Values are printed as
+    // published, not rounded into bands.
+    _perChainScoreText(v) {
+        if (typeof v === 'string') return v.trim() || null;
+        if (!v || typeof v !== 'object' || Array.isArray(v)) return null;
+        var parts = [];
+        Object.keys(v).forEach(function(k) {
+            var n = v[k];
+            if (typeof n !== 'number' || !isFinite(n)) return;
+            parts.push(String(k).replace(/_/g, ' ') + ' ' + (Math.round(n * 10) / 10).toFixed(1));
+        });
+        if (!parts.length) return null;
+        return '⚠️ by chain: ' + parts.join(' · ');
+    },
+
+    _producerLabel(name) {
+        if (!name || typeof name !== 'string') return name;
+        var key = name.trim();
+        var hit = this.PRODUCER_LABELS[key] || this.PRODUCER_LABELS[key.toLowerCase()];
+        return hit || key.replace(/[_-]+/g, ' ');
+    },
+
+    _axisSourceHtml(axis) {
+        var p = this.AXIS_PROVENANCE && this.AXIS_PROVENANCE[axis];
+        if (!p) return '';
+        var n = p.overridden.length + p.added.length;
+        // ⚠️ Name EVERY contributor, not the last file fetched. Axis 5 is served
+        // by two producers on two declared halves, and crediting only riskanalyst
+        // would attribute security_analyst's hand-walk to them — the same
+        // laundering the verbatim `unmeasured[]` rendering exists to prevent.
+        var self = this;
+        var contribs = (p.contributors || []).map(function(c) { return self._producerLabel(c.producer); })
+            .filter(function(v, i, a) { return v && a.indexOf(v) === i; });
+        var src = contribs.length > 1
+            ? contribs.join(' + ')
+            : (this._producerLabel(p.producer) || (p.file || '').split('/').pop() || 'overlay');
+
+        // ⚠️ A REFUSED OVERLAY MUST BE LOUDER THAN AN ACCEPTED ONE. The page is
+        // rendering the embedded block while a file from the axis's own producer
+        // sits unread beside it — the reader is looking at the SECOND-choice
+        // source and has no way to know. Silence here reproduces the exact
+        // failure this chip exists to end.
+        // ⚠️ KEPT PAST ITS HORIZON BECAUSE NOTHING CAN REPLACE IT. Distinct from
+        // a refusal: the overlay IS being rendered, and the reader needs to know
+        // it is being rendered on sufferance rather than because it is current.
+        if (p.stale_sole_source) {
+            var ss = p.stale_sole_source;
+            return '<span class="axis-src axis-src-stale" title="' + this._escapeAttr(
+                'This overlay is ' + ss.age_days.toFixed(1) + ' days old, past the ' +
+                ss.max_age_days + '-day limit for its schema — but it is the ONLY source of ' +
+                'depth for this asset, so it is still being rendered.\n' +
+                'Refusing it would replace a stale measurement with nothing, which is worse ' +
+                'for a reader than a stale one that says so.\n' +
+                'File: ' + (p.file || '?') +
+                (p.producer ? ' (producer: ' + this._producerLabel(p.producer) + ')' : '') + '.') +
+                '">\u26a0\ufe0f ' + this._escapeAttr(src) + ' overlay stale \u2014 sole source</span>';
+        }
+
+        if (p.refused) {
+            var why = p.refused === 'schema not adopted'
+                ? 'It declares schema_version "' + (p.refused_detail || '?') + '", which this ' +
+                  'dashboard does not yet read. Adopting a schema means teaching the section its ' +
+                  'field names — until then the embedded block is rendered unchanged, because ' +
+                  'merging an unknown vocabulary field-by-field silently keeps the OLD producer\u2019s ' +
+                  'numbers wherever the new one renamed something.'
+                : 'Refused: ' + p.refused + '. ' + (p.refused_detail || '');
+            return '<span class="axis-src axis-src-refused" title="' + this._escapeAttr(
+                'An overlay for this axis EXISTS and is NOT being used.\n' +
+                'File: ' + (p.file || '?') +
+                // Only claim a producer when one was DECLARED. src falls back to
+                // the filename for chip text, and "producer: reusd_re_issuer.json"
+                // would attribute a file to itself.
+                (p.producer ? ' (producer: ' + this._producerLabel(p.producer) + ')' : ' (producer undeclared)') +
+                '.\n' + why +
+                '\nThe figures shown come from the asset feed, not from ' + src + '.'
+            ) + '">\u26a0\ufe0f ' + this._escapeAttr(src) + ' overlay not used</span>';
+        }
+
+        if (p.replaced) {
+            return '<span class="axis-src" title="' + this._escapeAttr(
+                'This axis is served WHOLLY by ' + src + ' (' + (p.file || '?') + '), schema ' +
+                (p.schema || '?') + '. One producer owns the axis: the embedded block was ' +
+                'REPLACED, not blended, so no field here is a survivor of a different source.\n' +
+                'Dropped from the asset feed: ' +
+                ((p.dropped && p.dropped.length) ? p.dropped.sort().join(', ') : 'nothing') + '.\n' +
+                (p.overlay_as_of ? 'as_of ' + p.overlay_as_of : '\u26a0\ufe0f declares no as_of')
+            ) + '">' + this._escapeAttr(src) + ' \u00b7 whole axis</span>';
+        }
+        // ⚠️ MIXED is the case worth naming. A block assembled from two producers
+        // has two clocks, and the axis clock beside this shows only the OLDEST —
+        // honest about staleness, silent about the split. Without this the page
+        // would imply one source for a block that has two.
+        var mixed = p.kept.length > 0 && n > 0;
+        // ⚠️ THE QUIET FAILURE. An overlay that shares NO field name with the
+        // embedded block overrides NOTHING: every figure on the page is still
+        // the feed's, and the overlay's own numbers are inert. It looks like a
+        // successful merge — "6 fields" — and is a vocabulary mismatch wearing
+        // a merge's clothes. Caught live: riskAnalyst publishes `score` where
+        // the renderer reads `issuer_score`, so a 5.5 authored by the axis owner
+        // sat beside a 5.5 relayed through PegTracker and nothing indicated
+        // which one the page was showing. Only an overlay declaring a
+        // schema_version gets caught by the adoption gate; this one declares
+        // none, so it needs its own signal.
+        // ⚠️ THE WARNING SAYS THE PAGE "CANNOT TELL" WHETHER AN OVERLAY IS ADDITIVE
+        // BY DESIGN. Where the schema DECLARES it, the page can tell — so asking
+        // the reader to worry is wrong, and firing on every issuer overlay would
+        // train them to ignore the chip on the axes where it means something.
+        //
+        // Only a schema that has NOT declared itself additive still warns; an
+        // unknown vocabulary sharing no field with the feed remains exactly the
+        // ambiguous case this was written for.
+        var _adopted = (this.ADOPTED_OVERLAY_SCHEMAS[axis] || {})[p.schema] || {};
+        var disjoint = p.overridden.length === 0 && p.added.length > 0 &&
+            p.kept.length > 0 && _adopted.additive !== true;
+        var tip = 'Axis merged per field, no assembler.\n' +
+            'From ' + src + ' (' + (p.file || '?') + '): ' +
+            (n ? p.overridden.concat(p.added).sort().join(', ') : 'nothing') + '.\n' +
+            'From the asset feed: ' + (p.kept.length ? p.kept.sort().join(', ') : 'nothing') + '.\n' +
+            (p.overlay_as_of
+                ? 'Overlay declares as_of ' + p.overlay_as_of + '.'
+                : '\u26a0\ufe0f The overlay declares NO as_of, so its own age is unknown — the ' +
+                  'clock beside this can only report the stamps the asset feed declared.') +
+            (mixed ? '\n\u26a0\ufe0f MIXED: two producers, two clocks. The age shown is the oldest ' +
+                     'of them, which is not necessarily this source\u2019s.' : '') +
+            ((p.stale_dropped && p.stale_dropped.length)
+                ? '\n\u26a0\ufe0f Dropped as stale: ' + p.stale_dropped.sort().join(', ') +
+                  ' \u2014 the asset feed\u2019s rendering of a value this overlay overrode. Kept, it ' +
+                  'would have displayed the OLD number under the OLD label.'
+                : '');
+        if (disjoint) {
+            tip += '\n\u26a0\ufe0f NO FIELD IN COMMON with the asset feed: this overlay overrode ' +
+                   'NOTHING. Every figure rendered on this axis is still the feed\u2019s. Either the ' +
+                   'two producers spell the same quantity differently, or this overlay is additive ' +
+                   'by design \u2014 the page cannot tell which, and it must not assume the second.';
+        }
+        return '<span class="axis-src' + (disjoint ? ' axis-src-refused' : (mixed ? ' axis-src-mixed' : '')) +
+            '" title="' + this._escapeAttr(tip) + '">' +
+            (disjoint ? '\u26a0\ufe0f ' + this._escapeAttr(src) + ' \u00b7 no field in common'
+                      : (mixed ? 'mixed \u00b7 ' : '') + this._escapeAttr(src) +
+                        (n ? ' \u00b7 ' + n + (n === 1 ? ' field' : ' fields') : '')) + '</span>';
+    },
+
+    // ------ Collateral-ratio scale resolution ------
+    //
+    // Feeds disagree on units: USDm publishes collateral_ratio as a RAW ratio
+    // (1.296) while every other feed publishes percent (129.60). This used to
+    // be resolved with `if (cr < 2) cr *= 100` — inferring the unit from the
+    // value's magnitude. That is the same class of bug as guessing token
+    // decimals from a number's size: correct until the value enters the
+    // ambiguous range, then silently and confidently wrong.
+    //
+    // It fails BOTH ways. A raw feed reaching 2.0 (double-collateralised, the
+    // healthiest state it can reach) rendered as "2.00%". A percent feed
+    // falling below 2% (near-total loss of backing) would be multiplied to
+    // "150%" and coloured green.
+    //
+    // Resolution order — never magnitude:
+    //   1. summary.collateral_ratio_scale, if the feed declares it
+    //   2. RAW_CR_ASSETS, an explicit per-asset list
+    //   3. default: percent, returned unchanged
+    //
+    // The default is deliberate. An undeclared raw feed renders alarmingly low
+    // and gets investigated; the reverse — a distressed feed silently rendered
+    // healthy — is the failure that sits on a public page unnoticed.
+    // Retired 2026-08-27: usdm now declares collateral_ratio_scale on both blocks,
+    // so the declared branch resolves it and a per-asset list encoding producer
+    // knowledge in the consumer is no longer needed. Kept empty rather than
+    // deleted so the resolution order below still reads as three steps, and so
+    // re-adding an entry is visibly a fallback rather than the normal path.
+    RAW_CR_ASSETS: [],
+
+    normalizeCollateralRatio(value, assetSlug, summary) {
+        if (value === null || value === undefined) return value;
+        var declared = summary && summary.collateral_ratio_scale;
+        if (declared === 'percent') return value;
+        // ⚠️ `multiple` IS PEGTRACKER'S WORD FOR `ratio`, AND NOT KNOWING IT RENDERED
+        // 151% AS 1.51%.
+        //
+        // fxUSD declares `collateral_ratio_scale: "multiple"` and publishes
+        // 1.513516. That fell to the "unrecognised declaration" branch below, which
+        // returns the value untouched — i.e. treats it as already-percent — so the
+        // backing tile read **1.51%** and the axis rated **Critical 1/5** on an asset
+        // collateralised at 151.4%. Caught before fxusd was registered; no reader saw it.
+        //
+        // ⚠️ THE DECLARATION WAS CORRECT AND THE CONSUMER'S VOCABULARY WAS NOT. This is
+        // not a producer error to push back on — `multiple` and `ratio` mean the same
+        // thing and theirs is arguably the better word. Three spellings are live today:
+        //   percent   21 assets
+        //   ratio     usdm
+        //   multiple  dusd_alto, fxusd   <- newer, and previously unknown here
+        // ⚠️ Accepting a synonym entrenches the divergence, so this is a stopgap, not a
+        // resolution: the producers should converge on one spelling. Until they do,
+        // dropping either word silently mis-scales by 100x.
+        if (declared === 'ratio' || declared === 'multiple') return value * 100;
+        // ⚠️ An unrecognised declaration still falls through untouched, and that stays
+        // deliberate for the reason stated above: it renders alarmingly LOW, which gets
+        // investigated. The dangerous direction is a distressed feed rendered healthy.
+        // But note this branch is indistinguishable from `percent` by construction — it
+        // told us nothing about fxUSD for as long as `multiple` was unknown. After this
+        // change ZERO live assets reach it; if one ever does, that silence is the cost.
+        if (declared) return value;  // unrecognised declaration: trust it as-is
+        if (assetSlug && CommonRenderer.RAW_CR_ASSETS.indexOf(assetSlug) !== -1) {
+            return value * 100;
+        }
+        return value;
+    },
+
+    formatCurrency(num) {
+        if (num === null || num === undefined) return '-';
+        if (Math.abs(num) >= 1e6) return '$' + (num / 1e6).toFixed(1) + 'M';
+        if (Math.abs(num) >= 1e3) return '$' + (num / 1e3).toFixed(1) + 'K';
+        return '$' + num.toFixed(0);
+    },
+
+    formatCurrencyExact(num) {
+        if (num === null || num === undefined) return '-';
+        return '$' + num.toLocaleString('en-US', { maximumFractionDigits: 0 });
+    },
+
+    formatPercent(num, decimals) {
+        if (num === null || num === undefined) return '-';
+        decimals = decimals !== undefined ? decimals : 2;
+        return num.toFixed(decimals) + '%';
+    },
+
+    formatDate(isoString) {
+        if (!isoString) return '-';
+        var utc = isoString.endsWith('Z') ? isoString : isoString + 'Z';
+        return new Date(utc).toLocaleString('en-US', {
+            month: 'short', day: 'numeric', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', timeZoneName: 'short'
+        });
+    },
+
+    // ------ Peg / NAV-spread shared helpers ------
+    // Threshold mirrors the Layer-3 alerter:
+    //   <0.25% → Near reference      (ok)
+    //   <0.50% → Moderate deviation  (warn)
+    //   ≥0.50% → Material deviation  (critical)
+    //
+    // These labels describe PRICE DISTANCE only. "Stress" was retired here
+    // because a deviation alone cannot establish that the peg mechanism is
+    // stressed; that requires the mechanism-relative and authored lenses.
+    // Absolute value — premium and discount of equal magnitude get the same severity.
+    pegStatusClass(pctValue) {
+        if (pctValue == null) return 'unknown';
+        var abs = Math.abs(pctValue);
+        if (abs < 0.25) return 'ok';
+        if (abs < 0.50) return 'warn';
+        return 'critical';
+    },
+
+    pegStatusLabel(state) {
+        if (state === 'ok') return 'Near reference';
+        if (state === 'warn') return 'Moderate deviation';
+        if (state === 'critical') return 'Material deviation';
+        return '—';
+    },
+
+    pegPctText(pct, decimals) {
+        if (pct == null) return '—';
+        decimals = decimals != null ? decimals : 3;
+        var sign = pct >= 0 ? '+' : '';
+        return sign + pct.toFixed(decimals) + '%';
+    },
+
+    pegPctClass(state) {
+        if (state === 'ok') return 'text-green-600';
+        if (state === 'warn') return 'text-amber-600';
+        if (state === 'critical') return 'text-red-600';
+        return 'text-slate-500';
+    },
+
+    // The latest observation and the rolling score answer different questions.
+    // Keep both in the scan surface, with their horizons on the face, so a current
+    // depeg cannot sit under an apparently contradictory "Healthy" rolling band.
+    _pegCurrentChipHtml(data) {
+        var pct = data && data.peg ? data.peg.premium_discount_pct : null;
+        var state = this.pegStatusClass(pct);
+        var label = this.pegStatusLabel(state);
+        var cls = state === 'ok' ? 'r-ok' : (state === 'warn' ? 'r-warn' :
+            (state === 'critical' ? 'r-crit' : 'r-na'));
+        var title = pct == null
+            ? 'No current premium/discount observation is published.'
+            : 'Latest premium/discount: ' + this.pegPctText(pct, 3) + '.';
+        return '<span class="axis-rating ' + cls + '" title="' +
+            this._escapeAttr(title) + '">Current · ' + label + '</span>';
+    },
+
+    _pegBandChipHtml(data, history) {
+        var rating = this.pegRating(data, history);
+        if (rating == null) {
+            return this._ratingChipHtml(null, this._pegUnratedReason(data),
+                this.pegRatingBasisNote(data, history));
+        }
+        var b = this._pegDevBasis(data, history, 7);
+        var c = this._ratingChip(rating);
+        var rolling = b.basis === '7d';
+        var face = (rolling ? '7d band' : 'Current band') + ' · ' + (rating * 2) + '/10';
+        var title = this._ratingChipBasis(rating) + ' — ' +
+            this.pegRatingBasisNote(data, history) +
+            (rolling ? ' Observations in the 7-day window: ' + b.n + '.' : '');
+        return '<span class="axis-rating ' + c.cls + '" title="' +
+            this._escapeAttr(title) + '">' + face + '</span>';
+    },
+
+    // ±25 / ±50 / ±100 bps reference bands for peg/spread charts.
+    pegBandAnnotations() {
+        return {
+            healthyBand:   { type: 'box', yMin: -0.25, yMax: 0.25, backgroundColor: 'rgba(34, 197, 94, 0.07)', borderWidth: 0 },
+            watchBandPos:  { type: 'box', yMin: 0.25, yMax: 0.50, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+            watchBandNeg:  { type: 'box', yMin: -0.50, yMax: -0.25, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+            stressBandPos: { type: 'box', yMin: 0.50, yMax: 1.00, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+            stressBandNeg: { type: 'box', yMin: -1.00, yMax: -0.50, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+            line25pos:  { type: 'line', yMin: 0.25,  yMax: 0.25,  borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3], label: { content: '+25 bps', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
+            line25neg:  { type: 'line', yMin: -0.25, yMax: -0.25, borderColor: '#22c55e', borderWidth: 1, borderDash: [3, 3], label: { content: '-25 bps', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } },
+            line50pos:  { type: 'line', yMin: 0.50,  yMax: 0.50,  borderColor: '#f59e0b', borderWidth: 1, borderDash: [3, 3], label: { content: '+50 bps', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+            line50neg:  { type: 'line', yMin: -0.50, yMax: -0.50, borderColor: '#f59e0b', borderWidth: 1, borderDash: [3, 3], label: { content: '-50 bps', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+            line100pos: { type: 'line', yMin: 1.00,  yMax: 1.00,  borderColor: '#ef4444', borderWidth: 1, borderDash: [3, 3], label: { content: '+100 bps', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+            line100neg: { type: 'line', yMin: -1.00, yMax: -1.00, borderColor: '#ef4444', borderWidth: 1, borderDash: [3, 3], label: { content: '-100 bps', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+            zero:       { type: 'line', yMin: 0,     yMax: 0,     borderColor: '#94a3b8', borderWidth: 1 }
+        };
+    },
+
+    // ------ Summary cards ------
+    renderSummaryCards(data) {
+        var s = data.summary;
+        var displaySupply = s.circulating_supply || s.tvl_ex_pol || s.total_supply;
+        var supplyLabel = (s.circulating_supply || s.tvl_ex_pol) ? 'Circulating Supply' : 'Total Supply';
+        // Vault-share assets (1 unit ≠ $1) opt out of dollar formatting via summary.supply_unit.
+        var supplyValue;
+        if (s.supply_unit === 'shares') {
+            supplyValue = (displaySupply || 0).toLocaleString('en-US', { maximumFractionDigits: 0 }) + ' shares';
+        } else {
+            supplyValue = this.formatCurrencyExact(displaySupply);
+        }
+
+        var cards = [
+            { label: supplyLabel, value: supplyValue },
+            { label: 'Total Backing', value: this.formatCurrencyExact(s.total_backing) },
+            { label: 'Collateral Ratio', value: this.formatPercent(s.collateral_ratio), cls: s.collateral_ratio >= 100 ? 'positive' : 'negative' },
+            { label: s.collateral_ratio_alt.label, value: s.collateral_ratio_alt.is_currency ? this.formatCurrency(s.collateral_ratio_alt.value) : this.formatPercent(s.collateral_ratio_alt.value), cls: s.collateral_ratio_alt.is_currency ? '' : (s.collateral_ratio_alt.value >= 100 ? 'positive' : 'warning') },
+            { label: 'Surplus / Deficit', value: this.formatCurrencyExact(s.surplus_deficit), cls: s.surplus_deficit >= 0 ? 'positive' : 'negative' },
+        ];
+
+        // Asset-specific renderers can prepend extra cards (e.g. NAV for vault shares).
+        var spec = data.asset_specific || {};
+        if (Array.isArray(spec.extra_summary_cards)) {
+            cards = spec.extra_summary_cards.concat(cards);
+        }
+        // Asset-specific renderers can override individual cards by label
+        // (e.g. relabel "Collateral Ratio" → "Pool Coverage Ratio" + add subtext).
+        // An override with `hidden: true` removes the card entirely.
+        var overrides = spec.card_overrides;
+        if (overrides && typeof overrides === 'object') {
+            cards = cards.map(function(c) {
+                var ov = overrides[c.label];
+                if (!ov) return c;
+                return Object.assign({}, c, ov);
+            }).filter(function(c) { return !c.hidden; });
+        }
+
+        var container = document.getElementById('summary-cards');
+        container.innerHTML = cards.map(function(c) {
+            return '<div class="summary-card">' +
+                '<div class="card-label">' + c.label + '</div>' +
+                (c.prefix_html ? c.prefix_html : '') +
+                '<div class="card-value ' + (c.cls || '') + '">' + c.value + '</div>' +
+                (c.subtext ? '<div class="text-xs text-slate-400 mt-1">' + c.subtext + '</div>' : '') +
+                (c.extra_html ? c.extra_html : '') +
+                '</div>';
+        }).join('');
+    },
+
+    // Legacy top-level backing_breakdown vs the 5-axis backing.breakdown.
+    //
+    // Bespoke renderers either synthesise the legacy field or hide this table, so
+    // the unguarded data.backing_breakdown.map() below only ever saw feeds that
+    // had it. susds is the first GENERIC-path asset emitting the 5-axis shape
+    // only, and it threw "Cannot read properties of undefined (reading 'map')" —
+    // which fails the WHOLE page, not just the table. Every future 5-axis-only
+    // asset would hit the same wall.
+    //
+    // Falls back to the publisher's own backing.breakdown rather than deriving
+    // anything; `tags` is optional there, so it is defaulted at the read site.
+    _backingBreakdown(data) {
+        if (data && Array.isArray(data.backing_breakdown)) return data.backing_breakdown;
+        if (data && data.backing && Array.isArray(data.backing.breakdown)) return data.backing.breakdown;
+        return [];
+    },
+
+    // ------ Backing breakdown table ------
+    renderBreakdownTable(data) {
+        var tbody = document.querySelector('#breakdown-table tbody');
+        var bd = CommonRenderer._backingBreakdown(data);
+        if (!bd.length) { var bp = tbody && tbody.closest('.panel'); if (bp) bp.style.display = 'none'; return; }
+        var rows = bd.map(function(item) {
+            // `tags` is optional in the 5-axis backing.breakdown shape. Normalise
+            // once here rather than guarding each read — the previous fix guarded
+            // .map and the very next line still threw on .indexOf.
+            var itemTags = Array.isArray(item.tags) ? item.tags : [];
+            var tags = itemTags.map(function(t) {
+                return '<span class="tag tag-' + t + '">' + t + '</span>';
+            }).join('');
+            var barColor = itemTags.indexOf('amo') >= 0 ? '#ef4444' :
+                           itemTags.indexOf('cross-chain') >= 0 ? '#3b82f6' :
+                           itemTags.indexOf('idle') >= 0 ? '#22c55e' : '#6366f1';
+            return '<tr>' +
+                '<td class="font-medium">' + item.label + tags + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(item.value) + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatPercent(item.pct, 1) + '</td>' +
+                '<td><div class="pct-bar-container"><div class="pct-bar" style="width:' + item.pct + '%; background:' + barColor + '"></div></div></td>' +
+                '</tr>';
+        });
+
+        // Total row
+        var total = bd.reduce(function(sum, i) { return sum + i.value; }, 0);
+        rows.push(
+            '<tr class="font-bold border-t-2 border-slate-200">' +
+            '<td>Total</td>' +
+            '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(total) + '</td>' +
+            '<td class="text-right">100%</td>' +
+            '<td></td></tr>'
+        );
+        tbody.innerHTML = rows.join('');
+
+        // Basis caption: the % column is each line's share of the displayed
+        // backing pie (the 100% row), NOT share of token supply. Generic line
+        // for every asset; USG gets an addendum because the same page shows POL
+        // on two different bases that otherwise look contradictory — the pie's
+        // "POL pool stables" counter-side % vs the Supply Composition panel's
+        // "POL deployed" share. Figures are read from live data so they always
+        // match the panels above (no hardcoded numbers to go stale).
+        var cap = document.getElementById('breakdown-caption');
+        if (cap) {
+            var note = "Percentages are each line’s share of total displayed backing (the 100% row) — not share of token supply.";
+            if (data.asset_slug === 'usg') {
+                var sc = data.asset_specific && data.asset_specific.supply_composition;
+                var polRow = CommonRenderer._backingBreakdown(data).filter(function(i) {
+                    return i.tags && i.tags.indexOf('pol') >= 0;
+                })[0];
+                var polPiePct = polRow ? CommonRenderer.formatPercent(polRow.pct, 1) : null;
+                var polSupplyPct = sc && sc.pol_pct != null ? CommonRenderer.formatPercent(sc.pol_pct, 1) : null;
+                note += ' <strong>USG:</strong> this is the inclusive-CR backing pie (CDP collateral + PegKeeper pool counter-side stables).';
+                if (polPiePct && polSupplyPct) {
+                    note += ' The “POL pool stables (PegKeeper)” line — the pool counter-side stablecoins (USDC/frxUSD paired against protocol-minted USG) — is ' + polPiePct +
+                        ' of this pie. That is a different quantity from the “POL deployed” figure (' + polSupplyPct +
+                        ') in the Supply Composition panel above, which counts the protocol-minted USG itself as a share of supply. Both are correct: different numerators (counter-side stables vs minted USG) and different denominators (backing pie vs supply).';
+                }
+            }
+            cap.innerHTML = note;
+        }
+    },
+
+    // ⚠️ THE ROW DOES NOT COLLAPSE ON ITS OWN. The backing row is a 3-column
+    // grid: "Backing Breakdown" spans 2 and the Risk Flags / Allocation sidebar
+    // takes 1. Both wide panels hide themselves when an asset publishes no
+    // breakdown — and the sidebar then sits alone in column 1 with two thirds of
+    // a 1440px row empty beside it, which looks like a broken layout rather than
+    // an asset with less to show.
+    //
+    // So when the wide panel is gone the sidebar spans the full row, and the
+    // flags inside lay out in columns rather than stretching one short sentence
+    // across the viewport.
+    reflowBackingGrid() {
+        var grid = document.querySelector('#section-backing .grid');
+        if (!grid) return;
+        var wide = grid.querySelector('.lg\\:col-span-2');
+        var sidebar = null;
+        Array.prototype.forEach.call(grid.children, function(c) {
+            if (c !== wide && !c.classList.contains('lg:col-span-2')) sidebar = c;
+        });
+        if (!sidebar) return;
+        var wideHidden = !wide || getComputedStyle(wide).display === 'none';
+        sidebar.classList.toggle('backing-sidebar-full', wideHidden);
+        var flags = document.getElementById('risk-flags');
+        if (flags) flags.classList.toggle('risk-flags-columns', wideHidden);
+    },
+
+    // ⚠️ A DEPTH FIGURE THAT MEASURES ONE LEG OF A TWO-LEG EXIT IS NOT A DOLLAR
+    // FIGURE, and rendered bare it will be read as one. reUSDe's $15.5K is the
+    // reUSDe -> sUSDe leg on Curve; a dollar exit also pays sUSDe -> USD, which
+    // this ladder does not measure. So the number UNDERSTATES true exit cost —
+    // the producer declared that scope rather than quoting a dollar figure it had
+    // not measured, and declaring it is worthless if the consumer drops it.
+    //
+    // Also renders which leg BINDS the axis. The axis scores the worse of {venue
+    // depth, primary redemption}; saying which one that is turns a rating into a
+    // statement a reader can act on: here $15.5K of venue against $1.5M/quarter
+    // of primary, so the venue is the constraint.
+    depthScopeHtml(data) {
+        var l = data.liquidity || {};
+        var ds = (l.depth && l.depth.denomination_scope) || l.denomination_scope;
+        var bind = l.axis_binding_constraint;
+        // ⚠️ A WITHHELD DEPTH MUST SAY WHY IT WAS WITHHELD. Adopting liquidity/1
+        // replaces the axis, and on syzUSD that swapped a $200K figure for
+        // "unmeasured" — correctly: DexTracker withheld it because the anchor
+        // "came from the router being measured", which is the syzUSD case where
+        // 194 of 201bps turned out to be basis rather than slippage. Showing the
+        // old number would show one known to be unsound. But a bare "n/a" reads
+        // as a broken feed, and the producer's reason is right there.
+        var withheld = l.depth && typeof l.depth === 'object' &&
+            l.depth.depth_usd == null && l.depth.basis;
+        var self = this, bits = [];
+
+        // ⚠️ EMBEDDED FALLBACK. The three fields above are liquidity/1 (DexTracker),
+        // and only 3 of 25 published assets have that overlay — so for the other 22
+        // this function could never fire, no matter what their feed declared. Ten of
+        // them DO declare a measured venue, in four different shapes, and none of it
+        // reached the page: yzUSD publishes a full by_chain breakdown that rendered
+        // nowhere.
+        //
+        // This is the axis-3 twin of the backing axis's `supply_scope` chip, which
+        // exists because usdat published a 100.00% collateral ratio that was an
+        // ETHEREUM-ONLY statement, and the word Ethereum appeared once on the page.
+        // A depth figure with no scope is populated but misleading — it looks
+        // complete, which is worse than a blank.
+        var derived = null;
+        if (!ds && !bind && !withheld) {
+            // 1. An explicit producer declaration beats anything I derive.
+            //
+            // ⚠️ TWO PUBLISHED LOCATIONS, AND THE RICHER ONE WAS NOT READ.
+            // `liquidity.scope` is a short slug ("routed_ethereum"); thUSD publishes
+            // `exit_mark.scope` as a full sentence, and it carries the fact that
+            // decides the figure: "ONE LEG: Ethereum only. Arbitrum (~$34K, ~$0
+            // volume) is excluded as dust. Stable holds ~38% of SUPPLY but no indexed
+            // DEX venue: GeckoTerminal 404s thUSD there and none of Stable's top 60
+            // pools contain it (control: GeckoTerminal does index Stable)."
+            //
+            // Our derivation would have said "Depth measured on ethereum only" —
+            // true, and silent about over a third of the supply sitting where no
+            // venue could be found. A depth figure with no scope looks complete,
+            // which this function's own header calls worse than a blank.
+            //
+            // The sentence form is preferred over the slug and used verbatim: it is
+            // the producer's prose, not ours to recompose.
+            var emScope = (l.exit_mark || {}).scope;
+            if (typeof emScope === 'string' && emScope.trim()) {
+                derived = emScope.trim();
+            } else if (typeof l.scope === 'string' && l.scope.trim()) {
+                derived = 'Measured scope: ' + l.scope.trim().replace(/_/g, ' ');
+            } else if ((l.exit_mark || {}).chain) {
+                // ⚠️ THE LADDER'S OWN CHAIN, WHICH IS NOT A DERIVATION. The union
+                // of pool chains below is a guess assembled from a listing; this is
+                // the producer stating which chain the quote actually ran on.
+                // reusd_re is the case: PegTracker measures $10.0M via KyberSwap
+                // with `exit_mark.chain: "ethereum"`, while the asset trades on
+                // four chains and its own four pool rows carry chain: null. So the
+                // page showed a single figure for a multi-chain asset with nothing
+                // saying which chain it was, and the scope line could not fire
+                // because the pools had no chains to union.
+                derived = 'Depth measured on ' +
+                    String(l.exit_mark.chain).trim().toLowerCase() + ' only.';
+            } else {
+                // 2. Otherwise the pools' own chains — but ONLY as a union, never a
+                // pick. Naming one chain when pools span several would be inventing
+                // a scope, which is the failure this line exists to prevent.
+                var pools = Array.isArray(l.pools) ? l.pools : [];
+                var chains = [];
+                pools.forEach(function(pl) {
+                    var c = pl && pl.chain ? String(pl.chain).trim().toLowerCase() : '';
+                    if (c && chains.indexOf(c) < 0) chains.push(c);
+                });
+                // by_chain names venues per chain; use its keys when pools carry none.
+                if (!chains.length && Array.isArray(l.by_chain)) {
+                    l.by_chain.forEach(function(e) {
+                        var c = e && e.chain ? String(e.chain).trim().toLowerCase() : '';
+                        if (c && chains.indexOf(c) < 0) chains.push(c);
+                    });
+                }
+                if (chains.length === 1) {
+                    derived = 'Depth measured on ' + chains[0] + ' only.';
+                } else if (chains.length > 1) {
+                    derived = 'Depth measured across ' + chains.length + ' chains: ' +
+                        chains.sort().join(', ') + '.';
+                }
+            }
+            // ⚠️ NOT `volume_24h_scope`. That names the DATA SOURCE for volume
+            // ("geckoterminal_…"), not the chain depth was measured on. Reading it
+            // as a depth scope would be the same error as reading `base_token` on a
+            // PYUSD-reserved dollar as the token — a field name assumed to mean what
+            // it sounds like.
+            if (!derived) return;
+        }
+        if (derived) {
+            bits.push('<div class="ds-line"><span class="ds-key">Scope:</span> ' +
+                self._escapeAttr(derived) + '</div>');
+        }
+        if (withheld) {
+            // ⚠️ "Depth not published" SAT ABOVE A PUBLISHED DEPTH FIGURE the moment
+            // the hand-off landed (fe1d82f10): the axis owner still publishes none,
+            // which is what this line reports, but the tile now shows the base
+            // feed's figure — so the two read as a contradiction. The sentence is
+            // about WHOSE figure is absent, so it has to say whose.
+            var ownerLabel = self._producerLabel(
+                (self.AXIS_PROVENANCE && self.AXIS_PROVENANCE.liquidity &&
+                 self.AXIS_PROVENANCE.liquidity.producer) || '') || 'the axis owner';
+            var handed = !!(self.AXIS_PROVENANCE && self.AXIS_PROVENANCE.liquidity &&
+                            self.AXIS_PROVENANCE.liquidity.depth_handed_off);
+            bits.push('<div class="ds-line ds-warn">\u26a0\ufe0f ' +
+                (handed
+                    ? 'The ' + self._escapeAttr(ownerLabel) + ' publishes no depth figure for this ' +
+                      'asset, so the figure shown is the base feed\u2019s'
+                    : 'Depth not published') +
+                '</div><details><summary>Depth scope and measurement limits</summary>' +
+                self._escapeAttr(String(l.depth.basis)) + '</details>');
+        }
+        if (ds && typeof ds === 'object') {
+            bits.push('<div class="ds-line"><span class="ds-key">Measured leg:</span> ' +
+                self._escapeAttr(String(ds.measured_leg || '?')) +
+                (ds.excluded_leg
+                    ? ' \u00b7 <span class="ds-warn">excludes ' +
+                      self._escapeAttr(String(ds.excluded_leg)) + '</span>' : '') + '</div>');
+            if (ds.exit_cost_scope) {
+                bits.push('<div class="ds-line ds-warn">\u26a0\ufe0f ' +
+                    self._escapeAttr(String(ds.exit_cost_scope)) + '</div>');
+            }
+        }
+        if (bind && typeof bind === 'object' && bind.basis) {
+            bits.push('<div class="ds-line"><span class="ds-key">Binding leg:</span> ' +
+                self._escapeAttr(String(bind.leg || '?').replace(/_/g, ' ')) + ' \u2014 ' +
+                self._escapeAttr(String(bind.basis)) + '</div>');
+        }
+        if (!bits.length) return '';
+        return bits.join('');
+    },
+
+    // ⚠️ THE SCOPE LINE LIVES ON THE HEAD, AND A PAGE WITH NO HEAD LOSES IT.
+    // Same split as the panel above, for the same reason: ethena hides the axis
+    // head, so "Measured scope: … ⚠️ ONE CHAIN" — the sentence that stops a
+    // single depth figure reading as complete — reached neither Ethena page.
+    // One builder, two callers, so the head and the panel cannot drift.
+    _renderDepthScope(data) {
+        var head = document.getElementById('axis-liquidity-head');
+        if (!head) return;
+        var html = this.depthScopeHtml(data);
+        if (!html) return;
+        var el = document.createElement('div');
+        el.className = 'depth-scope';
+        el.innerHTML = html;
+        head.appendChild(el);
+    },
+
+    // ⚠️ WHEN DEPTH IS UNMEASURABLE, THE EXIT IS STILL KNOWN — show it rather
+    // than "n/a". reUSDe publishes no depth for an honest reason: its only venue
+    // prices it in sUSDe, not dollars, so a USD ladder would inherit a second
+    // asset's price. But its PRIMARY exit is measured precisely — a quarterly
+    // window capped at $1.5M, ~7.9% of the tranche, first window filled exactly
+    // to its ceiling. "n/a" over that is the blank-tile defect the spec forbids:
+    // a reader scanning the top row learns nothing about an exit we can describe
+    // better than most assets on the dashboard.
+    //
+    // ⚠️ Rendered as a RATE, never as a depth figure. $1.5M per quarter is not
+    // $1.5M of depth, and the sub-label says which. The axis rating still comes
+    // from depth alone and stays unrated here — this fills the VALUE slot, not
+    // the score.
+    _exitCapacityHtml(liq) {
+        var pe = liq && liq.primary_exit;
+        if (!pe || typeof pe !== 'object') return 'n/a';
+        var pct = typeof pe.capacity_pct_of_tranche === 'number' ? pe.capacity_pct_of_tranche : null;
+        var cad = pe.cadence ? String(pe.cadence) : null;
+        if (pct != null && cad) {
+            return '<span title="' + this._escapeAttr(
+                    [pe.gate, pe.capacity_basis, pe.note].filter(Boolean).join(' \u2014 ')) + '">' +
+                pct + '%<span class="text-slate-400 text-base font-normal">/' +
+                this._escapeAttr(cad.replace(/ly$/, '')) + '</span></span>';
+        }
+        if (typeof pe.capacity_usd === 'number') {
+            return this.formatCurrency(pe.capacity_usd) +
+                (cad ? '<span class="text-slate-400 text-base font-normal">/' +
+                       this._escapeAttr(cad.replace(/ly$/, '')) + '</span>' : '');
+        }
+        return 'n/a';
+    },
+
+    // ------ Pie chart ------
+    renderPieChart(data) {
+        var ctx = document.getElementById('pie-chart');
+        if (!ctx) return;
+
+        var items = CommonRenderer._backingBreakdown(data).filter(function(i) { return i.pct > 0.5; });
+        // ⚠️ An empty doughnut is a large blank card with a title, which reads as
+        // a failed render rather than as "this asset publishes no breakdown".
+        // renderBreakdownTable already hides ITS panel on the same condition;
+        // this one never did, so reUSD showed a titled ~200px void. Five assets
+        // publish no breakdown (bmnr, mstr, strc, usdm and now reusd-re), so this
+        // was visible on all of them.
+        var pieShell = ctx.closest ? ctx.closest('.panel') : null;
+        if (pieShell) pieShell.style.display = items.length ? '' : 'none';
+        if (!items.length) {
+            if (window._pieChart) { window._pieChart.destroy(); window._pieChart = null; }
+            CommonRenderer.reflowBackingGrid();
+            return;
+        }
+        var palette = ['#6366f1', '#3b82f6', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16'];
+        var colorIdx = 0;
+        var colors = items.map(function(i) {
+            var ts = Array.isArray(i.tags) ? i.tags : [];
+            if (ts.indexOf('amo') >= 0 || ts.indexOf('circular') >= 0) return '#ef4444';
+            if (ts.indexOf('cross-chain') >= 0) return '#3b82f6';
+            if (ts.indexOf('idle') >= 0) return '#22c55e';
+            if (ts.indexOf('pegkeeper') >= 0) return '#f97316';
+            return palette[colorIdx++ % palette.length];
+        });
+
+        if (window._pieChart) window._pieChart.destroy();
+        window._pieChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: items.map(function(i) { return i.label; }),
+                datasets: [{
+                    data: items.map(function(i) { return i.value; }),
+                    backgroundColor: colors,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.label + ': ' + CommonRenderer.formatCurrencyExact(ctx.raw) + ' (' + CommonRenderer.formatPercent(ctx.raw / data.summary.total_backing * 100, 1) + ')';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    // ⚠️ An accounting divergence is not a solvency event, and the flag text
+    // cannot say so.
+    //
+    // USDat's critical flag reads "holds $80,461,171.08 but totalAssets() reports
+    // $0.00 (100.000000% of supply unaccounted by the contract)". To a holder,
+    // "100% unaccounted" reads as THE MONEY IS MISSING. It is not: backing and
+    // supply tie to the cent. What is absent is the contract's recognition of the
+    // assets, because the token holding all of them is not on its own allowlist.
+    //
+    // Both halves matter and neither substitutes. Quoting only the backing
+    // understates a real defect; quoting only "unaccounted" is a false solvency
+    // alarm. The flag is feed-emitted and is NOT reworded here — this adds the
+    // half the reader needs, from the producer's own structured fields
+    // (contract_total_assets_usd, backing_total_usd, supply_usd), not by parsing
+    // the message. Generic: any asset emitting these fields gets it.
+    _divergenceContextHtml(data) {
+        if (data.accounting_review && data.accounting_review.semantics === 'primary_pyusdx_separate_from_alternative_assets') return '';
+        var s = data.summary || {};
+        var contractTA = s.contract_total_assets_usd;
+        var backing = s.backing_total_usd;
+        var supply = s.supply_usd;
+        if (contractTA == null || backing == null || supply == null) return '';
+        if (contractTA >= backing * 0.5) return '';          // no material divergence
+        if (!(backing > 0) || Math.abs(backing - supply) / supply > 0.005) return '';
+        return '<div class="text-xs text-slate-700 dark:text-slate-200 bg-slate-50 ' +
+            'dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded p-2 mt-2">' +
+            '<span class="font-semibold">What the divergence is, and is not.</span> The assets are ' +
+            'present: backing <span class="font-mono">' + this.formatCurrencyExact(backing) +
+            '</span> against supply <span class="font-mono">' + this.formatCurrencyExact(supply) +
+            '</span>, tying to the cent. What is missing is the <em>contract\u2019s recognition</em> ' +
+            'of them \u2014 <span class="font-mono">totalAssets()</span> reports ' +
+            this.formatCurrencyExact(contractTA) + '. That is a real defect, and anything dividing ' +
+            'by it degenerates rather than mispricing, but it is not absent backing.' +
+        '</div>';
+    },
+
+    // ⚠️ report_url_status is published and was unread — both link sites keyed on
+    // report_url alone. PegTracker's convention: "published" is verified live,
+    // "unavailable" is known-dead, "unverified" means the producer could not
+    // check (transport failure, stale cache) and emits the link anyway.
+    //
+    // A renderer must not turn "could not verify" into a promise. yzUSD and
+    // syzUSD ship report_url with status "unverified" and both URLs 404 today —
+    // linking them would put two dead links on a public page, which is the same
+    // six-404 problem this repo hit last week from the other direction.
+    //
+    // Absent status still links, so feeds that never emit the field are
+    // unaffected. Every live asset today is "published" and unchanged.
+    _reportUrlUsable(issuer) {
+        if (!issuer || !issuer.report_url) return false;
+        var st = issuer.report_url_status;
+        return (st == null || st === 'published' || st === 'staged');
+    },
+
+    _reportLinkLabel(issuer, longForm) {
+        var staged = issuer && issuer.report_url_status === 'staged';
+        if (longForm) return staged ? 'Read the staged risk report →' : 'Read the full risk report →';
+        return staged ? 'Staging report →' : 'Report →';
+    },
+
+    // ------ Feed staleness ------
+    //
+    // ⚠️ Built because NOTHING detected Saturn going 4.1h stale. usdat, susdat
+    // and saturn_family sat on a timed-out analyzer's previous output; the only
+    // time on those pages was a bare "Updated:" stamp with no judgement attached,
+    // and a human noticed it looked old. Seven renderers had a bespoke freshness
+    // surface and seven did not — saturn.js was in the second group.
+    //
+    // Deliberately ONE implementation in the common path rather than fourteen.
+    // Per-renderer is how thusd ended up the only tier-3 page missing its section
+    // suppression: a thing added n times gets added n-1 times.
+    //
+    // A timed-out analyzer leaves the PREVIOUS file in place, so a stale payload
+    // has correct schema, correct blocks and plausible numbers. It differs from a
+    // good one only in its timestamp — which is why this reads the timestamp and
+    // nothing else.
+    //
+    // Silent when fresh. A permanent "data is current" badge on 22 pages is the
+    // noise that teaches people to skip the one that matters.
+    //
+    // ⚠️ Thresholds mirror check_feeds.py deliberately. Two places to update; the
+    // alternative is a page and a checker that disagree about what stale means,
+    // which is worse than the duplication.
+    STALE_SLOW_ASSETS: { bmnr: 1, frax: 1 },   // own cadences, not hourly
+
+    renderStalenessBanner(data, slug) {
+        var el = document.getElementById('staleness-banner');
+        if (!el) return;
+        el.innerHTML = '';
+        // ⚠️ Three field names in use across the feeds: timestamp (most),
+        // as_of (bmnr, saturn), timestamp_utc (strc/mstr). Reading only the
+        // first two left strc and mstr silently unbannered — found by backdating
+        // every feed and loading all 23 pages, not by reading the code. A
+        // staleness banner that cannot see an asset's timestamp is exactly the
+        // failure it exists to catch, one level up.
+        var ts = data && (data.timestamp || data.as_of || data.timestamp_utc);
+        if (!ts) return;
+        var t = Date.parse(String(ts).endsWith('Z') || /[+-]\d\d:?\d\d$/.test(String(ts))
+            ? ts : ts + 'Z');
+        if (!isFinite(t)) return;
+        var hours = (Date.now() - t) / 3600000;
+
+        var slow = slug && this.STALE_SLOW_ASSETS[slug];
+        var warnAt = slow ? 12 : 3;
+        var failAt = slow ? 30 : 6;
+        if (hours <= warnAt) return;
+
+        var crit = hours > failAt;
+        var cls = crit
+            ? 'bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 text-red-800 dark:text-red-200'
+            : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200';
+        var age = hours < 48 ? hours.toFixed(1) + ' hours' : (hours / 24).toFixed(1) + ' days';
+
+        el.innerHTML =
+            '<div class="border rounded p-3 mb-4 text-sm ' + cls + '">' +
+                '<span class="font-semibold">' +
+                    (crit ? 'This data is stale.' : 'This data is older than expected.') +
+                '</span> Last updated <span class="font-mono">' + age + '</span> ago' +
+                (slow ? ' (this asset refreshes on a slower cadence).' : ', against an hourly refresh.') +
+                ' Every figure below is from that snapshot' +
+                (crit
+                    ? ' \u2014 an analyzer that fails leaves its previous output in place, so these ' +
+                      'numbers look normal and are simply old.'
+                    : '.') +
+            '</div>';
+    },
+
+    // ⚠️⚠️ A CRITICAL RISK FLAG THAT REACHES NO READER, ON FIVE LIVE PAGES.
+    //
+    // #risk-flags lives inside #section-backing, and the bespoke renderers hide
+    // that section ("band-only ... every axis has a richer custom panel",
+    // saturn.js:346). Most of them re-render the flags in their own panels and
+    // lose nothing — thusd, cusd, msusd-metronome and usde all check out. FOUR
+    // DO NOT, and what they drop is the most severe content on the feed:
+    //
+    //   usdat   BOTH flags unseen, BOTH critical — "accounting divergence: holds
+    //           $92,361,127.74 but totalAssets() reports $0.00 (100% of supply
+    //           unaccounted by the contract)" and an implementation drift
+    //   susdat  3 of 3 unseen, 1 critical — implementation drifted from published
+    //   usdai   1 of 1 unseen
+    //   susde   2 of 2 unseen
+    //   syrupusdt 1 of 4 unseen with its panel VISIBLE — a different cause
+    //
+    // An implementation drift says the deployed code no longer matches what was
+    // published. That is the single thing a contract-risk dashboard exists to
+    // surface, and on two assets it was in the DOM and invisible.
+    //
+    // ⚠️ IT WAS FOUND BY A DETOUR, NOT BY LOOKING FOR IT. riskAnalyst asked about
+    // the wording of a buffer ALERT; checking whether that alert appeared on our
+    // page showed the whole flag panel was unreachable. The flag I was sent to
+    // look at was the least important one in the list.
+    //
+    // ⚠️ SELF-LIMITING BY CONSTRUCTION. It re-renders a flag ONLY when that flag's
+    // own message is absent from the page's VISIBLE text, so the thirteen assets
+    // whose panel renders normally, and the four bespoke pages that carry their
+    // flags themselves, get nothing added. A blanket banner would have duplicated
+    // flags on seventeen pages to fix five.
+    //
+    // ⚠️ VISIBILITY IS MEASURED, NOT ASSUMED — computed style on every ancestor
+    // plus a non-zero box, and collapsed <details> treated as unread. innerHTML
+    // returns true for text in a 0x0 box and innerText omits collapsed content;
+    // both were used in this session to report hidden content as rendering. See
+    // tools/visible_text_check.js, which is the same logic with its controls.
+    //
+    // Runs AFTER the bespoke renderer, into a container outside #asset-specific-panels,
+    // for the reason the staleness banner gives: a bespoke renderer assigns innerHTML
+    // and would overwrite anything placed before it.
+    renderUnseenRiskFlags(data) {
+        var el = document.getElementById('unseen-flags-banner');
+        if (!el) return;
+        el.innerHTML = '';
+        var flags = (data && Array.isArray(data.risk_flags)) ? data.risk_flags : [];
+        if (!flags.length) return;
+
+        var seen = this._pageVisibleText();
+        var unseen = flags.filter(function(f) {
+            var m = f && typeof f.message === 'string' ? f.message.trim() : '';
+            if (!m) return false;
+            // Compare on a prefix: a renderer may append its own suffix (an
+            // inherited-from note, a tooltip marker) to the producer's message.
+            return seen.indexOf(m.slice(0, 40)) < 0;
+        });
+        if (!unseen.length) return;
+
+        var anyCrit = unseen.some(function(f) { return f.severity === 'critical'; });
+        var cls = anyCrit
+            ? 'bg-red-50 dark:bg-red-950/40 border-red-300 dark:border-red-800 text-red-800 dark:text-red-200'
+            : 'bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-800 dark:text-amber-200';
+        var self = this;
+        el.innerHTML =
+            '<div class="border rounded p-3 mb-4 text-sm ' + cls + '">' +
+                '<span class="font-semibold">' +
+                    (anyCrit ? 'Critical risk flags for this asset:' : 'Risk flags for this asset:') +
+                '</span>' +
+                '<ul class="mt-1 ml-4 list-disc">' +
+                unseen.map(function(f) {
+                    // ⚠️ CARRY `inherited_from`, because sUSDe is one of the four and
+                    // BOTH of its unseen flags are inherited from USDe. Rendering the
+                    // message alone here would reproduce, in a new place, exactly the
+                    // defect renderRiskFlags was fixed for: a finding measured on USDe
+                    // reading as a finding about sUSDe's own state. Escaped with the
+                    // same helper for the same reason — producer prose is not markup.
+                    return '<li>' +
+                        (f.severity === 'critical'
+                            ? '<span class="font-semibold uppercase text-xs mr-1">critical</span>' : '') +
+                        self._escapeAttr(String(f.message == null ? '' : f.message)) +
+                        (f.inherited_from
+                            ? '<span class="text-xs opacity-80"> \u2014 inherited from ' +
+                              self._escapeAttr(String(f.inherited_from)) +
+                              ', not measured on this asset' +
+                              (f.scope ? ' (producer scope: ' +
+                                  self._escapeAttr(String(f.scope)) + ')' : '') + '</span>'
+                            : '') +
+                        '</li>';
+                }).join('') +
+                '</ul>' +
+                '<div class="text-xs mt-2 opacity-80">' +
+                    'Shown here because this page\u2019s layout does not display them elsewhere.' +
+                '</div>' +
+                // ⚠️⚠️ A TRUE FLAG RENDERED BARE IS A FALSE SOLVENCY ALARM, AND THIS
+                // BANNER SHIPPED ONE FOR AN HOUR.
+                //
+                // usdat's critical flag reads "holds $92,361,127.74 but totalAssets()
+                // reports $0.00 (100.000000% of supply unaccounted by the contract)".
+                // Every word is true and a reader meets it as THE MONEY IS GONE. It is
+                // not: backing $92,361,127.74 against supply $92,361,127.74,
+                // `backing_ratio: 1.0`, tying to the cent. What is missing is the
+                // CONTRACT'S RECOGNITION — isAllowedAsset is false for the reserve
+                // token, so its internal accounting counts none of it.
+                //
+                // ⚠️ THE SAME DEFECT CLASS AS `inherited_from`, WHICH THIS FUNCTION
+                // ALREADY HANDLES. I carried that one deliberately and missed this one,
+                // because `renderRiskFlags` appends `_divergenceContextHtml` after its
+                // list and my banner was an INCOMPLETE COPY of it. Surfacing hidden
+                // content means surfacing everything that made it readable, not the
+                // messages alone.
+                //
+                // ⚠️ MEASURED FIELDS, NOT PROSE. riskAnalyst offered to emit their
+                // 2026-08-29 analysis as a basis string; it is not needed and would
+                // have shipped a stale figure — their prose says 80,461,171.08, the
+                // feed says 92,361,127.74. This block reads `backing_total_usd`,
+                // `supply_usd` and `contract_total_assets_usd` live, so it cannot drift.
+                //
+                // Self-gating: returns '' unless the divergence is material AND backing
+                // ties to supply within 0.5%, so it appears only where it is the answer.
+                this._divergenceContextHtml(data) +
+            '</div>';
+    },
+
+    // ⚠️ 24 AXIS-BASIS DISCLOSURE LINES ARE BUILT AND NEVER SHOWN, ACROSS EIGHT PAGES.
+    //
+    // Each axis head can carry an `.axis-basis-note` — a collapsed <summary> reading
+    // "Why the report scores liquidity differently" / "Why this contract score" and
+    // the peg / backing / dependencies equivalents — with riskAnalyst's reasoning one
+    // click behind. The five bespoke renderers hide whole SECTIONS to avoid showing a
+    // second, emptier copy of each axis panel, and these notes live in the section
+    // HEADS, so they went as collateral. crvusd (5/5), usg (5/5) and cusd (3/3) show
+    // theirs, which is how we know the component works.
+    //
+    // ⚠️ THE COST IS CONCENTRATED IN THE TOOLTIP. With the note hidden, the only path
+    // to that reasoning is the rating chip's title="" — 4,031 chars on usdat's
+    // liquidity chip, 6,614 on its Structural chip. A native tooltip cannot be
+    // scrolled and truncates unpredictably, so the longest reasoning is the least
+    // readable. On crvusd the same basis sits in the visible note and the liquidity
+    // tooltip is 1,558 chars: the LENGTH is a symptom of the hiding.
+    //
+    // ⚠️ OPT-IN PER RENDERER, DELIBERATELY NOT FLEET-WIDE. Each bespoke renderer hides
+    // its own hardcoded section list, so each decides for itself by setting
+    // `CommonRenderer.LIFT_AXIS_NOTES = true`. ethena.js is NOT opted in: the backlog
+    // records that usde's liquidity panel was kept score-chip-free on purpose, because
+    // changing it "would have answered the deferred decision by implementation, in the
+    // generous direction, on a held asset". A fleet-wide lift would have done exactly
+    // that silently.
+    //
+    // MOVES the node rather than cloning it — a clone would leave the hidden original
+    // to drift, and the <details> is native so it carries its own toggle.
+    // Idempotent: a note already in the container is skipped, so the settle loop that
+    // calls this can run many times.
+    // ⚠️ SCANS THE SECTIONS, NOT A LIST OF HEAD IDS, AND THE FIRST VERSION DID THE
+    // LATTER AND MISSED ONE OF FOUR. The peg / liquidity / contract notes are appended
+    // to `#axis-<n>-head` as `.axis-basis-note` wrappers; the DEPENDENCIES one is built
+    // inline into `#axis-deps-common-mode`, a body container, so a head-id list lifted
+    // 3 of usdat's 4 and reported success. Measured in a browser, not reasoned about.
+    //
+    // ⚠️ TWO SELECTORS, AND BOTH ARE NEEDED. `_scoreBasisHtml` always emits
+    // `details.score-basis`, so that alone would catch every case — but the head
+    // wrappers also hold the per-chain line and the score-change chip, and lifting only
+    // the <details> would silently drop those. So: prefer the wrapper where there is
+    // one, fall back to the bare <details>, and never lift something already inside
+    // what was lifted.
+    liftHiddenAxisNotes() {
+        if (!this.LIFT_AXIS_NOTES) return;
+        var box = document.getElementById('axis-notes-lifted');
+        if (!box) return;
+        var self = this;
+        var found = document.querySelectorAll(
+            'section.axis-section .axis-basis-note, section.axis-section details.score-basis');
+        for (var i = 0; i < found.length; i++) {
+            var el = found[i];
+            // Only lift what a reader cannot already reach. If a renderer ever stops
+            // hiding its sections this becomes a no-op on its own.
+            if (self._elVisible(el)) continue;
+            // Skip a <details> whose wrapper is going to be (or has been) lifted whole.
+            if (el.closest && el.closest('.axis-basis-note') &&
+                el.closest('.axis-basis-note') !== el) continue;
+            box.appendChild(el);
+        }
+        box.className = box.children.length ? 'mb-6' : '';
+    },
+
+    // Visible text of the page: text nodes whose ancestors all render.
+    // ⚠️ Deliberately NOT innerText (omits collapsed <details>, and is blind to
+    // visibility:hidden / zero-opacity) and NOT innerHTML (true for a 0x0 box).
+    _pageVisibleText() {
+        var out = '';
+        if (!document.body || !document.createTreeWalker) return out;
+        var walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        while (walker.nextNode()) {
+            var el = walker.currentNode.parentElement;
+            if (el && this._elVisible(el)) out += ' ' + walker.currentNode.nodeValue;
+        }
+        return out.replace(/\s+/g, ' ');
+    },
+
+    _elVisible(el) {
+        var n = el;
+        while (n && n.tagName !== 'BODY') {
+            var cs = window.getComputedStyle(n);
+            if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+            if (n.tagName === 'DETAILS' && !n.open && n.firstElementChild) {
+                var sum = n.querySelector(':scope > summary');
+                if (!sum || !sum.contains(el)) return false;
+            }
+            n = n.parentElement;
+        }
+        var r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+    },
+
+    // ------ Risk flags ------
+    renderRiskFlags(data) {
+        var container = document.getElementById('risk-flags');
+        if (!data.risk_flags || data.risk_flags.length === 0) {
+            container.innerHTML = '<div class="text-green-600 text-sm font-medium">No risk flags</div>';
+            return;
+        }
+        // ⚠️ AN INHERITED FLAG MUST SAY IT IS INHERITED. sUSDe carries two warnings
+        // whose `inherited_from: "USDe"` and `scope: "usde_level"` were both dropped
+        // here — the renderer read only `severity` and `message`. A finding about
+        // USDe's custody attestation then reads as a finding about sUSDe's own state.
+        //
+        // PegTracker has been compensating in prose: both messages start "USDe: ".
+        // That is the producer working around a field we do not read, and it is
+        // ambiguous in exactly the wrong way — "USDe:" could as easily label sUSDe's
+        // exposure TO USDe as a finding measured one level up. The structured field
+        // says which, and it was published from the start.
+        //
+        // riskAnalyst asked whether this mechanism is generic enough for a wrapper
+        // whose upstream is not a stablecoin. It is generic because it is a
+        // pass-through — we assert nothing and derive nothing. But it has never
+        // rendered for anyone, so the honest answer was that weETH would be the
+        // second asset to use a mechanism that had never reached a reader, not the
+        // first non-stablecoin case of a working one.
+        var self = this;
+        container.innerHTML = data.risk_flags.map(function(f) {
+            if (f.code === 'RISK_FEED_STALE') {
+                return '<details class="text-xs text-slate-500 mt-2"><summary>Assessment freshness: last-known score</summary>' +
+                    self._escapeAttr(String(f.message || '')) + '</details>';
+            }
+            // ⚠️ ESCAPED. Producer prose went into innerHTML raw. Counted before
+            // changing it: 87 flags across the fleet and NOT ONE contains markup, so
+            // nothing is being formatted deliberately and this changes no rendered
+            // text — it closes a path where a producer string is interpreted as HTML.
+            var msg = self._escapeAttr(String(f.message == null ? '' : f.message));
+            var prov = '';
+            if (f.inherited_from) {
+                prov = '<div class="text-[11px] text-slate-500 mt-1" title="' +
+                    self._escapeAttr(
+                        'This finding was measured on ' + String(f.inherited_from) +
+                        ' and carried down to this asset' +
+                        (f.scope ? ' (producer scope: ' + String(f.scope) + ')' : '') +
+                        '. It is NOT a measurement of this asset\u2019s own state \u2014 the ' +
+                        'asset inherits the exposure, so the finding travels with it.') +
+                    '">inherited from ' + self._escapeAttr(String(f.inherited_from)) +
+                    ' \u2014 not measured on this asset \u24d8</div>';
+            }
+            return '<div class="risk-flag risk-' + self._escapeAttr(String(f.severity || '')) +
+                '">' + msg + prov + '</div>';
+        }).join('') + this._divergenceContextHtml(data);
+    },
+
+    // ------ CR trend chart ------
+    renderCRChart(historyData, opts) {
+        var ctx = document.getElementById('cr-chart');
+        // ⚠️ THIS BRANCH WAS THE ONLY SILENT ONE, AND SILENCE IS THE FAILURE §4.0 NAMES.
+        // Hiding the panel made "no history file is published" indistinguishable from
+        // "this element does not apply here" and from a chart that failed to load.
+        // Fourteen lines down, the sibling branch for a series that exists-but-is-all-null
+        // already states its absence; this one hid instead. syzUSD and thUSD publish a
+        // coverage figure and no history file, so both showed a figure with no series
+        // and no word about it.
+        //
+        // ⚠️ THE TWO CAUSES ARE SEPARATED because they close differently: no file at all
+        // is a producer gap, while a file too short to plot is a series that has just
+        // started and will fill. A reader told only "not tracked" cannot tell which.
+        if (!ctx || !historyData || !historyData.entries || historyData.entries.length < 2) {
+            var sPanel = document.getElementById('chart-panel');
+            if (!ctx || !sPanel) { if (sPanel) sPanel.style.display = 'none'; return; }
+            var sHolder = sPanel.querySelector('.chart-container');
+            if (sHolder) sHolder.style.display = 'none';
+            var priorS = document.getElementById('cr-chart-absent-note');
+            if (priorS) priorS.remove();
+            var nEnt = (historyData && historyData.entries) ? historyData.entries.length : 0;
+            var sNote = document.createElement('div');
+            sNote.id = 'cr-chart-absent-note';
+            sNote.className = 'text-sm text-slate-400';
+            sNote.style.lineHeight = '1.5';
+            sNote.textContent = (nEnt === 0
+                ? 'Coverage is not tracked over time — no history file is published for this asset. ' +
+                  'It would close when the producer begins retaining a coverage series; the current ' +
+                  'figure above is a single reading, not a trend.'
+                : 'Coverage history has ' + nEnt + ' reading' + (nEnt === 1 ? '' : 's') +
+                  ', too few to plot. It will close on its own as the series accumulates — this is a ' +
+                  'series that has just started, not one that is missing.');
+            sPanel.appendChild(sNote);
+            sPanel.style.display = '';
+            var sStats = document.getElementById('cr-chart-stats');
+            if (sStats) sStats.innerHTML = '';
+            if (window._crChart) { window._crChart.destroy(); window._crChart = null; }
+            return;
+        }
+        // ⚠️ THE PRODUCER SAID NO SUCH RATIO EXISTS, SO THIS DOES NOT PLOT ONE.
+        // Not the same branch as "no history published": here the series is
+        // present and the DECLARATION is the finding. The panel states it instead
+        // of drawing a line, and an asset-specific renderer is free to plot the
+        // per-tranche series that IS meaningful (dusd-alto.js does).
+        if (opts && typeof opts.declared_underivable === 'string') {
+            var dPanel = document.getElementById('chart-panel');
+            var dHolder = dPanel ? dPanel.querySelector('.chart-container') : null;
+            if (dHolder) dHolder.style.display = 'none';
+            var priorD = document.getElementById('cr-chart-declared-note');
+            if (priorD) priorD.remove();
+            var dNote = document.createElement('div');
+            dNote.id = 'cr-chart-declared-note';
+            dNote.className = 'text-sm text-slate-500';
+            dNote.style.lineHeight = '1.5';
+            // ⚠️ SHORT ON PURPOSE. The declaration's full text already renders on
+            // the backing axis head as "Basis: …"; printing it again here put the
+            // same paragraph on the page twice, a few hundred pixels apart.
+            dNote.innerHTML = '<span class="font-semibold text-slate-600">No single collateral ' +
+                'ratio is published for this asset, by declaration</span> — the reason is in ' +
+                '<span class="font-mono text-xs">collateral_ratio_basis</span>, shown with the ' +
+                'axis score above. Per-segment coverage is rendered separately where the asset ' +
+                'publishes segments.';
+            if (dPanel) dPanel.appendChild(dNote);
+            var dStats = document.getElementById('cr-chart-stats');
+            if (dStats) dStats.innerHTML = '';
+            if (window._crChart) { window._crChart.destroy(); window._crChart = null; }
+            return;
+        }
+        document.getElementById('chart-panel').style.display = '';
+
+        // Idempotency, not SPA cleanup — every asset change here is a full page
+        // load (nothing in js/ calls pushState or listens for popstate), so the
+        // panel never carries another asset's state. What this guards is a
+        // SECOND call on the same page: the absent-note branch below mutates the
+        // panel, and a re-render must be able to undo that.
+        var chartPanel = document.getElementById('chart-panel');
+        var priorNote = document.getElementById('cr-chart-absent-note');
+        if (priorNote) priorNote.remove();
+        var chartHolder = chartPanel.querySelector('.chart-container');
+        if (chartHolder) chartHolder.style.display = '';
+
+        opts = opts || {};
+        // ⚠️ THE PEG CHART CLIPS TO SEVEN DAYS AND THIS CHART PLOTTED THE WHOLE FILE.
+        // Two charts on one page, a few hundred pixels apart, answering "what has this
+        // asset been doing lately" over different spans with nothing saying so. The
+        // six-axis spec now requires ONE horizon per page: a reader comparing market
+        // behaviour with backing behaviour must not be shown 7d of peg beside full
+        // retention of coverage.
+        //
+        // ⚠️ OPT-IN BY DECLARATION, NOT FLEET-WIDE, AND THAT IS NOT TIMIDITY. Handing
+        // every asset the peg chart's 7 days would re-horizon eight long-retention
+        // histories (crvUSD 535d, usds 347d, yzUSD 173d, syzusd/usde/susde ~90d,
+        // susds 67d, strcx 108d) in a single line — a corpus change across 33 pages,
+        // and a decision that belongs to whoever owns those pages, not to this fix.
+        // The window arrives only where the asset declares `peg.chart_window_days`;
+        // today that is wstETH alone.
+        //
+        // ⚠️ The cutoff is anchored on Date.now(), the SAME anchor _renderPegChart
+        // uses. Anchoring on the newest row instead would hand a stale feed its own
+        // wider horizon while the peg chart beside it kept the real one — the two
+        // charts would agree on the number 7 and disagree about the week.
+        var crWindowDays = Number(opts.window_days) > 0 ? Number(opts.window_days) : null;
+        var crClip = null;
+        if (crWindowDays) {
+            var crAllEntries = historyData.entries;
+            var crCutoff = Date.now() - crWindowDays * 24 * 3600 * 1000;
+            var crKept = crAllEntries.filter(function(e) {
+                var t = (e && e.timestamp)
+                    ? Date.parse(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z') : NaN;
+                return isNaN(t) ? true : t >= crCutoff;
+            });
+            // ⚠️ Never clip to nothing — the peg chart's own rule, for the same reason:
+            // an empty plot reads as "no data" rather than "no recent data". Under two
+            // readings in the window, plot the full retention and SAY the horizon is
+            // wider than the peg chart's, rather than widening silently.
+            crClip = { windowDays: crWindowDays, kept: crKept.length,
+                       total: crAllEntries.length, applied: crKept.length >= 2 };
+            if (crClip.applied) {
+                historyData = Object.assign({}, historyData, { entries: crKept });
+            }
+            // ⚠️ A SHORT SERIES UNDER A 7d SIBLING IS THE OTHER WAY THE TWO CHARTS
+            // DISAGREE, and clipping cannot produce it: wstETH's coverage retention
+            // began the day before this shipped, so the peg chart above covers a week
+            // while this one covers seventeen hours. Both are honest; side by side
+            // they invite "coverage has been flat all week", which the data does not
+            // say. The series start is stated whenever it is materially inside the
+            // window — the producer's own `history_coverage` makes the same point at
+            // length, and nothing on this page rendered it.
+            // ⚠️ MEASURED OVER THE WHOLE FILE, NOT THE CLIPPED SLICE — the first
+            // version read the slice and told a 31-reading, 30-day series that it
+            // "begins 2026-10-04", which is where the CLIP begins. A statement about
+            // retention cannot be taken from the window that hid the retention.
+            var crEarliest = null;
+            crAllEntries.forEach(function(e) {
+                var t = (e && e.timestamp)
+                    ? Date.parse(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z') : NaN;
+                if (!isNaN(t) && (crEarliest === null || t < crEarliest)) crEarliest = t;
+            });
+            if (crEarliest !== null) {
+                var crSpanMs = Date.now() - crEarliest;
+                // Half a day of slack: an hourly feed's first row is never exactly on
+                // the cutoff, and "6.96 days" is not a short series.
+                if (crSpanMs < (crWindowDays * 24 - 12) * 3600 * 1000) {
+                    crClip.startsAt = new Date(crEarliest).toISOString().slice(0, 10);
+                }
+            }
+        }
+        var bands = opts.bands || {
+            critical: [0, 100], thin: [100, 110], amber: [110, 130], healthy: [130, 200],
+            min_line: 100, max_line: 130
+        };
+        var title = opts.title || 'Collateral Ratio History';
+        var datasetLabel = opts.dataset_label || 'CR';
+        var altDatasetLabel = opts.alt_dataset_label || 'CR (gross)';
+        // suggestedMin/Max default keeps the original 80-150 range; tight ratios (PCR) want to override
+        var yMin = opts.y_min !== undefined ? opts.y_min : 80;
+        var yMax = opts.y_max !== undefined ? opts.y_max : 150;
+        // Asset-specific renderers can opt in through chart_bands metadata;
+        // absence preserves the shared renderer's historical behavior.
+        var sanityFloor = opts.cr_sanity_floor !== undefined ? opts.cr_sanity_floor : bands.cr_sanity_floor;
+        // ⚠️ THE EXCLUSION WAS OPT-IN AND NOBODY OPTED IN. Every branch below that
+        // filters, counts and discloses a flagged read was gated behind
+        // `chart_bands.exclude_suspect`, and across all 27 assets NOT ONE declares
+        // it — so this machinery had never executed in production. crvUSD is the
+        // only history with a tripped flag, and all three of its flagged reads were
+        // being plotted: the 122.02% spike (producer: "OVERSTATED ... against
+        // neighbours near 107%", an unreadable operator mint) and the 101.15% one
+        // (producer: hardcoded BTC=$67,000/ETH=$2,000 after a CoinGecko failure,
+        // "the true CR was ~106.5%"). Those two ARE the Min and Max, so the whole
+        // published "Range: 20.87pp" was the distance between two reads the
+        // producer had already written a paragraph explaining were wrong.
+        //
+        // A producer that sets `suspect: true` AND writes the reason has made the
+        // call. Requiring a second per-asset declaration before honouring it means
+        // a known-bad read reaches the reader, which is backwards. So the presence
+        // of the field IS the opt-in; an explicit `false` still disables it.
+        //
+        // ⚠️ NOT extended to `cr_sanity_floor`. That one is an editorial threshold
+        // and needs a value per asset — inferring it is the mis-scaling trap this
+        // file keeps hitting. It stays opt-in and stays dormant.
+        //
+        // Nothing is hidden: the excluded count renders in the stats line with the
+        // producer's own reasons in its tooltip.
+        var historyFlagsSuspect = (historyData.entries || []).some(function(e) {
+            return e && Object.prototype.hasOwnProperty.call(e, 'suspect');
+        });
+        var excludeSuspect = opts.exclude_suspect !== undefined ? opts.exclude_suspect
+            : (bands.exclude_suspect !== undefined ? bands.exclude_suspect : historyFlagsSuspect);
+        var hardYBounds = opts.hard_y_bounds !== undefined ? opts.hard_y_bounds : bands.hard_y_bounds;
+        var hasSanityFloor = sanityFloor !== undefined && sanityFloor !== null;
+        function saneCR(v) {
+            if (v === null || v === undefined) return false;
+            // Preserve the old null-only behavior unless the asset opted in.
+            return !hasSanityFloor || (Number.isFinite(v) && v >= sanityFloor);
+        }
+        function isSuspect(e) {
+            // Missing keys are intentionally treated as false for pre-flag
+            // history exports and cached data.
+            return !!excludeSuspect && e && e.suspect === true;
+        }
+        function escapeAttr(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+        // Update panel title if overridden
+        var titleEl = document.querySelector('#chart-panel .panel-title');
+        if (titleEl) titleEl.textContent = title;
+
+        // Min/max CR stats
+        //
+        // ⚠️ The history series needs the SAME scale resolution as the headline
+        // tile. USDm publishes collateral_ratio as a raw ratio and declares
+        // `collateral_ratio_scale: "ratio"`; the tile honoured that and this
+        // chart did not, so the page showed 129.57% in the headline and plotted
+        // 1.2957 — a flat line at the bottom of a 0-140% axis, sitting inside
+        // the red Critical band, with "Min: 1.21%" in red above it.
+        //
+        // A double-collateralised reserve rendered as total loss of backing.
+        // Same failure the retired `if (cr < 2) cr *= 100` guard was written for,
+        // reached by a different route: the fix was applied to the summary path
+        // and the history path was never brought along.
+        //
+        // collateral_ratio_alt is deliberately NOT normalised here — usdm.js
+        // already converts it (stable_only_coverage_ratio * 100) before this
+        // runs, which is why the alt series was the only correct one on the chart.
+        var crScaleSummary = opts.cr_scale_summary || null;
+        var crScaleSlug = opts.asset_slug || null;
+        // ⚠️ A HISTORY ROW THAT DECLARES ITS OWN SCALE MUST NOT BE RESOLVED BY THE
+        // SNAPSHOT'S. This was about to multiply a chart by 100.
+        //
+        // PegTracker's new shared backing_history_writer NORMALISES history rows to
+        // percent and stamps `collateral_ratio_scale` on each row — while the SNAPSHOT
+        // block still declares `multiple` (fxUSD's backing.collateral_ratio is 1.5182).
+        // Resolving rows by the snapshot's declaration would have taken a
+        // already-percent 151.35 and multiplied it again: **15,135%** on the chart, the
+        // moment their next cron landed. Verified by simulating both states before and
+        // after their normalisation.
+        //
+        // ⚠️ Same rule the tile and the rating already follow — never inherit a scale
+        // across blocks — applied one level down, to the row rather than the block. The
+        // row is the most local declaration there is, so it wins.
+        //
+        // Fallback is unchanged for every feed whose rows carry no scale of their own
+        // (all of them until today), so usdm keeps resolving from `summary`, which is
+        // the only reason its 1.2785 history renders correctly at all.
+        var rawCRValues = historyData.entries.map(function(e) {
+            var rowScale = (e && typeof e.collateral_ratio_scale === 'string')
+                ? { collateral_ratio_scale: e.collateral_ratio_scale } : crScaleSummary;
+            return CommonRenderer.normalizeCollateralRatio(e.collateral_ratio, crScaleSlug, rowScale);
+        });
+        var rawAltCRValues = historyData.entries.map(function(e) { return e.collateral_ratio_alt; });
+        var rawAltHasData = !opts.omit_alt && rawAltCRValues.some(function(v) {
+            return v !== null && v !== undefined;
+        });
+        // ⚠️ A CHART FRAME WITH NOTHING IN IT IS NOT AN EMPTY CHART, IT IS AN
+        // UNANSWERED QUESTION. syzusd, reusd-re and reusde-re publish no
+        // `_backing_history.json` at all, so the peg history arrives here and
+        // every point maps to null: axes, bands, gridlines and the title
+        // "Collateral Ratio History" drawn over a blank plot. A reader cannot
+        // tell that from a chart that failed to load, or from a ratio that went
+        // to zero. Same symptom crvusd/usds/yzusd had from the app.js ref swap,
+        // and the same fix applies at the other end — say the series is absent.
+        //
+        // NOT the same as a series filtered to nothing by the suspect or sanity
+        // guards: there the values exist, the exclusion is the finding, and the
+        // stats line already reports it. This branch fires only when the field
+        // is not in the data at all.
+        var anyCRField = rawCRValues.some(function(v) { return v !== null && v !== undefined; });
+        if (!anyCRField && !rawAltHasData) {
+            if (chartHolder) chartHolder.style.display = 'none';
+            var note = document.createElement('div');
+            note.id = 'cr-chart-absent-note';
+            note.className = 'text-sm text-slate-400';
+            // ⚠️ §6.5.3 REQUIRES WHY AND WHAT WOULD CLOSE IT, and this stopped at the
+            // bare statement. But the honest version has TWO cases, and my first draft
+            // asserted the wrong one on four assets.
+            //
+            // This branch fires when `collateral_ratio` is absent from every entry —
+            // which is NOT the same as "no coverage series exists". USDe publishes
+            // `coverage_ratio`, USDai `coverage_ratio`, USDat `backing_ratio`, cUSD both
+            // `coverage_ratio` and `coverage_pct`. All four have a real series that THIS
+            // CHART CANNOT READ, because it reads one field name. Telling a reader
+            // "carries no coverage field" there is a false statement about a producer who
+            // published the data.
+            //
+            // ⚠️ So the unreadable case is reported as what it is — a transport gap with
+            // the field NAMED — rather than as an absence. That is the "published but
+            // unrendered" idiom this repo uses elsewhere, and it points at the fix
+            // instead of at the producer.
+            //
+            // ⚠️ NOT widened to read those fields here, deliberately: their values are
+            // RATIOS (1.0004, 0.9999) where this chart plots percents, and scale is
+            // resolved by declaration or an explicit list, never by magnitude. Plotting
+            // 1.0004 as 1.0004% is the mis-scaling that rule exists to prevent, so the
+            // widening needs its own pass with the scale confirmed per asset.
+            var ALT_COV = ['coverage_ratio', 'backing_ratio', 'coverage_pct',
+                           'on_chain_coverage_pct', 'collateral_ratio_inclusive'];
+            var altField = null;
+            for (var ai = 0; ai < ALT_COV.length && !altField; ai++) {
+                var nm = ALT_COV[ai];
+                if (historyData.entries.some(function(e) { return e && e[nm] != null; })) altField = nm;
+            }
+            note.textContent = altField
+                ? 'A coverage series IS published for this asset — ' +
+                  historyData.entries.length + ' readings of "' + altField + '" — and this chart ' +
+                  'does not read it. The gap is on the dashboard side, not the producer\u2019s, and ' +
+                  'it closes by teaching this chart that field name and its scale.'
+                : 'Coverage is not tracked over time — the history file has ' +
+                  historyData.entries.length + ' readings and carries no coverage field under any ' +
+                  'name this chart knows. It would close when the producer writes coverage into ' +
+                  'the series it already publishes.';
+            chartPanel.appendChild(note);
+            var sEl = document.getElementById('cr-chart-stats');
+            if (sEl) sEl.innerHTML = '';
+            return;
+        }
+
+        var crValues = rawCRValues.filter(function(v, i) {
+            return !isSuspect(historyData.entries[i]) && saneCR(v);
+        });
+        var missingReadCount = 0;
+        var suspectReadCount = 0;
+        var suspectReasonCounts = {};
+        var excludedCount = 0;
+        if (hasSanityFloor || excludeSuspect) {
+            missingReadCount = historyData.entries.filter(function(e, i) {
+                var primaryMissing = rawCRValues[i] === null || rawCRValues[i] === undefined;
+                var altMissing = rawAltHasData &&
+                    (rawAltCRValues[i] === null || rawAltCRValues[i] === undefined);
+                return primaryMissing || altMissing;
+            }).length;
+            historyData.entries.forEach(function(e, i) {
+                var primaryPresent = rawCRValues[i] !== null && rawCRValues[i] !== undefined;
+                var altPresent = !rawAltHasData ||
+                    (rawAltCRValues[i] !== null && rawAltCRValues[i] !== undefined);
+                if (!isSuspect(e) || !primaryPresent || !altPresent) return;
+                suspectReadCount++;
+                var reasons = Array.isArray(e.suspect_reasons) ? e.suspect_reasons.slice() : [];
+                ['mento_api_ok', 'monad_rpc_ok', 'ethereum_rpc_ok', 'celo_rpc_ok'].forEach(function(key) {
+                    if (e[key] === false && !reasons.some(function(reason) {
+                        return String(reason).indexOf(key + '=false') !== -1;
+                    })) {
+                        reasons.push(key + '=false');
+                    }
+                });
+                if (reasons.length === 0) reasons.push('flagged by analyzer (no reason supplied)');
+                Array.from(new Set(reasons.map(String))).forEach(function(reason) {
+                    suspectReasonCounts[reason] = (suspectReasonCounts[reason] || 0) + 1;
+                });
+            });
+            if (hasSanityFloor) {
+                historyData.entries.forEach(function(e, i) {
+                    if (isSuspect(e)) return;
+                    if (rawCRValues[i] !== null && rawCRValues[i] !== undefined &&
+                        !saneCR(rawCRValues[i])) excludedCount++;
+                    if (rawAltHasData && rawAltCRValues[i] !== null &&
+                        rawAltCRValues[i] !== undefined && !saneCR(rawAltCRValues[i])) {
+                        excludedCount++;
+                    }
+                });
+            }
+        }
+        if (crValues.length > 0) {
+            var minCR = Math.min.apply(null, crValues);
+            var maxCR = Math.max.apply(null, crValues);
+            var statsEl = document.getElementById('cr-chart-stats');
+            if (!statsEl) {
+                statsEl = document.createElement('div');
+                statsEl.id = 'cr-chart-stats';
+                statsEl.className = 'flex gap-4 text-xs text-slate-500 mb-2';
+                var chartPanel = document.getElementById('chart-panel');
+                var titleEl = chartPanel.querySelector('.panel-title');
+                if (titleEl) titleEl.after(statsEl);
+            }
+            // ⚠️ THE STATS LINE IGNORED THE BANDS DRAWN ON THE CHART BESIDE IT.
+            // 100 and 110 are hardcoded here, and they are not the frame the asset
+            // declared: wstETH's canonical wrapper is 100.000000% BY CONSTRUCTION and
+            // its Min rendered amber; cUSD's at-par 99.98% rendered RED against its
+            // own bands, which frame >=99.5% as at-par. A warning colour on a figure
+            // the same panel shades green is the panel contradicting itself.
+            //
+            // The rule is now "the number is coloured by the band it is drawn in",
+            // wherever the asset declares bands. display_only is deliberately NOT
+            // consulted: that flag exists because a shading boundary makes a poor
+            // 1-5 RATING (critical:[0,98] collapses 97% and 60%), and this is not a
+            // rating — it is the same shading, applied to the number beside it.
+            //
+            // ⚠️ MEASURED ACROSS THE FLEET BEFORE SHIPPING — three pages move, each
+            // onto the colour its own chart already draws: cusd 99.98 red->plain,
+            // usdm 105.97 amber->plain, syrupusdt 123.71 plain->amber.
+            //
+            // ⚠️ AND THE DEFAULT FRAME DISAGREES WITH ITSELF, which this does NOT
+            // touch. On the default bands the amber box is [110,130] and the thin box
+            // [100,110] is drawn in red tint, while the thresholds below call 110-130
+            // plain and 100-110 amber. crvUSD's Min of 113.47% sits inside the amber
+            // box and prints plain today. Resolving that re-colours every asset on the
+            // default frame, in the alarming direction, on a judgement about what the
+            // fleet's bands mean — a corpus decision, not a side effect of a wstETH fix.
+            var minCls;
+            if (opts.bands && Array.isArray(bands.healthy) && Array.isArray(bands.amber)) {
+                minCls = minCR < bands.amber[0] ? 'text-red-600 font-semibold'
+                       : minCR < bands.healthy[0] ? 'text-amber-600 font-semibold' : '';
+            } else {
+                minCls = minCR < 100 ? 'text-red-600 font-semibold' : minCR < 110 ? 'text-amber-600 font-semibold' : '';
+            }
+            var suspectTooltip = Object.keys(suspectReasonCounts).sort(function(a, b) {
+                return suspectReasonCounts[b] - suspectReasonCounts[a] || a.localeCompare(b);
+            }).map(function(reason) {
+                return reason + (suspectReasonCounts[reason] > 1 ? ' (' + suspectReasonCounts[reason] + ')' : '');
+            }).join('; ');
+            // ⚠️ These labels read "30d" for a long time while min/max were taken
+            // over the WHOLE file. That was accidentally true — every history
+            // export held ~29 days — until it wasn't: yzUSD ships 309 points
+            // over 317 days, so the page called a 7.63pp ten-month range a "30d
+            // range" when the real 30-day range is 3.88pp. USDS at 50 days had
+            // the same defect, smaller.
+            //
+            // ⚠️ It inverts the reading, it does not just widen it. A 2pp move
+            // against a claimed 7.63pp band looks like ordinary noise; against
+            // the true 3.88pp band it is half the range and worth looking at.
+            // The mislabel argues AGAINST investigating the thing it should
+            // argue for.
+            //
+            // So: state the window instead of asserting one. A range means
+            // nothing without the span it covers, and the span is right here in
+            // the data — there is no reason to hardcode a guess at it.
+            // ⚠️ PREFER THE PUBLISHED WINDOW. PegTracker now emits
+            // asset_specific.history_window carrying the window, the point count
+            // and the range computed over it — added precisely because the
+            // full-file range was being read as a 30-day one. Deriving my own
+            // span from the entries reproduces the original defect in a politer
+            // form: yzUSD's file spans 11 months, so I would show 7.63pp while
+            // the producer publishes 3.88pp over the last 30 days, and the wider
+            // band makes a real step look like noise.
+            //
+            // The published block wins whenever it is present; the derived span
+            // stays as the fallback for feeds that do not emit one.
+            var hw = opts.history_window || null;
+            var spanLabel = '';
+            if (hw && hw.collateral_ratio_min != null && hw.collateral_ratio_max != null) {
+                minCR = hw.collateral_ratio_min;
+                maxCR = hw.collateral_ratio_max;
+                spanLabel = (hw.points != null ? hw.points + ' obs over ' : '') +
+                    (hw.window_days != null ? hw.window_days + ' days' : 'the published window');
+            }
+            var tsAll = (historyData.entries || []).map(function(e) {
+                if (!e || !e.timestamp) return null;
+                return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z').getTime();
+            }).filter(function(t) { return t && !isNaN(t); });
+            if (!spanLabel && tsAll.length > 1) {
+                var spanDays = Math.round((Math.max.apply(null, tsAll) - Math.min.apply(null, tsAll)) / 86400000);
+                spanLabel = crValues.length + ' obs over ' +
+                    (spanDays >= 60 ? Math.round(spanDays / 30) + ' months'
+                                    : spanDays + (spanDays === 1 ? ' day' : ' days'));
+            }
+            // The durable form of the reserve-step flag. The per-run flag fires
+            // the hour a step happens and clears the next, while the LEVEL
+            // persists — so a reader meets an odd ratio with no flag attached.
+            // reserve_step_last_seen is what lets the page say the numerator
+            // moved recently rather than only that it moved this hour.
+            var stepNote = '';
+            if (hw && hw.reserve_step_count) {
+                stepNote = '<span class="text-amber-700" title="' +
+                    this._escapeAttr(hw.note || '') + '">' + hw.reserve_step_count +
+                    ' reserve step' + (hw.reserve_step_count === 1 ? '' : 's') +
+                    ' in window' +
+                    (hw.reserve_step_last_seen
+                        ? ' · last ' + this.formatDate(hw.reserve_step_last_seen) : '') +
+                    ' \u24d8</span>';
+            }
+
+            // ⚠️ MIN AND MAX WITHOUT THE SPOT'S POSITION LET A HEADLINE SIT AT THE
+            // EDGE OF ITS OWN RANGE AND READ AS STEADY STATE. apxUSD on 2026-09-14
+            // published 101.05% — the MAXIMUM of its last 48 readings, against a
+            // median of 100.25% and a crossing back above par only three days
+            // earlier. The panel showed Min, Max and Range and never said which
+            // end today was standing on.
+            //
+            // ⚠️ THE FAVOURABLE DIRECTION IS THE ONE THAT DOES NOT GET CAUGHT.
+            // The same defect in the other direction was found this morning on
+            // sUSDat — a buffer at the 8th percentile rendering as normal — and
+            // that one at least looks alarming enough to check. Nobody re-checks
+            // good news, so a peak rendered as a level survives longer.
+            //
+            // Generic on purpose: any asset with a CR history gets it, and it
+            // stays quiet where the series is flat, because a position inside a
+            // 0.02pp band is noise rather than information.
+            var curCR = null;
+            for (var ci = crValues.length - 1; ci >= 0; ci--) {
+                if (typeof crValues[ci] === 'number' && !isNaN(crValues[ci])) { curCR = crValues[ci]; break; }
+            }
+            var posNote = '';
+            if (curCR != null && (maxCR - minCR) >= 0.05) {
+                var atOrBelow = crValues.filter(function(v) { return v <= curCR; }).length;
+                var pctile = atOrBelow / crValues.length * 100;
+                // ⚠️ ROUNDING MANUFACTURED A FALSE SUPERLATIVE. apxUSD at 101.05%
+                // against a window max of 101.52% first rendered as "the 100th
+                // percentile", which reads as the top of the range when it is not
+                // — the same class of overstatement this note exists to prevent.
+                // 100th and 0th are reserved for the actual extremes.
+                var edge;
+                if (curCR >= maxCR) edge = 'the HIGHEST reading in this window';
+                else if (curCR <= minCR) edge = 'the LOWEST reading in this window';
+                else edge = 'the ' + Math.min(99, Math.max(1, Math.round(pctile))) + 'th percentile of this window';
+                var edgeCls = (curCR >= maxCR || pctile >= 90) ? 'text-amber-700'
+                            : (curCR <= minCR || pctile <= 10) ? 'text-amber-700' : 'text-slate-500';
+                posNote = '<span class="' + edgeCls + '" title="' + escapeAttr(
+                    'Today\u2019s published ratio against the same window this Min/Max covers. ' +
+                    'A headline sitting at either edge of its own range is not a steady state, ' +
+                    'in either direction.') + '">Today ' + curCR.toFixed(2) + '% \u2014 ' + edge + ' \u24d8</span>';
+            }
+
+            statsEl.innerHTML = '<span>Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
+                '<span>Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
+                '<span>Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>' +
+                posNote +
+                (spanLabel ? '<span class="text-slate-400">' + spanLabel + '</span>' : '') +
+                // ⚠️ CLIPPING MUST BE STATED — the rule the peg chart already follows.
+                // A clipped chart and an unclipped one look identical; what a reader
+                // cannot see is the retention that was withheld, or that this panel's
+                // horizon stopped matching the peg chart's above it.
+                (crClip && crClip.applied && crClip.kept < crClip.total
+                    ? '<span class="text-slate-400">last ' + crClip.windowDays + 'd \u2014 ' +
+                      crClip.kept + ' of ' + crClip.total + ' retained readings</span>' : '') +
+                (crClip && crClip.startsAt
+                    ? '<span class="text-amber-600" title="' + escapeAttr(
+                        'This panel and the peg chart above are set to the same ' + crClip.windowDays +
+                        '-day window, but the coverage series does not reach back that far yet. ' +
+                        'Retention begins at the first preserved measurement; nothing earlier is implied.') +
+                      '">series begins ' + crClip.startsAt + ' \u2014 shorter than the ' +
+                      crClip.windowDays + 'd window the peg chart covers \u24d8</span>' : '') +
+                (crClip && !crClip.applied
+                    ? '<span class="text-amber-600">the ' + crClip.windowDays + '-day window holds ' +
+                      crClip.kept + ' reading' + (crClip.kept === 1 ? '' : 's') + ', too few to plot \u2014 ' +
+                      'showing all ' + crClip.total + ' retained, a wider horizon than the peg chart above</span>'
+                    : '') +
+                stepNote +
+                (missingReadCount > 0 ? '<span class="text-slate-400">' + missingReadCount + ' observations unavailable (missing/incomplete reads)</span>' : '') +
+                (suspectReadCount > 0 ? '<span class="text-amber-600" title="' + escapeAttr(suspectReadCount + ' excluded: ' + suspectTooltip) + '">' + suspectReadCount + ' flagged observations excluded as incomplete reads ⓘ</span>' : '') +
+                (excludedCount > 0 ? '<span class="text-amber-600">' + excludedCount + ' implausible values excluded (&lt;' + sanityFloor + '%)</span>' : '');
+        }
+
+        var entries = historyData.entries;
+        var labels = entries.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });
+        var crData = rawCRValues.map(function(v, i) {
+            return !isSuspect(entries[i]) && saneCR(v) ? v : null;
+        });
+        var crAltData = rawAltCRValues.map(function(v, i) {
+            return !isSuspect(entries[i]) && saneCR(v) ? v : null;
+        });
+
+        // Drop the second series if explicitly suppressed, or if every value is null/undefined.
+        var altHasData = rawAltHasData && crAltData.some(function(v) { return v !== null && v !== undefined; });
+        var datasets = [{
+            label: datasetLabel,
+            data: crData,
+            borderColor: '#3b82f6',
+            backgroundColor: 'rgba(59, 130, 246, 0.1)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 0,
+            borderWidth: 2
+        }];
+        if (altHasData) {
+            datasets.push({
+                label: altDatasetLabel,
+                data: crAltData,
+                borderColor: '#f59e0b',
+                backgroundColor: 'transparent',
+                borderDash: [5, 3],
+                tension: 0.3,
+                pointRadius: 0,
+                borderWidth: 2
+            });
+        }
+
+        var minLine = bands.min_line;
+        var maxLine = bands.max_line;
+        var annotations = {
+            critical: { type: 'box', yMin: bands.critical[0], yMax: bands.critical[1], backgroundColor: 'rgba(220, 38, 38, 0.08)', borderWidth: 0, label: { content: 'Critical', display: true, position: 'start', font: { size: 9 }, color: '#dc2626' } },
+            thin: { type: 'box', yMin: bands.thin[0], yMax: bands.thin[1], backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+            amber: { type: 'box', yMin: bands.amber[0], yMax: bands.amber[1], backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+            healthy: { type: 'box', yMin: bands.healthy[0], yMax: bands.healthy[1], backgroundColor: 'rgba(22, 163, 74, 0.04)', borderWidth: 0 }
+        };
+        if (minLine !== undefined && minLine !== null) {
+            annotations.minLine = { type: 'line', yMin: minLine, yMax: minLine, borderColor: '#dc2626', borderWidth: 1, borderDash: [4, 4], label: { content: minLine + '%', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } };
+        }
+        if (maxLine !== undefined && maxLine !== null) {
+            annotations.maxLine = { type: 'line', yMin: maxLine, yMax: maxLine, borderColor: '#16a34a', borderWidth: 1, borderDash: [4, 4], label: { content: maxLine + '%', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } };
+        }
+
+        // Keep the raw Chart.js config unambiguous: a scale has either hard
+        // bounds or suggested bounds, never min/max keys whose values happen
+        // to be undefined. Suggested bounds yield to genuine data outside the
+        // normal envelope after asset-level artifact filtering.
+        var yScaleOptions = {
+            grid: { color: '#f1f5f9' },
+            ticks: {
+                callback: function(v) { return v + '%'; },
+                font: { size: 11 }
+            }
+        };
+        if (hardYBounds) {
+            yScaleOptions.min = yMin;
+            yScaleOptions.max = yMax;
+        } else {
+            yScaleOptions.suggestedMin = yMin;
+            yScaleOptions.suggestedMax = yMax;
+        }
+
+        if (window._crChart) window._crChart.destroy();
+        window._crChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: yScaleOptions
+                },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) { return ctx.dataset.label + ': ' + ctx.raw.toFixed(2) + '%'; }
+                        }
+                    },
+                    annotation: { annotations: annotations }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    // =====================================================================
+    // 5-AXIS RISK FRAME
+    // Activated only for assets that carry the Layer-1 axis blocks (peg /
+    // liquidity / backing / dependencies / issuer). Assets without the blocks
+    // keep the legacy backing-only layout untouched (the 4 non-backing
+    // sections stay hidden and #summary-cards shows the old CR cards).
+    // =====================================================================
+
+    // True once the analyzer emits the standard axis contract. Keyed on `peg`
+    // (the first block the analyzer attaches); the whole set lands together.
+    // ⚠️ STRIPS A VENUE NAME FROM A PRODUCER'S SESSION STRING, because the string is
+    // about TIMING and the venue in it is not a fact the producer established.
+    //
+    // strc_backing.json publishes quote_detail = "outside NYSE regular session". STRC
+    // is not NYSE-listed. Strategy Inc's 10-Q cover page (CIK 0001050446, accession
+    // 0001050446-26-000044, period 2026-06-30) lists the Variable Rate Series A
+    // Perpetual Stretch Preferred as trading on THE NASDAQ GLOBAL SELECT MARKET, and
+    // "NYSE" appears ZERO times in the 508,121-character filing. The venue word is a
+    // yfinance generic session label that rode along into a published field.
+    //
+    // ⚠️ IT STRIPS RATHER THAN CORRECTS, AND THAT STANDS EVEN NOW THE CITATION IS
+    // LOCAL. data/strcx_axis_basis.json carries the accession and the zero-hit NYSE
+    // control, so the venue is checkable here — which is why the chain LABEL says
+    // Nasdaq. This string is different in kind: it is a VENDOR-GENERATED session
+    // annotation, so the honest repair is to stop it naming an exchange, not to make
+    // it name a better one. Different provenance, different treatment. The session
+    // fact survives: "outside NYSE regular session" -> "outside regular session".
+    //
+    // The fix belongs at the producer and is on a handoff to PegTracker. This is the
+    // consumer-side stopgap so a wrong venue is not on the page in the meantime.
+    sanitizeQuoteDetail(detail) {
+        if (typeof detail !== 'string' || !detail) return detail;
+        return detail
+            .replace(/\b(the\s+)?(NYSE|NASDAQ|Nasdaq|N\.Y\.S\.E\.)\b\s*/g, '')
+            .replace(/\s{2,}/g, ' ')
+            .trim();
+    },
+
+    // Why axis 1 is unrated, said out loud. Returns null when there is nothing
+    // specific to say, so the chip falls back to its plain "Not rated" face rather
+    // than inventing an explanation.
+    _pegUnratedReason(data) {
+        var auth = this._authoredAxisScore((data && data.peg) || {},
+            ['peg_mechanism_score', 'volatility_score']);
+        if (!auth || typeof auth.score !== 'number') return null;
+        return 'The report scores this axis ' + auth.score + '/10, and the dashboard is ' +
+            'NOT showing it. There is no live peg measurement for this asset for the ' +
+            'score to sit beside, and unlike the backing and liquidity axes this one has ' +
+            'no way to accept a producer declaration that the axis is not measurable. ' +
+            'So the number exists and is published — this frame has no path to render it. ' +
+            'It is a gap in the dashboard, not an absence of data or a judgement about ' +
+            'the score.';
+    },
+
+    hasAxisBlocks(data) {
+        return !!(data && data.peg && typeof data.peg === 'object');
+    },
+
+    // Map a metric to a 1–5 rating against ascending/descending cutoffs.
+    // direction 'high' = larger is better (liquidity, backing);
+    // 'low' = smaller is better (peg deviation).
+    _rate(value, cutoffs, direction) {
+        if (value == null || !Array.isArray(cutoffs) || cutoffs.length !== 4) return null;
+        if (direction === 'low') {
+            if (value < cutoffs[0]) return 5;
+            if (value < cutoffs[1]) return 4;
+            if (value < cutoffs[2]) return 3;
+            if (value < cutoffs[3]) return 2;
+            return 1;
+        }
+        if (value >= cutoffs[0]) return 5;
+        if (value >= cutoffs[1]) return 4;
+        if (value >= cutoffs[2]) return 3;
+        if (value >= cutoffs[3]) return 2;
+        return 1;
+    },
+
+    _axisThresholds(data) {
+        var ov = (data.asset_specific && data.asset_specific.axis_thresholds) || {};
+        return {
+            peg:       ov.peg       || RISK_AXIS_THRESHOLDS.peg,
+            liquidity: ov.liquidity || RISK_AXIS_THRESHOLDS.liquidity,
+            backing:   ov.backing   || RISK_AXIS_THRESHOLDS.backing
+        };
+    },
+
+    // Rating → display chip. Bands 5/4 healthy, 3 watch, ≤2 stress, null = not rated.
+    // Internal domain stays 1-5; only the RENDERING is /10 (§6.5.1).
+    // ⚠️ Why an axis is UNRATED, when the null is deliberate.
+    //
+    // "Not rated" looks worse on a live page than "Healthy 5/5", and the first
+    // person to meet a blank axis will reasonably read it as a pipeline fault.
+    // The thing it prevents — a rating that is affirmatively wrong — is
+    // invisible. So a guard that does not say what it protects gets relaxed by
+    // whoever meets it next, and "restore the fallback" is the reasonable-looking
+    // relaxation available here. Name the 5/5 explicitly or the null looks like
+    // the defect.
+    backingUnratedReason(data) {
+        var sum = data.summary || {};
+        var aspThr = data.asset_specific && data.asset_specific.axis_thresholds;
+        var bOv = aspThr && aspThr.backing;
+        var fromBacking = data.backing && data.backing.collateral_ratio != null;
+        var cr = fromBacking ? data.backing.collateral_ratio : sum.collateral_ratio;
+
+        // What the generic band WOULD say, so the reason can name it.
+        var generic = (cr == null) ? null
+            : this._rate(CommonRenderer.normalizeCollateralRatio(cr, data.asset_slug, sum),
+                         this._axisThresholds({}).backing.cr_pct, 'high');
+        var wouldSay = (generic == null) ? '' :
+            ' Falling back to the generic cutoffs would rate this ' +
+            this._ratingChip(generic).text + ' — the outcome this band exists to prevent.';
+
+        if (!aspThr && data.axis_thresholds) {
+            return 'The producer published axis_thresholds at the top level, where this ' +
+                'renderer cannot read it, so the asset-specific band is unreachable.' + wouldSay;
+        }
+        if (bOv && Array.isArray(bOv.cr_pct)) {
+            if (bOv.stale_by_floor_drift === true) {
+                return 'The band\u2019s measured floor has drifted beyond tolerance' +
+                    (bOv.live_floor_pct != null && bOv.anchored_floor_pct != null
+                        ? ' (' + bOv.anchored_floor_pct + '% \u2192 ' + bOv.live_floor_pct + '%)' : '') +
+                    ', so the cutoffs no longer describe this book. Re-derive them.' + wouldSay;
+            }
+            if (bOv.expires === true && bOv.review_by &&
+                Date.now() > Date.parse(bOv.review_by + 'T00:00:00Z')) {
+                return 'The band expired on ' + CommonRenderer._escapeAttr(bOv.review_by) +
+                    ' and is a property of the book as measured then, not of the protocol. ' +
+                    'Re-derive it rather than extending the date.' + wouldSay;
+            }
+        }
+        if (!fromBacking && sum.collateral_ratio_synthetic === true) {
+            return 'The only collateral ratio available is a placeholder synthesised by the ' +
+                'renderer, not a producer value. Rating it would invent a number.';
+        }
+        return null;
+    },
+
+    // ⚠️ Bands are 1-5 internally; the PAGE renders /10 (spec §6.5.1, user
+    // decision 2026-09-07). Every other surface in the estate — riskAnalyst
+    // assets, the risk feed, tidresearch reports — is /10, and a /5 chip beside
+    // a /10 report gives a reader no way to tell whether the two AGREE.
+    // The x2 mapping emits only EVEN numbers, and that spacing is the honest
+    // tell that the scale is coarse. Do NOT cap the top at 9 to soften
+    // "10/10": it breaks the spacing and makes 9 read as a FINER measurement
+    // than 8, inventing the granularity the cap was meant to prevent. The
+    // misreading is fixed by the LABEL — the band word plus the tooltip below.
+    _ratingChip(rating) {
+        if (rating == null) return { cls: 'r-na', text: 'Not rated' };
+        var cls = rating >= 4 ? 'r-ok' : (rating === 3 ? 'r-warn' : 'r-crit');
+        var word = rating >= 4 ? 'Healthy' : (rating === 3 ? 'Watch' : 'Stress');
+        return { cls: cls, text: word + ' · ' + (rating * 2) + '/10', band: rating };
+    },
+
+    // The band word carries provenance (computed) against "Authored" (§6.3);
+    // the tooltip STATES the granularity rather than encoding it in the digits.
+    _ratingChipBasis(rating) {
+        return 'Band ' + rating + ' of 5, mapped to /10. A five-level band, not ' +
+            'a 10-point score — the top band means "inside the healthy threshold", not "perfect".';
+    },
+
+    _ratingChipHtml(rating, reason, extraNote) {
+        var c = this._ratingChip(rating);
+        if (rating == null && reason) {
+            return '<span class="axis-rating ' + c.cls + '" title="' +
+                this._escapeAttr(reason) + '">' + c.text + ' \u24d8</span>';
+        }
+        if (rating == null) {
+            return '<span class="axis-rating ' + c.cls + '">' + c.text + '</span>';
+        }
+        // `extraNote` appends what the band was computed FROM (e.g. 7-day average
+        // vs a single reading). A band and its basis are one fact, not two.
+        var title = this._ratingChipBasis(rating) + (extraNote ? ' — ' + extraNote : '');
+        var warn = (extraNote && extraNote.indexOf('⚠') >= 0) ? ' ⚠️' : '';
+        return '<span class="axis-rating ' + c.cls + '" title="' +
+            this._escapeAttr(title) + '">' + c.text + warn + '</span>';
+    },
+
+    // --- per-axis ratings ---
+    pegRating(data, history) {
+        var th = this._axisThresholds(data).peg.abs_dev_pct;
+        // Prefer 7-day average absolute deviation when peg-history is available;
+        // else the latest premium/discount magnitude (As-built: history lives in
+        // *_backing_history.json under peg.history_field).
+        // Basis is tracked so the chip can SAY whether it is a 7-day average or a
+        // single reading — see _pegDevBasis. Same value as before; the difference
+        // is that the fallback is no longer invisible.
+        var basis = this._pegDevBasis(data, history, 7);
+        return this._rate(basis.value, th, 'low');
+    },
+
+    // Tooltip text for the peg chip: what the band was computed FROM.
+    pegRatingBasisNote(data, history) {
+        var b = this._pegDevBasis(data, history, 7);
+        if (b.value == null) return null;
+        var head = (b.basis === '7d')
+            ? 'Basis: 7-day average absolute deviation (' + b.value.toFixed(4) + '%).'
+            : '⚠️ Basis: ONE instantaneous reading (' + b.value.toFixed(4) + '%), not a 7-day average.';
+        return head + ' ' + (b.note || '');
+    },
+
+    // ⚠️ WHY THE BAND USES A 7-DAY AVERAGE AND WHY THE FALLBACK MUST BE VISIBLE.
+    // The peg axis is a DYNAMIC measured score by design (user decision
+    // 2026-09-07) — it reports how the peg is actually performing, not an
+    // editorial judgement of the mechanism. That is only honest if the window is
+    // real: a single instantaneous reading near par rates 10/10 on one tick.
+    //
+    // The averaging was already the design and SILENTLY WASN'T REACHING a third
+    // of the fleet — 7 of 21 assets fell through to one instantaneous reading and
+    // the chip looked identical either way. Three declared a `history_field`
+    // ('peg_market_price') that does not exist in their own history entries; four
+    // have no history file. A fallback nobody can see is a different metric
+    // wearing the same label.
+    //
+    // So the basis is now computed alongside the value and rendered. This does
+    // NOT guess a replacement field — deriving what a producer should declare is
+    // the mis-scaling trap this codebase keeps hitting. It reports the gap.
+    _pegDevBasis(data, history, days) {
+        var peg = data.peg || {};
+        var declared = peg.history_field || 'peg_premium_discount_pct';
+        var cur = peg.premium_discount_pct != null ? Math.abs(peg.premium_discount_pct) : null;
+        var out = { value: null, basis: 'instant', n: 0, note: null, degenerate: false };
+
+        if (!history || !Array.isArray(history.entries) || !history.entries.length) {
+            out.value = cur;
+            out.note = 'No peg history is published for this asset, so the band is a SINGLE ' +
+                'instantaneous reading rather than a 7-day average. One tick near par rates ' +
+                'the same as a week of stability.';
+            return out;
+        }
+        // Is the declared field actually in the entries?
+        var tail = history.entries.slice(-5), present = false;
+        for (var i = 0; i < tail.length; i++) {
+            if (tail[i] && tail[i][declared] != null) { present = true; break; }
+        }
+        if (!present) {
+            out.value = cur;
+            out.note = 'The feed declares history_field "' + declared + '", which is ABSENT from ' +
+                'its own history entries — so the 7-day average could not be computed and the band ' +
+                'is a single instantaneous reading. This is a producer-side field-name mismatch, ' +
+                'not a missing history.';
+            return out;
+        }
+        // ⚠️ Degenerate: averaging the NAV reference against itself measures NAV
+        // ACCRUAL over the window, not deviation from it. Reported, not silently
+        // repaired — picking a substitute field is the producer's call.
+        if (declared === 'nav' || declared === peg.nav_field) {
+            out.degenerate = true;
+        }
+        var avg = this._pegAvgAbsDev(data, history, days);
+        if (avg == null) {
+            out.value = cur;
+            out.note = 'Peg history is present but yielded no usable readings in the window; ' +
+                'the band is a single instantaneous reading.';
+            return out;
+        }
+        out.value = avg; out.basis = '7d';
+        // Count the actual points in the scored window, not the entire retained
+        // history. BOLD retains 58 points but only 8 fall in its current 7-day
+        // window; reporting 58 would hide the sparse basis of the score.
+        var last = history.entries[history.entries.length - 1];
+        var cutoff = null;
+        if (last && last.timestamp) {
+            var lt = new Date(last.timestamp.endsWith('Z') ? last.timestamp :
+                last.timestamp + 'Z').getTime();
+            cutoff = lt - days * 86400000;
+        }
+        out.n = history.entries.filter(function(e) {
+            if (!e || e[declared] == null) return false;
+            if (cutoff == null || !e.timestamp) return true;
+            var et = new Date(e.timestamp.endsWith('Z') ? e.timestamp :
+                e.timestamp + 'Z').getTime();
+            return !isNaN(et) && et >= cutoff;
+        }).length;
+        if (out.degenerate) {
+            out.note = '⚠️ The 7-day average is computed from "' + declared + '" against the ' +
+                'current NAV, so for a NAV-tracking asset it measures NAV ACCRUAL over the week ' +
+                'rather than deviation from NAV. Treat this band as indicative until the feed ' +
+                'declares a market-price field.';
+        } else {
+            out.note = '7-day average absolute deviation, the basis for this band — not a single ' +
+                'reading. A momentary print near par cannot lift it on its own.';
+        }
+        return out;
+    },
+
+    _pegAvgAbsDev(data, history, days) {
+        if (!history || !Array.isArray(history.entries) || !history.entries.length) return null;
+        var field = data.peg.history_field || 'peg_premium_discount_pct';
+        var nav = data.peg.nav != null ? data.peg.nav : 1.0;
+        var entries = history.entries;
+        // Window the last `days` worth of points by timestamp; fall back to the
+        // tail count if timestamps are missing.
+        var last = entries[entries.length - 1];
+        var cutoff = null;
+        if (last && last.timestamp) {
+            var t = new Date(last.timestamp.endsWith('Z') ? last.timestamp : last.timestamp + 'Z').getTime();
+            cutoff = t - days * 86400000;
+        }
+        var devs = [];
+        for (var i = 0; i < entries.length; i++) {
+            var e = entries[i];
+            if (cutoff != null && e.timestamp) {
+                var et = new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z').getTime();
+                if (et < cutoff) continue;
+            }
+            var v = e[field];
+            if (v == null) continue;
+            // Field may be a price (→ convert to % deviation vs nav) or already a %.
+            var devPct = (field.indexOf('pct') >= 0) ? Math.abs(v)
+                : (nav ? Math.abs((v - nav) / nav * 100) : null);
+            if (devPct != null) devs.push(devPct);
+        }
+        if (!devs.length) return null;
+        var mean = devs.reduce(function(a, b) { return a + b; }, 0) / devs.length;
+        // ⚠️ UNIT SANITY GUARD. The price-vs-percent test above is a SUBSTRING
+        // MATCH on 'pct' in the field name, which is fragile by construction: a
+        // field named `peg_deviation` already holds a percent (0.1239) and gets
+        // treated as a PRICE, yielding |0.1239 - 1.1086| / 1.1086 * 100 = 85.8%
+        // — and 85.8% average deviation rates 2/10, a catastrophic misread
+        // rendered as a confident score.
+        //
+        // No stablecoin or NAV-share on this dashboard averages tens of percent
+        // off its reference for a week without being a headline failure, so a
+        // mean this large is far better explained by a unit mismatch than by the
+        // asset. Refuse rather than rate: pegRating then falls back and the chip
+        // says which basis it used. An unrated axis is honest; a 2/10 computed
+        // from a misread unit is not.
+        if (mean > 50) return null;
+        return mean;
+    },
+
+    liquidityRating(data) {
+        // Credit vaults emit an explicit 1-5 band_score (from free-liquidity %); prefer it.
+        if (data.liquidity && data.liquidity.band_score != null) return data.liquidity.band_score;
+        // ⚠️ Refuse to rate a depth the feed's OWN LADDER contradicts.
+        //
+        // usde publishes total_2pct_depth = $5,000,000 and quotes that same rung
+        // at −1588 bps. 200bps is the threshold, so the 2% crossing is bracketed
+        // INSIDE its own ladder between $2M (−1.4bps) and $5M — and the published
+        // figure is the rung BEYOND it. That rated Healthy 5/5.
+        //
+        // This does not derive a depth; deriving one is the producer's job and
+        // guessing would be the mis-scaling this codebase keeps being bitten by.
+        // It withholds a rating the payload does not support, which is the same
+        // rule backingRating already applies to synthesised ratios: an unrated
+        // axis is honest, a rating computed from a contradicted number is not.
+        //
+        // Fires only when a quoted rung at or below the published depth costs
+        // worse than 2%. Verified against all 12 assets carrying both a depth and
+        // a ladder — usde is the only one, and the others stay rated.
+        if (this._depthContradictedByLadder(data)) return null;
+        // ⚠️ And refuse to rate a figure the producer says bounds nothing. USDS
+        // publishes $50,000,000 with status not_size_responsive because every
+        // rung from $1M to $50M returned identical 0.00bps. Rating that Healthy
+        // 5/5 would make the one asset whose depth was NOT measured the deepest
+        // on the dashboard. Same rule as the ladder contradiction and as
+        // backingRating's refusal to rate a synthesised ratio.
+        var lq = data.liquidity || {};
+        if (lq.two_pct_depth_status === 'not_size_responsive' ||
+            lq.two_pct_depth_size_responsive === false) return null;
+        // ⚠️ AND REFUSE A FIGURE THAT IS NOT A CROSSING AT ALL. `supply_capped`
+        // means the producer measured the crossing, found it ABOVE the float that
+        // can reach the market, and published the FLOAT in `depth_usd` instead.
+        // DUSD (Alto): the -200bps crossing sits at $2.51M against $821,855 of
+        // total supply, so `depth_usd` is $23,935 of supply outside the pool — an
+        // UPPER BOUND on what could be sold, not third-party float (measured at
+        // 946.70; the rest is protocol-owned). The other
+        // 797,920 sit inside the Curve pool being quoted.
+        //
+        // The band is absolute — [2M, 1M, 500K, 100K] — so that float rates 1/5
+        // Critical, which is a grading of the asset's SIZE dressed as a grading of
+        // its book. The same payload says every unit that can be sold clears at a
+        // PREMIUM (+17.27 bps for the entire float). A 1/5 is not a conservative
+        // reading of that; it is a different question answered wrongly.
+        //
+        // ⚠️ ZERO existing assets carry this status — counted across all 22 feeds
+        // with a liquidity block and all 8 liquidity/1 overlays in data/ before
+        // adding the branch. Nothing on the dashboard is re-graded by it.
+        //
+        // Withholding the band also UNBLOCKS the authored path: `_authoredLiquidity`
+        // fills only where the band is genuinely absent, so a producer's measured
+        // judgement can now land here. Under the old behaviour the computed 1/5
+        // outranked it permanently.
+        // ⚠️ Any status added here MUST also be in DEPTH_NON_DERIVABLE_STATUSES —
+        // a band withheld without the authored path unblocked leaves the axis
+        // blank with both halves in hand. That is the defect this pair caused.
+        // ⚠️ READS THE LIST, not a literal. This line named `supply_capped` directly
+        // while the authored gate consulted the shared list, which is the exact drift
+        // the comment on that list was written about — and it recurred within the
+        // month, because a retired status changes a literal's meaning silently.
+        if (this.DEPTH_NON_DERIVABLE_STATUSES.indexOf(lq.two_pct_depth_status) >= 0) {
+            return null;
+        }
+        // ⚠️ AN UNMEASURED OR GATED PRIMARY LEG MEANS DEPTH IS NOT THE BINDING
+        // LEG — see _primaryExitNotScorable. Withholding here unblocks the authored
+        // path there, so the axis shows the producer's worse-leg judgement instead
+        // of a venue reading dressed as an exit rating.
+        if (this._primaryExitNotScorable(lq)) return null;
+        // ⚠️ THE BAND SCORES WHAT THE TILE SHOWS. Both read `depthAtLimit`, so a
+        // bracket is graded on its LOWER end (the last size that actually cleared)
+        // and a capacity figure is not graded at all — there is no crossing to
+        // bucket. Measured across the fleet the day this landed: every band input
+        // is unchanged, because a bracket's lower end IS the rung the old 2%
+        // figure came from. What it buys is that the two cannot drift apart when
+        // a ladder changes shape.
+        //
+        // ⚠️ It also ends sUSDS's flip-flop at the root. Its producer flag
+        // oscillates on the sign of sub-bp jitter; when it read "size-responsive"
+        // a computed band displaced riskAnalyst's authored 8.5, and when it read
+        // otherwise the authored score came back — twice a day. A capacity figure
+        // is never bandable, so the authored judgement holds either way.
+        var d = this.depthAtLimit(data);
+        if (d.shape === 'capacity' || d.shape === 'none') return null;
+        var bandFig = (d.shape === 'bracket') ? d.bracket[0] : d.value;
+        var th = this._axisThresholds(data).liquidity.depth_usd;
+        return this._rate(bandFig, th, 'high');
+    },
+
+    // The liquidity twin of backing's authored path (§6.3, §6.5.1). susds is the
+    // case: its ladder returns an IDENTICAL 0.00bps from $1k to $1M and then a
+    // constant 1078.15bps across $5M-$100M, so liquidityRating correctly refuses
+    // a band — a fixed-rate redemption quote bounds nothing. Meanwhile a measured
+    // Liquidity & Exit judgement existed upstream with nowhere to render.
+    //
+    // ⚠️ PRECEDENCE: THE COMPUTED BAND ALWAYS WINS. An authored number silently
+    // overriding a measured one is the category error §1.1 names, and it is what
+    // put syrup's retired structural_score into a field named issuer_score on two
+    // live pages. Authored fills ONLY where the band is genuinely absent.
+    //
+    // ⚠️ And it requires a DECLARATION, not just a number: the producer must say
+    // the measurement is not derivable. Without that gate an authored score would
+    // paper over a feed that is merely broken, which is the opposite of the job.
+    // Returns {score, basis} when accepted, {rejected: why} when a score was
+    // SUPPLIED and refused, or null when the producer offered nothing.
+    //
+    // ⚠️ The rejected case must not be indistinguishable from a genuine refusal.
+    // Both render "Not rated" on the face, but "we correctly declined to compute
+    // a band" and "an authored score arrived malformed and was dropped" are
+    // opposite facts, and this is the same rule §6.3 applies to authored scores —
+    // turned on this gate. The reason rides in the tooltip.
+    // ⚠️ `requireDeclaration` FALSE for the DIVERGENCE case, TRUE for FILL, and
+    // the asymmetry is the point rather than an oversight (riskAnalyst, 2026-09-08).
+    //
+    //   FILL     authored REPLACES an absent band  -> declaration REQUIRED. Without
+    //            it an authored number papers over a feed that is merely broken,
+    //            and broken and unmeasurable are opposite facts.
+    //   DIVERGE  authored shown BESIDE a band      -> no declaration needed. Nothing
+    //            is being papered over: the measurement is rendered right next to
+    //            it and the reader can see both numbers.
+    //
+    // The declaration's whole justification is "this could hide a broken feed",
+    // and that justification does not survive when the feed's own number is on
+    // screen beside it. Applying one condition to both cases silences a real
+    // conflict on any asset whose depth IS derivable — which is exactly the
+    // situation the divergence chip exists for.
+    //
+    // ⚠️ The BASIS requirement stays in both paths. A judgement with no stated
+    // reasoning cannot be assessed by a reader whether or not a band sits beside it.
+    // ⚠️ THE GUARD AND THE GATE HAD DIFFERENT LISTS, AND THE ASSET THAT NEEDED
+    // BOTH FELL THROUGH THE GAP. `liquidityRating` learned to refuse a
+    // `supply_capped` figure — DUSD (Alto) publishes the reachable FLOAT where a
+    // crossing would go, and rating a float as depth grades an asset's size —
+    // and that refusal was documented as "UNBLOCKING the authored path". It did
+    // not: `_authoredLiquidity` kept its own three-condition list, `supply_capped`
+    // was not in it, so riskAnalyst's authored 5.5 was REJECTED for having "no
+    // non-derivability declaration" on the very asset whose declaration is why
+    // the band was withheld. The page read "Not rated" with both halves present.
+    //
+    // One list now, consulted by both, so a status added to one cannot be missing
+    // from the other.
+    // ⚠️ `clears_entire_supply` ADDED 2026-10-03, and it is a SEMANTIC change, not a
+    // rename. DexTracker retired `supply_capped` the same day on our user's objection:
+    // the old status published the FLOAT where a crossing goes, the new one publishes
+    // TOTAL SUPPLY and means "the crossing lies above everything in existence". The
+    // figure went from $26,495 to $1,323,765 and from a refusal to a valid answer.
+    //
+    // ⚠️ IT STILL MUST NOT BE BANDED, and the reason survives the rename intact: the
+    // band is absolute — [2M, 1M, 500K, 100K] — so banding a supply-clamped figure
+    // grades the asset's SIZE. Measured on this payload the day it landed:
+    //
+    //     supply $  900,000  ->  3/5
+    //     supply $1,323,765  ->  4/5     <- today, and it is live
+    //     supply $2,100,000  ->  5/5
+    //
+    // Nothing about the book moves those. DUSD's supply grew 61% in the two weeks to
+    // 2026-10-03, so the score would have walked 3 -> 4 on MINTING. And it displaced
+    // riskAnalyst's authored 5.5, which is the pair this list exists to keep in step.
+    //
+    // `supply_capped` is KEPT alongside it. No live payload carries it — DUSD was the
+    // only one — but our own synced copy still did when this was written, the history
+    // store carries it, and a status that has been retired upstream is exactly the kind
+    // of string that comes back on a replay.
+    DEPTH_NON_DERIVABLE_STATUSES: ['not_size_responsive', 'supply_capped',
+                                   'clears_entire_supply'],
+
+    // ⚠️ DEPTH IS NOT THE EXIT WHEN THE WORSE LEG IS UNMEASURED, AND THE TILE
+    // SAID "Healthy 10/10" ON AN AXIS TWO PRODUCERS SCORE 4.5.
+    //
+    // reUSD-RE: `total_2pct_depth` $10M (bracketed, genuinely measured) banded 5/5
+    // and rendered as Liquidity & Exit. But axis 3 is the WORSE of venue depth and
+    // primary redemption — venue 5.0, redemption 4.5 — and redemption binds,
+    // because a U.S. person has no primary channel at all. So the band measured
+    // the leg that does not constrain the exit and published it as the exit rating.
+    //
+    // ⚠️ THE PRODUCER HAD ALREADY WRITTEN THE WARNING INTO OUR OWN SERVED PAYLOAD
+    // AND IT REACHED NO READER: `liquidity_score_depth_caveat` says the $10M
+    // "measures the leg this axis does NOT score on. Do not reconcile 4.5 against
+    // it." The tile reconciled exactly that way. It is rendered now, below.
+    //
+    // ⚠️ THE DIRECTION IS WHY THIS WAS URGENT RATHER THAN UNTIDY. Overstating risk
+    // is the usual error to guard against; this UNDERSTATED it, on a held asset, on
+    // a surface tidresearch's published report LINKS TO — so our page lent a
+    // flattering rating their credibility. A divergence that favours the asset is
+    // the one that costs a reader money.
+    //
+    // ⚠️ IT AROSE FROM A CORRECT FIX. Before 2026-10-02 a DexTracker overlay
+    // publishing no depth suppressed PegTracker's measured figure under `replace`,
+    // so the tile read "n/a · Not rated". Carrying the base feed's depth through
+    // (fe1d82f10) was right; it moved this asset from the authored path onto the
+    // computed one, and that second-order consequence was the defect.
+    //
+    // ⚠️⚠️ THE DISCRIMINATOR IS `gate: 'not_measured'`, NOT `gated: true`, AND I
+    // GOT THAT WRONG FIRST WITH A FALSE COUNT WRITTEN INTO THIS COMMENT. I scanned
+    // only the `*_backing.json` feeds, found `primary_exit.gated: true` on reusd_re
+    // alone, and wrote "reusd_re ALONE" here. The liquidity/1 OVERLAYS also carry
+    // it — dusd_alto, fxusd, reusde_re, tsm_rh and usg — so that rule would have
+    // withheld the band on SIX assets while the comment claimed one. Four of those
+    // are currently banded, so four headline ratings would have moved silently on a
+    // report about a fifth asset.
+    //
+    // The two cases are genuinely different and only one was reported:
+    //   gated: true        — the gate is KNOWN and DESCRIBED ("Redemption disabled
+    //                        at the protocol level for holders"), and riskAnalyst
+    //                        has already priced the worse leg into an authored
+    //                        score. ALSO WITHHELD — see below.
+    //   gate: not_measured — the leg is DECLARED UNMEASURED.
+    //
+    // ⚠️⚠️ `gated: true` IS INCLUDED BECAUSE A NEGATIVE CONTROL FOUND A SECOND
+    // INSTANCE OF THE REPORTED DEFECT THAT NOBODY HAD REPORTED. Running the five
+    // controls to prove reusd_re was the only asset that moved, fxusd came back
+    // "Healthy · 10/10" — with `primary_exit.gate: "Redemption disabled at the
+    // protocol level for holders."` and riskAnalyst's authored liquidity 4.5. The
+    // same 5.5-point flattering gap, the same mechanism, on a registered asset,
+    // and it was found by checking that a fix did NOT do something rather than
+    // that it did.
+    //
+    // tidresearch reported the CLASS, not the instance: "don't compute an axis-3
+    // band from depth alone where a primary-redemption leg exists and is worse."
+    // fxusd satisfies that exactly, so leaving it would have been knowing about a
+    // live flattering rating and shipping around it.
+    //
+    // ⚠️ EVERY AFFECTED ASSET MEASURED BEFORE INCLUDING IT, because the first
+    // version of this rule shipped a false count in this very comment:
+    //   fxusd      Healthy 10/10 -> Authored 4.5   <- the material correction
+    //   usg        Stress  4/10  -> Authored 3.5   <- half a notch, same direction
+    //   reusde_re  Stress  2/10  -> Authored 2.0   <- no visible change
+    //   dusd_alto  already withheld (clears_entire_supply) — unchanged
+    //   tsm_rh     gated, NO authored score -> "Not rated". Not registered, so no
+    //              page renders it today; if it is ever registered the axis reads
+    //              Not rated rather than wrong, which is the honest failure.
+    //   usdm, susds, syzusd publish `gated: false` -> untouched, live control.
+    //
+    // ⚠️ KEYED ON THE STRUCTURE, NOT ON THE SIZE OF THE DISAGREEMENT. Withholding
+    // only where the authored score differs materially would key on the divergence
+    // itself — which is the comparison the owner closed on axis 1, for the reason
+    // that a published score beside a live band reads as a rival to it. A holder
+    // with no primary channel is a fact about the asset; the gap it produces is a
+    // consequence, not the test.
+    //   gate: not_measured — the leg is DECLARED UNMEASURED, so the worse of two
+    //                        legs is not computable at all. tidresearch's own
+    //                        framing: if the worse leg isn't available, not rating
+    //                        beats rating the wrong leg.
+    //
+    // ⚠️ Counted across every served liquidity/1 overlay AND every base feed with a
+    // liquidity block: `gate: 'not_measured'` is reusd_re ALONE. syzusd publishes
+    // `depth.status: 'not_measured'` with no gate field and is unaffected, which is
+    // the live negative control for the field being read rather than the word.
+    //
+    // ⚠️ READ FROM THE MERGED BLOCK, WHICH IS WHY IT IS THE OVERLAY'S FIELD. The
+    // base feed's `primary_exit.gated: true` DOES NOT SURVIVE to render time:
+    // liquidity/1 is `mode: 'replace'`, so the overlay's `primary_exit` (gated:
+    // null, gate: 'not_measured') supplants it wholesale — the same silent field
+    // loss the replace-mode note on AXIS_OVERLAY_SCHEMAS warns about. My first
+    // attempt keyed on the base feed's flag and changed nothing on the page; the
+    // browser said so and the diff would not have.
+    // ⚠️ THE SECOND VOCABULARY FOR THE SAME FACT, AND IT COST sUSDe ITS RATING THE
+    // DAY A LADDER ARRIVED. This helper reads `primary_exit.gate/gated`. sUSDe says
+    // the same thing in different words — `primary_redemption_depth_status:
+    // 'not_measured_as_depth'`, with a note reading "a time-delayed primary path,
+    // not an executable depth rung" — because its primary exit is a GATED COOLDOWN,
+    // which has no rung to publish.
+    //
+    // So when DexTracker's secondary ladder landed on 2026-10-12, this returned
+    // false, the band computed off venue depth, and the asset went to
+    // "Healthy · 10/10" against riskAnalyst's authored 7.0 — a holder reading the
+    // best liquidity score on the dashboard for a token they cannot leave for a day.
+    // The flattering direction, on the leg that is not binding: exactly what
+    // 7bab81979 was written to stop, reached through a field name it did not know.
+    //
+    // ⚠️ Counted before adding: `primary_redemption_depth_status` is published by
+    // sUSDe ALONE across every served feed and overlay, so this moves one asset.
+    // The statuses are listed rather than matched loosely — a status meaning "we
+    // measured it and it is fine" must never trip this.
+    PRIMARY_REDEMPTION_UNSCORABLE: ['not_measured_as_depth', 'not_measured', 'gated'],
+
+    _primaryExitNotScorable(lq) {
+        lq = lq || {};
+        if (typeof lq.primary_redemption_depth_status === 'string' &&
+            this.PRIMARY_REDEMPTION_UNSCORABLE.indexOf(lq.primary_redemption_depth_status) >= 0) {
+            return true;
+        }
+        var pe = lq.primary_exit;
+        if (!pe || typeof pe !== 'object') return false;
+        // Declared unmeasured: the worse of two legs is not computable.
+        if (pe.gate === 'not_measured') return true;
+        // Declared gated: the holder's primary channel does not exist, so venue
+        // depth is not the binding leg. `gated` is a deliberate tri-state —
+        // false is published and must NOT trip this.
+        return pe.gated === true;
+    },
+
+    _depthNonDerivable(lq) {
+        lq = lq || {};
+        // ⚠️ BOTH SIDES READ THIS ONE HELPER ON PURPOSE. The invariant stated on
+        // DEPTH_NON_DERIVABLE_STATUSES — "a band withheld without the authored path
+        // unblocked leaves the axis blank with both halves in hand" — was violated
+        // once already by a literal here drifting from the shared list. A gated
+        // primary exit withholds the band in liquidityRating AND admits the
+        // producer's authored score here; expressing it twice is how they drift.
+        return lq.derived_score_status === 'not_computed' ||
+            lq.two_pct_depth_size_responsive === false ||
+            this._primaryExitNotScorable(lq) ||
+            this.DEPTH_NON_DERIVABLE_STATUSES.indexOf(lq.two_pct_depth_status) >= 0;
+    },
+
+    _authoredLiquidity(data, requireDeclaration) {
+        if (requireDeclaration === undefined) requireDeclaration = true;
+        var lq = data.liquidity || {};
+        if (typeof lq.liquidity_score !== 'number') return null;
+        var declared = this._depthNonDerivable(lq);
+        if (!declared && !requireDeclaration) {
+            var b0 = lq.liquidity_score_basis || lq.liquidity_score_source;
+            if (!b0) return { rejected: 'An authored liquidity score of ' + lq.liquidity_score +
+                '/10 was supplied with no basis or source string, so it was not rendered.' };
+            // ⚠️ `field` is REQUIRED by _divergenceChipHtml, which prints it as
+            // "(field: X)". Omitting it rendered "field: undefined" on the ONLY
+            // working divergence flag on the page — the one place a reader can see
+            // that a judgement and a measurement disagree looked like a bug.
+            // The peg/backing path gets this free from _authoredAxisScore, which
+            // sets it; this one builds its object by hand and did not.
+            return { score: lq.liquidity_score, basis: String(b0), field: 'liquidity_score' };
+        }
+        if (!declared) {
+            return { rejected: 'An authored liquidity score of ' + lq.liquidity_score +
+                '/10 was supplied WITHOUT a non-derivability declaration ' +
+                '(derived_score_status: not_computed, two_pct_depth_size_responsive: false, ' +
+                'or two_pct_depth_status in [' + this.DEPTH_NON_DERIVABLE_STATUSES.join(', ') +
+                ']), so it was not ' +
+                'rendered. An authored score may only fill a gap the producer has ' +
+                'declared unmeasurable — otherwise it would paper over a broken feed. ' +
+                'Showing neither.' };
+        }
+        var basis = lq.liquidity_score_basis || lq.liquidity_score_source;
+        if (!basis) {
+            return { rejected: 'An authored liquidity score of ' + lq.liquidity_score +
+                '/10 was supplied with no basis or source string, so it was not ' +
+                'rendered. A judgement with no stated reasoning cannot be assessed ' +
+                'by a reader. Showing neither.' };
+        }
+        return { score: lq.liquidity_score, basis: String(basis), field: 'liquidity_score' };
+    },
+
+    // What a published `band_score` was computed FROM. Returns null for the
+    // ordinary case — a band derived here from `total_2pct_depth` — so only the
+    // assets whose band is NOT a depth reading carry the extra sentence.
+    _liquidityBandBasisNote(data) {
+        var lq = (data && data.liquidity) || {};
+        if (lq.band_score == null) return null;
+        var free = (typeof lq.free_liquidity_pct === 'number')
+            ? lq.free_liquidity_pct.toFixed(2) + '%' : null;
+        return 'This band is the producer\u2019s published band_score' +
+            (free ? ', computed from free liquidity (' + free + ')' : '') +
+            (lq.total_2pct_depth == null
+                ? ' \u2014 NOT from 2% depth, which is unmeasured for this asset'
+                : '') + '.';
+    },
+
+    _liquidityChipHtml(data) {
+        var band = this.liquidityRating(data);
+        // ⚠️ Declaration required ONLY when the authored score would FILL an
+        // absent band. Beside a rendered measurement it is a divergence, and the
+        // gate's justification does not apply — see _authoredLiquidity.
+        var authored = this._authoredLiquidity(data, band == null);
+        // ⚠️ `authored` has THREE shapes: accepted {score,basis}, {rejected},
+        // and null. Every branch below must test `.score`, not truthiness — a
+        // rejected object is truthy and would render "Authored undefined/10".
+        var accepted = (authored && typeof authored.score === 'number') ? authored : null;
+
+        if (band != null) {
+            // ⚠️ Both present is a DIVERGENCE, not something to reconcile
+            // silently. Render the measurement and SAY the judgement disagrees;
+            // a reader who cannot see the conflict cannot report it.
+            // Threshold and tooltip come from the SAME helpers the peg and
+            // backing axes use — the gap rule is defined once
+            // (AUTHORED_DIVERGENCE_MIN_GAP), not typed into three axes.
+            // ⚠️ THE CHIP SAID "DEPTH" AND THE BAND WAS NOT ONE. Credit vaults
+            // publish an explicit `band_score` computed from FREE LIQUIDITY —
+            // liquidityRating prefers it, correctly — and both syrup pools render
+            // "Stress · 2/10" beside a "2% depth n/a" tile. The number was right
+            // and its provenance was missing, which on this axis is the same
+            // mistake hastra-prime's withheld band was written to avoid: a band
+            // whose basis a reader cannot see invites them to read it as the
+            // measurement the sub-label names.
+            var bandNotes = [this._liquidityBandBasisNote(data),
+                             this._authoredTooltipNote(band, accepted)]
+                .filter(Boolean).join(' ');
+            return this._ratingChipHtml(band, null, bandNotes || null) +
+                this._divergenceChipHtml(band, accepted);
+        }
+        if (accepted) {
+            // Say it is authored — the word carries provenance, not the scale (§6.5.1).
+            return '<span class="axis-rating r-warn" title="' +
+                // ⚠️ _mdPlain first — same rule as the dependencies chip 500 lines below,
+                // which has always done it. This one and the backing one had not, so the
+                // two chips riskAnalyst's declarations unlocked came up with 16 and 14
+                // literal asterisks in their hovers.
+                this._escapeAttr(this._mdPlain(String(accepted.basis))) +
+                '">Authored ' + accepted.score + '/10</span>';
+        }
+        // Same face as a genuine refusal, distinguishable on hover.
+        return this._ratingChipHtml(null, authored ? authored.rejected : null);
+    },
+
+    // ⚠️ A LAYER SUMMARY CAN HIDE A PATH OF DIFFERENT CHARACTER, and until now
+    // this table rendered `layers` and NEVER read `.paths`. 13 layers across 7
+    // assets carry paths whose (reach, timelock) differ from the row shown.
+    //
+    // This is not cosmetic. I read crvUSD's layer-level `reach: full` and
+    // attributed it to BOTH paths, then told my user "five keys can mint on a
+    // $244M stablecoin immediately" — the walk said `reach: bounded` and
+    // "not represented as a full arbitrary-mint or upgrade path". riskAnalyst
+    // caught it. The per-path data was right; the page could not show it, so
+    // they carried the branch in their overlay prose with the note "CARRIED HERE
+    // BECAUSE IT RENDERS NOWHERE ELSE". A producer working around a consumer bug
+    // in published copy is the signal to fix the consumer.
+    //
+    // ⚠️ Only DIVERGENT paths render. Where every path matches the summary the
+    // row is complete already and sub-rows would be noise — most layers have one
+    // path, and a table that repeats itself teaches readers to skip it.
+    _divergentPathRows(l, esc) {
+        var paths = Array.isArray(l.paths) ? l.paths : [];
+        if (paths.length < 2) return '';
+        var shapes = {};
+        paths.forEach(function(p) { shapes[(p.reach || '?') + '|' + String(p.execution_delay != null ? p.execution_delay : p.timelock)] = 1; });
+        if (Object.keys(shapes).length < 2) return '';
+        return paths.map(function(p) {
+            var delay = p.execution_delay != null ? p.execution_delay : p.timelock;
+            var tl = String(delay == null ? 'unresolved' : delay);
+            var undelayed = tl === 'none';
+            var unknown = tl === 'unresolved';
+            // ⚠️ `terminal` distinguishes a PARTY from a CONTRACT, and conflating
+            // them is how an architectural ward reads as a discretionary actor.
+            // usds's undelayed full-reach path terminates in UsdsJoin — the join
+            // adapter must hold wards to mint. Naming the terminal kind lets a
+            // reader tell that from a key-holder without the renderer judging it.
+            var who = p.name || p.holder_kind || p.terminal || '—';
+            return '<tr class="tw-path">' +
+                '<td style="padding-left:1.5em;opacity:.75;">↳ ' + esc(who) +
+                    (p.terminal ? '<span class="tw-sub"> (' + esc(p.terminal) + ')</span>' : '') + '</td>' +
+                '<td>' + (p.threshold != null ? esc(String(p.threshold)) +
+                    (p.owners != null ? ' of ' + esc(String(p.owners)) : '') : '—') + '</td>' +
+                '<td class="' + (unknown ? 'tw-unknown' : (undelayed ? 'tw-bad' : 'tw-ok')) + '">' +
+                    (unknown ? '\u26a0\ufe0f not measured' : (undelayed ? '\u26a0\ufe0f none' : esc(tl))) + '</td>' +
+                '<td>' + esc(p.via || '—') + '</td>' +
+                // ⚠️ "bounded" is useless without the bound. security_analyst
+                // corrected apyUSD's ADMIN path from full to bounded and named
+                // what it reaches: "the UnlockReceipt contract only; the apyUSD
+                // vault and apxUSD are not reachable by this path". Rendering
+                // "bounded" alone loses the half that tells a reader whether the
+                // bound matters — a bounded path over in-flight unlock claims is
+                // not the same as a bounded path over a fee parameter.
+                '<td>' + esc(p.reach || '—') +
+                    (p.reach_bound
+                        ? '<span class="tw-sub"> \u2014 ' + esc(p.reach_bound) + '</span>'
+                        : '') + '</td>' +
+            '</tr>';
+        }).join('');
+    },
+
+    // ⚠️ META-AUTHORITY: who administers the ROLES rather than who holds them.
+    // Recorded as `role_admin` on the layer it bounds (their schema.md 1.9) rather
+    // than as a fourth path, because a path entry would double-count the same Safe
+    // in the holder list.
+    //
+    // ⚠️ IT MUST RENDER OR THE PAGE LOSES THE BINDING NUMBER. apyUSD's ADMIN Safe
+    // reaches only the receipt contract directly — but it administers roles 21-25,
+    // so it CAN reach the vault by re-pointing the gate. That route is 72h, not
+    // instant. Without this row the layer reads "ADMIN · none · bounded" with no
+    // indication the vault is reachable at all, which understates in one direction
+    // while the old "bypassable 72h" reading overstated in the other.
+    _roleAdminRowHtml(l, esc) {
+        var ra = l && l.role_admin;
+        if (!ra || typeof ra !== 'object') return '';
+        var route = ra.shortest_route_to_vault;
+        return '<tr class="tw-path tw-roleadmin">' +
+            '<td style="padding-left:1.5em;opacity:.75;">\u21b3 role admin' +
+                (ra.kind ? '<span class="tw-sub"> (' + esc(ra.kind) + ')</span>' : '') + '</td>' +
+            '<td>' + (ra.holder ? esc(String(ra.holder).slice(0, 10) + '\u2026') : '\u2014') + '</td>' +
+            '<td class="' + (route ? 'tw-ok' : 'tw-unknown') + '"' +
+                (ra.note ? ' title="' + esc(ra.note) + '"' : '') + '>' +
+                (route ? esc(route) + '<span class="tw-sub"> to vault</span>'
+                       : '\u26a0\ufe0f route not measured') + '</td>' +
+            '<td>' + esc(ra.via || '\u2014') + '</td>' +
+            '<td>meta</td>' +
+        '</tr>';
+    },
+
+    // ⚠️ GATED IS TWO DIFFERENT FACTS AND ONE WORD FOR BOTH IS A FALSE CLAIM.
+    //
+    // Caught by RUNNING the gate copy over the corpus, not by reading it. "Not an
+    // exit a holder can take" is exactly right for DUSD (Alto) and usg — capacity
+    // zero, no holder route at any size — and FALSE for reusde-re, whose quarterly
+    // window a holder genuinely can take: 72 claims, 1,077,727 tokens, $1,500,075
+    // settled, filled to the announced ceiling and rationed pro rata. That is
+    // restricted access, not a closed door, and calling it closed would have been
+    // this renderer asserting something the producer's own payload refutes.
+    //
+    // ⚠️ THE DISCRIMINATOR IS PUBLISHED, NOT PARSED. `capacity_usd === 0` is the
+    // producer saying there is no holder capacity at all — DexTracker and usg both
+    // spell out in `capacity_basis` that the zero is redemption capacity rather
+    // than empty reserves. tsm_rh publishes no capacity figure but declares
+    // `mechanism: "none_for_holders"`, which is the same statement. Anything that
+    // publishes real capacity is restricted. Reading the gate PROSE for words like
+    // "no" would be inferring a state that is already a field.
+    _exitClosedToHolders(pe) {
+        if (!pe || typeof pe !== 'object') return false;
+        if (pe.mechanism === 'none_for_holders') return true;
+        return pe.capacity_usd === 0;
+    },
+
+    _exitScopeHtml(liq) {
+        liq = liq || {};
+        var pe = liq.primary_exit;
+        // ⚠️ "UNDECLARED" WAS FALSE ON THE ONE ASSET THAT DECLARES IT DIFFERENTLY.
+        // sUSDe's payload carries `primary_redemption_depth_status`, a status and a
+        // note describing a gated cooldown — three published fields saying the leg
+        // exists — and this branch, which only knows `primary_exit`, told the reader
+        // the payload "represents no redemption leg at all". Unknown scope and
+        // known-narrow scope are opposite findings, and this said the worse one
+        // about a leg the producer had spelled out.
+        if (!pe && typeof liq.primary_redemption_depth_status === 'string') {
+            var prTip = (typeof liq.primary_redemption_note === 'string' && liq.primary_redemption_note)
+                ? liq.primary_redemption_note
+                : 'The payload declares a primary redemption leg and states that it is not expressible as depth.';
+            return ' · <span class="text-amber-700" title="' + this._escapeAttr(prTip) + '">primary exit: ' +
+                this._escapeAttr(String(liq.primary_redemption_depth_status).replace(/_/g, ' ')) + '</span>';
+        }
+        if (!pe) {
+            // Not "unmeasured" — UNREPRESENTED. Nothing in the payload says a
+            // redemption leg exists, so the scope of the score is unknown rather
+            // than known-narrow. That is worse and must read worse.
+            return ' · <span class="text-amber-700" title="The score is venue depth only. The payload represents no redemption leg at all, so the scope of this rating is unknown rather than known-narrow.">exit leg undeclared</span>';
+        }
+        var basis = pe.gated_basis;
+        // ⚠️ "UNPROBED" AND "CLOSED" ARE OPPOSITE FACTS AND THIS SAID THE FIRST.
+        //
+        // A `gated: true` with a declared reason is a MEASURED finding: the leg was
+        // walked and there is no holder route through it. It fell through to the
+        // final branch and rendered "exit unprobed (declared)" — telling the reader
+        // the gap is in our measurement when the gap is in the asset. tsm_rh
+        // carries that today ("the issuer provides no holder redemption mechanism")
+        // and DUSD (Alto) would join it: one Safe holds SWAPPER_ROLE and originated
+        // all 16 lifetime swaps across all three modules.
+        //
+        // ⚠️ ABOVE THE `measured` SHORT-CIRCUIT, BECAUSE THAT CHECK CONFLATES TWO
+        // STATES. It returns '' for any basis beginning "measured", which is right
+        // for susds/syzusd/usdm — measured and OPEN, nothing to qualify — and wrong
+        // for usg, whose basis reads "measured_protocol_design: USG is borrower-
+        // minted CDP debt… the protocol exposes no holder redemption". usg
+        // publishes `gate`, `capacity_usd: 0`, `capacity_basis` and `note` saying
+        // so, its venue is null so the panel's exit line never fires either, and
+        // NONE of it reached the page. Measured-and-open and measured-and-closed
+        // are not the same qualification.
+        //
+        // ⚠️ Reason accepted from `gate` as well as `gated_basis`. reusde-re
+        // declares its gate in `gate` and nothing in `gated_basis`, so requiring
+        // the latter would keep calling a documented quarterly window "asserted,
+        // basis undeclared" — penalising the field name rather than the disclosure.
+        //
+        // ⚠️ ONE DIRECTION ONLY, and it is the same asymmetry the `gated: false`
+        // suppression on the panel's venue line is built on: saying an exit is
+        // CLOSED cannot overstate how easily a holder leaves. `gated: false` stays
+        // withheld pending the usdm dispute.
+        if (pe.gated === true && (basis || pe.gate)) {
+            return ' · <span class="text-amber-700" title="' + this._escapeAttr(
+                    [pe.gate, pe.gated_basis, pe.capacity_basis, pe.note].filter(Boolean).join(' — ')) +
+                '">' + (this._exitClosedToHolders(pe)
+                    ? 'no holder exit through this leg (measured)'
+                    : 'holder exit restricted (measured)') + '</span>';
+        }
+        if (typeof basis === 'string' && basis.indexOf('measured') === 0) return '';
+        // ⚠️ A boolean gated with no basis is an ASSERTION, not an unprobed leg.
+        // susds publishes gated: false and no basis at all — calling that
+        // "unprobed" states the opposite of what the producer said. And an
+        // asserted-open exit with undeclared provenance is the flattering
+        // direction, which is why usdm's gated: false is still withheld pending
+        // the dispute with riskAnalyst over whether that path is allowlisted.
+        if (typeof pe.gated === 'boolean' && !basis) {
+            return ' · <span class="text-amber-700" title="The producer states a gate value but declares no basis for it, so how it was established is unknown. The score is venue depth only.">exit asserted, basis undeclared</span>';
+        }
+        return ' · <span class="text-slate-500" title="' +
+            this._escapeAttr(pe.gated_note || 'The producer declares the redemption leg unmeasured. The score is venue depth only.') +
+            '">exit unprobed (declared)</span>';
+    },
+
+    // ⚠️ THE BAND IS SIZE-BLIND AND THIS IS THE FIX THAT DOES NOT RE-GRADE 25 ASSETS.
+    //
+    // liquidity thresholds are ABSOLUTE — [2M, 1M, 500K, 100K] for every asset —
+    // so $5M of depth rates Healthy 10/10 whether the book is $5M or $600M.
+    // hastra-prime renders 10/10 on depth worth ~0.85% of its supply, against a
+    // measured wall where output stops increasing entirely. USDe rated 3/5 on
+    // 0.011% of supply while yzUSD rated 2/5 on seventy times that share.
+    //
+    // Owner decision: keep the absolute band — it stays comparable across assets,
+    // answers "can MY position exit", and does not inherit the supply-definition
+    // disputes several assets carry — and render the SHARE beside it so a reader
+    // sees both readings at once.
+    //
+    // ⚠️ THE DENOMINATOR IS NAMED, NEVER ASSUMED. total_supply and total_backing
+    // differ materially — apyUSD publishes 129M against 184M, 42% apart — so the
+    // label says which one was divided by. Falls back to backing only where supply
+    // is absent, and renders nothing when neither is.
+    _depthShareHtml(data) {
+        var liq = (data && data.liquidity) || {};
+        var depth = liq.total_2pct_depth;
+        if (typeof depth !== 'number' || !(depth > 0)) return '';
+        // ⚠️ IF THE BAND IS WITHHELD, THE SHARE IS WITHHELD. liquidityRating returns
+        // null exactly where the producer says the figure does not bound anything —
+        // not_size_responsive, or a ladder that contradicts its own published depth.
+        // Dividing such a number by supply produces a percentage that looks precise
+        // and means nothing, printed directly beside a qualifier saying so. If we
+        // will not rate it, we will not divide it.
+        if (this.liquidityRating(data) == null) return '';
+        var sum = (data && data.summary) || {};
+        var bk = (data && data.backing) || {};
+        var denom = null, label = null;
+        if (typeof sum.total_supply === 'number' && sum.total_supply > 0) {
+            denom = sum.total_supply; label = 'supply';
+        } else if (typeof sum.circulating_supply === 'number' && sum.circulating_supply > 0) {
+            denom = sum.circulating_supply; label = 'circulating supply';
+        } else if (typeof sum.real_supply === 'number' && sum.real_supply > 0) {
+            denom = sum.real_supply; label = 'supply';
+        } else if (typeof bk.total_backing === 'number' && bk.total_backing > 0) {
+            denom = bk.total_backing; label = 'backing';
+        }
+        if (denom == null) return '';
+        var pct = (depth / denom) * 100;
+        // ⚠️ Below 0.01% prints "0.0%", which reads as zero rather than as small.
+        var txt = pct >= 0.1 ? pct.toFixed(1) + '%'
+                : pct >= 0.01 ? pct.toFixed(2) + '%'
+                : '<0.01%';
+        // ⚠️ DEMOTED FROM THE HEADLINE TILE, AND THE FRAMING RETIRED WITH IT.
+        // This line was added on 2026-09-11 to answer riskAnalyst's criticism
+        // that the absolute band [2M, 1M, 500K, 100K] is size-blind. Their owner
+        // has since ruled the other way: the ladder and redemption status decide
+        // axis 3, and share of supply is CONTEXT, not a deciding factor —
+        // "$5M of depth is the same $5M whether the book behind it is $50M or
+        // $5B". riskAnalyst withdrew the criticism explicitly; tidr's owner put
+        // it sharpest: nobody exits as a percentage of supply, and that holds for
+        // large allocators too.
+        //
+        // ⚠️ Sitting under the headline number in the qualifier's own style, it
+        // read as a rival grading of the same question. It now renders BELOW the
+        // ladder, and the tooltip no longer says the two "can point in opposite
+        // directions" — that sentence presented a retired frame as an equal
+        // reading. Owner's call (2026-09-12): keep the figure, demote it.
+        return '<div class="text-[11px] text-slate-500 mt-3" title="' + this._escapeAttr(
+            'Context only, and not part of the grading. The band above answers "can a position ' +
+            'of this size exit", against fixed dollar thresholds identical for every asset — ' +
+            'which is the holder\u2019s question. This figure is background on how the depth ' +
+            'compares with the size of the book; nobody exits as a percentage of supply. ' +
+            'Denominator: ' + label + ' ' + this.formatCurrency(denom) + '.') +
+            '">For context: \u2248 ' + txt + ' of ' + label + ' would clear at ' +
+            this._depthLabel(data) + '</div>';
+    },
+
+    // ⚠️ A DEPTH MEASURED AGAINST ITS OWN VENUE'S QUOTE, WITH NOTHING SAYING SO.
+    // Both producers declare this and the page read neither. usg's overlay
+    // carries `anchor.self_referential: true`; PegTracker declares
+    // `peg.market_price_self_referential: true` for usg AND usdm. usdm renders
+    // "≥$500.4K" as the SOLE source on its page — a floor derived from the same
+    // Mento getAmountOut quote that anchors it — and said nothing at all.
+    //
+    // ⚠️ Why it matters even for a floor: a uniformly mispriced venue quotes
+    // ~0bps against its own mid, so the number cannot detect the failure it
+    // exists to detect. A bound is weaker than a crossing, but it is still a
+    // figure derived from its own mark.
+    //
+    // ⚠️ ATTRIBUTED, NEVER INFERRED. This renders only where a producer has
+    // DECLARED the flag, and the tooltip names which one and about what. The
+    // two declarations are about the same mark but they are not the same claim,
+    // and joining them silently would be the renderer deciding a question that
+    // belongs to the producers. Where neither declares, nothing renders —
+    // absence of a flag is not evidence of independence, and this must not be
+    // read as certifying the assets it stays quiet on.
+    _selfReferentialHtml(data) {
+        var liq = (data && data.liquidity) || {};
+        if (liq.total_2pct_depth == null) return '';
+        var claims = [];
+        var a = (liq.exit_mark || {}).anchor || (liq.depth || {}).anchor || {};
+        if (a.self_referential === true) {
+            claims.push('The depth feed declares its anchor self-referential' +
+                (a.self_referential_note ? ': ' + a.self_referential_note : '.'));
+        }
+        var peg = (data && data.peg) || {};
+        if (peg.market_price_self_referential === true) {
+            claims.push('The price feed declares this market mark self-referential' +
+                (peg.market_price_self_referential_basis
+                    ? ': ' + peg.market_price_self_referential_basis : '.'));
+        }
+        // ⚠️ AN AFFIRMATIVE "NO" FROM THE AXIS OWNER IS ALSO A CLAIM, AND IT HAD
+        // NO READER. DexTracker reviewed usg's anchor and published
+        // `self_referential: false` with determination `input_sizing_only_reviewed`
+        // — the mark converts USD rung sizes to USG and nothing else, so it does
+        // not determine the crossing, which is measured against an independent
+        // baseline. This renderer read only `=== true`, so that determination was
+        // dropped and the page showed the price feed's warning as an unanswered
+        // alarm against a figure whose producer had answered it.
+        //
+        // ⚠️ STILL NOT ADJUDICATED. Both statements are true and they are about
+        // different things: the mark IS venue-native, and it does NOT set the
+        // crossing. Rendering one and hiding the other is the renderer picking a
+        // winner. Both now show, each attributed, and the marker stops reading as
+        // an open question once the owner has closed it.
+        var rebuttal = null;
+        if (a.self_referential === false && a.self_referential_determination) {
+            rebuttal = 'The depth feed reviewed this and determined it does NOT affect the ' +
+                'measurement (' + String(a.self_referential_determination).replace(/_/g, ' ') + ')' +
+                (a.self_referential_basis ? ': ' + a.self_referential_basis : '.');
+        }
+        if (!claims.length) return '';
+        var tail = '\n\nA venue quoted against its own mid returns ~0bps however mispriced it is, ' +
+            'so a depth anchored this way cannot detect the failure it exists to detect.';
+        if (rebuttal) {
+            return '<div class="text-[11px] text-slate-500" title="' + this._escapeAttr(
+                claims.join('\n\n') + '\n\n' + rebuttal + tail +
+                '\n\nBoth statements are published and both are true: the mark is venue-native, ' +
+                'and the axis owner holds that it only sizes the input. Neither is adjudicated here.') +
+                '">venue-native mark \u2014 reviewed by the depth feed \u24d8</div>';
+        }
+        return '<div class="text-[11px] text-amber-700 dark:text-amber-300" title="' +
+            this._escapeAttr(claims.join('\n\n') + tail) +
+            '">\u26a0\ufe0f anchored to the venue being measured \u24d8</div>';
+    },
+
+    // ⚠️ A VENUE WITH NO CURVE NEEDS A TILE THAT SAYS SO, NOT AN EMPTY DEPTH SLOT.
+    // usdm's Mento FPMM quotes one rate at every size, so there is no 2%
+    // crossing to locate and `depth_usd` is correctly null. Rendering only that
+    // leaves "2% depth n/a" and nothing else — LESS informative than the wrong
+    // $500,430 it replaced, which is the trap when a producer withholds honestly.
+    //
+    // ⚠️ THE BINDING NUMBER IS INVENTORY, NOT SLIPPAGE. The quoter returns a flat
+    // rate however large the ask and does not check the counter-asset exists —
+    // it quoted $5,000,000 out of a book holding $36,578. So the ceiling is the
+    // counter-asset side of the book, and `quoter_honours_inventory: false` is
+    // why the old figure existed at all: a quote from this venue is not an
+    // executability statement.
+    //
+    // Producer's own prose renders verbatim; nothing here is derived.
+    exitCapacityHtml(liq) {
+        var ec = (liq || {}).exit_capacity;
+        if (!ec || typeof ec !== 'object') return '';
+        if (typeof ec.capacity_usd !== 'number') return '';
+        var res = ec.reserves || {};
+        var resPairs = Object.keys(res).filter(function(k) {
+            return typeof res[k] === 'number' && k !== 'block_timestamp';
+        });
+        return '<div class="mt-4 border border-amber-300 dark:border-amber-800 rounded-lg p-3 ' +
+                    'bg-amber-50 dark:bg-amber-950/30">' +
+            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1">' +
+                'Exit capacity \u2014 ' + this._escapeAttr(String(ec.venue_type || 'venue').replace(/_/g, ' ')) +
+                ', bounded by ' + this._escapeAttr(String(ec.binding_constraint || 'inventory').replace(/_/g, ' ')) +
+            '</div>' +
+            '<div class="grid grid-cols-2 md:grid-cols-3 gap-3 my-2">' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Capacity</div>' +
+                    '<div class="text-lg font-bold">' + this.formatCurrencyExact(ec.capacity_usd) + '</div>' +
+                    (ec.capacity_basis ? '<div class="text-[11px] text-slate-500" title="' +
+                        this._escapeAttr(ec.capacity_basis) + '">the ceiling, not a depth figure \u24d8</div>' : '') +
+                '</div>' +
+                (typeof ec.cost_bps_flat === 'number'
+                    ? '<div><div class="text-xs text-slate-400 font-medium uppercase">Cost, flat</div>' +
+                      '<div class="text-lg font-bold">' + ec.cost_bps_flat.toFixed(2) + ' bps</div>' +
+                      (ec.cost_note ? '<div class="text-[11px] text-slate-500" title="' +
+                          this._escapeAttr(ec.cost_note) + '">same at every size \u24d8</div>' : '') +
+                      '</div>'
+                    : '') +
+                (resPairs.length
+                    ? '<div><div class="text-xs text-slate-400 font-medium uppercase">Book</div>' +
+                      '<div class="text-sm font-mono">' + resPairs.map(function(k) {
+                          return CommonRenderer._escapeAttr(k) + ' ' +
+                                 CommonRenderer.formatCurrencyExact(res[k]).replace('$', '');
+                      }).join('<br>') + '</div>' +
+                      (res.custody_verified === true
+                          ? '<div class="text-[11px] text-slate-500" title="' + this._escapeAttr(
+                              'The venue\u2019s own getReserves() and the actual ERC20 balances agree exactly.') +
+                            '">reserves verified \u24d8</div>' : '') +
+                      '</div>'
+                    : '') +
+            '</div>' +
+            (ec.quoter_honours_inventory === false
+                ? '<div class="text-xs text-amber-800 dark:text-amber-200" style="line-height:1.5">' +
+                  '<span class="font-semibold">\u26a0\ufe0f The quoter does not check this ceiling.</span> ' +
+                  'It returns the same rate however large the ask, so a quote from this venue is not a ' +
+                  'statement that the trade can be filled \u2014 only the book above bounds it.</div>'
+                : '') +
+            (ec.pool ? '<div class="text-[11px] text-slate-400 mt-2">' +
+                this._escapeAttr(String(ec.chain || '')) + ' \u00b7 ' +
+                this._escapeAttr(String(ec.pool).slice(0, 10)) + '\u2026' +
+                (ec.measured_at ? ' \u00b7 read ' + this._escapeAttr(String(ec.measured_at).replace('T', ' ').slice(0, 16)) + 'Z' : '') +
+                '</div>' : '') +
+        '</div>';
+    },
+
+    // Renders the depth figure a `replace` overlay superseded, where the overlay
+    // itself publishes none. Reads only what was stashed at merge time; returns ''
+    // when the owner did publish a figure, which is the normal case.
+    // ⚠️ THE DEPTH FIGURE CHANGED HANDS, SO THE PAGE SAYS WHOSE IT IS. The axis
+    // owner declined to publish one and the other producer's measurement took over
+    // (see the hand-off in `mergeAxisOverlays`). Attribution is not optional here:
+    // the chip above credits the axis owner, so an unattributed figure reads as
+    // theirs — and on reUSD-RE it is precisely the number they declined to publish,
+    // for a stated reason.
+    //
+    // ⚠️ THIS REPLACED A NOTE THAT SAID "not used as the axis figure", WHICH WAS
+    // TRUE AND IS NOW FALSE. That note belonged to the stash-and-explain behaviour,
+    // where the figure was shown as a footnote under an `n/a` headline. The figure
+    // is now the headline, so the old sentence would deny what the tile says one
+    // line above it. A renderer left pointing at retired behaviour is the fossil
+    // this file keeps producing.
+    _depthHandoffHtml() {
+        var p = (this.AXIS_PROVENANCE || {}).liquidity;
+        var h = p && p.depth_handed_off;
+        if (!h) return '';
+        if (h.source_file) {
+            return '<div class="text-[11px] text-slate-500 mt-1">Executable ladder: ' +
+                this._escapeAttr(h.producer) + ' · ' + this._escapeAttr(h.source_file) +
+                '. Venue inventory is measured separately.</div>';
+        }
+        // ⚠️ CREDITED BY ROLE, NOT BY REPO, BECAUSE THE BASE FEED NAMES NOBODY.
+        // It carries no `producer` field at any level, so naming the repo here would
+        // be the renderer asserting an authorship the data does not state — the same
+        // rule that keeps composed issuer claims off these pages. What IS checkable
+        // from the page is that the same file supplies the peg and backing axes, so
+        // that is what the tooltip says.
+        var who = (typeof h.producer === 'string' && h.producer !== 'the asset feed')
+            ? (this._producerLabel(h.producer) || h.producer)
+            : 'this page\u2019s base feed';
+        var owner = this._producerLabel(h.owner) || h.owner || 'the axis owner';
+        return '<div class="text-[11px] text-slate-500 mt-1" title="' +
+            this._escapeAttr(
+                owner + ' owns this axis and published no depth figure for this asset, so the ' +
+                'figure above comes from ' + who +
+                (h.chain ? ', measured on ' + String(h.chain) : '') + ' \u2014 the same file that ' +
+                'supplies this page\u2019s peg and backing axes \u2014 used in its place rather ' +
+                'than rendering nothing. It declares no producer name, so it is credited by role.' +
+                (h.owner_reason ? '\n\n' + owner + '\u2019s stated reason for declining: ' +
+                    h.owner_reason : '') +
+                '\n\n\u26a0\ufe0f The two are not adjudicated here. The owner\u2019s reason may be ' +
+                'the better answer for this asset; what is certain is that a reason to withhold ONE ' +
+                'figure is not evidence that NO figure is known, and the page used to assert the ' +
+                'second.') +
+            '">depth figure from ' + this._escapeAttr(who) +
+            (h.chain ? ' (' + this._escapeAttr(String(h.chain)) + ')' : '') +
+            ' \u2014 the ' + this._escapeAttr(owner) + ' publishes none for this asset \u24d8</div>';
+    },
+
+    // ⚠️ THE EXECUTION COST AT MINIMUM SIZE WAS PUBLISHED ON 8 ASSETS AND RENDERED
+    // NOWHERE, AND THE SPEC PROMISED TO STATE IT. §Axis 3: "The standing cost is
+    // then STATED, not discarded." That worked only on ALL-IN ladders, where it sits
+    // in `slippage_bps` and the subtraction strips it. On an IMPACT ladder
+    // `slippage_bps` at the reference rung is 0.0 BY CONSTRUCTION — there is nothing
+    // to strip and nothing to state, so the cost became invisible rather than
+    // stated. It was never missing from the payload: it is `output_usd` / size.
+    //
+    //   syzUSD -237.8 bps · usde +58.5 · reUSD-RE +43.6 · syrupUSDT -16.5
+    //   susds +12.1 · apyUSD -9.7 · apxUSD +4.6 · hastra-prime -2.01
+    //
+    // Found by riskAnalyst asking why our depth tile ranks syrupUSDT ABOVE
+    // syrupUSDC while their report scores it below: impact -4.0 vs -8.6 bps at $1M
+    // (we are right), all-in -20.52 vs -7.68 (they are right). ⚠️ The surfaces were
+    // never in conflict — ours was SILENT on the quantity theirs scores.
+    //
+    // ⚠️ DERIVED FROM output_usd REGARDLESS OF CONVENTION, which is why it is one
+    // rule and not two. It reproduces the published field wherever the producer
+    // already used all-in — usg -54.17 vs -54.2 published, susdat 65.5 vs 65.54,
+    // usdai 4.5 vs 4.52, hastra-prime -2.01 vs -2.01 — so there is no branch to get
+    // wrong and no asset where the two readings race.
+    //
+    // ⚠️ NOT THE SAME NUMBER AS `standing_bps`, AND BOTH MUST SURVIVE.
+    // `standing_bps` is what `depthAtLimit` SUBTRACTS, and it has to stay in the
+    // rungs' own units or the subtraction double-counts on an all-in ladder and
+    // removes a real cost on an impact one. This one is for DISPLAY only. They
+    // coincide on all-in ladders; they must not be merged.
+    //
+    // ⚠️ AND IT IS NOT THE PEG DISCOUNT. It is spread + basis at the smallest probe,
+    // measured against the size sold. Axis 1 prices the discount; stating this on
+    // the exit-cost line is the cost of TRADING, and the tooltip says so rather than
+    // letting a reader net the two.
+    _executionCostBps(liq) {
+        if (!liq || typeof liq !== 'object') return null;
+        var q = (liq.exit_mark && liq.exit_mark.quotes) || null;
+        if (!q || typeof q !== 'object') return null;
+        var sizes = Object.keys(q).map(parseFloat).filter(isFinite).sort(function(a, b) { return a - b; });
+        if (!sizes.length) return null;
+        var refSize = typeof liq.slippage_reference_size_usd === 'number' &&
+                      sizes.indexOf(liq.slippage_reference_size_usd) !== -1
+            ? liq.slippage_reference_size_usd : sizes[0];
+        var rung = q[String(refSize)];
+        if (!rung || typeof rung !== 'object') return null;
+        var bps = null;
+        if (typeof rung.output_usd === 'number' && refSize > 0) {
+            bps = (rung.output_usd / refSize - 1) * 10000;
+        } else if (typeof rung.fill_ratio === 'number') {
+            bps = (rung.fill_ratio - 1) * 10000;
+        } else if (typeof rung.slippage_bps === 'number') {
+            // Last resort: the producer's own field, whatever convention it used.
+            bps = rung.slippage_bps;
+        }
+        if (typeof bps !== 'number' || !isFinite(bps)) return null;
+        return { bps: bps, size: refSize };
+    },
+
+    _depthQualifierHtml(liq, data) {
+        var st = liq.two_pct_depth_status;
+        var br = liq.two_pct_depth_bracket;
+        // ⚠️ A DERIVED FIGURE USED TO LOSE ITS WHOLE EVIDENCE BLOCK. This returned ''
+        // the moment the producer published no scalar — but the tile still renders a
+        // figure in that case, derived from the rungs (syrupUSDT and syrupUSDC read
+        // "0.5% depth >=$1.0M" with total_2pct_depth null). So the one case where the
+        // reader most needs the basis and the execution level is the case that
+        // silently dropped both. The STATUS qualifier still requires the scalar,
+        // because `two_pct_depth_status` describes that scalar; the evidence does not.
+        var scalarAbsent = liq.total_2pct_depth == null;
+        var tip = liq.two_pct_depth_basis || '';
+        // ⚠️ A RELABELLED FLOOR HAS TO SHOW ITS EVIDENCE. Where the headline moved
+        // to 0.5% off the rungs rather than off a producer declaration, the rungs
+        // that justify it render beside the figure — otherwise the tighter
+        // threshold is an assertion the reader cannot check.
+        var headlineNote = data ? this._depthHeadlineNote(data) : '';
+        var headlineLine = headlineNote
+            ? '<details class="text-[11px] text-slate-400"><summary>Depth threshold and quote methodology</summary>' + this._escapeAttr(headlineNote) + '</details>'
+            : '';
+        // ⚠️ THE STANDING COST, STATED, BECAUSE THE DEPTH FIGURE NO LONGER CONTAINS
+        // IT. Depth is the impact of SIZE; what it costs to sell at the smallest
+        // quoted size is a different fact and a real one — USG's is −54.7 bps
+        // before a single dollar of size impact. Shown only where it is material,
+        // so the sixteen ladders that start at ~0 stay quiet.
+        var standingLine = '';
+        var ex = this._executionCostBps(liq);
+        if (ex && Math.abs(ex.bps) >= 2) {
+            standingLine = '<div class="text-[11px] text-amber-700" title="' + this._escapeAttr(
+                'Measured as output_usd / size at the ' + this.formatCurrency(ex.size) +
+                ' rung, so it is the ALL-IN cost of trading at minimum size: the venue\u2019s ' +
+                'spread plus the asset\u2019s basis against what was sold into. ' +
+                'The depth figure above deliberately EXCLUDES it \u2014 depth is the impact of ' +
+                'SIZE, and an asset can have excellent depth at a poor level. ' +
+                '\u26a0\ufe0f It is NOT the peg discount, which axis 1 prices; do not net the ' +
+                'two. Neither figure is adjudicated against the other here.') + '">' +
+                (ex.bps < 0 ? 'costs ' : 'pays ') +
+                Math.abs(ex.bps).toFixed(1) + ' bps at the smallest quoted size (' +
+                this.formatCurrency(ex.size) + '), before any size impact \u2014 ' +
+                'a cost of LEVEL, not of depth \u24d8</div>';
+        }
+        // ⚠️ APPENDED INSIDE wrap(), not at one return site. This function has six
+        // return paths and picking one or two would have shown the evidence on
+        // some assets and not others — the bug shape this file keeps hitting.
+        if (scalarAbsent) return headlineLine + standingLine;
+        function wrap(txt, cls) {
+            return '<div class="text-[11px] ' + (cls || 'text-slate-400') + '"' +
+                (tip ? ' title="' + CommonRenderer._escapeAttr(tip) + '"' : '') + '>' +
+                txt + (tip ? ' \u24d8' : '') + '</div>' + headlineLine + standingLine;
+        }
+        // ⚠️ TWO BRACKET SHAPES, AND THE RICHER ONE IS THE NEW DEFAULT.
+        //
+        // The array form [lower, upper] is what crvUSD and syzUSD still publish.
+        // PegTracker's ca4943e emits an OBJECT carrying the slippage at each end —
+        // {lower_size_usd, lower_slippage_bps, upper_size_usd, upper_slippage_bps} —
+        // and USG already ships it. Accepting only the array meant USG rendered a
+        // bare "bracketed" with no range at all, on the one asset where the ladder
+        // had just been built from nothing.
+        //
+        // ⚠️ Every asset migrates to the object form as its ladder is rebuilt, so
+        // this is not a special case for one feed — the array branch is the legacy
+        // one and must keep working until the last of them turns over.
+        if (st === 'bracketed' && br && typeof br === 'object') {
+            var lo = Array.isArray(br) ? br[0] : br.lower_size_usd;
+            var hi = Array.isArray(br) ? br[1] : br.upper_size_usd;
+            if (typeof lo === 'number' && typeof hi === 'number') {
+                // ⚠️ A BISECTED BRACKET IS NOT A RANGE, AND PRINTING IT AS ONE
+                // INVENTS AN UNCERTAINTY THAT WAS MEASURED AWAY. DexTracker
+                // bisects to convergence: USG's bracket is $677,124 → $677,139,
+                // fifteen dollars wide, and reusde-re's is under a dollar.
+                // "crossing between $677.1K and $677.1K" reads as a rounding
+                // artefact or a bug; the honest reading is that the headline
+                // figure IS the crossing rather than the last rung below it,
+                // which is the opposite of what a wide bracket says.
+                //
+                // The gap is stated instead of the range, so the precision is
+                // the reader's to judge. 1% is comfortably below any real
+                // bracket — PegTracker's USG ladder is 33% wide and crvUSD's
+                // is 10× — so this cannot swallow one.
+                // ⚠️ PREFER THE PUBLISHED WIDTH. DexTracker now emits `width_usd`
+                // on every bracket, re-quoting both ends after bisection so the
+                // number carries its own evidence. Recomputing hi - lo here
+                // would be deriving what the producer already measured, and the
+                // two would disagree the first time rounding differed.
+                var gap = (!Array.isArray(br) && typeof br.width_usd === 'number')
+                    ? br.width_usd : (hi - lo);
+                if (gap >= 0 && gap <= Math.max(1, lo * 0.01)) {
+                    return wrap('crossing solved \u2014 bracket ' +
+                        (gap < 1 ? '<$1' : this.formatCurrencyExact(gap)) + ' wide',
+                        'text-slate-500');
+                }
+                var loBps = Array.isArray(br) ? null : br.lower_slippage_bps;
+                var hiBps = Array.isArray(br) ? null : br.upper_slippage_bps;
+                // The slippage at each end is what makes the bracket readable: a
+                // reader can see how close the lower rung came to crossing.
+                var detail = (typeof loBps === 'number' && typeof hiBps === 'number')
+                    ? ' (' + loBps.toFixed(0) + 'bps \u2192 ' + hiBps.toFixed(0) + 'bps)'
+                    : '';
+                return wrap('crossing between ' + this.formatCurrency(lo) +
+                            ' and ' + this.formatCurrency(hi) + detail, 'text-slate-500');
+            }
+        }
+        if (st === 'not_size_responsive' || liq.two_pct_depth_size_responsive === false) {
+            return wrap('no depth curve \u2014 this figure bounds nothing', 'text-amber-700');
+        }
+        // \u26a0\ufe0f THIS FIGURE IS A FLOAT, NOT A CROSSING, AND THE FALLBACK BELOW SAID SO
+        // IN GREY. `if (st) return wrap(st.replace(/_/g,' '), 'text-slate-500')`
+        // renders "supply capped" in the BENIGN class with the basis on hover only
+        // \u2014 the same styling as "crossing solved", which is the opposite kind of
+        // fact. The reader sees a dollar figure under a "2% depth" label and a
+        // neutral grey word beneath it.
+        //
+        // Named explicitly, in amber, with the crossing quoted where the producer
+        // published one, so the two numbers cannot be confused for each other.
+        // ⚠️ `clears_entire_supply` — the figure IS the asset's whole supply, and the
+        // crossing lies above it. Without a branch this fell to the generic grey
+        // `st.replace(/_/g,' ')` fallback, which happened to read "clears entire
+        // supply" and so looked correct — a fallback that reads well by luck is the
+        // worst case, because nothing prompts anyone to write the real sentence.
+        //
+        // What the grey version loses is the SIZE of the headroom, which is the
+        // whole point: the crossing sits at ~2.4x everything in existence. "Clears
+        // entire supply" sounds like a boundary just met. It is not close.
+        //
+        // ⚠️ Quote the crossing at the SAME threshold the tile is labelled with.
+        // DexTracker publishes one per threshold and the 0.5% figure is the headline
+        // for a stable asset — quoting the 2% crossing under a "0.5% depth" label
+        // would be a different measurement presented as this one, which is the error
+        // the supply_capped branch below was itself written to avoid.
+        if (st === 'clears_entire_supply') {
+            var dep = liq.depth || {};
+            var thBps = this._headlineThresholdBps(liq);
+            var matched = (thBps === 50 && dep.bracket_50bps)
+                ? (dep.bracket_50bps.curve_crossing_above_supply || {})
+                : (dep.curve_crossing_above_supply || {});
+            var xTxt = (typeof matched.depth_usd === 'number')
+                ? ' — the crossing sits above everything in existence, at ' +
+                  (matched.is_floor === true ? '≥' : '') +
+                  this.formatCurrency(matched.depth_usd)
+                : '';
+            // ⚠️ BENIGN class, deliberately, and it is the one case on this axis that
+            // earns it. Every other branch here flags a figure that is weaker than it
+            // looks; this one is stronger. Amber would read as a warning about an
+            // asset whose entire supply exits inside the threshold.
+            return wrap('the whole supply clears' + xTxt, 'text-slate-500');
+        }
+        if (st === 'supply_capped') {
+            // \u26a0\ufe0f Read, never derived. DexTracker publishes the real crossing in a
+            // SEPARATE object precisely so the float in `depth_usd` is not mistaken
+            // for it; recomputing it from the rungs would be deriving what the
+            // producer measured and bisected.
+            var cross = liq.depth && liq.depth.curve_crossing_above_supply;
+            var crossTxt = (cross && typeof cross.depth_usd === 'number')
+                ? ' \u2014 the 2% crossing sits above it at ' +
+                  (cross.is_floor === true ? '\u2265' : '') + this.formatCurrency(cross.depth_usd)
+                : '';
+            // ⚠️ THIS STRING IS OURS AND IT SAID "reachable float", WHICH OVERSTATES
+            // BY ~26x. DexTracker's figure for dusd-alto is supply-outside-the-pool
+            // (24,936.18); riskAnalyst measured the third-party float at 946.70,
+            // the gap being protocol-owned — two AltoBorrowMarkets and two fee
+            // timelocks. "Float" is the word a reader prices an exit on.
+            //
+            // ⚠️⚠️ AND I DISPATCHED IT TO DexTracker AS THEIR WORDING, twice,
+            // including the sentence "it is your string and we do not rewrite
+            // producer copy". It was never theirs — it is hardcoded here. I
+            // verified the FIGURE's provenance and assumed the WORDING came with
+            // it. They corrected it. Their own payload prose had the same
+            // overstatement in different words and they fixed that end.
+            //
+            // ⚠️ The two quantities also DIVERGE: +1,000 DUSD minted into a borrow
+            // market raises supply-outside-pool and leaves third-party float
+            // untouched, so this figure can grow while nothing new can be sold.
+            return wrap('supply outside the pool \u2014 an upper bound on what could be sold, ' +
+                        'not third-party float' + crossTxt, 'text-amber-700');
+        }
+        if (st === 'quote_failed') {
+            return wrap('floor \u2014 the deeper rung returned a broken route', 'text-amber-700');
+        }
+        if (st === 'ladder_exhausted' || liq.total_2pct_depth_is_floor === true) {
+            return wrap('ladder exhausted \u2014 floor, not a measurement');
+        }
+        if (st) return wrap(String(st).replace(/_/g, ' '), 'text-slate-500');
+        return '';
+    },
+
+    _depthContradictedByLadder(data) {
+        var liq = data.liquidity || {};
+        var dp = liq.total_2pct_depth;
+        var quotes = (liq.exit_mark || {}).quotes || {};
+        if (dp == null) return false;
+        return Object.keys(quotes).some(function(k) {
+            var size = Number(k);
+            var bps = quotes[k] && quotes[k].slippage_bps;
+            return !isNaN(size) && size <= dp && typeof bps === 'number' && bps < -200;
+        });
+    },
+
+    // Backing rating honours an asset's chart_bands override (e.g. USG PCR) when
+    // present, otherwise the generic CR cutoffs.
+    // ⚠️ AN AUTHORED FALLBACK THAT FIRES ONLY ON A DECLARED IMPOSSIBILITY.
+    //
+    // riskAnalyst withheld their backing_score on the correct general rule that a
+    // judgement must not displace a measurement. On reUSD there is no measurement
+    // and cannot be one — Re publishes combined reUSD + reUSDe reserves with no
+    // asset-attributed denominator — so the rule was leaving the axis blank while
+    // the judgement sat in the report unread.
+    //
+    // ⚠️ THE GATE IS THE PRODUCER'S DECLARATION, NOT THE FIELD'S ABSENCE, and
+    // that distinction is riskAnalyst's, not mine — I proposed the weaker
+    // "if no computed ratio". A bare null means at least three different things:
+    //
+    //   declared underivable  the producer said so, with a basis   -> safe
+    //   not yet computed      a new asset, a pending pass          -> unsafe
+    //   failed to load        a fetch error, a feed outage         -> DANGEROUS
+    //
+    // Falling back on the third promotes an authored score over a measurement
+    // that EXISTS but did not load, and it would look identical on the page to
+    // the legitimate case. So this requires collateral_ratio_basis — a sentence
+    // the producer wrote saying no ratio is establishable. A null cannot carry
+    // that; only a declaration can.
+    // ⚠️ A DISAGREEMENT A READER CANNOT SEE IS A DISAGREEMENT NOBODY CAN REPORT.
+    // Same treatment the Liquidity axis already gets: where a computed band AND
+    // an authored score both exist and differ, render the MEASUREMENT and say
+    // the judgement disagrees. Precedence is unchanged — the band stays the
+    // score, nothing is overridden, and this adds no new authority.
+    //
+    // ⚠️ Axis 1 has NO single field name: a stablecoin carries
+    // `peg_mechanism_score`, a vault-share carries `volatility_score`, and both
+    // are the same axis. Reading only one silently shows nothing on half the
+    // fleet — so the candidates are enumerated, not assumed.
+    // ⚠️ SHARED SO A BESPOKE PAGE CANNOT HIDE AN AUTHORED SCORE AND SAY NOTHING.
+    // Four renderers hide `section-dependencies` to avoid duplicating their own
+    // panel — usdai (which also serves susdai), thusd and hastra-prime. The axis
+    // head still rendered, into a node with `display:none`, so riskAnalyst's
+    // dependencies scores were in the DOM and invisible: susdai 4.5, usdai 7.0,
+    // thusd 3.0, all with a written basis. Three of those were refreshed the
+    // morning this was found and reached no reader at all.
+    //
+    // ⚠️ Extracted rather than copied into each renderer. A second copy of this
+    // markup would drift from the tooltip the shared path uses, and the tooltip
+    // is where the basis and the "not computed from live data" caveat live.
+    //
+    // Returns '' when the block carries no authored score, so a caller can
+    // append it unconditionally.
+    authoredScoreChipHtml(block, names, label) {
+        var auth = this._authoredAxisScore(block || {}, names);
+        if (!auth || typeof auth.score !== 'number') return '';
+        return '<span class="axis-rating r-na" title="' + this._escapeAttr(
+                'Authored score for this axis: ' + auth.score + '/10' +
+                (auth.basis ? '. ' + this._mdPlain(auth.basis) : '') +
+                '. This axis is not computed from live data \u2014 there is no measured band to ' +
+                'compare it against.') +
+            // ⚠️ An empty label is a supported call, not a mistake: inside a panel
+            // already titled "Dependencies" the labelled chip reads
+            // "Dependencies Dependencies 6/10".
+            '">' + (label ? this._escapeAttr(label) + ' ' : '') + auth.score + '/10</span>';
+    },
+
+    _authoredAxisScore(block, names) {
+        block = block || {};
+        for (var i = 0; i < names.length; i++) {
+            var n = names[i];
+            if (typeof block[n] === 'number') {
+                return {
+                    score: block[n],
+                    field: n,
+                    basis: block[n + '_basis'] || block[n + '_source'] || null,
+                    status: block[n + '_status'] || null,
+                    ageHours: block[n + '_age_hours'] != null ? block[n + '_age_hours'] : null
+                };
+            }
+        }
+        // ⚠️ An enumerated list is only as good as its enumeration. If the block
+        // carries a numeric *_score this list does NOT name, that is a producer
+        // adding a field the consumer silently ignores — the exact failure this
+        // helper exists to prevent, one field name later. Report it instead of
+        // returning a bare null that looks like "no authored score exists".
+        for (var k in block) {
+            if (!Object.prototype.hasOwnProperty.call(block, k)) continue;
+            if (typeof block[k] !== 'number') continue;
+            // ⚠️ `score` DOES NOT END IN `_score`, so a bare key slipped past this
+            // reporter entirely. dusd-alto's issuer overlay published `score: 4.5`
+            // — the only one of 24 issuer overlays to do so — and axis 6 rendered
+            // NO number with nothing saying one existed. The producer has since
+            // renamed it and asked that no `score` -> `issuer_score` translation
+            // be added, because a translation would silence the next typo instead
+            // of surfacing it. Agreed: this widens the REPORTER, not the reader.
+            if (!/_score$/.test(k) && k !== 'score') continue;
+            if (names.indexOf(k) >= 0) continue;
+            return { score: null, unknownField: k, unknownValue: block[k] };
+        }
+        return null;
+    },
+
+    // ⚠️ MINIMUM GAP BEFORE A DIVERGENCE IS A DISAGREEMENT RATHER THAN ARITHMETIC.
+    //
+    // Bands are 1-5 mapped x2, so they emit ONLY {2,4,6,8,10} — steps of 2.
+    // Authored scores use 0.5 steps across 1.0-10.0. Measured on this
+    // dashboard's own feeds: ZERO of the 6 authored scores currently published
+    // can be expressed by any band. An authored 7.0 sits exactly between bands 6
+    // and 8 and CANNOT match either, so its minimum possible gap is 1.0 on an
+    // asset where nobody disagrees about anything.
+    //
+    // On exact inequality the chip therefore fires on the GRID, not on a
+    // conflict — 14 of 15 backing axes would flag, which is noise that trains a
+    // reader to ignore the marker that matters.
+    //
+    // ⚠️ >= 2.0, NOT > 2.0. 2.0 is exactly one band step, and 6.0 IS expressible
+    // as a band — so an authored 6.0 against a band of 8 is a real one-band
+    // disagreement with nothing structural to explain it, and must fire. Only
+    // sub-2.0 gaps are the ones resolution accounts for. riskAnalyst's checker
+    // uses >= at the same boundary (e6afbdc); two tools sharing a nominal
+    // threshold and disagreeing at exactly 2.0 is its own trap.
+    AUTHORED_DIVERGENCE_MIN_GAP: 2.0,
+
+    // The authored value belongs in the tooltip EVEN WHEN THE CHIP IS SILENT.
+    // Suppressing the warning is a statement about noise, not about the number —
+    // a reader who opens the tooltip must still see both.
+    _authoredTooltipNote(band, authored) {
+        if (band == null || !authored || typeof authored.score !== 'number') return null;
+        var gap = Math.abs(authored.score - band * 2);
+        var head = 'Authored score for this axis: ' + authored.score + '/10 (' + authored.field + '), ' +
+            'against the measured band of ' + (band * 2) + '/10.';
+        // ⚠️ THE REASON WAS DROPPED EXACTLY WHERE IT WAS NEEDED MOST — the basis
+        // was appended only on the BELOW-threshold branch, so an authored score
+        // that merely differs by arithmetic got a full explanation and a REAL
+        // disagreement got two bare numbers and no reason. reUSD-RE: band 10/10
+        // against an authored 4.5, gap 5.5, and the producer's own basis says
+        // "MEASURES THE WORSE OF TWO LEGS ... THE BINDING LEG IS REDEMPTION, NOT
+        // DEPTH ... SO THE COMPUTED DEPTH FIGURE BESIDE THIS SCORE IS NOT WHAT THIS
+        // SCORE MEASURES" — published, and reaching no pixel at the one place a
+        // reader is looking at both numbers at once.
+        var reason = (authored.basis ? ' Basis: ' + this._mdPlain(String(authored.basis)) : '');
+        if (gap >= this.AUTHORED_DIVERGENCE_MIN_GAP) {
+            return head + ' \u26a0\ufe0f This gap is at or above the ' +
+                this.AUTHORED_DIVERGENCE_MIN_GAP.toFixed(1) + '-point threshold, so it is a real ' +
+                'disagreement rather than band arithmetic \u2014 the two numbers may be measuring ' +
+                'different things, and the basis below says which.' + reason;
+        }
+        return head + ' Gap of ' + gap.toFixed(1) + ' is below the ' +
+            this.AUTHORED_DIVERGENCE_MIN_GAP.toFixed(1) + '-point threshold and is NOT flagged: bands ' +
+            'can only emit even numbers, so an authored ' + authored.score + ' cannot match one ' +
+            'exactly. The difference here is resolution, not disagreement.' + reason;
+    },
+
+    // Appended to a band chip when an authored score disagrees with it.
+    _divergenceChipHtml(band, authored) {
+        // An authored score under a field name this renderer does not know is a
+        // gap, not an absence. Say so rather than render nothing.
+        if (authored && authored.unknownField) {
+            return '<span class="axis-rating r-na" title="' + this._escapeAttr(
+                'The feed publishes "' + authored.unknownField + '" = ' + authored.unknownValue +
+                ', which this renderer does not recognise as an axis score, so it is NOT being ' +
+                'compared against the band. A published score reaching no reader is a transport ' +
+                'gap — the field name needs adding to the consumer, not the value changing.') +
+                '"> ⚠️ unread score field</span>';
+        }
+        if (band == null || !authored || typeof authored.score !== 'number') return '';
+        // ⚠️ THE AUTHORED SCORE IS NO LONGER SHOWN BESIDE A LIVE ONE. Owner decision.
+        //
+        // It rendered "⚠️ authored 6/10 differs" next to a computed band, which read
+        // as a contradiction between two numbers when it was never one: the band is
+        // a live measurement and the authored score is a persistence-filtered
+        // judgement of a DIFFERENT subject. crvUSD's own basis says it outright —
+        // "MEASURES THE MECHANISM, NOT THE CURRENT DEVIATION" — and on liquidity the
+        // authored score prices a dollar exit while the band measures aggregate
+        // depth across pools, not one of which pairs crvUSD with a dollar.
+        //
+        // ⚠️ Flagging a conflict that does not exist is worse than not flagging one
+        // that does: it invites a reader to reconcile two numbers that cannot be
+        // reconciled, and it made the report look wrong. The axes where a live
+        // number exists now show ONLY the live number; the authored score lives in
+        // the report, and the standing note under the score strip says the two can
+        // differ and why.
+        //
+        // ⚠️ This function still returns '' for band == null BY THE LINE ABOVE, so
+        // the authored-only fallbacks are untouched — the four tiles that have an
+        // authored score and NO measured band (thusd backing/liquidity, usds and
+        // susds liquidity) render through separate paths and keep their number. A
+        // blank tile would be worse than an authored one, and with no rival number
+        // there is no divergence to imply.
+        return '';
+    },
+
+    // ⚠️ ONE GATE, TWO READERS — it was written out twice and they disagreed.
+    //
+    // `_authoredBackingRating` tested the three conditions below; the axis band's chip
+    // tested the same three PLUS `collateral_ratio == null`. So the moment a ratio was
+    // present the two answered differently: the rating accepted the authored score and
+    // the chip did not, and the chip fell through to rendering that same authored score
+    // as a COMPUTED BAND — "Watch · 6/10" over an authored 5.5, provenance stripped and
+    // the number changed by the 1-5 round-trip.
+    //
+    // ⚠️ THE DECLARATION IS THE DISCRIMINATOR, NOT THE FIELD'S ABSENCE, and the producer
+    // says so: riskAnalyst's `backing_score_applies_when_note` warns that a
+    // collateral_ratio arriving LATER must not be read as superseding the declaration
+    // without first checking whether it is the blend — because the blend is exactly the
+    // figure the declaration exists to refuse. `collateral_ratio == null` tested the
+    // symptom the declaration was written to make unnecessary.
+    //
+    // Counted before changing it: two assets declare underivable (reusd-re, reusde-re)
+    // and neither publishes a ratio, so nothing on the dashboard moves today. This is a
+    // guard for the case the producer explicitly predicted.
+    _backingAuthoredDeclared(b) {
+        return !!(b && typeof b.backing_score === 'number' &&
+            (b.backing_score_applies_when === 'collateral_ratio_declared_underivable' ||
+             b.backing_score_display === 'authored') &&
+            b.collateral_ratio_basis);
+    },
+
+    _authoredBackingRating(data) {
+        var b = data.backing || {};
+        if (!this._backingAuthoredDeclared(b)) return null;
+        // Scores are /10; the axis bands are 1-5.
+        return Math.max(1, Math.min(5, Math.round(b.backing_score / 2)));
+    },
+
+    backingRating(data) {
+        // ⚠️ FIXING THE TILE AND LEAVING THE SCORE IS HALF A FIX, AND THE SCORE IS WHAT
+        // THE TOP ROW COMPARES ACROSS ASSETS. Caught by running the branch above against
+        // three feed shapes: with the blended 110.7% present the VALUE rendered correctly
+        // as the zero-buffer figure while the chip still computed band 4 from the blend —
+        // a number the producer publishes with `blended_ratio_is_arithmetic_only: true`
+        // because it averages two tranches with opposite failure modes, and whose CDP half
+        // is not claimable by DUSD holders at all.
+        //
+        // Where the buffer is zero by construction, NO single ratio can be read at face
+        // value: the blend flatters, and the honest 100.00% means the opposite of what a
+        // band would score it. So the computed band is withheld and only an AUTHORED score
+        // may fill — same rule `supply_capped` applies on axis 3, and the same reason.
+        if (data.backing && data.backing.zero_buffer_by_construction === true) {
+            return this._authoredBackingRating(data);
+        }
+        var sum = data.summary || {};
+        var fromBacking = data.backing && data.backing.collateral_ratio != null;
+        var cr = fromBacking ? data.backing.collateral_ratio : sum.collateral_ratio;
+        if (cr == null) return this._authoredBackingRating(data);
+
+        // ⚠️ Never rate a manufactured value. Renderers synthesise a placeholder
+        // collateral_ratio in preRender so the legacy card has something to
+        // format, and preRender runs BEFORE this — so without the marker a
+        // placeholder is indistinguishable from a producer figure. An unrated
+        // axis is honest; a rating derived from a placeholder is not. The
+        // fallback itself stays: six assets rely on it legitimately (bold, frax,
+        // ousd, usdd, usdm, usg all emit a real summary.collateral_ratio).
+        if (!fromBacking && sum.collateral_ratio_synthetic === true) return null;
+
+        // ⚠️ Scale. usdm publishes a RAW ratio (1.2198); every other feed
+        // publishes percent. Unnormalised, 1.2198 falls through the default
+        // [130,110,100,90] cutoffs to 1/5 instead of 4/5 — a three-band
+        // misrating in the alarming direction. The index grid already normalises
+        // (app.js); this did not. Resolution is by declared scale or the explicit
+        // asset list, never by magnitude — see normalizeCollateralRatio.
+        //
+        // ⚠️ The scale declaration must come from the block the VALUE came from.
+        // summary.collateral_ratio_scale describes summary.collateral_ratio. Once
+        // an asset migrates to 5-axis, backing.collateral_ratio becomes the source
+        // and a payload can carry both fields under near-identical names. Applying
+        // summary's declaration to a backing value is a guess, and with a raw-list
+        // asset the normaliser is not idempotent — a percent value multiplied
+        // again reads 12198 and rates 5/5, the reassuring direction.
+        // A declaration describes ITS OWN block and nothing else. backing and
+        // summary routinely hold different quantities under the same field name —
+        // usdm's backing.collateral_ratio is stable-only reserve over Mento debt
+        // (91.02, percent) while summary.collateral_ratio is gross over the same
+        // debt (1.2231, ratio). Both declarations are right; they are 31pp apart
+        // because they measure different things.
+        //
+        // ⚠️ REMOVED: a check that rejected the payload when the two declared
+        // scales differed. It compared STRINGS, which cannot tell "two fields,
+        // two scales, both correct" from "one quantity, contradictory scales" —
+        // and it was strictly harmful. It fired ONLY when both blocks declared,
+        // which is exactly when per-block resolution already gets it right, and
+        // stayed silent on the hazard it was written for (an undeclared backing
+        // value inheriting summary's declaration), which still rated 5/5. It
+        // unrated usdm on a live page for being correct, and would have unrated
+        // every asset adopting the per-block declarations we asked for.
+        //
+        // So: never inherit across blocks. A backing value with no declaration of
+        // its own falls to the default (percent), not to summary's — guessing
+        // from a sibling field's scale is the mis-scaling this is meant to avoid.
+        var backingBlock = data.backing || {};
+        var scaleSrc = fromBacking ? backingBlock : sum;
+
+        cr = CommonRenderer.normalizeCollateralRatio(cr, data.asset_slug, scaleSrc);
+        if (cr == null) return null;
+        // Explicit per-asset cr_pct override (finer 5/4/3/2/1) wins over chart_bands' binary
+        // 5/3/1 — credit vaults (PCR ~100 by construction) need the finer bands so PCR 100 reads
+        // Healthy 4, not a perfect 5 (chart_bands stays for the CR-chart rendering).
+        // ⚠️ Misplaced override: refuse rather than rate on the generic band.
+        //
+        // The schema location is asset_specific.axis_thresholds. A producer that
+        // emits axis_thresholds at TOP LEVEL has published a band this reader
+        // cannot see, and the failure is silent and flattering — usg's 131.64
+        // rates 5/5 HEALTHY on the generic [130,110,100,90] and 3/5 WATCH on its
+        // own [158,145,130,120], which is anchored on a measured liquidation
+        // floor. Rating on defaults while a real band sits unread would publish
+        // the reassuring answer.
+        //
+        // Deliberately NOT reading the top-level copy. Accepting an undefined
+        // location lets the renderer define the contract by what it tolerates,
+        // which is how a schema rots quietly; and check_feeds.py already surfaces
+        // the misplacement. An unrated axis is honest and visibly wrong-looking,
+        // which is what gets it fixed.
+        var aspThr = data.asset_specific && data.asset_specific.axis_thresholds;
+        if (!aspThr && data.axis_thresholds) return null;
+
+        var bOv = aspThr && aspThr.backing;
+        if (bOv && Array.isArray(bOv.cr_pct)) {
+            // ⚠️ An override may declare its own expiry. usg's carries
+            // expires:true, review_by, and an expiry_reason saying the floor is a
+            // property of TODAY'S book — an active market set the issuer opens and
+            // pauses — with an explicit "re-derive it, do not extend the date".
+            //
+            // Rating on it past that date asserts a currency the producer has
+            // said it will not have. This repo already has the scar: a hardcoded
+            // editorial score sat at 8.0 through a depeg because nothing
+            // recomputed it. Falling back to the generic band would be worse than
+            // unrated here — that is the 5/5 the override exists to prevent — so
+            // an expired band goes UNRATED, which is visible and prompts the
+            // re-derivation the producer asked for.
+            // stale_by_floor_drift is the REAL trigger; review_by is the
+            // backstop. The band is derived from a measured floor that the
+            // producer recomputes every run — if an idle market activates with a
+            // different liquidation threshold the floor moves and the flag fires
+            // in September rather than waiting for November. The tolerance is a
+            // detection threshold, not a slack allowance: a drift firing early
+            // means re-derive, not widen.
+            if (bOv.stale_by_floor_drift === true) return null;
+            if (bOv.expires === true && bOv.review_by &&
+                Date.now() > Date.parse(bOv.review_by + 'T00:00:00Z')) {
+                return null;
+            }
+            return this._rate(cr, bOv.cr_pct, 'high');
+        }
+        // ⚠️ A display band is not a rating scale. Five renderers set chart_bands
+        // in preRender purely so two series stay legible on one axis — usdm's
+        // comment says so outright ("keep both named series continuously
+        // visible") — and preRender runs BEFORE this, so those bands were
+        // silently scoring the asset. A shading boundary makes a poor rating
+        // boundary: critical:[0,98] collapses 97% and 60% into the same 1/5.
+        //
+        // Measured: apxusd and usdm each rated 1/5 on injected display bands
+        // where the real cutoffs give 2/5 — both in the alarming direction.
+        // Feed-emitted bands (syrup's `pcr`) are deliberately rating-shaped and
+        // are still honoured; only renderer-set ones carry display_only.
+        var bands = data.asset_specific && data.asset_specific.chart_bands;
+        if (bands && bands.display_only === true) bands = null;
+        if (bands) {
+            // verbose {critical,thin,amber,healthy:[lo,hi]} or short {pcr|thresholds:[a,b,c,d]}
+            var healthyFloor, watchFloor;
+            if (Array.isArray(bands.healthy) && Array.isArray(bands.amber)) {
+                healthyFloor = bands.healthy[0];
+                watchFloor = bands.amber[0];
+            } else {
+                var short = bands.pcr || bands.thresholds;
+                if (Array.isArray(short) && short.length === 4) {
+                    healthyFloor = short[2];  // app.js maps healthy:[c,d]
+                    watchFloor = short[1];    // amber:[b,c]
+                }
+            }
+            if (healthyFloor != null && watchFloor != null) {
+                if (cr >= healthyFloor) return 5;
+                if (cr >= watchFloor) return 3;
+                return 1;
+            }
+        }
+        return this._rate(cr, this._axisThresholds(data).backing.cr_pct, 'high');
+    },
+
+    _escapeAttr(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    },
+
+    _indexerLabel(source) {
+        if (!source || typeof source !== 'string') return null;
+        var known = { geckoterminal: 'GeckoTerminal' };
+        var normalized = source.trim().toLowerCase();
+        if (known[normalized]) return known[normalized];
+        return source.trim().replace(/[_-]+/g, ' ').replace(/\b\w/g, function(c) {
+            return c.toUpperCase();
+        });
+    },
+
+    // 24h volume for the Liquidity card subtitle. Two contracts to keep:
+    //   1. `volume_24h` is emitted as null (never 0) when the lookup fails — an absent
+    //      figure must render "n/a", never a false $0 on a pool doing tens of millions.
+    //   2. It is indexer-derived (GeckoTerminal), unlike the 2% depth beside it, which is
+    //      an executable on-chain quote — so it carries an explicit (indexer) qualifier
+    //      and its source/as-of in the tooltip rather than reading as a chain verification.
+    // The upstream cadence is daily, so the as-of is context only: no staleness warning.
+    // ⚠️ Two spellings for one quantity. hastra-prime, thusd and usdai publish
+    // `volume_24h`; the Yuzu feeds publish `volume_24h_usd`. This read only the
+    // first, so the summary tile said "vol n/a" while the panel eight lines
+    // below rendered $24.74 from the other field — the SAME defect as the
+    // hardcoded literal, one layer up, and invisible because "n/a" is exactly
+    // what an unmeasured asset should show.
+    //
+    // Accepting both is a stopgap, not the resolution: a second accepted
+    // spelling entrenches the divergence. Raised with the producer to settle on
+    // one; when it lands, drop the fallback rather than leave two.
+    _volumeSubHtml(liq) {
+        var vol = liq ? liq.volume_24h : null;
+        if (vol == null && liq) vol = liq.volume_24h_usd;
+        if (vol == null) return 'vol n/a';
+        var src = this._indexerLabel(liq.volume_24h_source);
+        var tip = '24h volume ' + (Math.abs(vol) < 1000
+                ? '$' + vol.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : this.formatCurrencyExact(vol)) + ' · ' +
+            (src ? src + ' — indexer-derived, not an on-chain quote'
+                 : 'indexer-derived, not an on-chain quote');
+        if (liq.volume_24h_as_of) tip += ' · as of ' + this.formatDate(liq.volume_24h_as_of);
+        // ⚠️ formatCurrency floors to whole dollars below $1k, so yzUSD's $24.74
+        // renders "$25" here too — the same rounding that nearly cost the finding
+        // in the panel. Where the number is tiny, the exact figure IS the point.
+        var volTxt = Math.abs(vol) < 1000
+            ? '$' + vol.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            : this.formatCurrency(vol);
+        return '<span class="indexer-figure" title="' +
+            this._escapeAttr(tip) + '">vol ' + volTxt + ' (indexer)</span>';
+    },
+
+    // ⚠️ THE LABEL NAMES THE THRESHOLD THE FIGURE WAS ACTUALLY MEASURED AT.
+    //
+    // The spec's axis-3 row requires "what the depth was measured AGAINST" — it names
+    // no threshold itself, deliberately. The 2% was never a spec decision, it was a
+    // hardcoded string, and it became wrong the day DexTracker started publishing a
+    // 0.5% headline for stable assets.
+    //
+    // Reads `depth_threshold_bps`, set by _adaptSchema from the producer's
+    // `primary_threshold_bps`. Absent -> 200, so every feed that predates the field
+    // keeps saying "2% depth" exactly as before.
+    // ⚠️ 0.5% IS THE RIGHT HEADLINE FOR A PEG-TRACKING ASSET AND ONLY SIX OF
+    // TWENTY-FOUR GOT IT, FOR A PRODUCER REASON RATHER THAN AN ASSET ONE.
+    //
+    // DexTracker declares `primary_threshold_bps: -50`; PegTracker's embedded
+    // ladders declare no threshold at all, so 17 assets fell back to 200 and the
+    // same question rendered as "2% depth" on susde and "0.5% depth" on dusd-alto.
+    // For a stablecoin a 2% move is already a depeg, so the 2% crossing answers a
+    // question nobody holding it is asking (owner decision 2026-09-22, and the
+    // user's again on 2026-09-26).
+    //
+    // ⚠️ THIS DERIVES NOTHING. It relabels ONLY where the published figure is
+    // already a FLOOR and every quoted rung clears inside 50 bps — then the same
+    // number is a 0.5% floor as surely as it is a 2% one, and the tighter
+    // threshold is the stronger true statement. susde's $2.0M deepest rung clears
+    // at −3.7 bps; calling that "2% depth" understates it.
+    //
+    // ⚠️ A LOCATED CROSSING IS NEVER RELABELLED. crvUSD's $25M, usg's $500K and
+    // usdat's $2M are measured 200 bps crossings; the 0.5% crossing is a
+    // different, smaller number this cannot see. Those keep their label.
+    DEPTH_HEADLINE_BPS: 50,
+
+    // ⚠️ 0.5% IS THE DEFAULT FOR EVERY ASSET — spec, Axis 3. Depth answers "how
+    // much can I sell before losing more than X", and for a peg-tracking asset a
+    // 2% loss is already a depeg: USG sells $500,000 inside 2% and cannot sell
+    // $10,000 inside 0.5%, same ladder, same morning.
+    //
+    // Resolution: per-asset override, else the producer's own declaration of
+    // which of ITS published crossings is the headline, else 50.
+    _headlineThresholdBps(liq, overrideBps) {
+        if (typeof overrideBps === 'number') return overrideBps;
+        if (liq && typeof liq.depth_threshold_bps === 'number') return liq.depth_threshold_bps;
+        return this.DEPTH_HEADLINE_BPS;
+    },
+
+    // ⚠️ A LADDER ANSWERS IN ONE OF THREE SHAPES AND THE TILE MUST SAY WHICH.
+    // This is inherent to probing at discrete sizes, not a producer defect: the
+    // limit either falls between two rungs (BRACKET), or beyond the deepest one
+    // probed (FLOOR — "at least $X", never "the limit is $X"), or below the
+    // smallest (BELOW_PROBE — susdat cannot sell $1,000 inside 0.5%, usg cannot
+    // sell $10,000; both read as healthy five-figure depths at 2%).
+    //
+    // ⚠️ THE PRODUCER'S OWN FIGURE WINS WHERE IT WAS MEASURED AT THIS LIMIT.
+    // DexTracker bisects the 50bps crossing; a rung bracket is coarser than a
+    // bisection and must not displace it.
+    //
+    // ⚠️ AND A FIXED-RATE ROUTE GETS NO PERCENTAGE AT ALL. USDS routes the Sky
+    // PSM, sUSDS returns its redemption rate as a quote — same cost at every
+    // size, so no crossing exists to name and "0.5% depth $1M" is as false as
+    // "2% depth $1M".
+    depthAtLimit(data) {
+        var liq = (data && data.liquidity) || {};
+        var over = this.assetDepthOverrideBps(data);
+        var bps = this._headlineThresholdBps(liq, over);
+        var fig = liq.total_2pct_depth;
+        var rungs = this._ladderRungs(liq);
+
+        // ⚠️ ONE SHAPE, TWO REASONS, AND BOTH MEAN "NOT A CROSSING". sUSDS/USDS
+        // return the SAME cost at every size (a fixed rate quoted as a fill);
+        // hastra-prime's ladder DOES respond — -2.2 to -11.5 bps — but hits the
+        // pool's counter-token inventory ceiling, so output stops increasing with
+        // requested size. Different mechanisms, same consequence: the figure is a
+        // capacity limit, not a price crossing, and no percentage is true of it.
+        // My first cut called this 'fixed_rate' and would have mislabelled hastra.
+        // ⚠️ A PRODUCER-MEASURED ANSWER AT THIS LIMIT OUTRANKS ANYTHING DERIVED
+        // HERE. PegTracker now searches its ladder a second time at 50 bps and
+        // publishes the result as its own block; reading their answer beats
+        // re-deriving it from their rungs, which is what this function did alone
+        // until 2026-10-01. Their first two published assets agreed with the
+        // derivation to the dollar — that agreement is the reason to switch, not
+        // a reason to keep both.
+        // ⚠️ THE STANDING COST IS A FACT ABOUT THE LADDER, NOT ABOUT WHICH PATH
+        // ANSWERED. Attaching it only where WE derive would have hidden it on
+        // exactly the assets that have one: sUSDat's +69 bps premium and usdai's
+        // 4.8 bps both arrive with a producer block, so the line would never have
+        // rendered for them. Computed once, from the rungs, regardless.
+        var rungs0 = this._ladderRungs(liq);
+        var refSize0 = liq.slippage_reference_size_usd, ref0 = null;
+        if (typeof refSize0 === 'number') {
+            ref0 = rungs0.filter(function(r) { return r.size === refSize0; })[0] || null;
+        }
+        var standingBps = rungs0.length ? (ref0 || rungs0[0]).bps : null;
+
+        var published = this._publishedDepthAt(liq, bps);
+        if (published) {
+            if (standingBps != null) published.standing_bps = standingBps;
+            return published;
+        }
+
+        if (this._ladderIsFlat(liq)) {
+            return { bps: bps, shape: 'capacity', value: typeof fig === 'number' ? fig : null };
+        }
+        // Measured at this very limit by the producer — use it as published.
+        if (typeof liq.depth_threshold_bps === 'number' && liq.depth_threshold_bps === bps &&
+            typeof fig === 'number') {
+            return { bps: bps, shape: liq.total_2pct_depth_is_floor ? 'floor' : 'measured', value: fig };
+        }
+        if (!rungs.length) {
+            // No rungs to re-read: keep the producer's figure and label it with
+            // the limit IT was measured at rather than the one we wanted.
+            return typeof fig === 'number'
+                ? { bps: (typeof liq.depth_threshold_bps === 'number' ? liq.depth_threshold_bps : 200),
+                    shape: liq.total_2pct_depth_is_floor ? 'floor' : 'measured', value: fig,
+                    not_at_default: true }
+                : { bps: bps, shape: 'none', value: null };
+        }
+        // ⚠️ SIGNED, NEVER ABSOLUTE. `slippage_bps` is signed: a COST is negative and
+        // a GAIN is positive. My first cut used Math.abs(), which turned sUSDat's
+        // +70.17 bps at $1,000 — you get $1,007.02 back on a $1,000 sale, a 0.70%
+        // PREMIUM — into a 70 bps cost, and the tile would have said "cannot sell
+        // $1,000 inside 0.5%" about the one size that pays you to sell. A rung
+        // clears when its cost is no worse than the limit; there is no upper bound
+        // on how favourable it may be.
+        //
+        // ⚠️⚠️ AND MEASURED RELATIVE TO THE FIRST RUNG, because two ladder
+        // conventions are in play and only one of them is depth. Nine feeds publish
+        // PRICE IMPACT against the venue's own smallest rung (first rung 0.0 by
+        // construction). Eight publish ALL-IN COST against notional, which folds in
+        // the asset's STANDING DISCOUNT — the price of the asset, not the price of
+        // your trade. USG's smallest rung is −54.7 bps and ~49 of that is its peg
+        // discount at fair value 0.99511, so "cannot sell $10,000 inside 0.5%" was
+        // a statement about USG's quote, not its depth; impact-basis the crossing
+        // is near $250K–$500K. Found by PegTracker, who stopped before publishing a
+        // 0.5% block for it rather than publish the conflation.
+        //
+        // Subtracting the first rung is a NO-OP on every impact ladder (0 − 0 = 0)
+        // and strips the standing cost from every all-in one. Verified across all
+        // 17 ladders: only usg's answer changes. ⚠️ Deliberately NOT keyed off the
+        // basis prose — `slippage_reference` is null on 15 of 17, so there is no
+        // structured field, and matching sentence prefixes breaks the first time
+        // someone rewords one.
+        //
+        // ⚠️ What this removes is NOT discarded: `standing_bps` carries it to the
+        // tile as the exit cost at minimum size, so an asset whose smallest probe
+        // already costs real money still says so.
+        // ⚠️ THE REFERENCE RUNG IS NAMED WHERE THE PRODUCER NAMES IT. PegTracker
+        // publishes `slippage_reference_size_usd` at axis level (10,000 on usg,
+        // whose ladder starts at $10k). Positional rungs[0] happens to agree
+        // today; it would not if a producer ever struck impact against something
+        // other than its smallest probe, and then we would be subtracting the
+        // wrong number with nothing to notice it.
+        var refSize = liq.slippage_reference_size_usd;
+        var refRung = null;
+        if (typeof refSize === 'number') {
+            for (var ri = 0; ri < rungs.length; ri++) {
+                if (rungs[ri].size === refSize) { refRung = rungs[ri]; break; }
+            }
+        }
+        var standing = (refRung || rungs[0]).bps;
+        var lastOk = null, firstBad = null;
+        for (var i = 0; i < rungs.length; i++) {
+            var impact = rungs[i].bps - standing;
+            if (impact >= -bps) { lastOk = rungs[i]; }
+            else { firstBad = rungs[i]; break; }
+        }
+        // ⚠️ `below_probe` IS NOW ALL BUT UNREACHABLE and that is correct: impact at
+        // the smallest rung is zero by definition, so nothing can fail at it. The
+        // shape only ever fired because a standing discount was being counted as
+        // depth. Kept as a guard for a zero/negative limit, not as a live branch.
+        if (lastOk === null) return { bps: bps, shape: 'below_probe', value: rungs[0].size,
+                                      worst: rungs[0].bps, standing_bps: standing };
+        if (firstBad === null) return { bps: bps, shape: 'floor', value: lastOk.size,
+                                        deepest: lastOk.bps - standing, standing_bps: standing };
+        return { bps: bps, shape: 'bracket', value: lastOk.size,
+                 bracket: [lastOk.size, firstBad.size], upper_bps: firstBad.bps - standing,
+                 standing_bps: standing };
+    },
+
+    // ⚠️ MATCHED ON `threshold_bps` INSIDE THE BLOCK, NOT ON THE KEY NAME. The
+    // block is called `depth_50bps` today; keying off that string would need a
+    // code edit the day a producer publishes a second one or the default moves.
+    // The block states its own threshold — read that.
+    //
+    // ⚠️ AND `primary_threshold_bps` IS NOT CONSULTED HERE, DELIBERATELY. It is
+    // live on PegTracker's primary block and reads `200`, and on the obvious
+    // interpretation it would send all 17 of their assets back to a 2% headline.
+    // It means "this is the producer's OWN headline block", which is true — their
+    // 2pct keys have always been the 200 search. Which question to ASK is the
+    // consumer's policy (spec, Axis 3), and the answer is 50. Confirmed with the
+    // producer 2026-10-01 rather than assumed.
+    _publishedDepthAt(liq, bps) {
+        if (!liq || typeof liq !== 'object') return null;
+        var keys = Object.keys(liq).filter(function(k) { return /^depth_\d+bps$/.test(k); });
+        for (var i = 0; i < keys.length; i++) {
+            var b = liq[keys[i]];
+            if (!b || typeof b !== 'object') continue;
+            if (b.threshold_bps !== bps) continue;
+            if (typeof b.depth_usd !== 'number') continue;
+            var shape;
+            if (b.status === 'not_size_responsive' || b.size_responsive === false) shape = 'capacity';
+            else if (b.status === 'below_smallest_probe') shape = 'below_probe';
+            else if (b.status === 'bracketed') {
+                // ⚠️ A BRACKET WITHOUT A USABLE RANGE FALLS BACK, it does not
+                // degrade to a point figure. Printing `depth_usd` alone there
+                // would assert a precision the producer explicitly declined —
+                // the status says they located a RANGE. Caught by a fixture, not
+                // by live data.
+                if (!Array.isArray(b.bracket) || typeof b.bracket[0] !== 'number' ||
+                    typeof b.bracket[1] !== 'number') return null;
+                shape = 'bracket';
+            }
+            else if (b.is_floor === true || b.status === 'ladder_exhausted') shape = 'floor';
+            else shape = 'measured';
+            return {
+                bps: bps, shape: shape, value: b.depth_usd,
+                bracket: shape === 'bracket' ? b.bracket : undefined,
+                // The producer's own sentence, used in place of the derived one.
+                published_basis: (typeof b.basis === 'string' && b.basis.trim()) ? b.basis.trim() : null,
+                from_producer: true
+            };
+        }
+        return null;
+    },
+
+    // ⚠️ FLATNESS IS JUDGED ON THE NON-REFERENCE RUNGS. Impact is struck against
+    // the smallest rung, so that one is ~0 by construction — counting it is why
+    // the producer's own size-responsiveness flag flips on the sign of sub-bp
+    // jitter (sUSDS oscillated every ~12h, 2026-09-29 to 10-01, taking the
+    // threshold label and the authored-vs-band decision with it).
+    _ladderIsFlat(liq) {
+        var rungs = this._ladderRungs(liq);
+        if (rungs.length >= 3) {
+            var distinct = {};
+            for (var i = 1; i < rungs.length; i++) { distinct[Math.round(rungs[i].bps * 1e4)] = 1; }
+            if (Object.keys(distinct).length <= 1) return true;
+        }
+        return liq.two_pct_depth_size_responsive === false ||
+               liq.two_pct_depth_status === 'not_size_responsive';
+    },
+
+    // Per-asset override from the registry — the escape hatch for an asset the
+    // default does not fit. Empty today; a volatile asset would be the first.
+    ASSET_DEPTH_OVERRIDES: {},
+    assetDepthOverrideBps(data) {
+        var slug = (data && (data.view_slug || data.asset_slug)) || null;
+        if (!slug) return null;
+        var v = this.ASSET_DEPTH_OVERRIDES[slug];
+        if (v == null) v = this.ASSET_DEPTH_OVERRIDES[String(slug).replace(/_/g, '-')];
+        return typeof v === 'number' ? v : null;
+    },
+
+    _depthValueHtml(data) {
+        var d = this.depthAtLimit(data);
+        if (d.value == null) {
+            var ec = (data.liquidity || {}).exit_capacity;
+            if (this._ladderIsFlat(data.liquidity || {}) && ec &&
+                typeof ec.capacity_usd === 'number' && isFinite(ec.capacity_usd)) {
+                return '<span title="Counter-asset inventory bound; remaining trading limits and execution are not established">' +
+                    this.formatCurrency(ec.capacity_usd) + '</span>';
+            }
+            return 'n/a';
+        }
+        var money = this.formatCurrency(d.value);
+        if (d.shape === 'bracket') {
+            return money + '<span class="text-sm font-normal text-slate-500"> \u2013 ' +
+                this.formatCurrency(d.bracket[1]) + '</span>';
+        }
+        if (d.shape === 'below_probe') {
+            return '<span class="text-red-600">under ' + money + '</span>';
+        }
+        if (d.shape === 'floor') return '\u2265' + money;
+        // capacity and measured print the figure plainly: a capacity limit has no
+        // crossing to be a floor OF, and a measured crossing is exact.
+        return money;
+    },
+
+    // Sorted [{size, bps}] from the exit-mark ladder; rungs with no slippage are
+    // dropped rather than treated as zero.
+    _ladderRungs(liq) {
+        var q = (liq && liq.exit_mark && liq.exit_mark.quotes) || null;
+        if (!q || typeof q !== 'object') return [];
+        var out = [];
+        Object.keys(q).forEach(function(k) {
+            var size = parseFloat(k), bps = q[k] && q[k].slippage_bps;
+            if (isFinite(size) && typeof bps === 'number') out.push({ size: size, bps: bps });
+        });
+        return out.sort(function(a, b) { return a.size - b.size; });
+    },
+
+    // One line of evidence under the figure, so a reader can check the shape
+    // rather than take it. ⚠️ The bracket's width is the ladder's RESOLUTION and
+    // says so — printing a range without that invites it to be read as a
+    // measurement of uncertainty in the venue rather than in our probing.
+    _depthHeadlineNote(data) {
+        var d = this.depthAtLimit(data);
+        // ⚠️ Their sentence, not mine, where they wrote one — it names the rungs
+        // and their costs ("BRACKETED between $250,000 (clears) and $400,000
+        // (1,051bps)"), which is strictly more than a derived shape can say.
+        if (d.published_basis) return d.published_basis;
+        var pct = (Math.round(d.bps) / 100) + '%';
+        if (d.shape === 'capacity') {
+            // The producer's own reason where it gives one — a fixed rate and an
+            // inventory ceiling are different findings and it knows which.
+            var liq = (data && data.liquidity) || {};
+            if (typeof liq.two_pct_depth_unresponsive_note === 'string' &&
+                liq.two_pct_depth_unresponsive_note.trim()) {
+                return liq.two_pct_depth_unresponsive_note.trim();
+            }
+            // ⚠️ NO MECHANISM IS ASSERTED WITHOUT EVIDENCE. The fallback used to say
+            // "returns the same cost at every size", which is true of sUSDS/USDS and
+            // FALSE of hastra-prime, whose rungs run -2.2 to -11.5 before hitting an
+            // inventory ceiling. Where the producer gives no reason, say only what is
+            // common to both and leave the reason to its own basis string.
+            var flatData = this._ladderRungs(liq).length >= 3 &&
+                Object.keys(this._ladderRungs(liq).slice(1).reduce(function(acc, r) {
+                    acc[Math.round(r.bps * 1e4)] = 1; return acc; }, {})).length <= 1;
+            return flatData
+                ? 'the quote path returns the same cost at every size, so no crossing exists ' +
+                  'to name \u2014 this is capacity, not depth'
+                : 'the producer reports this figure as a capacity limit rather than a price ' +
+                  'crossing \u2014 see its basis for which limit binds';
+        }
+        if (d.shape === 'below_probe') {
+            return 'the SMALLEST size quoted (' + this.formatCurrency(d.value) + ') already costs ' +
+                Math.abs(d.worst).toFixed(1) + ' bps, past ' + pct + ' \u2014 the crossing is below ' +
+                'anything probed';
+        }
+        if (d.shape === 'bracket') {
+            return pct + ' crossing falls between two rungs \u2014 the width is the ladder\u2019s ' +
+                'resolution, not a measurement';
+        }
+        if (d.shape === 'floor' && d.deepest != null) {
+            return 'every quoted rung clears inside ' + d.bps + ' bps \u2014 deepest ' +
+                this.formatCurrency(d.value) + ' at ' + d.deepest.toFixed(1) + ' bps, so the ' +
+                'crossing is above where probing stopped';
+        }
+        if (d.not_at_default) {
+            return 'no ladder to re-read, so this is the producer\u2019s own figure at ' + pct;
+        }
+        return '';
+    },
+
+    // ⚠️ TAKES `data`, NOT `liq` — the per-asset override is keyed by slug and a
+    // liquidity block does not carry one. All three call sites had `data` in
+    // scope already.
+    _depthLabel(data) {
+        var d = this.depthAtLimit(data);
+        if (d.shape === 'capacity') return 'exit capacity';
+        var bps = d.bps;
+        var pct = bps / 100;
+        // 0.5 not 0.50, 2 not 2.0 — trailing zeros on a label read as precision.
+        return (Math.round(pct * 100) / 100) + '% depth';
+    },
+
+    // --- summary band (replaces the legacy 5 CR cards in 5-axis mode) ---
+    renderAxisBand(data, history) {
+        var container = document.getElementById('summary-cards');
+        if (!container) return;
+        var peg = data.peg || {}, liq = data.liquidity || {}, dep = data.dependencies || {};
+        var issuer = data.issuer || {};
+
+        var pegPct = peg.premium_discount_pct;
+        var pegCls = this.pegPctClass(this.pegStatusClass(pegPct));
+        var pegArrow = this._pegTrendArrow(data, history);
+
+        var nUp = Array.isArray(dep.upstream) ? dep.upstream.length : 0;
+        // Downstream is a reserved stub until a consumer analyzer exists; an
+        // absent/false `downstream_tracked` flag means "not tracked", NOT "0".
+        var downTracked = dep.downstream_tracked === true;
+        var nDown = Array.isArray(dep.downstream) ? dep.downstream.length : 0;
+        var depDownHtml = downTracked
+            ? nDown + ' <span class="text-sm font-normal text-slate-400">down</span>'
+            : '<span class="text-base font-normal text-slate-400">downstream not tracked</span>';
+
+        // Liquidity metric: credit vaults (e.g. Maple Syrup) expose free-liquidity % (instant-exit
+        // capacity, rest queues at NAV) rather than a DEX 2% depth — show whichever the asset emits.
+        var liqIsFree = liq.free_liquidity_pct != null;
+        // ⚠️ The qualifier has to live on the TILE, not only in the panel.
+        // usde, usdat and usdai are served by bespoke renderers that replace the
+        // liquidity panel, so a floor/bracket note placed there never reaches
+        // them — and usde is the exact asset whose $5M turned out to be past its
+        // own crossing. The band is generic, so this is the one place every
+        // asset passes through.
+        var dStatus = liq.two_pct_depth_status;
+        // ⚠️ not_size_responsive must NOT render like a floor, even though the
+        // producer sets is_floor alongside it. A floor says "at least this much"
+        // and is a real bound. USDS's $50M says only that the call returns the
+        // same answer at any number — every rung from $1M to $50M came back
+        // identical 0.00bps, because it routes the Sky PSM, a fixed-rate swap
+        // bounded by pocket balance rather than slippage.
+        //
+        // Render them the same and the WORST-MEASURED asset on the page becomes
+        // the deepest: "≥$50.0M" would put USDS above crvUSD's genuinely
+        // bracketed $25M.
+        var dUnresponsive = dStatus === 'not_size_responsive' ||
+                            liq.two_pct_depth_size_responsive === false;
+        // ⚠️ THE LABEL MOVES WITH THE VALUE — and under `supply_capped` the value
+        // stops being a 2% depth. See the sub-line below: the prefix is REPLACED,
+        // not extended, which is the rule the `exitAsValue` case already follows.
+        var dSupplyCapped = dStatus === 'supply_capped';
+        var dFloor = !dUnresponsive &&
+                     (liq.total_2pct_depth_is_floor === true ||
+                      dStatus === 'ladder_exhausted' || dStatus === 'quote_failed');
+        var depthTxt = liqIsFree
+            ? (liq.free_liquidity_pct.toFixed(1) + '% free')
+            : ((liq.total_2pct_depth != null)
+                ? (dFloor ? '\u2265' : '') + this.formatCurrency(liq.total_2pct_depth)
+                : this._exitCapacityHtml(liq));
+        // Standalone ladders can supply a bracket without the legacy scalar.
+        // Keep the tile consistent with the depth reader used by the axis body.
+        if (!liqIsFree && this.depthAtLimit(data).value != null) {
+            depthTxt = this._depthValueHtml(data);
+        }
+        var dWord = '';
+        // ⚠️ The label moves with the value — same rule the backing tile needed.
+        // A capped periodic window shown under "2% depth" would read as depth.
+        var exitAsValue = !liqIsFree && liq.total_2pct_depth == null && liq.primary_exit &&
+            typeof liq.primary_exit.capacity_pct_of_tranche === 'number';
+        if (!liqIsFree && liq.total_2pct_depth != null) {
+            if (dUnresponsive) dWord = ' \u2014 quote does not vary with size';
+            else if (dStatus === 'bracketed') dWord = ' (bracketed)';
+            else if (dStatus === 'quote_failed') dWord = ' (floor \u2014 route failed)';
+            else if (dFloor) dWord = ' (floor)';
+        }
+        // ⚠️ The liquidity score is one leg of two. The axis is "exit", and exit
+        // has a venue leg and a redemption leg — but the rating is computed from
+        // depth alone, so the number is narrower than the label.
+        //
+        // Refusing to rate would unrate 17 of 19 assets: only usdm and susds
+        // carry a measured gate. An honest page nobody can use is not better
+        // than a bounded number, so the scope is STATED rather than the rating
+        // withdrawn.
+        //
+        // ⚠️ And the three states must render differently, which is the whole
+        // point. If "redemption unprobed" looked the same on an asset that
+        // DECLARES gated_basis: "unmeasured" and on one that says nothing, then
+        // declaring a gap would cost the discloser exactly as much as hiding it
+        // — the incentive this is meant to fix, rebuilt inside the fix. Four
+        // assets scored with no exit leg represented at all while two declared
+        // theirs; the honest feeds must not read worse than the silent ones.
+        var exitScope = this._exitScopeHtml(liq);
+        var liqSub = liqIsFree
+            ? 'redemption · free at NAV, rest queues'
+            // ⚠️ REPLACE the "2% depth" prefix, never extend it. The first cut
+            // appended to it and produced "2% depth of tranche per quarter" — a
+            // periodic redemption cap described as venue depth, which is the exact
+            // mislabel the value fallback exists to prevent, reintroduced in the
+            // sub-line of the same tile.
+            : (exitAsValue
+                ? 'of tranche per ' +
+                  this._escapeAttr(String(liq.primary_exit.cadence || 'period').replace(/ly$/, '')) +
+                  ' — primary exit, capped · venue depth not measured'
+                // ⚠️ Same replacement, second case. A `supply_capped` figure under
+                // a "2% depth" label is the reUSDe mislabel in the other direction:
+                // there the value was a redemption cap, here it is the float that
+                // can reach the market, and NEITHER is a crossing. The tooltip
+                // carries the producer's own basis; `_depthQualifierHtml` renders
+                // the crossing that does sit above it.
+                : (dSupplyCapped
+                    ? '<span class="text-amber-700" title="' +
+                          this._escapeAttr(String(liq.two_pct_depth_basis || '')) +
+                      '">float that can reach the market — not a 2% depth</span> · ' +
+                      this._volumeSubHtml(liq) + exitScope
+                    : this._depthLabel(data) + dWord + ' · ' + this._volumeSubHtml(liq) + exitScope));
+        // Say WHY it is unrated, or an honest blank reads as a missing feed.
+        if (this._depthContradictedByLadder(data)) {
+            liqSub = '<span class="text-amber-700">depth exceeds the 2% crossing in its own ladder</span>';
+        } else if (dUnresponsive) {
+            liqSub = '<span class="text-amber-700">quote returns the same answer at every size</span>';
+        }
+
+        var cards = [
+            {
+                label: 'Peg',
+                valueHtml: '<span class="' + pegCls + '">' + this.pegPctText(pegPct, 2) + ' ' + pegArrow + '</span>',
+                sub: 'premium / discount',
+                chip: this._pegCurrentChipHtml(data) + this._pegBandChipHtml(data, history)
+            },
+            {
+                label: 'Backing',
+                valueHtml: this._backingValueHtml(data),
+                sub: this._backingSubText(data),
+                chip: (function(self) {
+                    var b = data.backing || {};
+                    // ⚠️ The SHARED gate — see _backingAuthoredDeclared. This used to
+                    // carry its own copy with an extra `collateral_ratio == null`, which
+                    // is how an authored 5.5 came to render as a computed "Watch · 6/10".
+                    var authored = self._backingAuthoredDeclared(b);
+                    // ⚠️ Say it is authored. A fallback rendered identically to a
+                    // computed band would let a judgement pass as a measurement,
+                    // which is the very thing the producer's rule guards against.
+                    if (authored) {
+                        // ⚠️ _mdPlain BEFORE _escapeAttr. A title="" renders as plain text, so
+                        // producer markdown shows its asterisks here; the file's own rule is
+                        // "tooltips get the markers STRIPPED, not converted" — converting would
+                        // show the <strong> TAG, which is worse than the asterisk it replaced.
+                        return '<span class="axis-rating r-warn" title="' + self._escapeAttr(
+                                   self._mdPlain(String(b.backing_score_basis || ''))) + '">Authored ' +
+                               b.backing_score + '/10</span>';
+                    }
+                    var bBand = self.backingRating(data);
+                    return self._ratingChipHtml(bBand, self.backingUnratedReason(data),
+                        self._authoredTooltipNote(bBand, self._authoredAxisScore(b, ["backing_score"]))) +
+                        self._divergenceChipHtml(bBand, self._authoredAxisScore(b, ['backing_score']));
+                })(this)
+            },
+            {
+                label: 'Liquidity & Exit',
+                valueHtml: depthTxt,
+                sub: liqSub,
+                chip: this._liquidityChipHtml(data)
+            },
+            {
+                label: 'Dependencies',
+                valueHtml: nUp + ' <span class="text-sm font-normal text-slate-400">up</span> · ' + depDownHtml,
+                sub: 'upstream / downstream',
+                chip: '<a href="#section-dependencies" class="axis-rating r-na">View links →</a>'
+            },
+            {
+                // ⚠️ Unrated by design, and the card says why rather than showing a
+                // bare dash. contract_score does not exist for any asset; see the
+                // axis-5 comment in renderAxisSections.
+                // ⚠️ "Contract & Admin", matching the section head — NOT "Contract".
+                // The axis is TWO halves from two producers: security_analyst's
+                // authority walk (who can act, keys, delays, upgrade & pause) and
+                // riskAnalyst's code half (audits, architecture) plus the score.
+                // A card reading "Contract" invites a reader to take it as
+                // smart-contract risk only, and on most assets here the ADMIN half
+                // is the one carrying the finding — susdai's code is not the issue,
+                // PAUSE_ADMIN and STRATEGY_ADMIN acting with no delay on a $463M
+                // vault is. Same length as 'Liquidity & Exit', so no layout risk.
+                label: 'Smart Contract & Admin',
+                // ⚠️ The per-layer detail moves into the tooltip rather than the
+                // face: the face carries ONE measurement, the tooltip carries
+                // what it is a minimum over — including that a delayed layer with
+                // timelock_floor: none is itself reducible, so even the non-zero
+                // delays are not guaranteed.
+                valueHtml: '<span title="' + this._escapeAttr(this._delayTooltip(data)) + '">' +
+                           this._contractValueHtml(data) + '</span>',
+                // The actionable-path count belongs in the full axis header and
+                // table, where each inactive layer and active path is explained.
+                // Repeating it in this compact tile made the headline read like
+                // a second chip. Legacy walks keep their delay-basis subtitle.
+                sub: ((data.contract || {}).authority_summary || {}).schema === 'actionable-path/1'
+                    ? '' : this._contractSubText(data),
+                chip: (typeof (data.contract || {}).structural_score === 'number'
+                    ? '<span class="axis-rating r-warn" title="' + this._escapeAttr(
+                          this._mdPlain(String((data.contract || {}).structural_score_basis || ''))) + '">Structural ' +
+                      data.contract.structural_score + '/10</span>'
+                    : '<span class="axis-rating r-na" title="No contract_score exists for any asset in the risk feed. The material is rendered in the axis below; the score is not yet authored.">Not scored yet</span>') +
+                    this._contractActionChipHtml(data)
+            },
+            {
+                label: this._escapeAttr(this._issuerAxisInfo(issuer).label),
+                valueHtml: this._issuerBadgeHtml(issuer),
+                sub: 'editorial · subjective',
+                // ⚠️ This slot was EMPTY whenever the report was not linkable,
+                // and it is the only card in the band that can be. Four cards
+                // carry a chip and the fifth carries nothing, which reads as a
+                // failed render rather than as an absent report — the same
+                // "correct-looking blank" that has cost the most today.
+                //
+                // The producer already says why: report_url_status is
+                // "unavailable" when a report exists but is not published yet
+                // (yzUSD/syzUSD are staged on tidresearch and 404), and
+                // "unverified" when it could not be checked. Say which, rather
+                // than leaving a gap the reader has to interpret.
+                chip: this._reportUrlUsable(issuer)
+                    ? '<a href="' + issuer.report_url + '" target="_blank" rel="noopener noreferrer" class="axis-rating r-na">' +
+                        this._reportLinkLabel(issuer, false) + '</a>'
+                    : this._reportChipHtml(issuer)
+            }
+        ];
+
+        // ⚠️ SAY THAT THESE ARE LIVE, ONCE, WHERE THE SCORES ARE.
+        //
+        // Axes 1-3 are recomputed every refresh from the feed; 5 and 6 are authored
+        // judgements. A reader seeing "Peg 10/10" beside a report saying 6.0 had no way
+        // to know the first is a 7-day performance reading and the second a mechanism
+        // score — the two look like a contradiction and the page never said they answer
+        // different questions.
+        //
+        // ⚠️ Says they MAY differ, never which is right. Neither is: they measure
+        // different things, and picking a winner here would be this renderer adjudicating
+        // between two producers on a question neither asked it.
+        // ⚠️ `col-span-full` IS LOAD-BEARING, not styling. #summary-cards is a
+        // 6-column grid, so appending this note made it a grid ITEM and it rendered
+        // as a chip-shaped block one cell wide on the left. Spanning the row is what
+        // makes it read as prose.
+        //
+        // ⚠️ The report link renders ONLY where one exists. The registry and the
+        // feed have DIFFERENT gaps — usg/usdm are absent from the registry but
+        // present in the feed, strc/mstr the reverse — and app.js backfills
+        // registry -> feed before this runs, so the union is 19 of 25. The other six
+        // (ousd, usdd, bmnr, cusd, yzusd, syzusd) get the note with no link rather
+        // than a dangling arrow to nothing.
+        var _reportUrl = (data && data.issuer && data.issuer.report_url) || null;
+        var liveNote = '<div class="axis-band-note col-span-full text-sm text-slate-500 mt-3 leading-relaxed">' +
+            '<strong>Live:</strong> Peg, Backing and Liquidity. ' +
+            '<strong>Authored:</strong> Smart Contract &amp; Admin and Issuer. ' +
+            'They measure different things.' +
+            (_reportUrl
+                ? ' <a href="' + this._escapeAttr(_reportUrl) + '" target="_blank" ' +
+                  'rel="noopener noreferrer" class="text-blue-600 hover:underline whitespace-nowrap">' +
+                  'Read the full risk report for the authored scores \u2192</a>'
+                : '') +
+        '</div>';
+        container.innerHTML = cards.map(function(c) {
+            return '<div class="summary-card">' +
+                '<div class="card-label">' + c.label + '</div>' +
+                '<div class="card-value">' + c.valueHtml + '</div>' +
+                (c.sub ? '<div class="text-xs text-slate-400 mt-1">' + c.sub + '</div>' : '') +
+                (c.chip ? '<div class="mt-2">' + c.chip + '</div>' : '') +
+            '</div>';
+        }).join('') + liveNote;
+        container.style.display = '';
+    },
+
+    // ⚠️ DO NOT DROP THIS FIELD TO MAKE THE BACKING AXIS LOOK FRESHER. Read this
+    // before any freshness sweep touches it.
+    //
+    // The axis clock takes the OLDEST declared input, so attachment_point_as_of
+    // drags axis 2 to "6d old" while the reserve figures beside it are minutes
+    // old. That reading is CORRECT — an axis is only as fresh as its stalest
+    // component — but it creates a perverse incentive that riskAnalyst named:
+    // supplying a valuable older fact makes the axis look WORSE, and the
+    // cheapest way to turn the clock green is to delete the attachment point.
+    //
+    // ⚠️ That would remove the single most important thing on this axis in order
+    // to improve a number describing it, and it would look like tidying. An
+    // output must not be allowed to remove its own input. The right fixes are a
+    // per-field freshness display, or re-measuring more often — the producer has
+    // taken the second (11.0% -> 9.7% -> 9.66% over twelve days; it is not
+    // static). Neither is "publish less."
+    //
+    // ⚠️ SUPPLY IS SCOPED AND THE SCOPE IS CONTESTED. This is the ETHEREUM
+    // supply. The feed's own header says "Ethereum primary; also Arbitrum, Base,
+    // Avalanche", while security_analyst measured code size 0 at the same address
+    // on all three — bounded to the same-address case, since a deployment at a
+    // different address was never searched. So neither "one chain" nor "four
+    // chains" is established, and this label says what was MEASURED (Ethereum)
+    // rather than resolving a question nobody has answered.
+    //
+    // ⚠️ Claim value is supply x issuer-set NAV. It is what holders are TOLD they
+    // hold, not what is held for them — and on this asset the NAV in that product
+    // is issuer-written (see the NAV write path on axis 1). Labelled as claim,
+    // never as backing.
+    _renderClaimSize(data) {
+        var b = (data && data.backing) || {};
+        var head = document.getElementById('axis-backing-head');
+        if (!head) return;
+        var supply = typeof b.ethereum_supply === 'number' ? b.ethereum_supply : null;
+        var claim = typeof b.nav_claim_value === 'number' ? b.nav_claim_value : null;
+        if (supply == null && claim == null) return;
+
+        var parts = [];
+        if (supply != null) {
+            parts.push('<span class="cs-item"><span class="cs-key">Supply</span>' +
+                '<span class="cs-val">' + (supply / 1e6).toFixed(1) + 'M</span>' +
+                '<span class="cs-scope">Ethereum \u2014 the only chain measured</span></span>');
+        }
+        if (claim != null) {
+            parts.push('<span class="cs-item"><span class="cs-key">Claim value</span>' +
+                '<span class="cs-val">$' + (claim / 1e6).toFixed(1) + 'M</span>' +
+                '<span class="cs-scope">supply \u00d7 issuer-set NAV \u2014 not backing</span></span>');
+        }
+        var el = document.createElement('div');
+        el.className = 'claim-size';
+        el.innerHTML = parts.join('') +
+            (b.nav_claim_value_basis
+                ? '<div class="cs-basis">' + this._escapeAttr(b.nav_claim_value_basis) + '</div>' : '') +
+            (b.total_backing_basis
+                ? '<div class="cs-basis"><span class="cs-key">No total backing:</span> ' +
+                  this._escapeAttr(b.total_backing_basis) + '</div>' : '');
+        head.appendChild(el);
+    },
+
+    // ⚠️ THE HAZARD IS A DIVISION THE READER PERFORMS, NOT A FIGURE WE OMIT.
+    // This page already shows nav_claim_value ($220.8M for reUSD). Put a reserves
+    // total beside it and a reader divides the two and reads a coverage ratio —
+    // but the numerator is PROTOCOL-WIDE (reUSD *and* reUSDe) while the
+    // denominator is reUSD alone. Two different scopes, so the quotient means
+    // nothing, and it means nothing in the alarming direction.
+    //
+    // The producer says this outright — scope: "not attributable to reUSD alone",
+    // integrity.note: "it is not used to claim reUSD coverage" — so the warning
+    // is the feed's own position, rendered rather than left in the payload. The
+    // scope line is the SUBTITLE of the figure, not a footnote under the table:
+    // a qualifier that arrives after the number has been read is too late.
+    //
+    // ⚠️ It is also why no ratio is computed here even though both operands are
+    // on the page. The dashboard declining to divide is the whole point.
+    _renderIssuerReportedReserves(data) {
+        var b = (data && data.backing) || {};
+        var pt = b.protocol_reserves_passthrough;
+        if (!pt || typeof pt !== 'object' || typeof pt.total_usd !== 'number') return;
+        var head = document.getElementById('axis-backing-head');
+        if (!head) return;
+
+        var rows = Array.isArray(pt.breakdown) ? pt.breakdown : [];
+        var self = this;
+        var body = rows.map(function(r) {
+            var pct = typeof r.pct === 'number' ? r.pct : null;
+            // ⚠️ Flag the concentration rather than leaving it as one row among
+            // six. sUSDe at 93.87% is not a line item, it is the asset's largest
+            // single dependency, and a reader scanning a table does not rank it.
+            var dominant = pct != null && pct >= 50;
+            return '<tr' + (dominant ? ' class="irr-dominant"' : '') + '>' +
+                '<td>' + self._escapeAttr(r.name || '—') + (dominant ? ' \u26a0\ufe0f' : '') + '</td>' +
+                '<td class="irr-num">' + (typeof r.value_usd === 'number'
+                    ? '$' + Math.round(r.value_usd).toLocaleString('en-US') : '—') + '</td>' +
+                '<td class="irr-num">' + (pct != null ? pct.toFixed(2) + '%' : '—') + '</td>' +
+                '<td class="irr-num">' + (r.chains != null ? r.chains : '—') + '</td>' +
+            '</tr>';
+        }).join('');
+
+        var el = document.createElement('div');
+        el.className = 'issuer-reserves';
+        el.innerHTML =
+            '<div class="irr-head">Program TVL \u2014 protocol-wide</div>' +
+            '<div class="irr-total">$' + (pt.total_usd / 1e6).toFixed(1) + 'M</div>' +
+            '<div class="irr-scope">\u26a0\ufe0f ' +
+                this._escapeAttr(pt.scope || 'Scope not declared by the producer.') +
+                ' <strong>This is not a coverage figure.</strong> Dividing it by reUSD\u2019s supply ' +
+                'or claim value compares a two-asset numerator with a one-asset denominator, so the ' +
+                'result is meaningless \u2014 and misleadingly low.' +
+            '</div>' +
+            (rows.length
+                ? '<div class="irr-tablewrap"><table class="irr-table">' +
+                  '<thead><tr><th>Asset</th><th class="irr-num">Value</th>' +
+                  '<th class="irr-num">Share</th><th class="irr-num">Chains</th></tr></thead>' +
+                  '<tbody>' + body + '</tbody></table></div>'
+                : '') +
+            '<details class="irr-note"><summary>TVL source and classification</summary>' +
+                (pt.source ? 'Source: ' + this._escapeAttr(String(pt.source)) + '. ' : '') +
+                (pt.as_of ? 'Observation: ' + this._escapeAttr(pt.as_of) + '. ' : '') +
+                (pt.basis ? this._escapeAttr(pt.basis) + ' ' : '') +
+                (pt.retrieved_at && !pt.as_of
+                    ? '\u26a0\ufe0f Retrieved ' + this._escapeAttr(pt.retrieved_at) +
+                      ' \u2014 that is when the page was FETCHED, not when the issuer computed these ' +
+                      'figures. No source timestamp is published, so their true age is unknown.'
+                    : '') +
+            '</details>' +
+            (b.integrity && b.integrity.note
+                ? '<div class="irr-note"><span class="irr-key">Integrity' +
+                  (b.integrity.status ? ' (' + this._escapeAttr(String(b.integrity.status)) + ')' : '') +
+                  ':</span> ' + this._escapeAttr(b.integrity.note) + '</div>'
+                : '');
+        head.appendChild(el);
+    },
+
+    // Data-gated: no-op for the 25 assets that publish no attachment point.
+    _renderAttachmentPoint(data) {
+        var b = data.backing || {};
+        var pct = b.attachment_point_pct;
+        if (typeof pct !== 'number' || !isFinite(pct)) return;
+        var head = document.getElementById('axis-backing-head');
+        if (!head) return;
+
+        // ⚠️ A WITHDRAWN METRIC IS NOT A STALE ONE, AND THE SCHEMA COULD NOT SAY SO.
+        //
+        // reUSD-RE's attachment point rendered for three weeks after riskAnalyst
+        // retired it, and NOTHING IN THE PAYLOAD WAS FALSE: `attachment_point_as_of`
+        // was right, `attachment_point_status` said `report_derived_not_onchain`
+        // which was right, and the source said "riskAnalyst report passthrough"
+        // which was right. `as_of` can express staleness and `*_status` could
+        // express derivation; neither could express THE PRODUCER WITHDREW THIS.
+        // A change the consumer needed had no channel, so a correct passthrough
+        // kept serving a retired ratio and no field anywhere was wrong.
+        //
+        // ⚠️ IT WAS THE OVERLAY'S READING THAT RENDERED, NOT THE FEED'S. The base
+        // feed carried 9.66% (as_of 2026-08-24) and `backing-overlay/1` merges with
+        // NO `max_age_days` — that gate is declared on `liquidity/1` alone — so a
+        // month-old overlay overrode the hourly feed with 7.94% unconditionally.
+        // The first report of this said the stale 9.66 was showing and implied the
+        // 7.94 was acceptable; both readings are retired and serving EITHER was the
+        // defect. Fixing the file named in that report would have fixed nothing.
+        //
+        // ⚠️ AND THE OVERRIDING FILE CARRIED THE CASE FOR BELIEVING IT: below_norm
+        // against a 10.0 norm (so warn styling), a clean three-point declining
+        // series, `basis_independent: true`, and a vintage note reading "RESOLVED
+        // 2026-09-06, AND IT RESOLVED ADVERSELY". Maximum confidence on a quantity
+        // the producer says is not computable. That is why this branch strips the
+        // warn class FIRST: the breach was a true statement about the 7.94 reading,
+        // not a current condition, and amber is the part a reader acts on.
+        //
+        // ⚠️ DELETING THE FIELDS WAS THE OTHER OPTION AND IS WORSE. One asset
+        // publishes this metric at all, so blanking makes the panel a no-op and a
+        // reader who saw 9.66% last month learns nothing about why it vanished —
+        // when a cushion going from 9.66% to NOT COMPUTABLE is itself the finding.
+        // So the history is retained and explicitly marked history.
+        //
+        // ⚠️ WHICH FIELDS ARE HISTORICAL IS THE PRODUCER'S LIST, NOT OURS.
+        // `attachment_point_fields_are_historical` names them; re-deriving that
+        // set here would disagree the first time they retire a different subset.
+        if (b.attachment_point_status === 'withdrawn_by_producer') {
+            this._renderAttachmentPointWithdrawn(head, b, pct);
+            return;
+        }
+
+        var norm = typeof b.attachment_point_norm_pct === 'number' ? b.attachment_point_norm_pct : null;
+        // ⚠️ Trust the producer's own verdict over re-deriving it from the two
+        // numbers. `below_norm` is the analyst's call; a renderer recomputing
+        // pct < norm would silently disagree the first time a norm is expressed
+        // as a band or the comparison is not a bare less-than.
+        var below = b.attachment_point_below_norm === true;
+
+        var el = document.createElement('div');
+        el.className = 'attachment-point' + (below ? ' attachment-point-warn' : '');
+        var bits = [];
+        bits.push('<span class="ap-label">First-loss attachment point</span>' +
+                  '<span class="ap-value">' + pct.toFixed(2) + '%</span>' +
+                  (norm != null
+                      ? '<span class="ap-norm">' + (below ? '\u26a0\ufe0f below' : 'vs') +
+                        ' the ' + norm + '% norm</span>'
+                      : ''));
+        if (b.attachment_point_basis) {
+            bits.push('<div class="ap-note"><span class="ap-note-key">Basis:</span> ' +
+                      this._escapeAttr(b.attachment_point_basis) + '</div>');
+        }
+        if (b.attachment_point_direction_note) {
+            bits.push('<div class="ap-note ap-note-direction">' +
+                      this._escapeAttr(b.attachment_point_direction_note) + '</div>');
+        }
+        // ⚠️ THE JUNIOR FIGURE IS NOT THIS RATIO'S DENOMINATOR, AND RENDERING IT
+        // BESIDE THE RATIO IS THE ONE PLACE THAT COULD GO WRONG.
+        //
+        // $73.0M is the BALANCE-SHEET junior — Re's "$77M" product-page quantity,
+        // computed as a /tvl residual. The attachment point divides by the $20.0M
+        // WATERFALL layer. Substitute one for the other and 7.94% becomes ~29%:
+        // the tile reads FOUR TIMES SAFER than it is. The producer wrote that trap
+        // into the field's own basis, so the label here names what the number is
+        // NOT, in the same breath as what it is.
+        //
+        // It earns its place because it is what makes the ratio checkable: the
+        // junior layer moved +0.4% in three weeks against +39.3% senior growth,
+        // so "the cushion thinned because the denominator rose" is measured here
+        // rather than assumed.
+        // ⚠️ THE SERIES NOTE RENDERS BECAUSE ITS EXCLUSION IS THE POINT. It carries
+        // a clean three-point all-chain series with the 2026-08-24 reading
+        // deliberately LEFT OUT and the reason stated — that reading's $207.0M was
+        // an ETHEREUM-LEG denominator, not comparable to the all-chain points
+        // either side of it. A dropped point that says why it was dropped is
+        // evidence; one that vanishes is a gap nobody can audit.
+        if (b.attachment_point_series_note) {
+            bits.push('<div class="ap-note ap-series"><span class="ap-note-key">Series:</span> ' +
+                this._escapeAttr(String(b.attachment_point_series_note)) + '</div>');
+        }
+        if (typeof b.junior_capital_usd === 'number') {
+            bits.push('<div class="ap-note ap-junior">' +
+                '<span class="ap-note-key">Junior capital:</span> $' +
+                (b.junior_capital_usd / 1e6).toFixed(1) + 'M balance-sheet ' +
+                '<span class="ap-junior-warn">\u2014 NOT the $20.0M waterfall layer this ratio ' +
+                'divides by</span>' +
+                (b.junior_capital_basis
+                    ? '<span class="ap-junior-basis" title="' +
+                      this._escapeAttr(String(b.junior_capital_basis)) + '"> \u24d8</span>'
+                    : '') +
+            '</div>');
+        }
+        if (b.attachment_point_as_of) {
+            // Its own clock: the attachment point is measured on a different
+            // cadence from the reserve figures beside it, and is usually older.
+            // ⚠️ "As of", NOT "Measured" — the difference is the whole claim.
+            // tidr's report marks this figure INDICATIVE because it divides a
+            // June 2026 junior-capital figure by a 2026-08-23 on-chain senior
+            // read: a two-month-old numerator over a current denominator. The
+            // producer's field is named `attachment_point_as_of` and says
+            // nothing about measurement; "Measured" was the renderer asserting
+            // a vintage the data does not claim.
+            bits.push('<div class="ap-note ap-note-asof">As of ' +
+                      this._escapeAttr(b.attachment_point_as_of) +
+                      (b.attachment_point_vintage_note
+                          ? ' \u00b7 ' + this._escapeAttr(b.attachment_point_vintage_note)
+                          : '') + '</div>');
+        }
+        el.innerHTML = bits.join('');
+        head.appendChild(el);
+    },
+
+    // The withdrawn face of the attachment point. NO current value, NO warn
+    // styling, and the retired reading shown as history with its own date.
+    //
+    // ⚠️ `as_of` IS LEFT AT THE DATA'S VINTAGE ON PURPOSE and must not be read as
+    // the withdrawal date. The producer declined to bump it because every operand
+    // is still 2026-09-06 vintage — only the withdrawal is new, and it carries
+    // `attachment_point_withdrawn_at`. Bumping `as_of` would have claimed the
+    // operands were re-measured. So this renders the two dates in different
+    // sentences: what the reading was as of, and when it was withdrawn.
+    _renderAttachmentPointWithdrawn(head, b, pct) {
+        var el = document.createElement('div');
+        el.className = 'attachment-point attachment-point-withdrawn';
+        var bits = [];
+
+        var when = typeof b.attachment_point_withdrawn_at === 'string'
+            ? b.attachment_point_withdrawn_at : null;
+        bits.push('<span class="ap-label">First-loss attachment point</span>' +
+                  '<span class="ap-withdrawn-flag">withdrawn by the producer' +
+                  (when ? ' \u00b7 ' + this._escapeAttr(when) : '') + '</span>');
+
+        // The retired reading, unmistakably past tense. Struck through rather than
+        // removed, because its disappearance is the thing a returning reader needs
+        // explained — see the note on deletion above.
+        bits.push('<div class="ap-note ap-was">' +
+            '<span class="ap-note-key">No longer computable.</span> Last published reading ' +
+            '<s>' + pct.toFixed(2) + '%</s>' +
+            (b.attachment_point_as_of
+                ? ' as of ' + this._escapeAttr(b.attachment_point_as_of)
+                : '') +
+            ' \u2014 retained as the record of what was believed, NOT a current cushion.' +
+            '</div>');
+
+        if (b.attachment_point_withdrawn_reason) {
+            bits.push('<div class="ap-note">Current contractual first-loss capital is unestablished.</div>' +
+                '<details class="ap-note"><summary>Why the attachment ratio was withdrawn</summary>' +
+                '<div class="ap-withdrawn-reason">' +
+                this._escapeAttr(String(b.attachment_point_withdrawn_reason)) + '</div></details>');
+        }
+
+        // ⚠️ The historical notes are rendered UNDER ONE "Historical" heading rather
+        // than in their original places. In the live face `Basis:` and `Series:`
+        // read as supporting the number beside them; here there is no number for
+        // them to support, and leaving them unframed is how a retired series gets
+        // read as a current trend.
+        var histKeys = Array.isArray(b.attachment_point_fields_are_historical)
+            ? b.attachment_point_fields_are_historical : [];
+        var labelled = [
+            ['attachment_point_basis', 'Basis'],
+            ['attachment_point_direction_note', 'Direction'],
+            ['attachment_point_series_note', 'Series'],
+            ['attachment_point_basis_independent_note', 'Basis independence'],
+            ['attachment_point_vintage_note', 'Vintage']
+        ];
+        var hist = [];
+        for (var i = 0; i < labelled.length; i++) {
+            var key = labelled[i][0];
+            // Only what the producer declared historical. A field they kept as
+            // current would be wrong to bury under this heading.
+            if (histKeys.indexOf(key) < 0) continue;
+            var val = b[key];
+            if (typeof val !== 'string' || !val.trim()) continue;
+            hist.push('<div class="ap-note ap-hist-item"><span class="ap-note-key">' +
+                labelled[i][1] + ':</span> ' + this._escapeAttr(val.trim()) + '</div>');
+        }
+        if (hist.length) {
+            bits.push('<details class="ap-hist"><summary>Revision history — withdrawn attachment readings</summary>' +
+                hist.join('') + '</details>');
+        }
+
+        el.innerHTML = bits.join('');
+        head.appendChild(el);
+    },
+
+    // Data-gated: silent for every asset that publishes no write path.
+    _navWritePathHtml(data) {
+        var b = (data && data.backing) || {};
+        var path = typeof b.nav_write_path === 'string' ? b.nav_write_path.trim() : '';
+        if (!path) return '';
+        var basis = typeof b.nav_write_path_basis === 'string' ? b.nav_write_path_basis.trim() : '';
+
+        // ⚠️ RENDER THE LIMIT, NOT ONLY THE CLAIM — the producer asked for this
+        // explicitly and was right to. Their evidence is selector presence in
+        // bytecode, which does NOT distinguish a contract that IMPLEMENTS a
+        // function from one that CALLS it, and no disassembly was done. The
+        // claim as written is stronger than the evidence supports, and a finding
+        // this serious is exactly the one that must carry its own uncertainty:
+        // a reader who later discovers the limit unaided discounts everything
+        // else on the page too.
+        //
+        // The limit is NOT hidden in a tooltip. It is the same size and in the
+        // same block as the claim, because a caveat a touch device cannot reach
+        // is a caveat that does not exist.
+        return '<div class="nav-write-path">' +
+            '<div class="nwp-head">\u26a0\ufe0f NAV write path</div>' +
+            '<div class="nwp-claim">' + this._escapeAttr(path) + '</div>' +
+            (basis
+                ? '<div class="nwp-basis"><span class="nwp-basis-key">Basis &amp; limit:</span> ' +
+                  this._escapeAttr(basis) + '</div>'
+                : '<div class="nwp-basis nwp-basis-none">\u26a0\ufe0f No basis published for this ' +
+                  'claim \u2014 it is asserted here without stated evidence or limits.</div>') +
+            '</div>';
+    },
+
+    _pegTrendArrow(data, history) {
+        // Compare current |deviation| to the 7-day average; ▲ = widening (worse),
+        // ▼ = tightening (better). Muted when no history.
+        var avg = this._pegAvgAbsDev(data, history, 7);
+        var cur = data.peg && data.peg.premium_discount_pct != null ? Math.abs(data.peg.premium_discount_pct) : null;
+        if (avg == null || cur == null) return '';
+        if (cur > avg * 1.05) return '<span class="text-red-500" title="widening vs 7d avg">▲</span>';
+        if (cur < avg * 0.95) return '<span class="text-green-500" title="tightening vs 7d avg">▼</span>';
+        return '<span class="text-slate-400" title="flat vs 7d avg">▶</span>';
+    },
+
+    // ⚠️ collateral_ratio_basis was published by five feeds and read by none.
+    //
+    // A CR is only comparable to another CR on the same basis, and these are not:
+    // apxusd's is netted of POL and inventory, usg's is a debt-weighted mean over
+    // active markets, usdm's backing CR is stable-only while its SUMMARY basis
+    // says in as many words "NOT USDm's own coverage". That warning was sitting
+    // in the payload, invisible, next to the number it warns about.
+    //
+    // Taken from the block the VALUE came from, same discipline as the scale.
+    _backingBasis(data) {
+        var fromBacking = data.backing && data.backing.collateral_ratio != null;
+        var blk = fromBacking ? data.backing : (data.summary || {});
+        if (blk.collateral_ratio_basis) return blk.collateral_ratio_basis;
+        // ⚠️ A DELIBERATELY NULL ratio still has a basis, and it is the most
+        // load-bearing one on the page: thUSD's says "Deliberately null. Total
+        // backing is NOT OBSERVABLE", sUSDai's says "No collateral ratio is
+        // defined for this asset." Keying on the value being non-null dropped
+        // the explanation precisely where there is no number to speak for
+        // itself. A basis describing an absent value is still describing its
+        // own block.
+        var b = data.backing || {};
+        if (!fromBacking && b.collateral_ratio === null && b.collateral_ratio_basis) {
+            return b.collateral_ratio_basis;
+        }
+        return null;
+    },
+
+    // Shared basis panel for the BESPOKE renderers.
+    //
+    // ⚠️ Eight assets showed their ratio basis on hover only, because their
+    // renderers clear axis-backing-head to build their own and the generic basis
+    // line cannot reach them. The strings were doing real work behind that
+    // tooltip — sUSDe "a claim on USDe is worth what USDe is backed by", thUSD
+    // "total backing is NOT OBSERVABLE", syrup "three INDEPENDENT reads".
+    //
+    // Returns a panel so each renderer can place it inside its own §3 rather
+    // than having a line injected into a head it owns.
+    backingBasisPanelHtml(data) {
+        var b = (data && data.backing) || {};
+        var rows = [];
+        function add(label, text) {
+            if (!text) return;
+            rows.push('<div class="text-xs text-slate-600 mt-2" style="line-height:1.5;">' +
+                '<span class="font-semibold">' + label + ':</span> ' +
+                CommonRenderer._escapeAttr(text) + '</div>');
+        }
+        var basis = this._backingBasis(data);
+        add('Ratio basis', basis);
+        // collateral_ratio_note is a SECOND field, not a copy — thUSD publishes
+        // both and they differ. Skip it only when it restates the basis.
+        // ⚠️ Compare case- and punctuation-insensitively. thUSD's two fields open
+        // "Deliberately null. Total backing is NOT OBSERVABLE" and "...is not
+        // observable" — the same sentence in different case, which a literal
+        // comparison treats as two findings and prints twice.
+        var note = b.collateral_ratio_note;
+        function key(x) { return String(x).toLowerCase().replace(/[^a-z0-9]+/g, '').slice(0, 60); }
+        if (note && basis && key(note) === key(basis)) note = null;
+        add('Ratio note', note);
+        add('Surplus basis', this._surplusBasis(data));
+        // ⚠️ "RESIDUAL... Ties by construction and is NOT evidence the off-chain
+        // backing exists" — a figure that looks measured and is not.
+        add('Off-chain backing', b.off_chain_backing_note);
+        if (!rows.length) return '';
+        return '<div class="panel">' +
+            '<div class="panel-title" style="margin-bottom:0.15rem;">What this number is</div>' +
+            rows.join('') +
+        '</div>';
+    },
+
+    // Same block discipline as _backingBasis: the basis describes the value in
+    // ITS OWN block, so take it from wherever surplus_deficit itself came from.
+    _surplusBasis(data) {
+        var b = data.backing || {};
+        var sum = data.summary || {};
+        if (b.surplus_deficit != null) return b.surplus_deficit_basis || null;
+        if (sum.surplus_deficit != null) return sum.surplus_deficit_basis || null;
+        return b.surplus_deficit_basis || sum.surplus_deficit_basis || null;
+    },
+
+    // Format a CR so rounding cannot move it across a rating cutoff.
+    _crDisplay(cr, data) {
+        var cuts = [];
+        var bOv = data.asset_specific && data.asset_specific.axis_thresholds
+                  && data.asset_specific.axis_thresholds.backing;
+        if (bOv && Array.isArray(bOv.cr_pct)) cuts = bOv.cr_pct;
+        else cuts = this._axisThresholds(data).backing.cr_pct || [];
+        for (var dp = 2; dp <= 6; dp++) {
+            var rounded = Number(cr.toFixed(dp));
+            var crossed = cuts.some(function (c) {
+                return (cr < c && rounded >= c) || (cr >= c && rounded < c);
+            });
+            if (!crossed) return this.formatPercent(cr, dp);
+        }
+        return this.formatPercent(cr, 6);
+    },
+
+    // ⚠️ THE OLD TILE ZIPPED TWO VALUES AGAINST N NAMES AND BROKE AT N>2.
+    // It emitted the first delayed layer and the first open one — at most two
+    // tokens — while the caption named EVERY layer. USG rendered "none" over
+    // "asset permission / oracle / governance": one value, three names. The
+    // positional pairing only ever held for a 1-delayed/1-open asset, which was
+    // the only asset emitting when it was written.
+    //
+    // ⚠️ AND "48h / none" WAS AMBIGUOUS IN A WAY THAT MATTERED. It means
+    // "contract-upgrade 48h, asset-permission none", but it also reads as "48h
+    // delay, with no floor" — which is ALSO true of reUSD, since that layer's
+    // timelock_floor really is none. A string with two true readings, one of
+    // which is not what it says, caught riskAnalyst with the layer JSON open in
+    // front of them.
+    //
+    // So the value is a single MEASUREMENT with nothing to zip against: the
+    // shortest warning any admin path gives. Derived by min(), never authored.
+    //
+    // ⚠️ A `none` FIXES THE MINIMUM AT ZERO REGARDLESS OF UNKNOWNS — one
+    // undelayed path is enough, so unresolved layers cannot raise it. With no
+    // `none` but some unresolved, the min is only an UPPER BOUND and renders as
+    // "≤Nh"; with everything unresolved it is not established. An unmeasured
+    // layer must never round down to zero.
+    _delaySummary(data) {
+        var c = data.contract;
+        var layers = (c && Array.isArray(c.layers)) ? c.layers : [];
+        if (!layers.length) return null;
+        function hours(v) {
+            var t = String(v == null ? '' : v).trim().toLowerCase();
+            var m = /^(\d+(?:\.\d+)?)\s*(h|hr|hrs|hour|hours|d|day|days|m|min|mins)$/.exec(t);
+            if (m) {
+                var n = parseFloat(m[1]);
+                if (/^d/.test(m[2])) return n * 24;
+                if (/^m/.test(m[2])) return n / 60;
+                return n;
+            }
+            if (/^\d+$/.test(t)) return parseInt(t, 10) / 3600;  // bare seconds
+            return null;
+        }
+        var open = 0, unresolved = 0, delayed = [], floorless = 0;
+        layers.forEach(function(l) {
+            var tl = String(l.timelock == null ? '' : l.timelock).trim().toLowerCase();
+            if (tl === 'unresolved') { unresolved++; return; }
+            if (!tl || tl === 'none') { open++; return; }
+            var h = hours(tl);
+            if (h == null) { unresolved++; return; }
+            delayed.push(h);
+            if (l.timelock_floor === 'none') floorless++;
+        });
+        var min = delayed.length ? Math.min.apply(null, delayed) : null;
+        return {
+            total: layers.length, open: open, unresolved: unresolved,
+            delayed: delayed.length, floorless: floorless,
+            hours: open > 0 ? 0 : min,
+            definite: open > 0 || (unresolved === 0 && min != null),
+            established: open > 0 || min != null
+        };
+    },
+
+    _fmtHours(h) {
+        if (h === 0) return '0h';
+        if (h < 1) return Math.round(h * 60) + 'm';
+        if (h < 48) return (h % 1 ? h.toFixed(1) : h) + 'h';
+        return (h / 24 % 1 ? (h / 24).toFixed(1) : h / 24) + 'd';
+    },
+
+    _delayTooltip(data) {
+        var c = data.contract || {};
+        var a = c.authority_summary;
+        if (a && a.schema === 'actionable-path/1') {
+            var lines = ['Controller existence and reach are evaluated before delay.'];
+            (a.active || []).forEach(function(r) {
+                var s = '• ' + (r.authority_layer || 'authority') + ': active ' +
+                    (r.reach || 'unresolved') + ' reach · execution delay ' +
+                    (r.execution_delay || 'unresolved');
+                if (r.reach_bound) s += ' · ' + r.reach_bound;
+                if (r.reaction_window && r.reaction_window.type && r.reaction_window.type !== 'none') {
+                    s += ' · ' + String(r.reaction_window.type).replace(/-/g, ' ') +
+                        ' reaction window (not a timelock)';
+                }
+                lines.push(s);
+            });
+            if (a.inactive_layers) lines.push('• ' + a.inactive_layers +
+                ' layer' + (a.inactive_layers === 1 ? '' : 's') +
+                ': absent/renounced — delay not applicable');
+            if (a.unresolved_layers) lines.push('• ' + a.unresolved_layers +
+                ' layer' + (a.unresolved_layers === 1 ? '' : 's') + ': unresolved');
+            return lines.join('\n');
+        }
+        var layers = Array.isArray(c.layers) ? c.layers : [];
+        if (!layers.length) return 'No admin layers published.';
+        var lines = layers.map(function(l) {
+            var tl = String(l.timelock == null ? '' : l.timelock).trim() || 'none';
+            var isDelayed = tl.toLowerCase() !== 'unresolved' && tl.toLowerCase() !== 'none';
+            return '\u2022 ' + (l.authority_layer || '?') + ': ' +
+                (tl.toLowerCase() === 'unresolved' ? 'NOT MEASURED' : tl) +
+                // ⚠️ Only where there is a delay to reduce. `timelock_floor: none`
+                // on an already-undelayed layer says nothing, and printing it
+                // three times on USG made the tooltip look like three findings.
+                (isDelayed && l.timelock_floor === 'none' ? ' (no floor \u2014 reducible)' : '');
+        });
+        return 'Shortest warning any admin path gives, min() over the measured layers:\n' +
+            lines.join('\n') +
+            '\n\u26a0\ufe0f One undelayed path fixes the minimum at zero regardless of the others.';
+    },
+
+    _contractValueHtml(data) {
+        var a = data.contract && data.contract.authority_summary;
+        if (a && a.schema === 'actionable-path/1') {
+            var cls = a.state === 'active-core-undelayed' ? 'text-red-600' :
+                (a.state === 'active-core-delayed' ? 'text-amber-700' :
+                    (a.state === 'unresolved' ? 'text-slate-500' : 'text-green-700'));
+            return '<span class="' + cls + '">' + this._escapeAttr(a.headline) + '</span>';
+        }
+        var d = this._delaySummary(data);
+        if (!d) return '<span class="text-slate-400">—</span>';
+        if (!d.established) return '<span class="text-amber-700">not established</span>';
+        var txt = (d.definite ? '' : '\u2264') + this._fmtHours(d.hours) + ' warning';
+        var cls = d.hours === 0 ? 'text-red-600' : 'text-slate-700 dark:text-slate-200';
+        return '<span class="' + cls + '">' + this._escapeAttr(txt) + '</span>';
+    },
+
+    // ⚠️ States the COUNT instead of implying a pairing, so it cannot misalign at
+    // any number of layers — and "N delayed" is what actually discriminates
+    // between assets, since every hand-walked asset in the book currently has at
+    // least one undelayed path and so shares the same 0h value.
+    _contractSubText(data) {
+        var a = data.contract && data.contract.authority_summary;
+        if (a && a.schema === 'actionable-path/1') {
+            var inactive = Number(a.inactive_layers || 0);
+            var active = Number(a.active_paths || 0);
+            var activeRows = Array.isArray(a.active) ? a.active : [];
+            // `active_core_paths` describes value-at-risk scope, not authority
+            // reach. Split the reader summary by reach so bounded oracle/pause
+            // powers are not presented as full core-control paths.
+            var activeBounded = activeRows.filter(function(r) { return r.reach === 'bounded'; }).length;
+            var activeCore = activeRows.length
+                ? activeRows.length - activeBounded
+                : Number(a.active_core_paths || 0);
+            var allocator = activeRows.length && activeRows.every(function(r) {
+                return r.value_at_risk_scope === 'bounded-pool' &&
+                    /allocat/i.test(String(r.target_name || '') + ' ' + String(r.reach_bound || ''));
+            });
+            var parts = [];
+            if (inactive) parts.push(inactive + ' immutable/renounced layer' + (inactive === 1 ? '' : 's'));
+            if (activeCore) parts.push(activeCore + ' active core path' + (activeCore === 1 ? '' : 's'));
+            if (activeBounded) parts.push(activeBounded + ' active bounded ' +
+                (allocator ? 'allocator' : 'path') + (activeBounded === 1 ? '' : 's'));
+            if (active && !activeCore && !activeBounded) {
+                parts.push(active + ' active path' + (active === 1 ? '' : 's'));
+            }
+            if (a.unresolved_layers) parts.push(a.unresolved_layers + ' unresolved');
+            return parts.join(' · ') || 'structured authority paths';
+        }
+        var d = this._delaySummary(data);
+        var c = data.contract || {};
+        if (!d) return 'admin authority & delay';
+        var parts = ['shortest of ' + d.total + ' admin path' + (d.total === 1 ? '' : 's')];
+        parts.push(d.delayed ? d.delayed + ' delayed' : 'none delayed');
+        if (d.unresolved) parts.push(d.unresolved + ' unmeasured');
+        if (c.method) parts.push(c.method);
+        return parts.join(' \u00b7 ');
+    },
+
+    // ⚠️ 100% IS THE MOST DANGEROUS NUMBER THIS TILE CAN RENDER, AND ONLY ON SOME ASSETS.
+    //
+    // DUSD (Alto)'s stability module holds 722,604.611770924639631386 frxUSD against
+    // exactly that many DUSD — identical to the wei. Its coverage ratio is 100.0000%
+    // and the tile's own rule paints `cr >= 100` GREEN. A reader scanning the top row
+    // sees a green 100% and reads FULLY BACKED. What it means is that every cent of
+    // frxUSD impairment is a cent of DUSD impairment with nothing in between.
+    //
+    // ⚠️ THE NUMBER AND THE FACT POINT IN OPPOSITE DIRECTIONS. That is not a ratio with
+    // a caveat — it is a ratio that misleads unless the caveat is attached to it, so a
+    // footnote does not fix it. Same treatment as `supply_capped` on axis 3: REPLACE the
+    // label and restyle the value, never annotate underneath.
+    //
+    // ⚠️ AND IT IS BY CONSTRUCTION, NOT BY POLICY — `FixedPriceStrategy` returns exactly
+    // 1e18 and `feeStrategy` is `address(0)`, so the 1:1 is the MECHANISM and cannot be
+    // widened into a cushion by a parameter change. A risk someone could decide to reduce
+    // versus a design property. riskAnalyst's words, and if one sentence survives editing
+    // it should be that one.
+    //
+    // ⚠️ A BOOLEAN, NOT A BASIS STRING. The producer published
+    // `zero_buffer_by_construction` specifically so this branch does not have to read
+    // prose to decide — the same discipline as `capacity_usd === 0` on the exit gate.
+    // ZERO existing assets carry it; counted across data/ before adding the branch.
+    _zeroBufferBacking(b) {
+        if (!b || b.zero_buffer_by_construction !== true) return null;
+        // The segment the producer declares carries no cushion. Selected on the
+        // published `buffer_pct`, not on which is largest and not by reading `name`.
+        // Ambiguity means no figure rather than a guessed one.
+        var segs = Array.isArray(b.segments) ? b.segments : [];
+        var zero = segs.filter(function (s) { return s && s.buffer_pct === 0; });
+        return { seg: zero.length === 1 ? zero[0] : null, note: b.zero_buffer_note || null };
+    },
+
+    _backingValueHtml(data) {
+        // Which block the value came from — decides whose scale declaration applies.
+        var fromBacking = !!(data.backing && data.backing.collateral_ratio != null);
+        // ⚠️ FIRST, ahead of the whole cr cascade below — deliberately. It has to catch
+        // BOTH shapes: a feed that publishes no single ratio (the tile would fall through
+        // to a dash) and one that publishes the blended 110.7% (which would render green
+        // and is arithmetic over two tranches with opposite failure modes — the CDP
+        // tranche's 188% is not claimable by DUSD holders generally).
+        var zb = this._zeroBufferBacking(data.backing);
+        if (zb) {
+            var pct = zb.seg && typeof zb.seg.ratio_pct === 'number' ? zb.seg.ratio_pct : null;
+            var tip = this._escapeAttr(this._mdPlain(String(zb.note || '')));
+            // ⚠️ AMBER, NEVER GREEN. Green on >=100 is the entire defect.
+            return '<span class="text-amber-700"' + (tip ? ' title="' + tip + '"' : '') + '>' +
+                   (pct != null ? this.formatPercent(pct, 2) : 'no cushion') +
+                   '</span><span class="text-amber-700 text-xs"> · 0 buffer</span>';
+        }
+        var cr = (data.backing && data.backing.collateral_ratio != null)
+            ? data.backing.collateral_ratio : (data.summary && data.summary.collateral_ratio);
+        // No CR, but a measured partial coverage figure — show what IS known.
+        // Uses on_chain_coverage_display_pct, which the producer publishes
+        // already-scaled beside on_chain_coverage_pct_is_fraction; the raw field
+        // is a FRACTION and rendering it directly would print 0.43%.
+        if (cr == null) {
+            var cov = data.backing && data.backing.on_chain_coverage_display_pct;
+            if (cov != null) {
+                var covCls = cov >= 70 ? 'text-green-600' : 'text-red-600';
+                var covBasis = (data.backing || {}).collateral_ratio_basis;
+                return '<span class="' + covCls + '"' +
+                    (covBasis ? ' title="' + this._escapeAttr(this._mdPlain(String(covBasis))) + '"' : '') + '>' +
+                    this.formatPercent(cov, 2) + '</span>' +
+                    '<span class="text-slate-400 text-xs"> on-chain</span>';
+            }
+            // ⚠️ STILL NOTHING? Fall through to the FIRST-LOSS ATTACHMENT POINT
+            // before printing a dash. Same principle as the coverage fallback
+            // above — show what IS known — and it matters more here: reUSD has
+            // no derivable collateral ratio (the issuer publishes combined
+            // reUSD + reUSDe reserves with no asset-attributed denominator), so
+            // the tile printed "—" over an axis whose headline is a cushion
+            // measured BELOW the norm its own report invokes. The top row is
+            // what a reader scans; a dash there reads as "nothing measured".
+            //
+            // ⚠️ Labelled, never presented as a coverage ratio. It answers a
+            // different question — how much loss lands on someone else first —
+            // and the sub text switches with it so the two cannot be confused.
+            var ap = data.backing && data.backing.attachment_point_pct;
+            if (typeof ap === 'number' && data.backing.attachment_point_status !== 'withdrawn_by_producer') {
+                var below = data.backing.attachment_point_below_norm === true;
+                var apTitle = [data.backing.attachment_point_basis,
+                               data.backing.attachment_point_vintage_note]
+                    .filter(Boolean).join(' \u2014 ');
+                return '<span class="' + (below ? 'text-amber-700' : 'text-slate-700') + '"' +
+                    (apTitle ? ' title="' + this._escapeAttr(apTitle) + '"' : '') + '>' +
+                    this.formatPercent(ap, 2) + '</span>' +
+                    (below ? '<span class="text-amber-700 text-xs"> \u26a0\ufe0f</span>' : '');
+            }
+            // ⚠️ A DASH IS NOT A RENDER OF "NON-DERIVABLE" — AND THE PRODUCER SAID WHY.
+            //
+            // The manifest's axis-2 row is "coverage figure, OR non-derivable + basis",
+            // under a governing rule that every element is rendered or its absence is
+            // DECLARED. A bare em-dash declares nothing: it reads as a feed that failed,
+            // which is the opposite of a producer who deliberately refused a figure.
+            //
+            // DUSD (Alto) surfaced it. PegTracker publishes `collateral_ratio: null` with
+            // a basis saying no single safety ratio exists for the asset — the 100%
+            // tranche has zero buffer and the CDP collateral is isolated and not
+            // generally claimable — and the tile rendered "—". reusde-re and susdai
+            // publish a basis too and have been showing a dash all along.
+            //
+            // ⚠️ Gated on the BASIS EXISTING, so it never turns a merely-empty feed into
+            // a claim that somebody decided something. bmnr, cusd and strc publish no
+            // basis and keep their dash, which for them is the honest render.
+            var crBasis = data.backing && data.backing.collateral_ratio_basis;
+            if (crBasis) {
+                return '<span class="text-slate-500" title="' +
+                    this._escapeAttr(this._mdPlain(String(crBasis))) +
+                    '">' + this._escapeAttr(data.backing.coverage_display_label || 'Coverage not established') + '</span>';
+            }
+            return '—';
+        }
+        // ⚠️ THE VALUE PATH DID NOT NORMALISE AND THE RATING PATH DID. fxUSD is the
+        // first asset whose BACKING block carries a raw ratio, and it split the two:
+        // backingRating resolved 1.513516 -> 151.35% and rated it Healthy, while this
+        // function rendered the same field as **1.51%** in red. One tile, two scales,
+        // and the number a reader sees was the wrong one.
+        //
+        // It worked until now only because every backing block to date has been
+        // percent — usdm's is 91.24 with `scale: "percent"` (its 1.2762 `ratio` lives
+        // on SUMMARY and is a different quantity). So the absence of a normalise here
+        // was invisible rather than correct.
+        //
+        // ⚠️ Same resolution as backingRating, deliberately: scale comes from the block
+        // the VALUE came from, never inherited across blocks. Guessing a backing
+        // value's scale from summary's declaration is the mis-scaling the helper exists
+        // to prevent.
+        cr = CommonRenderer.normalizeCollateralRatio(
+            cr, data.asset_slug, fromBacking ? (data.backing || {}) : (data.summary || {}));
+        var cls = cr >= 100 ? 'text-green-600' : 'text-red-600';
+        var basis = this._backingBasis(data);
+        // ⚠️ Never round ACROSS a rating boundary. susds is 99.999993 — seven
+        // millionths of a point below par, which its own basis explains as noise
+        // between a token balance and a chi-derived denominator — and it rendered
+        // "100.00%" beside a Stress chip and a deficit. The number and the chip
+        // then contradict each other and the page reads as broken when it is not.
+        // Show enough decimals that the displayed figure sits on the same side of
+        // the boundary as the real one. A no-op for every value not sitting on a
+        // cutoff.
+        var shown = this._crDisplay(cr, data);
+        return '<span class="' + cls + '"' +
+            (basis ? ' title="Basis: ' + this._escapeAttr(basis) + '"' : '') + '>' +
+            shown + '</span>' +
+            (basis ? '<span class="text-slate-400 text-xs" title="Basis: ' +
+                     this._escapeAttr(basis) + '"> \u24d8</span>' : '');
+    },
+
+    _backingSubText(data) {
+        var b = data.backing || {};
+        // ⚠️ THE LABEL MOVES WITH THE VALUE — the rule this file states three times
+        // elsewhere. "collateral ratio" under a zero-buffer figure is precisely the
+        // reading that makes 100% mean "fully backed". The scope is named too, because
+        // the figure covers 88% of supply rather than all of it.
+        var zbSub = this._zeroBufferBacking(b);
+        if (zbSub) {
+            var nm = zbSub.seg && zbSub.seg.name ? String(zbSub.seg.name) : null;
+            // The producer's own segment label already carries its share of supply
+            // ("Universal Stability Module (frxUSD) — 88% of supply"), so it is used
+            // rather than a share this renderer would have to compute.
+            return (nm ? nm.replace(/\s+/g, ' ') : 'zero-buffer tranche') +
+                   ' · zero buffer by construction';
+        }
+        // ⚠️ A null CR is not always "nothing to show". thUSD's is deliberately
+        // null because TOTAL backing is unobservable — but on-chain coverage IS
+        // measured, is flagged critical, and was sitting six inches below a blank
+        // card. Distinguish that from susdai, whose null means a NAV vault has no
+        // backing ratio at all: there, nothing is known and a dash is honest.
+        if (b.collateral_ratio == null && b.on_chain_coverage_display_pct != null) {
+            return 'on-chain only \u2014 total backing unobservable';
+        }
+        // ⚠️ THE LABEL MUST MOVE WITH THE VALUE. When the tile falls through to
+        // the attachment point, "collateral ratio" underneath it is a mislabel of
+        // exactly the kind this file keeps fixing elsewhere — a number rendered
+        // under the name of a different quantity. 9.66% is not coverage; it is
+        // how much loss lands on someone else before this tranche is touched.
+        if (b.collateral_ratio == null && typeof b.attachment_point_pct === 'number' &&
+            b.attachment_point_status !== 'withdrawn_by_producer') {
+            return 'first-loss attachment' +
+                (b.attachment_point_norm_pct != null
+                    ? ' \u00b7 ' + b.attachment_point_norm_pct + '% norm' : '') +
+                ' \u2014 no collateral ratio derivable';
+        }
+        // ⚠️ The label moves with the value here too — "collateral ratio" under the
+        // words "not derivable" is a caption for a number that is not there. Says what
+        // the state IS (declared, with a basis) rather than naming the absent quantity.
+        if (b.collateral_ratio == null && (data.summary && data.summary.collateral_ratio) == null &&
+            b.on_chain_coverage_display_pct == null &&
+            (typeof b.attachment_point_pct !== 'number' || b.attachment_point_status === 'withdrawn_by_producer') && b.collateral_ratio_basis) {
+            return 'no verified reserve-to-claims ratio';
+        }
+        var sd = (b.surplus_deficit != null)
+            ? b.surplus_deficit : (data.summary && data.summary.surplus_deficit);
+        var base = (sd == null)
+            ? 'collateral ratio'
+            : (sd >= 0 ? 'surplus +' : 'deficit −') + this.formatCurrency(Math.abs(sd));
+        // ⚠️ USDat's tile read "100.00% · surplus +$0 · Healthy 4/5" while its
+        // own feed said the ratio is an ETHEREUM-ONLY statement and the BSC leg
+        // exposes no backing accessor, so that leg's backing is UNREAD, not
+        // absent. The word Ethereum appeared once on the page and BSC not at
+        // all. 100.00% Healthy is the most reassuring pair of figures a backing
+        // tile can show, and the one fact qualifying it was published and
+        // rendered nowhere.
+        //
+        // supply_scope is a machine-readable enum, not prose — render it, don't
+        // parse the note. The full note goes near the panels; this is the chip
+        // that stops the headline being read as a global claim.
+        var scope = data.summary && data.summary.supply_scope;
+        if (scope) {
+            base += ' \u00b7 ' + String(scope).replace(/_/g, '-') + ' scope';
+        }
+
+        // ⚠️ THE BIGGEST NUMBER ON THE PAGE, WITH ITS QUALIFIER ONLY ON HOVER.
+        // sUSDat's tile reads "102.57% · surplus +$1.8M · Watch 6/10" while the
+        // producer's own basis says "ATTESTED, NOT MEASURED: 99.0% of the reserve
+        // is an OFF-CHAIN STRC claim marked by oracle … only 1.0% is on-chain
+        // USDat this repo can verify." That text IS on the tile — in a title=""
+        // attribute. ⚠️ A title does not exist on touch, in a screenshot, or in
+        // tidr's embeds of these dashboards, and it is not in the text a reader
+        // skims. The qualifier has to survive being looked at, not hovered.
+        //
+        // Keyed on the PUBLISHED on_chain_pct / off_chain_pct, so it appears for
+        // any feed that starts declaring them and stays absent for the ~20 that
+        // do not — the opposite of a name list that has to be edited to stay
+        // right. Today sUSDat is the only asset publishing them.
+        var onPct = b.on_chain_pct;
+        var offPct = b.off_chain_pct;
+        if (typeof onPct === 'number' && typeof offPct === 'number' && offPct > 0) {
+            base += ' \u00b7 ' + this.formatPercent(onPct, onPct < 10 ? 1 : 0) + ' on-chain verifiable';
+        }
+        return base;
+    },
+
+    _issuerAxisInfo(issuer) {
+        issuer = issuer || {};
+        var badge = typeof issuer.badge === 'string' ? issuer.badge.trim() : '';
+        // Only treat a badge as an axis score when it ends in a numeric N/10.
+        // Names such as USDS's "Sky (MakerDAO)" must remain opaque badge text.
+        var scoredBadge = badge.match(/^(.+?)\s+(\d+(?:\.\d+)?)\/10$/i);
+        var isStructural = Object.prototype.hasOwnProperty.call(issuer, 'structural_score') ||
+            issuer.structural_score_status != null;
+        var prefix = isStructural ? 'structural' : 'issuer';
+        var score = issuer[prefix + '_score'];
+        var status = issuer[prefix + '_score_status'];
+        var label = scoredBadge ? scoredBadge[1].trim() : (isStructural ? 'Structural' : 'Issuer');
+
+        return {
+            label: label,
+            badge: badge,
+            scoredBadge: scoredBadge,
+            score: score,
+            status: status,
+            source: issuer[prefix + '_score_source'],
+            generatedAt: issuer[prefix + '_score_generated_at'],
+            ageHours: issuer[prefix + '_score_age_hours'],
+            inheritedFrom: issuer[prefix + '_score_inherited_from'] ||
+                (prefix !== 'issuer' ? null : issuer.issuer_score_inherited_from)
+        };
+    },
+
+    _issuerBadgeText(issuer) {
+        var info = this._issuerAxisInfo(issuer);
+        if (info.scoredBadge) return info.scoredBadge[2] + '/10';
+        if (info.badge) {
+            // The unavailable badge follows the same "Axis unavailable" contract,
+            // but the summary card already carries the axis label above it.
+            if (info.status === 'unavailable' && /\s+unavailable$/i.test(info.badge)) return 'unavailable';
+            return info.badge;
+        }
+        if (info.score != null) return info.score + '/10';
+        if (info.status === 'unavailable') return 'unavailable';
+        return '—';
+    },
+
+    _issuerScoreTooltip(info) {
+        var parts = [];
+        if (info.inheritedFrom) parts.push(info.label + ' score inherited from ' + info.inheritedFrom);
+        if (info.status && info.status !== 'ok') parts.push('Status: ' + info.status.replace(/_/g, ' '));
+        if (info.generatedAt) parts.push('Generated ' + this.formatDate(info.generatedAt));
+        // ⚠️ AGE IS DERIVED AT READ TIME, NEVER READ FROM THE STORED FIELD — the same rule
+        // the market-price tile applies 700 lines up, which was written after this fleet
+        // published `price_age_hours: 0.012` identically across four unrelated assets.
+        // This site kept reading the stored value, and it is worse here than there.
+        //
+        // ⚠️ THE PUBLISHED NUMBERS DISPROVE THEMSELVES. Every authored score in the fleet
+        // carries the SAME `*_generated_at` — 2026-09-20T01:45:04Z, one risk-feed run —
+        // while the stored ages range from 30.20h to 31.27h across assets. One generation
+        // instant cannot have many ages: those values are each ANALYZER RUN's age, stamped
+        // onto a field named for the score's. crvUSD stamps 30.86 on its backing, liquidity,
+        // peg-mechanism AND issuer scores alike.
+        //
+        // And it does not converge — `generated_at` has not moved in 31 hours, so a stored
+        // age only refreshes when a producer re-runs, while a reader's page can sit cached
+        // for an hour on top of an hourly sync. usds already reads 30.20 against a true
+        // 31.77. The right input is sitting in the same object.
+        //
+        // Stored value kept ONLY as a fallback where no `generated_at` exists, so a producer
+        // publishing an age and nothing else still says something rather than nothing.
+        var ageH = null;
+        if (info.generatedAt) {
+            var t = Date.parse(info.generatedAt);   // ISO with Z — parsed as UTC, not local
+            if (!isNaN(t)) ageH = (Date.now() - t) / 3600000;
+        }
+        if (ageH == null && info.ageHours != null) ageH = Number(info.ageHours);
+        if (ageH != null && isFinite(ageH) && ageH >= 0) {
+            parts.push('Age ' + ageH.toFixed(1) + 'h' +
+                (info.generatedAt ? '' : ' (as published)'));
+        }
+        if (info.source) parts.push('Source: ' + info.source);
+        return parts.join(' · ');
+    },
+
+    _contractActionChipHtml(data) {
+        var a = data.contract && data.contract.authority_summary;
+        if (!a || a.schema !== 'actionable-path/1' || !Array.isArray(a.active) || !a.active.length) return '';
+        var undelayedBounded = a.active.filter(function(r) {
+            return r.reach === 'bounded' && r.execution_delay === 'none';
+        });
+        if (!undelayedBounded.length) return '';
+        var r = undelayedBounded[0], rw = r.reaction_window || {};
+        var tip = r.reach_bound || 'Active authority with bounded reach.';
+        if (rw.type && rw.type !== 'none') {
+            tip += ' Reaction window: ' + String(rw.type).replace(/-/g, ' ') + '.';
+            if (rw.minimum_window_seconds != null && rw.maximum_window_seconds != null) {
+                tip += ' Window ' + Math.round(rw.minimum_window_seconds / 3600) + '–' +
+                    Math.round(rw.maximum_window_seconds / 3600) + ' hours.';
+            }
+            if (rw.basis) tip += ' ' + rw.basis;
+            tip += ' This is a reaction window, not an execution timelock.';
+        }
+        var isAllocator = /allocat/i.test(String(r.target_name || '') + ' ' + String(r.reach_bound || ''));
+        return '<span class="axis-rating r-warn" title="' + this._escapeAttr(tip) +
+            '">' + (isAllocator ? 'Allocator' : 'Bounded path') + ' · no execution timelock</span>';
+    },
+
+    _issuerBadgeHtml(issuer) {
+        var info = this._issuerAxisInfo(issuer);
+        var text = this._issuerBadgeText(issuer);
+        var tooltip = this._issuerScoreTooltip(info);
+        var status = info.status && info.status !== 'ok'
+            ? ' <span class="text-xs font-normal text-amber-600">· ' +
+                this._escapeAttr(info.status.replace(/_/g, ' ')) + '</span>'
+            : '';
+        return '<span' + (tooltip ? ' title="' + this._escapeAttr(tooltip) + '"' : '') + '>' +
+            this._escapeAttr(text) + '</span>' + status;
+    },
+
+    // --- section heads ---
+    _renderAxisHead(name, num, title, sub, ratingHtml, block) {
+        var el = document.getElementById('axis-' + name + '-head');
+        if (!el) return;
+        el.innerHTML =
+            '<span class="axis-num">' + num + '</span>' +
+            '<span class="axis-title">' + title + '</span>' +
+            (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
+            (ratingHtml || '') +
+            this._axisClockHtml(block) +
+            this._axisSourceHtml(name);
+    },
+
+    // ⚠️ ONE PAGE STAMP OVER SIX CLOCKS. The header reads "Updated: 0.4h ago"
+    // from the file's top-level timestamp while, on yzUSD right now:
+    //
+    //   peg.market_price_as_of        23.9h
+    //   liquidity.venues_as_of         5.4h
+    //   issuer.issuer_score_...       17.8h
+    //   asset_specific.exposure_as_of 41.8h
+    //
+    // pegtracker-f9 found this by taking my own argument against an assembler
+    // and applying it INSIDE a single producer's file — six cadences, one stamp,
+    // and a block with no clock silently inherits one that is honest about the
+    // file and wrong about the block. No assembler required.
+    //
+    // So each axis states its own age. ⚠️ It is NOT an alarm: 17.8h is correct
+    // for an editorial score and 41.8h is the issuer's own exposure cadence.
+    // The defect was never that the data is old, it is that the page implied it
+    // was 0.4h old. Amber only past 24h, and only to draw the eye.
+    _axisClockHtml(block) {
+        if (!block || typeof block !== 'object') return '';
+        // ⚠️ Take the OLDEST declared input, not the first one found. An axis is
+        // only as fresh as its stalest component: yzUSD's liquidity block carries
+        // exit_mark.as_of at 1.7h AND venues_as_of at 5.4h, and quoting the 1.7h
+        // would be the same flattery as the file stamp, one level down.
+        //
+        // Scans one level deep plus exit_mark, because the producers name these
+        // per-field (market_price_as_of, venues_as_of, volume_24h_as_of) rather
+        // than with a block-level `as_of`. I have asked for one spelling; until
+        // it lands, accepting the existing names beats rendering "undeclared"
+        // over clocks that are plainly there.
+        // ⚠️ The oldest-wins rule means a SUPPLEMENTAL field can set the whole
+        // axis's age — see _renderAttachmentPoint for why that must not be
+        // "fixed" by dropping the supplement. The stamp's field is named in the
+        // tooltip precisely so a reader can tell a stale AXIS from one stale
+        // input beside fresh ones.
+        var stamp = null, oldest = -1, stampKey = null;
+        function consider(v, key) {
+            if (typeof v !== 'string') return;
+            var t = new Date(v.endsWith('Z') || v.indexOf('+') > 0 ? v : v + 'Z');
+            if (isNaN(t)) return;
+            var age = Date.now() - t.getTime();
+            if (age > oldest) { oldest = age; stamp = v; stampKey = key; }
+        }
+        var RX = /(as_of|generated_at|observed_at)$/;
+        Object.keys(block).forEach(function(k) {
+            if (RX.test(k)) consider(block[k], k);
+            var v = block[k];
+            if (v && typeof v === 'object' && !Array.isArray(v)) {
+                Object.keys(v).forEach(function(k2) { if (RX.test(k2)) consider(v[k2], k + '.' + k2); });
+            }
+        });
+        if (!stamp) {
+            // A block with no clock is UNDECLARED, not fresh. Saying nothing
+            // would let it inherit the header stamp by implication — the exact
+            // thing this fixes — and would penalise the producers who do declare.
+            return '<span class="axis-clock axis-clock-none" title="This block declares no as_of, so its age is unknown. It is NOT necessarily as fresh as the page header.">cadence undeclared</span>';
+        }
+        var t = new Date(stamp.endsWith('Z') || stamp.indexOf('+') > 0 ? stamp : stamp + 'Z');
+        if (isNaN(t)) return '';
+        var h = (Date.now() - t.getTime()) / 3600000;
+        var txt = h < 1 ? Math.max(0, Math.round(h * 60)) + 'm' :
+                  h < 48 ? h.toFixed(1) + 'h' : Math.round(h / 24) + 'd';
+        // ⚠️ AN AGE WITHOUT AN EXPECTED CADENCE IS UNREADABLE. "6d old" means
+        // nothing on its own: a reader cannot tell a producer that refreshes
+        // daily and is five days late from one that was never on a schedule at
+        // all. Axis 3 spent weeks in the second state and the page said only
+        // "Nd old" — the number was right and the reader could not act on it.
+        //
+        // ⚠️ THE CADENCE IS THE PRODUCER'S TO DECLARE, NOT MINE TO ASSERT.
+        // Hardcoding "daily" here would be a claim about another repo's crontab
+        // that goes stale the moment they change it, and would keep reading
+        // "daily" through an outage. Rendered only when the block declares it;
+        // silent otherwise, so a producer that has not declared one is not
+        // credited with a schedule it does not keep.
+        var cadence = block.refresh_cadence || block.cadence_declared || null;
+        var cadenceHtml = '';
+        if (typeof cadence === 'string' && cadence) {
+            cadenceHtml = '<span class="axis-clock" title="' + this._escapeAttr(
+                'The producer declares this block refreshes ' + cadence + '. Compare it with the ' +
+                'age beside it: an age well past the declared cadence means the producer is LATE, ' +
+                'which is a different fact from an axis that was never scheduled.') +
+                '">refreshes ' + this._escapeAttr(cadence) + '</span>';
+        }
+        return cadenceHtml + '<span class="axis-clock' + (h > 24 ? ' axis-clock-old' : '') +
+            '" title="Oldest declared input on this axis: ' + this._escapeAttr(stampKey || 'as_of') +
+            ' = ' + this._escapeAttr(stamp) +
+            '. \u26a0\ufe0f The field is NAMED because the oldest stamp is not always an input \u2014 syzUSD retains coingecko_price_as_of for a mark it REJECTED, and that diagnostic is older than the price actually published. The page header shows when the FILE was assembled, which is not the same thing as any of these.">' +
+            txt + ' old</span>';
+    },
+
+    // --- the four non-backing sections + backing head ---
+    renderAxisSections(data, history) {
+        var ids = ['section-peg', 'section-liquidity', 'section-dependencies',
+                   'section-contract', 'section-issuer'];
+        if (!this.hasAxisBlocks(data)) {
+            // Legacy asset: keep the 4 sections hidden and the backing head empty.
+            ids.forEach(function(id) { var s = document.getElementById(id); if (s) s.classList.add('hidden'); });
+            var bh = document.getElementById('axis-backing-head'); if (bh) bh.innerHTML = '';
+            return false;
+        }
+        ids.forEach(function(id) { var s = document.getElementById(id); if (s) s.classList.remove('hidden'); });
+
+        // 1 · Peg
+        this._renderAxisHead('peg', 1, 'Peg',
+            // ⚠️ THE SUBTITLE NAMES WHAT THE NUMBER MEASURES. It was unlabelled while
+            // the authored score beside it said "authored" — one side declared its
+            // provenance and the other did not, so the live reading read as the verdict
+            // and the judgement as a footnote.
+            // ⚠️ THE LABEL MOVES WITH THE VALUE (spec §3). This read "7d peg performance"
+            // unconditionally, including on the 7 assets where no 7-day series exists —
+            // promising a history the body withdraws. tidr caught it on strcx, where the
+            // panel says in terms that no premium history is published while the heading
+            // above it advertised one. _pegDevBasis already knows which it is, so the
+            // subtitle now asks it instead of asserting.
+            ((this._pegDevBasis(data, history, 7).basis === '7d'
+                ? '7d peg performance · ' : 'market vs its reference · ') +
+             (data.peg.source ? 'market vs NAV · ' + data.peg.source : 'market vs NAV')),
+            // ⚠️ A REFUSAL WITH NO STATED REASON READS AS MISSING DATA. Axis 3 returns a
+            // `rejected` string and prints "Not rated ⓘ" whose hover says the panel is
+            // withholding deliberately; axis 1 printed a bare "Not rated" and told the
+            // reader nothing — on assets where the producer HAS published a score.
+            //
+            // This does NOT change what is displayed. Whether an authored peg score may
+            // render at all is a frame-wide decision that is not being taken here; this
+            // only says why the chip is empty, which needs no such decision. tidr's
+            // framing: a silent refusal and an explained refusal are different defects,
+            // and only one of them misleads.
+            this._pegCurrentChipHtml(data) + this._pegBandChipHtml(data, history), data.peg);
+        this._renderPegSection(data, history);
+
+        // ⚠️ 2 is BACKING and 3 is LIQUIDITY — swapped from the original frame.
+        // The dashboard ran 1 Peg · 2 Liquidity · 3 Backing while the published
+        // reports ran 2 Backing · 3 Liquidity, so "axis 2" meant two different
+        // things depending which surface you were reading. Three of five
+        // positions disagreed while everyone argued about the label at 5.
+        //
+        // 2 · Backing (head only — panels are rendered by the existing common path)
+        // ⚠️ The head must label an authored score too. Fixing only the tile left
+        // the axis head reading "Watch · 3/5" — a fallback rendered exactly like a
+        // computed band, which is precisely the confusion the producer's gate
+        // exists to prevent, reintroduced one element away from where it was
+        // fixed.
+        var bAuth = (data.backing || {});
+        var backingAuthored = this._backingAuthoredDeclared(bAuth);
+        // ⚠️ THE LABEL MOVES WITH THE VALUE (spec §3). "live reserves & collateral ratio"
+        // is wrong on an asset whose producer has DECLARED that no per-token ratio is
+        // derivable — it promises two things the section then cannot show. Keyed off the
+        // declaration, not off emptiness, so it says the right thing for a stated reason
+        // rather than whenever data happens to be missing.
+        this._renderAxisHead('backing', 2, 'Backing',
+            (bAuth.backing_score_applies_when === 'collateral_ratio_declared_underivable'
+                ? 'what backs it · no per-token ratio derivable'
+                : 'live reserves & collateral ratio'),
+            (backingAuthored
+                ? '<span class="axis-rating r-warn" title="' +
+                  this._escapeAttr(this._mdPlain(String(bAuth.backing_score_basis || ''))) +
+                  '">Authored ' + bAuth.backing_score + '/10</span>'
+                : this._ratingChipHtml(this.backingRating(data)) +
+                  this._divergenceChipHtml(this.backingRating(data),
+                      this._authoredAxisScore(data.backing, ['backing_score']))), data.backing);
+        // ⚠️ collateral_ratio_basis was rendered ONLY as a hover tooltip on a ⓘ
+        // glyph beside the tile. For most assets that is a reasonable place for
+        // a definition. For syzUSD it is not: its basis says the headline
+        // 109.02% is "INHERITED from yzUSD" — the number belongs to a DIFFERENT
+        // ASSET — and a qualifier of that weight cannot live behind a hover,
+        // which does not exist at all on a touch device.
+        //
+        // So it also renders as text under the Backing head, where the reader
+        // meets it before the panels. Same string, same source block, no
+        // heuristics about which basis "matters" — 23 of 25 feeds publish one
+        // and every one of them is explaining a denominator a reader would
+        // otherwise assume.
+        var basisText = this._backingBasis(data);
+        // The tile prints "surplus +$X" beside the ratio, and for three feeds the
+        // surplus is NOT on the ratio's basis — apxUSD's is gross where the ratio
+        // is netted, frax's is against liabilities where supply gives a different
+        // sign, and USDS says outright "NOT total_backing - total_supply.
+        // Subtracting the published totals gives +$23.2M against this figure."
+        // A reader who tries to reconcile the two numbers cannot, and nothing on
+        // the page said why. Published by 11 feeds, rendered by none.
+        var sdBasis = this._surplusBasis(data);
+        var backingHead = document.getElementById('axis-backing-head');
+        if (backingHead && bAuth.assessment_summary) {
+            var assessment = document.createElement('div');
+            assessment.className = 'backing-assessment text-sm space-y-2 mt-3';
+            assessment.innerHTML = '<div class="font-semibold">' + this._escapeAttr(bAuth.assessment_summary) + '</div>' +
+                [['Protection', bAuth.assessment_strength], ['Limit', bAuth.assessment_limit],
+                 ['Next evidence', bAuth.assessment_next]].filter(function(row) { return row[1]; })
+                .map(function(row) { return '<div><span class="font-medium">' + CommonRenderer._escapeAttr(row[0]) +
+                    ':</span> ' + CommonRenderer._escapeAttr(row[1]) + '</div>'; }).join('');
+            backingHead.appendChild(assessment);
+        }
+        if (backingHead && Array.isArray(bAuth.loss_protection_layers)) {
+            var layers = document.createElement('div');
+            layers.className = 'loss-protection-layers mt-3 text-sm space-y-2';
+            layers.innerHTML = bAuth.loss_protection_layers.map(function(layer) {
+                return '<div><span class="font-medium">' + CommonRenderer._escapeAttr(layer.name) + '</span>: ' +
+                    CommonRenderer.formatCurrency(layer.value_usd) +
+                    (typeof layer.relative_to_senior_pct === 'number' ? ' · ' + layer.relative_to_senior_pct.toFixed(2) + '% of issuer reUSD TVL' : '') +
+                    ' <span class="text-xs text-slate-500">' + CommonRenderer._escapeAttr(layer.as_of || '') + '</span>' +
+                    '<div class="text-xs text-slate-600">' + CommonRenderer._escapeAttr(layer.basis || '') + '</div></div>';
+            }).join('') + '<div class="text-xs text-slate-500">Layers shown separately; no combined verified cushion is calculated.</div>';
+            backingHead.appendChild(layers);
+        }
+        if ((basisText || sdBasis) && backingHead) {
+            // ⚠️ textContent RENDERED PRODUCER MARKDOWN AS PUNCTUATION. These two
+            // notes are the only reader-facing basis strings that went to the DOM as
+            // text rather than through the converter, so `**bold**` printed its
+            // asterisks — visible the moment riskAnalyst published a
+            // collateral_ratio_basis for STRCx with emphasis in it, directly under
+            // the "Authored 4/10" chip. The score-basis <details> beside it converts
+            // correctly; these did not.
+            //
+            // ⚠️ THIRD PATH WITH THIS DEFECT TODAY (issuer facts, issuer summary, and
+            // now these). The pattern is that each one was written with its own
+            // escaping decision instead of reaching for the shared helper, and each
+            // stayed invisible until a producer used emphasis on that particular
+            // field. _mdInlineHtml escapes FIRST and converts after, so replacing
+            // textContent with it is not a loosening: "<script>" still lands as text.
+            if (basisText) {
+                var bNote = document.createElement('div');
+                bNote.className = 'axis-basis-note';
+                bNote.innerHTML = '<details><summary>Coverage basis — claims versus reserves</summary>' +
+                    this._mdInlineHtml(String(basisText)) + '</details>';
+                backingHead.appendChild(bNote);
+            }
+            if (sdBasis) {
+                var sNote = document.createElement('div');
+                sNote.className = 'axis-basis-note';
+                sNote.innerHTML = 'Surplus basis: ' + this._mdInlineHtml(String(sdBasis));
+                backingHead.appendChild(sNote);
+            }
+        }
+        // The authored-score rationale, reachable rather than hovered.
+        (function(self) {
+            var head = document.getElementById('axis-backing-head');
+            var bblk = data.backing || {};
+            var basis = bblk.backing_score_basis;
+            var change = self._scoreChangeHtml(bblk);
+            if (!head || (!basis && !change)) return;
+            var el = document.createElement('div');
+            el.className = 'axis-basis-note';
+            el.innerHTML = self._scoreBasisHtml('Why this backing score', basis, change) +
+                self._authoredNotesHtml('backing');
+            head.appendChild(el);
+        })(this);
+
+        // ⚠️ AXES 1 AND 3 LOST THEIR BASIS WHEN THE AUTHORED SCORE CAME OFF.
+        //
+        // Removing the divergence chip removed a NUMBER that read as a rival to
+        // the live band — correct — but the producer's EXPLANATION lived in the
+        // same chip and went with it. Measured after the change: axis 2 rendered
+        // its basis (it has the block above), axis 1 rendered none at all, and
+        // axis 3 only when an authored score filled an absent band.
+        //
+        // So the axis-basis rollout was writing axis-1 arguments that reached no
+        // reader. This gives 1 and 3 what 2 and 5 already had.
+        //
+        // ⚠️ NO NUMBER ON THE FACE. This is a collapsed explanation, not a second
+        // score — nothing to compare against the band, so it does not reopen the
+        // divergence the owner closed. crvUSD's reads "MEASURES THE MECHANISM, NOT
+        // THE CURRENT DEVIATION … PERSISTENCE-FILTERED", which is precisely why the
+        // page and the report differ and was invisible until now.
+        //
+        // ⚠️ `*_per_chain` RIDES ALONG, and it is the sharper half on some assets:
+        // yzUSD publishes "ethereum 4.5 · monad 3.5 — the rendered figure is the
+        // Ethereum one", and a Monad holder had no way to learn their leg scores
+        // worse. Rendered as the producer's own string; never recomputed here.
+        (function(self) {
+            [['axis-peg-head', data.peg, ['peg_mechanism_score', 'volatility_score'],
+              'Why the report scores peg differently'],
+             // ⚠️ LIQUIDITY IS NOT HANDLED HERE. This block runs BEFORE
+             // _renderAxisHead('liquidity', …), so anything appended to that head
+             // is overwritten moments later by the head render. The liquidity
+             // equivalent lives after that call — see below. The peg half worked,
+             // which is exactly why the broken half went unnoticed: a check that
+             // ORs the two axes passes on peg alone.
+            ].forEach(function(row) {
+                var head = document.getElementById(row[0]);
+                var blk = row[1] || {};
+                if (!head) return;
+                var basis = null, perChain = null;
+                row[2].forEach(function(f) {
+                    if (!basis && typeof blk[f + '_basis'] === 'string' && blk[f + '_basis'].trim()) {
+                        basis = blk[f + '_basis'];
+                    }
+                    if (!perChain) {
+                        perChain = self._perChainScoreText(blk[f + '_per_chain']);
+                    }
+                });
+                var change = self._scoreChangeHtml(blk);
+                var pegNotes = self._authoredNotesHtml('peg');
+                if (!basis && !perChain && !change && !pegNotes) return;
+                var el = document.createElement('div');
+                el.className = 'axis-basis-note';
+                el.innerHTML =
+                    (perChain
+                        ? '<div class="text-xs text-amber-700 mb-1">' +
+                          self._mdInlineHtml(perChain) + '</div>'
+                        : '') +
+                    self._scoreBasisHtml(row[3], basis, change) +
+                    self._authoredNotesHtml('peg');
+                head.appendChild(el);
+            });
+        })(this);
+
+        // ⚠️ THE FIRST-LOSS ATTACHMENT POINT, WHICH A COLLATERAL RATIO CANNOT SAY.
+        // For a tranched asset the question is not "is there enough collateral"
+        // but "how much loss lands on somebody else first". The dashboard cannot
+        // compute it — it comes from the report — so it arrives as a backing
+        // overlay and would otherwise sit in the payload unrendered, which is
+        // this repo's most-repeated defect.
+        //
+        // ⚠️ IT MUST RENDER THE DIRECTION, NOT ONLY THE LEVEL. reUSD's cushion
+        // thinned because the DENOMINATOR ROSE — senior deposits grew, no loss
+        // occurred. So a supply chart beside this reads as demand and health
+        // while the cushion erodes underneath it. The level alone would let a
+        // reader draw exactly the wrong conclusion from the rest of the page.
+        this._renderAttachmentPoint(data);
+
+        // ⚠️ Issuer-reported reserves. Rendered because $136.9M sat in the payload
+        // invisible while the axis read "Not rated" — but rendered CAREFULLY,
+        // because the danger here is not omission, it is arithmetic the reader
+        // does unprompted. See _renderIssuerReportedReserves.
+        // ⚠️ HOW BIG IS IT. Both figures were published and rendered nowhere, so
+        // the backing axis showed a "Not rated" chip, a basis note and no size
+        // at all. Supply is the one number every other question scales against.
+        this._renderClaimSize(data);
+        this._renderIssuerReportedReserves(data);
+
+        // Optional composition sub-panel (USDC held-vs-denominated split + per-Star
+        // breakdown). Data-gated & additive: no-op for assets lacking the fields.
+        this._renderBackingComposition(data);
+
+        // 3 · Liquidity & Exit. Renamed from "Liquidity": the axis covers BOTH
+        // exit paths — secondary venue depth AND primary redemption with the
+        // issuer — and they fail independently. The rating is still computed
+        // from depth alone, which is why the tile states its scope.
+        this._renderAxisHead('liquidity', 3, 'Liquidity & Exit',
+            'live venue depth & primary redemption',
+            this._liquidityChipHtml(data), data.liquidity);
+        this._renderDepthScope(data);
+        this._renderLiquiditySection(data);
+
+        // ⚠️ AFTER the head render, never before — see the note in the peg block.
+        //
+        // Carries three things the liquidity head had been missing:
+        //  - the depth QUALIFIER and the SHARE, which lived in axis-liquidity-body
+        //    until three bespoke renderers were found blanking that node
+        //    (hastra-prime.js, thusd.js, usdai.js). On those assets the band was
+        //    correctly WITHHELD and the reason for it was invisible, which is the
+        //    worse half of the pair.
+        //  - the liquidity BASIS, which was appended too early and overwritten.
+        (function(self) {
+            var lh = document.getElementById('axis-liquidity-head');
+            if (!lh) return;
+            var liq = (data && data.liquidity) || {};
+            // ⚠️ QUALIFIER ONLY — the share was removed from the head on
+            // 2026-09-12 when it was demoted out of the headline position. It
+            // renders once, below the ladder, in the body. Leaving it here too
+            // put it on the page TWICE for every shared-renderer asset, which is
+            // what demoting it without checking the second call site produced.
+            //
+            // ⚠️ The qualifier must stay: three bespoke renderers blank
+            // axis-liquidity-body, and on those assets the band is correctly
+            // WITHHELD while the reason for it lives in this line. Losing the
+            // reason is the worse half of that pair.
+            //
+            // Consequence, accepted: usdai and susdai blank the body, so the
+            // share no longer appears on them at all. Owner's call was "demote
+            // or drop"; on those two it drops.
+            var parts = self._depthQualifierHtml(liq, data);
+            var basis = typeof liq.liquidity_score_basis === 'string' && liq.liquidity_score_basis.trim()
+                ? liq.liquidity_score_basis : null;
+            // ⚠️ THE CAVEAT THAT WOULD HAVE PREVENTED THE DEFECT ABOVE IT, PUBLISHED
+            // AND UNRENDERED. reUSD-RE's `liquidity_score_depth_caveat` reads: the
+            // feed's $10M 2% depth "is a genuine venue measurement — but it measures
+            // the leg this axis does NOT score on. Do not reconcile 4.5 against it."
+            // That sentence sat in our own served payload while the tile reconciled
+            // exactly that way and published Healthy 10/10. Rendered next to the
+            // depth figure, which is where a reader meets the number it is about.
+            var depthCaveat = typeof liq.liquidity_score_depth_caveat === 'string' &&
+                liq.liquidity_score_depth_caveat.trim()
+                ? liq.liquidity_score_depth_caveat.trim() : null;
+            if (depthCaveat) {
+                parts += '<details class="text-xs text-amber-700 mb-1"><summary>Venue depth and primary-exit limits</summary>' +
+                    self._mdInlineHtml(depthCaveat) + '</details>';
+            }
+            var perChain = self._perChainScoreText(liq.liquidity_score_per_chain);
+            if (perChain) {
+                parts += '<div class="text-xs text-amber-700 mb-1">' + self._mdInlineHtml(perChain) + '</div>';
+                // ⚠️ THE PRODUCER'S REASON FOR THE PER-CHAIN SPLIT, WHERE THEY GIVE
+                // ONE. It is the sentence that stops a reader averaging the legs —
+                // weETH's reads "WORSE-LEG BY CHAIN, NOT BLENDED — weETH is four
+                // markets and an aggregate figure would lift the asset on its best
+                // leg." Numbers without it invite exactly the averaging it forbids.
+                //
+                // ⚠️ THE EXEMPLAR IS NOT IN OUR CORPUS AND THE CITATION SAID NOTHING
+                // ABOUT THAT, so the claim read as uncheckable and drew a (wrong)
+                // correction from riskAnalyst, who looked for weETH in data/ and
+                // found nothing. weETH is NOT a registered asset here; the quote is
+                // from riskAnalyst/data/axes/weeth_axis_basis.json, which the sync
+                // never copies because `weeth` is absent from assets.json.
+                //
+                // THE ONLY SERVED PAYLOAD CARRYING THIS FIELD IS susde_axis_basis.json
+                // — nine chains, ethereum 7.0 down to monad 2.0, and its basis is the
+                // sharper argument of the two: eight of the nine legs are
+                // VENUE-INVENTORY-DERIVED, not ladder-derived, so only the 7.0 rests
+                // on a measured crossing. Cite that one when checking this path
+                // locally. ⚠️ Name the repo whenever an example lives outside ours.
+                var pcb = liq.liquidity_score_per_chain_basis;
+                if (typeof pcb === 'string' && pcb.trim()) {
+                    parts += '<div class="text-[11px] text-slate-500 mb-1" style="line-height:1.5">' +
+                        self._mdInlineHtml(pcb.trim()) + '</div>';
+                }
+            }
+            var liqChange = self._scoreChangeHtml(liq);
+            if (basis || liqChange) {
+                parts += self._scoreBasisHtml('Why the report scores liquidity differently',
+                                              basis, liqChange);
+            }
+            parts += self._authoredNotesHtml('liquidity');
+            if (!parts) return;
+            var el = document.createElement('div');
+            el.className = 'axis-basis-note';
+            el.innerHTML = parts;
+            lh.appendChild(el);
+        })(this);
+
+        // 4 · Dependencies
+        // ⚠️ An array's LENGTH is how many rows the producer sent, not how many
+        // exist. A producer-side cap of 6 became the on-page claim "6 upstream"
+        // when there were 13 — and the length looked authoritative precisely
+        // because it was wrong. Prefer the declared count, and when the list is
+        // knowingly partial say so rather than passing the cap off as the total.
+        var dep = data.dependencies || {};
+        var upRows = Array.isArray(dep.upstream) ? dep.upstream.length : 0;
+        var upTotal = (typeof dep.upstream_count === 'number') ? dep.upstream_count : upRows;
+        var upSub = (dep.upstream_complete === false || upTotal > upRows)
+            ? 'top ' + upRows + ' of ' + upTotal + ' upstream'
+            : upTotal + ' upstream';
+        // Ordering is a claim too: thinnest-first reads as largest-first to
+        // anyone who assumes size ordering, so name it when the producer does.
+        if (dep.upstream_sorted_by) {
+            upSub += ' (' + String(dep.upstream_sorted_by).replace(/_/g, ' ') + ')';
+        }
+        var downSub = (dep.downstream_tracked === true)
+            ? (Array.isArray(dep.downstream) ? dep.downstream.length : 0) + ' downstream'
+            : 'downstream not tracked';
+        // ⚠️ AXIS 4 NOW CARRIES ITS AUTHORED SCORE. It was a link tile with no
+        // number while the producer published `underlying_score` with a full basis
+        // — counterparty concentration in the supply architecture, on a denominator
+        // swept from the complete SetDebtCeiling history.
+        //
+        // ⚠️ This does NOT reopen the divergence problem the owner closed today.
+        // That rule was "no authored score beside a LIVE one", because two numbers
+        // measuring different things read as a contradiction. Axis 4 computes
+        // nothing, so the authored score is the only number here — the same case as
+        // axes 5 and 6, which is what the rule permits.
+        //
+        // ⚠️ Labelled "Dependencies", not "Underlying". Axis 5 labels from its field
+        // (`structural_score` -> "Structural") but `underlying_score` -> "Underlying"
+        // tells a reader nothing. The axis name is the honest label and matches
+        // axis 6's "Issuer".
+        var depChip = this.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies');
+        this._renderAxisHead('dependencies', 4, 'Dependencies', upSub + ' \u00b7 ' + downSub, depChip, data.dependencies);
+        this._renderCdpMarketsSection(data);
+        this._renderDependenciesSection(data);
+        this.loadCommonModeExposure(data);
+
+        // 5 · Contract & Admin — MEASURED. Split from Issuer because they fail
+        // independently and the evidence is of different kinds. USDat is the
+        // live case: 4-of-6 behind a 72h delay at token level, while a 3-of-6
+        // with NO timelock owns the CCIP pools. One score over both hides that.
+        //
+        // ⚠️ It renders UNRATED for now, and the reason is stated on the page.
+        // contract_score does not exist for any asset — 0 of 146 in the risk
+        // feed. It exists only at PROTOCOL level, where it means smart-contract
+        // SECURITY (audit quality), which is a different measurement: a protocol
+        // scoring 9.0 on audits can still hold a bare EOA upgrade key, which is
+        // exactly what this axis is for. An unexplained blank is
+        // indistinguishable from an oversight, so it must never be silent.
+        // ⚠️ The score is the AUTHORITY half's, not the code half's, and the
+        // producer's basis says so outright: "audits do not offset an authority
+        // path. The number is set by the authority half." Rendering it without
+        // that basis would be the halo this axis exists to catch.
+        var cScore = (data.contract || {}).structural_score;
+        this._renderAxisHead('contract', 5, 'Smart Contract & Admin',
+            this._contractSubText(data),
+            (typeof cScore === 'number'
+                ? '<span class="axis-rating r-warn" title="' + this._escapeAttr(
+                      this._mdPlain(String((data.contract || {}).structural_score_basis || ''))) + '">Structural ' +
+                  cScore + '/10</span>'
+                : this._ratingChipHtml(null)) + this._contractActionChipHtml(data),
+            data.contract || (data.asset_specific || {}).control || (data.asset_specific || {}).governance);
+        (function(self) {
+            var head = document.getElementById('axis-contract-head');
+            var cblk = data.contract || {};
+            var basis = cblk.structural_score_basis;
+            var cChange = self._scoreChangeHtml(cblk);
+            if (!head || (!basis && !cChange)) return;
+            var el = document.createElement('div');
+            el.className = 'axis-basis-note';
+            el.innerHTML = self._scoreBasisHtml('Why this contract score', basis, cChange);
+            head.appendChild(el);
+        })(this);
+        this._renderContractSection(data);
+
+        // 6 · Editorial axis (issuer, structural, or a future per-asset label)
+        var issuerInfo = this._issuerAxisInfo(data.issuer || {});
+        this._renderAxisHead('issuer', 6, this._escapeAttr(issuerInfo.label), 'editorial — subjective axis', '',
+            { as_of: (data.issuer || {}).issuer_score_generated_at ||
+                     (data.issuer || {}).structural_score_generated_at });
+        this._renderIssuerSection(data);
+        return true;
+    },
+
+    // ------ Backing composition sub-panel (data-gated, additive) ------
+    // Renders into #backing-extra-panels ONLY when the analyzer emits the
+    // composition fields (backing.usdc_raw_held / usdc_denominated and/or
+    // backing.stars[]). For every other asset the slot is cleared, so this is a
+    // pure no-op that cannot regress a page lacking the fields. Same safe/additive,
+    // gated-on-data pattern as the syrup credit-vault primitives (liquidityRating
+    // band_score, free_liquidity_pct, backingRating cr_pct).
+    // ⚠️ backing.alternatives and backing.volatile_bucket — a SCHEMA-LEVEL
+    // convention, published and unread. The point of `alternatives` is that the
+    // rated headline is one of several legitimate readings, so publishing the
+    // headline alone reproduces exactly the ambiguity the field exists to close.
+    // usdm carries it today; usg, apxusd and susdat have the same shape.
+    //
+    // Deliberately key-agnostic. The producer renamed drawdown_to_gross_100_pct
+    // to drawdown_to_par_pct between two copies of the same file, so anything
+    // that hardcoded a key would have silently stopped rendering. Any *_pct is
+    // shown as a percent, any *_usd as currency, note as prose, *_basis as a
+    // tooltip on its sibling.
+    _humanizeKey(k) {
+        return String(k).replace(/_pct$|_usd$/, '').replace(/_/g, ' ')
+            .replace(/\bpct\b/g, '%');
+    },
+
+    _renderAlternativesHtml(b) {
+        var alt = b.alternatives;
+        var vol = b.volatile_bucket;
+        if ((!alt || typeof alt !== 'object') && (!vol || typeof vol !== 'object')) return '';
+        var self = this;
+
+        function rowsFor(obj) {
+            return Object.keys(obj).filter(function (k) {
+                return k !== 'note' && !/_basis$/.test(k) && typeof obj[k] === 'number';
+            }).map(function (k) {
+                var v = obj[k];
+                // Explicit about what it can format. An unrecognised key renders
+                // its bare number rather than being silently given a unit.
+                var val = /_usd$/.test(k) ? self.formatCurrencyExact(v)
+                        : /_pct$/.test(k) ? self.formatPercent(v, 2)
+                        : String(v) + ' <span class="text-slate-400 text-xs">(unit not declared)</span>';
+                var basis = obj[k.replace(/_pct$|_usd$/, '') + '_basis'] || obj[k + '_basis'];
+                return '<tr>' +
+                    '<td class="text-slate-600 dark:text-slate-300">' + self._escapeAttr(self._humanizeKey(k)) + '</td>' +
+                    '<td class="text-right font-mono"' + (basis ? ' title="' + self._escapeAttr(self._mdPlain(String(basis))) + '"' : '') +
+                        '>' + val + (basis ? ' \u24d8' : '') + '</td>' +
+                '</tr>';
+            }).join('');
+        }
+
+        var head = '';
+        if (vol && typeof vol === 'object') {
+            // The drawdown figure is the one number here that does not depend on
+            // choosing a mark, so it leads.
+            var ddKey = Object.keys(vol).filter(function (k) { return /^drawdown_/.test(k) && /_pct$/.test(k); })[0];
+            var dd = ddKey ? vol[ddKey] : null;
+            head = '<div class="text-sm text-slate-700 dark:text-slate-200 mb-2">' +
+                (dd != null ? '<span class="font-semibold">Par survives a ' + this.formatPercent(dd, 1) +
+                    ' drawdown</span> in the volatile bucket' : 'Volatile bucket') +
+                (vol.pct_of_reserve != null ? ', which is <span class="font-mono">' +
+                    this.formatPercent(vol.pct_of_reserve, 1) + '</span> of the reserve' : '') +
+                (vol.composition ? ' \u2014 ' + this._escapeAttr(vol.composition) : '') + '.' +
+            '</div>';
+        }
+
+        // Table carries the ALTERNATIVE RATIOS only. The volatile bucket is
+        // already stated in the sentence above, and putting its fields through
+        // the same formatter produced "usd = 4862481.42" and "% of reserve =
+        // 24.09" — my suffix heuristic reads _usd/_pct endings and these are
+        // named `usd` and `pct_of_reserve`. Rather than widen a unit guess based
+        // on key names (the thing this repo keeps getting wrong), scope the table
+        // to the block that is actually a list of ratios.
+        var body = alt ? rowsFor(alt) : '';
+        var notes = [alt && alt.note, vol && vol.note].filter(Boolean).map(function (n) {
+            return '<div class="text-xs text-slate-500 mt-2">' + self._escapeAttr(n) + '</div>';
+        }).join('');
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Other readings of this ratio</div>' +
+            '<p class="text-sm text-slate-500 mb-3">The rated figure is one of several defensible ' +
+                'denominators. These are published so it can be audited against the ones not chosen.</p>' +
+            head +
+            (body ? '<div class="data-table-scroll"><table class="data-table"><tbody>' + body + '</tbody></table></div>' : '') +
+            notes +
+        '</div>';
+    },
+
+    _renderBackingComposition(data) {
+        var slot = document.getElementById('backing-extra-panels');
+        if (!slot) return;
+        var b = data.backing || {};
+        var altHtml = this._renderAlternativesHtml(b);
+        var raw = b.usdc_raw_held, den = b.usdc_denominated;
+        var hasUsdcSplit = (raw && raw.value != null) || (den && den.value != null);
+        var stars = Array.isArray(b.stars) ? b.stars : [];
+        var hasUsdsEvidence = b.surplus_buffer_history || b.integrity ||
+            b.share_of_usds_supply_pct != null || Array.isArray(data.coverage_by_chain) ||
+            Array.isArray((data.liquidity || {}).exit_legs);
+        if (!hasUsdcSplit && !stars.length && !hasUsdsEvidence) { slot.innerHTML = altHtml; return; }
+
+        var fmt = this.formatCurrencyExact.bind(this);
+        var pct1 = function(v) { return v != null ? CommonRenderer.formatPercent(v, 1) : '—'; };
+        // Compact $ for the star cards (billions read cleanly in a narrow card).
+        var fmtBig = function(v) {
+            if (v == null) return '—';
+            if (Math.abs(v) >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+            return CommonRenderer.formatCurrency(v);
+        };
+        var esc = function(s) {
+            return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        };
+        // Trust chip: on-chain / trustless → green; attested / off-chain source → amber.
+        var trustChip = function(trust, source, labelOverride) {
+            var t = String(trust || '').toLowerCase();
+            var s = String(source || '').toLowerCase();
+            var onchain = t === 'trustless' || t === 'onchain' || s === 'onchain';
+            var cls = onchain ? 'r-ok' : 'r-warn';
+            var txt = labelOverride || (onchain ? 'on-chain' : 'attested');
+            return '<span class="axis-rating ' + cls + '">' + esc(txt) + '</span>';
+        };
+        var palette = ['#6366f1', '#3b82f6', '#14b8a6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#84cc16'];
+
+        var html = '';
+
+        // ---- Dual-USDC row: held (raw) vs denominated ----
+        if (hasUsdcSplit) {
+            var usdcTile = function(obj, label, badgeText) {
+                if (!obj || obj.value == null) return '';
+                return '<div class="dep-card">' +
+                    '<div class="flex items-center justify-between mb-1 gap-2">' +
+                        '<div class="card-label">' + esc(label) + '</div>' +
+                        trustChip(obj.trust, obj.source, badgeText) +
+                    '</div>' +
+                    '<div class="card-value">' + fmt(obj.value) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' + pct1(obj.pct) + ' of supply · source: ' + esc(obj.source || '—') + '</div>' +
+                    (obj.note ? '<div class="text-xs text-slate-400 mt-1">' + esc(obj.note) + '</div>' : '') +
+                '</div>';
+            };
+            html +=
+                '<div class="panel">' +
+                    '<div class="panel-title">USDC exposure — held vs denominated</div>' +
+                    '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
+                        usdcTile(raw, 'USDC held (raw)', 'on-chain') +
+                        usdcTile(den, 'USDC-denominated exposure', 'attested · denominated, not held') +
+                    '</div>' +
+                    '<p class="text-xs text-slate-400 mt-3">Raw = actual USDC held on-chain (trustless). Denominated = USDC-settled instruments (T-bills / CLO / OTC lending) attested by BlockAnalitica — denominated in USDC but not held as USDC.</p>' +
+                '</div>';
+        }
+
+        // ---- Per-Star composition cards ----
+        if (stars.length) {
+            var recon = b.reconciliation || {};
+            var driftByStar = {};
+            (Array.isArray(recon.star_drift) ? recon.star_drift : []).forEach(function(d) {
+                if (d && d.star) driftByStar[d.star] = d;
+            });
+
+            var cards = stars.map(function(st) {
+                var trust = st.trust || {};
+                var sizeChip = trustChip(trust.size, st.size_source, null);
+                var mix = Array.isArray(st.mix) ? st.mix : [];
+                var mixHtml = '';
+                if (mix.length) {
+                    mixHtml = '<div class="mt-3">' + mix.map(function(m, i) {
+                        var color = palette[i % palette.length];
+                        var w = Math.max(0, Math.min(100, m.pct || 0));
+                        return '<div class="flex items-center justify-between text-xs mb-0.5">' +
+                                '<span>' + esc(m.category) + '</span>' +
+                                '<span class="font-mono text-slate-500">' + pct1(m.pct) + '</span>' +
+                            '</div>' +
+                            '<div class="pct-bar-container mb-1.5"><div class="pct-bar" style="width:' + w + '%; background:' + color + '"></div></div>';
+                    }).join('') + '</div>';
+                    mixHtml += '<div class="text-[11px] text-slate-400 mt-1">mix source: ' + esc(st.mix_source || (trust.mix || 'aggregate')) + '</div>';
+                } else {
+                    mixHtml = '<div class="text-[11px] text-slate-400 mt-3">Per-star asset mix not itemised in this snapshot (aggregate-only).</div>';
+                }
+                // Surface a size-drift caveat where BA-backed and on-chain size disagree.
+                var drift = driftByStar[st.star];
+                var driftHtml = '';
+                if (drift && drift.status && String(drift.status).toUpperCase() === 'WARN' && drift.drift_pct != null) {
+                    driftHtml = '<div class="text-[11px] text-amber-600 mt-1" title="On-chain allocator debt vs BlockAnalitica backed value">' +
+                        'size drift vs attested: ' + CommonRenderer.formatPercent(drift.drift_pct, 1) + '</div>';
+                }
+                var vaultHtml = st.allocator_vault
+                    ? '<div class="text-[11px] font-mono text-slate-400 mt-1" title="Allocator vault">' + esc(st.allocator_vault.slice(0, 6) + '…' + st.allocator_vault.slice(-4)) + '</div>'
+                    : '';
+                return '<div class="dep-card">' +
+                    '<div class="flex items-center justify-between mb-1 gap-2">' +
+                        '<div class="dep-card-name">' + esc(st.label || st.star) + '</div>' +
+                        sizeChip +
+                    '</div>' +
+                    '<div class="card-value" style="font-size:1.25rem">' + fmtBig(st.size_usd) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-0.5">' + pct1(st.size_pct) + ' of supply · size: ' + esc(st.size_source || '—') + '</div>' +
+                    driftHtml +
+                    vaultHtml +
+                    mixHtml +
+                '</div>';
+            }).join('');
+
+            html +=
+                '<div class="panel">' +
+                    '<div class="panel-title">Per-Star composition</div>' +
+                    '<p class="text-xs text-slate-500 mb-3">Debt share uses combined USDS + DAI supply; each asset mix uses that Star\'s BlockAnalitica-backed value. The denominators are deliberately separate.</p>' +
+                    '<div class="dep-grid">' + cards + '</div>' +
+                '</div>';
+        }
+
+        var sparkRecon = ((b.star_reconciliation || {}).spark);
+        if (sparkRecon) {
+            var srDebt = sparkRecon.allocator_debt || {};
+            var srExternal = sparkRecon.external_principal_lookthrough || {};
+            var srSusds = sparkRecon.direct_susds || {};
+            var residual = sparkRecon.residual_after_direct_susds_usd;
+            html += '<div class="panel">' +
+                '<div class="panel-title">Spark allocator reconciliation</div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-4 gap-3">' +
+                    '<div><div class="card-label">Allocator debt</div><div class="card-value">' + fmt(srDebt.value_usd) + '</div><div class="text-xs text-slate-500">on-chain vat</div></div>' +
+                    '<div><div class="card-label">External principal look-through</div><div class="card-value">' + fmt(srExternal.value_usd) + '</div><div class="text-xs text-slate-500">BlockAnalitica backed basis</div></div>' +
+                    '<div><div class="card-label">Direct sUSDS</div><div class="card-value">' + fmt(srSusds.value_usds) + '</div><div class="text-xs text-slate-500">' +
+                        (srSusds.shares != null ? Math.round(srSusds.shares).toLocaleString() + ' shares · ' : '') + 'reflexive USDS claim</div></div>' +
+                    '<div><div class="card-label">Remaining residual</div><div class="card-value ' +
+                        (residual < 0 ? 'text-red-600' : 'text-amber-700') + '">' + fmt(residual) + '</div><div class="text-xs text-slate-500">' +
+                        esc(sparkRecon.residual_status || 'unattributed') + '</div></div>' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 mt-3">' + esc(sparkRecon.note || '') + '</div>' +
+                (Array.isArray(sparkRecon.residual_possible_components) ? '<details class="mt-2 text-xs text-slate-500"><summary>Possible residual components — not established</summary><div class="mt-1">' +
+                    sparkRecon.residual_possible_components.map(esc).join(' · ') + '</div></details>' : '') +
+            '</div>';
+        }
+
+        // ---- USDS/sUSDS evidence that must move with the measurements ----
+        var hist = b.surplus_buffer_history;
+        if (hist) {
+            var directionClass = hist.direction === 'improving' ? 'text-green-600' :
+                hist.direction === 'worsening' ? 'text-red-600' : 'text-slate-500';
+            var executive = b.executive_observations || {};
+            var pre = executive.pre_execution || {}, post = executive.post_execution || {};
+            html += '<div class="panel">' +
+                '<div class="panel-title">Vow surplus buffer — retained history</div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
+                    '<div><div class="card-label">Current level</div><div class="card-value">' + fmt(b.surplus_buffer_usd) + '</div>' +
+                        '<div class="text-xs text-slate-500">' + pct1(b.surplus_buffer_pct) + ' of supply</div></div>' +
+                    '<div><div class="card-label">Window range</div><div class="text-sm font-mono">' +
+                        fmt(hist.minimum_usd) + ' to ' + fmt(hist.maximum_usd) + '</div>' +
+                        '<div class="text-xs text-slate-500">' + esc(hist.window) + ' · ' + esc(hist.observations) + ' observations</div></div>' +
+                    '<div><div class="card-label">Direction</div><div class="text-lg font-semibold ' + directionClass + '">' +
+                        esc(hist.direction) + '</div><div class="text-xs text-slate-500">change ' + fmt(hist.change_usd) + '</div></div>' +
+                '</div>' +
+                (pre.timestamp && post.timestamp ? '<div class="mt-4 text-sm"><span class="font-semibold">October 8 executive observation:</span> buffer ' +
+                    fmt(pre.surplus_buffer_usd) + ' at ' + esc(pre.timestamp) + ' → ' + fmt(post.surplus_buffer_usd) +
+                    ' at ' + esc(post.timestamp) + '. <span class="text-slate-500">Adjacent snapshots are retained; timestamps are observations, not an inferred transaction time. Allocator readings are preserved in the feed.</span></div>' : '') +
+            '</div>';
+        }
+
+        var integrity = b.integrity;
+        if (integrity || b.share_of_usds_supply_pct != null) {
+            html += '<div class="panel">' +
+                '<div class="panel-title">sUSDS vault integrity</div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +
+                    '<div><div class="card-label">USDS balanceOf</div><div class="card-value">' + fmt(integrity && integrity.usds_held) + '</div></div>' +
+                    '<div><div class="card-label">totalAssets()</div><div class="card-value">' + fmt(integrity && integrity.total_assets_reported) + '</div>' +
+                        '<div class="text-xs text-slate-500">divergence ' + pct1(integrity && integrity.divergence_pct) + ' · ' + esc(integrity && integrity.direction) + '</div></div>' +
+                    '<div><div class="card-label">NAV / USDS supply share</div><div class="text-lg font-semibold font-mono">' +
+                        (b.nav_usds_per_share != null ? Number(b.nav_usds_per_share).toFixed(6) + ' USDS' : '—') + '</div>' +
+                        '<div class="text-xs text-slate-500">' + pct1(b.share_of_usds_supply_pct) + ' of Ethereum USDS supply</div></div>' +
+                '</div>' +
+                (integrity && integrity.note ? '<div class="text-xs text-slate-500 mt-3">' + esc(integrity.note) + '</div>' : '') +
+            '</div>';
+        }
+
+        var capacity = (data.liquidity || {}).fixed_rate_exit_capacity;
+        var legs = (data.liquidity || {}).exit_legs;
+        if (capacity || (Array.isArray(legs) && legs.length)) {
+            var exitRows = capacity ? '<tr><td>USDS → USDC</td><td>LitePSM fixed rate</td><td class="text-right font-mono">' + fmt(capacity.inventory_usd) + '</td><td>inventory bounded</td></tr>' :
+                legs.map(function(leg) { return '<tr><td>' + esc(leg.from) + ' → ' + esc(leg.to) + '</td><td>' + esc(leg.mechanism) + '</td><td class="text-right font-mono">' +
+                    (leg.capacity_usd != null ? fmt(leg.capacity_usd) : esc(leg.capacity || '—')) + '</td><td>' + esc(leg.status) + '</td></tr>'; }).join('');
+            html += '<div class="panel"><div class="panel-title">Exit path — distinct legs and capacity</div>' +
+                '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Leg</th><th>Mechanism</th><th class="text-right">Capacity</th><th>Status</th></tr></thead><tbody>' + exitRows + '</tbody></table></div>' +
+                '<div class="text-xs text-slate-500 mt-3">The quote ladder remains explicitly non-size-responsive. LitePSM USDC inventory, not the deepest quoted rung, bounds the fixed-rate dollar exit.</div></div>';
+        }
+
+        var chainCoverage = data.coverage_by_chain;
+        if (Array.isArray(chainCoverage) && chainCoverage.length) {
+            html += '<div class="panel"><div class="panel-title">Per-chain measurement coverage</div><div class="data-table-scroll"><table class="data-table"><tbody>' +
+                chainCoverage.map(function(c) { return '<tr><td class="font-semibold">' + esc(c.chain) + '</td><td>' + esc(c.status).replace(/_/g, ' ') + '</td><td class="text-xs text-slate-500">' + esc((c.covers || []).join(' · ') || c.note || 'No backing fields measured') + '</td></tr>'; }).join('') +
+                '</tbody></table></div></div>';
+        }
+
+        slot.innerHTML = altHtml + html;
+    },
+
+    _renderPegSection(data, history) {
+        var body = document.getElementById('axis-peg-body');
+        if (!body) return;
+        var peg = data.peg || {};
+        var pct = peg.premium_discount_pct;
+        var st = this.pegStatusClass(pct);
+        var pctCls = this.pegPctClass(st);
+        var mkt = peg.market_price, nav = peg.nav;
+        var fmtP = function(v) { return v != null ? v.toFixed(4) : '—'; };
+
+        var metricRow =
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Market price</div>' +
+                    '<div class="text-lg font-bold font-mono">' + fmtP(mkt) + '</div>' +
+                    // ⚠️ A peg mark with no timestamp cannot be told from a stale
+                    // one, and syzUSD proved the cost: a 30.2-hour-old CoinGecko
+                    // price divided by a live accruing NAV rendered −2.84% and
+                    // rated the axis Stress 1/5, against a true −0.25%. The
+                    // producer now publishes market_price_as_of / _age_hours /
+                    // _source, so the age travels WITH the number instead of
+                    // being a thing a reader has to assume.
+                    // ⚠️ AGE IS COMPUTED FROM `market_price_as_of`, NOT read from a
+                    // published `market_price_age_hours`. A stored age is stale by
+                    // construction — this fleet already published
+                    // `price_age_hours: 0.012` identically across four unrelated
+                    // assets, because it was the age of the RUN rather than of the
+                    // mark, which made a downstream freshness guard unable to fire.
+                    //
+                    // pegtracker-f9 kept the stored field alive behind a named
+                    // exemption solely because this line read it. This removes the
+                    // reason, so the field can go.
+                    (function () {
+                        var srcTxt = peg.market_price_source
+                            ? CommonRenderer._escapeAttr(String(peg.market_price_source).replace(/^peg_tracker:/, ''))
+                            : (peg.market_price_as_of ? 'source not named' : null);
+                        var h = null;
+                        if (peg.market_price_as_of) {
+                            var t = new Date(peg.market_price_as_of.endsWith('Z') ||
+                                             peg.market_price_as_of.indexOf('+') > 0
+                                             ? peg.market_price_as_of : peg.market_price_as_of + 'Z');
+                            if (!isNaN(t)) h = (Date.now() - t.getTime()) / 3600000;
+                        }
+                        if (srcTxt == null && h == null) return '';
+                        var ageTxt = h == null ? '' :
+                            ' · ' + (h < 1 ? Math.max(0, Math.round(h * 60)) + 'm old'
+                                           : h.toFixed(1) + 'h old');
+                        return '<div class="text-[11px] mt-0.5 ' +
+                            (h != null && h > 6 ? 'text-amber-700 font-semibold' : 'text-slate-400') + '"' +
+                            (peg.market_price_as_of
+                                ? ' title="as of ' + CommonRenderer._escapeAttr(peg.market_price_as_of) + '"'
+                                : ' title="No market_price_as_of is published, so the age of this mark is unknown."') +
+                            '>' + (srcTxt || 'source not named') + ageTxt + '</div>';
+                    })() +
+                '</div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">NAV / theoretical</div>' +
+                    '<div class="text-lg font-bold font-mono">' + fmtP(nav) + '</div>' +
+                    // ⚠️ syzUSD is rated Stress 1/5 on a −2.84% deviation measured
+                    // against "the on-chain ERC-4626 NAV (a redemption value, not
+                    // a peg)" — its own words, published in nav_basis and shown
+                    // nowhere. A discount to a redemption value on a yield-bearing
+                    // vault is not the same claim as a stablecoin off its peg, and
+                    // the tile said the second while the feed said the first.
+                    (peg.nav_basis
+                        ? '<div class="text-[11px] text-slate-400 mt-0.5" style="line-height:1.35;">vs ' +
+                          this._escapeAttr(peg.nav_basis) + '</div>' : '') +
+                    // ⚠️ WHO WRITES THE NAV, RENDERED BESIDE THE NAV. A
+                    // discount-to-NAV is only as trustworthy as the number in the
+                    // denominator, and on an issuer-written NAV that denominator
+                    // is a claim rather than a measurement. This must sit next to
+                    // the figure it qualifies — behind a tooltip or one section
+                    // down, it qualifies nothing.
+                    //
+                    // ⚠️ CROSS-BLOCK READ, DELIBERATE. The field lives in the
+                    // BACKING overlay because its evidence is a contract audit,
+                    // but the number it describes is on the PEG tile. Rendering
+                    // it where its producer files it would put the warning on a
+                    // panel that does not show the NAV.
+                '</div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Premium / discount</div>' +
+                    '<div class="text-lg font-bold font-mono ' + pctCls + '">' + this.pegPctText(pct, 3) + '</div></div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
+                    '<div class="text-lg font-bold ' + pctCls + '">' + this.pegStatusLabel(st) + '</div></div>' +
+            '</div>' +
+            // Below the stat row, not inside the NAV cell: in the cell it renders
+            // as a ~20-character column and a warning nobody finishes reading is
+            // not a warning. Still directly beneath the figure it qualifies.
+            this._navWritePathHtml(data);
+
+        // peg.history_ref may name a file OTHER than the backing history that was
+        // passed in — the per-asset {slug}_peg_history.json exports do exactly
+        // that. Until now history_ref was never fetched: this read only the
+        // backing history, so crvusd (0 peg fields in 692 rows) and usds rendered
+        // "Peg history not tracked" while a populated export sat unread beside
+        // them. Declaring a source is not the same as reading it.
+        var pegRef = peg.history_ref;
+        var usesOwnFile = !!(pegRef && !/_backing_history\.json$/.test(pegRef));
+        var hasHist = usesOwnFile || (history && Array.isArray(history.entries) &&
+            history.entries.some(function(e) { return e[peg.history_field] != null; }));
+        var chartBlock = hasHist
+            ? '<div class="chart-container"><canvas id="peg-chart"></canvas></div>'
+            : '<div class="text-sm text-slate-400">Peg history not tracked for this asset.</div>';
+
+        // The producer's own reading of the deviation. For yzUSD: "24h volume is
+        // $24.74 — a deviation struck on this little turnover is weak evidence
+        // about fair value and strong evidence about exit cost." That is the
+        // interpretation of the number directly above it, and it was published
+        // and unrendered.
+        var pegNote = peg.note
+            ? '<div class="text-xs text-slate-500 mt-3" style="line-height:1.5;">' +
+              this._escapeAttr(peg.note) + '</div>'
+            : '';
+
+        // ⚠️ A ONE-POINT CHART THAT DOES NOT SAY WHY READS AS A BROKEN FEED.
+        //
+        // The manifest requires the history element be rendered OR its absence
+        // declared. The existing "No peg history is published" note only fires on
+        // ZERO entries; DUSD (Alto) has one, deliberately — PegTracker refused to
+        // derive the ten-month archive until riskAnalyst's method handoff landed,
+        // because one trap in that block range would have published a ~99.5% false
+        // depeg. They declared that refusal in `history_coverage`, and nothing read
+        // it, so the page would have drawn a single dot on an empty plot with no
+        // explanation for an asset whose whole story is ten months of behaviour.
+        //
+        // ⚠️ The producer's sentence, not a count I infer. "Forward-only from
+        // 2026-09-21" is a statement about why the series starts where it does;
+        // counting the entries would only tell a reader that it is short.
+        var histCoverage = (typeof peg.history_coverage === 'string' && peg.history_coverage.trim())
+            ? '<div class="text-xs text-amber-700 mb-3" style="line-height:1.45;">⚠️ ' +
+              this._escapeAttr(peg.history_coverage.trim()) + '</div>'
+            : '';
+
+        body.innerHTML =
+            '<div class="panel">' +
+                '<div class="panel-title">Peg Performance</div>' +
+                metricRow +
+                pegNote +
+                histCoverage +
+                chartBlock +
+            '</div>';
+
+        if (hasHist) {
+            if (usesOwnFile) {
+                var self = this;
+                var nc = Math.floor(Date.now() / 60000);
+                fetch('data/' + pegRef + '?nocache=' + nc)
+                    .then(function(r) { return r.ok ? r.json() : null; })
+                    .then(function(h) {
+                        if (h && Array.isArray(h.entries)) self._renderPegChart(data, h);
+                        else self._pegChartUnavailable(pegRef);
+                    })
+                    .catch(function() { self._pegChartUnavailable(pegRef); });
+            } else {
+                this._renderPegChart(data, history);
+            }
+        }
+    },
+
+    _pegChartUnavailable(ref) {
+        var ctx = document.getElementById('peg-chart');
+        if (ctx && ctx.parentElement) {
+            ctx.parentElement.innerHTML =
+                '<div class="text-sm text-slate-400">Peg history unavailable (' +
+                String(ref).replace(/[<>&]/g, '') + ').</div>';
+        }
+    },
+
+    // ⚠️ `canvasId` is OPTIONAL and exists so a bespoke renderer can reuse this chart
+    // WITHOUT declaring a second <canvas id="peg-chart">. check_feeds.py fails any
+    // renderer that does, because the common #peg-chart is created inside a section
+    // that may be hidden — two nodes with one id means getElementById returns whichever
+    // comes first, and the visible chart silently stops being the one that gets painted.
+    // Passing an id is the way to share this implementation instead of copying it.
+    // ⚠️ ONE WINDOW ACROSS THE FLEET, so two assets' peg charts can be read against each
+    // other. Measured before choosing it: the median span already rendered is 29 DAYS and
+    // 11 of 19 assets sit exactly there — a 30-day retention window in the history files,
+    // not a rendering decision anyone made. So this standardises what retention already
+    // imposes rather than imposing something new.
+    //
+    // ⚠️ It CLIPS rather than truncates silently. Eight assets retain longer (crvUSD 535d,
+    // usds 347d, yzUSD 173d, syzUSD/usde/susde ~90d, susds 67d, strcx 108d) and their
+    // earlier points stop being drawn — so the function returns what it showed and what
+    // existed, and a caller that does not say so is the defect. A chart whose window is
+    // invisible reads as "this is all there is".
+    // ⚠️ 7 DAYS, WITH A POINT FLOOR — user decision 2026-09-14: 30 days is unreadable on
+    // mobile. It also aligns the chart with the tiles, which already quote a 7-DAY range,
+    // so the panel had been showing a month beside a week-long figure.
+    //
+    // ⚠️ THE FLOOR EXISTS BECAUSE SAMPLING IS NOT UNIFORM ACROSS THE FLEET, and measuring
+    // that is what stopped a flat 7d from wrecking four pages. Most assets sample hourly
+    // (~170 points a week); crvUSD, usds, yzUSD and syzUSD sample DAILY and get 8. An
+    // 8-point line is not a chart. So: take 7 days when it carries enough points, else
+    // widen to 30, else draw everything — and the caption states the window ACTUALLY used,
+    // never the one requested.
+    PEG_CHART_WINDOW_DAYS: 7,
+    PEG_CHART_FALLBACK_DAYS: 30,
+    PEG_CHART_MIN_POINTS: 24,
+    _pegPlotRows(entries, gaps) {
+        if (!Array.isArray(gaps) || !gaps.length) return entries;
+        var ranges = gaps.map(function(gap) { return [Date.parse(gap.from), Date.parse(gap.to)]; });
+        var rows = [];
+        entries.forEach(function(entry, index) {
+            if (index) {
+                var left = Date.parse(entries[index - 1].timestamp), right = Date.parse(entry.timestamp);
+                if (ranges.some(function(range) { return range[0] < right && range[1] > left; })) {
+                    rows.push({ timestamp: new Date((left + right) / 2).toISOString() });
+                }
+            }
+            rows.push(entry);
+        });
+        return rows;
+    },
+    _renderPegChart(data, history, canvasId, zeroLabel, windowDays, parLevel) {
+        var ctx = document.getElementById(canvasId || 'peg-chart');
+        if (!ctx) return null;
+        var field = data.peg.chart_history_field || data.peg.history_field || 'peg_market_price';
+        var nav = data.peg.nav != null ? data.peg.nav : 1.0;
+        var chartArray = data.peg.chart_history_array;
+        var chartEntries = chartArray ? history[chartArray] : history.entries;
+        if (!Array.isArray(chartEntries) || !chartEntries.length) {
+            ctx.parentElement.innerHTML = '<p class="text-sm text-slate-400">No observations are published for the selected chart history.</p>';
+            return null;
+        }
+        var all = chartEntries.filter(function(e) { return e[field] != null; });
+        var configuredWindow = data.peg && Number(data.peg.chart_window_days);
+        var win = (windowDays === null) ? null
+            : (typeof windowDays === 'number' ? windowDays
+                : (configuredWindow > 0 ? configuredWindow : this.PEG_CHART_WINDOW_DAYS));
+        var configuredMin = data.peg && Number(data.peg.chart_min_points);
+        var minPoints = configuredMin >= 2 ? configuredMin : this.PEG_CHART_MIN_POINTS;
+        var strictWindow = data.peg.chart_strict_window === true;
+        if (strictWindow) {
+            all = all.filter(function(e) {
+                var t=Date.parse(e.timestamp);
+                return Number.isFinite(e[field]) && Number.isFinite(e[data.peg.chart_reference_field || 'peg_theoretical_price']) &&
+                    Number.isFinite(t) && t<=Date.now() && (!win || t>=Date.now()-win*86400000);
+            });
+            if (all.length < minPoints) {
+                ctx.parentElement.innerHTML = '<p class="text-sm text-slate-400">Insufficient paired market-price and dollar-NAV observations: '+all.length+' of '+minPoints+' required within '+win+' days. Earlier unpaired NAV observations are excluded.</p>';
+                return null;
+            }
+        }
+        var entries = all, usedWindow = null;
+        if (win) {
+            var self2 = this;
+            var slice = function(days) {
+                var cutoff = Date.now() - days * 24 * 3600 * 1000;
+                return all.filter(function(e) {
+                    var t = Date.parse(e.timestamp);
+                    return isNaN(t) ? true : t >= cutoff;
+                });
+            };
+            var kept = slice(win);
+            // Widen once if the requested window is too sparse to read as a line.
+            if (!strictWindow && kept.length < minPoints && this.PEG_CHART_FALLBACK_DAYS > win) {
+                var wider = slice(this.PEG_CHART_FALLBACK_DAYS);
+                if (wider.length > kept.length) { kept = wider; win = this.PEG_CHART_FALLBACK_DAYS; }
+            }
+            // ⚠️ Never clip to nothing: a stale feed whose newest point predates the window
+            // would render an empty chart, which reads as "no data" rather than "no recent
+            // data". Fall back to the full series and let the caller say the window missed.
+            if (kept.length >= 2) { entries = kept; usedWindow = win; }
+        }
+        var _shown = { shown: entries.length, total: all.length,
+                       windowDays: usedWindow, clipped: entries.length < all.length,
+                       firstShown: entries.length ? entries[0].timestamp : null,
+                       firstAvailable: all.length ? all[0].timestamp : null };
+        if (chartArray) {
+            var noteId = (canvasId || 'peg-chart') + '-observation-note';
+            var previousNote = document.getElementById(noteId);
+            if (previousNote) previousNote.remove();
+            var observationNote = document.createElement('p');
+            observationNote.id = noteId;
+            observationNote.className = 'text-xs text-slate-500 mt-2';
+            observationNote.textContent = 'Chart: ' + entries.length + ' observations' +
+                (entries.length ? ' starting ' + entries[0].timestamp : '') +
+                '. Only the selected recent observation series is shown; archive points are excluded.';
+            ctx.parentElement.insertAdjacentElement('afterend', observationNote);
+        }
+        // Break the plotted line across producer-declared observation gaps.
+        // Keep the original observations for counts and ratings.
+        // coverage_gaps describes the daily entries archive, not a separately
+        // selected hourly array whose observations may fill the daily gap.
+        var plotRows = this._pegPlotRows(entries, chartArray ? null : history.coverage_gaps);
+        var labels = plotRows.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });
+        var series = plotRows.map(function(e) { return e[field] == null ? null : e[field]; });
+
+        // ⚠️ THE REFERENCE LINE WAS TODAY'S NAV DRAWN FLAT ACROSS ALL HISTORY.
+        //
+        // Correct for a $1 par target. Wrong for an accruing share, where every
+        // historical point gets compared against a NAV that had not accrued
+        // yet — so the whole series sits under the line and reads as a
+        // persistent discount, with the error zero at the right edge and growing
+        // backwards. sUSDe's left edge read −1.09% on a day it was AT its NAV;
+        // the gap drawn was three months of yield.
+        //
+        // Three cases, resolved by what the data can actually support:
+        //   per-row theoretical  -> plot it as a real second line, no annotation
+        //   percent-scale field  -> the reference is ZERO, not a price
+        //   par target (nav = 1) -> the flat line is right, keep it
+        //   otherwise            -> draw NO reference and say why
+        //
+        // The last one matters: sUSDe is the asset that motivated this and it has
+        // NO per-row theoretical in 2,159 rows, so the fix that works for apyUSD
+        // cannot work for it. A wrong reference line is worse than none.
+        var referenceField = data.peg.chart_reference_field || 'peg_theoretical_price';
+        var theoSeries = plotRows.map(function(e) { return e[referenceField] == null ? null : e[referenceField]; });
+        var theoCount = theoSeries.filter(function(v) { return v != null; }).length;
+        var theoDistinct = {};
+        theoSeries.forEach(function(v) { if (v != null) theoDistinct[v] = 1; });
+        var hasTheo = theoCount >= entries.length * 0.9 && (Object.keys(theoDistinct).length > 1 || strictWindow);
+
+        // The `_pct` suffix is the producer's own naming of the field, not a unit
+        // inferred from a value — but bound it anyway, so a mis-named price field
+        // cannot silently move the reference to zero.
+        var isPct = /_pct$/.test(field) && series.every(function(v) {
+            return v == null || (typeof v === 'number' && Math.abs(v) <= 50);
+        });
+        // ⚠️ sUSDS plots `field: nav` — the SERIES IS the NAV curve, so a marker at
+        // today's value is a legitimate "you are here" on its own line, not a
+        // false reference. riskAnalyst named it explicitly so a sweep would not
+        // "fix" it into something worse, and the first cut of this did exactly
+        // that: stripped its marker and captioned it as unreferenced.
+        var isSelfNav = /^(nav|nav_per_share|peg_theoretical_price)$/.test(field);
+        // ⚠️ parLevel lets a NON-$1 par draw its reference line. The original test was
+        // hardcoded to nav==1, which is right for a dollar stablecoin and silently drops
+        // the reference for a $100 preferred — STRC would have rendered a bare price
+        // series with "no reference drawn", the one outcome this block calls worse
+        // than none.
+        var parAt = (typeof parLevel === 'number') ? parLevel : (Math.abs(nav - 1) < 1e-9 ? 1 : null);
+        var isPar = !isPct && !hasTheo && !isSelfNav && parAt != null;
+        var noReference = !isPct && !hasTheo && !isPar && !isSelfNav;
+
+        if (window._pegChart) window._pegChart.destroy();
+        window._pegChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: labels, datasets: [{
+                label: isPct ? 'Deviation' : (isSelfNav ? 'NAV' : 'Market price'),
+                data: series,
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                // ⚠️ THINNER THAN THE REFERENCE, DELIBERATELY. On an hourly series this line
+                // is dense and noisy; at equal weight it crosses the reference constantly and
+                // buries it. The market series is the subject but the reference is the
+                // BASELINE a reader measures against, so the baseline wins the visual weight.
+                fill: true, tension: 0.3, spanGaps: false,
+                pointRadius: plotRows.length > entries.length ? 2 : 0, borderWidth: 1.4, order: 2
+            }].concat(hasTheo ? [{
+                // ⚠️ THE REFERENCE LINE IS THE POINT OF THIS CHART AND IT WAS THE FAINTEST
+                // THING ON IT — 1.5px of slate-400 dashes under a filled indigo area, on a
+                // pair of series that sit within a few tenths of a percent of each other.
+                // The gap between these two lines IS the premium, so a reader who cannot see
+                // the reference cannot read the chart at all.
+                //
+                // ⚠️ Deliberately still NEUTRAL, not a new hue. This dashboard spends red,
+                // amber and green on risk states; a coloured reference line would read as a
+                // verdict on the gap rather than as the baseline it is. Heavier, darker and a
+                // longer dash instead — slate-500 at 2.5px reads on both themes, where
+                // slate-600 would sink into the dark background.
+                label: 'NAV / theoretical',
+                data: theoSeries,
+                borderColor: '#475569',
+                borderDash: [8, 4],
+                // order below the market series so it is drawn LAST and sits on top
+                fill: false, tension: 0.3, pointRadius: 0, borderWidth: 3, order: 1
+            }] : []) },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'time', time: { unit: data.peg.chart_time_unit || 'day', displayFormats: { day: 'MMM d', hour: 'MMM d, HH:mm' } },
+                         grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+                    y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 },
+                         callback: function(v) { return v.toFixed(3); } } }
+                },
+                plugins: {
+                    legend: { display: hasTheo },
+                    tooltip: { callbacks: { label: function(c) {
+                        var v = c.raw;
+                        if (v == null) return '';
+                        return (c.dataset.label || '') + ': ' +
+                               (isPct ? v.toFixed(3) + '%' : v.toFixed(4));
+                    } } },
+                    annotation: { annotations: (isPct
+                        ? { par: { type: 'line', yMin: 0, yMax: 0, borderColor: '#94a3b8',
+                                   borderWidth: 1, borderDash: [4, 4],
+                                   label: { content: zeroLabel || '0% \u2014 at NAV', display: true, position: 'start',
+                                            font: { size: 9 }, color: '#64748b' } } }
+                        : (isPar
+                            ? { par: { type: 'line', yMin: parAt, yMax: parAt, borderColor: '#94a3b8',
+                                       borderWidth: 1, borderDash: [4, 4],
+                                       label: { content: 'Par ' + (parAt === 1 ? '1.00' : ('$' + parAt.toFixed(2))),
+                                                display: true, position: 'start',
+                                                font: { size: 9 }, color: '#64748b' } } }
+                            : (isSelfNav
+                                ? { par: { type: 'line', yMin: nav, yMax: nav, borderColor: '#94a3b8',
+                                           borderWidth: 1, borderDash: [4, 4],
+                                           label: { content: 'Today ' + nav.toFixed(4), display: true,
+                                                    position: 'end', font: { size: 9 }, color: '#64748b' } } }
+                                : {}))) }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+
+        // (returns _shown at the end so a caller can state the window — see below)
+        this._lastPegChartWindow = _shown;
+
+        // When no reference can be drawn honestly, say so rather than leaving a
+        // bare series a reader will mentally compare against par.
+        var holder = ctx.parentNode;
+        if (holder) {
+            var prev = holder.parentNode && holder.parentNode.querySelector('.peg-chart-note');
+            if (prev) prev.remove();
+            if (noReference) {
+                var n = document.createElement('div');
+                n.className = 'peg-chart-note text-xs text-slate-500 mt-2';
+                n.style.lineHeight = '1.45';
+                n.textContent = 'No NAV reference drawn: this asset\'s NAV accrues (today ' +
+                    nav.toFixed(4) + ') and the history carries no per-row theoretical, so a flat ' +
+                    'line at today\'s value would read as a discount that never happened. ' +
+                    'Compare points to each other, not to a level.';
+                holder.parentNode.insertBefore(n, holder.nextSibling);
+            }
+        }
+    },
+
+    // ⚠️ SHARED SO A BESPOKE PAGE CANNOT SILENTLY LOSE THE LADDER — OR RE-ACQUIRE
+    // A BUG THIS ONE HAS ALREADY FIXED. hastra-prime renders its own axis-3 panel
+    // and clears `axis-liquidity-body`, so everything below was unreachable on it:
+    // 13 measured rungs, including the collapse from -10.0bps at $5M to -857bps at
+    // $6M and -6088bps at $14M. Its own copy calls that "a hard inventory wall, not
+    // a slippage curve" — the rungs ARE the evidence for the claim, and the page
+    // made the claim without them.
+    //
+    // Copying the markup instead would have re-introduced the signed-vs-magnitude
+    // colouring defect on a fresh page the same week it was fixed here.
+    //
+    // Returns '' when the feed carries no ladder; the caller owns the empty state.
+    // ⚠️ FOUR FEEDS PUBLISH slippage_bps WITH THE SIGN INVERTED, and the
+    // contradiction sits in the same row. susdat's $500K rung reads "+8074.6 bps"
+    // beside a net out of $96,269 from $500,000 — a positive number, which
+    // conventionally means a gain, against an 81% loss. Its $1K rung reads
+    // "-65.0 bps" against $1,007 returned: a gain shown as a cost. usdat, usdai
+    // and susdai are the same. Found by riskAnalyst, who quoted the raw field
+    // into two published scores and got the right magnitudes by luck.
+    //
+    // ⚠️ THE FIGURE IS NOT OVERRIDDEN. Recomputing from output_usd would be
+    // deriving what the producer publishes, and for an asset whose fair_value is
+    // not $1 that recomputation is wrong in a different way. The published value
+    // renders; the CONTRADICTION is flagged.
+    //
+    // ⚠️ The detector is deliberately narrow: sign disagrees AND magnitudes match
+    // within 5%. A fair_value offset moves the magnitude (usde 1.00 vs 2.31,
+    // syrupUSDC 3.30 vs 10.24) and never mirrors it, so those never trip. An
+    // exact mirror cannot be a basis difference.
+    //
+    // Shared because two renderers draw slippage tables — this one and usdai.js,
+    // which serves the other two affected assets.
+    // ⚠️ SYSTEMATIC OR NOTHING. A sign inversion is the same arithmetic on every
+    // rung, so it mirrors on ALL of them. A coincidence mirrors on one.
+    //
+    // The first version of this checked each rung independently and was ONE
+    // ROUNDING from flagging susde — its fair_value is 1.2472, so recomputing
+    // from output_usd carries a systematic offset, and at the $100K rung the
+    // true -1.00 and the offset +0.99 coincide in magnitude by chance. Only a
+    // `|realised| > 1` guard excluded it, with 0.99 sitting just under the line.
+    // susde is the asset cited as the control proving this detector is narrow,
+    // so it is the one it could least afford to flag. Caught by PegTracker
+    // running it over every rung rather than one per asset.
+    //
+    //   susdat  3 of 3 mirror -> systematic, a sign bug
+    //   usdat   7 of 7 mirror -> systematic, a sign bug
+    //   susde   1 of 8 mirror -> coincidence, must NOT flag
+    //
+    // ⚠️ REVISED 2026-09-22 — TWO CONFIRMED WEAKNESSES, BOTH FOUND BY THE PegTracker
+    // SESSION RUNNING ITS OWN DETECTOR OVER THE SAME DATA. Neither was visible from
+    // this side; each rule's blind spot was the other's finding.
+    //
+    //   1. A FLIP-AND-RESCALE ESCAPED. The old rule demanded |published| ~ |realised|
+    //      within 5%, so a ladder that inverted the sign AND changed the scale —
+    //      published +5.0 against a realised -50.0 on every rung — mirrored on ZERO
+    //      rungs and returned false. Reproduced here before changing anything.
+    //      A magnitude tolerance is exactly what a rescaled inversion slips through.
+    //
+    //   2. THE `=== qualifying` DENOMINATOR MOVES. Rungs qualify only at
+    //      |realised| > 1, so a universally-quantified claim over "every qualifying
+    //      rung" gets EASIER to satisfy as rungs drop out — a ladder can approach
+    //      "all rungs mirror" without one value changing sign. Measured on reusd_re
+    //      across 49 minutes and two cron cycles: 9 qualifying rungs -> 5, as $10K
+    //      (-0.04), $50K (-0.11), $100K (-0.17) and $500K (-0.65) all fell inside
+    //      the threshold. With the old floor of 2, a ladder that shrank to two
+    //      coincidentally-mirroring rungs tripped this. Verified: it did.
+    //
+    // THE FIX — a constant RATIO, not a matched magnitude.
+    // A sign inversion is one arithmetic operation applied uniformly, so
+    // |published| / |realised| is FIXED across rungs whatever the scale factor.
+    // A basis difference (price-impact vs all-in-cost) has a ratio that DRIFTS with
+    // size, because the venue's base spread is a shrinking share of the total.
+    // So the ratio's spread across rungs separates the two, where a magnitude
+    // window could only recognise the k = 1 case.
+    //
+    // ⚠️ THIS DELIBERATELY DOES NOT READ `slippage_bps_basis`. Narrowing on a
+    // producer's own label would make the detector trust the field it exists to
+    // distrust — a feed that inverted its sign AND mislabelled its basis would be
+    // exempted by its own second mistake. The arithmetic shape does not ask the
+    // suspect for its alibi.
+    //
+    // FLOOR RAISED 2 -> 3, and the number is set by the real cases rather than by
+    // taste: the two confirmed sign bugs were susdat (3 of 3) and usdat (7 of 7), so
+    // 3 is the smallest floor that preserves every known true positive. The explicit
+    // trade: a genuine inversion on a two-rung ladder is no longer detected. That is
+    // accepted because two points always define a ratio pair and can sit inside any
+    // tolerance by chance, which is the coincidence weakness 2 describes.
+    //
+    // Controls run against this implementation (see also slippageSignWarningHtml):
+    //   flip-and-rescale  +5.0 vs -50.0, 3 rungs   -> true   (old rule: FALSE)
+    //   clean 1:1 inversion                        -> true
+    //   susdat-shape 3/3 mirror                    -> true
+    //   1dp rounding noise (~4% ratio spread)      -> true   (must not be lost)
+    //   two-rung mirrored ladder                   -> false  (floor)
+    //   every live ladder in data/ (21 of them)    -> false
+    //   crvUSD: reachable at all (gain rung no longer vetoes)
+    RATIO_SPREAD_TOLERANCE: 0.15,
+    MIN_QUALIFYING_RUNGS: 3,
+
+    // ⚠️ THREE OUTCOMES, NOT TWO. `false` and "could not check" are different
+    // statements and this used to collapse them, which is the vacuous-pass trap:
+    // susds has SEVEN gain rungs and ZERO loss rungs, so there is nothing a
+    // loss-published-as-gain detector could ever find there — yet it reported
+    // `false` and read as "checked, clean". `all()` over an empty list is True.
+    //
+    //   true   inverted — every loss rung disagrees in sign at a constant ratio
+    //   false  CHECKED and clean
+    //   null   ABSTAINED — fewer than MIN_QUALIFYING_RUNGS loss rungs to reason over
+    //
+    // null is falsy, so `x ? warn : ''` at both call sites behaves exactly as
+    // before. The distinction exists so a reader (and the panel) can tell silence
+    // from a clean bill of health.
+    slippageSignCheck(rows) {
+        var out = { verdict: null, qualifying: 0, required: CommonRenderer.MIN_QUALIFYING_RUNGS };
+        if (!Array.isArray(rows)) return out;
+        var qualifying = 0, ratios = [], anyAgreed = false;
+        for (var i = 0; i < rows.length; i++) {
+            var r = rows[i];
+            if (!r || typeof r.bps !== 'number' || typeof r.output !== 'number' ||
+                typeof r.size !== 'number' || !(r.size > 0)) continue;
+            var realised = (r.output / r.size - 1) * 10000;
+            // ⚠️ SIGNED LOSS, NOT `Math.abs(realised) > 1`. The defect this detects
+            // is A LOSS PUBLISHED AS A GAIN, so a rung that FILLED ABOVE PAR has no
+            // cost to mis-sign and can never supply evidence of inversion — but under
+            // an absolute-value predicate it could still VETO detection by "agreeing".
+            // crvUSD is the live case: its $1K rung publishes exactly 0.0 against a
+            // realised GAIN of +1.90 bps, 0 >= 0 agrees with realised >= 0, and the
+            // whole ladder returned false before its $25M/$50M loss rungs were ever
+            // examined. A signed field tested as unsigned — the same class as the
+            // four original sign bugs this detector was built for. Found by the
+            // PegTracker session reproducing a count from the same file.
+            if (!(realised < -1)) continue;
+            qualifying++;
+            // One rung agreeing in sign means not inverted — an inversion is
+            // systematic or it is not an inversion. ⚠️ Recorded rather than
+            // returned early: the floor has to be applied FIRST, or a single
+            // agreeing rung reports "clean" on a ladder too thin to judge.
+            if ((realised >= 0) === (r.bps >= 0)) anyAgreed = true;
+            else ratios.push(Math.abs(r.bps) / Math.abs(realised));
+        }
+        out.qualifying = qualifying;
+        if (qualifying < CommonRenderer.MIN_QUALIFYING_RUNGS) return out;  // verdict stays null
+        if (anyAgreed) { out.verdict = false; return out; }
+        var mn = Math.min.apply(null, ratios), mx = Math.max.apply(null, ratios);
+        out.verdict = (mx > 0) && (((mx - mn) / mx) <= CommonRenderer.RATIO_SPREAD_TOLERANCE);
+        return out;
+    },
+
+    // Thin wrapper kept for the two render call sites, which only ever ask
+    // "should a warning be drawn". Returns the tri-state verdict directly.
+    slippageSignIsInverted(rows) {
+        return CommonRenderer.slippageSignCheck(rows).verdict;
+    },
+
+    // The declared absence. House rule in this file: an absence a reader could
+    // mistake for a clean result gets said out loud. Renders nothing when the
+    // ladder WAS checked — silence there is a real verdict, not a gap.
+    slippageSignAbstentionHtml(rows) {
+        var c = CommonRenderer.slippageSignCheck(rows);
+        if (c.verdict !== null) return '';
+        return '<div class="text-[11px] text-slate-500 mb-2" title="' + this._escapeAttr(
+            'The sign-inversion check compares each rung that FILLED BELOW par against its ' +
+            'published bps. Rungs that filled above par are excluded: they carry no cost to ' +
+            'mis-sign. This ladder has ' + c.qualifying + ' such rung(s) and the check needs ' +
+            c.required + ', so no verdict is offered either way. This is not a clean result.') +
+            '">Sign-inversion check: <span class="font-mono">abstained</span> \u2014 ' +
+            c.qualifying + ' of ' + c.required + ' below-par rungs \u24d8</div>';
+    },
+
+    // The per-row marker, shown only where the LADDER was found systematically
+    // inverted. The published value is never overridden — recomputing a
+    // producer's field is how two numbers come to disagree, and for an asset
+    // whose fair_value is not $1 the recomputation is wrong in its own way.
+    slippageSignWarningHtml(sizeUsd, outputUsd, bps) {
+        if (typeof bps !== 'number' || typeof outputUsd !== 'number' ||
+            typeof sizeUsd !== 'number' || !(sizeUsd > 0)) return '';
+        var realised = (outputUsd / sizeUsd - 1) * 10000;
+        return ' <span class="text-amber-700 dark:text-amber-300" title="' + this._escapeAttr(
+            'Every rung on this ladder carries a slippage figure whose sign contradicts its own ' +
+            'output column, at the same magnitude — the signature of an inverted sign rather than ' +
+            'a basis difference. Selling ' + this.formatCurrency(sizeUsd) + ' returns ' +
+            this.formatCurrencyExact(outputUsd) + ', which is a ' +
+            (realised >= 0 ? 'GAIN' : 'LOSS') + ' of ' + Math.abs(realised).toFixed(1) + ' bps. ' +
+            'The published value is shown unchanged rather than corrected here.') +
+            '">\u26a0\ufe0f</span>';
+    },
+
+    // ⚠️ A LADDER NESTED ONE LEVEL DEEPER RENDERED AS A DECLARED ABSENCE.
+    // Seven feeds key exit_mark.quotes directly on size ("1000": {...}); the two
+    // apyx feeds key on the PAIR first ("apxUSD_to_USDC": {"1000": {...}}). The
+    // size scan below found no numeric keys, sizes came back empty, and the page
+    // printed "No exit-mark RFQ ladder in this snapshot" over a complete four-rung
+    // ladder. ⚠️ A FALSE ABSENCE IS NOT A SAFE FAILURE — it is a wrong statement
+    // about what is known, and it sat beside "Max ≤25 bps $100.0K", which is
+    // derived from the very quotes being called absent.
+    // Unwrap ONE level when the top level holds exactly one pair whose own keys
+    // are sizes. Handoff filed asking apyx to emit the fleet shape; when it does,
+    // the top level is numeric and this is a no-op.
+    _unwrapLadderQuotes(quotes) {
+        var hasNumeric = Object.keys(quotes).some(function(k) { return !isNaN(Number(k)); });
+        if (hasNumeric) return { quotes: quotes, pair: null };
+        var keys = Object.keys(quotes);
+        if (keys.length !== 1) return { quotes: quotes, pair: null };
+        var inner = quotes[keys[0]];
+        if (!inner || typeof inner !== 'object') return { quotes: quotes, pair: null };
+        if (!Object.keys(inner).some(function(k) { return !isNaN(Number(k)); })) return { quotes: quotes, pair: null };
+        return { quotes: inner, pair: keys[0] };
+    },
+
+    // ⚠️ ONE FACT, TWO UNITS. The flat feeds publish `slippage_bps`; the apyx
+    // feeds publish `slippage_pct` for the same quantity. Everything downstream
+    // — colouring, the ≤25bps qualifier, the sign-inversion check — reads bps, so
+    // a pct feed would be graded as though 1.93 meant 1.93 bps rather than 193.
+    // Normalise on read; never write the converted value back to the feed object.
+    _ladderRungBps(q) {
+        if (!q || typeof q !== 'object') return null;
+        if (q.slippage_bps != null) return q.slippage_bps;
+        if (q.slippage_pct != null) return q.slippage_pct * 100;
+        return null;
+    },
+
+    // The ladder's smallest rung IS the producer's baseline (its scoring code
+    // takes depth_baseline_bps = raw bps of the smallest size). Recovering it
+    // here rather than reading a published field, because `baseline_bps` is
+    // computed upstream and never reaches our feed.
+    _ladderBaselineBps(liq) {
+        var em = (liq || {}).exit_mark || {};
+        var q = this._unwrapLadderQuotes(em.quotes || {}).quotes;
+        var sizes = Object.keys(q).map(Number).filter(function(n) { return !isNaN(n); })
+            .sort(function(a, b) { return a - b; });
+        for (var i = 0; i < sizes.length; i++) {
+            var bps = this._ladderRungBps(q['' + sizes[i]] || q[sizes[i]]);
+            if (bps != null) return bps;
+        }
+        return null;
+    },
+
+    ladderBlockHtml(liq) {
+        liq = liq || {};
+        var em = liq.exit_mark || {};
+        var rawQuotes = em.quotes || {};
+        var unwrapped = this._unwrapLadderQuotes(rawQuotes);
+        var quotes = unwrapped.quotes;
+        var ladderPair = unwrapped.pair;
+
+        // Headline exit mark = the KyberSwap RFQ ladder (As-built #2). Lead with it.
+        var sizes = Object.keys(quotes).map(Number).filter(function(n) { return !isNaN(n); }).sort(function(a, b) { return a - b; });
+
+        // ⚠️ A BISECTED LADDER ROUNDS TWO DISTINCT RUNGS ONTO ONE LABEL. USG's
+        // bracket rungs are $677,124 and $677,139 at −199.994 and −200.010 bps:
+        // formatted at the table's usual precision they print as two identical
+        // rows, "$677.1K / −200.0 bps", one amber and one red. A reader sees a
+        // duplicated row with inconsistent colouring — which reads as a bug and
+        // hides the one thing those rows exist to show, the 2% crossing falling
+        // between them. Precision widens only when the rounding is what collided.
+        var qOf = function(sz) { return quotes['' + sz] || quotes[sz] || {}; };
+
+        // Smallest precision at which no two rungs share a label. Escalating once
+        // is not enough: reusde-re's bracket rungs are $15,461.12 and $15,461.35
+        // at -199.9984 and -200.0008 bps, which still collide at two decimals.
+        function firstDistinct(decs, label) {
+            for (var i = 0; i < decs.length; i++) {
+                var seenL = {}, clash = false;
+                for (var j = 0; j < sizes.length; j++) {
+                    var k = label(sizes[j], decs[i]);
+                    if (k == null) continue;
+                    if (seenL[k]) { clash = true; break; }
+                    seenL[k] = true;
+                }
+                if (!clash) return decs[i];
+            }
+            return decs[decs.length - 1];
+        }
+        function money(n, dec) {
+            return '$' + n.toLocaleString('en-US',
+                { minimumFractionDigits: dec, maximumFractionDigits: dec });
+        }
+        // -1 is the table's usual compact form ($1.0K / $1.0M); it is kept
+        // wherever it is unambiguous, because whole-dollar sizes are harder to
+        // scan down a column.
+        var sizeDec = firstDistinct([-1, 0, 2], function(sz, dec) {
+            return dec === -1 ? CommonRenderer.formatCurrency(sz) : money(sz, dec);
+        });
+        var sizeLabel = function(sz) {
+            return sizeDec === -1 ? CommonRenderer.formatCurrency(sz) : money(sz, sizeDec);
+        };
+
+        // ⚠️ Not "any duplicate bps" — usdm's ladder is genuinely flat at every
+        // rung and more decimals there add noise without adding a distinction.
+        // Only a collision that STRADDLES the 2% colour boundary is one where
+        // the displayed number contradicts the colour beside it.
+        function bpsClass(bps) {
+            if (bps == null) return null;
+            var m = Math.abs(bps);
+            return m <= 25 ? 'g' : (m <= 200 ? 'a' : 'r');
+        }
+        function bpsCollidesAcrossColour(dec) {
+            var byLabel = {};
+            for (var i = 0; i < sizes.length; i++) {
+                var bps = CommonRenderer._ladderRungBps(qOf(sizes[i]));
+                if (typeof bps !== 'number') continue;
+                var k = bps.toFixed(dec);
+                if (byLabel[k] && byLabel[k] !== bpsClass(bps)) return true;
+                byLabel[k] = bpsClass(bps);
+            }
+            return false;
+        }
+        var bpsDigits = 1;
+        while (bpsDigits < 4 && bpsCollidesAcrossColour(bpsDigits)) bpsDigits++;
+
+        // ⚠️ A FROZEN OUTPUT IS A WALL, AND A bps FIGURE RENDERS IT AS A PRICE.
+        // hastra-prime's output_usd stops at $5,900,633.43: $14M in returns
+        // exactly what $5.99M returns. The slippage column expresses that as
+        // -6088bps, which reads as "very expensive" rather than "cannot fill".
+        // Those are different facts and only one of them is a price.
+        //
+        // ⚠️ No threshold is invented here. The tell is that output_usd is
+        // IDENTICAL on consecutive rungs while the size grew — a pure
+        // observation from published data, which is the same reason
+        // `fill_ratio` is the right shape for the producer and a cutoff is not.
+        // ⚠️ fill_ratio IS THE FIGURE THAT SEPARATES "EXPENSIVE" FROM "GONE", and
+        // it needs no threshold to do it. susdat's $500K reads 0.1925 beside
+        // -8073bps: the bps says a price, the ratio says four fifths of the order
+        // did not fill. PegTracker publishes it per rung across every ladder
+        // rather than a `cannot_fill` status, deliberately — a status needs a
+        // cutoff and a cutoff would be invented. Rendered for every rung on a
+        // ladder that carries it, including the 1.0000s, because suppressing the
+        // healthy ones would itself be a threshold.
+        var hasFill = sizes.some(function(sz) {
+            return typeof qOf(sz).fill_ratio === 'number';
+        });
+        var frozenAt = {};
+        (function() {
+            for (var i = 1; i < sizes.length; i++) {
+                var a = qOf(sizes[i - 1]).output_usd, b = qOf(sizes[i]).output_usd;
+                if (typeof a === 'number' && typeof b === 'number' && Math.abs(a - b) < 0.005) {
+                    frozenAt[sizes[i]] = a;
+                }
+            }
+        })();
+        var ladderSignInverted = CommonRenderer.slippageSignIsInverted(sizes.map(function(sz) {
+            var q0 = qOf(sz);
+            return { size: sz, output: q0.output_usd, bps: CommonRenderer._ladderRungBps(q0) };
+        }));
+        var ladderRows = sizes.map(function(sz) {
+            var q = quotes['' + sz] || quotes[sz] || {};
+            var bps = CommonRenderer._ladderRungBps(q);
+            // ⚠️ A FAILED QUOTE RENDERED IDENTICALLY TO AN UNATTEMPTED ONE.
+            //
+            // The producer publishes {"error": "http_530"} for a size whose RFQ
+            // did not return, and `error` was never read — so the row printed
+            // "— —", indistinguishable from a size nobody asked about, and from
+            // a reader's point of view indistinguishable from nothing to report.
+            //
+            // ⚠️ On crvUSD it is the $10M rung, sitting exactly at the inflection:
+            // 5M quotes at -2.3 bps and 25M at -606.9 bps. The blank hides that the
+            // measurement FAILED at the one size where the ladder turns, and a
+            // reader scanning down sees smooth, blank, catastrophic.
+            //
+            // A failed read is not an absence — the distinction this estate has
+            // had to relearn repeatedly. It now says so, in the cell, in amber.
+            if (q.error) {
+                // ⚠️ AND SAY WHEN IT CANNOT BE A DEPTH LIMIT, because the blank
+                // invited exactly that reading and I made it myself: I described
+                // crvUSD's failed $10M rung as landing "at the inflection", which
+                // read meaning into noise. In 6 of the 9 failures across the
+                // estate a LARGER size quoted successfully in the same run —
+                // crvUSD failed at $10M while $50M returned; susDS failed at $10K.
+                // A quote that fails while a bigger one succeeds cannot mean depth
+                // ran out, and the row should tell a reader that rather than leave
+                // them to notice it.
+                var biggerOk = sizes.some(function(other) {
+                    var oq = quotes['' + other] || quotes[other] || {};
+                    return other > sz && !oq.error && CommonRenderer._ladderRungBps(oq) != null;
+                });
+                return '<tr>' +
+                    '<td class="font-mono">' + sizeLabel(sz) + '</td>' +
+                    '<td class="text-right font-mono text-amber-600" title="' +
+                        CommonRenderer._escapeAttr('The quote for this size FAILED (' +
+                        String(q.error) + '). This is an unsuccessful measurement, not a ' +
+                        'measurement of zero and not a size that was skipped — nothing is ' +
+                        'established about depth at this level.' +
+                        (biggerOk
+                            ? ' \u26a0\ufe0f A LARGER size quoted successfully in the same ' +
+                              'run, so this failure CANNOT mean depth ran out — it is a ' +
+                              'failed request, not a liquidity finding.'
+                            : '')) +
+                        '">\u26a0\ufe0f quote failed</td>' +
+                    '<td class="text-right font-mono text-slate-400">' +
+                        (biggerOk ? 'request failed' : 'not measured') + '</td>' +
+                    (hasFill ? '<td class="text-right font-mono text-slate-400">—</td>' : '') +
+                '</tr>';
+            }
+            // ⚠️ THE LADDER WAS COLOURED BY SIGNED VALUE, AND HALF THE ESTATE
+            // PUBLISHES COST AS NEGATIVE. `bps <= 25` is true for EVERY negative
+            // rung, so the worst reading on the page rendered green: crvUSD's $50M
+            // rung showed −4197.4 bps — $50M in, $29.0M out, a 42% haircut — in the
+            // same colour as a 0.0 bps fill. Live on crvusd, hastra-prime (−6262),
+            // syzusd (−5265), yzusd (−4007) and usde (−427).
+            //
+            // ⚠️ This is the SAME defect the depth qualifier above documents:
+            // "usde published $5M while quoting that same rung at −1490bps, because
+            // one comparison read a signed cost as though it were a magnitude." It
+            // was fixed there and left standing here. Sign carries the convention,
+            // MAGNITUDE carries the cost — grade on magnitude, always.
+            // ⚠️ FOUR FEEDS PUBLISH slippage_bps WITH THE SIGN INVERTED, and the
+            // contradiction is visible in the same row. susdat's $500K rung reads
+            // "+8074.6 bps" beside a net out of $96,269 from $500,000 — a
+            // positive number, which conventionally means a gain, against an 81%
+            // loss. Its $1K rung reads "-65.0 bps" against $1,007 returned: a
+            // gain shown as a cost. usdai, susdai and usdat are the same.
+            //
+            // ⚠️ THE FIGURE IS NOT OVERRIDDEN. Recomputing from output_usd would
+            // be deriving what the producer publishes, and for assets whose
+            // fair_value is not $1 my recomputation would be the wrong number in
+            // a different way. The published value renders; the CONTRADICTION is
+            // what gets flagged.
+            //
+            // ⚠️ The detector is deliberately narrow: sign disagrees AND the
+            // magnitudes match within 5%. A fair_value offset moves the
+            // magnitude (usde: 1.00 vs 2.31, syrupUSDC: 3.30 vs 10.24) and never
+            // mirrors it, so those do not trip. An exact mirror cannot be a
+            // basis difference.
+            var signWarn = ladderSignInverted
+                ? CommonRenderer.slippageSignWarningHtml(sz, q.output_usd, bps) : '';
+            var mag = bps == null ? null : Math.abs(bps);
+            var cls = mag == null ? '' : (mag <= 25 ? 'text-green-600' : (mag <= 200 ? 'text-amber-600' : 'text-red-600'));
+            return '<tr>' +
+                '<td class="font-mono">' + sizeLabel(sz) + '</td>' +
+                '<td class="text-right font-mono ' + cls + '">' + (bps != null ? bps.toFixed(bpsDigits) + ' bps' : '—') + signWarn + '</td>' +
+
+                '<td class="text-right font-mono">' +
+                    (q.output_usd != null ? CommonRenderer.formatCurrencyExact(q.output_usd) : '—') +
+                    (frozenAt[sz] != null
+                        ? ' <span class="text-amber-700 dark:text-amber-300" title="' +
+                          CommonRenderer._escapeAttr(
+                            'This rung returns the SAME amount as the smaller one before it, so the ' +
+                            'venue is exhausted rather than expensive. Asking for more returns no ' +
+                            'more. The slippage figure beside it expresses that as a very large ' +
+                            'cost, which reads as a price — but no price fills this size.') +
+                          '">\u26a0\ufe0f wall</span>'
+                        : '') +
+                '</td>' +
+                // ⚠️ AFTER Net out, because that is where the header puts it.
+                // The first version inserted this cell before Net out while the
+                // header appended "Fill" last, so every value sat under the
+                // wrong heading — a column that renders is not a column that
+                // lines up, and only reading the cells in order shows it.
+                (hasFill
+                    ? '<td class="text-right font-mono' +
+                        (typeof q.fill_ratio === 'number' && q.fill_ratio < 0.995
+                            ? ' text-amber-700 dark:text-amber-300' : '') + '">' +
+                      (typeof q.fill_ratio === 'number' ? q.fill_ratio.toFixed(4) : '\u2014') + '</td>'
+                    : '') +
+            '</tr>';
+        }).join('');
+
+        // ⚠️ "RFQ" WAS A DEFAULT, NOT A READ FIELD. The As-built #2 ladder was a
+        // KyberSwap RFQ, so the fallback named one; the liquidity/1 ladders are
+        // Curve get_dy eth_calls, and labelling an on-chain quote "RFQ" misstates
+        // how the number was obtained. Named source wins; otherwise the leg the
+        // producer says it measured; otherwise nothing.
+        var ladderTitle = em.source
+            ? 'Exit mark — ' + em.source + ' sell into ' + (em.sell_into || '\u2014')
+            : (em.measured_leg
+                ? 'Exit mark — ' + this._escapeAttr(em.measured_leg)
+                : 'Exit mark');
+
+        // ⚠️ TWO CONVENTIONS SHARE ONE COLUMN — and this comment used to describe
+        // one of them WRONGLY. It said "PegTracker quotes slippage against $1
+        // nominal par". PegTracker's own declared string says ALL-IN COST against
+        // NOTIONAL — `(output_usd - size) / size`, where size is the USD notional,
+        // converted to tokens at the asset's mark. ⚠️ Par and notional COINCIDE on
+        // a $1-pegged asset, which is why the wrong description survived: it was
+        // written from the assets where the two are the same number.
+        //
+        // ⚠️ PegTracker (2026-09-14) reports the same failure mode one level up,
+        // in the relationship BETWEEN the conventions: riskAnalyst read the gap as
+        // sign inversions, it was then described as a constant offset, and it is
+        // actually MULTIPLICATIVE — offset = (output/size) x (1/spot_rate - 1),
+        // verified on syzUSD's eight rungs to within 0.08bps, decaying 216.90 bps
+        // at $1K to 95.25 at $500K. It only looks constant while fills sit near
+        // par. ⚠️ Everyone who got it wrong sampled where the curve was flat.
+        //
+        // So: DO NOT describe either convention in terms of the other, and do not
+        // convert between them here. Render the producer's own declaration and let
+        // the difference stay visible. First sentence shown, full text on hover.
+        // ⚠️ TWO PRODUCERS, TWO FIELD NAMES, ONE FACT. DexTracker declares
+        // `slippage_convention`; PegTracker now declares `slippage_bps_basis`,
+        // naming whether the column is PRICE IMPACT (base spread EXCLUDED) or
+        // ALL-IN against notional. Both are the same statement — what the bps
+        // column means — and a reader comparing two assets needs it far more
+        // than another decimal.
+        var conv = em.slippage_convention || em.slippage_bps_basis || liq.slippage_bps_basis;
+        var convLine = '';
+        if (conv) {
+            // Plain split, not a lookbehind — older Safari does not have them
+            // and a thrown regex here would blank the whole axis.
+            var convParts = String(conv).split('. ');
+            var firstSentence = convParts.length > 1 ? convParts[0] + '.' : convParts[0];
+            var biasTxt = typeof em.price_bias_bps === 'number'
+                ? ' \u00b7 price bias ' + em.price_bias_bps.toFixed(1) + ' bps'
+                : '';
+            convLine = '<div class="text-[11px] text-slate-500 mb-2" title="' +
+                this._escapeAttr(conv + (em.bias_measures
+                    ? '\n\nPrice bias measures: ' + em.bias_measures : '')) + '">' +
+                this._escapeAttr(firstSentence) + biasTxt + ' \u24d8</div>';
+        }
+
+        // Empty state is the CALLER's call: the shared axis-3 panel says so out
+        // loud because four n/a tiles beside it would otherwise read as "nothing
+        // known", while a bespoke panel that already states its depth another way
+        // just wants nothing added.
+        // ⚠️ A LADDER CAN BE DENOMINATED IN SOMETHING THAT IS NOT A DOLLAR.
+        // apyUSD is an ERC-4626 vault over apxUSD: the producer divides the size
+        // by `nav` (apxUSD PER SHARE) and takes the proceeds in apxUSD, so both
+        // legs are apxUSD and the ratio is internally consistent — it is cost
+        // against contract NAV, and its ~173 bps floor at the smallest rung is
+        // the deliberate NAV-discount / cooldown-arb signal the analyzer's own
+        // scoring docstring describes, not a measurement error.
+        // ⚠️ I FIRST READ THIS AS A MIXED-BASIS RATIO AND NEARLY WITHHELD THE
+        // LADDER over it. What is actually wrong is narrower: the field is named
+        // `output_usd` and the column heading says "Net out", so apxUSD units
+        // render as though they were dollars. Name the unit; show the numbers.
+        // Detected, not hardcoded: proceeds marked at exactly 1.0 (output_usd ==
+        // output_token) while the asset they are denominated in is not a dollar
+        // unit. Unknown sell_into fails SAFE — it adds a note, never hides a row.
+        var DOLLAR_UNITS = /^(USDC|USDT|DAI|USDS|USDP|PYUSD|USDe|GUSD|USD)$/i;
+        var parJudged = 0, parMatches = 0;
+        sizes.forEach(function(sz) {
+            var q = quotes['' + sz] || quotes[sz] || {};
+            if (q.error || q.output_usd == null || q.output_token == null) return;
+            parJudged++;
+            if (Math.abs(q.output_usd - q.output_token) <= Math.max(0.01, q.output_token * 1e-6)) parMatches++;
+        });
+        // ⚠️ Judged over the rungs that CARRY both values, not over every rung.
+        // An earlier version used every() across all of them, and a single
+        // http_503 on one rung flipped the whole test off — a guard an upstream
+        // hiccup switches off is not a guard.
+        var outMarkedAtPar = parJudged > 0 && parMatches === parJudged;
+        var sellInto = em.sell_into || '';
+        var unitNote = '';
+        if (outMarkedAtPar && sellInto && !DOLLAR_UNITS.test(sellInto)) {
+            unitNote = '<div class="text-[11px] text-amber-700 mb-2">⚠️ Figures are denominated in ' +
+                '<span class="font-mono">' + this._escapeAttr(sellInto) + '</span>, not USD — size, ' +
+                'net out and slippage are all measured in it, so the ratio is consistent but the ' +
+                '“$” is this asset\'s unit of account. ' + this._escapeAttr(sellInto) +
+                '\u2019s own mark against the dollar is a separate figure on its own page.</div>';
+        }
+
+        if (!sizes.length) return '';
+        // ⚠️ Declared, not inferred from the absence of warnings. A ladder with too
+        // few below-par rungs draws no sign markers for the same reason a clean one
+        // draws none, and a reader cannot tell those apart from the table alone.
+        var abstainLine = CommonRenderer.slippageSignAbstentionHtml(sizes.map(function (sz) {
+            var qa = qOf(sz);
+            return { size: sz, output: qa.output_usd, bps: CommonRenderer._ladderRungBps(qa) };
+        }));
+        return '<div class="text-sm font-semibold text-slate-700 mb-2">' + ladderTitle + '</div>' +
+              convLine + abstainLine + unitNote +
+              '<div class="data-table-scroll"><table class="data-table">' +
+                  '<thead><tr><th>Size sold</th><th class="text-right">Slippage</th><th class="text-right">Net out</th>' +
+                      (hasFill ? '<th class="text-right" title="' + this._escapeAttr(
+                          'output_usd / size_usd. How much of the order actually filled. 1.0000 is a ' +
+                          'complete fill; anything materially below it means the venue ran out, which ' +
+                          'a slippage figure expresses as a price rather than as a failure to fill.') +
+                          '">Fill</th>' : '') +
+                  '</tr></thead>' +
+                  '<tbody>' + ladderRows + '</tbody></table></div>';
+    },
+
+    // ⚠️ A HIDDEN SECTION IS NOT A RENDERED ONE, AND THIS AXIS HAD NO WAY OUT OF
+    // ITS NODE. ethena.js hides every numbered section — right, and documented at
+    // that call site — then re-renders axes 1, 2, 4 and 6 in its own stream from
+    // HTML-returning helpers. Axis 3 had none, so both Ethena pages showed a
+    // summary-band card and nothing else: no ladder, no floor semantics, no
+    // one-chain scope caveat, and not the producer's note that sUSDe's primary
+    // exit is a SEVEN-DAY COOLDOWN while the ladder is the instant-but-thin
+    // alternative. That last sentence is the axis for this asset.
+    //
+    // Split exactly as `dependenciesPanelHtml` and `issuerPanelHtml` already are:
+    // the section renderer keeps the DOM write, the panel builder returns HTML and
+    // touches no node. Nothing about the markup changed in the split — verified by
+    // capturing axis-liquidity-body's innerHTML on crvusd, usds and dusd-alto
+    // before and after and comparing length + hash.
+    // ⚠️ THE VENUE LIST AND THE DEPTH FIGURE ARE NOT THE SAME AGE, AND THE AXIS
+    // CLOCK CAN ONLY SHOW ONE OF THEM. `_axisClockHtml` takes the OLDEST declared
+    // input, which is the right rule for an axis-level age and the wrong number to
+    // read either half by. On reUSD-RE today the depth was measured 12h ago and the
+    // venue enumeration is 23 DAYS old, so the head renders "refreshes daily ·
+    // 23d old": it reads as a producer 22 days late, when they are on time for the
+    // thing that refreshes daily and the stale half is the one that moves slowly.
+    //
+    // Both failures point the same way for a reader — they cannot tell which half
+    // the age belongs to — and for depth that matters most, because exit cost moves
+    // in hours (one asset's deepest rung: -5.2 bps at 13:30Z, -130.2 at 22:30Z).
+    // So each half states its own clock where it renders. The axis-level
+    // oldest-wins rule is untouched; this does not replace it, it disambiguates it.
+    //
+    // ⚠️ RENDERED ONLY WHERE A VENUE-SPECIFIC STAMP IS PUBLISHED. 23 base blocks
+    // carry pools under the block's own `as_of`, and for those the axis clock is
+    // already the pool clock — a second identical date would be noise asserting a
+    // distinction that does not exist. Two spellings exist in the corpus:
+    // DexTracker's `enumeration.as_of` and PegTracker's `venues_as_of`.
+    _stampAge(stamp) {
+        if (typeof stamp !== 'string' || !stamp) return null;
+        var t = new Date(/Z$|[+-]\d\d:?\d\d$/.test(stamp) ? stamp : stamp + 'Z');
+        if (isNaN(t)) return null;
+        var h = (Date.now() - t.getTime()) / 3600000;
+        return {
+            hours: h,
+            text: h < 1 ? Math.max(0, Math.round(h * 60)) + 'm' :
+                  h < 48 ? h.toFixed(1) + 'h' : Math.round(h / 24) + 'd'
+        };
+    },
+
+    // The venue enumeration's own stamp, not the payload's. Null when the producer
+    // publishes none, which is NOT the same as fresh — see the note above for why
+    // silence is correct there rather than falling back to the block clock.
+    _venueStamp(liq) {
+        if (!liq || typeof liq !== 'object') return null;
+        var e = liq.enumeration;
+        if (e && typeof e === 'object' && typeof e.as_of === 'string') return e.as_of;
+        if (typeof liq.venues_as_of === 'string') return liq.venues_as_of;
+        return null;
+    },
+
+    // When the ladder was actually probed. ⚠️ `enumeration.routed_measurement_as_of`
+    // sits INSIDE the enumeration block but is the depth clock, not the venue one —
+    // DexTracker re-stamps it on every daily refresh while the enumeration around
+    // it keeps its own older date.
+    _depthStamp(liq) {
+        if (!liq || typeof liq !== 'object') return null;
+        var e = liq.enumeration;
+        if (e && typeof e === 'object' && typeof e.routed_measurement_as_of === 'string') {
+            return e.routed_measurement_as_of;
+        }
+        var em = liq.exit_mark;
+        if (em && typeof em === 'object') {
+            if (typeof em.as_of === 'string') return em.as_of;
+            if (typeof em.measured_at === 'string') return em.measured_at;
+        }
+        return typeof liq.as_of === 'string' ? liq.as_of : null;
+    },
+
+    _venueClockHtml(liq) {
+        var s = this._venueStamp(liq);
+        var a = this._stampAge(s);
+        if (!a) return '';
+        return '<span class="text-[11px] font-normal text-slate-400 ml-2" title="' +
+            this._escapeAttr(
+                'The venue list and the TVL beside it were enumerated at ' + s + ' — ' +
+                a.text + ' ago. That is the enumeration’s OWN clock, which the producer ' +
+                'publishes separately from the depth refresh: a venue sweep is a slow, ' +
+                'registry-wide search and does not run on the depth cadence. An age here is ' +
+                'not evidence that the depth figure above is the same age.') +
+            '">enumerated ' + this._escapeAttr(String(s).replace('T', ' ').slice(0, 16)) +
+            'Z · ' + a.text + ' old ⓘ</span>';
+    },
+
+    // ⚠️ ONLY WHEN THE AXIS AGE IS SET BY SOMETHING OTHER THAN THE DEPTH. Where the
+    // two halves share a clock the head already states it and repeating it here
+    // would imply a split that this asset does not have.
+    _depthClockHtml(liq) {
+        var vs = this._venueStamp(liq), ds = this._depthStamp(liq);
+        var va = this._stampAge(vs), da = this._stampAge(ds);
+        if (!va || !da || va.hours - da.hours < 24) return '';
+        return '<div class="text-[11px] text-slate-500 mt-1" title="' + this._escapeAttr(
+            'This figure was measured at ' + ds + ' — ' + da.text + ' ago. The age on the ' +
+            'axis heading is older because it reports the axis’s STALEST input, which for ' +
+            'this asset is the venue enumeration (' + va.text + '), not the ladder. Exit cost ' +
+            'moves in hours, so the two must not be read off one number.') +
+            '">ladder measured ' + this._escapeAttr(String(ds).replace('T', ' ').slice(0, 16)) +
+            'Z · ' + da.text + ' old, not the ' + va.text +
+            ' on the heading — that is the venue sweep ⓘ</div>';
+    },
+
+    _routeBasisHtml(liq) {
+        var assurance = liq.route_assurance;
+        var current = assurance && assurance.checked_at &&
+            typeof liq.ladder_scope === 'string' && liq.ladder_scope.trim();
+        var note = current ? liq.ladder_scope.trim() :
+            (liq.exit_mark && typeof liq.exit_mark.basis_note === 'string'
+                ? liq.exit_mark.basis_note.trim() : '');
+        if (!note) return '';
+        var limits = current && Array.isArray(assurance.not_established)
+            ? assurance.not_established.join('; ') : '';
+        return '<div class="text-[11px] text-slate-500 mt-2" style="line-height:1.5">' +
+            '<span class="font-semibold">Route measured:</span> ' + this._escapeAttr(note) +
+            (current ? ' <span>Assurance checked: ' + this._escapeAttr(String(assurance.checked_at)) + '.</span>' : '') +
+            (limits ? ' <span>Not established: ' + this._escapeAttr(limits) + '.</span>' : '') + '</div>';
+    },
+
+    _renderLiquiditySection(data) {
+        var body = document.getElementById('axis-liquidity-body');
+        if (!body) return;
+        body.innerHTML = this.liquidityPanelHtml(data);
+    },
+
+    // ⚠️ NO `withQualifier` OPTION, AND THE FIRST CUT HAD ONE. I added it on the
+    // reasoning that the depth qualifier lives on the axis HEAD, which ethena
+    // hides — then the DOM showed "ladder exhausted — floor, not a measurement"
+    // TWICE in the same panel, because the stat row's depth card already carries
+    // it. The head copy is the duplicate, not the source. Planned wrong, caught
+    // by rendering it.
+    // `opts.withHeadContext` prepends the two strings that belong to this axis and
+    // render on the HEAD (the scope line) or ⚠️ NOWHERE AT ALL (`liquidity.note`).
+    // Only a caller whose head is hidden may pass it.
+    //
+    // ⚠️ `liquidity.note` IS PUBLISHED BY 8 ASSETS AND RENDERED BY THE SHARED
+    // PANEL FOR NONE OF THEM — susde's is "Primary exit: 7-day cooldown to USDe at
+    // NAV; ladder = instant secondary market", which is the whole answer to how a
+    // holder gets out. syrupusdc.js renders its own copy bespoke; the other six
+    // (hastra-prime, reusd-re, reusde-re, susdat, susds, and the two here) show it
+    // nowhere. Folding it into the panel fleet-wide means de-duplicating syrup's
+    // copy in the same change, so it is raised separately rather than smuggled in
+    // behind an Ethena fix.
+    liquidityPanelHtml(data, opts) {
+        opts = opts || {};
+        var liq = data.liquidity || {};
+        // ⚠️ A BESPOKE PANEL HAS NO AXIS HEAD, SO THE SCORE HAD NOWHERE TO GO.
+        // ethena.js hides the generic liquidity section and renders this panel
+        // instead, unnumbered. Dependencies and issuer were given `withScoreChip`
+        // for exactly that reason ("withScoreChip because there is no axis head here
+        // to carry the score") and liquidity was missed — so on sUSDe riskAnalyst's
+        // authored Liquidity 7.0 reached NO READER, including the basis they
+        // corrected on 2026-10-02.
+        //
+        // ⚠️ AUTHORED ONLY WHERE NO COMPUTED BAND EXISTS, which is the rule the
+        // generic path already follows and the spec already describes for four
+        // tiles. sUSDe qualifies: its depth resolves to shape 'none', so there is no
+        // live number and the authored score is the only one.
+        //
+        // ⚠️ AND DELIBERATELY NOT WHERE A BAND DOES EXIST. USDe's band is 10/10
+        // against the same producer's authored 7.0 — a 3.0 gap in the FLATTERING
+        // direction on an asset whose July attestation is 70 days stale. Which chip
+        // wins there is the open owner decision already deferred on reUSD-RE
+        // (specs/asset-backlog.md), and adding the band here would answer it by
+        // implementation and in the generous direction. So USDe gains nothing from
+        // this and stays as it is.
+        var liqTitleChip = '';
+        if (opts.withScoreChip && this.liquidityRating(data) == null) {
+            liqTitleChip = this.authoredScoreChipHtml(liq, ['liquidity_score'], '');
+        }
+        var headContext = '';
+        if (opts.withHeadContext) {
+            var scopeHtml = this.depthScopeHtml(data);
+            if (scopeHtml) headContext += '<div class="depth-scope mb-2">' + scopeHtml + '</div>';
+            if (typeof liq.note === 'string' && liq.note.trim()) {
+                headContext += '<div class="text-sm text-slate-600 mb-2" style="line-height:1.5;">' +
+                    this._escapeAttr(liq.note.trim()) + '</div>';
+            }
+        }
+        // ⚠️ "No ladder in this snapshot" reads as a MISSING measurement. Where
+        // the producer has published an exit_capacity block it is not missing —
+        // the venue has no curve to ladder, and the capacity block says so and
+        // gives the real ceiling. Saying both invites a reader to look for a
+        // ladder that should not exist.
+        var ladderBlock = this.ladderBlockHtml(liq) ||
+            ((liq.exit_capacity && typeof liq.exit_capacity === 'object')
+                ? ''
+                : '<div class="text-sm text-slate-400">No exit-mark RFQ ladder in this snapshot.</div>');
+
+        // Later dated assurance can supersede an older route caveat without
+        // changing the producer's canonical quotes or cost conventions.
+        var ladderBasis = this._routeBasisHtml(liq);
+        ladderBlock = ladderBlock + ladderBasis;
+
+        // ⚠️ Four n/a's read as "we know nothing about this asset's liquidity".
+        // For usdm the feed says something quite different: there is no secondary
+        // depth BY DESIGN, because Mento pools are a mint/redeem venue, and the
+        // holder's actual exit is the reserve swap. Same shape as usdat's two
+        // zero rows — the page said something answerable, so nobody asked.
+        //
+        // "How does a holder get out" is the question this axis exists to
+        // answer, and for a reserve-backed asset the answer is a redemption venue
+        // rather than pool depth. Generic: any such asset has this shape and
+        // total_2pct_depth: null stays correct for all of them.
+        var pe = liq.primary_exit;
+        // \u26a0\ufe0f A NAMED VENUE WITH THE GATE SUPPRESSED READS AS AN AVAILABLE EXIT,
+        // AND THAT IS THE WORST THING THIS PANEL CAN DO.
+        //
+        // The suppression below is right about `gated: false` and was applied in
+        // BOTH directions, so a measured, closed, capacity-zero leg rendered as
+        // "Primary exit: <venue>" with nothing after it. DUSD (Alto) is the case
+        // that forced this: `venue: "Alto Universal Stability Module (frxUSD)"`,
+        // `gated: true`, `capacity_usd: 0`, and a `gate` reading "No holder
+        // redemption. Only the Alto treasury Safe can swap DUSD to frxUSD at par."
+        // The page would have named the module and said none of the rest.
+        //
+        // \u26a0\ufe0f AND IT FIRES WITHOUT A VENUE. usg and tsm_rh both publish `venue:
+        // null` with `gated: true` and a full gate/capacity_basis/note, so the
+        // whole block was skipped by the `pe.venue || pe.into` guard \u2014 the
+        // articulate "there is no holder exit by design" reached nothing at all.
+        // A gate is a fact about the asset whether or not a venue is named.
+        //
+        // \u26a0\ufe0f Same one-direction rule as _exitScopeHtml: `gated: true` only.
+        // Rendering "closed" cannot overstate a holder's options; rendering the
+        // disputed `gated: false` as open can, and still does not render.
+        var gateHtml = '';
+        if (pe && pe.gated === true) {
+            // \u26a0\ufe0f Producer text, not ours. `gate` is a sentence written by whoever
+            // walked the leg; paraphrasing it here would be this repo naming a
+            // mechanism it did not measure.
+            var gateWhy = pe.gate || pe.gated_basis;
+            // \u26a0\ufe0f `capacity_usd: 0` NEEDS ITS BASIS OR IT READS AS EMPTY RESERVES.
+            // DexTracker says it outright \u2014 "Zero HOLDER redemption capacity, not
+            // zero reserves" \u2014 and usg says the same in its own words. A bare "$0"
+            // beside a fully-reserved module is a solvency claim we did not make.
+            var capTxt = (pe.capacity_usd === 0)
+                ? ' <span class="font-semibold">Capacity $0.</span>' : '';
+            // \u26a0\ufe0f CLOSED vs RESTRICTED \u2014 see _exitClosedToHolders. reusde-re's
+            // window has been taken, so "not an exit a holder can take" is false
+            // there; the producer's own terms follow either way.
+            var closed = this._exitClosedToHolders(pe);
+            gateHtml =
+                '<div class="text-xs text-amber-700 mt-1" style="line-height:1.45;">' +
+                    '\u26a0\ufe0f <span class="font-semibold">Gated \u2014 ' +
+                    (closed ? 'not an exit a holder can take.'
+                            : 'restricted, not open on demand.') + '</span>' +
+                    capTxt +
+                    (gateWhy ? ' ' + this._escapeAttr(String(gateWhy)) : '') +
+                    (pe.capacity_basis ? ' ' + this._escapeAttr(String(pe.capacity_basis)) : '') +
+                    (pe.note ? ' ' + this._escapeAttr(String(pe.note)) : '') +
+                '</div>';
+        }
+        var exitLine = '';
+        if (pe && (pe.venue || pe.into || gateHtml)) {
+            exitLine =
+                '<div class="text-sm text-slate-700 dark:text-slate-200 mt-3">' +
+                    '<span class="font-semibold">Primary exit:</span> ' +
+                    // \u26a0\ufe0f Not "venue not named" when the reason it is unnamed is that
+                    // there IS none. usg's venue is null BY DESIGN and the gate line
+                    // below says why; "venue not named" would read as a gap in the
+                    // feed rather than as the finding.
+                    // ⚠️ "none for holders" only where the gate is CLOSED. A
+                    // restricted-but-real window with an unnamed venue is an
+                    // unnamed venue, not an absent exit. No asset has that shape
+                    // today (usg and tsm_rh are the two venue-less gates, both
+                    // closed) — the branch is here so the first one does not
+                    // inherit the wrong word.
+                    (pe.venue
+                        ? this._escapeAttr(pe.venue)
+                        : ((gateHtml && this._exitClosedToHolders(pe))
+                            ? '<span class="text-slate-500">none for holders</span>'
+                            : 'venue not named')) +
+                    (pe.into ? ' \u2192 ' + this._escapeAttr(pe.into) : '') +
+                    gateHtml +
+                    // ⚠️ THE GATE IS NOW RENDERED, AND THE REASON IT WAS WITHHELD
+                    // STOPPED BEING TRUE IN THE DATA.
+                    //
+                    // This block used to say pe.gated is "DELIBERATELY NOT RENDERED"
+                    // because usdm published gated:false while riskAnalyst's report
+                    // said the path was allowlisted — "one is wrong and it is
+                    // unresolved with PegTracker". It is resolved, and PegTracker
+                    // resolved it IN THE FIELD: usdm's own gated_note reads "Any
+                    // address may call swap() on the Monad FPMMs — the probe reverts
+                    // on economics, not permission. The Celo Reserve's own
+                    // mint/redeem is a SEPARATE venue and is allowlisted to
+                    // strategies; this field describes the FPMM only." Two venues,
+                    // both producers correct. The dispute was a scope confusion and
+                    // the producer named the scope.
+                    //
+                    // ⚠️ ONE ASSET'S UNRESOLVED VALUE WAS SUPPRESSING SEVEN. The spec
+                    // requires this ALWAYS (§4.0 manifest row 3, "primary redemption:
+                    // gated or not, for WHOM"), and we were in violation of our own
+                    // required-render rule on every asset that publishes a verdict:
+                    // bold, dusd-alto, fxusd, reusde-re, susds, usdm, usg. Same shape
+                    // as the axis-wide depth suppression fixed this morning — a single
+                    // declining case taking down a fleet.
+                    //
+                    // ⚠️ THE VERDICT NEVER RENDERS BARE. "Not gated" alone reads as
+                    // "open to any holder", which is the flattering direction and the
+                    // original comment was right about that. It renders WITH the
+                    // producer's basis, so what the claim covers travels with it —
+                    // usdm's says "public router route", which is a statement about a
+                    // market-maker swap and not about an issuer redemption, and the
+                    // venue name beside it already says FPMM.
+                    (typeof pe.gated === 'boolean' && pe.gated_basis
+                        ? '<div class="text-xs mt-1" style="line-height:1.45;">' +
+                          '<span class="' + (pe.gated ? 'text-amber-700 font-semibold'
+                                                      : 'text-slate-600 font-semibold') + '">' +
+                          (pe.gated ? 'Gated' : 'Not gated') + '</span>' +
+                          '<span class="text-slate-500"> \u2014 ' +
+                          this._escapeAttr(this._mdPlain(String(pe.gated_basis))) + '</span></div>'
+                        : '') +
+                    // ⚠️ THE SCOPING NOTE NOW RENDERS WHENEVER IT EXISTS, not only
+                    // where there is no verdict. It was gated on (gated == null ||
+                    // basis == 'unmeasured'), which showed it on exactly the five
+                    // assets with nothing to qualify and hid it on the ones with a
+                    // verdict to bound. On usdm that note is the sentence that makes
+                    // a rendered "Not gated" honest.
+                    (pe.gated_note
+                        ? '<div class="text-xs text-amber-700 mt-1" style="line-height:1.45;">' +
+                          this._escapeAttr(pe.gated_note) + '</div>' : '') +
+                '</div>';
+        }
+        var poolsNote = liq.pools_note
+            ? '<div class="text-xs text-slate-500 mt-1">' + this._escapeAttr(liq.pools_note) + '</div>'
+            : '';
+
+        var eff = liq.effective_max_under_25bps_usd;
+
+        // ⚠️ THIS CARD AND THE LADDER BELOW IT ANSWER DIFFERENT QUESTIONS, and on
+        // apyUSD they look like a contradiction: the card reads "Max ≤25 bps
+        // $100.0K" directly above a ladder whose $100K rung is 193.3 bps. Both are
+        // right. The producer's max_under_25 is measured on MARGINAL bps (raw
+        // minus the smallest rung's own baseline — 193.3 − 173.5 = 19.8, under 25),
+        // while the ladder prints RAW. Nothing on the page said so, and a reader
+        // who tries to reconcile them concludes one is broken.
+        // Only shown where the baseline is actually material, so the ~26 assets
+        // whose smallest rung sits near zero (apxUSD: 0.04 bps) are untouched —
+        // there, marginal and raw are the same number and the note would be noise.
+        var effBaseline = this._ladderBaselineBps(liq);
+        var effBasisNote = '';
+        if (eff != null && effBaseline != null && Math.abs(effBaseline) >= 25) {
+            effBasisNote = '<div class="text-[11px] text-amber-700" title="' +
+                this._escapeAttr('The ladder below prints RAW slippage; this figure is MARGINAL — raw minus ' +
+                    'the smallest rung\u2019s own ' + Math.abs(effBaseline).toFixed(0) + ' bps baseline. ' +
+                    'The baseline is a standing entry cost at every size, not something that appears as you ' +
+                    'trade bigger, so it is held out of the size-capacity question this card answers.') +
+                '">marginal basis · ' + Math.abs(effBaseline).toFixed(0) + ' bps baseline held out \u24d8</div>';
+        }
+
+        // ⚠️ Sell-side inventory: a MEASURED number that was going unshown.
+        //
+        // Where a pool is heavily skewed, a symmetric depth figure overstates what
+        // a SELLER can execute — usg's worst pool is 73.6% USG, so the counter-side
+        // stablecoin inventory is the real exit. The producer measured it and,
+        // correctly, refused to put it in total_2pct_depth, which is reserved for
+        // quoted depth. The result was a card showing four n/a's and a pool TVL the
+        // producer had flagged as misleading, while the one figure it had measured
+        // appeared nowhere — implying less is known than is.
+        //
+        // Displayed only. NOT fed to liquidityRating: that stays null, because an
+        // executable inventory is not quoted depth and rating one as the other is
+        // the substitution the producer declined to make. Generic on the field
+        // names, not usg-specific — other feeds will want "what a seller can
+        // execute into" as distinct from depth.
+        var sellSide = liq.sell_side_counter_inventory_usd;
+        var sellCard = (sellSide == null) ? '' :
+            '<div><div class="text-xs text-slate-400 font-medium uppercase">Sell-side inventory</div>' +
+                '<div class="text-lg font-bold">' + this.formatCurrency(sellSide) + '</div>' +
+                '<div class="text-[11px] text-slate-400"' +
+                    (liq.sell_side_basis ? ' title="' + this._escapeAttr(this._mdPlain(String(liq.sell_side_basis))) + '"' : '') +
+                    '>executable, not quoted depth' +
+                    (liq.worst_pool_usg_share_pct != null
+                        ? ' \u00b7 worst pool ' + liq.worst_pool_usg_share_pct.toFixed(1) + '% skewed' : '') +
+                '</div></div>';
+
+        // ⚠️ The pool table read {venue, pair, depth_usd, balance_ratio} and the
+        // yzUSD/syzUSD feeds publish {name, project, chain, tvl_usd}, so every
+        // row rendered "— Monad — —". Two of those columns are not a rename:
+        // depth and balance ratio have no source in these feeds and shouldn't be
+        // faked from TVL — TVL is not depth.
+        //
+        // So the columns follow the data instead of asserting a fixed schema. A
+        // column appears when at least one pool supplies it; a feed that gains
+        // depth later gains the column with no change here, and a feed without
+        // it shows a narrower table rather than a wall of dashes.
+        var allPools = liq.pools || [];
+        var venueScope = data.dashboard_venue_scope || {};
+        var scopeChains = Array.isArray(venueScope.chains)
+            ? venueScope.chains.map(function(c) { return String(c).toLowerCase(); }) : [];
+        var outOfScopePools = [];
+        var pools = allPools.filter(function(p) {
+            if (!scopeChains.length) return true;
+            var inside = p && p.chain && scopeChains.indexOf(String(p.chain).toLowerCase()) !== -1;
+            if (!inside) outOfScopePools.push(p);
+            return inside;
+        });
+
+        // One fleet rule for venue legibility: preserve route-used venues, then
+        // rank direct exits ahead of multi-hop/family context, and rank within a
+        // role by trusted TVL. The default table is deliberately short; a second
+        // tranche is reader-expandable and the long tail is reconciled by count
+        // and TVL instead of becoming a hundred-row wall.
+        var routeIds = {};
+        var quoteMap = (liq.exit_mark && liq.exit_mark.quotes) || {};
+        Object.keys(quoteMap).forEach(function(k) {
+            var rs = quoteMap[k] && quoteMap[k].route_venues;
+            (Array.isArray(rs) ? rs : []).forEach(function(v) {
+                var id = typeof v === 'string' ? v : (v && (v.pool || v.address || v.pool_id));
+                if (id) routeIds[String(id).toLowerCase()] = true;
+            });
+        });
+        function poolId(p) { return String((p && (p.address || p.pool_id)) || '').toLowerCase(); }
+        function roleRank(p) {
+            var r = String((p && p.role) || '').toLowerCase();
+            if (/(^|\s)(eth|dollar|stable|direct) exit/.test(r)) return 0;
+            if (/family/.test(r)) return 2;
+            if (/other pair|multi.?hop|indirect/.test(r)) return 1;
+            return 1;
+        }
+        function trustedTvl(p) {
+            return p && p.tvl_status !== 'implausible' && typeof p.tvl_usd === 'number'
+                ? p.tvl_usd : -1;
+        }
+        pools = pools.slice().sort(function(a, b) {
+            var ar = !!routeIds[poolId(a)], br = !!routeIds[poolId(b)];
+            if (ar !== br) return ar ? -1 : 1;
+            var rr = roleRank(a) - roleRank(b);
+            return rr || trustedTvl(b) - trustedTvl(a);
+        });
+        var defaultPools = pools.slice(0, 10);
+        var additionalPools = pools.slice(10, 30);
+        var summarizedPools = pools.slice(30);
+        function anyPool(key) {
+            return pools.some(function(p) { return p && p[key] != null; });
+        }
+        var cols = [];
+        cols.push({ th: 'Venue', cls: '', get: function(p) {
+            var nm = p.venue || p.project || p.name || '—';
+            return '<span class="font-medium">' + nm + '</span>' +
+                   (p.pair ? '<span class="text-xs text-slate-400 ml-1">' + p.pair + '</span>' : '');
+        }});
+        if (anyPool('chain')) cols.push({ th: 'Chain', cls: 'text-xs text-slate-400',
+            get: function(p) { return p.chain || ''; }});
+        // ⚠️ `≤` WHERE THE PRODUCER SAID UPPER BOUND. bold publishes
+        // `tvl_is_upper_bound` on its venues; rendering that identically to usg's
+        // measured TVL would assert a precision the producer explicitly disclaimed —
+        // the same rule the depth tile applies with its floor marker.
+        if (anyPool('tvl_usd')) cols.push({ th: 'TVL (USD)', cls: 'text-right font-mono',
+            get: function(p) {
+                if (p.tvl_usd == null) return '—';
+                // ⚠️ A REJECTED FIGURE MUST NOT RENDER AS A FIGURE. crvUSD's
+                // FraxlendV1 row reports $1,428,182 against $0 held on-chain in both
+                // named legs. Printed plainly it is the fourth-largest venue on the
+                // page and a reader would price an exit on it.
+                //
+                // Struck through rather than hidden, and the number is kept: the
+                // reader is better served knowing the indexer claims $1.4M and we
+                // reject it than seeing a dash, which reads as "not reported". The
+                // producer's own basis is the tooltip — ours would be a second-hand
+                // retelling of a measurement we did not take.
+                if (p.tvl_status === 'implausible') {
+                    var eb = CommonRenderer._escapeAttr(p.tvl_exclusion_basis || '');
+                    return '<span class="text-amber-700"' + (eb ? ' title="' + eb + '"' : '') + '>' +
+                           '<s>' + CommonRenderer.formatCurrencyExact(p.tvl_usd) + '</s>' +
+                           ' <span class="text-xs font-semibold">rejected</span></span>';
+                }
+                return (p.tvl_is_upper_bound === true ? '≤' : '') +
+                       CommonRenderer.formatCurrencyExact(p.tvl_usd);
+            }});
+        if (anyPool('depth_usd')) cols.push({ th: 'Depth (USD)', cls: 'text-right font-mono',
+            get: function(p) { return p.depth_usd != null ? CommonRenderer.formatCurrencyExact(p.depth_usd) : '—'; }});
+        if (anyPool('volume_24h')) cols.push({ th: '24h Vol', cls: 'text-right font-mono',
+            get: function(p) {
+                if (p.volume_24h == null) return '—';
+                return Math.abs(p.volume_24h) < 1000
+                    ? '$' + p.volume_24h.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : CommonRenderer.formatCurrencyExact(p.volume_24h);
+            }});
+        if (anyPool('balance_ratio')) cols.push({ th: 'Balance', cls: 'text-right font-mono',
+            get: function(p) { return (p.balance_ratio * 100).toFixed(1) + '%'; }});
+        // ⚠️ TRI-STATE, AND THE THIRD STATE IS THE WHOLE REASON THIS IS NOT A BOOLEAN.
+        // true = quoted live on-chain. false = excluded, with a closed-enum reason.
+        // null = the verdict was NEVER ESTABLISHED, which is neither — it must not
+        // render as liquidity and must not render as dead. Amber, and it says so.
+        if (anyPool('has_liveness')) cols.push({ th: 'Status', cls: 'text-xs',
+            get: function(p) {
+                var esc = CommonRenderer._escapeAttr;
+                var tip = [p.liveness_basis, p.exclusion_reason_note].filter(Boolean).join(' — ');
+                var t = tip ? ' title="' + esc(tip) + '"' : '';
+                if (p.is_live === true) {
+                    return '<span class="text-green-600"' + t + '>live</span>';
+                }
+                if (p.is_live === false) {
+                    // The producer's enum, underscores opened out — not re-worded.
+                    // Re-phrasing a closed enum is how a consumer starts asserting a
+                    // reason the producer did not publish.
+                    return '<span class="text-slate-400"' + t + '>excluded' +
+                        (p.exclusion_reason
+                            ? ' · ' + esc(String(p.exclusion_reason).replace(/_/g, ' '))
+                            : '') + '</span>';
+                }
+                return '<span class="text-amber-700" title="' + esc(tip ||
+                    'This venue was enumerated but its liveness was never resolved on-chain. ' +
+                    'Unknown — not confirmed live, and not established as dead.') +
+                    '">unverified</span>';
+            }});
+        // ⚠️ KEPT ALONGSIDE `is_live`, AT THE PRODUCER'S REQUEST AND ON MERIT. The enum
+        // says a pool is dead; only this sentence says "slot0 still reports ~1.0000 and
+        // must not be quoted", which is the part that stops someone quoting it.
+        if (anyPool('role')) cols.push({ th: 'Role', cls: 'text-xs text-slate-500',
+            get: function(p) { return p.role ? CommonRenderer._escapeAttr(p.role) : '—'; }});
+
+        function poolRows(rows) { return rows.map(function(p) {
+            return '<tr>' + cols.map(function(c) {
+                return '<td class="' + c.cls + '">' + c.get(p) + '</td>';
+            }).join('') + '</tr>';
+        }).join(''); }
+        var primaryPoolRows = poolRows(defaultPools);
+        var additionalPoolRows = poolRows(additionalPools);
+        // ⚠️ pools_note points at a number the page did not show: "Lending markets
+        // are listed under asset_specific.lending_exposure: they are the LARGER
+        // numbers." On syzUSD that is $1.83M of lending exposure against $554K of
+        // swap TVL — the pool table showed the smaller figure and the note sent
+        // the reader to a field with no rendering.
+        //
+        // by_chain is the structure behind it: swap, lending and issuer-vault TVL
+        // per chain from one enumeration. syzUSD's Plasma row is $71K of swap
+        // against $36.2M sitting in the issuer vault, which is the whole
+        // exit-capacity story and it was in the payload unread.
+        var byChain = Array.isArray(liq.by_chain) ? liq.by_chain : [];
+        var chainBlock = '';
+        if (byChain.length) {
+            var showLend = byChain.some(function(c) { return c.lending_tvl_usd; });
+            var showVault = byChain.some(function(c) { return c.issuer_vault_tvl_usd; });
+            chainBlock =
+                '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">TVL by chain' +
+                this._venueClockHtml(liq) + '</div>' +
+                '<div class="data-table-scroll"><table class="data-table">' +
+                '<thead><tr><th>Chain</th><th class="text-right">Swap</th>' +
+                (showLend ? '<th class="text-right">Lending</th>' : '') +
+                (showVault ? '<th class="text-right">Issuer vault</th>' : '') +
+                '<th>Local venue</th></tr></thead><tbody>' +
+                byChain.map(function(c) {
+                    return '<tr>' +
+                        '<td class="font-medium">' + CommonRenderer._escapeAttr(c.chain || '—') + '</td>' +
+                        '<td class="text-right font-mono">' + (c.swap_tvl_usd != null ? CommonRenderer.formatCurrency(c.swap_tvl_usd) : '—') + '</td>' +
+                        (showLend ? '<td class="text-right font-mono">' + (c.lending_tvl_usd != null ? CommonRenderer.formatCurrency(c.lending_tvl_usd) : '—') + '</td>' : '') +
+                        (showVault ? '<td class="text-right font-mono">' + (c.issuer_vault_tvl_usd != null ? CommonRenderer.formatCurrency(c.issuer_vault_tvl_usd) : '—') + '</td>' : '') +
+                        '<td class="text-xs ' + (c.no_local_swap_venue ? 'text-amber-700 font-semibold' : 'text-slate-500') + '">' +
+                            (c.no_local_swap_venue ? 'none — holders cannot exit locally'
+                                : (c.swap_venues != null ? c.swap_venues + ' venue' + (c.swap_venues === 1 ? '' : 's') : '—')) +
+                        '</td>' +
+                    '</tr>';
+                }).join('') +
+                '</tbody></table></div>' +
+                (liq.by_chain_note ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
+                    this._escapeAttr(liq.by_chain_note) + '</div>' : '') +
+                (liq.lending_exposure_usd
+                    ? '<div class="text-xs text-slate-600 mt-2"><span class="font-semibold">Lending exposure:</span> ' +
+                      this.formatCurrencyExact(liq.lending_exposure_usd) +
+                      ' — a liquidation-risk figure, not exit depth.</div>' : '');
+        }
+
+        var hiddenTrustedTvl = summarizedPools.reduce(function(sum, p) {
+            var v = trustedTvl(p); return sum + (v > 0 ? v : 0);
+        }, 0);
+        var venueSummary = (pools.length > 10 || outOfScopePools.length)
+            ? '<div class="text-xs text-slate-500 mt-2">Showing ' + defaultPools.length +
+                ' material venues from ' + pools.length + ' in dashboard scope' +
+                (outOfScopePools.length ? ' · ' + outOfScopePools.length + ' outside-scope venues excluded' : '') +
+                '.</div>' : '';
+        var additionalBlock = additionalPools.length
+            ? '<details class="mt-3"><summary class="text-xs font-semibold text-slate-600 cursor-pointer">Show ' +
+                additionalPools.length + ' additional material venues</summary>' +
+                '<div class="data-table-scroll mt-2"><table class="data-table"><thead><tr>' +
+                cols.map(function(c) { return '<th' + (/text-right/.test(c.cls) ? ' class="text-right"' : '') + '>' + c.th + '</th>'; }).join('') +
+                '</tr></thead><tbody>' + additionalPoolRows + '</tbody></table></div></details>'
+            : '';
+        var tailSummary = summarizedPools.length
+            ? '<div class="text-xs text-slate-500 mt-2">' + summarizedPools.length +
+                ' further venues summarized rather than listed' +
+                (hiddenTrustedTvl > 0 ? ' · ' + this.formatCurrencyExact(hiddenTrustedTvl) + ' combined trusted TVL' : '') +
+                '.</div>' : '';
+        var poolBlock = pools.length
+            ? '<div class="text-sm font-semibold text-slate-700 mb-2 mt-6">Material venues' +
+                this._venueClockHtml(liq) + '</div>' +
+              '<div class="data-table-scroll"><table class="data-table">' +
+                  '<thead><tr>' + cols.map(function(c) {
+                      return '<th' + (/text-right/.test(c.cls) ? ' class="text-right"' : '') + '>' + c.th + '</th>';
+                  }).join('') + '</tr></thead>' +
+                  '<tbody>' + primaryPoolRows + '</tbody></table></div>' +
+                  venueSummary + additionalBlock + tailSummary +
+                  this._tvlTrustHtml(pools)
+            : '';
+
+        // ⚠️ "24h volume: n/a — not tracked" was a HARDCODED literal that read no
+        // field, sitting in a panel whose own object carries volume_24h_usd. It
+        // was true when written and silently stopped being true.
+        //
+        // For yzUSD this is the most informative liquidity fact on the page:
+        // $24.74 of 24h volume against $852K of pool TVL says more than any
+        // rating. It is also the reason no executable ladder was built — the
+        // volume figure IS the finding, and it could not reach the page.
+        //
+        // "not tracked" was additionally false for hastra-prime, usdat and
+        // susdat, which publish per-pool volume_24h with a source and an as-of.
+        // ⚠️ formatCurrencyExact rounds to whole dollars, which renders yzUSD's
+        // $24.74 as "$25" — and the exactness IS the finding here. A tiny volume
+        // is the signal; rounding it away turns a striking number into a dull
+        // one. Cents below $1,000, whole dollars above.
+        function volFmt(v) {
+            return Math.abs(v) < 1000
+                ? '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                : CommonRenderer.formatCurrencyExact(v);
+        }
+        var vol = liq.volume_24h_usd;
+        var volCard;
+        if (vol != null) {
+            volCard = '<div><div class="text-xs text-slate-400 font-medium uppercase">24h volume</div>' +
+                '<div class="text-lg font-bold">' + volFmt(vol) + '</div></div>';
+        } else if (anyPool('volume_24h')) {
+            volCard = '<div><div class="text-xs text-slate-400 font-medium uppercase">24h volume</div>' +
+                '<div class="text-lg font-bold text-slate-400">per pool</div>' +
+                '<div class="text-[11px] text-slate-400">see table</div></div>';
+        } else {
+            volCard = '<div><div class="text-xs text-slate-400 font-medium uppercase">24h volume</div>' +
+                '<div class="text-lg font-bold text-slate-400">n/a</div>' +
+                '<div class="text-[11px] text-slate-400">not published</div></div>';
+        }
+
+        var statRow =
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">' +
+                    CommonRenderer._depthLabel(data) + '</div>' +
+                    // ⚠️ total_2pct_depth_is_floor means the quote ladder was
+                    // EXHAUSTED before price moved 2% — the real depth is at
+                    // least this, not equal to it. sUSDS publishes it true and
+                    // nothing read it, so the page showed "$1.0M" where the
+                    // honest reading is "≥$1.0M". It understates, which makes
+                    // the liquidity rating harsher than the measurement warrants.
+                    '<div class="text-lg font-bold">' +
+                        // ⚠️ NOT_SIZE_RESPONSIVE MUST NOT WEAR FLOOR NOTATION, and this
+                        // panel was doing it while the band tile guarded correctly — the
+                        // same asset rendered "$50.0M" on the tile and "≥$50.0M" here.
+                        // A floor says "AT LEAST this much" and is a real bound; USDS's
+                        // $50M says only that the call returns the same answer at any
+                        // size. The tile's own comment spells out the consequence:
+                        // "≥$50.0M would put USDS above crvUSD's genuinely bracketed
+                        // $25M" — the worst-measured asset rendering as the deepest.
+                        // Found by riskAnalyst reading a truncated comment and ASKING
+                        // rather than asserting.
+                        // ⚠️ THE VALUE FOLLOWS THE SHAPE, because the shape is the
+                        // finding. A bracket printed as a single number asserts a
+                        // precision the rungs do not have, and "below $10,000"
+                        // printed as "$500,000" (usg's 2% figure) inverts the
+                        // reading entirely.
+                        this._depthValueHtml(data) + '</div>' +
+                    // ⚠️ Four kinds of number wore the same label. The producer
+                    // now declares which: `bracketed` located the crossing
+                    // between two rungs, `ladder_exhausted` never reached it,
+                    // `quote_failed` hit a broken route, `not_size_responsive`
+                    // means the quote path ignores the size argument entirely
+                    // (USDS returns 0.00bps from $5M to $100M — a fixed-rate PSM
+                    // swap, so "clears $5M" is evidence about the call, not the
+                    // venue). Extending rungs there only extends the tautology.
+                    //
+                    // The distinction is the whole finding: usde published $5M
+                    // while quoting that same rung at −1490bps, because one
+                    // comparison read a signed cost as though it were a
+                    // magnitude. Rendering "≥" or a bracket is what stops a
+                    // bound being read as a measurement.
+                    this._depthQualifierHtml(liq, data) +
+                    this._selfReferentialHtml(data) +
+                    (liq.total_2pct_depth == null && liq.total_2pct_depth_note
+                        ? '<div class="text-[11px] text-slate-400" title="' +
+                          this._escapeAttr(liq.total_2pct_depth_note) + '">unmeasured, not zero \u24d8</div>' : '') +
+                    // ⚠️ A DELIBERATE WITHHOLDING MUST NOT READ AS A GAP. When the
+                    // producer publishes no depth AND says where the real
+                    // constraint lives, "n/a" alone is worse than the wrong
+                    // number it replaced.
+                    // ⚠️ THE OTHER PRODUCER'S FIGURE, WHEN THE OWNER PUBLISHES NONE.
+                    // Attributed, never substituted: the owner declined to publish
+                    // a depth figure and that decision stands as the axis reading.
+                    // But a reader seeing only "n/a" cannot know a current
+                    // measurement of the same asset exists, on a named chain, from
+                    // the producer whose block this one replaced.
+                    this._depthHandoffHtml() +
+                    (liq.total_2pct_depth == null && liq.two_pct_depth_status === 'not_size_responsive'
+                        ? '<div class="text-[11px] text-amber-700 dark:text-amber-300" title="' +
+                          this._escapeAttr(liq.two_pct_depth_basis ||
+                            'The venue quotes one rate at every size, so there is no crossing to locate.') +
+                          '">no curve to measure \u2014 see exit capacity \u24d8</div>' : '') +
+                '</div>' +
+                sellCard +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Max ≤25 bps</div>' +
+                    '<div class="text-lg font-bold">' + (eff != null ? this.formatCurrency(eff) : 'n/a') + '</div>' +
+                    effBasisNote + '</div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Pool TVL</div>' +
+                    '<div class="text-lg font-bold">' + (liq.total_tvl != null ? this.formatCurrency(liq.total_tvl) : 'n/a') + '</div></div>' +
+                volCard +
+            '</div>';
+
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Liquidity &amp; Exit' +
+                (liqTitleChip ? ' <span class="ml-2 align-middle">' + liqTitleChip + '</span>' : '') +
+            '</div>' +
+            headContext +
+            statRow + this._depthClockHtml(liq) + this.exitCapacityHtml(liq) + exitLine + ladderBlock +
+            this._depthShareHtml(data) + poolBlock + poolsNote + chainBlock +
+        '</div>';
+    },
+
+    // ⚠️ SIX ISOLATED MARKETS, EACH WITH ITS OWN ORACLE, PUBLISHED AND RENDERING
+    // NOWHERE. The last item from DUSD's published-vs-DOM diff.
+    //
+    // The minted-side breakdown shows the 88/12 split, which is the partition. It says
+    // nothing about the 12%: that tranche is SIX separate AltoMintMarkets with
+    // independent collateral, independent ratios from 128% to 255%, and each priced by
+    // its OWN Alto oracle. "CDP ~188%" is an average over six books that cannot
+    // cross-subsidise — isolation is the design, so the aggregate is the least
+    // informative view of it.
+    //
+    // ⚠️ `axis-backing-body` is empty for every asset today (checked: bold, usg, usdai
+    // all render 0 chars there — backing content lives in the main grid). Filling it
+    // only where `backing.cdp.markets[]` exists is data-gated and additive; no existing
+    // page changes. One asset publishes this field.
+    //
+    // ⚠️ THE ORACLE COLUMN IS THE POINT, not decoration. riskAnalyst's coverage_note
+    // says these oracles "were read but not audited", and the collateral column is
+    // therefore valued the way ALTO values it, not independently. A ratio table without
+    // that attribution invites a reader to treat 255% as verified headroom.
+    _renderCdpMarketsSection(data) {
+        var body = document.getElementById('axis-backing-body');
+        if (!body) return;
+        var cdp = (data.backing || {}).cdp;
+        var mkts = cdp && Array.isArray(cdp.markets) ? cdp.markets : null;
+        if (!mkts || !mkts.length) return;
+        var self = this;
+        var esc = function (x) { return self._escapeAttr(String(x == null ? '—' : x)); };
+        // Descending by debt: the reader's question is which book carries the exposure.
+        var rows = mkts.slice().sort(function (a, b) {
+            return (b.debt || 0) - (a.debt || 0);
+        }).map(function (m) {
+            // ⚠️ `ratio` is a MULTIPLE here (1.2763…), declared by cdp.ratio_scale.
+            // Rendering it as a percent without the ×100 is the scale bug this repo
+            // has normalizeCollateralRatio for; rendering it as "1.28" beside other
+            // assets' "128%" is the other half of the same confusion.
+            var pct = typeof m.ratio === 'number' ? m.ratio * 100 : null;
+            // Thin, not healthy: these are liquidatable books, and the reader cannot
+            // tell 128% from 255% by colour unless the colour means something.
+            var cls = pct == null ? '' : (pct < 130 ? 'text-amber-700' : 'text-slate-700');
+            return '<tr>' +
+                '<td class="font-medium">' + esc(m.collateral) + '</td>' +
+                '<td class="text-right font-mono">' + (typeof m.debt === 'number'
+                    ? self.formatCurrencyExact(m.debt) : '—') + '</td>' +
+                '<td class="text-right font-mono">' + (typeof m.coll_value === 'number'
+                    ? self.formatCurrencyExact(m.coll_value) : '—') + '</td>' +
+                '<td class="text-right font-mono ' + cls + '">' +
+                    (pct == null ? '—' : pct.toFixed(1) + '%') + '</td>' +
+                '<td class="text-xs text-slate-500">' + esc(m.oracle) + '</td>' +
+            '</tr>';
+        }).join('');
+        body.innerHTML =
+            '<div class="panel">' +
+                '<div class="panel-title">CDP mint markets — the 12% tranche, ' +
+                    mkts.length + ' isolated books</div>' +
+                // ⚠️ The producer's own basis, which says what the aggregate hides.
+                (cdp.ratio_basis
+                    ? '<div class="text-xs text-slate-500 mb-3" style="line-height:1.45;">' +
+                      esc(cdp.ratio_basis) + '</div>' : '') +
+                '<div class="data-table-scroll"><table class="data-table"><thead><tr>' +
+                    '<th>Collateral</th><th class="text-right">DUSD debt</th>' +
+                    '<th class="text-right">Collateral value</th>' +
+                    '<th class="text-right">Ratio</th><th>Priced by</th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+                '<div class="text-xs text-amber-700 mt-2" style="line-height:1.45;">' +
+                    '⚠️ Isolated per collateral: a surplus in one book is NOT available to ' +
+                    'cover a shortfall in another, and none of it is a general claim for ' +
+                    'DUSD holders — it backs each market’s own borrowers.' +
+                '</div>' +
+            '</div>';
+    },
+
+    _renderDependenciesSection(data) {
+        var body = document.getElementById('axis-dependencies-body');
+        if (!body) return;
+        body.innerHTML = this.dependenciesPanelHtml(data);
+    },
+
+    // ⚠️ SHARED SO A PAGE WITHOUT AXIS SECTIONS CAN STILL SHOW THIS AXIS.
+    // ethena.js hides every numbered section — deliberately, because a lone
+    // "5 Contract & Admin" on a page with no 1/2/3/4/6 reads as a rendering
+    // failure — and renders a bespoke panel stream instead. It had no axis-4
+    // header to hang a score chip on, so usde and susde showed NO dependency
+    // information at all: not the authored 6.0, not its basis, and not usde's
+    // three upstream rows naming its custodians.
+    //
+    // The panel this returns already matches that stream's idiom (`.panel` +
+    // `.panel-title`), so it drops in unchanged rather than needing a second
+    // layout.
+    //
+    // `opts.withScoreChip` adds the authored score beside the title, for callers
+    // that have no axis head rendering it already. Off by default so the shared
+    // path does not print it twice.
+    _dependencyMetricHtml(metric) {
+        var self = this;
+        function valueHtml(value) {
+            if (value == null) return 'not measured';
+            if (typeof value === 'number' && Number.isFinite(value)) {
+                return self._escapeAttr(value.toLocaleString('en-US', { maximumFractionDigits: 2 }));
+            }
+            if (typeof value === 'object') {
+                return Object.keys(value).map(function(key) {
+                    return '<div>' + self._escapeAttr(key.replace(/_/g, ' ')) + ': ' + valueHtml(value[key]) + '</div>';
+                }).join('');
+            }
+            return self._escapeAttr(String(value));
+        }
+        return '<div class="dep-card-metric">' + valueHtml(metric) + '</div>';
+    },
+
+    dependenciesPanelHtml(data, opts) {
+        opts = opts || {};
+        data = data || {};
+        var dep = data.dependencies || {};
+        var up = Array.isArray(dep.upstream) ? dep.upstream : [];
+        var down = Array.isArray(dep.downstream) ? dep.downstream : [];
+
+        // A dependency's `note` is where the producer puts the thing that makes
+        // the row mean something other than what it looks like: a ticker
+        // collision (USG's reUSD is Resupply's, not Re Protocol's), a 100%
+        // concentration (sUSDS), a circularity. Every one of those was
+        // published and dropped on the floor here — the card rendered name and
+        // metric only. `circular` gets its own marker so it survives even when
+        // no prose accompanies it.
+        //
+        // `label` is accepted as a name fallback because not every feed spells
+        // the field `name`; a dependency with no renderable name showed as an
+        // em-dash, which is indistinguishable from an unnamed dependency.
+        function card(d) {
+            var note = d.note
+                ? '<div class="dep-card-note' +
+                      (d.circular === true ? ' dep-card-note-warn' : '') + '">' +
+                      CommonRenderer._escapeAttr(String(d.note)) + '</div>'
+                : '';
+            var circChip = (d.circular === true && !d.note)
+                ? '<div class="dep-card-note dep-card-note-warn">⚠️ Circular: this dependency\'s own backing includes the asset above.</div>'
+                : '';
+            var context = (d.source || note)
+                ? '<details class="dep-card-details"><summary class="dep-card-link">Source &amp; context</summary>' +
+                    (d.source ? '<div class="dep-card-source">' +
+                        CommonRenderer._escapeAttr(String(d.source)) + '</div>' : '') +
+                    note + '</details>'
+                : circChip;
+            var inner =
+                '<div class="dep-card-name">' + CommonRenderer._escapeAttr(String(d.name || '—')) + '</div>' +
+                (d.metric != null ? CommonRenderer._dependencyMetricHtml(d.metric) : '') +
+                context;
+            var destination = '<div class="dep-card-link text-slate-400">No dashboard</div>';
+            if (d.link && d.link_type === 'internal') {
+                // An internal link is only a link if the target is registered.
+                // Feeds name dependencies this dashboard may not serve, and an
+                // ?asset= href to an unregistered slug renders as a live link
+                // and lands on nothing. Show the dependency, not the dead link.
+                var m = /[?&]asset=([^&]+)/.exec(d.link);
+                var known = !m || !Array.isArray(CommonRenderer.KNOWN_ASSET_SLUGS) ||
+                            CommonRenderer.KNOWN_ASSET_SLUGS.indexOf(m[1]) !== -1;
+                if (known) {
+                    destination = '<a href="' + CommonRenderer._escapeAttr(String(d.link)) +
+                        '" class="dep-card-link">Open dashboard →</a>';
+                }
+            } else if (d.link && d.link_type === 'external') {
+                destination = '<a href="' + CommonRenderer._escapeAttr(String(d.link)) +
+                    '" target="_blank" rel="noopener noreferrer" class="dep-card-link">External ↗</a>';
+            }
+            return '<div class="dep-card">' + inner + destination + '</div>';
+        }
+
+        var upBlock = up.length
+            ? '<div class="dep-grid">' + up.map(card).join('') + '</div>'
+            : '<div class="text-sm text-slate-400">No upstream dependencies tracked.</div>';
+
+        // ⚠️ SAY WHAT THE OVERLAY REPLACED, AND NAME IT. An axis owner supplying
+        // its own dependency list is correct — but a reader cannot tell a list
+        // that is short because the asset has two dependencies from one that is
+        // short because a longer measured list was swapped out. On reUSD the
+        // dropped list contained "Ethena sUSDe — 93.87% of reserves and Ethereum
+        // redemption payout asset", the largest single dependency on the asset.
+        var prov = (CommonRenderer.AXIS_PROVENANCE || {}).dependencies || {};
+        var repl = (prov.replaced_arrays || []).filter(function(r) { return r.field === 'upstream'; })[0];
+        // ⚠️ ON-PAGE ONLY ON A NET LOSS OF ROWS. riskAnalyst rebuilt their list to
+        // CARRY the measurements rather than replace them — 3 entries in, 3 out,
+        // each now holding the metric the feed's version had. The warning had
+        // done its job and kept firing, and a notice that stays lit after the
+        // thing it warns about is fixed is one readers learn to skip.
+        //
+        // ⚠️ The limit, stated rather than hidden: an equal-count swap CAN still
+        // drop a dependency and add an unrelated one, and this test would not
+        // catch it. That is why provenance keeps the dropped names either way and
+        // the chip tooltip still reports them — only the page-level banner is
+        // gated, on the case where a reader would be misled about COMPLETENESS.
+        if (repl && repl.dropped_names && repl.dropped_names.length && repl.to < repl.from) {
+            upBlock += '<div class="dep-replaced">\u26a0\ufe0f These ' + repl.to +
+                ' entries come from <strong>' + this._escapeAttr(prov.producer || 'an overlay') +
+                '</strong>, which owns this axis. They REPLACED ' + repl.from +
+                ' entries published by the asset feed \u2014 ' +
+                this._escapeAttr(repl.dropped_names.join('; ')) +
+                ' \u2014 rather than being added to them. The two producers name the same ' +
+                'dependencies differently, so the lists cannot be safely merged; what was dropped ' +
+                'is named here instead of being silently absent.</div>';
+        }
+
+        // The block-level note describes the LIST — what it contains and how it
+        // is ordered (USG: "ALL active markets, thinnest headroom first"; USDm:
+        // why the volatile bucket sits apart). Without it the grid is a set of
+        // rows with no stated basis, which is the same defect as an undeclared
+        // denominator. Sits under the grid it describes, not above it.
+        if (dep.note) {
+            upBlock += '<details class="dep-block-note"><summary class="dep-card-link">' +
+                'About this dependency set</summary><div>' +
+                this._escapeAttr(String(dep.note)) + '</div></details>';
+        }
+
+        // ⚠️ THE LEGS DO NOT PARTITION. yzUSD's 16 upstream shares sum to 108.53%,
+        // and nothing on the page said so — a reader adding the rows gets 108%
+        // and either distrusts the page or, worse, does not add them.
+        //
+        // riskAnalyst found this while reproducing my protocol-grouping finding,
+        // and it is the same rule I had just given them one axis over: publish
+        // the set, not the derived number. `distinct_protocol_count` alone would
+        // have hidden it completely — the count is right, the shares are right,
+        // and the SUM is the thing that says what they mean.
+        //
+        // ⚠️ States the arithmetic only. The CAUSE — that a levered leg's
+        // collateral and its borrowed asset can both appear — is their inference
+        // and belongs in the producer's note, not asserted by a renderer.
+        // Prefers the producer's own `pct_sums_to` / `is_partition` once emitted.
+        // ⚠️ SAME-COUNTERPARTY LEGS READ AS INDEPENDENT EXPOSURES. yzUSD lists 16
+        // upstream legs that resolve to 10 counterparties. Ethena has a
+        // CONCENTRATION flag pointing at it; MAPLE DOES NOT — 20.67% split across
+        // three separate rows with no flag, no adjacency, and no reason for a
+        // reader to add them. riskAnalyst's case, and it is stronger than the
+        // Ethena one I led with.
+        //
+        // ⚠️ AND IT UNDERSTATES. riskAnalyst found the limit: the prefix names the
+        // ISSUER OF THE UNDERLYING, not every counterparty in the leg.
+        // "[Agora]_PT_AUSD_Loop" (4.93%) and "[Sky]_PT_sUSDS_Loop" (1.32%) are
+        // both principal-token positions — 6.25% attributed entirely to Agora and
+        // Sky, while the protocol whose contract, oracle and maturity mechanics
+        // sit between yzUSD and those underlyings has NO ROW AT ALL. At 6.25% it
+        // would rank sixth of eleven, above Superstate and PayPal.
+        //
+        // ⚠️ NOT fixed by parsing "PT_" — that is the world-knowledge assertion
+        // this caption exists to avoid, and riskAnalyst explicitly asked that it
+        // not be. Verified there is nothing better to group on: a leg carries
+        // name, value, metric, pct, source, link — no protocol field, no address.
+        // It belongs in the producer's `by_protocol`, WHERE A LEG CAN CARRY MORE
+        // THAN ONE COUNTERPARTY — which means by_protocol is not a partition of
+        // legs either, and that is worth knowing before it is designed.
+        //
+        // ⚠️ Deliberately narrow about what this claims. It groups on the
+        // PRODUCER'S OWN NAME PREFIX — "[Maple]_syrupUSDT_Loop" — and says so.
+        // It does NOT assert that two legs are the same counterparty from any
+        // knowledge of the world, and it does NOT sum their shares, because the
+        // legs do not partition (108.53%) and a summed share would be a number I
+        // invented. The producer's `by_protocol` is the right home for the
+        // arithmetic; this makes the repetition visible until it exists.
+        //
+        // Fires only where the convention is actually used: 15 of 16 legs on
+        // yzUSD, zero on every other asset.
+        var prefixCount = {};
+        up.forEach(function(x) {
+            var m = /^\[([^\]]+)\]/.exec(x && x.name || '');
+            if (m) prefixCount[m[1]] = (prefixCount[m[1]] || 0) + 1;
+        });
+        var shared = Object.keys(prefixCount).filter(function(k) { return prefixCount[k] > 1; });
+        if (shared.length) {
+            upBlock += '<div class="dep-block-note"><span class="text-amber-700">' +
+                'Several legs share a name prefix:</span> ' +
+                shared.sort(function(a, b) { return prefixCount[b] - prefixCount[a]; })
+                      .map(function(k) { return CommonRenderer._escapeAttr(k) + ' \u00d7' + prefixCount[k]; })
+                      .join(' \u00b7 ') +
+                '. Grouped on the producer\'s own name prefix, not on an independent ' +
+                'counterparty check \u2014 and their shares are NOT summed here, because the ' +
+                'legs do not partition. ' + up.length + ' rows are not ' + up.length +
+                ' independent exposures. \u26a0\ufe0f A prefix names the ISSUER OF THE ' +
+                'UNDERLYING, which is not every counterparty in the leg: a wrapped or ' +
+                'principal-token position also depends on the contracts that wrap it, and ' +
+                'the name does not record them. So this understates sharing as well as ' +
+                'showing it.</div>';
+        }
+
+        var pctSum = dep.pct_sums_to;
+        if (pctSum == null && up.length > 1) {
+            var acc = 0, seen = 0;
+            up.forEach(function(x) { if (typeof x.pct === 'number') { acc += x.pct; seen++; } });
+            if (seen === up.length) pctSum = acc;
+        }
+        if (up.length > 1 && typeof pctSum === 'number' &&
+            (dep.is_partition === false || pctSum > 101 || pctSum < 99)) {
+            // ⚠️ THE PRODUCER'S OWN BASIS WINS WHERE IT EXISTS. This composed its
+            // sentence unconditionally and dropped `is_partition_basis`, which on
+            // yzUSD says something this renderer cannot know and must not invent:
+            // "⚠️ The CAUSE of the overlap is NOT established here and is
+            // deliberately not named — the excess is measured, the mechanism is
+            // not." A generic "legs are not mutually exclusive" asserts a mechanism
+            // the producer explicitly refused to assert.
+            //
+            // Same rule as issuer and authority prose: where the producer has
+            // authored the explanation, render theirs; compose only as a fallback.
+            upBlock += '<div class="dep-block-note"><span class="text-amber-700">' +
+                'These shares do not partition:</span> they sum to ' + pctSum.toFixed(1) +
+                '%, not 100%. ' +
+                (typeof dep.is_partition_basis === 'string' && dep.is_partition_basis.trim()
+                    ? this._escapeAttr(dep.is_partition_basis.trim())
+                    : 'Legs are not mutually exclusive, so they cannot be read as ' +
+                      'slices of the backing and must not be added.') + '</div>';
+        }
+
+        // Downstream is a reserved stub until a consumer analyzer exists. An
+        // absent/false `downstream_tracked` flag means "not tracked" (NOT "0") —
+        // show the future-version placeholder. Once the analyzer flips the flag
+        // true, real cards (or an honest empty state) render with no code change.
+        var downBlock;
+        if (dep.downstream_tracked === true) {
+            downBlock = down.length
+                ? '<div class="dep-grid">' + down.map(card).join('') + '</div>'
+                : '<div class="text-sm text-slate-400">No downstream consumers currently tracked.</div>';
+        } else {
+            downBlock = '<div class="dep-card dep-stub">' +
+                  '<div class="dep-card-name text-slate-500">Downstream not tracked</div>' +
+                  '<div class="dep-card-metric">Consumer tracking (Morpho / Pendle / etc.) coming in a future version.</div>' +
+              '</div>';
+        }
+
+        // ⚠️ THE BASIS RENDERS WHERE THE SCORE IS, not in a tooltip. A 900-character
+        // argument about counterparty concentration is not something a reader
+        // hovers for — same rule already applied to backing_score_basis and
+        // structural_score_basis, which were tooltip-only until they weren't.
+        var depChange = this._scoreChangeHtml(dep);
+        var depNotes = this._authoredNotesHtml('dependencies');
+        var depBasis = ((dep.underlying_score_basis && typeof dep.underlying_score_basis === 'string') || depChange)
+            ? this._scoreBasisHtml('Why this dependencies score', dep.underlying_score_basis, depChange) +
+              (dep.underlying_score_denominator
+                  ? '<div class="text-xs text-slate-500 mb-3">Denominator: ' +
+                    this._escapeAttr(String(dep.underlying_score_denominator)) + '</div>'
+                  : '') + depNotes
+            : depNotes;
+
+        var titleChip = opts.withScoreChip
+            ? this.authoredScoreChipHtml(dep, ['underlying_score'], '') : '';
+        return '<div class="panel">' +
+            '<div class="panel-title">Dependencies' +
+                (titleChip ? ' <span class="ml-2 align-middle">' + titleChip + '</span>' : '') +
+            '</div>' +
+            depBasis +
+            // ⚠️ AXIS 4 CARRIES NO SCORE FLEET-WIDE, AND UNTIL NOW NOTHING SAID WHY.
+            //
+            // A reader comparing axis 4's "View links →" against five numbered chips
+            // has no way to tell a deliberate abstention from a producer who has not
+            // got to it. riskAnalyst published the reason on DUSD — "NO SCORE IS
+            // PUBLISHED ON THIS AXIS BY DELIBERATE CHOICE", because one asset scoring
+            // it would redefine what every other page's blank means — and it reached
+            // no pixel. Theirs, not composed: only they can say their abstention is
+            // deliberate, and the fleet-wide convention is the one thing a renderer
+            // must not assert on their behalf.
+            ((typeof dep.coverage_note === 'string' && dep.coverage_note.trim())
+                ? '<div class="dep-block-note" style="line-height:1.45;">' +
+                  this._mdInlineHtml(dep.coverage_note.trim()) + '</div>'
+                : '') +
+            '<div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Upstream — what this asset depends on</div>' +
+            upBlock +
+            '<div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 mt-6">Downstream — what depends on this asset</div>' +
+            downBlock +
+            // ⚠️ AN UPSTREAM SHARED WITH ANOTHER STACK IS A DEPENDENCY THIS PANEL
+            // HAS NO ROW FOR. apxUSD lists STRCx at 68% of reserves and sUSDat
+            // lists STRC at ~99% of backing; neither page says the other exists.
+            // The common-mode exposure is already MEASURED — strc_backing.json's
+            // `downstream_exposure` carries both legs and their combined total —
+            // and it renders on exactly one page, the one a reader of these two is
+            // least likely to be on. Filled asynchronously; absent if the fetch
+            // fails, because a silent gap beats a half-drawn claim.
+            '<div id="axis-deps-common-mode"></div>' +
+        '</div>';
+    },
+
+    // Shared upstream / common-mode exposure. Keyed on the dependency rows this
+    // page ALREADY renders — any upstream linking to ?asset=strc gets the STRC
+    // family's other legs — so it extends itself if another asset starts naming
+    // the same upstream, rather than matching on a list of slugs that has to be
+    // edited. Silent no-op everywhere else.
+    loadCommonModeExposure(data) {
+        var host = document.getElementById('axis-deps-common-mode');
+        if (!host) return;
+        var up = ((data || {}).dependencies || {}).upstream || [];
+        var sharesStrc = up.some(function(d) {
+            return d && typeof d.link === 'string' && /[?&]asset=strc(?:$|&)/.test(d.link);
+        });
+        if (!sharesStrc) return;
+        var self = this;
+        var mySlug = data.view_slug || data.asset_slug || '';
+        fetch('data/strc_backing.json?nocache=' + Math.floor(Date.now() / 600000))
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(strc) {
+                var dx = strc && strc.downstream_exposure;
+                if (!dx) return;
+                var legs = [];
+                Object.keys(dx).forEach(function(k) {
+                    var v = dx[k];
+                    if (!v || typeof v !== 'object') return;
+                    var usd = (v.strc_bucket_usd != null) ? v.strc_bucket_usd : v.strc_raw_usd;
+                    if (usd == null) return;
+                    legs.push({ name: k, usd: usd, share: v.strc_share_of_reserves,
+                                verifiable: v.verifiable, src: v.source_file });
+                });
+                if (legs.length < 2) return;   // "shared" needs at least two holders
+                legs.sort(function(a, b) { return b.usd - a.usd; });
+                var total = dx.portfolio_total_strc_family_usd;
+                var rows = legs.map(function(l) {
+                    var mine = mySlug && l.src && l.src.indexOf(mySlug) === 0;
+                    return '<tr' + (mine ? ' class="bg-slate-50"' : '') + '>' +
+                        '<td class="font-medium">' + self._escapeAttr(l.name) +
+                            (mine ? ' <span class="text-xs text-slate-500">(this stack)</span>' : '') + '</td>' +
+                        '<td class="text-right font-mono">' + self.formatCurrency(l.usd) + '</td>' +
+                        '<td class="text-right font-mono">' +
+                            (l.share != null ? self.formatPercent(l.share * 100, 1) : '—') + '</td>' +
+                        '<td class="text-xs text-slate-500">' +
+                            (l.verifiable === 'oracle_unverified' ? 'oracle-marked, unverified' : 'attested') + '</td>' +
+                    '</tr>';
+                }).join('');
+                host.innerHTML =
+                    '<div class="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 mt-6">' +
+                        'Shared upstream — who else holds this collateral</div>' +
+                    '<div class="text-xs text-slate-500 mb-2 leading-relaxed">' +
+                        'STRC is not this asset\'s exposure alone. A move in the STRC mark reaches every ' +
+                        'stack below at once, so these are correlated by construction rather than ' +
+                        'independent — and a stress on one is not diversified by the other.' +
+                    '</div>' +
+                    '<div class="data-table-scroll"><table class="data-table"><thead><tr>' +
+                        '<th>Stack</th><th class="text-right">STRC held</th>' +
+                        '<th class="text-right">Share of its reserves</th><th>Basis</th>' +
+                    '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+                    (total != null
+                        ? '<div class="text-xs text-slate-500 mt-2">Combined STRC-family exposure ' +
+                          '<span class="font-mono font-semibold">' + self.formatCurrency(total) + '</span>. ' +
+                          'Source: <span class="font-mono">strc_backing.json</span> ' +
+                          '<span class="font-mono">downstream_exposure</span>, measured from each stack\'s own feed. ' +
+                          '<a href="?asset=strc" class="text-blue-600 hover:underline">STRC dashboard →</a></div>'
+                        : '');
+            })
+            .catch(function() { /* leave absent */ });
+    },
+
+    _renderIssuerSection(data) {
+        var body = document.getElementById('axis-issuer-body');
+        if (!body) return;
+        body.innerHTML = this.issuerPanelHtml(data) + this._issuerContextHtml(data);
+    },
+
+    // Extracted so the BESPOKE renderers can emit axis 6 too. They build their
+    // whole axis set into #asset-specific-panels and clear the generic bodies,
+    // so before this they simply had no axis 6 — their old "5 Issuer" head was
+    // sitting above admin-topology panels, which is Contract & Admin content.
+    issuerPanelHtml(data) {
+        var issuer = data.issuer || {};
+        var info = this._issuerAxisInfo(issuer);
+        // ⚠️ A NAME BADGE MUST NOT DISPLACE THE SCORE. This was
+        // `info.badge || (score…)`, so any badge short-circuited the score
+        // branch. usds publishes badge "Sky (MakerDAO)" — a name, deliberately,
+        // with the analyzer commenting "a name, not a score" — and an authored
+        // issuer_score of 7.0. The name won and the 7.0 reached NO READER, while
+        // susds on the same axis showed "Issuer 7.0/10". A published score
+        // rendering nowhere is the failure this dashboard keeps re-finding.
+        //
+        // Three cases, not two: a badge that ALREADY carries the score is the
+        // score chip; a badge that is a NAME accompanies it; no badge falls back
+        // to the score alone.
+        // One decimal: an authored score reads N.N estate-wide ("Authored 4.0/10",
+        // §6.5.1), and 7.0 arriving as the JS number 7 rendered "Issuer 7/10"
+        // beside susds's "Issuer 7.0/10" for the identical value.
+        var scoreText = (info.score != null)
+            ? info.label + ' ' + Number(info.score).toFixed(1) + '/10'
+            : (info.status === 'unavailable' ? info.label + ' unavailable' : null);
+        var nameBadge = (info.badge && !info.scoredBadge) ? info.badge : null;
+        var badge = info.scoredBadge ? info.badge : scoreText;
+        var age = issuer.attestation_age_days;
+        var scoreTooltip = this._issuerScoreTooltip(info);
+        var methodology = info.label.toLowerCase() === 'issuer'
+            ? 'The issuer axis is an editorial, subjective rating — KYC, permissioning, governance and admin posture are assessed in the full report rather than scored live here.'
+            : 'The ' + this._escapeAttr(info.label.toLowerCase()) +
+                ' axis is an editorial, subjective rating. Its asset-specific methodology is assessed in the full report rather than scored live here.';
+
+        var chips =
+            // The name, when the badge is one — rendered as identity, not as a rating.
+            (nameBadge ? '<span class="axis-rating r-na">' +
+                this._escapeAttr(nameBadge) + '</span>' : '') +
+            (badge ? '<span class="axis-rating r-warn"' +
+                (scoreTooltip ? ' title="' + this._escapeAttr(scoreTooltip) + '"' : '') + '>' +
+                this._escapeAttr(badge) + '</span>' : '') +
+            (info.status && info.status !== 'ok'
+                ? '<span class="axis-rating r-na"' +
+                    (scoreTooltip ? ' title="' + this._escapeAttr(scoreTooltip) + '"' : '') +
+                    '>Score ' + this._escapeAttr(info.status.replace(/_/g, ' ')) + '</span>'
+                : '') +
+            (age != null ? '<span class="axis-rating r-na" title="Last attestation age">Attested ' + age + 'd ago</span>' : '');
+
+        var reportLink = this._reportUrlUsable(issuer)
+            ? '<a href="' + issuer.report_url + '" target="_blank" rel="noopener noreferrer" ' +
+                'class="inline-flex items-center gap-1 text-sm font-semibold text-blue-600 hover:text-blue-700">' +
+                this._reportLinkLabel(issuer, true) + '</a>'
+            // ⚠️ Three states, not two. "No report linked" was being shown for a
+            // report that EXISTS and is deliberately withheld, which reads as
+            // "nobody has written one". A status without a URL is the withheld
+            // case: production 404s while the report is unpublished, and the
+            // staging host cannot be linked because it renders the whole
+            // unpublished corpus to anyone who follows the link.
+            : (issuer.report_url || issuer.report_url_status
+                ? '<span class="text-sm text-slate-400" title="' + this._escapeAttr(
+                      'The producer marks this report "' + String(issuer.report_url_status) +
+                      '" rather than published.' +
+                      (!issuer.report_url
+                          ? ' A report exists; it is withheld until publication, so there is no safe ' +
+                            'URL to link \u2014 the production URL 404s and the staging host renders ' +
+                            'the whole unpublished corpus.' : '')) +
+                  '">Report not yet published \u24d8</span>'
+                : '<span class="text-sm text-slate-400">No report linked.</span>');
+
+        // ⚠️ issuer.facts is an EXISTING feed convention that nothing rendered.
+        // usds has published four of them — "48h GSM timelock", "Pause Proxy is
+        // the sole owner/admin", "Freeze / emergency-shutdown functions exist",
+        // an allocator-visibility caveat — and every one was invisible while this
+        // section showed only the generic "editorial, subjective axis" line.
+        //
+        // This is deliberately the mechanism for issuer material rather than
+        // hardcoding prose into a renderer. Claims like "unlicensed", "not
+        // bankruptcy-remote" or a jurisdiction are assertions about a real
+        // company: they belong to the producer, must move when the assessment
+        // moves, and are exactly what this repo shipped unsourced once before.
+        // A renderer that names a custodian or a legal status is a constant that
+        // nothing recomputes.
+        var facts = (issuer.facts && Array.isArray(issuer.facts)) ? issuer.facts : [];
+        // ⚠️ Collapsed past a handful. Ten bullets under a paragraph is the same
+        // wall axis 5 had, and the reader who needs the detail is one click from
+        // it while the reader scanning six axes is not made to wade through it.
+        // Few enough entries stay open — usds publishes four, thusd five, and
+        // collapsing those buys nothing.
+        var factsList = facts.length
+            ? '<ul class="text-sm text-slate-600 dark:text-slate-300 list-disc ml-5 space-y-1">' +
+                // ⚠️ _mdInlineHtml, not _escapeAttr. Producers write markdown — the
+                // score-basis path has converted `**bold**` and `code` since the
+                // 346-span find, and this path did not, so the FIRST issuer file to
+                // use emphasis rendered its asterisks as punctuation (strcx_issuer,
+                // 8 spans, on the axis whose whole job is separating Backed from
+                // Strategy). Same producer, same prose, two destinations, and only
+                // one of them had been taught the convention.
+                //
+                // _mdInlineHtml escapes FIRST and converts after, so this is not a
+                // loosening: a producer writing "<script>" still lands as text.
+                facts.map(function (f) {
+                    return '<li>' + CommonRenderer._mdInlineHtml(String(f)) + '</li>';
+                }).join('') +
+              '</ul>'
+            : '';
+        var factsHtml = !facts.length ? ''
+            : facts.length <= 5
+                ? '<div class="mb-3">' + factsList + '</div>'
+                : '<details class="issuer-facts"><summary class="issuer-facts-toggle">' +
+                  facts.length + ' assessment points</summary>' + factsList + '</details>';
+
+        // ⚠️ `issuer.summary` — prose, and AUTHORED BY THE PRODUCER, never here.
+        // The axis is editorial: it says who the issuer is, which regulator, what
+        // the legal instrument actually is. Every one of those is an assertion
+        // about a real company, so the same rule as `facts` applies and applies
+        // harder to a paragraph than to a bullet — this repo has already shipped
+        // an invented "Cayman-SPV / daily attestation" line that contradicted its
+        // own panels, and a renderer that composes issuer prose from fields is
+        // that failure with extra steps.
+        //
+        // `summary_source` is rendered with it. A summary of a PUBLISHED report
+        // and a summary of an INTERNAL one are different objects: the first can
+        // be followed by a reader, the second cannot, and on this asset the two
+        // are demonstrably not in sync — the internal §III carries a four-entity
+        // map, the Note structure and the BVI regulator that the published report
+        // does not mention at all.
+        var summary = typeof issuer.summary === 'string' ? issuer.summary.trim() : '';
+        // ⚠️ COLLAPSED WHEN THERE ARE BULLETS TO SCAN, and the choice of what to
+        // collapse is deliberate. The prose and `facts[]` cover the same ground —
+        // the bullets are the producer's own scannable form of it — so a reader
+        // meeting an unbroken 1,100-character block above ten bullets reads the
+        // same material twice, badly, and most will read neither.
+        //
+        // ⚠️ COLLAPSED, NOT TRUNCATED. Cutting to the first N sentences would mean
+        // this renderer choosing WHICH of the producer's warnings a reader sees,
+        // and on this asset the second ⚠️ (no direct claim on the §114 trust
+        // assets) is the one most likely to surprise someone — a length-based cut
+        // would have hidden exactly it. Nothing is dropped; it is one click away
+        // and the click is labelled with what it opens.
+        //
+        // With no facts to fall back on, the prose stays open: collapsing the only
+        // content on the axis would leave a panel that says nothing.
+        // ⚠️ The visible lead is the producer's OWN FIRST SENTENCE, taken
+        // mechanically — never a sentence composed here. On this asset it is
+        // "The issuer is FOUR entities, not one.", which is exactly the finding;
+        // but the rule is mechanical precisely so the renderer is not choosing
+        // which claim about a real company leads the card.
+        var leadMatch = summary ? /^([\s\S]*?\.)\s+([\s\S]+)$/.exec(summary) : null;
+        var lead = leadMatch ? leadMatch[1] : summary;
+        var rest = leadMatch ? leadMatch[2] : '';
+        // ⚠️ THIS COLLAPSED ON FACT COUNT AND NEVER LOOKED AT LENGTH, which was
+        // right for the summaries that existed when it was written and became
+        // wrong the moment they were rewritten.
+        //
+        // The original reasoning was real: a 290-word block sitting above ten
+        // bullets covering the same ground meant a reader read the same material
+        // twice, badly, and most read neither. But the producer has since split
+        // the roles explicitly — summary = ORIENTATION, facts[] = the depth — and
+        // shortened every summary to ~95 words to match. A 95-word orienting
+        // paragraph is not a wall, and it is no longer a duplicate of the bullets.
+        //
+        // ⚠️ WITH THE OLD RULE ALL FIVE REWRITTEN SUMMARIES STILL COLLAPSED TO ONE
+        // SENTENCE — which is precisely the complaint that prompted the rewrite
+        // ("they read as one key line with the substance hidden behind it"). The
+        // producer shortened the prose believing that would put it on the face; it
+        // would not have, because this rule counts bullets rather than words.
+        //
+        // Length is now the trigger and the fact count stays as a secondary
+        // condition, so the collapse survives as a safety valve for genuinely long
+        // prose (reusd-re's 1,159-character summary still collapses) while an
+        // orienting paragraph renders where it can be read.
+        var SUMMARY_COLLAPSE_CHARS = 240;
+        var collapseSummary = summary && summary.length > SUMMARY_COLLAPSE_CHARS;
+        var srcHtml = summary
+            ? (issuer.summary_source
+                  ? '<div class="issuer-summary-src">Source: ' +
+                    this._escapeAttr(String(issuer.summary_source)) + '</div>'
+                  : '<div class="issuer-summary-src issuer-summary-src-none">\u26a0\ufe0f No source ' +
+                    'declared for this summary.</div>')
+            : '';
+        // Markdown in the summary too — same reason as facts[] above. The <summary>
+        // TOGGLE keeps _escapeAttr: it is a one-line control, not prose.
+        var summaryHtml = !summary ? ''
+            : collapseSummary
+                ? (issuer.entity ? '<div class="issuer-lead">' +
+                    this._escapeAttr(String(issuer.entity)) + '</div>' : '') +
+                  '<details class="issuer-summary-details"><summary class="issuer-summary-toggle">' +
+                  'Full issuer assessment' +
+                  (issuer.entity ? ' \u2014 ' + this._escapeAttr(String(issuer.entity)) : '') +
+                  '</summary><div class="issuer-summary">' + this._mdInlineHtml(summary) +
+                  srcHtml + '</div></details>'
+                : '<div class="issuer-summary">' + this._mdInlineHtml(summary) + srcHtml + '</div>';
+
+        // ⚠️ `regulator` WAS PUBLISHED BY THREE ASSETS AND RENDERED BY NONE — and on
+        // DUSD (Alto) it is an ABSENCE, which is the case that must not be silent:
+        // "None — no regulated entity, licence or jurisdiction is disclosed". The
+        // manifest's axis-6 requirement is WHO the issuer is; `entity` answers the
+        // name and this answers whether anyone supervises them. A page that shows
+        // "Alto Foundation" and nothing else lets a reader supply their own
+        // assumption about oversight.
+        //
+        // ⚠️ RENDERED AS THE PRODUCER'S FIELD, WITH NO FRAMING ADDED. The label is
+        // "Regulator" because that is the field name; reusd-re's value is "BVI
+        // Financial Services Commission" and writing "Regulated by" around it would
+        // be this renderer asserting a supervisory relationship it has not checked.
+        // The value carries its own negation where there is one.
+        var regulatorHtml = (typeof issuer.regulator === 'string' && issuer.regulator.trim())
+            ? '<div class="text-xs text-slate-500 mb-3" style="line-height:1.45;">' +
+              '<span class="font-semibold">Regulator:</span> ' +
+              this._escapeAttr(issuer.regulator.trim()) + '</div>'
+            : '';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">' + this._escapeAttr(info.label) + '</div>' +
+            '<div class="flex flex-wrap items-center gap-2 mb-3">' + chips + '</div>' +
+            regulatorHtml +
+            summaryHtml +
+            factsHtml +
+            // ⚠️ The methodology sentence is identical on every asset and says
+            // the axis is editorial — true, unchanging, and the longest visible
+            // line on the card once the content collapsed. It belongs on hover,
+            // not above the fold, and the "editorial — subjective axis" label in
+            // the axis head already carries the same claim in three words.
+            '<div class="issuer-meta" title="' + this._escapeAttr(methodology.replace(/<[^>]+>/g, '')) +
+                '">Editorial axis \u2014 how this is rated \u24d8</div>' +
+            reportLink +
+        '</div>';
+    },
+
+    // ⚠️ Axis 5 · Contract & Admin. The panels below were rendered under Issuer
+    // until the six-axis split, which was a misfiling rather than an omission —
+    // 12 of 25 assets carried this material all along.
+    //
+    // It renders even with no score, because the content is the point and an
+    // unrated axis with a stated reason beats a rated one built on the wrong
+    // measurement. See the head comment in renderAxisSections.
+    _renderContractSection(data) {
+        var body = document.getElementById('axis-contract-body');
+        if (!body) return;
+        var html = this._contractPanelsHtml(data);
+        body.innerHTML = html ||
+            '<div class="panel"><div class="panel-title">Not assessed</div>' +
+            '<div class="text-sm text-slate-500" style="line-height:1.5;">' +
+            'No admin-control facts are published for this asset. ' +
+            '\u26a0\ufe0f Not assessed \u2014 this is an absence of data, not a finding that ' +
+            'control is unconstrained.</div></div>';
+    },
+
+    // ⚠️ The issuer axis read "4.0/10" and a line of boilerplate while the feed
+    // carried the material a reader actually wants: whether the issuer's own
+    // figures were checked against the chain, where they came from, and who can
+    // move the money. It sat in asset_specific rather than the issuer block, so
+    // this section never looked at it.
+    //
+    // Everything below is data-gated and no-ops for assets that publish none of
+    // it. Nothing is inferred: where the producer says a thing is unknown, the
+    // page says unknown.
+    _reportChipHtml(issuer) {
+        issuer = issuer || {};
+        var st = issuer.report_url_status;
+        if (st === 'unavailable') {
+            return '<span class="axis-rating r-na" title="A report exists but the publisher has not released it yet, so there is nothing to link.">Report not published</span>';
+        }
+        if (st === 'unverified') {
+            return '<span class="axis-rating r-na" title="The producer could not verify the report URL resolves, so it is deliberately not linked.">Report unverified</span>';
+        }
+        if (st) {
+            return '<span class="axis-rating r-na">Report ' + this._escapeAttr(String(st).replace(/_/g, ' ')) + '</span>';
+        }
+        return '<span class="axis-rating r-na" title="No report URL is published for this asset.">No report</span>';
+    },
+
+    // ⚠️ A RATIONALE THAT ONLY EXISTS IN A TOOLTIP IS UNPUBLISHED.
+    //
+    // I rendered backing_score_basis and structural_score_basis as title=""
+    // attributes. syrupUSDC's is 2,162 characters; reUSD's backing basis is
+    // 1,162. A hover tooltip is invisible on touch, invisible to anyone who does
+    // not hover, and browsers truncate long title text — so the argument for why
+    // a score is what it is was functionally not on the page.
+    //
+    // ⚠️ This is the same defect class as "published but unrendered", one step
+    // further in: the field IS read, and rendered somewhere nobody looks. An
+    // audit that greps renderer source counts it as DONE.
+    //
+    // A basis must render WHERE IT QUALIFIES THE NUMBER. Collapsed is fine —
+    // reachable by click, discoverable by an affordance — but a hover is not a
+    // place a 2,000-character argument can live.
+    // ⚠️ PRODUCERS WRITE MARKDOWN AND THIS RENDERED IT AS PUNCTUATION.
+    //
+    // 346 emphasis spans across 20 files — 334 of them in structural_score_basis
+    // alone — arrived as literal `**bold**` and backticked `code`. The emphasis is
+    // deliberate: riskAnalyst uses bold to mark the load-bearing turn in a
+    // 5,000-character argument, and stripping it to plain text loses the structure
+    // a reader navigates by.
+    //
+    // ⚠️ ESCAPE FIRST, THEN CONVERT. The input is producer prose and must never
+    // reach innerHTML unescaped; converting afterwards means only the markers this
+    // function creates become tags, and a producer writing "<script>" still lands
+    // as text. The patterns deliberately refuse to span newlines so an unclosed
+    // marker cannot swallow a paragraph.
+    _mdInlineHtml(text) {
+        if (!text || typeof text !== 'string') return '';
+        return this._escapeAttr(text)
+            .replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    },
+
+    // ⚠️ TOOLTIPS GET THE MARKERS STRIPPED, NOT CONVERTED. A title="" attribute
+    // renders its value as plain text, so <strong> there would show the TAG to a
+    // reader — worse than the asterisk it replaced. Same prose, two destinations,
+    // two treatments.
+    _mdPlain(text) {
+        if (!text || typeof text !== 'string') return '';
+        return text.replace(/\*\*([^*\n]+)\*\*/g, '$1')
+                   .replace(/`([^`\n]+)`/g, '$1');
+    },
+
+    // ⚠️ A SCORE MOVE IS A FACT SEPARATE FROM THE SCORE, AND IT REACHED NO READER.
+    //
+    // riskAnalyst cut usds/susds backing 7.0 -> 6.5 on 2026-09-24. The NUMBER
+    // merged and rendered; the argument FOR THE MOVE did not, because the only
+    // backing prose this renderer reads is `*_score_basis` — which that morning
+    // still closed with "HELD AT 7.0". Measured in the DOM of both pages, not in
+    // the JSON: the superseded sentence was present and "CUT 7.0" appeared
+    // nowhere. The producer fixed the prose; this renders the move itself.
+    //
+    // ⚠️ DELIBERATELY NOT SOLVED BY PROMOTING `*_score_correction*`, and that is
+    // why the typed field exists. That suffix holds two different kinds of thing:
+    // of the 11 in the corpus, 5 are score moves and 6 are the producer's errata
+    // about their OWN repo (one states that a commit message of theirs is false).
+    // Telling them apart means reading prose for "X -> Y", i.e. guessing at
+    // meaning — which is exactly how security_analyst's ⚠️-marked repo
+    // maintenance notes became reader copy (see the marker-rule note further
+    // down). A typed field is discriminable without a heuristic over prose.
+    //
+    // ⚠️ THE MOVE DOES NOT GO ON THE AXIS FACE. `from`/`to` are authored
+    // numbers, so the owner decision that took the authored score off the face
+    // beside a live band covers them too — "7.0 → 6.5" next to a measured band
+    // invites the same reconciliation of two numbers that answer different
+    // questions. It renders INSIDE the authored-argument <details>, the space
+    // that already belongs to the report's view.
+    //
+    // ⚠️ `to` IS CHECKED AGAINST THE LIVE SCORE, NOT TRUSTED. A move saying
+    // "to 6.5" beside a rendered 7.0 means the overlay did not merge, or the
+    // producer moved one field and not the other. The reader is told, because a
+    // move that disagrees with the number it describes is worse than no move.
+    _scoreChangeHtml(block) {
+        if (!block || typeof block !== 'object') return '';
+        var self = this, out = '';
+        Object.keys(block).forEach(function(k) {
+            var m = /^(.+_score)_change$/.exec(k);
+            if (!m) return;
+            var c = block[k];
+            if (!c || typeof c !== 'object' || Array.isArray(c)) return;
+            // from/to are the whole point of the field; without both there is no
+            // move to state and a partial object is not rendered as one.
+            if (typeof c.from !== 'number' || typeof c.to !== 'number') return;
+            var field = m[1], live = block[field];
+            var dir = (typeof c.direction === 'string' && c.direction.trim())
+                ? c.direction.trim() : (c.to < c.from ? 'cut' : c.to > c.from ? 'raise' : 'restated');
+            var cls = c.to < c.from ? 'sc-down' : c.to > c.from ? 'sc-up' : '';
+            // ⚠️ ONE DECIMAL ON BOTH SIDES. Authored scores move in 0.5 steps and
+            // JS prints 7.0 as "7", so an unformatted move reads "7 → 6.5" — two
+            // different precisions in one four-character string, on a page where
+            // every other score carries its decimal.
+            var fmt = function(n) { return (Math.round(n * 10) / 10).toFixed(1); };
+            var KNOWN_CHANGE_KEYS = ['from', 'to', 'on', 'direction', 'basis',
+                                     'not_load_bearing', 'restore_trigger', 'basis_warning',
+                                     'inherited_from'];
+            var extraKeys = Object.keys(c).filter(function(k) {
+                return KNOWN_CHANGE_KEYS.indexOf(k) < 0 && c[k] != null && c[k] !== '';
+            });
+            var unread = extraKeys.length
+                ? '<div class="sc-unread" title="' + self._escapeAttr(
+                        'The producer published ' + extraKeys.length + ' field' +
+                        (extraKeys.length === 1 ? '' : 's') + ' on this score move that this ' +
+                        'renderer does not read, so ' + (extraKeys.length === 1 ? 'it is' : 'they are') +
+                        ' NOT on the page. The name is shown and the content is not, because an ' +
+                        'unread field may be reader copy or may be the producer\u2019s internal note ' +
+                        'and no renderer-side rule separates them. Adding it to the consumer is the fix.') +
+                  '">\u26a0\ufe0f unread field' + (extraKeys.length === 1 ? '' : 's') + ': ' +
+                  extraKeys.map(function(k) { return self._escapeAttr(k); }).join(', ') + '</div>'
+                : '';
+            var mismatch = (typeof live === 'number' && live !== c.to)
+                ? '<div class="sc-warn">⚠️ This move says ' + fmt(c.to) + ' and the rendered ' +
+                  self._escapeAttr(field.replace(/_/g, ' ')) + ' is ' +
+                  fmt(live) + '. One of the two did not land — the move is shown as published, ' +
+                  'not reconciled here.</div>'
+                : '';
+            out += '<div class="score-change">' +
+                '<span class="sc-move ' + cls + '">' + fmt(c.from) + ' → ' + fmt(c.to) + '</span>' +
+                '<span class="sc-meta">' + self._escapeAttr(dir) +
+                    (c.on ? ' · ' + self._escapeAttr(String(c.on)) : '') +
+                    (c.inherited_from
+                        ? ' · inherited from ' + self._escapeAttr(String(c.inherited_from)) : '') +
+                '</span>' +
+                mismatch +
+                (typeof c.basis === 'string' && c.basis.trim()
+                    ? '<div class="sc-basis">' + self._mdInlineHtml(c.basis) + '</div>' : '') +
+                // ⚠️ A CAVEAT ABOUT THE FIGURES IN THE BASIS BELONGS BESIDE THEM.
+                // usds's cut quotes "Spark is 61.2% onchain crypto lending while
+                // holding 33.01% of Sky vat debt" — two percentages a reader can
+                // multiply, and the producer publishes `basis_warning` saying the
+                // bases are 23.7% apart and must NOT be multiplied. Same role as
+                // `*_score_denominator` on axis 4, which this renderer has shown
+                // since the day it was published. Found by the unread-field marker
+                // on its first live pass, not by reading the schema.
+                (typeof c.basis_warning === 'string' && c.basis_warning.trim()
+                    ? '<div class="sc-caveat">\u26a0\ufe0f Basis caveat: ' +
+                      self._mdInlineHtml(c.basis_warning) + '</div>' : '') +
+                // ⚠️ The producer asked for this one BY NAME: the sUSDS reflexive
+                // loop is measured, unsized, and did not price the cut. Rendering
+                // the move without it invites a reader to assume it did.
+                (typeof c.not_load_bearing === 'string' && c.not_load_bearing.trim()
+                    ? '<div class="sc-nlb">⚠️ Recorded, and explicitly NOT what drove this ' +
+                      'move: ' + self._mdInlineHtml(c.not_load_bearing) + '</div>' : '') +
+                // ⚠️ THE CONDITION FOR THE NEXT MOVE, WHICH IS THE HALF A READER
+                // CAN ACT ON. syrupUSDC's cut publishes what would restore 7.5 (a
+                // DexTracker ladder at institutional notional) AND what would take
+                // it to 6.0 — "free liquidity stays under 2% for four consecutive
+                // weekly reads". Both were dropped on the floor by the first cut
+                // of this renderer, which read `basis` and `not_load_bearing` only.
+                (typeof c.restore_trigger === 'string' && c.restore_trigger.trim()
+                    ? '<div class="sc-trigger">What would move it again: ' +
+                      self._mdInlineHtml(c.restore_trigger) + '</div>' : '') +
+                // ⚠️ NAME THE FIELD, NEVER PRINT THE VALUE. Same rule as
+                // _authoredAxisScore's unknown-field report, and for the same
+                // reason this renderer does not promote `*_score_correction*`: a
+                // key we have not read could be reader copy or could be the
+                // producer's own errata, and a renderer cannot tell without
+                // guessing at meaning. So the gap is made visible to whoever can
+                // fix it, and the unvetted prose stays off the page.
+                unread +
+            '</div>';
+        });
+        return out;
+    },
+
+    // Called per axis-basis/1 block at merge time. Splits its block-level prose
+    // into adopted notes (rendered) and unadopted keys (named, not printed).
+    _collectAuthoredNotes(axis, block) {
+        if (!block || typeof block !== 'object') return;
+        var self = this, notes = [], unread = [];
+        var unreadBlocks = [];
+        Object.keys(block).forEach(function(k) {
+            var v = block[k];
+            // ⚠️ A NEW BLOCK VANISHED AS SILENTLY AS A NEW PROSE FIELD USED TO, and
+            // this marker existed the whole time. It inspected strings only, so
+            // riskAnalyst's 11-field `contract.assurance` — audits, bounty, formal
+            // verification, test coverage, effect_on_score — landed on syrupUSDC and
+            // susde, rendered nowhere, and was not named, while the SAME call named
+            // `authority_note` and `provenance_note` on that same asset.
+            //
+            // Its own comment records being "blind to the schema next door" once and
+            // being widened to every merge-mode overlay. It was still blind, to a
+            // SHAPE rather than a schema: prose detected, structures not. The defect
+            // this repo calls its most repeated had a detector covering half the
+            // cases.
+            if (v && typeof v === 'object') {
+                if (self.AUTHORED_BLOCK_KNOWN.indexOf(k) >= 0) return;
+                // ⚠️ Dynamic key family: the depth-crossing blocks are matched by
+                // pattern in _publishedDepthAt (/^depth_\d+bps$/), so no literal name
+                // can be listed above.
+                if (/^depth_\d+bps(_all_in)?$/.test(k)) return;
+                // The score-sibling skip below covers *_score_change and
+                // *_score_per_chain, which the basis/addenda path already renders.
+                if (/_score(_|$)/.test(k)) return;
+                if (self.AUTHORED_NOTE_IGNORE.indexOf(k) >= 0) return;
+                var empty = Array.isArray(v) ? v.length === 0 : Object.keys(v).length === 0;
+                if (!empty) unreadBlocks.push(k);
+                return;
+            }
+            if (typeof v !== 'string' || !v.trim()) return;
+            // ⚠️ ADOPTION IS CHECKED FIRST, and it has to be. The skip below is a
+            // substring test, so `structural_score_rescore_pending` — a key whose
+            // whole purpose is to be rendered beside the score — was swallowed as
+            // "a score's own sibling" and then rendered by nothing, because the
+            // sibling path only reads `_basis`. Adopted on the list, rendered.
+            if (self.AUTHORED_NOTE_KEYS.indexOf(k) >= 0) { notes.push({ key: k, text: v }); return; }
+            // A score's own siblings are handled by the basis/addenda path.
+            if (/_score(_|$)/.test(k)) return;
+            if (/_generated_at$/.test(k)) return;
+            if (self.AUTHORED_NOTE_IGNORE.indexOf(k) >= 0) return;
+            // ⚠️ Short strings are values, not arguments (a date, a venue name).
+            // The marker fires on prose only, so a new scalar field does not read
+            // as a missing paragraph.
+            if (v.trim().length >= 120) unread.push(k);
+        });
+        if (notes.length || unread.length || unreadBlocks.length) {
+            this.AXIS_AUTHORED_NOTES[axis] = {
+                notes: notes, unread: unread, unreadBlocks: unreadBlocks
+            };
+        }
+    },
+
+    // Humanised from the key: the producer's key names ARE the headline
+    // ("premium cannot close by trading"), so inventing a label here would only
+    // move the wording away from the person who authored the argument.
+    _authoredNoteLabel(key) {
+        var t = key.replace(/_note$/, '').replace(/_/g, ' ').trim();
+        return t.charAt(0).toUpperCase() + t.slice(1);
+    },
+
+    // One collapsed <details> per note — the summary line carries the producer's
+    // own framing ("Read the sign before the size"), which is the half a reader
+    // needs even unopened.
+    _authoredNotesHtml(axis) {
+        var e = this.AXIS_AUTHORED_NOTES[axis];
+        if (!e) return '';
+        var self = this, out = '';
+        (e.notes || []).forEach(function(n) {
+            out += self._scoreBasisHtml(self._authoredNoteLabel(n.key), n.text);
+        });
+        // ⚠️ NAMED, NEVER SHOWN. A block may be reader copy or an internal structure
+        // and no renderer-side rule separates them — the same reason the prose marker
+        // prints the name and withholds the content. The field COUNT is given because
+        // it is the one safe signal of how much is being dropped: an 11-field
+        // structure and a one-field stub are very different omissions.
+        if (e.unreadBlocks && e.unreadBlocks.length) {
+            var blkSelf = this;
+            out += '<div class="sc-unread" title="' + this._escapeAttr(
+                    'The overlay carries ' + e.unreadBlocks.length + ' structured field' +
+                    (e.unreadBlocks.length === 1 ? '' : 's') + ' this renderer does not read, so ' +
+                    (e.unreadBlocks.length === 1 ? 'it is' : 'they are') + ' NOT on the page. ' +
+                    'Named rather than shown: a block may be reader content or an internal ' +
+                    'structure, and nothing here separates them. Adopting it in the consumer is ' +
+                    'the fix \u2014 a published field reaching no reader is the same defect as an ' +
+                    'unrendered score.') +
+                '">\u26a0\ufe0f unread block' + (e.unreadBlocks.length === 1 ? '' : 's') + ': ' +
+                e.unreadBlocks.map(function(k) { return blkSelf._escapeAttr(k); }).join(', ') +
+                '</div>';
+        }
+        if (e.unread && e.unread.length) {
+            out += '<details class="sc-unread"><summary>Additional overlay notes (' + e.unread.length + ')</summary><div title="' + this._escapeAttr(
+                    'The axis-basis overlay carries ' + e.unread.length + ' prose field' +
+                    (e.unread.length === 1 ? '' : 's') + ' this renderer has not adopted, so ' +
+                    (e.unread.length === 1 ? 'it is' : 'they are') + ' NOT on the page. The name ' +
+                    'is shown and the content is not: an unadopted field may be reader copy or may ' +
+                    'be an internal note, and no renderer-side rule separates them.') +
+                '">\u26a0\ufe0f unread note' + (e.unread.length === 1 ? '' : 's') + ': ' +
+                e.unread.map(function(k) { return self._escapeAttr(k); }).join(', ') + '</div></details>';
+        }
+        return out;
+    },
+
+    // `leadHtml` is already-escaped HTML (the typed score move) placed ABOVE the
+    // prose: what changed first, then the argument. A caller passing only a basis
+    // string behaves exactly as before, and a block with a move but no basis
+    // still opens — the move is reason enough for the <details> to exist.
+    _scoreBasisHtml(label, text, leadHtml) {
+        var t = (typeof text === 'string') ? text.trim() : '';
+        var lead = (typeof leadHtml === 'string') ? leadHtml : '';
+        if (!t && !lead) return '';
+        return '<details class="score-basis"><summary class="score-basis-toggle">' +
+            this._escapeAttr(label) + '</summary>' +
+            '<div class="score-basis-body">' + lead +
+            (t ? this._mdInlineHtml(t) : '') + '</div></details>';
+    },
+
+    // ⚠️ HOW FAR THE CHECK WENT, ON THE FACE — because the FINDING is on the
+    // face and a bound that renders one click down is not a bound.
+    //
+    // This block describes the MEASUREMENT, never the asset: who authored the
+    // walk, who reviewed it, and how many claims were re-measured. That is
+    // precisely why the producer could publish it where a prose findings[] was
+    // refused — "four claims re-measured" is an observation, "therefore this is
+    // safe" would be judgement and belongs to the editorial producer.
+    //
+    // ⚠️ IT EXISTS BECAUSE ONE OF THESE WALKS WAS PEER-AUTHORED AND PUBLISHED
+    // FOR A DAY while I reported all five were the producer's own — from a git
+    // check that had exactly one possible output, in a repo where every session
+    // commits under the same name. A reader deserves to see the provenance of a
+    // walk without taking my word that it was verified.
+    _reviewHtml(c) {
+        var r = c && c.review;
+        if (!r || typeof r !== 'object') return '';
+        var self = this;
+        var esc = function(x) { return self._escapeAttr(String(x)); };
+        var bits = [];
+        if (r.scope) bits.push(esc(String(r.scope)) + ' review');
+        if (r.claims_remeasured != null) bits.push(esc(r.claims_remeasured) + ' claims re-measured');
+        if (r.reviewed_by) bits.push('reviewed by ' + esc(this._producerLabel(r.reviewed_by)));
+        if (r.reviewed_at) bits.push(esc(r.reviewed_at));
+        return '<details class="walk-review">' +
+            '<summary class="wr-head">Review provenance \u2014 ' + bits.join(' \u00b7 ') + '</summary>' +
+            (r.authored_by
+                ? '<div class="wr-line"><span class="wr-key">Authored by:</span> ' +
+                  esc(r.authored_by) + ' \u2014 not by the reviewing repo</div>'
+                : '') +
+            (r.note ? '<div class="wr-line">' + esc(r.note) + '</div>' : '') +
+        '</details>';
+    },
+
+    // ⚠️ SHARED AUTHORITY, RENDERED STRUCTURALLY AND WITHOUT A CONCLUSION.
+    //
+    // The producer publishes ADDRESSES ONLY and deliberately dropped the prose
+    // note I drafted: "the subordination is not protected by separate control"
+    // is a JUDGEMENT, and judgement is riskAnalyst's field, not
+    // security_analyst's store. ⚠️ That reasoning binds this renderer too — if I
+    // supply the sentence they refused to supply, I have moved the authoring one
+    // layer FURTHER from the evidence, which is worse than where it started.
+    //
+    // So this states what is shared and with whom, and lets the rows do the work:
+    // one timelock over both tokens, one implementation, one 3-of-5 Safe behind
+    // every minter, one AccessManager at admin delay zero.
+    //
+    // ⚠️ ON THE FACE, NOT IN THE COLLAPSED TRAIL, for a specific reason: two
+    // sibling pages each showing "48h timelock" invite a reader to count two
+    // independent controls where there is one. On a tranched product that is not
+    // a detail — the junior tranche exists to absorb losses first, and whether
+    // that ordering is separately controlled is the question a holder has.
+    _sharedAuthorityHtml(c) {
+        var list = (c && Array.isArray(c.authority_shared_with)) ? c.authority_shared_with : [];
+        if (!list.length) return '';
+        var self = this;
+        var esc = function(x) { return self._escapeAttr(String(x)); };
+        var short = function(a) {
+            var t = String(a || '');
+            return t.length > 14 ? t.slice(0, 8) + '\u2026' + t.slice(-4) : t;
+        };
+        return list.map(function(e) {
+            var other = String(e.asset || '');
+            var known = !Array.isArray(CommonRenderer.KNOWN_ASSET_SLUGS) ||
+                        CommonRenderer.KNOWN_ASSET_SLUGS.indexOf(other) !== -1;
+            var rows = (e.shares || []).map(function(sh) {
+                var bits = [];
+                if (sh.roles && sh.roles.length) bits.push(sh.roles.join(', '));
+                if (sh.n != null && sh.m != null) bits.push(sh.n + '-of-' + sh.m);
+                if (sh.admin_delay === 0) bits.push('admin delay 0');
+                else if (sh.admin_delay != null) bits.push('admin delay ' + sh.admin_delay);
+                return '<tr><td>' + esc(String(sh.kind || '?').replace(/-/g, ' ')) + '</td>' +
+                    '<td class="sa-addr" title="' + esc(sh.address || '') + '">' +
+                    esc(short(sh.address)) + '</td>' +
+                    '<td>' + esc(bits.join(' \u00b7 ')) + '</td></tr>';
+            }).join('');
+            return '<div class="shared-authority">' +
+                '<div class="sa-head">\u26a0\ufe0f Shares admin authority with ' +
+                    (known ? '<a href="?asset=' + esc(other) + '">' + esc(other) + '</a>' : esc(other)) +
+                '</div>' +
+                '<div class="sa-sub">The same addresses hold these roles over both assets \u2014 ' +
+                    'measured on each proxy separately, not inherited.</div>' +
+                '<div class="sa-tablewrap"><table class="sa-table"><thead><tr>' +
+                    '<th>Shared</th><th>Address</th><th>Holds</th></tr></thead><tbody>' +
+                    rows + '</tbody></table></div>' +
+            '</div>';
+        }).join('');
+    },
+
+    // Code half with NO authority walk. Leads with what is not established.
+    _codeHalfOnlyHtml(c) {
+        var self = this;
+        var esc = function(x) { return self._escapeAttr(String(x)); };
+        var note = c.authority_note || c.no_walk_note ||
+            'The authority half of this axis has not been walked.';
+        // ⚠️ THE HEADLINE IS THE PRODUCER'S SENTENCE, NEVER MINE. The first cut
+        // hardcoded "the authority half is NOT ESTABLISHED" — true when written,
+        // FALSE within the hour: riskAnalyst found reUSDe's DEFAULT_ADMIN_ROLE is
+        // held by the same 48h TimelockController, read on-chain 2026-08-12 and
+        // recorded in their own report. A renderer that asserts an absence is
+        // making a claim about an asset, and it cannot know when that claim stops
+        // being true. Their `authority_note` says what is and is not established,
+        // in their words, and it moves when their assessment moves.
+        return '<div class="panel topology-walk">' +
+            '<div class="panel-title">Smart Contract &amp; Admin \u2014 no topology walk filed</div>' +
+            '<div class="tw-flag">' + esc(note) + '</div>' +
+            (c.no_structural_score_note
+                ? '<div class="tw-sub">' + esc(c.no_structural_score_note) + '</div>' : '') +
+            // ⚠️ `coverage_note` WAS NEVER READ ON THIS PATH, AND IT IS THE AXIS-5
+            // NOT-ESTABLISHED DECLARATION THE MANIFEST REQUIRES.
+            //
+            // The headline above reads `authority_note || no_walk_note || <generic>`.
+            // Neither of the two assets that take this path publishes either field:
+            // dusd-alto and strcx both put the declaration in `coverage_note`, which
+            // only the WALKED path (_topologyWalkHtml) renders. So both pages fell
+            // through to my generic sentence — true, but far weaker than what was
+            // published. strcx has been discarding a 1,287-char reader-facing scope
+            // limit this whole time, and DUSD's names both of its specific gaps:
+            // who can DRIVE EmergencyController 0x3c822f14, and the unresearched
+            // signer identities with no cross-protocol overlap sweep.
+            //
+            // ⚠️ COLLAPSED, NOT PROMOTED TO THE HEADLINE — same treatment and same
+            // reason as the walked path. These notes open with their own label
+            // ("READER-FACING SCOPE LIMIT.", "THE AUTHORITY HALF..."), so a
+            // first-sentence split yields the label, and judging which sentence is
+            // "label-like" is the prose-parsing this renderer does not do. The
+            // generic line stays as the face because it is accurate; the producer's
+            // full statement is one click away instead of absent.
+            (c.coverage_note
+                ? '<details class="tw-scope" open><summary class="tw-code-toggle">' +
+                  '⚠️ What this score does NOT establish — the producer’s ' +
+                  'scope limit</summary><div class="tw-sub">' +
+                  self._mdInlineHtml(c.coverage_note) + '</div></details>'
+                : '') +
+            // ⚠️ Their explicit gaps, rendered as prominently as the score.
+            // The producer states the DIRECTION — every open question here can
+            // only push the score down — so a reader cannot mistake the gap for
+            // reassurance, which is the failure this axis keeps producing.
+            (Array.isArray(c.unmeasured) && c.unmeasured.length
+                ? '<div class="tw-unresolved"><div class="tw-unresolved-head">\u26a0\ufe0f Not ' +
+                  'measured \u2014 ' + c.unmeasured.length + '</div><ul>' +
+                  c.unmeasured.map(function(u) { return '<li>' + esc(u) + '</li>'; }).join('') +
+                  '</ul></div>'
+                : '') +
+            '<details class="tw-code"><summary class="tw-code-toggle">Code &amp; audits \u2014 ' +
+                c.code_facts.length + ' points (the OTHER half)</summary>' +
+                '<ul class="tw-code-list">' +
+                c.code_facts.map(function(f) { return '<li>' + esc(f) + '</li>'; }).join('') +
+                '</ul><div class="tw-sub">\u26a0\ufe0f These describe the CODE. They say nothing ' +
+                'about who can act on it, which is the half above and is unmeasured.</div>' +
+            '</details>' +
+            // Same collapse as the walked path — see _topologyWalkHtml.
+            (Array.isArray(c.cross_axis) && c.cross_axis.length
+                ? '<details class="tw-scope"><summary class="tw-code-toggle">' +
+                  'What this score does and does not cover \u2014 ' + c.cross_axis.length +
+                  ' notes</summary><ul class="tw-code-list">' +
+                  c.cross_axis.map(function(x) { return '<li>' + esc(x) + '</li>'; }).join('') +
+                  '</ul></details>'
+                : '') +
+        '</div>';
+    },
+
+    // Axis 5 from a topology walk (contract/1). Data-gated: every asset without
+    // one keeps the existing asset_specific.governance / .control panels, and
+    // assets with neither keep the "Not assessed" state, which is correct and
+    // is not a gap to paper over.
+    _topologyWalkHtml(data) {
+        var c = data.contract;
+        if (!c || typeof c !== 'object') return '';
+        // ⚠️ THE CODE HALF CAN EXIST WITHOUT THE AUTHORITY HALF, and gating the
+        // whole panel on `headline` (a walk-only field) made the page state a
+        // flat negative — "No admin-control facts are published" — while five
+        // published code facts sat loaded in memory. Both cannot be right.
+        //
+        // ⚠️ BUT THE ORDER IS THE WHOLE ANSWER. Audits shown alone under a
+        // heading that says "admin authority & delay" read as reassurance about
+        // the half nobody measured. So when there is no walk, the panel LEADS
+        // with the absence, in the producer's own words, and the code half is
+        // subordinate and collapsed beneath it. Strong audits under an
+        // unmeasured key is the halo this axis exists to catch — the same
+        // reasoning that keeps reUSD's 4.0 from being lifted by its audits.
+        var hasWalk = !!c.headline;
+        var hasCode = Array.isArray(c.code_facts) && c.code_facts.length;
+        if (!hasWalk && !hasCode) return '';
+        if (!hasWalk) return this._codeHalfOnlyHtml(c);
+        var self = this;
+        var esc = function(x) { return self._escapeAttr(String(x)); };
+
+        var layers = Array.isArray(c.layers) ? c.layers : [];
+        var layerRows = layers.map(function(l) {
+            var tl = String(l.timelock == null ? '' : l.timelock);
+            var allPaths = l.paths || [];
+            var schemaPaths = allPaths.filter(function(p) {
+                return p && p.control_state != null && p.execution_delay != null && p.reach != null;
+            });
+            var newSchema = allPaths.length > 0 && schemaPaths.length === allPaths.length;
+            if (newSchema) {
+                var active = schemaPaths.filter(function(p) { return p.actionable === true; });
+                var unresolvedPath = schemaPaths.some(function(p) {
+                    return p.actionable === 'unresolved' || p.control_state === 'unresolved' ||
+                        p.reach === 'unresolved' || p.execution_delay === 'unresolved';
+                });
+                var delayText, delayClass, reachText;
+                if (!active.length && unresolvedPath) {
+                    delayText = '⚠️ unresolved'; delayClass = 'tw-unknown'; reachText = 'unresolved';
+                } else if (!active.length) {
+                    delayText = 'not applicable'; delayClass = 'tw-ok'; reachText = 'none';
+                } else {
+                    var delays = active.map(function(p) { return p.execution_delay; });
+                    var noDelay = delays.indexOf('none') !== -1;
+                    var full = active.some(function(p) {
+                        return p.reach === 'full' || p.value_at_risk_scope === 'core';
+                    });
+                    delayText = noDelay ? 'no execution delay' : delays.join(', ');
+                    delayClass = noDelay ? (full ? 'tw-bad' : 'tw-unknown') : 'tw-ok';
+                    reachText = Array.from(new Set(active.map(function(p) {
+                        return p.reach + (p.value_at_risk_scope ? ' · ' + p.value_at_risk_scope : '');
+                    }))).join(', ');
+                }
+                return '<tr>' +
+                    '<td>' + esc(l.authority_layer || '—') + '</td>' +
+                    '<td>' + ((l.keys || []).map(esc).join(', ') || '—') + '</td>' +
+                    '<td class="' + delayClass + '">' + delayText + '</td>' +
+                    '<td>' + esc(l.topology || '—') + '</td>' +
+                    '<td>' + esc(reachText) + '</td>' +
+                '</tr>' + CommonRenderer._roleAdminRowHtml(l, esc) +
+                         CommonRenderer._divergentPathRows(l, esc);
+            }
+            // ⚠️ "unresolved" is NOT "none" and must not render as a clean cell.
+            // Their coverage audit exists because `timelock: unresolved` was read
+            // as "no timelock" — it means NOT MEASURED. An unmeasured field shown
+            // as an empty cell converts an unknown into an implied clean bill.
+            var undelayed = !tl || tl === 'none';
+            var unknown = tl === 'unresolved';
+            return '<tr>' +
+                '<td>' + esc(l.authority_layer || '—') + '</td>' +
+                '<td>' + ((l.keys || []).map(esc).join(', ') || '—') + '</td>' +
+                // ⚠️ A CONFIGURED DELAY IS NOT AN ENFORCED ONE, and the column now
+                // says so in two words instead of a paragraph. `timelock: 48h`
+                // only ever meant a delay is SET; `timelock_floor: none` means
+                // MINIMUM_DELAY()/MIN_DELAY() were called and reverted, so the
+                // delay is reducible by whoever can schedule against the
+                // timelock's own admin. security_analyst shipped the field rather
+                // than the prose I asked for, and they were right: it is a chain
+                // read with a positive control, not a judgement, so it joins for
+                // every consumer instead of rendering for one.
+                //
+                // ⚠️ ABSENT IS NOT `none`. A missing floor field means NOT
+                // MEASURED and renders nothing — inventing "no floor" from
+                // silence would be the same error as reading `timelock:
+                // unresolved` as "no timelock".
+                '<td class="' + (unknown ? 'tw-unknown' : (undelayed ? 'tw-bad' : 'tw-ok')) + '">' +
+                    (unknown ? '\u26a0\ufe0f not measured' : (undelayed ? '\u26a0\ufe0f none' : esc(tl))) +
+                    (l.timelock_floor === 'none'
+                        ? '<span class="tw-nofloor" title="MINIMUM_DELAY() and MIN_DELAY() both revert, so no MIN_DELAY constant is enforced. \u26a0\ufe0f WHAT THIS DOES NOT SAY: on a stock OZ TimelockController, updateDelay is onlySelf \u2014 reducing the delay must itself be scheduled and executed through the timelock, so it first clears the CURRENT delay. Read this as \u2018no hardcoded minimum\u2019, NOT as \u2018this can happen instantly\u2019. The convention behind this field is being settled between producers.">' +
+                          ' \u00b7 no floor</span>'
+                        : (l.timelock_floor
+                            ? '<span class="tw-sub"> \u00b7 floor ' + esc(l.timelock_floor) + '</span>'
+                            // ⚠️ UNREAD MUST NOT RENDER AS SILENCE. A delay with no floor
+                            // field was rendering nothing at all, so a reader saw "3d" with
+                            // no qualifier and read it as a clean, complete measurement.
+                            // Absent means NOT MEASURED — the same distinction this column
+                            // already makes for `timelock: unresolved`. Seven layers were
+                            // silently in this state, all syrup.
+                            // ⚠️ Only where a DELAY EXISTS. A floor qualifies a delay; beside
+                            // "⚠️ none" or "not measured" it is noise, and noise in the column
+                            // that carries the real warnings is how a reader learns to skip it.
+                            : ((undelayed || unknown) ? ''
+                                : '<span class="tw-unknown" title="The floor was NOT MEASURED for this layer \u2014 the field is absent, not set to none. Whether this delay can be shortened, and how fast, is unknown rather than established.">' +
+                                  ' \u00b7 floor not measured</span>'))) +
+                '</td>' +
+                '<td>' + esc(l.topology || '—') + '</td>' +
+                '<td>' + esc(l.reach || '—') + '</td>' +
+            '</tr>' + CommonRenderer._roleAdminRowHtml(l, esc) +
+                     CommonRenderer._divergentPathRows(l, esc);
+        }).join('');
+
+        var unresolved = Array.isArray(c.unresolved) ? c.unresolved : [];
+
+        // ⚠️ THE MARKER RULE BACKFIRED AND THE FAILURE WAS MINE. I promoted every
+        // ⚠️-marked paragraph in the producer's header to page copy, then told
+        // them those paragraphs were now page copy — so they correctly added
+        // ⚠️-marked notes FOR FUTURE EDITORS of their file ("THIS FILE HAS A LIVE
+        // PUBLIC CONSUMER", "SLUG_TO_FILE needs one line added"), and repo
+        // maintenance instructions started rendering to readers of a risk
+        // dashboard. Five flagged paragraphs, two of them findings.
+        //
+        // A source comment serves two audiences and the glyph does not
+        // distinguish them. Emphasis inside a repo file is not the same signal as
+        // importance to an outside reader, and no renderer-side heuristic can
+        // separate them without guessing at meaning.
+        //
+        // So header prose renders in the verbatim trail below and NOT as page
+        // copy. ⚠️ That temporarily moves one real finding — the 48h delay has NO
+        // FLOOR, since MINIMUM_DELAY/MIN_DELAY both revert — one click away. It
+        // belongs in a STRUCTURED field the producer publishes deliberately for
+        // this surface, which is what has been asked for; a comment that happens
+        // to carry a glyph is not that.
+        var notes = Array.isArray(c.walk_notes) ? c.walk_notes : [];
+        var findings = Array.isArray(c.findings) ? c.findings : [];
+        var flagged = findings.map(function(f) {
+            return typeof f === 'string' ? f : (f && f.text) ? f.text : '';
+        }).filter(Boolean);
+
+        return '<div class="panel topology-walk">' +
+            '<div class="panel-title">Authority walk \u2014 ' + esc(c.method || 'unknown method') + '</div>' +
+            // ⚠️ Provenance goes in tooltips, not in the reading line. Three
+            // meta sentences above the table — how the headline was derived, what
+            // file it came from, what generator row it replaced, and their
+            // coverage-audit percentage — were longer than the finding itself.
+            // All of it is true, none of it is what the axis is for, and it is
+            // still one hover (and one click, in the trail) away.
+            '<div class="tw-headline"' +
+                (c.headline_basis ? ' title="' + esc(c.headline_basis) + '"' : '') + '>' +
+                esc(c.headline) + '</div>' +
+            '<div class="tw-sub">Walked ' + esc(c.observed_at || '?') +
+                // ⚠️ `source_file` DROPPED FROM THE READER'S TOOLTIP. Its value is a
+                // path into a PRODUCER'S REPO — "security_analyst/topology/assets/
+                // crvusd.yaml" — on 21 of 21 assets that publish it. An external
+                // reader cannot open it, learns nothing from it, and it discloses
+                // how this estate is wired for no benefit. `method_note` is kept:
+                // it describes HOW the walk was done, which is reader material.
+                //
+                // Not deleted from the feed — the field is real provenance and the
+                // producer should keep publishing it. It simply stops being
+                // rendered, the way `producer_note` already is.
+                (c.method_note
+                    ? ' <span class="tw-meta" title="' + esc(c.method_note) +
+                      '">\u24d8</span>'
+                    : '') + '</div>' +
+            // ⚠️ COVERAGE ON THE FACE, beside the walk date, because a scope limit
+            // qualifies every row below it. riskAnalyst split this out of
+            // `authority_note`, which mixed a reader-facing scope caveat with repo
+            // bookkeeping in one string — "2 of 5 chains" next to "replaces
+            // generator v2.1 output". The first changes how the table reads; the
+            // second is a note about our own gate.
+            // ⚠️ COVERAGE: TOGGLE ON THE FACE, NOT THE PARAGRAPH.
+            //
+            // I asked riskAnalyst to split the reader-facing scope limit out of
+            // `authority_note` and then rendered the whole field inline. crvUSD's
+            // is 1,287 chars, so it sat between the headline and the authority
+            // table and pushed the measurement below a wall — visible text went
+            // 1098 -> 2386, WORSE than before the split I requested.
+            //
+            // ⚠️ A first-sentence split does not rescue it: this note opens with
+            // the label "READER-FACING SCOPE LIMIT.", so the mechanical lead is
+            // the label rather than the scope. Skipping "label-like" sentences
+            // would mean judging what a sentence IS, which is the prose-parsing
+            // line this renderer does not cross.
+            //
+            // So the whole note collapses under a named toggle until the producer
+            // supplies a one-line form. Coverage stays one click from the table it
+            // qualifies, and the table stays first.
+            // ⚠️ `coverage_summary` IS THE FACE, `coverage_note` IS THE DETAIL.
+            // The one-line form earns the position beside the walk date because a
+            // scope limit qualifies every row of the table below it; the 1,287-char
+            // note does not, and putting it there once pushed the measurement under
+            // a wall of prose.
+            (c.coverage_summary
+                ? '<div class="tw-coverage">' + esc(c.coverage_summary) + '</div>'
+                : '') +
+            (c.coverage_note
+                ? '<details class="tw-scope"><summary class="tw-code-toggle">' +
+                  (c.coverage_summary ? 'Coverage \u2014 full scope statement'
+                                      : 'Coverage \u2014 which chains this walk covers') +
+                  '</summary><div class="tw-sub">' + self._mdInlineHtml(c.coverage_note) + '</div></details>'
+                : '') +
+            (layerRows
+                ? '<div class="tw-tablewrap"><table class="tw-table"><thead><tr>' +
+                  '<th>Authority</th><th>Keys</th><th>Delay</th><th>Topology</th><th>Reach</th>' +
+                  '</tr></thead><tbody>' + layerRows + '</tbody></table></div>'
+                : '') +
+            (flagged.length
+                ? '<div class="tw-flagged">' + flagged.map(function(f) {
+                      return '<div class="tw-flag">' + esc(f) + '</div>'; }).join('') + '</div>'
+                : '') +
+            this._reviewHtml(c) +
+            this._sharedAuthorityHtml(c) +
+            // ⚠️ NOT ESTABLISHED is rendered as prominently as what WAS, and
+            // verbatim. These entries carry their own attribution — the
+            // attribution is inside the producer's own text. ⚠️ This comment used
+            // to say the MINTER_ROLE finding was riskAnalyst's — it WAS, and
+            // security_analyst measured it themselves on 2026-09-06 and retired
+            // the entry. Rendering verbatim is what let that correction reach the
+            // page without a code change; summarising would have frozen the old
+            // credit in this file.
+            // ⚠️ COLLAPSED, BUT THE SCOPES STAY VISIBLE. "Not established" must
+            // remain as prominent as what WAS established — that is the whole
+            // argument for publishing it — but prominence is the reader knowing
+            // THAT four things are unmeasured and WHICH, not 1,400 characters of
+            // justification stacked above the fold. The scopes are taken
+            // mechanically from the text before each first colon.
+            (unresolved.length
+                // ⚠️ The attribute must be OMITTED, not set empty: <details open="">
+                // is OPEN. Few enough items stay expanded; a long list collapses.
+                ? '<details class="tw-unresolved"' + (unresolved.length <= 2 ? ' open' : '') + '>' +
+                  '<summary class="tw-unresolved-head">\u26a0\ufe0f Not established \u2014 ' +
+                  unresolved.length + ' item' + (unresolved.length === 1 ? '' : 's') + ': ' +
+                  esc(unresolved.map(function(u) {
+                      var i = u.indexOf(':');
+                      return i > 0 && i < 60 ? u.slice(0, i) : u.split(/\.\s/)[0].slice(0, 40);
+                  }).join(' \u00b7 ')) + '</summary><ul>' +
+                  unresolved.map(function(u) {
+                      // First sentence as the visible label, remainder behind an
+                      // expander. Mechanical — split on the first sentence end —
+                      // so the renderer never chooses WHICH part of a producer's
+                      // caveat a reader sees. These run to 648 characters each
+                      // and four of them stacked is a wall nobody finishes.
+                      var m = /^([^.]*\.)\s+([\s\S]+)$/.exec(u);
+                      if (!m) return '<li>' + esc(u) + '</li>';
+                      return '<li>' + esc(m[1]) +
+                          ' <details class="tw-more"><summary>why</summary>' +
+                          esc(m[2]) + '</details></li>';
+                  }).join('') +
+                  '</ul><div class="tw-sub">Absence of a measurement is not a finding that the ' +
+                  'authority is unconstrained \u2014 nor that it is constrained.</div></details>'
+                : '') +
+            // ⚠️ THE CODE HALF, AND THE SEAM BETWEEN THE TWO PRODUCERS DECLARED.
+            // riskAnalyst supplies audits and the score; security_analyst supplies
+            // the authority walk above. Their `authority_note` states that they do
+            // NOT restate the walk — rendered, so a reader can see the axis is
+            // split by design rather than wondering which producer is missing.
+            (Array.isArray(c.code_facts) && c.code_facts.length
+                ? '<details class="tw-code"><summary class="tw-code-toggle">Code &amp; audits \u2014 ' +
+                  c.code_facts.length + ' points</summary><ul class="tw-code-list">' +
+                  c.code_facts.map(function(f) { return '<li>' + esc(f) + '</li>'; }).join('') +
+                  '</ul>' +
+                  // ⚠️ FALLBACK ONLY. While a producer still emits the old combined
+                  // `authority_note` AND the new split fields, rendering both would
+                  // show the coverage caveat twice. Rendering NEITHER is the worse
+                  // failure — riskAnalyst kept `authority_note` populated on purpose
+                  // so a split landing before renderer support could not turn a
+                  // verbose paragraph into a silent blank, which is what happened to
+                  // `axis_exemptions` and to usdg's axis-5 score. So: prefer the new
+                  // field, fall back to the old, never drop both.
+                  (c.coverage_note ? '' :
+                      (c.authority_note ? '<div class="tw-sub">' + esc(c.authority_note) + '</div>' : '')) +
+                  // Bookkeeping — collapsed with the code half, never on the face.
+                  (c.provenance_note ? '<div class="tw-sub tw-provenance">' + esc(c.provenance_note) + '</div>' : '') +
+                  '</details>'
+                : '') +
+            // ⚠️ SCOPE NOTES COLLAPSE. These are "what this score does NOT cover"
+            // — legitimate, and not findings. Rendered flat they stacked four
+            // ⚠️-prefixed paragraphs into the reading path directly under the
+            // authority table, so the tile read as 1,130 characters of caveat
+            // after 700 characters of measurement.
+            //
+            // ⚠️ AND THEY WERE SPENDING THE COLUMN'S ONLY SEVERITY SIGNAL. The
+            // Delay column uses ⚠️ for `none` and `not measured`; five consecutive
+            // ⚠️ where none marks a finding teaches a reader to skip the glyph,
+            // including on the row that means an undelayed full-reach upgrade.
+            //
+            // One click away, not deleted — a technical reader still gets every
+            // word, in the producer's wording, which is the same treatment
+            // code_facts and the walk notes already get.
+            (Array.isArray(c.cross_axis) && c.cross_axis.length
+                ? '<details class="tw-scope"><summary class="tw-code-toggle">' +
+                  'What this score does and does not cover \u2014 ' + c.cross_axis.length +
+                  ' notes</summary><ul class="tw-code-list">' +
+                  c.cross_axis.map(function(x) { return '<li>' + esc(x) + '</li>'; }).join('') +
+                  '</ul></details>'
+                : '') +
+            (notes.length
+                ? '<details class="tw-details"><summary>Verification trail &amp; walk notes (verbatim, ' +
+                  notes.length + ' lines)</summary><pre class="tw-pre">' +
+                  esc(notes.join('\n')) + '</pre></details>'
+                : '') +
+        '</div>';
+    },
+
+    // `opts.withHeadContext` prepends the score basis, which renders on the axis
+    // HEAD for every normal asset. ⚠️ Only a caller whose head is hidden may pass
+    // it: on susde the 1,741-character argument for the 5.5 was reachable ONLY as
+    // a tooltip on the summary card, and the head copy — the one a reader can
+    // actually read — was inside a display:none node.
+    _contractPanelsHtml(data, opts) {
+        opts = opts || {};
+        var sp = data.asset_specific || {};
+        var basis = (data.contract || {}).structural_score_basis;
+        var head = (opts.withHeadContext && typeof basis === 'string' && basis.trim())
+            ? this._scoreBasisHtml('Why this contract score', basis) : '';
+        // ⚠️ IN THE PANEL, NOT ON THE HEAD. The axis-5 basis renders on the head,
+        // which ethena hides — so anything appended there is lost on exactly the
+        // pages this material matters for. Notes travel with the panel instead.
+        var out = head + this._authoredNotesHtml('contract') + this._topologyWalkHtml(data);
+
+        // 2. Governance — gated on the NORMALISED shape only. apxusd and
+        // syrupusdc publish governance under entirely different keys and are
+        // served by their own renderers; matching on quorum_threshold keeps this
+        // from half-rendering someone else's schema.
+        var g = sp.governance;
+        if (g && g.quorum_threshold != null) {
+            // ⚠️ "4 of an unstated total" is the whole point. The producer
+            // publishes quorum_denominator: null deliberately, having asked the
+            // same question I did, so the page says 4-of-unknown rather than
+            // implying 4-of-5. A quorum without a denominator is not a posture.
+            var quorum = g.quorum_denominator != null
+                ? this._escapeAttr(g.quorum_threshold) + '-of-' + this._escapeAttr(g.quorum_denominator)
+                : this._escapeAttr(g.quorum_threshold) + '-of-<span class="text-amber-700">unknown</span>';
+            var unknowns = Array.isArray(g.unknowns) ? g.unknowns : [];
+            out += '<div class="panel">' +
+                '<div class="panel-title">Governance (issuer-disclosed)</div>' +
+                '<div class="text-sm text-slate-700 dark:text-slate-200">' +
+                    '<span class="font-semibold">Quorum:</span> ' + quorum +
+                    (g.default_action ? ' · <span class="font-semibold">Default action:</span> ' +
+                        this._escapeAttr(g.default_action) : '') +
+                    (g.policy_modified_at ? ' · <span class="font-semibold">Policy changed:</span> ' +
+                        this.formatDate(g.policy_modified_at) : '') +
+                '</div>' +
+                (Array.isArray(g.attestation_kinds) && g.attestation_kinds.length
+                    ? '<div class="text-xs text-slate-500 mt-2"><span class="font-semibold">Attestation kinds:</span> ' +
+                      g.attestation_kinds.map(function(k) { return CommonRenderer._escapeAttr(k); }).join(' · ') +
+                      '</div>' : '') +
+                (unknowns.length
+                    ? '<div class="text-xs mt-2" style="line-height:1.45;">' +
+                      '<span class="font-semibold text-amber-700">Not established:</span>' +
+                      '<ul class="list-disc ml-5 mt-1 space-y-1 text-slate-600">' +
+                        unknowns.map(function(u) {
+                            return '<li>' + CommonRenderer._escapeAttr(String(u)) + '</li>';
+                        }).join('') +
+                      '</ul></div>' : '') +
+                (g.note ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
+                    this._escapeAttr(g.note) + '</div>' : '') +
+            '</div>';
+        }
+
+        // 3. Control surface — who can change the contract, and what was checked
+        // rather than assumed. sUSDS publishes this in full and nothing read it:
+        // the pause surface it does NOT have (five selectors tried, all revert),
+        // that it IS upgradeable, the authority holding that power, and whether
+        // the deployed implementation matches the published one.
+        //
+        // ⚠️ "No pause function" is only reassuring if someone looked. The
+        // producer's note makes the distinction the page has to keep: summary
+        // .paused is null "because there is nothing to read — not because a read
+        // failed", and the equivalent risk on that asset is an upgrade.
+        var ctl = sp.control;
+        if (ctl && (ctl.authority || ctl.pause_surface || ctl.upgradeable != null)) {
+            var auth = ctl.authority || {};
+            var ps = ctl.pause_surface || {};
+            var rows = [];
+            if (auth.name || auth.address) {
+                rows.push(['Authority',
+                    this._escapeAttr(auth.name || '—') +
+                    (auth.address ? ' <span class="font-mono text-xs">' +
+                        this._escapeAttr(auth.address) + '</span>' : '')]);
+            }
+            if (ctl.upgradeable != null) {
+                rows.push(['Upgradeable', ctl.upgradeable
+                    ? '<span class="text-amber-700 font-semibold">yes</span>' +
+                      (ctl.proxy_admin_slot ? ' <span class="text-xs text-slate-500">· ' +
+                        this._escapeAttr(ctl.proxy_admin_slot) + '</span>' : '')
+                    : 'no']);
+            }
+            if (ctl.impl_matches_published != null) {
+                rows.push(['Deployed implementation', ctl.impl_matches_published
+                    ? '<span class="text-green-600">matches published</span>'
+                    : '<span class="text-red-600 font-semibold">DOES NOT match published</span>']);
+            }
+            if (ps.exists != null) {
+                rows.push(['Pause surface', ps.exists
+                    ? '<span class="text-amber-700">present</span>'
+                    : 'none' + (Array.isArray(ps.checked) && ps.checked.length
+                        ? ' <span class="text-xs text-slate-500">(' + ps.checked.length +
+                          ' selectors checked: ' +
+                          ps.checked.map(function(c) { return CommonRenderer._escapeAttr(c); }).join(', ') +
+                          ')</span>' : '')]);
+            }
+            out += '<div class="panel">' +
+                '<div class="panel-title">Control surface</div>' +
+                '<table class="data-table"><tbody>' +
+                rows.map(function(r) {
+                    return '<tr><td class="font-medium" style="width:32%">' + r[0] + '</td><td>' + r[1] + '</td></tr>';
+                }).join('') +
+                '</tbody></table>' +
+                (ps.note ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
+                    this._escapeAttr(ps.note) + '</div>' : '') +
+            '</div>';
+        }
+
+        return out;
+    },
+
+    // ⚠️ Stays with ISSUER (axis 6), not Contract & Admin. Corroboration is
+    // about whether the ISSUER'S OWN FIGURES survive an independent read, and
+    // the disclosed wallet set is a disclosure-quality fact. Neither is a
+    // statement about who can change the contract.
+    _issuerContextHtml(data) {
+        var sp = data.asset_specific || {};
+        var out = '';
+
+        // 1. Corroboration — the strongest issuer-axis fact available: how much
+        // of what the issuer reports has been independently reproduced on-chain.
+        var corr = sp.corroboration;
+        if (corr && corr.checks) {
+            var rows = Object.keys(corr.checks).map(function(k) {
+                var c = corr.checks[k] || {};
+                var ok = c.agrees === true;
+                return '<tr>' +
+                    '<td class="font-medium">' + CommonRenderer._escapeAttr(k.replace(/_/g, ' ')) + '</td>' +
+                    '<td class="text-right font-mono text-xs">' + (c.feed != null ? c.feed : '—') + '</td>' +
+                    '<td class="text-right font-mono text-xs">' + (c.chain != null ? c.chain : '—') + '</td>' +
+                    '<td class="text-xs ' + (ok ? 'text-green-600' : 'text-red-600') + '">' +
+                        (ok ? 'agrees' : 'DISAGREES') + '</td>' +
+                '</tr>';
+            }).join('');
+            out += '<div class="panel">' +
+                '<div class="panel-title">Independent verification</div>' +
+                '<div class="data-table-scroll"><table class="data-table">' +
+                '<thead><tr><th>Check</th><th class="text-right">Issuer feed</th>' +
+                '<th class="text-right">On-chain</th><th>Result</th></tr></thead>' +
+                '<tbody>' + rows + '</tbody></table></div>' +
+                (corr.note ? '<div class="text-xs text-slate-500 mt-2" style="line-height:1.45;">' +
+                    this._escapeAttr(corr.note) + '</div>' : '') +
+                (sp.feed_url ? '<div class="text-xs text-slate-500 mt-2">' +
+                    '<span class="font-semibold">Issuer source:</span> ' +
+                    this._escapeAttr(sp.feed_url) +
+                    (sp.feed_as_of ? ' · as of ' + this.formatDate(sp.feed_as_of) : '') +
+                    '</div>' : '') +
+            '</div>';
+        }
+
+        // 4. Issuer-disclosed wallets. A count and the addresses, nothing more —
+        // the disclosure is the fact, and whether the balances are in the
+        // backing figure is a different question the feed answers elsewhere.
+        var wal = sp.wallets;
+        if (wal && typeof wal === 'object') {
+            var groups = Object.keys(wal).filter(function(k) { return Array.isArray(wal[k]) && wal[k].length; });
+            if (groups.length) {
+                out += '<div class="panel">' +
+                    '<div class="panel-title">Issuer-disclosed wallets</div>' +
+                    groups.map(function(gname) {
+                        var list = wal[gname];
+                        return '<div class="mb-2">' +
+                            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200">' +
+                                CommonRenderer._escapeAttr(gname) + ' \u00b7 ' + list.length + '</div>' +
+                            '<div class="text-xs font-mono text-slate-500" style="line-height:1.6; word-break:break-all;">' +
+                                list.map(function(w) {
+                                    return CommonRenderer._escapeAttr(w.wallet || w.address || '—');
+                                }).join(' \u00b7 ') +
+                            '</div>' +
+                        '</div>';
+                    }).join('') +
+                    (sp.wallets_note ? '<div class="text-xs text-slate-500 mt-1" style="line-height:1.45;">' +
+                        this._escapeAttr(sp.wallets_note) + '</div>' : '') +
+                '</div>';
+            }
+        }
+        return out;
+    }
+};

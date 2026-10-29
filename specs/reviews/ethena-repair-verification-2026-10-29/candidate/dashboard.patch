@@ -1,0 +1,311 @@
+diff --git a/index.html b/index.html
+index 91421300db..b39f1e71de 100644
+--- a/index.html
++++ b/index.html
+@@ -237,7 +237,7 @@
+     <script src="js/renderers/saturn.js?v=20261019a"></script>
+     <script src="js/renderers/usdm.js?v=20261017a"></script>
+     <script src="js/renderers/thusd.js?v=20260912a"></script>
+-    <script src="js/renderers/ethena.js?v=20261021b"></script>
++    <script src="js/renderers/ethena.js?v=20261029a"></script>
+     <script src="js/renderers/cap.js?v=20260827z"></script>
+     <script src="js/renderers/usdai.js?v=20260912d"></script>
+     <script src="js/renderers/hastra-prime.js?v=20260913a"></script>
+diff --git a/js/renderers/ethena.js b/js/renderers/ethena.js
+index acbfdedcc6..d1a761f814 100644
+--- a/js/renderers/ethena.js
++++ b/js/renderers/ethena.js
+@@ -274,11 +274,88 @@ var EthenaRenderer = {
+             '<tr><td>Risk Committee · October 12, 2026</td><td>101.43% coverage including a $62.57m Reserve Fund; recommended fund size $45.7m, approximately 1.4×. Published October 13.</td></tr>'+
+             '<tr><td>Ethena issuer-reported snapshot · October 21, 2026, 05:59:44 UTC</td><td>100.0978% coverage before and 101.4290% after the Reserve Fund. Issuer-reported offchain backing, not independently verified live coverage. sUSDe inherits USDe exposure; this is not a separate sUSDe reserve portfolio.</td></tr>'+
+             '<tr><td>Risk Committee backing mix · September 30, 2026</td><td>74% liquid cash; 17% hedged BTC/ETH positions; 6% JAAA/STAC RWAs. Published categories total 97%; no allocation is inferred for the remainder.</td></tr>'+
+-            '</tbody></table></div><p class="text-sm text-slate-500 mt-3">These differently dated sources do not replace unavailable hourly coverage. Posted hedge collateral, hedge positions and derivatives notional have different scopes.</p>'+
++            '</tbody></table></div><p class="text-sm text-slate-500 mt-3">These separately dated snapshots do not replace current source-labelled issuer observations or independently verify current custody. Posted hedge collateral, hedge positions and derivatives notional have different scopes.</p>'+
+             '<p class="text-sm mt-2"><a href="https://gov.ethenafoundation.com/t/ethena-s-july-september-2026-governance-update/857" target="_blank" rel="noopener noreferrer">Risk Committee update ↗</a></p></div>';
+     },
+ 
++    _liquiditySelectionHtml: function(data) {
++        var l = data.liquidity || {}, d = l.depth || {}, q = d.quote || {}, a = d.anchor || {};
++        var primary = d.depth_50bps || d.bracket_50bps, b = primary && primary.bracket;
++        if (b && q.token_in && q.token_out) {
++            return '<div class="panel text-sm" id="ethena-selected-liquidity-scope"><div class="panel-title">Selected secondary route and unresolved precision</div>' +
++                '<p>' + CommonRenderer._escapeAttr(q.token_in.symbol + ' → ' + q.token_out.symbol) + ' · ' + CommonRenderer._escapeAttr(q.venue || 'provider unavailable') +
++                ' · ' + CommonRenderer._escapeAttr(q.chain || 'chain unavailable') + ' · quoted ' + CommonRenderer._escapeAttr(q.quoted_as_of || l.as_of || 'time unavailable') + '.</p>' +
++                '<p>Primary 50-bps marginal bracket: last clearing ' + CommonRenderer.formatCurrencyExact(b.last_clearing_size_usd) +
++                '; first failing ' + CommonRenderer.formatCurrencyExact(b.first_crossing_size_usd) + '; width ' + CommonRenderer.formatCurrencyExact(b.width_usd) +
++                '. Precision obligation: ' + (b.meets_precision_obligation === true ? 'met' : 'not met') + '. ' + CommonRenderer._escapeAttr(primary.basis || '') +
++                ' This is an unresolved bracket, not an exact crossing or a capacity limit at its lower bound.</p>' +
++                '<p>Marginal impact is relative to the first successful ' + CommonRenderer.formatCurrencyExact(q.baseline_size_usd) + ' rung. ' +
++                'USD notional anchor: ' + CommonRenderer._escapeAttr(a.fair_value_source || a.fair_value_basis || 'unavailable') + ' at ' + CommonRenderer._escapeAttr(a.fair_value_as_of || 'unavailable') +
++                '. The external notional anchor is not the impact reference; baseline spread and all-in cost are separate.</p>' +
++                '<p>Legacy ' + Math.abs(d.threshold_bps || 200) + '-bps lower bound: ' + CommonRenderer.formatCurrencyExact(d.depth_usd) +
++                '. This USDe-output leg does not establish a USDC exit. Any second leg has a separate observation time; simulation, fills, settlement and primary request-to-fill latency remain unproved.</p></div>';
++        }
++        if (l.depth_50bps && l.primary_threshold_bps != null) {
++            return '<div class="panel text-sm" id="ethena-selected-liquidity-scope"><div class="panel-title">USDe threshold definitions</div>' +
++                '<p>Base ladder legacy headline: ' + l.primary_threshold_bps + ' bps. Separately published stable-valued threshold: ' + l.depth_50bps.threshold_bps +
++                ' bps; ' + (l.depth_50bps.is_floor ? 'floor ≥' : 'reported depth ') + CommonRenderer.formatCurrencyExact(l.depth_50bps.depth_usd) +
++                '. These are separate source fields; the legacy headline has not been relabelled. Source: ' + CommonRenderer._escapeAttr((l.exit_mark || {}).source || 'unavailable') +
++                '; observation ' + CommonRenderer._escapeAttr(l.as_of || 'unavailable') + '. Quotes are not fills or settlement.</p></div>';
++        }
++        return '';
++    },
++
++    _historySeriesWithBreaks: function(hist, key) {
++        var rows = hist.entries || [], groups = [], current = [], previous = null;
++        rows.forEach(function(row) {
++            var time = Date.parse(row.timestamp.endsWith('Z') ? row.timestamp : row.timestamp + 'Z');
++            var definition = row.definition || 'legacy_llamarisk';
++            if (previous && (definition !== previous.definition || time - previous.time > 6 * 3600000)) {
++                if (current.length) groups.push(current);
++                current = [];
++            }
++            current.push(row); previous = {time: time, definition: definition};
++        });
++        if (current.length) groups.push(current);
++        var out = [];
++        groups.forEach(function(group, i) {
++            var sampled = EthenaRenderer._downsample(group, 200);
++            if (i && sampled.length) out.push({x: new Date(Date.parse(sampled[0].timestamp.endsWith('Z') ? sampled[0].timestamp : sampled[0].timestamp + 'Z') - 1), y: null});
++            sampled.forEach(function(row) { out.push({x: new Date(row.timestamp.endsWith('Z') ? row.timestamp : row.timestamp + 'Z'), y: row[key] == null ? null : row[key]}); });
++        });
++        return out;
++    },
++
++    _tokenAmount: function(value, symbol) {
++        return Number.isFinite(value) ? value.toLocaleString('en-US', {maximumFractionDigits: 2}) + ' ' + (symbol || 'USDe') : 'Unavailable';
++    },
++
+     _liveCoverageHtml: function(fam,slug) {
++        var meta = fam.source_metadata || {}, issuer = meta.backing || {};
++        if (issuer.source_kind === 'issuer_reported') {
++            var sum = fam.summary || {}, ok = issuer.fetch_status === 'ok' && (fam.source_status || {}).ethena_issuer === 'ok';
++            var canonical = meta.canonical_supply || {};
++            function usd(v) { return ok && Number.isFinite(v) ? EthenaRenderer._money(v) : 'Unavailable'; }
++            function ratio(v) { return ok && Number.isFinite(v) ? (v * 100).toFixed(4) + '%' : 'Unavailable'; }
++            var supply = canonical.status === 'ok' && Number.isFinite(sum.usde_supply_usd)
++                ? sum.usde_supply_usd.toLocaleString('en-US', {maximumFractionDigits: 2}) + ' USDe' : 'Unavailable';
++            return '<div class="panel" id="ethena-live-coverage"><div class="panel-title">' +
++                (slug === 'susde' ? 'Inherited issuer-reported USDe backing' : 'Canonical USDe supply and issuer-reported backing') + '</div>' +
++                '<p class="text-sm text-amber-700 mb-3">Issuer source: ' + CommonRenderer._escapeAttr(issuer.fetch_status || 'unavailable') +
++                '. Issuer-reported reserves; independent offchain custody and complete allocation remain unverified.</p>' +
++                '<div class="grid grid-cols-2 md:grid-cols-4 gap-3"><div>Canonical supply (tokens)<br><strong>' + supply +
++                '</strong></div><div>Issuer backing<br><strong>' + usd(sum.total_backing_usd) +
++                '</strong></div><div>Coverage excluding / including fund<br><strong>' + ratio(sum.coverage_ratio) + ' / ' + ratio(sum.coverage_ratio_with_reserve_fund) +
++                '</strong></div><div>Issuer Reserve Fund<br><strong>' + usd(sum.reserve_fund_usd) + '</strong></div></div>' +
++                '<p class="text-xs text-slate-500 mt-3">Coverage denominator: issuer supply ' + usd(sum.issuer_supply_usd) +
++                ' at ' + CommonRenderer._escapeAttr(issuer.source_timestamp || 'unavailable') +
++                '. Canonical supply observation: ' + CommonRenderer._escapeAttr(canonical.block_time || canonical.as_of || 'unavailable') +
++                '; includes adapter-locked tokens, remote supplies are not additive. Source retrieved: ' + CommonRenderer._escapeAttr(issuer.retrieved_at || 'unavailable') +
++                '. File generated: ' + CommonRenderer._escapeAttr(fam.timestamp || 'unavailable') +
++                '. Composition and positions retain separate clocks; no same-snapshot allocation is inferred.' +
++                (slug === 'susde' ? ' sUSDe vault accounting is not a second reserve fund or proof of dollar backing.' : '') + '</p></div>';
++        }
++
+         var s=fam.summary || {}, status=(fam.source_status || {}).llamarisk || 'unavailable';
+         var failed=status!=='ok';
+         function amount(v){return !failed && Number.isFinite(v) ? EthenaRenderer._money(v) : 'Unavailable';}
+@@ -317,7 +394,7 @@ var EthenaRenderer = {
+         // producer's "primary exit: 7-day cooldown to USDe at NAV" — rendered into
+         // a display:none node.
+         html += anc('panel-liquidity',
+-            CommonRenderer.liquidityPanelHtml(data, { withHeadContext: true, withScoreChip: true }));
++            CommonRenderer.liquidityPanelHtml(data, { withHeadContext: true, withScoreChip: true }) + EthenaRenderer._liquiditySelectionHtml(data));
+         html += CommonRenderer.backingBasisPanelHtml(data);
+         // Async-filled placeholders (all from ethena_family.json):
+         html += '<div id="ethena-custody-panel"></div>';
+@@ -500,7 +577,7 @@ var EthenaRenderer = {
+             metricsRow =
+                 '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
+                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Supply</div>' +
+-                        '<div class="text-lg font-bold text-slate-800">' + (s.total_supply==null ? 'Unavailable' : EthenaRenderer._money(s.total_supply)) + '</div></div>' +
++                        '<div class="text-lg font-bold text-slate-800">' + (s.supply_unit === 'USDe tokens' ? EthenaRenderer._tokenAmount(s.total_supply, 'USDe') : (s.total_supply==null ? 'Unavailable' : EthenaRenderer._money(s.total_supply))) + '</div></div>' +
+                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Coverage (incl. RF)</div>' +
+                         '<div class="text-lg font-bold ' + covCls + '">' + (covWithRf==null ? 'Unavailable' : CommonRenderer.formatPercent(covWithRf, 2)) + '</div>' +
+                         '<div class="text-xs text-slate-500 mt-0.5">' + (covBase==null ? 'Unavailable' : CommonRenderer.formatPercent(covBase, 2)) + ' without RF</div></div>' +
+@@ -527,7 +604,7 @@ var EthenaRenderer = {
+             metricsRow =
+                 '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">' +
+                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Vault assets</div>' +
+-                        '<div class="text-lg font-bold text-slate-800">' + EthenaRenderer._money(assets) + '</div>' +
++                        '<div class="text-lg font-bold text-slate-800">' + EthenaRenderer._tokenAmount(assets, 'USDe') + '</div>' +
+                         '<div class="text-xs text-slate-500 mt-0.5">USDe staked</div></div>' +
+                     '<div><div class="text-xs text-slate-400 font-medium uppercase">NAV / share</div>' +
+                         '<div class="text-lg font-bold text-slate-800">' + (nav != null ? nav.toFixed(4) : '-') +
+@@ -600,7 +677,7 @@ var EthenaRenderer = {
+         if (vault.silo_usde != null) {
+             siloCard =
+                 '<div class="summary-card"><div class="card-label">In cooldown</div>' +
+-                    '<div class="card-value">' + EthenaRenderer._money(vault.silo_usde) + '</div>' +
++                    '<div class="card-value">' + EthenaRenderer._tokenAmount(vault.silo_usde, 'USDe') + '</div>' +
+                     '<div class="text-xs text-slate-400 mt-1">USDe held in the cooldown silo' +
+                     (assets ? ' · ' + (vault.silo_usde / assets * 100).toFixed(2) + '% of vault assets' : '') +
+                     '</div></div>';
+@@ -655,7 +732,7 @@ var EthenaRenderer = {
+             '<div class="panel-title">sUSDe Vault</div>' +
+             '<div class="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">' +
+                 '<div class="summary-card"><div class="card-label">Total assets</div>' +
+-                    '<div class="card-value">' + EthenaRenderer._money(assets) + '</div>' +
++                    '<div class="card-value">' + EthenaRenderer._tokenAmount(assets, 'USDe') + '</div>' +
+                     '<div class="text-xs text-slate-400 mt-1">USDe held by the vault</div></div>' +
+                 '<div class="summary-card"><div class="card-label">NAV / share</div>' +
+                     '<div class="card-value">' + (nav != null ? nav.toFixed(6) : '-') + '</div>' +
+@@ -689,7 +766,7 @@ var EthenaRenderer = {
+             cards += EthenaRenderer._measurementCard('Measured chains', chains.length,
+                 'hourly · unmeasured chains stay explicit');
+             cards += EthenaRenderer._measurementCard('Unattributed bridge supply',
+-                unattributed != null ? EthenaRenderer._money(unattributed) : '—',
++                unattributed != null ? EthenaRenderer._tokenAmount(unattributed, 'USDe') : '—',
+                 supply.bridged_unattributed_pct != null ? supply.bridged_unattributed_pct.toFixed(1) + '% of adapter-locked' : 'not assigned by estimate');
+             var mr = m.mint_redeem || {};
+             var active = (mr.assets || []).filter(function(a) { return a.supported && a.is_active; });
+@@ -699,9 +776,14 @@ var EthenaRenderer = {
+             cards += EthenaRenderer._measurementCard('Fee-switch milestone',
+                 fs.status === 'ok' ? (fs.milestone_met ? 'Met' : 'Not met') : 'Unavailable',
+                 fs.usde_supply_14d_ma_usd != null ? EthenaRenderer._money(fs.usde_supply_14d_ma_usd) + ' 14d mean vs ' + EthenaRenderer._money(fs.threshold_usd) : 'daily');
++            details += '<div class="text-xs text-slate-500 mt-3">Fee-switch input status: ' + CommonRenderer._escapeAttr(fs.status || 'unavailable') +
++                '. Requested window: ' + CommonRenderer._escapeAttr(fs.window_requested_start || 'unavailable') + ' → ' + CommonRenderer._escapeAttr(fs.window_requested_end || 'unavailable') +
++                '. Observed window: ' + CommonRenderer._escapeAttr(fs.window_start || 'unavailable') + ' → ' + CommonRenderer._escapeAttr(fs.window_end || 'unavailable') +
++                '; ' + (fs.points != null ? fs.points : 0) + ' samples. ' + CommonRenderer._escapeAttr(fs.reason || '') +
++                ' Statistical milestone evidence does not establish governance activation.</div>';
+             if (chains.length) {
+-                details = '<div class="text-xs text-slate-500 mt-3">Largest measured bridged supplies: ' +
+-                    chains.slice(0, 6).map(function(c) { return c.chain + ' ' + EthenaRenderer._money(c.supply); }).join(' · ') +
++                details += '<div class="text-xs text-slate-500 mt-3">Largest measured bridged supplies: ' +
++                    chains.slice(0, 6).map(function(c) { return c.chain + ' ' + EthenaRenderer._tokenAmount(c.supply, 'USDe'); }).join(' · ') +
+                     '. Ethereum total supply includes adapter-locked tokens; chain values are a split, not additive.</div>';
+             }
+         } else {
+@@ -712,7 +794,7 @@ var EthenaRenderer = {
+                 vault.cooldown_seconds != null ? (vault.cooldown_seconds / 86400).toFixed(0) + ' day' : '—',
+                 vault.block != null ? 'on-chain at block ' + vault.block.toLocaleString() : 'hourly');
+             cards += EthenaRenderer._measurementCard('Cooldown silo',
+-                vault.silo_usde != null ? EthenaRenderer._money(vault.silo_usde) : '—', 'USDe awaiting withdrawal');
++                vault.silo_usde != null ? EthenaRenderer._tokenAmount(vault.silo_usde, 'USDe') : '—', 'USDe awaiting withdrawal');
+             cards += EthenaRenderer._measurementCard('Realized NAV growth (7d)',
+                 growth['7d'] && growth['7d'].growth_pct != null ? growth['7d'].growth_pct.toFixed(3) + '%' : '—',
+                 growth['7d'] && growth['7d'].annualized_pct != null ? growth['7d'].annualized_pct.toFixed(2) + '% annualized; realized, not advertised APY' : 'daily');
+@@ -891,7 +973,7 @@ var EthenaRenderer = {
+                     if (meta) meta.textContent = 'The trailing 7-day window has fewer than two NAV observations; a wider period is not substituted. ';
+                     return;
+                 }
+-                if (meta) meta.textContent = 'Last 7d — ' + entries.length + ' of ' + allEntries.length + ' retained readings. ';
++                if (meta) meta.textContent = 'Requested last 7d — ' + entries.length + ' of ' + allEntries.length + ' retained readings; observed ' + entries[0].timestamp + ' → ' + entries[entries.length - 1].timestamp + '. ' + ((hist.source_breaks || []).length ? 'Source transition and acquisition gap retained; no missing observations reconstructed. ' : '');
+                 var labels = entries.map(function(e) { return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'); });
+                 var navSeries = entries.map(function(e) { return (e.nav != null) ? e.nav : e.theoretical_price; });
+                 var mktSeries = entries.map(function(e) { return e.market_price; });
+@@ -966,6 +1048,10 @@ var EthenaRenderer = {
+ 
+     // ----- §2 Custody breakdown -----
+     _fillCustody: function(fam) {
++        if((fam.source_status || {}).allocation === 'unknown') {
++            EthenaRenderer._set('ethena-custody-panel','<div class="panel"><div class="panel-title">Current custody allocation — unknown</div><p class="text-sm">Issuer headline amounts do not establish a same-snapshot custody allocation. Wallet and attestation subsets remain separate; unavailable allocation is not zero.</p></div>');
++            return;
++        }
+         if((fam.source_status || {}).llamarisk==='http_404') {
+             EthenaRenderer._set('ethena-custody-panel','<div class="panel"><div class="panel-title">Current backing composition — unavailable</div><p class="text-sm">The LlamaRisk overview returns http_404. A blend of older custodian attestations and current wallet balances is not a live reserve total, coverage ratio or complete Reserve Fund valuation. Dated custody evidence is shown in the attestation panel; separately measured wallet positions remain below.</p></div>');
+             return;
+@@ -1471,6 +1557,10 @@ var EthenaRenderer = {
+ 
+     // ----- §5 CEX hedge breakdown -----
+     _fillCex: function(fam) {
++        if((fam.source_status || {}).allocation === 'unknown') {
++            EthenaRenderer._set('ethena-cex-panel','<div class="panel"><div class="panel-title">Current CEX hedge allocation — unknown</div><p class="text-sm">The issuer positions view has its own observation time and does not reconcile to the headline snapshot. Missing balances are not zero exposure; fills and hedge effectiveness remain unproved.</p></div>');
++            return;
++        }
+         if((fam.source_status || {}).llamarisk==='http_404'){EthenaRenderer._set('ethena-cex-panel','<div class="panel"><div class="panel-title">Live CEX hedge collateral — unavailable</div><p class="text-sm">The LlamaRisk overview returns http_404. Missing hedge balances are not zero exposure; the September 30 portfolio mix above is a dated snapshot.</p></div>');return;}
+         var venues = (fam.cex_hedge_breakdown || []).slice().sort(function(a, b) { return (b.usd || 0) - (a.usd || 0); });
+         var total = fam.cex_hedge_total_usd || 0;
+@@ -1628,10 +1718,10 @@ var EthenaRenderer = {
+                 '<div class="text-xs text-slate-400 uppercase font-medium">' + name + '</div>' + lines + '</a>';
+         }
+         var usdeCard = card('usde', 'USDe',
+-            '<div class="text-base font-bold text-slate-800 mt-1">' + (s.usde_supply_usd==null ? 'Unavailable' : EthenaRenderer._money(s.usde_supply_usd)) + ' supply</div>' +
++            '<div class="text-base font-bold text-slate-800 mt-1">' + (fam.source_metadata && fam.source_metadata.canonical_supply ? EthenaRenderer._tokenAmount(s.usde_supply_usd, 'USDe') : (s.usde_supply_usd==null ? 'Unavailable' : EthenaRenderer._money(s.usde_supply_usd))) + ' supply</div>' +
+             '<div class="text-xs text-slate-500">Coverage ' + (s.coverage_ratio_with_reserve_fund != null ? (s.coverage_ratio_with_reserve_fund * 100).toFixed(2) + '%' : 'Unavailable') + ' incl. RF · $' + (s.usde_price != null ? s.usde_price.toFixed(4) : '—') + '</div>');
+         var susdeCard = card('susde', 'sUSDe',
+-            '<div class="text-base font-bold text-slate-800 mt-1">' + EthenaRenderer._money(s.usde_staked_usd) + ' staked</div>' +
++            '<div class="text-base font-bold text-slate-800 mt-1">' + (s.usde_staked_usde != null ? EthenaRenderer._tokenAmount(s.usde_staked_usde, 'USDe') : EthenaRenderer._money(s.usde_staked_usd)) + ' staked</div>' +
+             '<div class="text-xs text-slate-500">' + (s.susde_supply_shares != null ? (s.susde_supply_shares / 1e6).toFixed(1) + 'M shares' : '—') + ' · $' + (s.susde_price != null ? s.susde_price.toFixed(4) : '—') + '</div>');
+ 
+         EthenaRenderer._set('ethena-family-panel',
+@@ -1652,17 +1742,17 @@ var EthenaRenderer = {
+         ]).then(function(res) {
+             var ctx = document.getElementById('ethena-family-trend');
+             if (!ctx || typeof Chart === 'undefined') return;
+-            var usde = (res[0] && res[0].entries) ? EthenaRenderer._downsample(res[0].entries, 200) : [];
+-            var susde = (res[1] && res[1].entries) ? EthenaRenderer._downsample(res[1].entries, 200) : [];
++            var usde = res[0] ? EthenaRenderer._historySeriesWithBreaks(res[0], 'total_backing') : [];
++            var susde = res[1] ? EthenaRenderer._historySeriesWithBreaks(res[1], 'total_assets_usde') : [];
+             if (usde.length < 2 && susde.length < 2) { ctx.parentElement.innerHTML = '<div class="text-xs text-slate-400 italic">Trend data unavailable.</div>'; return; }
+ 
+             var datasets = [];
+             if (usde.length) datasets.push({
+-                label: 'USDe backing', data: usde.map(function(e) { return { x: new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'), y: e.total_backing }; }),
++                label: 'USDe backing', data: usde, spanGaps: false,
+                 borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', fill: false, tension: 0.25, pointRadius: 0, borderWidth: 2
+             });
+             if (susde.length) datasets.push({
+-                label: 'sUSDe assets (USDe staked)', data: susde.map(function(e) { return { x: new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z'), y: e.total_assets_usde }; }),
++                label: 'sUSDe assets (USDe staked)', data: susde, spanGaps: false, yAxisID: 'yUSDe',
+                 borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.08)', fill: false, tension: 0.25, pointRadius: 0, borderWidth: 2
+             });
+ 
+@@ -1674,10 +1764,11 @@ var EthenaRenderer = {
+                     responsive: true, maintainAspectRatio: false,
+                     scales: {
+                         x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } }, grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+-                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 }, callback: function(v) { return '$' + (v / 1e9).toFixed(1) + 'B'; } } }
++                        y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 }, callback: function(v) { return '$' + (v / 1e9).toFixed(1) + 'B'; } } },
++                        yUSDe: { position: 'right', grid: { drawOnChartArea: false }, ticks: { font: { size: 11 }, callback: function(v) { return (v / 1e9).toFixed(1) + 'B USDe'; } } }
+                     },
+                     plugins: { legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+-                        tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + EthenaRenderer._money(c.parsed.y); } } } },
++                        tooltip: { callbacks: { label: function(c) { return c.dataset.label + ': ' + (c.dataset.yAxisID === 'yUSDe' ? EthenaRenderer._tokenAmount(c.parsed.y, 'USDe') : EthenaRenderer._money(c.parsed.y)); } } } },
+                     interaction: { intersect: false, mode: 'index' }
+                 }
+             });
+diff --git a/tests/test_ethena_source_repair.js b/tests/test_ethena_source_repair.js
+new file mode 100644
+index 0000000000..cc25b1d40c
+--- /dev/null
++++ b/tests/test_ethena_source_repair.js
+@@ -0,0 +1,38 @@
++const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
++const root='specs/reviews/ethena-repair-verification-2026-10-29/';
++const read=n=>JSON.parse(fs.readFileSync(root+'data__'+n+'.json'));
++const ctx={console,window:{}};vm.createContext(ctx);
++vm.runInContext(fs.readFileSync(root+'js__renderers__common.js','utf8')+'\nglobalThis.common=CommonRenderer',ctx);
++vm.runInContext(fs.readFileSync('js/renderers/ethena.js','utf8'),ctx);
++const r=ctx.EthenaRenderer,family=read('ethena_family');
++for(const slug of ['usde','susde']){
++ const html=r._liveCoverageHtml(family,slug);
++ assert.match(html,/issuer-reported/);assert.match(html,/101\.7467%/);assert.match(html,/100\.3806%/);
++ assert.match(html,/05:59:28/);assert.match(html,/07:01:23/);assert.match(html,/Canonical supply/);
++ assert.match(html,/Coverage denominator: issuer supply/);assert.match(html,/independent offchain custody.*unverified/);
++ assert.doesNotMatch(html,/Live supply, backing coverage and Reserve Fund values are unavailable/);
++}
++const failed=structuredClone(family);failed.source_status.ethena_issuer='http_503';failed.source_metadata.backing.fetch_status='http_503';
++assert.doesNotMatch(r._liveCoverageHtml(failed,'usde'),/101\.7467%|100\.3806%/);
++const slots={};r._set=(id,html)=>{slots[id]=html};r._fillCustody(family);r._fillCex(family);
++assert.match(slots['ethena-custody-panel'],/unknown/);assert.match(slots['ethena-cex-panel'],/unknown/);
++assert.doesNotMatch(slots['ethena-custody-panel'],/100%|Total — LlamaRisk/);
++const fee=r._renderMeasurementsPanel(read('usde_backing').asset_specific,'usde');
++assert.match(fee,/insufficient_history/);assert.match(fee,/governance activation/);assert.doesNotMatch(fee,/Not met/);
++for(const slug of ['usde','susde']){
++ const h=read(slug+'_backing_history'),series=r._historySeriesWithBreaks(h,slug==='usde'?'total_backing':'total_assets_usde');
++ assert.ok(series.some(p=>p.y===null),'acquisition/definition gap must break line');
++ const last=series[series.length-1];assert.equal(+last.x,Date.parse(h.entries.at(-1).timestamp));
++}
++const base=read('susde_backing'),overlays=[];
++for(const [axis,ss] of Object.entries(ctx.common.AXIS_OVERLAYS))for(const suffix of Array.isArray(ss)?ss:[ss]){let p=root+'data__susde'+suffix+'.json';if(fs.existsSync(p))overlays.push({axis,file:'data/susde'+suffix+'.json',json:JSON.parse(fs.readFileSync(p))});}
++const merged=ctx.common.mergeAxisOverlays(base,overlays,'susde'),html=r._liquiditySelectionHtml(merged);
++assert.match(html,/sUSDe → USDe/);assert.match(html,/1,000,000/);assert.match(html,/10,000,000/);assert.match(html,/9,000,000/);assert.match(html,/Precision obligation: not met/);
++assert.match(html,/Legacy 200-bps/);assert.match(html,/50-bps marginal/);assert.match(html,/unresolved bracket/);assert.match(html,/not the impact reference/);assert.match(html,/fills, settlement/);
++assert.equal(merged.liquidity.total_2pct_depth,1000000);assert.equal(merged.liquidity.depth_threshold_bps,50);
++assert.match(r._liquiditySelectionHtml(read('usde_backing')),/legacy headline: 200 bps/);
++function scores(x,p='',out={}){if(x&&typeof x==='object')for(const [k,v]of Object.entries(x)){if(k.endsWith('_score')&&typeof v==='number')out[p+k]=v;else scores(v,p+k+'.',out)}return out}
++const before=JSON.stringify(scores(merged)),chain=JSON.stringify(merged.liquidity.liquidity_score_per_chain);r.preRender(merged,{entries:[]});assert.equal(JSON.stringify(scores(merged)),before);assert.equal(JSON.stringify(merged.liquidity.liquidity_score_per_chain),chain);
++console.log('PASS candidate issuer/provenance/units, fee status, unknown allocation, history gaps, selected unresolved liquidity bracket and unchanged scores/overrides.');
++r._fillFamily(family,'susde');
++assert.match(slots['ethena-family-panel'],/USDe/) ;

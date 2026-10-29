@@ -1,0 +1,667 @@
+{
+  "served": {
+    "issuer_amounts_visible": false,
+    "retired_source_hides_valid_issuer": true,
+    "unknown_allocation_rendered_as_total_100pct": true,
+    "fee_verdict_unavailable": true,
+    "fee_actual_window_status_visible": false,
+    "scores_and_chain_overrides_preserved": true,
+    "selection": {
+      "usde": {
+        "rationale_consumption": {
+          "peg.peg_mechanism_score_basis": true,
+          "backing.backing_score_basis": true,
+          "liquidity.liquidity_score_basis": true,
+          "dependencies.underlying_score_basis": true,
+          "issuer.issuer_score_basis": false
+        },
+        "scores": {
+          "peg.peg_mechanism_score": 6.5,
+          "liquidity.liquidity_score": 7,
+          "backing.backing_score": 6.5,
+          "dependencies.underlying_score": 6,
+          "issuer.issuer_score": 7,
+          "contract.structural_score": 5.5
+        },
+        "scope": "venue_inventory_only",
+        "overlay_selected": false,
+        "as_of": "2026-10-29T00:10:21Z",
+        "selected_threshold_bps": 200,
+        "selected_lower_bound_usd": 5000000,
+        "selected_bracket": null,
+        "source_quote": null,
+        "anchor": null,
+        "legacy_threshold_bps": 200,
+        "legacy_depth_usd": 5000000,
+        "base_direct_route_preserved_as_nonselected": null,
+        "liquidity_rationale": "Score carried unchanged. October 28 primary configuration has nonzero caps; historical executed spreads are not new fills. October 29 base Ethereum USDe-to-USDC ladder tests through $5m with a nested 50bps clearing floor. Legacy top-level depth text still uses 200bps and requires reconciliation. Venue-only overlay does not replace the base ladder. No located crossing, new settlement proof or equivalent chain-local capacity is asserted."
+      },
+      "susde": {
+        "rationale_consumption": {
+          "peg.volatility_score_basis": true,
+          "backing.backing_score_basis": true,
+          "liquidity.liquidity_score_basis": true,
+          "dependencies.underlying_score_basis": true,
+          "issuer.issuer_score_basis": false
+        },
+        "scores": {
+          "peg.volatility_score": 6.5,
+          "liquidity.liquidity_score": 7,
+          "backing.backing_score": 6.5,
+          "dependencies.underlying_score": 6,
+          "issuer.issuer_score": 7,
+          "contract.structural_score": 5.5
+        },
+        "liquidity_score_per_chain": {
+          "ethereum": 7,
+          "arbitrum": 5,
+          "plasma": 5,
+          "blast": 4,
+          "base": 2.5,
+          "bsc": 2.5,
+          "fraxtal": 2,
+          "optimism": 2,
+          "mantle": 2,
+          "monad": 2
+        },
+        "scope": "venue_inventory_and_canonical_ethereum_exit_ladder",
+        "overlay_selected": true,
+        "as_of": "2026-10-28T23:49:49Z",
+        "selected_threshold_bps": 50,
+        "selected_lower_bound_usd": 1000000,
+        "selected_bracket": {
+          "last_clearing_size_usd": 1000000,
+          "last_clearing_marginal_impact_bps": -4.082922671022615,
+          "first_crossing_size_usd": 10000000,
+          "first_crossing_marginal_impact_bps": -6550.965112508835,
+          "width_usd": 9000000,
+          "monotonic_in_bracket": true,
+          "threshold_bps": -50,
+          "meets_precision_obligation": false
+        },
+        "source_quote": {
+          "method": "KyberSwap GET /api/v1/routes exact-input sUSDe -> USDe; the router discovers and split-optimises verified Ethereum venues at each size. This is secondary execution, not the one-day primary unstaking cooldown.",
+          "venue": "kyberswap_routed",
+          "chain": "ethereum",
+          "token_in": {
+            "symbol": "sUSDe",
+            "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+            "decimals": 18
+          },
+          "baseline_size_usd": 100,
+          "quoted_as_of": "2026-10-28T23:49:20Z",
+          "token_out": {
+            "symbol": "USDe",
+            "address": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+            "decimals": 18
+          },
+          "resolution": "Both tokens are exact addresses. Returned route venues are enumerated from router responses, never selected by ticker or guessed pool keys.",
+          "failure_reporting": {
+            "note": "A failed rung carries `failure_kind` and `http_status`. `no_route_found` is a finding ABOUT THE ASSET; every other kind is our instrument failing, and the two must not be read as the same claim.",
+            "retried_kinds": [
+              "upstream_unavailable",
+              "upstream_rate_limited",
+              "transport_timeout",
+              "transport_error"
+            ],
+            "never_retried": [
+              "no_route_found",
+              "chain_not_mapped",
+              "invalid_request"
+            ]
+          },
+          "retry_policy": {
+            "attempts_per_size": 4,
+            "backoff_schedule_seconds": [
+              2,
+              4,
+              8
+            ],
+            "between_rung_delay_seconds": 1,
+            "failure_semantics": "A transient upstream failure becomes quote_failed only after all attempts fail. no_route_found is not retried because it is a venue finding. Failures are never interpolated or treated as zero liquidity."
+          },
+          "venue_enumeration": {
+            "method": "union of address-keyed router routes returned across tested sizes",
+            "venues": [
+              {
+                "venue": "aero-cl",
+                "status": "quoted"
+              },
+              {
+                "venue": "curve-stable-ng",
+                "status": "quoted"
+              },
+              {
+                "venue": "curve-stable-plain",
+                "status": "quoted"
+              },
+              {
+                "venue": "ekubo-v3",
+                "status": "quoted"
+              },
+              {
+                "venue": "erc4626",
+                "status": "quoted"
+              },
+              {
+                "venue": "fluid-dex-t1",
+                "status": "quoted"
+              },
+              {
+                "venue": "frxusd",
+                "status": "quoted"
+              },
+              {
+                "venue": "metric-propamm/curve-stable-ng",
+                "status": "quoted"
+              },
+              {
+                "venue": "metric-propamm/curve-stable-plain",
+                "status": "quoted"
+              },
+              {
+                "venue": "metric-propamm/ekubo-v3",
+                "status": "quoted"
+              },
+              {
+                "venue": "metric-propamm/uniswap-v4-stable-stable",
+                "status": "quoted"
+              },
+              {
+                "venue": "pancake-v3",
+                "status": "quoted"
+              },
+              {
+                "venue": "supernova-v4",
+                "status": "quoted"
+              },
+              {
+                "venue": "synapse",
+                "status": "quoted"
+              },
+              {
+                "venue": "uniswap",
+                "status": "quoted"
+              },
+              {
+                "venue": "uniswap-v4",
+                "status": "quoted"
+              },
+              {
+                "venue": "uniswap-v4-fairflow",
+                "status": "quoted"
+              },
+              {
+                "venue": "uniswap-v4-stable-stable",
+                "status": "quoted"
+              },
+              {
+                "venue": "uniswapv3",
+                "status": "quoted"
+              }
+            ],
+            "legacy_token_excluded": null,
+            "unmeasured": []
+          }
+        },
+        "anchor": {
+          "fair_value": 1.2546412881146,
+          "fair_value_basis": "onchain_nav_times_same_observation_usde_usd_mark",
+          "fair_value_source": "sUSDe.convertToAssets(1e18) * CoinGecko USDe/USD",
+          "fair_value_as_of": "2026-10-28T23:49:15Z",
+          "fair_value_choice": "marginal_baseline",
+          "fair_value_choice_mode": "producer_method",
+          "self_referential": false,
+          "observation_window": {
+            "started_at": "2026-10-28T23:49:14Z",
+            "ended_at": "2026-10-28T23:49:15Z"
+          },
+          "nav": {
+            "usde_per_susde": 1.255384475724229,
+            "block_number": 26294625,
+            "block_tag": "0x1913961",
+            "method": "convertToAssets(1e18)"
+          },
+          "usde_usd_mark": {
+            "price": 0.999408,
+            "as_of": "2026-10-28T23:48:49Z",
+            "source": "CoinGecko token-price API",
+            "token": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3"
+          },
+          "denomination": "Input USD = raw sUSDe input × on-chain NAV in USDe × USDe/USD mark; output USD = raw USDe output × the same USDe/USD mark."
+        },
+        "legacy_threshold_bps": -200,
+        "legacy_depth_usd": 3320312.5,
+        "base_direct_route_preserved_as_nonselected": {
+          "status": "measured",
+          "chain": "ethereum",
+          "measured_at": "2026-10-29T04:30:37Z",
+          "venue": "kyberswap routed venues on ethereum",
+          "sell_into": "USDC",
+          "denomination": "USD",
+          "shape_basis": "discrete ladder rungs",
+          "cost_convention": "marginal impact of each incremental rung interval versus the first rung execution rate",
+          "first_rung_subtracted": true,
+          "standing_cost_bps": -2.4,
+          "standing_cost_basis": "smallest-rung all-in output_usd / notional_usd; stated separately from marginal impact",
+          "primary_threshold_bps": 50,
+          "depth_50bps": {
+            "threshold_bps": 50,
+            "shape": "floor",
+            "depth_usd": 2000000,
+            "basis": "marginal",
+            "note": "Ladder ended while still clearing; this is a lower bound, not a limit."
+          },
+          "depth_200bps": {
+            "threshold_bps": 200,
+            "shape": "floor",
+            "depth_usd": 2000000,
+            "basis": "marginal",
+            "note": "Ladder ended while still clearing; this is a lower bound, not a limit."
+          },
+          "rungs": [
+            {
+              "notional_usd": 1000,
+              "output_usd": 999.76,
+              "all_in_cost_bps": -2.4,
+              "impact_vs_first_rung_bps": 0,
+              "marginal_impact_bps": 0
+            },
+            {
+              "notional_usd": 10000,
+              "output_usd": 9997.29,
+              "all_in_cost_bps": -2.71,
+              "impact_vs_first_rung_bps": -0.31,
+              "marginal_impact_bps": -0.34
+            },
+            {
+              "notional_usd": 50000,
+              "output_usd": 49985.93,
+              "all_in_cost_bps": -2.81,
+              "impact_vs_first_rung_bps": -0.41,
+              "marginal_impact_bps": -0.44
+            },
+            {
+              "notional_usd": 100000,
+              "output_usd": 99970.3,
+              "all_in_cost_bps": -2.97,
+              "impact_vs_first_rung_bps": -0.57,
+              "marginal_impact_bps": -0.73
+            },
+            {
+              "notional_usd": 250000,
+              "output_usd": 249915.54,
+              "all_in_cost_bps": -3.38,
+              "impact_vs_first_rung_bps": -0.98,
+              "marginal_impact_bps": -1.25
+            },
+            {
+              "notional_usd": 500000,
+              "output_usd": 499804.68,
+              "all_in_cost_bps": -3.91,
+              "impact_vs_first_rung_bps": -1.51,
+              "marginal_impact_bps": -2.03
+            },
+            {
+              "notional_usd": 1000000,
+              "output_usd": 999445.43,
+              "all_in_cost_bps": -5.55,
+              "impact_vs_first_rung_bps": -3.15,
+              "marginal_impact_bps": -4.79
+            },
+            {
+              "notional_usd": 2000000,
+              "output_usd": 1997865.73,
+              "all_in_cost_bps": -10.67,
+              "impact_vs_first_rung_bps": -8.27,
+              "marginal_impact_bps": -13.4
+            }
+          ]
+        },
+        "liquidity_rationale": "Score carried unchanged pending common-input reconciliation. Selected October 28 canonical sUSDe-to-USDe overlay has a primary 50bps marginal bracket: $1m last clear (-4.08bps), $10m first fail, $9m width, non-monotonic, precision obligation false. This is not a located $1m limit. Legacy $3.32m result is 200bps; older $3.30m 50bps and base direct-USDC floor are different dated routes. Separate USDe-to-USDC quote is non-atomic; complete exit execution remains unproven. One-day cooldown and 90-day maximum are confirmed at block 26296428; chain scores remain venue judgments."
+      }
+    }
+  },
+  "candidate": {
+    "issuer_amounts_visible": true,
+    "retired_source_hides_valid_issuer": false,
+    "unknown_allocation_rendered_as_total_100pct": false,
+    "fee_verdict_unavailable": true,
+    "fee_actual_window_status_visible": true,
+    "scores_and_chain_overrides_preserved": true,
+    "selection": {
+      "usde": {
+        "rationale_consumption": {
+          "peg.peg_mechanism_score_basis": true,
+          "backing.backing_score_basis": true,
+          "liquidity.liquidity_score_basis": true,
+          "dependencies.underlying_score_basis": true,
+          "issuer.issuer_score_basis": false
+        },
+        "scores": {
+          "peg.peg_mechanism_score": 6.5,
+          "liquidity.liquidity_score": 7,
+          "backing.backing_score": 6.5,
+          "dependencies.underlying_score": 6,
+          "issuer.issuer_score": 7,
+          "contract.structural_score": 5.5
+        },
+        "scope": "venue_inventory_only",
+        "overlay_selected": false,
+        "as_of": "2026-10-29T00:10:21Z",
+        "selected_threshold_bps": 200,
+        "selected_lower_bound_usd": 5000000,
+        "selected_bracket": null,
+        "source_quote": null,
+        "anchor": null,
+        "legacy_threshold_bps": 200,
+        "legacy_depth_usd": 5000000,
+        "base_direct_route_preserved_as_nonselected": null,
+        "liquidity_rationale": "Score carried unchanged. October 28 primary configuration has nonzero caps; historical executed spreads are not new fills. October 29 base Ethereum USDe-to-USDC ladder tests through $5m with a nested 50bps clearing floor. Legacy top-level depth text still uses 200bps and requires reconciliation. Venue-only overlay does not replace the base ladder. No located crossing, new settlement proof or equivalent chain-local capacity is asserted."
+      },
+      "susde": {
+        "rationale_consumption": {
+          "peg.volatility_score_basis": true,
+          "backing.backing_score_basis": true,
+          "liquidity.liquidity_score_basis": true,
+          "dependencies.underlying_score_basis": true,
+          "issuer.issuer_score_basis": false
+        },
+        "scores": {
+          "peg.volatility_score": 6.5,
+          "liquidity.liquidity_score": 7,
+          "backing.backing_score": 6.5,
+          "dependencies.underlying_score": 6,
+          "issuer.issuer_score": 7,
+          "contract.structural_score": 5.5
+        },
+        "liquidity_score_per_chain": {
+          "ethereum": 7,
+          "arbitrum": 5,
+          "plasma": 5,
+          "blast": 4,
+          "base": 2.5,
+          "bsc": 2.5,
+          "fraxtal": 2,
+          "optimism": 2,
+          "mantle": 2,
+          "monad": 2
+        },
+        "scope": "venue_inventory_and_canonical_ethereum_exit_ladder",
+        "overlay_selected": true,
+        "as_of": "2026-10-28T23:49:49Z",
+        "selected_threshold_bps": 50,
+        "selected_lower_bound_usd": 1000000,
+        "selected_bracket": {
+          "last_clearing_size_usd": 1000000,
+          "last_clearing_marginal_impact_bps": -4.082922671022615,
+          "first_crossing_size_usd": 10000000,
+          "first_crossing_marginal_impact_bps": -6550.965112508835,
+          "width_usd": 9000000,
+          "monotonic_in_bracket": true,
+          "threshold_bps": -50,
+          "meets_precision_obligation": false
+        },
+        "source_quote": {
+          "method": "KyberSwap GET /api/v1/routes exact-input sUSDe -> USDe; the router discovers and split-optimises verified Ethereum venues at each size. This is secondary execution, not the one-day primary unstaking cooldown.",
+          "venue": "kyberswap_routed",
+          "chain": "ethereum",
+          "token_in": {
+            "symbol": "sUSDe",
+            "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+            "decimals": 18
+          },
+          "baseline_size_usd": 100,
+          "quoted_as_of": "2026-10-28T23:49:20Z",
+          "token_out": {
+            "symbol": "USDe",
+            "address": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
+            "decimals": 18
+          },
+          "resolution": "Both tokens are exact addresses. Returned route venues are enumerated from router responses, never selected by ticker or guessed pool keys.",
+          "failure_reporting": {
+            "note": "A failed rung carries `failure_kind` and `http_status`. `no_route_found` is a finding ABOUT THE ASSET; every other kind is our instrument failing, and the two must not be read as the same claim.",
+            "retried_kinds": [
+              "upstream_unavailable",
+              "upstream_rate_limited",
+              "transport_timeout",
+              "transport_error"
+            ],
+            "never_retried": [
+              "no_route_found",
+              "chain_not_mapped",
+              "invalid_request"
+            ]
+          },
+          "retry_policy": {
+            "attempts_per_size": 4,
+            "backoff_schedule_seconds": [
+              2,
+              4,
+              8
+            ],
+            "between_rung_delay_seconds": 1,
+            "failure_semantics": "A transient upstream failure becomes quote_failed only after all attempts fail. no_route_found is not retried because it is a venue finding. Failures are never interpolated or treated as zero liquidity."
+          },
+          "venue_enumeration": {
+            "method": "union of address-keyed router routes returned across tested sizes",
+            "venues": [
+              {
+                "venue": "aero-cl",
+                "status": "quoted"
+              },
+              {
+                "venue": "curve-stable-ng",
+                "status": "quoted"
+              },
+              {
+                "venue": "curve-stable-plain",
+                "status": "quoted"
+              },
+              {
+                "venue": "ekubo-v3",
+                "status": "quoted"
+              },
+              {
+                "venue": "erc4626",
+                "status": "quoted"
+              },
+              {
+                "venue": "fluid-dex-t1",
+                "status": "quoted"
+              },
+              {
+                "venue": "frxusd",
+                "status": "quoted"
+              },
+              {
+                "venue": "metric-propamm/curve-stable-ng",
+                "status": "quoted"
+              },
+              {
+                "venue": "metric-propamm/curve-stable-plain",
+                "status": "quoted"
+              },
+              {
+                "venue": "metric-propamm/ekubo-v3",
+                "status": "quoted"
+              },
+              {
+                "venue": "metric-propamm/uniswap-v4-stable-stable",
+                "status": "quoted"
+              },
+              {
+                "venue": "pancake-v3",
+                "status": "quoted"
+              },
+              {
+                "venue": "supernova-v4",
+                "status": "quoted"
+              },
+              {
+                "venue": "synapse",
+                "status": "quoted"
+              },
+              {
+                "venue": "uniswap",
+                "status": "quoted"
+              },
+              {
+                "venue": "uniswap-v4",
+                "status": "quoted"
+              },
+              {
+                "venue": "uniswap-v4-fairflow",
+                "status": "quoted"
+              },
+              {
+                "venue": "uniswap-v4-stable-stable",
+                "status": "quoted"
+              },
+              {
+                "venue": "uniswapv3",
+                "status": "quoted"
+              }
+            ],
+            "legacy_token_excluded": null,
+            "unmeasured": []
+          }
+        },
+        "anchor": {
+          "fair_value": 1.2546412881146,
+          "fair_value_basis": "onchain_nav_times_same_observation_usde_usd_mark",
+          "fair_value_source": "sUSDe.convertToAssets(1e18) * CoinGecko USDe/USD",
+          "fair_value_as_of": "2026-10-28T23:49:15Z",
+          "fair_value_choice": "marginal_baseline",
+          "fair_value_choice_mode": "producer_method",
+          "self_referential": false,
+          "observation_window": {
+            "started_at": "2026-10-28T23:49:14Z",
+            "ended_at": "2026-10-28T23:49:15Z"
+          },
+          "nav": {
+            "usde_per_susde": 1.255384475724229,
+            "block_number": 26294625,
+            "block_tag": "0x1913961",
+            "method": "convertToAssets(1e18)"
+          },
+          "usde_usd_mark": {
+            "price": 0.999408,
+            "as_of": "2026-10-28T23:48:49Z",
+            "source": "CoinGecko token-price API",
+            "token": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3"
+          },
+          "denomination": "Input USD = raw sUSDe input × on-chain NAV in USDe × USDe/USD mark; output USD = raw USDe output × the same USDe/USD mark."
+        },
+        "legacy_threshold_bps": -200,
+        "legacy_depth_usd": 3320312.5,
+        "base_direct_route_preserved_as_nonselected": {
+          "status": "measured",
+          "chain": "ethereum",
+          "measured_at": "2026-10-29T04:30:37Z",
+          "venue": "kyberswap routed venues on ethereum",
+          "sell_into": "USDC",
+          "denomination": "USD",
+          "shape_basis": "discrete ladder rungs",
+          "cost_convention": "marginal impact of each incremental rung interval versus the first rung execution rate",
+          "first_rung_subtracted": true,
+          "standing_cost_bps": -2.4,
+          "standing_cost_basis": "smallest-rung all-in output_usd / notional_usd; stated separately from marginal impact",
+          "primary_threshold_bps": 50,
+          "depth_50bps": {
+            "threshold_bps": 50,
+            "shape": "floor",
+            "depth_usd": 2000000,
+            "basis": "marginal",
+            "note": "Ladder ended while still clearing; this is a lower bound, not a limit."
+          },
+          "depth_200bps": {
+            "threshold_bps": 200,
+            "shape": "floor",
+            "depth_usd": 2000000,
+            "basis": "marginal",
+            "note": "Ladder ended while still clearing; this is a lower bound, not a limit."
+          },
+          "rungs": [
+            {
+              "notional_usd": 1000,
+              "output_usd": 999.76,
+              "all_in_cost_bps": -2.4,
+              "impact_vs_first_rung_bps": 0,
+              "marginal_impact_bps": 0
+            },
+            {
+              "notional_usd": 10000,
+              "output_usd": 9997.29,
+              "all_in_cost_bps": -2.71,
+              "impact_vs_first_rung_bps": -0.31,
+              "marginal_impact_bps": -0.34
+            },
+            {
+              "notional_usd": 50000,
+              "output_usd": 49985.93,
+              "all_in_cost_bps": -2.81,
+              "impact_vs_first_rung_bps": -0.41,
+              "marginal_impact_bps": -0.44
+            },
+            {
+              "notional_usd": 100000,
+              "output_usd": 99970.3,
+              "all_in_cost_bps": -2.97,
+              "impact_vs_first_rung_bps": -0.57,
+              "marginal_impact_bps": -0.73
+            },
+            {
+              "notional_usd": 250000,
+              "output_usd": 249915.54,
+              "all_in_cost_bps": -3.38,
+              "impact_vs_first_rung_bps": -0.98,
+              "marginal_impact_bps": -1.25
+            },
+            {
+              "notional_usd": 500000,
+              "output_usd": 499804.68,
+              "all_in_cost_bps": -3.91,
+              "impact_vs_first_rung_bps": -1.51,
+              "marginal_impact_bps": -2.03
+            },
+            {
+              "notional_usd": 1000000,
+              "output_usd": 999445.43,
+              "all_in_cost_bps": -5.55,
+              "impact_vs_first_rung_bps": -3.15,
+              "marginal_impact_bps": -4.79
+            },
+            {
+              "notional_usd": 2000000,
+              "output_usd": 1997865.73,
+              "all_in_cost_bps": -10.67,
+              "impact_vs_first_rung_bps": -8.27,
+              "marginal_impact_bps": -13.4
+            }
+          ]
+        },
+        "liquidity_rationale": "Score carried unchanged pending common-input reconciliation. Selected October 28 canonical sUSDe-to-USDe overlay has a primary 50bps marginal bracket: $1m last clear (-4.08bps), $10m first fail, $9m width, non-monotonic, precision obligation false. This is not a located $1m limit. Legacy $3.32m result is 200bps; older $3.30m 50bps and base direct-USDC floor are different dated routes. Separate USDe-to-USDC quote is non-atomic; complete exit execution remains unproven. One-day cooldown and 90-day maximum are confirmed at block 26296428; chain scores remain venue judgments."
+      }
+    }
+  },
+  "acceptance": {
+    "producer_and_rationale_inputs_verified": true,
+    "actual_served_display_pass": false,
+    "candidate_display_checks_pass": true,
+    "candidate_published": false,
+    "remaining_display_gaps": [
+      "retired LlamaRisk gate hides issuer observations",
+      "unknown custody allocation shown as empty zero/100% total",
+      "fee-window endpoints/status not explicit",
+      "history discontinuity not segmented in family trend",
+      "selected route/threshold/precision context needs explicit display",
+      "issuer_score_basis in updated axis-basis envelope is not selected by issuer overlay mapping; four financial/dependency axes are selected"
+    ],
+    "liquidity_source_gaps": [
+      "50bps refinement refused non-monotonic while nested monotonic_in_bracket flag remains true; precision false retained",
+      "formal producer route/convention ownership alignment still to acknowledge",
+      "execution/fills/settlement and primary latency unproved"
+    ]
+  }
+}
