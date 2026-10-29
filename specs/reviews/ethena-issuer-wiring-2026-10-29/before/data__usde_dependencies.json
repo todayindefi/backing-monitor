@@ -1,0 +1,83 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "usde",
+  "as_of": "2026-10-11T00:00:00Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "USDC — liquid stablecoin reserves at published addresses",
+        "slug": "usdc",
+        "edge_kind": "backing",
+        "materiality": "material"
+      },
+      {
+        "name": "USDtb — the path to BlackRock BUIDL",
+        "slug": "usdtb",
+        "edge_kind": "backing",
+        "materiality": "material",
+        "note": "Tokenized RWAs are held primarily as BUIDL via the USDtb path, so USDtb is the recorded hop."
+      },
+      {
+        "name": "JAAA — approved AAA-CLO reserve asset",
+        "slug": "jaaa",
+        "edge_kind": "backing",
+        "materiality": "minor",
+        "note": "The Risk Committee approved an approximately $310M position cap and the fund had approximately $200M issued when reviewed. Neither figure proves how much USDe backing currently holds. Actual exposure is pending the newest attestation; approved capacity must not be presented as a reserve holding."
+      },
+      {
+        "name": "BlackRock BUIDL",
+        "unresolved": [
+          "BUIDL"
+        ],
+        "unresolved_note": "⚠️ Securitize ERC-20, wallet-readable, and NO REPORT — reached through USDtb and a material share of the RWA leg."
+      },
+      {
+        "name": "Institutional overcollateralized lending — Anchorage, Maple Institutional, Coinbase AM",
+        "terminal": true,
+        "kind": "real-world",
+        "note": "⚠️ Off-chain bilateral loans against borrower BTC/ETH collateral in triparty custody. Attested monthly (Harris & Trotter), not verifiable on-chain. This report flags the book as NEW and NOT OPERATIONALLY SEASONED THROUGH STRESS. maple.md exists as a protocol report; Anchorage and Coinbase AM have none."
+      },
+      {
+        "name": "Basis trade — BTC/ETH perpetual shorts",
+        "terminal": true,
+        "kind": "real-world",
+        "note": "The approximately 11% share is a Q1 2026 measurement, not a current allocation. The 2026-10-10 producer feed reports 20.61% as CEX delta-hedge collateral, but collateral location is not equivalent to derivatives notional or backing share. Current residual derivatives exposure is pending the newest attestation and hedge reconciliation. OES custody balances are readable; the CEX short legs are off-chain."
+      },
+      {
+        "name": "Chaos Labs Edge Proof of Reserves",
+        "terminal": true,
+        "kind": "oracle",
+        "note": "Ingests off-chain custodian and CEX data and publishes to Ethena's transparency page. The verifiability of ~89% of backing rests on it."
+      }
+    ],
+    "upstream_resolution_rule": "⚠️ EVERY upstream entry carries exactly one resolution: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL means nothing is missing; UNRESOLVED means a report is owed. Never merged.",
+    "edge_kind_rule": "`backing` = my SOLVENCY depends on it. `venue` = my EXIT PRICE does.",
+    "coverage_note": "The September 27 attestation establishes custody totals, while the refreshed October 11 feed splits backing into 79.55% liquid/unallocated and 20.45% CEX delta-hedge collateral. Exact current loan, RWA, cash and derivatives-notional weights remain unresolved. Live tracking covers all 13 disclosed reserve accounts after restoring Reserve 2's Aave Horizon RLUSD and Aave V4 positions and pricing the second Solana wallet's JAAA and STAC shares from status-gated hourly NAV sources. Seven accounts lack reconstructed September 27 balances, so the historical snapshot comparison remains scope-limited. Downstream relationships are generated separately and do not affect this score.",
+    "collateral_as_of": "2026-09-27",
+    "downstream_tracked": [
+      "aavethena-loop-mainnet",
+      "avusd",
+      "reusde-re",
+      "savusd",
+      "susde",
+      "usdp-parallel"
+    ],
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "aavethena-loop-mainnet",
+        "avusd",
+        "reusde-re",
+        "savusd",
+        "susde",
+        "usdp-parallel"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
+  }
+}
