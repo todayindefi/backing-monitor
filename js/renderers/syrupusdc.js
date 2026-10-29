@@ -71,7 +71,7 @@ var SYRUP_STRATEGY_IMPL_INFO = {
 // at the same threshold so activation is also visible in §Risk Flags.
 // Shown on every collateral cell whose below-par read the pool's own on-chain
 // credit alarm contradicts. Wording is the producer's verdict, not ours.
-var SYRUP_UNCORROBORATED_TITLE = 'Reads below par in Maple GraphQL but uncorroborated: pool unrealizedLosses = 0 and the loan is not impaired, called or in default. Treated as a collateral-amount data artifact \u2014 the number is shown, not asserted.';
+var SYRUP_UNCORROBORATED_TITLE = 'Reported below par in Maple GraphQL; collateral valuation and custody scope remain uncorroborated. Zero recognized losses and accounting PCR do not resolve the reading or independently establish a shortfall.';
 
 var SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD = 100000;
 
@@ -894,7 +894,7 @@ var SyrupUSDCRenderer = {
             var uncorrN = health.crit_uncorroborated_count || 0;
             var uncorrUsd = health.crit_uncorroborated_principal_usd || 0;
             var warn = health.warn_count || 0;
-            var suspectTitle = 'Below 100% in Maple GraphQL but uncorroborated (unrealizedLosses=0, none impaired/called) — likely collateral-amount data artifact; PCR authoritative';
+            var suspectTitle = SYRUP_UNCORROBORATED_TITLE;
             var parts = [];
             if (corrN > 0) {
                 parts.push('<span class="font-mono text-red-600 font-semibold">' + corrN + ' CRIT</span>' +
@@ -2076,7 +2076,7 @@ var SyrupUSDCRenderer = {
                          t.points_above_par <= 5 ? 'text-amber-600 font-semibold' : 'text-slate-700';
             tightestBlock =
                 '<div class="text-sm mt-2">' +
-                    (stats ? 'Tightest verifiable loan: ' : 'Tightest loan: ') + '<span class="font-mono">' + CommonRenderer.formatCurrency(t.principal_usd) + ' ' + t.asset + '</span> @ ' +
+                    (stats ? 'Tightest remaining priced loan (uncorroborated reads excluded): ' : 'Tightest loan: ') + '<span class="font-mono">' + CommonRenderer.formatCurrency(t.principal_usd) + ' ' + t.asset + '</span> @ ' +
                     CommonRenderer.formatPercent(t.current_level_pct, 1) +
                     ' (init ' + CommonRenderer.formatPercent(t.init_level_pct, 0) + ', ' + tSign + t.buffer_pp.toFixed(1) + 'pp)' +
                     ' — only <span class="' + papCls + '">' + pap + 'pp above par</span>' +
@@ -2110,7 +2110,7 @@ var SyrupUSDCRenderer = {
                     '<div class="text-sm text-slate-500 mb-1">' +
                         'ⓘ ' + uncorrN + ' Set A loan' + (uncorrN === 1 ? '' : 's') + ' read below ' + setACritPct + '% in Maple GraphQL · ' +
                         CommonRenderer.formatCurrency(uncorrUsd) +
-                        '<div class="text-xs text-slate-400 mt-1 ml-4">Uncorroborated (unrealizedLosses=0, none impaired/called); treat as a collateral-amount data artifact. PCR is the authoritative solvency alarm.</div>' +
+                        '<div class="text-xs text-slate-400 mt-1 ml-4">Collateral valuation and custody scope remain uncorroborated. Zero recognized losses and accounting PCR do not resolve these readings; neither a verified shortfall nor a safe recovery buffer is established.</div>' +
                     '</div>';
             }
             if (warnN > 0) {
@@ -2470,7 +2470,7 @@ var SyrupUSDCRenderer = {
         var basis = coll && coll.read_corroboration_basis;
         return basis
             ? 'Reads below par in Maple GraphQL but uncorroborated — ' + basis +
-              '. Treated as a collateral-amount data artifact; the number is shown, not asserted.'
+              '. The valuation and custody scope remain unresolved; accounting PCR does not resolve this reading.'
             : SYRUP_UNCORROBORATED_TITLE;
     },
 
