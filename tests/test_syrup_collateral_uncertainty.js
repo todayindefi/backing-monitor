@@ -17,3 +17,13 @@ const supply=ctx.syrup._renderMultiChain(refreshed,'syrupusdc');
 assert.match(supply,/non-additive|includes bridge locks/);
 assert.match(supply,/reconciliation.*incomplete/);
 assert.doesNotMatch(supply,/deployed natively|>100%</);
+const strategies=ctx.syrup._renderLiquidityLayer(refreshed,'syrupusdc');
+assert.match(strategies,/Treasury strategy/);assert.match(strategies,/DEX LP strategy/);
+assert.match(strategies,/not immediately withdrawable cash/);
+assert.doesNotMatch(strategies,/Parked reserve|T\+0|T\+1/);
+// Same token symbol must not collapse distinct reviewed economic roles.
+const mixed=structuredClone(refreshed);
+for(const row of mixed.loan_book.loans)if(row.position_type==='liquidity')row.collateral.asset='PYUSD';
+const mixedHtml=ctx.syrup._renderLiquidityLayer(mixed,'syrupusdc');
+assert.match(mixedHtml,/Treasury strategy/);assert.match(mixedHtml,/DEX LP strategy/);
+assert.doesNotMatch(mixedHtml,/Parked reserve/);

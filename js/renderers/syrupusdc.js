@@ -116,6 +116,12 @@ var SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD = 100000;
 // balances aren't the raw stablecoin). Keyed by sleeve id; see
 // SyrupUSDCRenderer._liquiditySleeveKey for the meta/category → id mapping.
 var SYRUP_LIQUIDITY_SLEEVES = {
+    treasuries: { label: 'Treasury strategy', axis: 'Source classification', readiness: 'Unmeasured', custodied: false },
+    dex_lp: { label: 'DEX LP strategy', axis: 'Source classification', readiness: 'Unmeasured', custodied: false },
+    trading: { label: 'Trading strategy', axis: 'Source classification', readiness: 'Unmeasured', custodied: false },
+    defi: { label: 'DeFi strategy', axis: 'Source classification', readiness: 'Unmeasured', custodied: false },
+    intercompany: { label: 'Intercompany strategy', axis: 'Source classification', readiness: 'Unmeasured', custodied: false },
+    unknown: { label: 'Unclassified non-credit position', axis: 'Unknown', readiness: 'Unmeasured', custodied: false },
     parked:  { label: 'Parked reserve',          axis: 'Issuer + custody',                  readiness: 'T+0 · custodied',                    custodied: true },
     amm:     { label: 'Market-making (AMM LP)',  axis: 'Smart-contract + IL + reflexivity', readiness: 'Instant · slippage + reflexive haircut', custodied: false },
     rwa:     { label: 'RWA / T-bills',            axis: 'Issuer + T+1 settlement',           readiness: 'T+1 · settlement',                   custodied: true },
@@ -1828,21 +1834,40 @@ var SyrupUSDCRenderer = {
             return !SyrupUSDCRenderer._isLoanAssetIn(a.asset, assetTypes);
         });
 
-        // Accumulate sleeve subtotals from by_asset, members from loans[].
+        // Versioned full-book sources publish economic subtypes per address.
+        // Do not collapse different roles on the same token into an asset heuristic.
+        var reviewedRows = !!lb.classification_version && (lb.loans || []).length === lb.active_loan_count;
+        if (reviewedRows) {
+            var bySymbol = {};
+            loans.forEach(function(l) {
+                var symbol = (l.collateral || {}).asset || 'unknown';
+                if (!bySymbol[symbol]) bySymbol[symbol] = { asset: symbol, principal_usd: 0 };
+                bySymbol[symbol].principal_usd += l.principal || 0;
+            });
+            byAssetLiq = Object.keys(bySymbol).map(function(k) { return bySymbol[k]; });
+        }
         var sleeves = {};
         function ensureSleeve(key) {
             if (!sleeves[key]) sleeves[key] = { key: key, subtotal: 0, members: [] };
             return sleeves[key];
         }
-        byAssetLiq.forEach(function(a) {
-            var key = SyrupUSDCRenderer._liquiditySleeveKey(a.asset, a.category, metaMap);
-            ensureSleeve(key).subtotal += (a.principal_usd || 0);
-        });
-        loans.forEach(function(l) {
-            var c = l.collateral || {};
-            var key = SyrupUSDCRenderer._liquiditySleeveKey(c.asset, c.category, metaMap);
-            ensureSleeve(key).members.push(l);
-        });
+        if (reviewedRows) {
+            loans.forEach(function(l) {
+                var sleeve = ensureSleeve(l.strategy_subtype || 'unknown');
+                sleeve.subtotal += l.principal || 0;
+                sleeve.members.push(l);
+            });
+        } else {
+            byAssetLiq.forEach(function(a) {
+                var key = SyrupUSDCRenderer._liquiditySleeveKey(a.asset, a.category, metaMap);
+                ensureSleeve(key).subtotal += (a.principal_usd || 0);
+            });
+            loans.forEach(function(l) {
+                var c = l.collateral || {};
+                var key = SyrupUSDCRenderer._liquiditySleeveKey(c.asset, c.category, metaMap);
+                ensureSleeve(key).members.push(l);
+            });
+        }
 
         // Render order: subtotal desc; drop sub-threshold dust sleeves (the
         // ~$5 USTB slot, dormant lending) — their principal is acknowledged
@@ -1963,12 +1988,12 @@ var SyrupUSDCRenderer = {
                 ' · ' + CommonRenderer.formatCurrency(tailUsd) + ' (below display cutoff / dust — included in sleeve subtotals above)</div>' : '';
 
         return '<div class="panel">' +
-            '<div class="panel-title">Liquidity Layer <span class="text-xs font-normal text-slate-500">(pool-owned positions)</span></div>' +
-            '<p class="text-sm text-slate-500 mb-3">Pool-owned redemption reserve, not third-party credit — split by function: ' +
+            '<div class="panel-title">' + (reviewedRows ? 'Non-credit strategies' : 'Liquidity Layer <span class="text-xs font-normal text-slate-500">(pool-owned positions)</span>') + '</div>' +
+            (reviewedRows ? '<p class="text-sm text-slate-500 mb-3">Exact source-classified strategy roles; the compatibility liquidity bucket is not immediately withdrawable cash. Settlement and executable exit readiness remain unmeasured.</p>' : '<p class="text-sm text-slate-500 mb-3">Pool-owned redemption reserve, not third-party credit — split by function: ' +
                 '<strong>parked reserve</strong> (custodied stablecoin — issuer + custody risk), ' +
                 '<strong>market-making</strong> (AMM LP seeding the syrup token\'s secondary market — smart-contract / IL / reflexivity risk), and ' +
                 '<strong>RWA</strong> (tokenized T-bills — issuer + settlement risk). ' +
-                'Booked figures are reconciled against on-chain custody balances where available.</p>' +
+                'Booked figures are reconciled against on-chain custody balances where available.</p>') +
             header +
             eoaFlag +
             concentration +
