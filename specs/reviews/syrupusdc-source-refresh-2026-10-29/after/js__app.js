@@ -1,0 +1,937 @@
+/**
+ * Backing Monitor - Main Application
+ * Routes between index (asset grid) and asset detail views.
+ */
+
+var REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+
+// ⚠️ PUBLICATION IS EXPLICIT — user decision 2026-09-07. An asset appears in
+// the grid ONLY if it carries `published: true`. Absence is the staged state.
+//
+// It used to be the other way round: live unless `staged: true` was present,
+// so a registered slug went into the index the moment a producer's file
+// landed, and NOBODY had to decide. usdm published that way on 2026-09-07 —
+// accurate work, but chosen by no one. The absence of a marker is a bad way
+// to express consent.
+//
+// ⚠️ STAGED MEANS UNLISTED, NOT PRIVATE. The page and its JSON are served
+// publicly and always were; staging only removes the link from the index.
+// Do not describe it to anyone as a privacy or embargo control.
+//
+// One flag, not two: `staged` was REMOVED rather than kept alongside this.
+// Two fields meaning one thing is how they drift apart.
+function isPublished(a) { return !!a && a.published === true; }
+
+// Cache-bust JSON fetches to defeat Fastly's bare-URL stickiness on GH Pages.
+// Bumps once per hour so per-page-load fetches still hit the CDN edge most
+// of the time (data syncs at xx:45 hourly), but a stale-by-hour upper bound
+// is enforced.
+// ⚠️ The bucket is OFFSET past the sync, and that offset is the whole point.
+//
+// This cache-busted on a plain hour boundary while sync_and_push.sh commits at
+// :08, so a page first loaded between :00 and :08 pinned the PRE-SYNC copy for
+// the rest of the hour — up to 52 minutes of stale data with a stale "Updated:"
+// stamp to match. Two assets checked in the same visit disagreed for exactly
+// this reason, and it reads as a failed sync rather than a caching artefact.
+//
+// Shifting the boundary to :10 puts every load in a bucket whose data has
+// already landed. Keep SYNC_OFFSET_MIN ahead of the cron minute in
+// sync_and_push.sh if that ever moves.
+var SYNC_OFFSET_MIN = 10;
+var DATA_CACHE_REV = '20261018a';
+function dataUrl(path) {
+    var hour = Math.floor((Date.now() - SYNC_OFFSET_MIN * 60000) / 3600000);
+    var sep = path.indexOf('?') >= 0 ? '&' : '?';
+    return path + sep + 'v=' + hour + '&r=' + DATA_CACHE_REV;
+}
+
+// Asset-specific renderers registry. Keys are matched against
+// data.asset_slug first, then asset_specific.type — so a renderer
+// can be keyed by slug (thusd) when the analyzer's type field is
+// too generic to use safely (e.g. "rwa-stable").
+var ASSET_RENDERERS = {
+    ousd:      typeof OUSDRenderer      !== 'undefined' ? OUSDRenderer      : null,
+    frax:      typeof FRAXRenderer      !== 'undefined' ? FRAXRenderer      : null,
+    crvusd:    typeof CrvUSDRenderer    !== 'undefined' ? CrvUSDRenderer    : null,
+    usg:       typeof USGRenderer       !== 'undefined' ? USGRenderer       : null,
+    bold:      typeof BOLDRenderer      !== 'undefined' ? BOLDRenderer      : null,
+    dola:      typeof DOLARenderer      !== 'undefined' ? DOLARenderer      : null,
+    wsteth:    typeof WstETHRenderer    !== 'undefined' ? WstETHRenderer    : null,
+    frxusd:    typeof FrxUSDRenderer    !== 'undefined' ? FrxUSDRenderer    : null,
+    sfrxusd:   typeof SfrxUSDRenderer   !== 'undefined' ? SfrxUSDRenderer   : null,
+    fxusd:     typeof FxUSDRenderer !== 'undefined' ? FxUSDRenderer : null,
+    fxsave:    typeof FxSaveRenderer !== 'undefined' ? FxSaveRenderer : null,
+    scrvusd:   typeof ScrvUSDRenderer   !== 'undefined' ? ScrvUSDRenderer   : null,
+    'msusd-metronome': typeof MsUSDMetronomeRenderer !== 'undefined' ? MsUSDMetronomeRenderer : null,
+    usdd:      typeof USDDRenderer      !== 'undefined' ? USDDRenderer      : null,
+    syrupusdc: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
+    syrupusdt: typeof SyrupUSDCRenderer !== 'undefined' ? SyrupUSDCRenderer : null,
+    apxusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null,
+    apyusd:    typeof ApyxRenderer      !== 'undefined' ? ApyxRenderer      : null,
+    usdat:     typeof SaturnRenderer    !== 'undefined' ? SaturnRenderer    : null,
+    susdat:    typeof SaturnRenderer    !== 'undefined' ? SaturnRenderer    : null,
+    usdai:     typeof UsdaiRenderer     !== 'undefined' ? UsdaiRenderer     : null,
+    susdai:    typeof UsdaiRenderer     !== 'undefined' ? UsdaiRenderer     : null,
+    thusd:     typeof ThusdRenderer     !== 'undefined' ? ThusdRenderer     : null,
+    usde:      typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
+    susde:     typeof EthenaRenderer    !== 'undefined' ? EthenaRenderer    : null,
+    cusd:      typeof CapRenderer       !== 'undefined' ? CapRenderer       : null,
+    strc:      typeof STRCRenderer      !== 'undefined' ? STRCRenderer      : null,
+    mstr:      typeof MSTRRenderer      !== 'undefined' ? MSTRRenderer      : null,
+    // Shares strc_backing.json via `data_source` but is its OWN asset: its axis
+    // overlays resolve from this view slug (strcx_*), not the source's.
+    strcx:     typeof STRCxRenderer     !== 'undefined' ? STRCxRenderer     : null,
+    bmnr:      typeof BMNRRenderer      !== 'undefined' ? BMNRRenderer      : null,
+    // Reads hastra_prime_backing.json via assets.json `data_source` (the
+    // analyzer's filename is underscored; the URL slug is dashed).
+    'hastra-prime': typeof HastraPrimeRenderer !== 'undefined' ? HastraPrimeRenderer : null,
+    'fiat-stable-reserve-backed': typeof USDmRenderer !== 'undefined' ? USDmRenderer : null,
+    // Both spellings: the URL/view slug is dashed, the feed's asset_slug is
+    // underscored, and findAssetRenderer consults them in that order.
+    'dusd-alto': typeof DusdAltoRenderer !== 'undefined' ? DusdAltoRenderer : null,
+    dusd_alto:   typeof DusdAltoRenderer !== 'undefined' ? DusdAltoRenderer : null
+};
+
+function findAssetRenderer(data) {
+    if (!data) return null;
+    // First: URL view_slug. Set by renderAsset() after fetch so a sibling
+    // view (e.g. ?asset=mstr that reads strc_backing.json) routes to its
+    // own renderer instead of falling through to the source asset's.
+    if (data.view_slug && ASSET_RENDERERS[data.view_slug]) return ASSET_RENDERERS[data.view_slug];
+    var bySlug = data.asset_slug ? ASSET_RENDERERS[data.asset_slug] : null;
+    if (bySlug) return bySlug;
+    var t = data.asset_specific && data.asset_specific.type;
+    if (t && ASSET_RENDERERS[t]) return ASSET_RENDERERS[t];
+    // Third fallback: bare `asset` field. The STRC analyzer emits a flat
+    // tradfi/wrapper_strcx schema that doesn't populate asset_slug or
+    // asset_specific.type; routing keys off `asset: "strc"` instead.
+    if (data.asset && ASSET_RENDERERS[data.asset]) return ASSET_RENDERERS[data.asset];
+    return null;
+}
+
+function getAssetSlug() {
+    var params = new URLSearchParams(window.location.search);
+    return params.get('asset');
+}
+
+// Convert a producer's standalone executable ladder into the existing
+// liquidity/1 reader contract. This is transport adaptation only: every quote,
+// threshold and clock remains PegTracker's observation. Venue inventory still
+// arrives independently from DexTracker and is merged afterwards by the normal
+// ownership rules.
+function exitLadderOverlay(file, ladder) {
+    if (!ladder || !Array.isArray(ladder.rungs)) return null;
+    var quotes = {};
+    ladder.rungs.forEach(function (row) {
+        if (!row || row.status !== 'ok' || typeof row.size_usd !== 'number') return;
+        quotes[String(row.size_usd)] = {
+            size_usd: row.size_usd,
+            input_amount: row.input_amount != null ? row.input_amount : row.input_frxusd,
+            output_amount: row.output_usdc,
+            amount_out_usdc: row.output_usdc,
+            output_usd: row.output_usdc,
+            amount_in_raw: row.amount_in_raw,
+            amount_out_raw: row.amount_out_raw,
+            // CommonRenderer uses signed slippage: negative is an exit cost.
+            slippage_bps: typeof row.size_impact_bps === 'number' ? -row.size_impact_bps : null,
+            all_in_exit_cost_bps: row.all_in_cost_bps,
+            marginal_impact_bps: row.marginal_impact_bps,
+            status: row.status,
+            route_venues: Array.isArray(row.swaps) ? row.swaps : [],
+            quote_timestamp: row.quote_timestamp,
+            block_number: row.ethereum_head_block_at_request,
+            expiry: row.expiry,
+            expiry_basis: row.expiry_basis
+        };
+    });
+    var h = ladder.headline || {};
+    var bracket = Array.isArray(h.bracket_usd) ? h.bracket_usd.slice() : null;
+    var depth50 = null;
+    if (typeof h.value_usd === 'number') {
+        depth50 = {
+            threshold_bps: Number(h.threshold_bps || 50),
+            depth_usd: h.value_usd,
+            bracket: bracket,
+            status: bracket ? 'bracketed' : (h.status || null),
+            is_floor: h.status === 'floor',
+            basis: h.value_basis || ladder.headline_basis || null
+        };
+    }
+    return {
+        axis: 'liquidity',
+        file: file,
+        json: {
+            schema_version: 'liquidity/1',
+            asset_slug: ladder.asset_slug,
+            producer: ladder.producer || 'PegTracker',
+            as_of: ladder.measured_at,
+            scope: ladder.scope || 'canonical_ethereum_exit_ladder',
+            publishes: ['depth'],
+            does_not_publish: ['venue_inventory', 'primary_exit', 'rating'],
+            chain: ladder.chain,
+            sell_into: ladder.sell_into,
+            depth_50bps: depth50,
+            depth_threshold_bps: depth50 ? depth50.threshold_bps : 50,
+            exit_mark: {
+                producer: ladder.producer || 'PegTracker',
+                source_file: file,
+                measured_at: ladder.measured_at,
+                chain: ladder.chain,
+                sell_into: ladder.sell_into,
+                quotes: quotes,
+                basis: ladder.headline_basis,
+                source: ladder.aggregator,
+                // Preserve separately scoped diagnostics and clocks for asset detail.
+                source_observation: ladder
+            },
+            slippage_reference_size_usd: ladder.reference_rung_usd,
+            cost_conventions: ladder.cost_conventions,
+            failed_rungs_usd: ladder.failed_rungs_usd,
+            route_venues: ladder.route_venues,
+            last_valid_headline: ladder.last_valid_headline
+        }
+    };
+}
+
+function backingVerificationOverlay(file, verification) {
+    if (!verification || verification.schema_version !== 'frxusd-backing-verification/1') return null;
+    return {
+        axis: 'backing',
+        file: file,
+        json: {
+            schema_version: 'backing-overlay/1',
+            producer: verification.producer,
+            asset: verification.asset,
+            as_of: (verification.observation || {}).block_timestamp || verification.generated_at,
+            backing: { verification: verification }
+        }
+    };
+}
+
+// ========================================
+// Index view
+// ========================================
+async function renderIndex() {
+    document.body.classList.remove('fxsave-dashboard');
+    document.getElementById('index-view').classList.remove('hidden');
+    document.getElementById('asset-view').classList.add('hidden');
+    document.getElementById('error-view').classList.add('hidden');
+    document.getElementById('header-subtitle').textContent = '';
+    var reportLink = document.getElementById('header-report-link');
+    if (reportLink) {
+        reportLink.classList.add('hidden');
+        reportLink.removeAttribute('href');
+    }
+    var companionLink = document.getElementById('header-companion-link');
+    if (companionLink) {
+        companionLink.classList.add('hidden');
+        companionLink.removeAttribute('href');
+    }
+    var anchorNav = document.getElementById('asset-anchor-nav');
+    if (anchorNav) anchorNav.classList.add('hidden');
+
+    try {
+        var resp = await fetch(dataUrl('data/assets.json'));
+        var assets = await resp.json();
+
+        // ⚠️ STAGED ASSETS ARE OMITTED FROM THE INDEX, NOT FROM THE SITE.
+        // Only assets carrying `published: true` appear in the grid — see
+        // isPublished(). Everything else renders at ?asset=<slug> and is absent
+        // from the index, so nothing LINKS to it. Mirrors tidresearch's
+        // `production: false`, which the reports already use.
+        //
+        // ⚠️ The page itself carries a STAGED banner — see renderAsset. A page
+        // that is incomplete and LOOKS finished is the failure this whole
+        // dashboard keeps re-learning, and an unlinked URL is still a URL.
+        assets = assets.filter(isPublished);
+
+        // Try to fetch latest data for each asset to show CR on cards.
+        // `data_source` lets a sibling view (e.g. mstr) reuse another
+        // asset's backing JSON instead of needing its own file.
+        var cardData = await Promise.all(assets.map(async function(a) {
+            try {
+                var sourceSlug = a.data_source || a.slug;
+                var r = await fetch(dataUrl('data/' + sourceSlug + '_backing.json'));
+                var d = await r.json();
+                return { asset: a, data: d };
+            } catch (e) {
+                return { asset: a, data: null };
+            }
+        }));
+
+        var grid = document.getElementById('asset-grid');
+        grid.innerHTML = cardData.map(function(item) {
+            var a = item.asset;
+            var d = item.data;
+            // Some analyzers (USDm) emit collateral_ratio as a ratio (1.296)
+            // instead of a percentage (129.60). Normalize for display so all
+            // cards share the same scale. Resolution is by declared scale or
+            // explicit asset list — NEVER by the value's magnitude, which
+            // mis-scales in both directions at the boundary. See
+            // CommonRenderer.normalizeCollateralRatio.
+            // USG-shape analyzers emit collateral_ratio as a conservative
+            // "collateral-backed share of supply" (~55%); the headline ratio is the
+            // CDP-book mint CR. Prefer it (only when both fields are present, which
+            // is USG-only) so the grid card isn't a misleading sub-100.
+            // Defensive: some asset JSONs (e.g. strc) carry no `summary` block —
+            // their analyzer emits a flat per-domain schema. Guard each access so
+            // a single off-schema asset doesn't NPE the whole grid render.
+            var s = d && d.summary;
+            var issuerCoverage = !!(s && typeof s.issuer_coverage_pct === 'number');
+            var crRaw = s ? ((s.mint_cr != null && s.collateral_ratio_inclusive != null) ? s.mint_cr : s.collateral_ratio) : null;
+            if (crRaw == null && issuerCoverage) crRaw = s.issuer_coverage_pct;
+            var crNorm = CommonRenderer.normalizeCollateralRatio(crRaw, a.slug,
+                issuerCoverage ? ((d && d.backing) || {}) : s);
+            var cr = (crNorm != null) ? CommonRenderer.formatPercent(crNorm) : '-';
+            var crClass = (crNorm != null && crNorm >= 100) ? 'text-green-600' : 'text-red-600';
+            var supply = s ? CommonRenderer.formatCurrency(s.total_supply || s.real_supply) : '-';
+            var ts = d ? CommonRenderer.formatDate(d.timestamp || d.timestamp_utc) : '';
+            if (issuerCoverage) {
+                supply = CommonRenderer.formatCurrency((d.backing || {}).liabilities_usd);
+                ts = CommonRenderer.formatDate((d.backing || {}).as_of);
+            }
+            var flagCount = (d && Array.isArray(d.risk_flags)) ? d.risk_flags.length : 0;
+            var flagBadge = flagCount > 0 ?
+                '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">' + flagCount + ' flag' + (flagCount > 1 ? 's' : '') + '</span>' : '';
+
+            return '<a href="?asset=' + a.slug + '" class="asset-card block">' +
+                '<div class="flex items-start justify-between mb-2">' +
+                    '<div class="font-bold text-slate-800">' + a.name + '</div>' +
+                    flagBadge +
+                '</div>' +
+                '<div class="text-xs text-slate-500 mb-3">' + a.chain + ' &middot; ' + a.description + '</div>' +
+                '<div class="grid grid-cols-2 gap-3">' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">' + (issuerCoverage ? 'Issuer coverage' : 'CR') + '</div><div class="text-lg font-bold ' + crClass + '">' + cr + '</div></div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">' + (issuerCoverage ? 'Net claims' : 'Supply') + '</div><div class="text-lg font-bold text-slate-700">' + supply + '</div></div>' +
+                '</div>' +
+                '<div class="text-xs text-slate-400 mt-3">' + ts + '</div>' +
+                '</a>';
+        }).join('');
+
+    } catch (e) {
+        showError('Could not load asset list: ' + e.message);
+    }
+}
+
+// ========================================
+// Asset detail view
+// ========================================
+async function renderAsset(slug) {
+    document.getElementById('index-view').classList.add('hidden');
+    document.getElementById('asset-view').classList.remove('hidden');
+    document.getElementById('error-view').classList.add('hidden');
+
+    document.body.classList.remove('fxsave-dashboard');
+    var previousAxisNotes=document.getElementById('axis-notes-lifted');
+    if(previousAxisNotes)previousAxisNotes.innerHTML='';
+
+    // Default-hide apyx-specific header/nav adornments — the apyx renderer
+    // re-reveals them at the end of render() when applicable. Without this,
+    // navigating apyx → another asset leaves stale anchor nav / companion
+    // link visible.
+    var resetCompanion = document.getElementById('header-companion-link');
+    if (resetCompanion) {
+        resetCompanion.classList.add('hidden');
+        resetCompanion.removeAttribute('href');
+    }
+    var resetAnchorNav = document.getElementById('asset-anchor-nav');
+    if (resetAnchorNav) resetAnchorNav.classList.add('hidden');
+    var staleDisclaimer = document.getElementById('apyx-trust-disclaimer');
+    if (staleDisclaimer) staleDisclaimer.remove();
+
+    try {
+        // Fetch assets.json first so we can resolve `data_source` aliases
+        // (e.g. ?asset=mstr reads strc_backing.json) before fetching data.
+        var assetsResp0 = await fetch(dataUrl('data/assets.json')).catch(function() { return null; });
+        var assetMeta = null;
+        if (assetsResp0 && assetsResp0.ok) {
+            var assets = await assetsResp0.json();
+            assetMeta = assets.find(function(a) { return a.slug === slug; }) || null;
+            // Publish the registered slugs so renderers can tell a working
+            // ?asset= link from one that resolves to nothing. Feeds emit
+            // internal dependency links for assets this dashboard may not
+            // serve (usds points at ?asset=susds, which is not registered).
+            if (typeof CommonRenderer !== 'undefined') {
+                CommonRenderer.KNOWN_ASSET_SLUGS = assets.map(function(a) { return a.slug; });
+            }
+        }
+        var sourceSlug = (assetMeta && assetMeta.data_source) ? assetMeta.data_source : slug;
+
+        // ⚠️ AXIS OVERLAYS FOLLOW THE VIEW; THE BASE FEED FOLLOWS THE DATA SOURCE.
+        // These were the same slug, and a sibling lens rendered another asset's
+        // risk judgements as its own for as long as ?asset=mstr has existed.
+        //
+        // mstr declares data_source "strc" to REUSE STRC'S FEED, which is correct —
+        // one analyzer covers Strategy's capital structure and mstr is a second lens
+        // on it. The overlay URLs were built from that same sourceSlug, so the MSTR
+        // page fetched data/strc_axis_basis.json, and because riskAnalyst's envelope
+        // CREATES data.peg on a feed that has none, hasAxisBlocks() (literally
+        // `!!data.peg`) flipped true and unhid the whole six-axis frame on a
+        // common-equity page. Axis 1 read "7d peg performance · market vs NAV" and
+        // carried STRC's basis prose: "MEASURES REALIZED DEVIATION FROM PAR ON A
+        // PAR-ANCHORED PREFERRED". MSTR is common stock. riskAnalyst confirms it
+        // carries ZERO axes by design — every axis reading there was borrowed.
+        //
+        // ⚠️ THE PRODUCER COULD NOT HAVE CAUGHT THIS. Their file's routing_note said
+        // "ROUTING VERIFIED AGAINST common.js", and common.js is right — it merges
+        // exactly what it is handed. A routing claim checked against the merge cannot
+        // see a SECOND CONSUMER of the same file; that lives here, in URL construction.
+        //
+        // An axis score is a judgement about the asset the reader is looking at, so it
+        // resolves from the VIEW slug. Dashes are normalised because the sync writes
+        // underscored filenames: hastra-prime -> hastra_prime_axis_basis.json, which
+        // is the same file it read before. Checked every data_source entry before
+        // changing this — mstr->strc is the ONLY true sibling lens; hastra-prime,
+        // reusd-re and reusde-re are dash/underscore spellings of one asset, and the
+        // normalise keeps them resolving exactly as they did.
+        //
+        // ⚠️ mstr now loads NO overlay, so hasAxisBlocks() is false and the five axis
+        // sections stay hidden. That is the intended outcome: an empty section is
+        // honest about an overall-only asset, and the structure it replaces was
+        // asserting things that are false about it.
+        var axisSlug = slug.replace(/-/g, '_');
+
+        // Per-axis overlay files, fetched ALONGSIDE the base rather than after
+        // it: a serial fetch would add a round trip per axis to every page load
+        // for files that mostly 404 today. A 404 is the normal case — no
+        // producer emits one yet — so each resolves to null and the merge is a
+        // no-op. ⚠️ Failures are swallowed deliberately: an overlay that does
+        // not load must never take the page down with it, because the base feed
+        // still renders a complete, if less current, axis.
+        var overlaySuffixes = (typeof CommonRenderer !== 'undefined' && CommonRenderer.AXIS_OVERLAYS) || {};
+        // An axis may declare SEVERAL files, applied in declaration order — axis
+        // 5 is served by security_analyst's walk and riskAnalyst's code-half
+        // overlay. Order is the contract: the replace runs before the merge, so
+        // the merge lands on the walk rather than being wiped by it.
+        var overlayFetches = [];
+        if (assetMeta && assetMeta.backing_verification_ref) {
+            (function (file) {
+                overlayFetches.push(
+                    fetch(dataUrl('data/' + file))
+                        .then(function(r) { return r && r.ok ? r.json() : null; })
+                        .then(function(j) { return backingVerificationOverlay('data/' + file, j); })
+                        .catch(function() { return null; }));
+            })(assetMeta.backing_verification_ref);
+        }
+        if (assetMeta && assetMeta.liquidity_ladder_ref) {
+            (function (file) {
+                overlayFetches.push(
+                    fetch(dataUrl('data/' + file))
+                        .then(function(r) { return r && r.ok ? r.json() : null; })
+                        .then(function(j) { return exitLadderOverlay('data/' + file, j); })
+                        .catch(function() { return null; }));
+            })(assetMeta.liquidity_ladder_ref);
+        }
+        Object.keys(overlaySuffixes).forEach(function(axis) {
+            var sufs = overlaySuffixes[axis];
+            if (!Array.isArray(sufs)) sufs = [sufs];
+            sufs.forEach(function(suf) {
+                var file = 'data/' + axisSlug + suf + '.json';
+                overlayFetches.push(
+                    fetch(dataUrl(file))
+                        .then(function(r) { return r && r.ok ? r.json() : null; })
+                        .then(function(j) { return j ? { axis: axis, file: file, json: j } : null; })
+                        .catch(function() { return null; }));
+            });
+        });
+
+        // ⚠️ THE FAMILY ENVELOPE IS FETCHED FROM THE **SOURCE**, AND THAT IS NOT A
+        // RELAPSE INTO SOURCE-KEYED AXIS RESOLUTION. Axis SCORES are judgements about
+        // one asset and follow the view (axisSlug, above). `family_overalls` is the
+        // opposite kind of object: one block describing SEVERAL assets — MSTR 4.5,
+        // STRC 4.0, STRCx 3.0 — published once in the shared feed's envelope because
+        // it is about the family, not about whichever page is open.
+        //
+        // ⚠️ IT IS RAW AND UNMERGED. Nothing here may read an AXIS field off it; the
+        // merge is the only thing allowed to do that, and it has staleness and
+        // identity rules this does not. Envelope-level extras only.
+        var familyFetch = fetch(dataUrl('data/' + sourceSlug + '_axis_basis.json'))
+            .then(function (r) { return r && r.ok ? r.json() : null; })
+            .catch(function () { return null; });
+
+        var fetched = await Promise.all([
+            fetch(dataUrl('data/' + sourceSlug + '_backing.json')),
+            fetch(dataUrl('data/' + sourceSlug + '_backing_history.json')).catch(function() { return null; })
+        ].concat(overlayFetches).concat([familyFetch]));
+        var dataResp = fetched[0], histResp = fetched[1];
+        var familyEnvelope = fetched[fetched.length - 1];
+        var overlays = fetched.slice(2, fetched.length - 1).filter(Boolean);
+        if (typeof CommonRenderer !== 'undefined') {
+            CommonRenderer.FAMILY_ENVELOPE = familyEnvelope || null;
+        }
+
+        if (!dataResp.ok) {
+            // ⚠️ A REGISTERED-BUT-UNFED slug is a DECLARED state, not a broken page.
+            // Registration is what wires transport — sync_and_push.sh derives its
+            // copy list from assets.json — so a staged asset NECESSARILY passes
+            // through a window where the entry exists and the producer's file does
+            // not. Over that window the generic "Failed to load data" reads as a
+            // defect in the dashboard rather than as work in progress, and tells a
+            // reader nothing about what is missing or that it is expected.
+            if (assetMeta && !isPublished(assetMeta) && dataResp.status === 404) {
+                showStagedPending(slug, sourceSlug);
+                return;
+            }
+            throw new Error('Asset data not found (HTTP ' + dataResp.status + ')');
+        }
+        var data = await dataResp.json();
+        data.dashboard_published = isPublished(assetMeta);
+        // Tag the URL slug so findAssetRenderer can route to the sibling
+        // view's renderer instead of falling through to the source asset's.
+        data.view_slug = slug;
+        // Machine-readable publication scope for the generic venue renderer.
+        // Producers may enumerate bridge deployments for completeness; the
+        // page registry decides which of those deployments this dashboard is
+        // actually presenting.
+        if (assetMeta && assetMeta.venue_scope) {
+            data.dashboard_venue_scope = assetMeta.venue_scope;
+        }
+        // Merge per-axis overlays over the embedded blocks, per FIELD, each
+        // field keeping its origin. Runs before preRender so a bespoke renderer
+        // reads the merged block rather than the pre-merge one — otherwise a
+        // renderer and the common frame would disagree about the same axis.
+        // ⚠️ axisSlug, not sourceSlug: the identity check compares the overlay's own
+        // `asset` field against the asset it is being applied TO. Passing the source
+        // would let strcx_axis_basis.json (asset "strcx") be accepted on the strc
+        // view — the identity check exists precisely to refuse that.
+        CommonRenderer.mergeAxisOverlays(data, overlays, axisSlug);
+
+        // A producer withdrawal supersedes alerts embedded in older base feeds.
+        if (data.backing && data.backing.attachment_point_status === 'withdrawn_by_producer') {
+            data.risk_flags = (data.risk_flags || []).filter(function (flag) {
+                return !/attachment point|attachment ratio/i.test(flag.message || '');
+            });
+        }
+
+        // The issuer panel's "Read the full risk report" reads issuer.report_url.
+        // On reUSD no producer supplies one — PegTracker's issuer block was
+        // removed (it published the report's OVERALL score as the issuer axis)
+        // and riskAnalyst's issuer/1 overlay carries the score, not the link.
+        // assets.json is this dashboard's own registry and is authoritative for
+        // where a report lives, so it fills the gap rather than the panel
+        // reading "No report linked" beside a working header link.
+        //
+        // ⚠️ Only when the producer supplies nothing. A producer that publishes
+        // report_url AND a report_url_status has said something deliberate about
+        // reachability — usually that a report exists but is NOT published — and
+        // overwriting that with a registry URL would turn a considered "not
+        // linked" into a live link to a page that may 404.
+        if (assetMeta && (assetMeta.report_url || assetMeta.report_status)) {
+            data.issuer = data.issuer || {};
+            if (assetMeta.report_url && !data.issuer.report_url) {
+                data.issuer.report_url = assetMeta.report_url;
+                data.issuer.report_url_status = data.issuer.report_url_status ||
+                    assetMeta.report_status || 'published';
+                data.issuer.report_url_source = 'assets.json registry';
+            }
+            // ⚠️ "A report exists but is not published" is NOT the same state as
+            // "no report exists", and the page said the second. Carrying the
+            // status WITHOUT a URL is deliberate: there is nothing safe to link
+            // (production 404s, and the staging host renders the entire
+            // unpublished corpus), but the reader should still be told the
+            // difference between an absent report and a withheld one.
+            if (!data.issuer.report_url && assetMeta.report_status) {
+                data.issuer.report_url_status = assetMeta.report_status;
+            }
+        }
+        var history = null;
+        if (histResp && histResp.ok) {
+            history = await histResp.json();
+        }
+
+        // ⚠️ RESOLVE peg.history_ref — the convention is NOT the only filename.
+        // The fetch above assumes `<slug>_backing_history.json`, but six assets
+        // declare `history_ref: <slug>_peg_history.json`, and that is where the
+        // declared `history_field` actually lives:
+        //
+        //   crvusd, usds, yzusd            _backing_history.json exists but LACKS the field
+        //   syzusd, reusd_re, reusde_re    _backing_history.json does not exist at all
+        //
+        // So pegRating was handed a file without the field, silently returned no
+        // 7-day average, and fell through to ONE instantaneous reading — on an
+        // axis whose whole point is measured behaviour over a window. The data was
+        // published correctly the whole time; the consumer fetched the wrong name.
+        //
+        // ⚠️ A declared ref beats a derived name. Deriving a filename that the
+        // producer also declares is the same class as deriving a value they
+        // publish — the convention silently disagrees and nothing says so.
+        var pegRef = data.peg && data.peg.history_ref;
+        if (pegRef && pegRef !== sourceSlug + '_backing_history.json') {
+            // A backing history can contain a spot peg field without containing
+            // the declared peg series. Its presence must not suppress this fetch.
+            try {
+                var refResp = await fetch(dataUrl('data/' + pegRef));
+                if (refResp && refResp.ok) {
+                    var refJson = await refResp.json();
+                    if (refJson && Array.isArray(refJson.entries) && refJson.entries.length) {
+                        // Keep the backing history reachable — chart code and
+                        // renderers still read collateral series off it.
+                        if (history) refJson._backing_history = history;
+                        history = refJson;
+                    }
+                }
+            } catch (e) { /* declared ref unreachable: keep the conventional file */ }
+        }
+
+        // Asset-specific pre-render hook — lets the renderer patch top-card
+        // overrides (e.g. swap in init-level CR for syrupUSDC/USDT) before
+        // the common summary-cards row paints. History is passed too so
+        // renderers can normalize chart-series scale (USDm ratio→%).
+        // Runs before the header below so renderers can backfill top-level
+        // fields the Layer-1 schema doesn't carry (e.g. Saturn omits
+        // `asset` + `chain`, aliasing them in preRender keeps the header
+        // out of "undefined (undefined)").
+        var preRenderer = findAssetRenderer(data);
+        if (preRenderer && typeof preRenderer.preRender === 'function') {
+            preRenderer.preRender(data, history);
+        }
+
+        // Header
+        document.getElementById('header-subtitle').textContent = data.asset + ' (' + data.chain + ')';
+        document.getElementById('header-timestamp').textContent = 'Updated: ' + CommonRenderer.formatDate(data.timestamp);
+
+        var reportLink = document.getElementById('header-report-link');
+        if (reportLink) {
+            if (assetMeta && assetMeta.report_url) {
+                reportLink.href = assetMeta.report_url;
+                reportLink.textContent = assetMeta.report_status === 'staged'
+                    ? 'Staging report ↗' : 'Full report ↗';
+                reportLink.classList.remove('hidden');
+            } else {
+                reportLink.classList.add('hidden');
+                reportLink.removeAttribute('href');
+            }
+        }
+
+        var related = assetMeta && assetMeta.related_dashboard;
+        var relatedLink = document.getElementById('header-companion-link');
+        if (relatedLink && related && typeof related.slug === 'string') {
+            relatedLink.href = '?asset=' + encodeURIComponent(related.slug);
+            relatedLink.textContent = related.label || 'Related dashboard →';
+            relatedLink.classList.remove('hidden');
+        }
+
+        // Feed staleness — rendered for EVERY asset from here, not per-renderer.
+        // Placed before the panels so a reader meets it before any figure it
+        // qualifies. Silent when the feed is fresh.
+        // ⚠️ A staged page must SAY it is staged. Omitting it from the index
+        // stops anything linking to it; it does not stop the URL working, and a
+        // half-built page that looks finished is the failure mode this dashboard
+        // keeps re-learning. The banner is the page's own declaration.
+        (function () {
+            var el = document.getElementById('staged-banner');
+            if (!el) return;
+            el.innerHTML = '';
+            if (!assetMeta || isPublished(assetMeta)) return;
+            el.innerHTML =
+                '<div class="panel" style="border-left:4px solid #b45309;">' +
+                    '<div class="text-sm" style="line-height:1.5;">' +
+                    // \u26a0\ufe0f Says NOT LINKED, not "unfinished". Since publication became
+                    // explicit, a staged page may be complete and simply awaiting a
+                    // decision \u2014 asserting it is under construction would be a claim
+                    // the renderer cannot check.
+                    '<span class="font-semibold text-amber-700">\u26a0\ufe0f STAGED \u2014 not linked from the index.</span> ' +
+                    'This page is deliberately absent from the asset index and has not been ' +
+                    'published. It may be incomplete, unrated, or still under review \u2014 ' +
+                    'axes may be wrong. Do not cite figures from it until it is published.' +
+                    '</div></div>';
+        })();
+
+        CommonRenderer.renderStalenessBanner(data, slug);
+
+        // Common sections.
+        // 5-axis mode (asset carries the Layer-1 axis blocks): the summary band
+        // shows the 5 axis cards. Legacy assets keep the old CR summary cards.
+        var has5axis = CommonRenderer.hasAxisBlocks(data);
+        if (has5axis) {
+            CommonRenderer.renderAxisBand(data, history);
+        } else {
+            CommonRenderer.renderSummaryCards(data);
+        }
+        CommonRenderer.renderRiskFlags(data);
+        var chartOpts = {};
+        if (data.asset_specific) {
+            var rawBands = data.asset_specific.chart_bands;
+            if (rawBands) {
+                // Two accepted shapes:
+                //   verbose: {critical:[0,99], thin:[99,99.8], amber:[99.8,100], healthy:[100,101], min_line:99.8, max_line:100}
+                //   short:   {pcr:[a,b,c,d]} or {thresholds:[a,b,c,d]}  → 4 ascending breakpoints
+                var short = rawBands.pcr || rawBands.thresholds;
+                if (Array.isArray(short) && short.length === 4) {
+                    var a = short[0], b = short[1], c = short[2], d = short[3];
+                    chartOpts.bands = {
+                        critical: [0, a],
+                        thin: [a, b],
+                        amber: [b, c],
+                        healthy: [c, d],
+                        min_line: b,
+                        max_line: c
+                    };
+                    if (chartOpts.y_min === undefined) chartOpts.y_min = a;
+                    if (chartOpts.y_max === undefined) chartOpts.y_max = d;
+                    // The `pcr` key is the implicit signal for Pool Coverage Ratio framing.
+                    if (rawBands.pcr) {
+                        chartOpts.title = chartOpts.title || 'Pool Coverage Ratio — 30d';
+                        chartOpts.dataset_label = chartOpts.dataset_label || 'PCR';
+                    }
+                } else {
+                    chartOpts.bands = rawBands;
+                }
+            }
+            if (data.asset_specific.chart_title) chartOpts.title = data.asset_specific.chart_title;
+            if (data.asset_specific.chart_dataset_label) chartOpts.dataset_label = data.asset_specific.chart_dataset_label;
+            if (data.asset_specific.chart_alt_dataset_label) chartOpts.alt_dataset_label = data.asset_specific.chart_alt_dataset_label;
+            if (data.asset_specific.chart_y_min !== undefined) chartOpts.y_min = data.asset_specific.chart_y_min;
+            if (data.asset_specific.chart_y_max !== undefined) chartOpts.y_max = data.asset_specific.chart_y_max;
+        }
+        // ⚠️ THE PRODUCER NAMES ITS OWN ALT SERIES AND WE WERE SUBSTITUTING A DEFAULT.
+        //
+        // `summary.collateral_ratio_alt.label` is published by four assets and read by
+        // none. renderCRChart fell back to 'CR (gross)', which is right for exactly ONE
+        // of them, by coincidence:
+        //
+        //   ousd   "CR (gross)"           -> rendered "CR (gross)"   matched by luck
+        //   usdd   "Independent CR"       -> rendered "CR (gross)"   wrong
+        //   frax   "External-only CR"     -> rendered "CR (gross)"   wrong
+        //   usdm   "Stable-Only Coverage" -> rendered "CR (gross)"   wrong
+        //
+        // ⚠️ And the substitution INVERTS the meaning rather than blurring it. frax's
+        // alt is EXTERNAL-ONLY, a narrower measure, rendered under a word meaning more
+        // inclusive. usdm's is the STABLE-ONLY series — the conservative figure the axis
+        // is actually rated on — labelled as the gross one, while the system-wide line
+        // beside it reads plain "CR". A reader would take the two lines backwards.
+        //
+        // ⚠️ Placed AFTER the asset_specific block rather than inside it: usdm has no
+        // alt series in its feed at all — usdm.js SYNTHESISES it in preRender and sets
+        // the label there — and `data.asset_specific` is optional, so reading this
+        // inside that guard would both miss usdm and risk throwing where it is absent.
+        //
+        // asset_specific.chart_alt_dataset_label still wins; this is the fallback.
+        if (chartOpts.alt_dataset_label == null) {
+            var altMeta = data.summary && data.summary.collateral_ratio_alt;
+            if (altMeta && typeof altMeta.label === 'string' && altMeta.label.trim()) {
+                chartOpts.alt_dataset_label = altMeta.label.trim();
+            }
+        }
+        // The alt CR is a USD value (e.g. Free Liquidity), not a percentage —
+        // don't plot it on a % axis.
+        if (data.summary && data.summary.collateral_ratio_alt && data.summary.collateral_ratio_alt.is_currency) {
+            chartOpts.omit_alt = true;
+        }
+        // The chart resolves CR scale exactly as the summary tile does; without
+        // the summary it cannot, and a raw-ratio feed plots 100x low.
+        // ⚠️ THIRD CALL SITE OF THE SAME SCALE BUG. The tile and the rating each
+        // resolved CR scale independently and disagreed (fixed in dedb98a96); the
+        // CHART is the third, and it reads `summary` alone.
+        //
+        // fxUSD has NO summary block — its ratio and its `collateral_ratio_scale:
+        // "multiple"` both live on `backing`. So this passed null, normalize fell to
+        // its percent default, and a 151.35% asset would have plotted as a flat line
+        // at 1.51% the moment its history landed. Caught before that history exists.
+        //
+        // ⚠️ Summary still WINS where present, and that is not laziness: usdm's
+        // history stores 1.2785, which is the SUMMARY's ratio scale, not its backing
+        // block's percent. Preferring backing would break the one asset the old code
+        // got right. Fall back only when there is no summary at all.
+        chartOpts.cr_scale_summary = data.summary || data.backing || null;
+        // The producer's own window beats one derived from the file. See
+        // renderCRChart — a full-file range read as "30d" is the defect this
+        // block was added upstream to close.
+        chartOpts.history_window = (data.asset_specific && data.asset_specific.history_window) || null;
+        // ⚠️ ONE DECLARATION, TWO CHARTS. The peg chart reads `peg.chart_window_days`;
+        // reading the same field here is what makes the spec's "identical trailing
+        // cutoff" true by construction instead of by two numbers someone keeps in
+        // step by hand. asset_specific.chart_window_days overrides it for an asset
+        // whose coverage genuinely cannot share the peg horizon — none does today.
+        var crWin = (data.asset_specific && Number(data.asset_specific.chart_window_days)) ||
+                    (data.peg && Number(data.peg.chart_window_days)) || null;
+        chartOpts.window_days = crWin > 0 ? crWin : null;
+        chartOpts.asset_slug = data.asset_slug || slug;
+        // ⚠️ `_backing_history` WAS WRITTEN AND NEVER READ. The peg-ref block
+        // above reassigns `history` to the PEG history and stashes the backing
+        // history on it, with the stated reason "Keep the backing history
+        // reachable — chart code and renderers still read collateral series off
+        // it." Nothing read it. `renderCRChart` was handed the peg file, whose
+        // entries have no `collateral_ratio` at all, so every point mapped to
+        // null: the panel drew its axes, its bands and its title over an empty
+        // plot. Live on crvusd (362 null points), usds (337) and yzusd (172) —
+        // exactly the three assets that declare a `_peg_history.json` ref AND
+        // have a real backing history to lose.
+        //
+        // ⚠️ The tell was in the chart's own point count matching the peg
+        // chart's exactly. A reachable field is not a read field, and the
+        // comment asserting reachability is what stopped anyone looking.
+        //
+        // Only this one consumer wants the collateral series; the peg-rating and
+        // peg-chart readers below genuinely want the reassigned `history`.
+        var crHistory = (history && history._backing_history) || history;
+        // ⚠️ A DECLARED-UNDERIVABLE RATIO MUST NOT COME BACK AS A CHART. DUSD
+        // (Alto) publishes `backing.collateral_ratio: null` with a basis saying a
+        // single safety ratio cannot exist for it — and its HISTORY file still
+        // writes `collateral_ratio: 100.0` hourly, so the shared chart drew a flat
+        // 100% line over 67 reads with "Range: 0.00pp" underneath. That is the
+        // most reassuring possible rendering of the exact figure two producers
+        // declared misleading. The declaration travels with the live block, so it
+        // is read here and passed down rather than inferred from the series.
+        var bk = data.backing || {};
+        if (bk.collateral_ratio == null && typeof bk.collateral_ratio_basis === 'string' &&
+            bk.collateral_ratio_basis.trim()) {
+            chartOpts = Object.assign({}, chartOpts, {
+                declared_underivable: bk.collateral_ratio_basis
+            });
+        }
+        CommonRenderer.renderCRChart(crHistory, chartOpts);
+
+        // Breakdown table + pie: skip for crvUSD (handled in asset-specific renderer)
+        var assetType = data.asset_specific && data.asset_specific.type;
+        if (assetType !== 'crvusd') {
+            CommonRenderer.renderBreakdownTable(data);
+            CommonRenderer.renderPieChart(data);
+            // Both panels above hide themselves when an asset publishes no
+            // breakdown; this collapses the row so the sidebar does not sit in a
+            // third of an otherwise empty grid.
+            CommonRenderer.reflowBackingGrid();
+        } else {
+            document.querySelector('#breakdown-table tbody').innerHTML = '';
+            document.getElementById('pie-chart').parentElement.parentElement.style.display = 'none';
+            // Also hide the empty breakdown panel
+            document.getElementById('breakdown-table').closest('.panel').style.display = 'none';
+            CommonRenderer.reflowBackingGrid();
+        }
+
+        // 5-axis sections (peg / liquidity / dependencies / issuer + backing head).
+        // Reveals & fills the standard axis sections in 5-axis mode; a no-op that
+        // keeps them hidden for legacy assets. Runs BEFORE the bespoke renderer so
+        // that renderer can slot its panels into already-revealed axis sections.
+        var hasAxes = CommonRenderer.renderAxisSections(data, history);
+
+        // Asset-specific renderer
+        var renderer = findAssetRenderer(data);
+        if (renderer) {
+            renderer.render(data, history);
+        } else {
+            document.getElementById('asset-specific-panels').innerHTML = '';
+        }
+
+        // ⚠️ A legacy (pre-5-axis) asset takes neither basis line, because both
+        // hang off axis heads it does not have — and having a bespoke renderer
+        // does not help, since those hang their own copy off the axis head too.
+        // frax and ousd are the two, and frax's surplus basis is not cosmetic:
+        // the surplus is against LIABILITIES, and against supply the same feed
+        // would show a +$4.1M surplus instead. Nothing on the page said which.
+        //
+        // Prepended AFTER the renderer runs, because a bespoke renderer assigns
+        // innerHTML and would overwrite anything placed before it.
+        if (!hasAxes) {
+            var legacyBasis = CommonRenderer.backingBasisPanelHtml(data);
+            var panelsEl = document.getElementById('asset-specific-panels');
+            if (legacyBasis && panelsEl) {
+                panelsEl.innerHTML = legacyBasis + panelsEl.innerHTML;
+            }
+        }
+
+        // ⚠️ LAST, AND DEFERRED, AND THE DEFERRAL IS NOT OPTIONAL. It asks what is
+        // VISIBLE on the finished page, so every renderer that could reveal a flag
+        // must already have run. Four bespoke pages were dropping their risk flags
+        // entirely — usdat's two CRITICAL ones (a 100%-of-supply accounting
+        // divergence and an implementation drift) were in the DOM and unreachable.
+        //
+        // ⚠️ RUNNING IT INLINE HERE DUPLICATED FLAGS ON THREE PAGES. Measured on
+        // cusd: the flag text appeared TWICE in visible text, once in this banner
+        // and once in a bespoke panel that populated after this line. Some bespoke
+        // renderers resolve their own fetches, so `renderer.render()` returning is
+        // not the page being finished. Found by testing twelve assets instead of
+        // the four the fix was for — the duplicates were all on assets that were
+        // already correct.
+        //
+        // ⚠️ A FIXED DELAY WAS THE FIRST FIX AND IT WAS NOT ENOUGH. At 1200ms the
+        // duplicates cleared on cusd and usde and msusd-metronome STILL showed four
+        // — its analyzer runs in this repo and its renderer is the slowest on the
+        // fleet. Any constant is a guess about the slowest renderer, and the guess
+        // is wrong the moment one gets slower.
+        //
+        // So: re-run on DOM settle instead of on a clock. renderUnseenRiskFlags is
+        // idempotent (it clears and rebuilds from the feed every time), so repeated
+        // passes converge rather than accumulate — the last pass, on the finished
+        // page, is the one that decides. Observer is capped and disconnects, so a
+        // page that never stops mutating cannot keep this running.
+        (function(payload) {
+            var run = function() {
+                // Lift first: it moves content INTO the visible page, and the flag
+                // banner's self-limiting check reads what is visible — so a flag quoted
+                // inside a lifted note must be visible before that check runs.
+                CommonRenderer.liftHiddenAxisNotes();
+                CommonRenderer.renderUnseenRiskFlags(payload);
+            };
+            var view = document.getElementById('asset-view');
+            run();
+            if (!view || typeof MutationObserver !== 'function') return;
+            var timer = null;
+            var obs = new MutationObserver(function() {
+                if (timer) clearTimeout(timer);
+                timer = setTimeout(run, 350);
+            });
+            obs.observe(view, { childList: true, subtree: true, characterData: true });
+            // Hard stop: the banner must not be a permanent observer on a live page.
+            setTimeout(function() {
+                obs.disconnect();
+                if (timer) clearTimeout(timer);
+                run();
+            }, 12000);
+        })(data);
+
+    } catch (e) {
+        showError('Could not load ' + slug + ': ' + e.message);
+    }
+}
+
+function showError(msg) {
+    document.getElementById('index-view').classList.add('hidden');
+    document.getElementById('asset-view').classList.add('hidden');
+    document.getElementById('error-view').classList.remove('hidden');
+    // Reset the heading: showStagedPending() repaints it, and this is an SPA —
+    // a real load failure after visiting a staged URL must not inherit the
+    // amber "STAGED" wording.
+    var head = document.getElementById('error-heading');
+    if (head) {
+        head.textContent = 'Failed to load data';
+        head.className = 'text-slate-400 text-lg mb-2';
+    }
+    document.getElementById('error-message').textContent = msg;
+}
+
+// A staged asset whose producer feed has not landed yet. Says which file is
+// missing, because "not found" without a filename is indistinguishable from a
+// typo'd slug — and a typo'd slug is what an UNREGISTERED name must look like.
+function showStagedPending(slug, sourceSlug) {
+    document.getElementById('index-view').classList.add('hidden');
+    document.getElementById('asset-view').classList.add('hidden');
+    document.getElementById('error-view').classList.remove('hidden');
+    var head = document.getElementById('error-heading');
+    if (head) {
+        head.textContent = '⚠️ STAGED — not finished, not linked';
+        head.className = 'text-amber-700 text-lg mb-2 font-semibold';
+    }
+    document.getElementById('error-message').textContent =
+        slug + ' is registered so its producer feed can reach the dashboard, but ' +
+        'data/' + sourceSlug + '_backing.json has not been published yet. ' +
+        'This page is deliberately absent from the asset index and carries no figures. ' +
+        'Do not cite this URL.';
+}
+
+// ========================================
+// Init + auto-refresh
+// ========================================
+function route() {
+    var slug = getAssetSlug();
+    if (slug) {
+        renderAsset(slug);
+    } else {
+        renderIndex();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    route();
+    setInterval(route, REFRESH_INTERVAL);
+});

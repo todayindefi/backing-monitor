@@ -1,0 +1,49 @@
+{
+  "schema_version": "contract-overlay/1",
+  "producer": "riskanalyst",
+  "asset": "syrupusdc",
+  "as_of": "2026-09-07T00:00:00Z",
+  "contract": {
+    "structural_score": 4.5,
+    "structural_score_source": "riskAnalyst:authored",
+    "structural_score_generated_at": "2026-09-07T00:00:00Z",
+    "structural_score_basis": "Contract & Admin 4.5 holds on the shared September 6 authority walk: two-key governor role capture, three-key undelayed registered-implementation manager upgrades, and one-key withdrawal processing/upgrade discretion. Component audit/source assurance is documented separately and does not offset authority risk. Reviewed October 13; live Safe memberships, bridge pool migration and all runtime-bytecode matches were not remeasured.",
+    "code_facts": [
+      "⚠️ CORRECTED 2026-10-03 — this read \"8+ published audits across the Maple v2 corpus; $1M bug bounty\" and BOTH figures overstated, against this file's own `assurance` block measured the same day. The bounty is the Immunefi MAPLE program, maximum USD 500,000 (version read 2026-04-21, 43 listed assets) — not $1M. \"8+\" is a count of Maple protocol engagements, not of engagements covering this pool, and the Dec-2022 and Jun-2023 reviews predate syrupUSDC entirely. [security_analyst measurement]",
+      "ERC-4626 standard vault on a multi-year battle-tested MapleGlobals/PoolManager codebase; ~3-year clean record on the Syrup product line, zero principal losses. [published document]",
+      "⚠️ Upgrades are bounded to REGISTERED implementations: MapleProxyFactory gates registerImplementation / enableUpgradePath / setDefaultVersion behind onlyGovernor, so three keys buy a rollback to a Maple-published version, not new code. [riskAnalyst assessment]",
+      "⚠️ That cap does NOT reach the exit. The redemption-queue powers on the pause layer — not processing, and flipping a holder to manual withdrawal — need no implementation at all. [riskAnalyst assessment]",
+      "⚠️ Maple attests the custody EOAs are MPC wallets under policy controls (2026-05-04). CREDITED for key-compromise cost and NOT credited against the liveness path — MPC protects the key from theft, not the holder from the operator declining to act. [riskAnalyst assessment]",
+      "⚠️ The attestation is NOT on-chain-verifiable: eth_getCode == 0x rules out a Safe but cannot distinguish MPC from a single key. Do not read walk field `threshold: 1` as a measured compromise cost on these holders. [riskAnalyst assessment]"
+    ],
+    "authority_note": "September 6 security_analyst hand walk is the authority source. October 13 producer snapshots retain the same named governor/securityAdmin/delegate addresses. This refresh does not imply a new role-holder or signer-membership walk.",
+    "cross_axis": [
+      "Borrower concentration and collateral-asset correlation belong to Dependencies; collateral valuation evidence belongs to Backing.",
+      "Maple operator/entity record belongs to Issuer. Different Pool Delegate EOA addresses do not justify different contract scores when powers/thresholds are the same."
+    ],
+    "provenance_note": "⚠️ SOURCE-OF-RECORD RESTORED 2026-09-14. This file was recreated in riskAnalyst/data/axes/ from the copy serving at backing-monitor/data/, which had been the ONLY copy since 2026-09-07/08. ⚠️ HOW IT GOT THERE: it was authored, synced, committed on the consumer side, and then ceased to exist on the producer side -- it has NEVER been in riskAnalyst's git history at any path. Three gaps let that happen and each is recorded so none is mistaken for the others: (1) the axis-5 spec's ownership table gives the AUTHORITY half a source AND a destination (security_analyst/topology/... -> backing-monitor/data/...) and gives OUR half only a destination, so it never named an authoring location; (2) sync_and_push.sh's SLUGS x SUFFIXES x ROOTS loop warns on COLLISION and on an unpublished marker but has NO branch for ABSENCE, so a registered slug whose source has vanished is silent -- the script's own comments argue against exactly this twice, including 'a missing source must be LOUD' and 'the failure was silent because the stale copy was committed'; (3) riskAnalyst's pre-commit hook exited unless assets/*.md was staged, so nothing guarded data/axes/ at all until 2026-09-14. ✅ CONTENT IS UNCHANGED FROM THE SERVING COPY AND THE SCORE WAS GATED BEFORE RESTORING: structural_score was checked against the report's frontmatter and matched for all seven. NOTHING WAS RE-DERIVED -- this restores a source of record, it does not re-open a judgement.",
+    "assurance": {
+      "as_of": "2026-10-03",
+      "source": "security_analyst/audits/syrupusdc-contract-half-assurance-2026-10-03.md",
+      "headline": "⚠️⚠️ '8+ TOTAL AUDITS ACROSS THE V1 AND V2 LIFECYCLE' IS NOT EIGHT syrupUSDC AUDITS, AND THE REASON IS TEMPORAL RATHER THAN MERELY INHERITED: syrupUSDC DID NOT EXIST when the three December 2022 V2 launch reviews or the two June 2023 reviews occurred. Those engagements reviewed reusable pool, manager, withdrawal and loan code later used by syrupUSDC. ⚠️ An audit cannot have covered an asset that post-dates it.",
+      "engagements": {
+        "dec_2022_v2_launch_x3": "Predate syrupUSDC. Reviewed reusable V2 components, not this product.",
+        "jun_2023_x2": "Predate syrupUSDC. Same.",
+        "may_aug_2024_syrup_router_and_utilities": "⚠️ The ONLY reports that name Syrup and review a user-facing syrupUSDC path — and they do NOT audit the core pool as a deployed product.",
+        "dec_2024_three_sigma_and_0xmacro": "✅ The strongest match to the current pool / manager / strategy code.",
+        "sep_2025_pair": "Examine GovernorTimelock roles."
+      },
+      "upgrade_path_and_admin_roles": "⚠️⚠️ NOT COVERED, AND ONE REPORT DISCLAIMS IT EXPLICITLY. No reviewed report audits the live syrupUSDC authority topology — in particular the TWO DISTINCT poolDelegate-derived EOA control paths recorded in the admin walk. Reports examine access-control LOGIC, and the September 2025 pair examine GovernorTimelock roles, but neither establishes who controls the live privileged addresses. ⚠️ AND TRAIL OF BITS EXPLICITLY STATES it reviewed the V2 upgrade mechanism only to understand it and 'did not look for security flaws.'",
+      "prose_correction": "⚠️ THIS REPORT SAID: 'Both Spearbit and Trail of Bits on the v2/Syrup contracts is a notable positive — the audit profile of a well-funded, security-conscious protocol.' Trail of Bits DISCLAIMED looking for security flaws in the upgrade mechanism, so citing it as a positive on that surface is wrong, not merely unscoped.",
+      "audited_equals_deployed": "October 3 security brief confirms SHA-256 matches of current public Pool/PoolManager/cover/deployer/initializer/storage source files to the December 2024 0xMacro report. No reproducible metadata-aware compile/runtime comparison across all live components was performed. Source match is stronger than a generic audit count, but is not full deployment proof.",
+      "bounty": "⚠️ Immunefi MAPLE program — not a syrupUSDC program. Live from 2022-01-25, version read 2026-04-21, maximum USD 500,000. Lists 43 contract assets and 10 impacts, including MapleGlobals proxy 0x804a6f5f667170f545bf14e5ddb48c70b788390c, PoolManager factory 0xe463cd473ecc1d1a4ecf20b62624d84dd20a8339 and PoolManager implementation 0xfe02be1ad28efd8e3dd6f29c402b244c2a258b8.",
+      "formal_verification": "NOT ESTABLISHED. No formal-verification claim exists for syrupUSDC, PoolManager, Pool or the deployed system in Maple's reports or the current public pool-v2 repository. ⚠️ Dedaub's 2021 V1 report mentions symbolic execution and Maple documents per-block Tenderly invariant monitoring — neither is a published mathematical proof, and neither should be cited as formal verification. No Certora/Halmos-style specification or proof result located.",
+      "test_coverage": "No published figure located for syrupUSDC.",
+      "effect_on_score": "NONE on the 4.5. The spec's ANTI-OFFSET RULE applies — the admin half caps. ⚠️ But the direction is worth stating: this evidence REMOVES a credit the report was taking rather than adding one, and the uncovered surface is precisely the two-EOA poolDelegate path the admin walk found.",
+      "status": "Measured component/source assurance from security_analyst October 3 brief; full deployed-bytecode and live role topology assurance remain partial."
+    },
+    "refresh_scope": "Targeted source alignment reviewed October 28. Authority observation remains September 6 and assurance October 3. Current named governor/securityAdmin/delegate match October 13; membership and bridge roles not re-enumerated. No score change.",
+    "bridge_migration_note": "Maple September 28 announcement starts CCIP 2.0 on September 29, staged through Q4. Token addresses stay fixed but pools change. Old bridge-pool authority observations do not verify replacement pools. Reconcile per-chain registry with live role holders before treating the migration as audited/verified. https://maple.finance/insights/syrupusd-assets-are-upgrading-to-chainlink-ccip-2-0"
+  },
+  "reviewed_at": "2026-10-28T00:00:00Z"
+}

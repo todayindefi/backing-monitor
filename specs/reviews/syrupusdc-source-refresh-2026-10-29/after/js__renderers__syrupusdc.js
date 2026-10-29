@@ -1,0 +1,3585 @@
+/**
+ * syrupUSDC renderer — six-axis, section-native layout.
+ *
+ * CommonRenderer owns the six canonical axis sections and their measured
+ * panels. This renderer adds the richer Syrup-specific panels to each axis's
+ * `*-extra-panels` slot. It must never build a second axis spine in
+ * #asset-specific-panels: that makes anchor navigation and provenance point at
+ * empty hidden sections while the useful content sits in an unrelated dump.
+ *
+ * Render order (each panel keeps its own content; this layer just groups + heads):
+ *   §1 Peg          — common market-vs-NAV panel + history
+ *   §2 Backing      — common coverage/risk panels · Backing · Loan Book
+ *                     Health · Strategy contract slots · Yield
+ *   §3 Liquidity    — free buffer / queue / DEX slippage · Liquidity Layer
+ *                     · Repayment Schedule
+ *   §4 Dependencies — Borrower Concentration (upstream credit)
+ *                     · Cross-Pool Family
+ *   §5 Contract     — Trust Stack · Multi-Chain Distribution
+ *   §6 Issuer       — common editorial issuer panel
+ *
+ * Suppresses the common-header Backing Breakdown table + Allocation pie panel for
+ * syrupUSDC only — they're replaced by §3 Backing's asset-composition table + donut.
+ * OUSD / crvUSD / USDD don't run this renderer, so they keep the common layout.
+ */
+
+// Static metadata for the Collateral Mix sub-block + loan-table column.
+// ⚠️ TWO ROWS THE PAYLOAD CALLS `category: "unknown"` ARE IN HERE DELIBERATELY,
+// and neither is a guess. riskAnalyst's 2026-09-25 ruling establishes both: WBTC
+// is BTC price risk ("the category field understates correlated exposure by 2.57
+// points and a consumer trusting it gets it wrong"), and USDtb sits inside the
+// arithmetic that reconciles the liquidity bucket to `principal_liquidity_usd`.
+// ⚠️ ISSUERS ARE LEFT BLANK ON BOTH — BitGo and Ethena are not named for these
+// positions on any surface I can read, and an issuer label is a claim about who
+// a depositor is exposed to. USDG (a $5 dust row, also "unknown") is NOT added:
+// nothing sources it, and inventing a third classification to tidy a table is
+// how a renderer becomes an author.
+var SYRUP_COLLATERAL_META = {
+    BTC:   { category: 'crypto',     issuer: '—',           color: '#f59e0b' },
+    WBTC:  { category: 'crypto',     issuer: '—',           color: '#f59e0b' },
+    USDtb: { category: 'stablecoin', issuer: '—',           color: '#64748b' },
+    cbBTC: { category: 'crypto',     issuer: 'Coinbase',    color: '#f59e0b' },
+    ETH:   { category: 'crypto',     issuer: '—',           color: '#6366f1' },
+    XRP:   { category: 'crypto',     issuer: '—',           color: '#0ea5e9' },
+    HYPE:  { category: 'crypto',     issuer: '—',           color: '#06b6d4' },
+    USDC:  { category: 'stablecoin', issuer: 'Circle',      color: '#3b82f6' },
+    USDT:  { category: 'stablecoin', issuer: 'Tether',      color: '#10b981' },
+    PYUSD: { category: 'stablecoin', issuer: 'Paxos',       color: '#a855f7' },
+    USTB:  { category: 'rwa',        issuer: 'Superstate',  color: '#ec4899' }
+};
+
+// Editorial descriptions for known strategy implementation contracts.
+// Keyed by `strategy_impl_name` (the analyzer reads this from the strategy
+// implementation's `name()` getter when available). Used by the Backing
+// panel's dormant-sleeve sub-block; unknown impls degrade to "configured
+// DeFi sleeve" with the truncated address.
+// Editorial descriptions for known strategy implementation contracts.
+// FixedTermLoanManager is a Maple-internal alternate loan-type slot
+// (fixed-term + amortization), NOT an external-DeFi sleeve — keep its
+// description distinct from Aave/Sky to avoid mislabeling its activation
+// risk profile. Maple v1 (2021-22) was all fixed-term; Syrup standardized
+// on OpenTermLoanManager to avoid the v1 refinancing-cliff dynamics.
+var SYRUP_STRATEGY_IMPL_INFO = {
+    'MapleAaveStrategy':    'Aave V3 stablecoin pool wrapper',
+    'MapleSkyStrategy':     'Sky / sUSDS DSR wrapper',
+    'FixedTermLoanManager': 'alternate loan-type slot — fixed-term loans within Maple; currently unused (Syrup standardized on open-term)'
+};
+
+// Active-vs-dormant threshold for non-LoanManager DeFi sleeves. Below this
+// the sleeve renders as DORMANT in its own muted sub-block; at-or-above it
+// rounds back into the main strategy table. PegTracker fires a risk flag
+// at the same threshold so activation is also visible in §Risk Flags.
+// Shown on every collateral cell whose below-par read the pool's own on-chain
+// credit alarm contradicts. Wording is the producer's verdict, not ours.
+var SYRUP_UNCORROBORATED_TITLE = 'Reported below par in Maple GraphQL; collateral valuation and custody scope remain uncorroborated. Zero recognized losses and accounting PCR do not resolve the reading or independently establish a shortfall.';
+
+var SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD = 100000;
+
+// ⚠️ REMOVED 2026-10-03: SYRUP_AUDIT_INFO WAS OUR CLAIM AND EVERY PART OF IT WAS WRONG.
+// It rendered, visible and uncollapsed, in the Trust Stack panel on both pools:
+//
+//   "Audits: Spearbit + Trail of Bits + 6 others (8+ total) · Bug bounty: Immunefi $1M+"
+//
+//   $1M+          the programme maximum is $500,000 (security_analyst, 2026-10-03,
+//                 Immunefi version 2026-04-21). "$1M+" asserts a FLOOR above the real
+//                 MAXIMUM, so it was not merely doubled — it was wrong in the direction
+//                 that flatters.
+//   Maple's       the bounty is a Maple PROTOCOL programme covering 43 listed assets,
+//                 not a syrupUSDC one. A protocol bounty on a product page needs that
+//                 distinction and had none.
+//   8+ total      five of those reviews (three Dec 2022, two Jun 2023) PREDATE this
+//                 asset's existence. An audit cannot have covered something that did not
+//                 exist when it ran — a temporal argument, so relabelling cannot save it.
+//   Trail of Bits their own report states it reviewed the V2 upgrade mechanism only to
+//                 understand it and "did not look for security flaws". The firm NAME is
+//                 what a reader recognises; the disclaimer is what they do not read.
+//
+// ⚠️ The comment said "sourced from the public risk report" — we copied a report that has
+// since been corrected into a HARDCODED CONSTANT, so no producer sync could ever fix it.
+// riskAnalyst corrected the same figure in four payloads today and none of them reached
+// this line. That is the rule the apyx trust-banner incident already set: do not author
+// security, custody or attestation claims in reader-facing copy.
+//
+// ⚠️ AND NOTHING REPLACES IT, DELIBERATELY. §4.0 would have us declare the absence, but
+// the declared form is "no audit published" and that would be a NEW false claim — audits
+// do exist, they are simply not ours to assert unsourced. riskAnalyst now publishes an
+// `assurance` block on axis 5 (contract) for both pools, under an anti-offset rule where
+// it correctly moves no score; it is neither synced nor adopted here yet, and adopting it
+// is its own job with its own care. Until then this panel says nothing about assurance,
+// and the report link already on the page is where a reader gets it. Recorded in
+// specs/asset-backlog.md.
+
+// §2b Liquidity Layer — functional-sleeve definitions. Each liquidity
+// position is grouped by *what it's doing* (parked cash vs deployed
+// market-making vs RWA), not just "how much". `custodied` sleeves get the
+// on-chain reconciliation column; AMM/lending do not (LP-token / protocol
+// balances aren't the raw stablecoin). Keyed by sleeve id; see
+// SyrupUSDCRenderer._liquiditySleeveKey for the meta/category → id mapping.
+var SYRUP_LIQUIDITY_SLEEVES = {
+    parked:  { label: 'Parked reserve',          axis: 'Issuer + custody',                  readiness: 'T+0 · custodied',                    custodied: true },
+    amm:     { label: 'Market-making (AMM LP)',  axis: 'Smart-contract + IL + reflexivity', readiness: 'Instant · slippage + reflexive haircut', custodied: false },
+    rwa:     { label: 'RWA / T-bills',            axis: 'Issuer + T+1 settlement',           readiness: 'T+1 · settlement',                   custodied: true },
+    lending: { label: 'Yield strategy (lending)', axis: 'Protocol',                          readiness: 'varies',                             custodied: false }
+};
+
+var SyrupUSDCRenderer = {
+
+    // ----- helpers --------------------------------------------------------
+    _freeLiquidityPct: function(s) {
+        if (s.free_liquidity_pct !== null && s.free_liquidity_pct !== undefined) return s.free_liquidity_pct;
+        if (s.deployment_ratio_pct !== null && s.deployment_ratio_pct !== undefined) return 100 - s.deployment_ratio_pct;
+        return null;
+    },
+
+    _ethLink: function(addr) {
+        if (!addr) return '';
+        return '<a href="https://etherscan.io/address/' + addr + '" target="_blank" class="text-blue-500 hover:underline text-xs" title="' + addr + '">↗</a>';
+    },
+
+    _truncAddr: function(addr) {
+        if (!addr) return '-';
+        return addr.slice(0, 6) + '...' + addr.slice(-4);
+    },
+
+    _statusEmoji: function(status) {
+        var s = (status || '').toLowerCase();
+        if (s === 'healthy' || s === 'active') return '🟢';
+        if (s === 'impaired') return '🟡';
+        if (s === 'called') return '🟠';
+        if (s === 'default' || s === 'defaulted') return '🔴';
+        return '';
+    },
+
+    // Underlying-asset symbol for the pool — drives "USDT per share",
+    // "Free USDT", "USDT est." labels on the syrupUSDT page so they match
+    // the actual deposit token rather than hardcoding "USDC".
+    _underlying: function(slug) {
+        return slug === 'syrupusdt' ? 'USDT' : 'USDC';
+    },
+
+    // Position-type classifier — works directly off the analyzer's
+    // position_type field; falls back to a static asset-name heuristic for
+    // older snapshots that haven't been re-emitted with the new schema yet.
+    // Loans = crypto-overcollateralized third-party credit. Liquidity =
+    // pool-owned positions in stablecoin/RWA/AMM venues (functionally NOT
+    // third-party credit, even though they're routed through the
+    // LoanManager as accounting wrappers).
+    _isLoan: function(loan) {
+        if (!loan) return false;
+        if (loan.position_type) return loan.position_type === 'loan';
+        var asset = loan.collateral && loan.collateral.asset;
+        return SyrupUSDCRenderer._isLoanAsset(asset);
+    },
+    _isLiquidity: function(loan) {
+        if (!loan) return false;
+        if (loan.position_type) return loan.position_type === 'liquidity';
+        var asset = loan.collateral && loan.collateral.asset;
+        return asset && !SyrupUSDCRenderer._isLoanAsset(asset);
+    },
+    _escapeAttrSafe: function(v) {
+        return String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    },
+
+    _isLoanAsset: function(asset) {
+        // LAST-RESORT name heuristic — crypto-overcollat collateral assets;
+        // anything else (PYUSD, USTB, USDC, USDT, sUSDS, etc.) reads as
+        // liquidity-layer. It is a closed list, so every collateral asset
+        // Maple adds is silently misfiled as liquidity until someone edits it:
+        // WBTC and USDtb are both loan collateral and both missing here.
+        // Prefer _isLoanAssetIn() with a map harvested from position_type.
+        return ['BTC', 'cbBTC', 'ETH', 'XRP', 'HYPE'].indexOf(asset) >= 0;
+    },
+
+    // Asset -> position_type, harvested from the loans[] rows, which carry the
+    // analyzer's authoritative `position_type`. The by_asset / family rollups
+    // carry no position_type of their own, so without this they fall back to
+    // the closed name list above — which is how a $25M WBTC LOAN ended up
+    // counted inside the liquidity layer: a "parked reserve $25.0M" sleeve
+    // header whose only member row was PYUSD $1.5K, a "top asset WBTC 131.6%
+    // of layer" that divided by a total correctly excluding it, and a
+    // cross-pool liquidity table summing to 132%.
+    // Cross-check that this map is right, not just different: with it, the
+    // per-class row sums reconcile EXACTLY to the producer's published
+    // aum_loans_usd / aum_liquidity_usd. The name heuristic does not.
+    // Accepts one or more loan_book objects (the family view has two pools).
+    _assetPositionTypes: function(/* lb, lb, ... */) {
+        var map = {};
+        Array.prototype.forEach.call(arguments, function(lb) {
+            ((lb && lb.loans) || []).forEach(function(l) {
+                var a = l.collateral && l.collateral.asset;
+                if (!a || !l.position_type) return;
+                // An asset seen as both types is left unresolved, so the
+                // caller falls back rather than picking a side.
+                if (map[a] && map[a] !== l.position_type) map[a] = 'mixed';
+                else if (!map[a]) map[a] = l.position_type;
+            });
+        });
+        return map;
+    },
+
+    _isLoanAssetIn: function(asset, typeMap) {
+        var t = typeMap && typeMap[asset];
+        if (t === 'loan') return true;
+        if (t === 'liquidity') return false;
+        return SyrupUSDCRenderer._isLoanAsset(asset);
+    },
+
+    // Human-readable relative age: <60s "Just now", <60min "N minutes ago",
+    // <24h "N hours ago", <7d "N days ago", >=7d absolute YYYY-MM-DD.
+    // Used by the queue-based withdrawal UI for last-fill / head-age cells.
+    _formatRelativeAge: function(seconds) {
+        if (seconds == null) return '—';
+        var s = Math.max(0, Math.floor(seconds));
+        if (s < 60) return 'Just now';
+        if (s < 3600) return Math.floor(s / 60) + ' minutes ago';
+        if (s < 86400) {
+            var h = Math.floor(s / 3600);
+            return h + (h === 1 ? ' hour ago' : ' hours ago');
+        }
+        if (s < 86400 * 7) {
+            var dys = Math.floor(s / 86400);
+            return dys + (dys === 1 ? ' day ago' : ' days ago');
+        }
+        var dt = new Date(Date.now() - s * 1000);
+        return dt.toISOString().slice(0, 10);
+    },
+
+    _statusFlagClass: function(status) {
+        var s = (status || '').toLowerCase();
+        if (s === 'healthy' || s === 'active') return 'text-green-600';
+        if (s === 'impaired') return 'text-amber-600';
+        if (s === 'called') return 'text-orange-600';
+        if (s === 'default' || s === 'defaulted') return 'text-red-600';
+        return '';
+    },
+
+    _suppressCommonPanels: function(data) {
+        // §1 Backing absorbs the breakdown-table + allocation pie. Hide the
+        // common-header panels and stretch the (now-orphan) Risk Flags wrapper
+        // to span the full row width.
+        var bd = document.getElementById('breakdown-table');
+        if (bd) {
+            var p = bd.closest('.panel');
+            if (p) p.style.display = 'none';
+        }
+        var pie = document.getElementById('pie-chart');
+        if (pie) {
+            var p2 = pie.closest('.panel');
+            if (p2) p2.style.display = 'none';
+        }
+        var risk = document.getElementById('risk-flags');
+        if (risk) {
+            var wrapper = risk.closest('.panel').parentElement;
+            if (wrapper && !wrapper.classList.contains('lg:col-span-3')) {
+                wrapper.classList.add('lg:col-span-3');
+            }
+        }
+        // The canonical six sections remain visible and populated by CommonRenderer.
+        // Only the generic backing breakdown/pie are suppressed because the Syrup
+        // backing panel replaces them with a loans-vs-liquidity composition view.
+    },
+
+    // Lightweight axis section-header divider for the bespoke panel stream —
+    // reuses the common layer's .axis-head / .axis-num / .axis-title / .axis-sub
+    // visual style so the in-#asset-specific-panels headers match the band above.
+    _axisHead: function(num, title, sub) {
+        return '<div class="axis-head">' +
+            '<span class="axis-num">' + num + '</span>' +
+            '<span class="axis-title">' + title + '</span>' +
+            (sub ? '<span class="axis-sub">' + sub + '</span>' : '') +
+        '</div>';
+    },
+
+    // §1 Peg — syrup HAS a real secondary market-vs-NAV signal (CoinGecko),
+    // it's just small (≈ −0.05% usdc / −0.10% usdt). Render a proper Peg panel
+    // mirroring CommonRenderer._renderPegSection's metric row (Market price /
+    // NAV / Premium-Discount % / Status), plus a peg-vs-NAV history chart.
+    // The chart canvas (#peg-chart) is wired by reusing
+    // CommonRenderer._renderPegChart(data, history) — see _loadPegChart, which
+    // fetches the backing-history file (data.peg.history_ref) AFTER the panel
+    // HTML is in the DOM (the bespoke render() only receives `data`, not the
+    // history). Primary redemption is still at NAV via Maple's queue; the
+    // secondary discount is the instant-but-thin path, now charted here.
+    _renderPegPanel: function(data) {
+        var peg = (data && data.peg) || {};
+        var pct = peg.premium_discount_pct;
+        var mkt = peg.market_price;
+        var nav = peg.nav;
+        var fmtP = function(v) { return v != null ? v.toFixed(4) : '—'; };
+
+        // Mirror common.js helpers when present; degrade gracefully if the
+        // common layer isn't loaded for some reason.
+        var hasCommon = (typeof CommonRenderer !== 'undefined');
+        var st = hasCommon ? CommonRenderer.pegStatusClass(pct) :
+                 (pct == null ? 'unknown' : Math.abs(pct) < 0.25 ? 'ok' : Math.abs(pct) < 0.5 ? 'warn' : 'critical');
+        var pctCls = hasCommon ? CommonRenderer.pegPctClass(st) :
+                 (st === 'ok' ? 'text-green-600' : st === 'warn' ? 'text-amber-600' : st === 'critical' ? 'text-red-600' : 'text-slate-500');
+        var pctText = hasCommon ? CommonRenderer.pegPctText(pct, 3) :
+                 (pct == null ? '—' : (pct >= 0 ? '+' : '') + pct.toFixed(3) + '%');
+        var statusLabel = hasCommon ? CommonRenderer.pegStatusLabel(st) :
+                 (st === 'ok' ? 'Near reference' : st === 'warn' ? 'Moderate deviation' :
+                  st === 'critical' ? 'Material deviation' : '—');
+
+        var metricRow =
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Market price</div>' +
+                    '<div class="text-lg font-bold font-mono">' + fmtP(mkt) + '</div></div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">NAV / theoretical</div>' +
+                    '<div class="text-lg font-bold font-mono">' + fmtP(nav) + '</div></div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Premium / discount</div>' +
+                    '<div class="text-lg font-bold font-mono ' + pctCls + '">' + pctText + '</div></div>' +
+                '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
+                    '<div class="text-lg font-bold ' + pctCls + '">' + statusLabel + '</div></div>' +
+            '</div>';
+
+        // Chart canvas is always emitted; _loadPegChart fetches the history and
+        // paints a bespoke TWO-line chart (market price + historical NAV), or
+        // removes the slot if no history is available (e.g. data not yet synced
+        // with peg_market_price fields). Canvas uses a UNIQUE id (#syrup-peg-chart)
+        // to avoid colliding with the hidden common-section #peg-chart, which
+        // would otherwise leave this canvas 0×0 / let the common layer paint it.
+        var chartBlock = '<div id="syrup-peg-chart-slot" class="chart-container"><canvas id="syrup-peg-chart"></canvas></div>';
+
+        var note = peg.note ||
+            'Primary redemption is at NAV via Maple\'s withdrawal queue; secondary trades at a small discount (charted).';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Peg Performance</div>' +
+            metricRow +
+            chartBlock +
+            '<p class="text-xs text-slate-500 mt-3 leading-relaxed">' + note + '</p>' +
+        '</div>';
+    },
+
+    // Fetch the peg history (the pool's own backing-history file) and paint a
+    // bespoke TWO-line Chart.js line chart on #syrup-peg-chart:
+    //   • Market price — entries[].peg_market_price (indigo)
+    //   • NAV          — entries[].peg_theoretical_price (slate)
+    // We deliberately plot peg_theoretical_price for the NAV line, NOT the
+    // on-chain `nav` field: `nav` carries a historical ~3.7% early discrepancy
+    // (and on syrupUSDT is only populated for the latest entry) that would draw
+    // a fake premium; peg_theoretical_price is consistent with the market
+    // series. This replaces the prior CommonRenderer._renderPegChart call (flat
+    // NAV reference line) — the moving NAV line makes the small gap visible.
+    // Mirrors _loadCrossPoolFamily's fetch pattern. Runs after the panel HTML
+    // is in the DOM so the canvas exists. If the fetch yields no usable series,
+    // the slot is removed so the panel degrades to metric-row-only.
+    _loadPegChart: function(data) {
+        var slot = document.getElementById('syrup-peg-chart-slot');
+        if (!slot) return;
+        var peg = (data && data.peg) || {};
+        var mktField = peg.history_field || 'peg_market_price';
+        var navField = 'peg_theoretical_price';
+        var ref = peg.history_ref ||
+                  ((data.asset_slug || 'syrupusdc') + '_backing_history.json');
+        if (typeof Chart === 'undefined') { slot.remove(); return; }
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + ref + '?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                var entries = hist && Array.isArray(hist.entries) ? hist.entries : null;
+                // Keep only points where BOTH series are present, so the two
+                // lines share an identical x-axis and the gap reads cleanly.
+                var pts = (entries || []).filter(function(e) {
+                    return e && e[mktField] != null && e[navField] != null && e.timestamp;
+                });
+                if (!pts.length) { slot.remove(); return; }
+                SyrupUSDCRenderer._paintPegChart(pts, mktField, navField);
+            })
+            .catch(function() { slot.remove(); });
+    },
+
+    // Build the bespoke 2-line peg chart on #syrup-peg-chart. Uses
+    // window._syrupPegChart for teardown so it never touches the common
+    // layer's window._pegChart / #peg-chart instance.
+    _paintPegChart: function(pts, mktField, navField) {
+        var ctx = document.getElementById('syrup-peg-chart');
+        if (!ctx) return;
+        var labels = pts.map(function(e) {
+            return new Date(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z');
+        });
+        var mkt = pts.map(function(e) { return e[mktField]; });
+        var nav = pts.map(function(e) { return e[navField]; });
+
+        if (window._syrupPegChart) window._syrupPegChart.destroy();
+        window._syrupPegChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: labels, datasets: [
+                {
+                    label: 'Market price',
+                    data: mkt,
+                    borderColor: '#6366f1',
+                    backgroundColor: 'rgba(99, 102, 241, 0.06)',
+                    fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2
+                },
+                {
+                    label: 'NAV',
+                    data: nav,
+                    borderColor: '#94a3b8',
+                    backgroundColor: 'rgba(148, 163, 184, 0.06)',
+                    fill: false, tension: 0.3, pointRadius: 0, borderWidth: 2,
+                    borderDash: [5, 4]
+                }
+            ] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: {
+                    x: { type: 'time', time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                         grid: { display: false }, ticks: { maxTicksLimit: 8, font: { size: 11 } } },
+                    // y zoomed to the data (no forced baseline) so the small
+                    // market-vs-NAV gap is actually visible.
+                    y: { grid: { color: '#f1f5f9' },
+                         ticks: { font: { size: 11 }, callback: function(v) { return v.toFixed(3); } } }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top', labels: { boxWidth: 12, font: { size: 11 } } },
+                    tooltip: { callbacks: { label: function(c) {
+                        return c.dataset.label + ': ' + Number(c.raw).toFixed(4);
+                    } } }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    // ----- pre-render hook (fires before common summary cards render) ----
+    // Swaps the static "Pool Coverage Ratio" card (always 100% by ERC-4626
+    // design — a binary loss-recognition alarm, not a metric) for the
+    // dynamic init-level Pool Collateral Ratio (Maple's headline coverage
+    // metric, weighted-avg across active loans). PCR is demoted to an
+    // inline status pill below the value, with a banner-prefix when
+    // unrealized losses are recognized or PCR drops below 100.
+    preRender: function(data) {
+        var specific = data.asset_specific || {};
+        if (specific.type !== 'syrupusdc' && specific.type !== 'syrupusdt') return;
+        var lb = specific.loan_book || {};
+        var cs = lb.collateral_summary || {};
+        var poolCR = cs.pool_collateral_ratio_pct;
+        if (poolCR == null) return;  // graceful — keep existing override
+
+        var vs = specific.vault_state || {};
+        var pcr = vs.pcr_principal_pct;
+        var ul  = vs.unrealized_losses || 0;
+        var alarm = (ul > 0) || (pcr != null && pcr < 100.0);
+
+        // Color bands per spec: >=130 green, 110-130 amber, <110 red.
+        var cls = poolCR >= 130 ? 'positive' :
+                  poolCR >= 110 ? 'warning'  :
+                                  'negative';
+
+        var pillCls, pillDot, pillText;
+        if (alarm) {
+            pillCls  = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 mt-2';
+            pillDot  = '<span class="w-1.5 h-1.5 rounded-full bg-red-500"></span>';
+            var pcrTxt = (pcr != null) ? CommonRenderer.formatPercent(pcr, 2) : '—';
+            var ulTxt  = ul > 0 ? ' · ' + CommonRenderer.formatCurrency(ul) + ' losses recognized' : '';
+            pillText = 'PCR ' + pcrTxt + ulTxt;
+        } else {
+            pillCls  = 'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-500 mt-2';
+            pillDot  = '<span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>';
+            pillText = 'PCR ' + (pcr != null ? CommonRenderer.formatPercent(pcr, 2) : '100.00%') + ' · no losses recognized';
+        }
+        var pillHtml = '<div><span class="' + pillCls + '">' + pillDot + ' ' + pillText + '</span></div>';
+
+        var bannerHtml = alarm ?
+            '<div class="risk-flag risk-critical mt-1 mb-1 text-xs"><strong>Loss recognized:</strong> PCR ' +
+                (pcr != null ? CommonRenderer.formatPercent(pcr, 2) : '—') +
+                (ul > 0 ? ' · ' + CommonRenderer.formatCurrency(ul) + ' unrealized losses' : '') +
+            '</div>' : '';
+
+        // Replace the existing "Pool Coverage Ratio" override with the
+        // init-level Pool Collateral Ratio override.
+        specific.card_overrides = specific.card_overrides || {};
+        specific.card_overrides['Collateral Ratio'] = {
+            label: 'Pool Collateral Ratio',
+            value: CommonRenderer.formatPercent(poolCR, 2),
+            subtext: 'Weighted-avg init-level coverage across active loans',
+            cls: cls,
+            prefix_html: bannerHtml,
+            extra_html: pillHtml
+        };
+        // Surplus / Deficit is total_assets - (free + strategy_aum) — a
+        // sanity check that should always be 0; the few-dollar non-zero
+        // values are float-rounding noise, not a real signal. Hide it.
+        specific.card_overrides['Surplus / Deficit'] = { hidden: true };
+
+        // Re-label NAV's "USDC per share" subtext for the syrupUSDT page.
+        // The card is baked into extra_summary_cards by the analyzer with
+        // a hardcoded subtext; rewrite it here so the deposit-asset symbol
+        // matches the pool.
+        var underlying = SyrupUSDCRenderer._underlying(data.asset_slug);
+        if (Array.isArray(specific.extra_summary_cards)) {
+            specific.extra_summary_cards.forEach(function(c) {
+                if (c && c.label === 'NAV') {
+                    c.subtext = underlying + ' per share';
+                }
+            });
+        }
+
+        // Promote brand-wide live APY to a top-strip card with a 30d
+        // sparkline. Sourced from yield.apy_history.entries (single Maple
+        // syrupGlobals.apyTimeSeries — same series for both pools, hence
+        // "Syrup brand APY" subtitle).
+        var y = specific.yield || {};
+        var apyEntries = (y.apy_history && Array.isArray(y.apy_history.entries)) ? y.apy_history.entries : [];
+        var liveApy = (y.core_apy_pct != null) ? y.core_apy_pct :
+                      (y.headline_apy_pct != null ? y.headline_apy_pct : y.base_apy_pct);
+        if (liveApy != null && apyEntries.length >= 2) {
+            var apyValues = apyEntries.map(function(e) { return e.total_apy_pct; }).filter(function(v) { return v != null; });
+            var first = apyValues[0];
+            var last = apyValues[apyValues.length - 1];
+            var minV = Math.min.apply(null, apyValues);
+            var maxV = Math.max.apply(null, apyValues);
+            var rangePp = maxV - minV;
+            var slopePp = last - first;
+            // Color rule per spec: rising/falling slope dominates; small
+            // range over the window reads as "stable" muted-green; otherwise
+            // moderate-variation slate-neutral.
+            var apyCls, sparkColor;
+            if (slopePp > 0.5) { apyCls = 'positive'; sparkColor = '#22c55e'; }
+            else if (slopePp < -0.5) { apyCls = 'warning'; sparkColor = '#f59e0b'; }
+            else if (rangePp <= 0.3) { apyCls = ''; sparkColor = '#10b981'; }
+            else { apyCls = ''; sparkColor = '#64748b'; }
+
+            var W = 80, H = 24, range = (maxV - minV) || 1;
+            var step = W / (apyValues.length - 1);
+            var pts = apyValues.map(function(v, i) {
+                var x = i * step;
+                var yPx = H - ((v - minV) / range) * (H - 4) - 2;
+                return x.toFixed(1) + ',' + yPx.toFixed(1);
+            }).join(' ');
+            var sparkSvg =
+                '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" class="inline-block flex-shrink-0">' +
+                    '<polyline points="' + pts + '" fill="none" stroke="' + sparkColor + '" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>' +
+                '</svg>';
+            var apyValueHtml =
+                '<div class="flex items-center justify-between gap-2">' +
+                    '<span>' + CommonRenderer.formatPercent(liveApy, 2) + '</span>' +
+                    sparkSvg +
+                '</div>';
+
+            specific.extra_summary_cards = specific.extra_summary_cards || [];
+            specific.extra_summary_cards.push({
+                label: 'Live APY',
+                value: apyValueHtml,
+                subtext: 'Syrup brand APY · 30d trend',
+                cls: apyCls
+            });
+        }
+
+        // Risk-flag reword — analyzer still emits the legacy "At-par (Set B)
+        // collateral: ..." flag; replace it with two flags that frame the
+        // exposure in Loans/Liquidity terms (issuer/RWA/AMM axis vs
+        // borrower-credit) plus the single-key EOA topology summary.
+        if (Array.isArray(data.risk_flags)) {
+            var lb = specific.loan_book || {};
+            var vs = specific.vault_state || {};
+            var ct = (specific.governance || {}).custody_topology || {};
+            var liquidityUsd = lb.principal_liquidity_usd;
+            var totalAssets = vs.total_assets;
+            var pctOfPool = (liquidityUsd != null && totalAssets) ?
+                (liquidityUsd / totalAssets * 100) : null;
+            var custodyEntries = (ct.entries || []).filter(function(e) {
+                return e.control_type === 'custody' && e.is_eoa;
+            });
+            var custodyEoaCount = custodyEntries.length;
+            var custodyEoaUsd = custodyEntries.reduce(function(sum, e) {
+                return sum + (e.capital_under_control_usd || 0);
+            }, 0);
+            var newFlags = [];
+            if (pctOfPool != null) {
+                newFlags.push({
+                    severity: 'info',
+                    message: 'Liquidity layer: ' + CommonRenderer.formatPercent(pctOfPool, 0) +
+                        ' of pool — issuer/RWA/AMM risk axis (not borrower credit)'
+                });
+            }
+            if (custodyEoaCount > 0) {
+                newFlags.push({
+                    severity: 'info',
+                    message: 'Maple-controlled MPC custody: ' + CommonRenderer.formatCurrency(custodyEoaUsd) +
+                        ' held across ' + custodyEoaCount + ' MPC wallet' + (custodyEoaCount === 1 ? '' : 's') +
+                        ' (per Maple\'s 2026-05-04 attestation)'
+                });
+            }
+            data.risk_flags = data.risk_flags.flatMap(function(f) {
+                if (f && typeof f.message === 'string' && /At-par \(Set B\)/i.test(f.message)) {
+                    return newFlags;
+                }
+                return [f];
+            });
+            // If the legacy at-par flag wasn't present but we have data,
+            // still surface the new Liquidity/EOA flags.
+            var hasLiquidityFlag = data.risk_flags.some(function(f) {
+                return f && /Liquidity layer:/i.test(f.message || '');
+            });
+            if (!hasLiquidityFlag && newFlags.length) {
+                data.risk_flags = data.risk_flags.concat(newFlags);
+            }
+        }
+    },
+
+    // ----- entry point ----------------------------------------------------
+    render: function(data) {
+        var container = document.getElementById('asset-specific-panels');
+        var specific = data.asset_specific;
+        if (!specific || (specific.type !== 'syrupusdc' && specific.type !== 'syrupusdt')) return;
+
+        this._suppressCommonPanels(data);
+
+        var s = data.summary;
+        // The legacy dump must stay empty. Populate only the canonical axis slots.
+        container.innerHTML = '';
+        var backingSlot = document.getElementById('backing-extra-panels');
+        var liquiditySlot = document.getElementById('liquidity-extra-panels');
+        var dependencySlot = document.getElementById('dependencies-extra-panels');
+        var contractSlot = document.getElementById('contract-extra-panels');
+
+        if (backingSlot) {
+            backingSlot.innerHTML =
+                this._renderBacking(specific, s, data.asset_slug, data.backing) +
+                this._renderLoanBookHealth(specific) +
+                this._renderStrategySlots(specific, data.asset_slug) +
+                this._renderYield(specific);
+        }
+        if (liquiditySlot) {
+            liquiditySlot.innerHTML =
+                this._renderLiquidityAndPeg(specific, s, data.asset_slug, data.liquidity) +
+                this._renderLiquidityLayer(specific, data.asset_slug) +
+                this._renderRepaymentSchedule(specific);
+        }
+        if (dependencySlot) {
+            dependencySlot.innerHTML =
+                this._renderBorrowerConcentration(specific) +
+                '<div id="syrup-family-panel"></div>';
+        }
+        if (contractSlot) {
+            contractSlot.innerHTML =
+                this._renderTrustStack(specific) +
+                this._renderMultiChain(specific, data.asset_slug);
+        }
+
+        // Post-render canvases (after innerHTML + relocation so the DOM nodes exist).
+        this._renderBackingDonut(specific, data.asset_slug);
+        this._renderRepaymentScheduleChart(specific);
+        this._renderAumCoverageChart(specific, data.asset_slug);
+        this._attachLoanTableSort();
+        this._loadCushionHistory(data);
+        this._loadCrossPoolFamily(data);
+    },
+
+    // ⚠️ A SPOT CUSHION READ CANNOT SUPPORT A CLAIM ABOUT THE CUSHION, and both
+    // surfaces had been making one. The page showed free liquidity as a single
+    // number with a "<2%" flag beside it; riskAnalyst's own trigger is worded on
+    // FOUR CONSECUTIVE WEEKLY READS, and their argument for not cutting syrupUSDC
+    // below syrupUSDT rested on the sibling holding "the larger cushion (3.39%)"
+    // — a figure measured near that day's maximum. Read hourly instead: over the
+    // 14 days to 2026-09-25 syrupUSDT ranges 0.16%-15.10% and syrupUSDC
+    // 0.38%-11.72%, and which pool is thinner flips depending on the hour.
+    //
+    // ⚠️ THE SERIES WAS ALREADY IN THE REPO — 678 hourly `deployment_ratio_pct`
+    // rows per pool, synced since June and plotted nowhere. This derives nothing
+    // the producer does not publish: free liquidity % is 100 - deployment_ratio,
+    // the same identity the spot tile above already uses (checked against
+    // free_liquidity / total_assets on both pools, equal to the second decimal).
+    _CUSHION_FLAG_PCT: 2,
+
+    _loadCushionHistory: function(data) {
+        var slot = document.getElementById('syrup-cushion-hist');
+        if (!slot) return;
+        var ref = (data.asset_slug || 'syrupusdc') + '_backing_history.json';
+        var nocache = Math.floor(Date.now() / 60000);
+        fetch('data/' + ref + '?nocache=' + nocache)
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(hist) {
+                var entries = (hist && Array.isArray(hist.entries)) ? hist.entries : [];
+                var cutoff = Date.now() - 14 * 86400000;
+                var pts = entries.filter(function(e) {
+                    if (!e || e.deployment_ratio_pct == null || !e.timestamp) return false;
+                    var t = Date.parse(e.timestamp.endsWith('Z') ? e.timestamp : e.timestamp + 'Z');
+                    return isFinite(t) && t >= cutoff;
+                }).map(function(e) { return 100 - e.deployment_ratio_pct; });
+                // A range needs a range. Two points is a line segment, not a
+                // 14-day character, so the strip is withheld rather than drawn
+                // from almost nothing.
+                if (pts.length < 12) { slot.remove(); return; }
+                slot.innerHTML = SyrupUSDCRenderer._cushionHistHtml(pts);
+            })
+            .catch(function() { slot.remove(); });
+    },
+
+    _cushionHistHtml: function(pts) {
+        var flag = SyrupUSDCRenderer._CUSHION_FLAG_PCT;
+        var sorted = pts.slice().sort(function(a, b) { return a - b; });
+        var min = sorted[0], max = sorted[sorted.length - 1];
+        var mid = sorted.length % 2
+            ? sorted[(sorted.length - 1) / 2]
+            : (sorted[sorted.length / 2 - 1] + sorted[sorted.length / 2]) / 2;
+        var under = pts.filter(function(v) { return v < flag; }).length;
+        var now = pts[pts.length - 1];
+        // Sparkline over the same points, on a 0..max scale so the flag line
+        // sits where a reader expects it. Same polyline idiom as the APY spark.
+        var W = 180, H = 26, span = (max > 0 ? max : 1);
+        var xy = pts.map(function(v, i) {
+            var x = (i / (pts.length - 1)) * W;
+            var y = H - (v / span) * H;
+            return x.toFixed(1) + ',' + Math.max(0, Math.min(H, y)).toFixed(1);
+        }).join(' ');
+        var flagY = (H - (flag / span) * H);
+        var flagLine = (flag <= max)
+            ? '<line x1="0" y1="' + flagY.toFixed(1) + '" x2="' + W + '" y2="' + flagY.toFixed(1) +
+              '" stroke="#f59e0b" stroke-width="1" stroke-dasharray="2,2"/>'
+            : '';
+        var fmt = function(v) { return v.toFixed(2) + '%'; };
+        return '<div class="mt-3">' +
+            '<div class="text-xs font-semibold text-slate-600 mb-1">Cushion history ' +
+                '<span class="font-normal text-slate-400">— free liquidity, hourly, 14d</span></div>' +
+            '<div class="flex items-center gap-3 flex-wrap">' +
+                '<svg width="' + W + '" height="' + H + '" viewBox="0 0 ' + W + ' ' + H + '" ' +
+                    'preserveAspectRatio="none" class="shrink-0">' + flagLine +
+                    '<polyline points="' + xy + '" fill="none" stroke="#6366f1" stroke-width="1.5" ' +
+                    'stroke-linejoin="round" stroke-linecap="round"/></svg>' +
+                '<div class="text-xs text-slate-600 font-mono">' +
+                    'now ' + fmt(now) + ' · 14d ' + fmt(min) + '\u2013' + fmt(max) +
+                    ' · median ' + fmt(mid) +
+                    ' · <span class="' + (under > pts.length / 2 ? 'text-amber-700 font-semibold' : '') + '">' +
+                    under + ' of ' + pts.length + ' reads under ' + flag + '%</span>' +
+                '</div>' +
+            '</div>' +
+            '<div class="text-[11px] text-slate-400 mt-1" style="line-height:1.45;">' +
+                'free liquidity = total_assets \u2212 principal_out, read hourly from this pool\u2019s ' +
+                'own history (100 \u2212 deployment_ratio_pct) \u2014 the same construction as the spot ' +
+                'figure above. The dashed line is the ' + flag + '% flag. \u26a0\ufe0f A single read is ' +
+                'not the level: intraday spikes are deposits not yet deployed.' +
+            '</div>' +
+        '</div>';
+    },
+
+    // ----- Cross-Pool Family panel (shared by syrupUSDC + syrupUSDT) ------
+    _loadCrossPoolFamily: function(data) {
+        var target = document.getElementById('syrup-family-panel');
+        if (!target) return;
+        var nocache = Math.floor(Date.now() / 60000);
+        var siblingSlug = data.asset_slug === 'syrupusdt' ? 'syrupusdc' : 'syrupusdt';
+        // Fetch family JSON + sibling pool's backing JSON in parallel. The
+        // sibling fetch supplies its init-level Pool CR for the side-by-side
+        // comparison row; the family JSON itself doesn't carry that field.
+        var famPromise     = fetch('data/syrup_family.json?nocache=' + nocache).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+        var siblingPromise = fetch('data/' + siblingSlug + '_backing.json?nocache=' + nocache).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; });
+        Promise.all([famPromise, siblingPromise]).then(function(results) {
+            var fam = results[0];
+            var siblingData = results[1];
+            if (!fam) {
+                target.innerHTML = '';
+                return;
+            }
+            if (fam.data_source === 'incomplete') {
+                target.innerHTML =
+                    '<div class="panel">' +
+                        '<div class="panel-title">Maple Syrup Family — Cross-Pool Snapshot</div>' +
+                        '<div class="risk-flag risk-info">Cross-pool family data is currently unavailable (one pool\'s analyzer is mid-cycle or stale). Per-pool dashboards continue to render correctly.</div>' +
+                    '</div>';
+                return;
+            }
+            target.innerHTML = SyrupUSDCRenderer._renderCrossPoolFamilyContent(fam, data, siblingData);
+        }).catch(function() { target.innerHTML = ''; });
+    },
+
+    _renderCrossPoolFamilyContent: function(fam, data, siblingData) {
+        var combined = fam.combined || {};
+        var pools = fam.pools || [];
+        var usdcPool = pools.find(function(p) { return p.slug === 'syrupusdc'; }) || {};
+        var usdtPool = pools.find(function(p) { return p.slug === 'syrupusdt'; }) || {};
+        var overlap = fam.borrower_overlap || [];
+        var gov = fam.shared_governance || {};
+        var currentSlug = data.asset_slug || 'syrupusdc';
+        // Pool-level total assets — analyzer emits `total_assets_usd`; older
+        // fixture-style emits `aum_usd`. Accept either.
+        function poolAum(p) { return p.aum_usd != null ? p.aum_usd : p.total_assets_usd; }
+
+        // ---- Family aggregates row (Loans / Liquidity split) ----
+        // Aggregate Loan CR was dropped: CR is per-pool because risk is
+        // per-pool — depositors in one pool aren't covered by collateral in
+        // the other, so averaging across pools "covers" a risk that isn't
+        // actually shared and masks divergence. Per-pool comparison lives in
+        // the table below.
+        var loansAum = combined.aum_loans_usd;
+        var liqAum = combined.aum_liquidity_usd;
+        var totalAum = combined.aum_total_usd != null ? combined.aum_total_usd : combined.total_aum_usd;
+        var liqPct = (liqAum != null && totalAum) ? (liqAum / totalAum * 100) : null;
+        var loansOnlyCount = combined.loans_only_count;
+        var liquidityCount = combined.liquidity_count;
+
+        var aggCards =
+            '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">' +
+                '<div class="summary-card">' +
+                    '<div class="card-label">Family Loans</div>' +
+                    '<div class="card-value">' + CommonRenderer.formatCurrency(loansAum) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' +
+                        (loansOnlyCount != null ? loansOnlyCount + ' loans · ' : '') +
+                        'third-party credit' +
+                    '</div>' +
+                '</div>' +
+                '<div class="summary-card">' +
+                    '<div class="card-label">Family Liquidity</div>' +
+                    '<div class="card-value">' + CommonRenderer.formatCurrency(liqAum) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' +
+                        (liquidityCount != null ? liquidityCount + ' positions · ' : '') +
+                        (liqPct != null ? CommonRenderer.formatPercent(liqPct, 1) + ' of pool' : 'pool-owned') +
+                    '</div>' +
+                '</div>' +
+                '<div class="summary-card">' +
+                    '<div class="card-label">Family Total AUM</div>' +
+                    '<div class="card-value">' + CommonRenderer.formatCurrency(totalAum) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">USDC ' + CommonRenderer.formatCurrency(poolAum(usdcPool)) +
+                        ' + USDT ' + CommonRenderer.formatCurrency(poolAum(usdtPool)) + '</div>' +
+                '</div>' +
+            '</div>';
+
+        // ---- Per-pool collateral health comparison ----
+        // Side-by-side replacement for the dropped family-aggregate Loan CR.
+        // Use source-authored credit coverage; strategy principal cannot be
+        // subtracted from aggregate collateral to invent a credit-only ratio.
+        function summaryFromBacking(d) {
+            return d && d.asset_specific && d.asset_specific.loan_book &&
+                d.asset_specific.loan_book.collateral_summary || null;
+        }
+        function loansOnlyCR(p) {
+            var d = p.slug === currentSlug ? data : siblingData;
+            var book = d && d.asset_specific && d.asset_specific.loan_book;
+            if (!book) return null;
+            if (book.credit_coverage) return book.credit_coverage.collateral_ratio_pct;
+            return (book.collateral_summary || {}).collateral_ratio_loans_only_pct;
+        }
+        function crCls(v) {
+            if (v == null) return 'text-slate-400';
+            if (v >= 130) return 'text-green-600 font-semibold';
+            if (v >= 110) return 'text-amber-600 font-semibold';
+            return 'text-red-600 font-semibold';
+        }
+        var usdcSummary = currentSlug === 'syrupusdc' ? summaryFromBacking(data) : summaryFromBacking(siblingData);
+        var usdtSummary = currentSlug === 'syrupusdt' ? summaryFromBacking(data) : summaryFromBacking(siblingData);
+        var usdcLoansOnlyCR = loansOnlyCR(usdcPool);
+        var usdtLoansOnlyCR = loansOnlyCR(usdtPool);
+        var usdcInitCR = usdcSummary && usdcSummary.pool_collateral_ratio_pct;
+        var usdtInitCR = usdtSummary && usdtSummary.pool_collateral_ratio_pct;
+        var usdcSetAHealth = usdcSummary && usdcSummary.set_a_collateral_health;
+        var usdtSetAHealth = usdtSummary && usdtSummary.set_a_collateral_health;
+        var setAThresholds = usdcSetAHealth || usdtSetAHealth || {};
+        var setACritPct = setAThresholds.crit_level_pct != null ? setAThresholds.crit_level_pct : 100;
+        var setAWarnPct = setAThresholds.warn_level_pct != null ? setAThresholds.warn_level_pct : 120;
+        var setAHealthSubLabel = '<span class="text-xs font-normal text-slate-500">(CRIT &lt; ' +
+            setACritPct + '% · WARN &lt; ' + setAWarnPct + '%)</span>';
+
+        function pendingCell() {
+            return '<span class="text-slate-400 italic text-xs">unavailable / incomplete scope</span>';
+        }
+        function pctCell(v) {
+            if (v == null) return pendingCell();
+            return '<span class="font-mono ' + crCls(v) + '">' + CommonRenderer.formatPercent(v, 2) + '</span>';
+        }
+        function countsCell(p) {
+            var lo = p.loans_only_count, lq = p.liquidity_count;
+            if ((lo == null || lo === 0) && (lq == null || lq === 0)) return pendingCell();
+            return '<span class="font-mono">' + (lo || 0) + ' / ' + (lq || 0) + '</span>';
+        }
+        function setAHealthCell(health) {
+            if (!health) return '<span class="text-slate-400">—</span>';
+            // Corroborated bucket drives the red CRIT styling. Fall back to the
+            // total crit_count when the split fields are absent (older cached
+            // JSON) so a real alarm is never silently hidden.
+            var corrN = (health.crit_corroborated_count != null) ? health.crit_corroborated_count : (health.crit_count || 0);
+            var corrUsd = (health.crit_corroborated_count != null) ? (health.crit_corroborated_principal_usd || 0) : (health.crit_principal_usd || 0);
+            var uncorrN = health.crit_uncorroborated_count || 0;
+            var uncorrUsd = health.crit_uncorroborated_principal_usd || 0;
+            var warn = health.warn_count || 0;
+            var suspectTitle = SYRUP_UNCORROBORATED_TITLE;
+            var parts = [];
+            if (corrN > 0) {
+                parts.push('<span class="font-mono text-red-600 font-semibold">' + corrN + ' CRIT</span>' +
+                    '<span class="text-xs text-red-500"> · ' + CommonRenderer.formatCurrency(corrUsd) + '</span>');
+            }
+            if (uncorrN > 0) {
+                parts.push('<span class="font-mono text-slate-500 text-xs" title="' + suspectTitle + '">ⓘ ' + uncorrN + ' data-suspect · ' + CommonRenderer.formatCurrency(uncorrUsd) + '</span>');
+            }
+            if (warn > 0) {
+                parts.push('<span class="font-mono text-amber-600 text-xs">' + warn + ' WARN · ' + CommonRenderer.formatCurrency(health.warn_principal_usd || 0) + '</span>');
+            }
+            if (parts.length === 0) {
+                return '<span class="font-mono text-green-600 font-semibold">all clear</span>';
+            }
+            return parts.join('<br>');
+        }
+
+        var perPoolBlock =
+            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-1">Per-pool collateral health</div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                '<th>Metric</th>' +
+                '<th class="text-right">syrupUSDC</th>' +
+                '<th class="text-right">syrupUSDT</th>' +
+            '</tr></thead><tbody>' +
+                '<tr>' +
+                    '<td class="font-medium">Loans-only CR <span class="text-xs font-normal text-slate-500">(current snapshot)</span></td>' +
+                    '<td class="text-right">' + pctCell(usdcLoansOnlyCR) + '</td>' +
+                    '<td class="text-right">' + pctCell(usdtLoansOnlyCR) + '</td>' +
+                '</tr>' +
+                '<tr>' +
+                    '<td class="font-medium">Init-level pool CR <span class="text-xs font-normal text-slate-500">(weighted-avg baseline)</span></td>' +
+                    '<td class="text-right">' + pctCell(usdcInitCR) + '</td>' +
+                    '<td class="text-right">' + pctCell(usdtInitCR) + '</td>' +
+                '</tr>' +
+                '<tr>' +
+                    '<td class="font-medium">Loans / Liquidity count</td>' +
+                    '<td class="text-right">' + countsCell(usdcPool) + '</td>' +
+                    '<td class="text-right">' + countsCell(usdtPool) + '</td>' +
+                '</tr>' +
+                '<tr>' +
+                    '<td class="font-medium">Set A loans near/under par ' + setAHealthSubLabel + '</td>' +
+                    '<td class="text-right">' + setAHealthCell(usdcSetAHealth) + '</td>' +
+                    '<td class="text-right">' + setAHealthCell(usdtSetAHealth) + '</td>' +
+                '</tr>' +
+            '</tbody></table></div>' +
+            '<div class="text-xs text-slate-500 mt-2 mb-4">' +
+                'CR is per-pool: depositors in one pool aren\'t covered by collateral in the other. ' +
+                'Set A health is measured as current collateralization vs par (100%) on the crypto-overcollateralized loan book: ' +
+                'CRIT = collateral worth less than principal, WARN = thin buffer. ' +
+                'Set B (at-par pool-owned positions) is excluded — it sits at ~100% by construction.' +
+            '</div>';
+
+        // ---- By collateral asset — split into Loans and Liquidity tables ----
+        // Asset-level family rollup. Classifies each row by asset name
+        // (BTC/XRP/HYPE/cbBTC/ETH = loans; PYUSD/USTB/USDC/USDT/sUSDS =
+        // liquidity) and renders two tables with percentages re-normalized
+        // within each class.
+        var assetRollup = fam.by_collateral_asset_combined;
+        var assetBlock = '';
+        if (Array.isArray(assetRollup) && assetRollup.length) {
+            function poolCell(loans, principal) {
+                if (!loans) return '<span class="text-slate-400">—</span>';
+                var label = loans === 1 ? '1 loan' : loans + ' loans';
+                return '<span class="font-mono text-xs">' + label + ' / ' + CommonRenderer.formatCurrency(principal || 0) + '</span>';
+            }
+            // Classify off position_type harvested from BOTH pools' loan rows;
+            // the family rollup itself carries none. Row sums then reconcile to
+            // combined.aum_loans_usd / aum_liquidity_usd, which is what makes
+            // the "% of class" column add to 100 instead of 132.
+            var famTypes = SyrupUSDCRenderer._assetPositionTypes(
+                ((data || {}).asset_specific || {}).loan_book,
+                ((siblingData || {}).asset_specific || {}).loan_book);
+            var loanAssets = assetRollup.filter(function(r) { return SyrupUSDCRenderer._isLoanAssetIn(r.asset, famTypes); })
+                .sort(function(a, b) { return (b.combined_principal_usd || 0) - (a.combined_principal_usd || 0); });
+            var liqAssets = assetRollup.filter(function(r) { return !SyrupUSDCRenderer._isLoanAssetIn(r.asset, famTypes); })
+                .sort(function(a, b) { return (b.combined_principal_usd || 0) - (a.combined_principal_usd || 0); });
+
+            function renderAssetTable(rows, classTotal, headerLabel) {
+                if (rows.length === 0) return '';
+                var bodyHtml = rows.map(function(row) {
+                    var raw = row.combined_principal_usd || 0;
+                    var pct = classTotal > 0 ? (raw / classTotal * 100) : 0;
+                    var pctCls = pct >= 30 ? 'text-red-600 font-semibold' :
+                                 pct >= 15 ? 'text-amber-600 font-semibold' :
+                                              'text-green-600';
+                    return '<tr>' +
+                        '<td class="font-mono font-semibold">' + row.asset + '</td>' +
+                        '<td class="text-right">' + poolCell(row.syrupusdc_loans, row.syrupusdc_principal_usd) + '</td>' +
+                        '<td class="text-right">' + poolCell(row.syrupusdt_loans, row.syrupusdt_principal_usd) + '</td>' +
+                        '<td class="text-right font-mono font-semibold">' + CommonRenderer.formatCurrency(raw) + '</td>' +
+                        '<td class="text-right font-mono ' + pctCls + '">' + CommonRenderer.formatPercent(pct, 1) + '</td>' +
+                    '</tr>';
+                }).join('');
+                return '<div class="text-sm font-semibold text-slate-700 mb-2 mt-4">' + headerLabel + '</div>' +
+                    '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                        '<th>Asset</th>' +
+                        '<th class="text-right">USDC pool</th>' +
+                        '<th class="text-right">USDT pool</th>' +
+                        '<th class="text-right">Combined</th>' +
+                        '<th class="text-right">% of class</th>' +
+                    '</tr></thead><tbody>' + bodyHtml + '</tbody></table></div>';
+            }
+
+            var loansAumF = combined.aum_loans_usd ||
+                loanAssets.reduce(function(s, r) { return s + (r.combined_principal_usd || 0); }, 0);
+            var liqAumF = combined.aum_liquidity_usd ||
+                liqAssets.reduce(function(s, r) { return s + (r.combined_principal_usd || 0); }, 0);
+
+            var topLoanAsset = loanAssets[0];
+            var topLoanShare = topLoanAsset && loansAumF > 0 ?
+                ((topLoanAsset.combined_principal_usd || 0) / loansAumF * 100) : 0;
+            var loanCallout = topLoanShare >= 50 ?
+                '<div class="risk-flag risk-warning mt-2">' +
+                    topLoanAsset.asset + ' is ' + CommonRenderer.formatPercent(topLoanShare, 0) +
+                    ' of loans book — single-asset concentration risk axis.' +
+                '</div>' : '';
+
+            assetBlock =
+                renderAssetTable(loanAssets, loansAumF, 'By asset (Loans)') +
+                loanCallout +
+                SyrupUSDCRenderer._correlatedBtcHtml(loanAssets, 'combined_principal_usd',
+                                                     loansAumF, 'family loans class') +
+                renderAssetTable(liqAssets, liqAumF, 'By asset (Liquidity)');
+        }
+
+        // ---- Cross-pool borrower concentration (Loans-only) ----
+        // Switched from book-wide borrower_overlap to
+        // cross_pool_concentration_loans_only — concentration percentages
+        // are now versus the loans-only family book ($1.27B), not total
+        // AUM ($1.61B). Drops the per-pool USDC/USDT split since the
+        // loans-only concentration data isn't broken out by pool.
+        var loansOnlyConc = fam.cross_pool_concentration_loans_only || {};
+        var loansOnlyBorrowers = loansOnlyConc.borrowers || [];
+        var top3LoansPct = 0;
+        for (var i = 0; i < Math.min(3, loansOnlyBorrowers.length); i++) {
+            top3LoansPct += loansOnlyBorrowers[i].share_pct || 0;
+        }
+        var rowsHtml = (loansOnlyBorrowers.length === 0) ?
+            '<tr><td colspan="3" class="text-slate-400 text-sm italic">No loans-only cross-pool concentration data.</td></tr>' :
+            loansOnlyBorrowers.map(function(b) {
+                var pct = b.share_pct || 0;
+                var pctCls = pct >= 15 ? 'text-red-600 font-semibold' :
+                             pct >= 8  ? 'text-amber-600 font-semibold' :
+                                          'text-green-600';
+                var rowCls = pct >= 15 ? 'bg-red-50' : pct >= 8 ? 'bg-amber-50' : '';
+                var addrCell = '<span class="font-mono text-xs" title="' + b.address + '">' +
+                    SyrupUSDCRenderer._truncAddr(b.address) + '</span> ' +
+                    SyrupUSDCRenderer._ethLink(b.address) +
+                    (b.borrower_firm ? ' <span class="text-xs text-slate-500">' + b.borrower_firm + '</span>' : '');
+                return '<tr class="' + rowCls + '">' +
+                    '<td>' + addrCell + '</td>' +
+                    '<td class="text-right font-mono font-semibold">' + CommonRenderer.formatCurrency(b.principal_usd || 0) + '</td>' +
+                    '<td class="text-right font-mono ' + pctCls + '">' + CommonRenderer.formatPercent(pct, 2) + '</td>' +
+                '</tr>';
+            }).join('');
+
+        var hhi = loansOnlyConc.hhi;
+        var hhiBucket = loansOnlyConc.hhi_bucket;
+        var hhiCls = hhiBucket === 'unconcentrated' ? 'text-green-700' :
+                     hhiBucket === 'moderate' ? 'text-amber-700' : 'text-red-700';
+        var calloutText = loansOnlyBorrowers.length > 0 ?
+            ('Top 3 loan borrowers control ~<span class="font-semibold">' + CommonRenderer.formatPercent(top3LoansPct, 1) + '</span> of family loans-only book' +
+             (hhi != null ? ' · HHI <span class="font-mono ' + hhiCls + '">' + hhi + '</span>' + (hhiBucket ? ' (' + hhiBucket + ')' : '') : '') + '.' +
+             ' A credit event at any of these damages the family loan book.') :
+            'No cross-pool loan-borrower data.';
+
+        var tableBlock =
+            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-4">Top cross-pool borrower exposures <span class="text-xs font-normal text-slate-500">(Loans-only)</span></div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                '<th>Borrower</th>' +
+                '<th class="text-right">Family principal</th>' +
+                '<th class="text-right">% loans-only</th>' +
+            '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
+            '<div class="risk-flag risk-warning mt-3">' + calloutText + '</div>';
+
+        // ---- Shared governance row ----
+        // Accept either { address, note } object form or a plain address string
+        // (analyzer emits the latter).
+        function normRole(role) {
+            if (!role) return null;
+            if (typeof role === 'string') return { address: role, note: null };
+            if (typeof role === 'object' && role.address) return role;
+            return null;
+        }
+        function addrCell(role) {
+            var n = normRole(role);
+            if (!n) return '<span class="text-slate-400">—</span>';
+            return '<span class="font-mono text-xs" title="' + n.address + '">' +
+                SyrupUSDCRenderer._truncAddr(n.address) + '</span> ' +
+                SyrupUSDCRenderer._ethLink(n.address) +
+                (n.note ? ' <span class="text-xs text-slate-500">' + n.note + '</span>' : '');
+        }
+        function rowAddr(label, role) {
+            var n = normRole(role);
+            if (!n) return '';
+            return '<tr><td class="font-medium">' + label + '</td><td>' + addrCell(role) + '</td></tr>';
+        }
+        // Timelock hours: prefer governor.timelock_hours, fall back to
+        // shared_governance.min_delay_seconds (analyzer's flat shape).
+        var timelockHours = (gov.governor && gov.governor.timelock_hours) ||
+            (gov.min_delay_seconds ? Math.round(gov.min_delay_seconds / 3600) : null) ||
+            (gov.timelock_hours ? gov.timelock_hours : 24);
+        var govRows = '';
+        if (gov.governor) govRows += rowAddr('Governor (' + timelockHours + 'h timelock)', gov.governor);
+        if (gov.operational_admin) govRows += rowAddr('Operational Admin', gov.operational_admin);
+        if (gov.security_admin) govRows += rowAddr('Security Admin', gov.security_admin);
+        var delegates = gov.delegates_per_pool || {};
+        if (delegates.syrupusdc) govRows += rowAddr('Pool Delegate — syrupUSDC', delegates.syrupusdc);
+        if (delegates.syrupusdt) govRows += rowAddr('Pool Delegate — syrupUSDT', delegates.syrupusdt);
+
+        var govBlock = govRows ?
+            '<div class="text-sm font-semibold text-slate-700 mb-2 mt-4">Shared governance</div>' +
+            '<table class="data-table"><tbody>' + govRows + '</tbody></table>' : '';
+
+        // ---- Sibling-pool link ----
+        var siblingSlug = currentSlug === 'syrupusdt' ? 'syrupusdc' : 'syrupusdt';
+        var currentLabel = currentSlug === 'syrupusdt' ? 'syrupUSDT' : 'syrupUSDC';
+        var siblingLabel = siblingSlug === 'syrupusdt' ? 'syrupUSDT' : 'syrupUSDC';
+        var siblingBlock =
+            '<div class="text-sm text-slate-600 mt-4 pt-3 border-t border-slate-200">' +
+                'Currently viewing: <strong>' + currentLabel + '</strong> · ' +
+                'Sibling pool: <a href="?asset=' + siblingSlug + '" class="text-blue-600 hover:underline font-semibold">→ ' + siblingLabel + '</a>' +
+            '</div>';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Maple Syrup Family — Cross-Pool Snapshot</div>' +
+            (combined.classification_basis ? '<div class="text-xs text-amber-700 mb-3">' + CommonRenderer._escapeAttr(combined.classification_basis) + '</div>' : '') +
+            aggCards +
+            perPoolBlock +
+            assetBlock +
+            tableBlock +
+            govBlock +
+            siblingBlock +
+        '</div>';
+    },
+
+    // ----- AUM-based coverage chart (replaces the common PCR chart) -------
+    // PCR sits flat at 100% by ERC-4626 design (binary impairment alarm); the
+    // live AUM-based coverage (collateralUsd / loansUsd × 100, Maple GraphQL)
+    // is what actually moves day-to-day. Override the existing #cr-chart with
+    // this series + a dashed deployment_pct overlay. Init-level commitment
+    // stays visible as a caption since they're different metrics.
+    _renderAumCoverageChart: function(specific, slug) {
+        var underlying = SyrupUSDCRenderer._underlying(slug);
+        var h = specific.aum_history;
+        if (!h || !Array.isArray(h.entries) || h.entries.length < 2) return;
+        var ctx = document.getElementById('cr-chart');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var panel = document.getElementById('chart-panel');
+        if (!panel) return;
+        panel.style.display = '';  // unhide if common renderer suppressed it
+
+        // Sort then slice to the trailing 7 days. PegTracker still emits 30d
+        // in aum_history.entries[]; we narrow the viewport here to drop the
+        // documented Apr 3-20 Maple aggregation-transient dips that visually
+        // dominated the 30d chart but aren't real undercollateralization.
+        var allEntries = h.entries.slice().sort(function(a, b) { return a.timestamp - b.timestamp; });
+        // ⚠️ This was `slice(-7)` — the last 7 POINTS, labelled and charted as
+        // "7d". aum_history is daily, so the two nearly agree and syrupUSDC was
+        // unaffected. syrupUSDT was not: the 8th point back falls inside 7 days
+        // and is the lowest reading in the window, so the panel showed
+        // "7d Min: 116.47%" against a true 7-day minimum of 103.98% — 12.5pp
+        // understated, in the direction that makes coverage look safer.
+        //
+        // A count is not a window. Slice by date so the label and the data
+        // agree whatever cadence the producer sends.
+        var lastTs = allEntries[allEntries.length - 1].timestamp;
+        var windowStart = lastTs - 7 * 86400;
+        var entries = allEntries.filter(function(e) { return e.timestamp >= windowStart; });
+        if (entries.length < 2) entries = allEntries.slice(-7);
+        var labels = entries.map(function(e) { return new Date(e.timestamp * 1000); });
+        var crSeries = entries.map(function(e) { return e.collateral_ratio_pct; });
+
+        // Title + 7d stats
+        var titleEl = panel.querySelector('.panel-title');
+        if (titleEl) titleEl.textContent = 'Pool Coverage (live USD) — 7d';
+
+        var statsEl = document.getElementById('cr-chart-stats');
+        if (!statsEl) {
+            statsEl = document.createElement('div');
+            statsEl.id = 'cr-chart-stats';
+            if (titleEl) titleEl.after(statsEl);
+        }
+        statsEl.className = 'flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mb-2';
+        var crNonNull = crSeries.filter(function(v) { return v != null; });
+        if (crNonNull.length > 0) {
+            var minCR = Math.min.apply(null, crNonNull);
+            var maxCR = Math.max.apply(null, crNonNull);
+            var minCls = minCR < 110 ? 'text-red-600 font-semibold' : minCR < 130 ? 'text-amber-600 font-semibold' : '';
+            statsEl.innerHTML =
+                '<span>7d Min: <span class="font-mono ' + minCls + '">' + minCR.toFixed(2) + '%</span></span>' +
+                '<span>7d Max: <span class="font-mono">' + maxCR.toFixed(2) + '%</span></span>' +
+                '<span>7d Range: <span class="font-mono">' + (maxCR - minCR).toFixed(2) + 'pp</span></span>';
+        } else {
+            statsEl.innerHTML = '';
+        }
+
+        if (window._crChart) {
+            try { window._crChart.destroy(); } catch (e) {}
+        }
+
+        window._crChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'AUM-based Coverage',
+                    data: crSeries,
+                    borderColor: '#22c55e',
+                    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        suggestedMin: 95,
+                        suggestedMax: 170,
+                        ticks: { callback: function(v) { return v + '%'; }, font: { size: 11 } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) { return c.dataset.label + ': ' + (c.raw != null ? c.raw.toFixed(2) + '%' : '—'); }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            underwater: { type: 'box', yMin: 0,   yMax: 100, backgroundColor: 'rgba(220, 38, 38, 0.10)', borderWidth: 0, label: { content: 'Underwater', display: true, position: 'start', font: { size: 9 }, color: '#dc2626' } },
+                            thin:       { type: 'box', yMin: 100, yMax: 110, backgroundColor: 'rgba(239, 68, 68, 0.06)', borderWidth: 0 },
+                            amber:      { type: 'box', yMin: 110, yMax: 130, backgroundColor: 'rgba(245, 158, 11, 0.06)', borderWidth: 0 },
+                            healthy:    { type: 'box', yMin: 130, yMax: 160, backgroundColor: 'rgba(22, 163, 74, 0.05)', borderWidth: 0 },
+                            cushion:    { type: 'box', yMin: 160, yMax: 220, backgroundColor: 'rgba(14, 165, 233, 0.05)', borderWidth: 0 },
+                            line110:    { type: 'line', yMin: 110, yMax: 110, borderColor: '#dc2626', borderWidth: 1, borderDash: [4, 4], label: { content: '110%', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } },
+                            line130:    { type: 'line', yMin: 130, yMax: 130, borderColor: '#16a34a', borderWidth: 1, borderDash: [4, 4], label: { content: '130%', display: true, position: 'end', font: { size: 9 }, color: '#16a34a' } }
+                        }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+
+        // Subtitle + init-level commitment caption below the chart.
+        var caption = panel.querySelector('.cr-source-subtitle');
+        if (!caption) {
+            caption = document.createElement('div');
+            caption.className = 'cr-source-subtitle text-xs text-slate-400 mt-2';
+            panel.appendChild(caption);
+        }
+        var poolCR = ((specific.loan_book || {}).collateral_summary || {}).pool_collateral_ratio_pct;
+        var asOfText = '';
+        if (h.as_of) {
+            var d = new Date(h.as_of * 1000);
+            if (!isNaN(d.getTime())) asOfText = ' · as of ' + d.toISOString().slice(0, 10);
+        }
+        var sourceLine = 'Source: <span class="font-mono">poolV2.aumTimeSeries</span> (Maple GraphQL) · collateralUsd ÷ loansUsd' + asOfText + '.';
+        var initLine = (poolCR != null) ?
+            ('<br>Init-level commitment: <span class="font-mono font-semibold text-slate-600">' + poolCR.toFixed(1) + '%</span> ' +
+             '(from <span class="font-mono">poolV2.collateralRatio</span>) — the chart above shows live AUM-based coverage, which can sit below init-level when collateral prices drift.') : '';
+        // Data-quality footnote — Maple's aumTimeSeries aggregates the at-par
+        // stablecoin/RWA positions inconsistently across days (same root cause
+        // as the per-loan currentAssetAmount anomaly). Include a check on
+        // unrealizedLosses so the credit-alarm framing only fires when it's 0.
+        var ul = (specific.vault_state || {}).unrealized_losses;
+        var ulFragment = (ul === 0 || ul == null) ?
+            ' <span class="font-mono">unrealizedLosses</span> (the on-chain credit alarm) stayed at 0 throughout — the apparent dips were aggregation glitches, not real undercollateralization.' :
+            '';
+
+        // Second, distinct Maple GraphQL failure mode, and the one that used to
+        // render as red distress: a per-loan `currentAssetAmount` returned
+        // understated, so a healthy crypto-collateralised loan prices below par.
+        // Described from the live feed rather than hardcoded — the counts and
+        // the factor range go stale the moment the upstream data moves, and the
+        // sentence disappears entirely on a pool with no such reads.
+        var uncorrFragment = '';
+        var uncorrRows = ((specific.loan_book || {}).loans || [])
+            .filter(SyrupUSDCRenderer._isLoan)
+            .filter(function(l) { return SyrupUSDCRenderer._collateralUncorroborated(l, ul); });
+        if (uncorrRows.length > 0) {
+            var uncorrUsdTotal = uncorrRows.reduce(function(a, l) { return a + (l.principal || 0); }, 0);
+            var factors = uncorrRows.map(function(l) {
+                var c = l.collateral;
+                return (c.init_level_pct > 0 && c.current_level_pct > 0) ? (c.init_level_pct / c.current_level_pct) : null;
+            }).filter(function(f) { return f != null; });
+            var factorText = '';
+            if (factors.length > 1) {
+                var lo = Math.min.apply(null, factors), hi = Math.max.apply(null, factors);
+                factorText = ' The understatement is not a constant factor (roughly ' + lo.toFixed(1) + '× to ' +
+                    hi.toFixed(1) + '× against each loan\'s funding-time init level), so it is not a decimal-scale error.';
+            }
+            var assetSet = {};
+            uncorrRows.forEach(function(l) { if (l.collateral.asset) assetSet[l.collateral.asset] = 1; });
+            uncorrFragment =
+                ' A second, distinct read fails the other way: on <strong>' + uncorrRows.length + ' loan' +
+                (uncorrRows.length === 1 ? '' : 's') + '</strong> (' + CommonRenderer.formatCurrency(uncorrUsdTotal) +
+                ', collateralised in ' + Object.keys(assetSet).sort().join('/') + ') Maple GraphQL returns an understated ' +
+                '<span class="font-mono">currentAssetAmount</span>, so the loan prices below par while nothing else about it ' +
+                'is distressed — it is not impaired, called or in default, and the pool\'s own on-chain ' +
+                '<span class="font-mono">unrealizedLosses</span> is 0.' + factorText +
+                ' Those cells read <span class="text-slate-400">unverified</span> in the loan table and are excluded from ' +
+                'the buffer-health figures; the number is shown, not asserted.';
+        }
+        var noteLine = '<div id="syrup-data-anomaly-note" class="mt-2 pt-2 border-t border-slate-100 text-xs text-slate-400 leading-relaxed scroll-mt-4">' +
+            '<strong class="text-slate-500">Note:</strong> Window narrowed to 7d to focus on the post-anomaly clean window. Maple\'s <span class="font-mono">aumTimeSeries</span> has documented aggregation inconsistencies (most recently seen Apr 3–20, 2026 with day-over-day swings of $300–500M on a $1B+ book).' + ulFragment +
+            ' Treat day-to-day swings &gt;10pp as data-quality variance unless cross-validated against <span class="font-mono">unrealizedLosses</span>. Loan-level cells flagged with <span class="text-amber-500 font-semibold">?</span> share this root cause — Maple GraphQL returns no usable <span class="font-mono">currentAssetAmount</span> for those at-par stablecoin/RWA positions, leaving their current-value and buffer cells blank.' + uncorrFragment +
+        '</div>';
+        caption.innerHTML = sourceLine + initLine + noteLine;
+
+        // Second stacked chart in the same panel — deployment ratio.
+        this._renderDeploymentChart(panel, labels, entries, underlying);
+    },
+
+    // ----- Deployment ratio chart (stacked below AUM coverage) ------------
+    _renderDeploymentChart: function(panel, labels, entries, underlying) {
+        if (typeof Chart === 'undefined') return;
+        var deplSeries = entries.map(function(e) { return e.deployment_pct; });
+
+        // Build / find the deployment chart subsection — title, stats,
+        // canvas, caption. Reuse on re-renders so we don't duplicate.
+        var deplTitle = panel.querySelector('.syrup-depl-title');
+        if (!deplTitle) {
+            deplTitle = document.createElement('div');
+            deplTitle.className = 'syrup-depl-title panel-title mt-6 pt-4 border-t border-slate-200';
+            deplTitle.textContent = 'Pool Deployment Ratio — 30d';
+            panel.appendChild(deplTitle);
+        }
+
+        var deplStats = panel.querySelector('#syrup-depl-stats');
+        if (!deplStats) {
+            deplStats = document.createElement('div');
+            deplStats.id = 'syrup-depl-stats';
+            deplStats.className = 'flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500 mb-2';
+            panel.appendChild(deplStats);
+        }
+        var deplNonNull = deplSeries.filter(function(v) { return v != null; });
+        if (deplNonNull.length > 0) {
+            var minD = Math.min.apply(null, deplNonNull);
+            var maxD = Math.max.apply(null, deplNonNull);
+            var lastD = deplNonNull[deplNonNull.length - 1];
+            var lastCls = lastD >= 95 ? 'text-red-600 font-semibold' :
+                          lastD >= 80 ? 'text-amber-600 font-semibold' :
+                          lastD < 50 ? 'text-green-600' : '';
+            deplStats.innerHTML =
+                '<span>30d Min: <span class="font-mono">' + minD.toFixed(2) + '%</span></span>' +
+                '<span>30d Max: <span class="font-mono">' + maxD.toFixed(2) + '%</span></span>' +
+                '<span>Latest: <span class="font-mono ' + lastCls + '">' + lastD.toFixed(2) + '%</span></span>' +
+                '<span>Free buffer: <span class="font-mono">' + (100 - lastD).toFixed(2) + '%</span></span>';
+        } else {
+            deplStats.innerHTML = '';
+        }
+
+        var deplContainer = panel.querySelector('.syrup-depl-container');
+        if (!deplContainer) {
+            deplContainer = document.createElement('div');
+            deplContainer.className = 'chart-container syrup-depl-container';
+            var deplCanvas = document.createElement('canvas');
+            deplCanvas.id = 'syrup-depl-chart';
+            deplContainer.appendChild(deplCanvas);
+            panel.appendChild(deplContainer);
+        }
+
+        var deplCaption = panel.querySelector('.syrup-depl-caption');
+        if (!deplCaption) {
+            deplCaption = document.createElement('div');
+            deplCaption.className = 'syrup-depl-caption text-xs text-slate-400 mt-2';
+            deplCaption.innerHTML = 'Share of pool deployed into loans + DeFi strategies. Higher = less free ' + underlying + ' buffer for redemptions. <span class="font-mono">&lt;2%</span> buffer triggers a risk flag on this page.';
+            panel.appendChild(deplCaption);
+        }
+
+        var ctx = document.getElementById('syrup-depl-chart');
+        if (!ctx) return;
+        if (window._syrupDeplChart) {
+            try { window._syrupDeplChart.destroy(); } catch (e) {}
+        }
+
+        window._syrupDeplChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Deployment',
+                    data: deplSeries,
+                    borderColor: '#f59e0b',
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 0,
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'day', displayFormats: { day: 'MMM d' } },
+                        grid: { display: false },
+                        ticks: { maxTicksLimit: 8, font: { size: 11 } }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        suggestedMin: 50,
+                        suggestedMax: 100,
+                        ticks: { callback: function(v) { return v + '%'; }, font: { size: 11 } }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) { return 'Deployment: ' + (c.raw != null ? c.raw.toFixed(2) + '%' : '—'); }
+                        }
+                    },
+                    annotation: {
+                        annotations: {
+                            green:    { type: 'box', yMin: 0,  yMax: 50,  backgroundColor: 'rgba(22, 163, 74, 0.05)', borderWidth: 0 },
+                            amber:    { type: 'box', yMin: 50, yMax: 80,  backgroundColor: 'rgba(245, 158, 11, 0.05)', borderWidth: 0 },
+                            redAmber: { type: 'box', yMin: 80, yMax: 95,  backgroundColor: 'rgba(239, 68, 68, 0.07)', borderWidth: 0 },
+                            red:      { type: 'box', yMin: 95, yMax: 100, backgroundColor: 'rgba(220, 38, 38, 0.12)', borderWidth: 0, label: { content: 'Fully deployed', display: true, position: 'start', font: { size: 9 }, color: '#dc2626' } },
+                            line80:   { type: 'line', yMin: 80, yMax: 80, borderColor: '#d97706', borderWidth: 1, borderDash: [4, 4], label: { content: '80%', display: true, position: 'end', font: { size: 9 }, color: '#d97706' } },
+                            line95:   { type: 'line', yMin: 95, yMax: 95, borderColor: '#dc2626', borderWidth: 1, borderDash: [4, 4], label: { content: '95%', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } }
+                        }
+                    }
+                },
+                interaction: { intersect: false, mode: 'index' }
+            }
+        });
+    },
+
+    // ----- §1 Backing -----------------------------------------------------
+    _renderBacking: function(specific, s, slug, backing) {
+        var v = specific.vault_state || {};
+        var totalAssets = v.total_assets;
+        var liquidityCap = v.liquidity_cap;
+        var capUtilPct = v.cap_utilization_pct;
+        if ((capUtilPct === null || capUtilPct === undefined) && totalAssets && liquidityCap) {
+            capUtilPct = totalAssets / liquidityCap * 100;
+        }
+        var nav = v.nav;
+        var fee = (s && s.delegate_management_fee_pct != null) ? s.delegate_management_fee_pct :
+                   (specific.yield && specific.yield.delegate_fee_pct);
+
+        // Asset composition rows. Three-bucket split: Free + Loans + Liquidity.
+        // Both Loans and Liquidity flow through the Strategy 0 LoanManager as
+        // accounting wrapper, but their risk axes differ — Loans = third-party
+        // borrower credit, Liquidity = issuer/RWA/AMM. Splitting prevents the
+        // misread of "97.9% in Loan Manager" as "97.9% in third-party credit".
+        var freeUsdc = (v.free_usdc !== null && v.free_usdc !== undefined) ?
+            v.free_usdc :
+            (s && s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency ? s.collateral_ratio_alt.value : 0);
+        var underlying = SyrupUSDCRenderer._underlying(slug);
+        var strategies = v.strategies || [];
+        var lb = specific.loan_book || {};
+        var loansUsd = lb.principal_loans_only_usd;
+        var liqUsd = lb.principal_liquidity_usd;
+
+        // LoanManager address — both Loans and Liquidity rows link here.
+        var lmAddress = null;
+        strategies.forEach(function(st) { if (st.is_loan_manager) lmAddress = st.address; });
+
+        var rows = [{
+            label: 'Free ' + underlying,
+            value: freeUsdc,
+            color: '#64748b',
+            tooltip: 'Pool ' + underlying + ' sitting in the vault contract — instantly available for withdrawals.'
+        }];
+
+        var haveLoansLiqSplit = (loansUsd != null && liqUsd != null);
+        if (haveLoansLiqSplit) {
+            rows.push({
+                label: 'Loans <span class="text-xs font-normal text-slate-500">(third-party credit)</span>',
+                value: loansUsd,
+                color: '#22c55e',
+                address: lmAddress,
+                tooltip: 'Crypto-overcollateralized open-term loans. Routed through the Strategy 0 LoanManager as accounting wrapper, but functionally third-party borrower credit risk.'
+            });
+            rows.push({
+                label: 'Liquidity layer <span class="text-xs font-normal text-slate-500">(pool-owned strategies)</span>',
+                value: liqUsd,
+                color: '#f59e0b',
+                address: lmAddress,
+                tooltip: 'Pool-owned positions in stablecoin / RWA / AMM venues (PYUSD, USTB, etc.). Routed through the same Strategy 0 LoanManager as accounting wrapper, but the risk axis is issuer / RWA / AMM — NOT third-party credit.'
+            });
+        } else if (strategies.length === 0) {
+            // Older analyzer JSON without per-loan position_type or loan_book
+            // principal split — degrade to a single deployed bucket.
+            rows.push({
+                label: 'Strategy AUM (deployed)',
+                value: (v.strategy_aum != null) ? v.strategy_aum : ((totalAssets || 0) - (freeUsdc || 0)),
+                color: '#6366f1'
+            });
+        } else {
+            strategies.forEach(function(st, i) {
+                var aum = st.aum_usd || 0;
+                var isActive = st.is_loan_manager || aum >= SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD;
+                if (!isActive) return;
+                rows.push({
+                    label: st.is_loan_manager ? 'Strategy ' + i + ' (Loan Manager)' : 'Strategy ' + i,
+                    value: aum,
+                    color: st.is_loan_manager ? '#6366f1' : '#94a3b8',
+                    address: st.address
+                });
+            });
+        }
+
+        var total = (totalAssets || rows.reduce(function(a, r) { return a + (r.value || 0); }, 0)) || 1;
+
+        var compRows = rows.map(function(r) {
+            var pct = (r.value || 0) / total * 100;
+            var infoIcon = r.tooltip ?
+                ' <span class="text-slate-400 cursor-help" title="' + r.tooltip.replace(/"/g, '&quot;') + '">ⓘ</span>' : '';
+            return '<tr>' +
+                '<td class="font-medium">' + r.label + infoIcon +
+                    (r.address ? ' ' + SyrupUSDCRenderer._ethLink(r.address) : '') +
+                '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(r.value || 0) + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatPercent(pct, 1) + '</td>' +
+                '<td><div class="pct-bar-container"><div class="pct-bar" style="width:' + Math.min(pct, 100) + '%; background:' + r.color + '"></div></div></td>' +
+            '</tr>';
+        }).join('');
+        compRows += '<tr class="font-bold border-t-2 border-slate-200">' +
+            '<td>Total</td>' +
+            '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(total) + '</td>' +
+            '<td class="text-right">100%</td>' +
+            '<td></td>' +
+        '</tr>';
+
+        var pausedBadge = v.protocol_paused ?
+            '<div class="risk-flag risk-critical mt-3"><strong>PROTOCOL PAUSED</strong> — deposits/withdrawals blocked at MapleGlobals</div>' : '';
+        var ulBadge = (v.unrealized_losses && v.unrealized_losses > 0) ?
+            '<div class="risk-flag risk-critical mt-3"><strong>Unrealized losses:</strong> ' + CommonRenderer.formatCurrencyExact(v.unrealized_losses) + ' — PCR_principal below 100%</div>' : '';
+
+        // Header KPI row — 4 stats split into two visual columns.
+        var kpiHeader =
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">' +
+                '<div class="grid grid-cols-2 gap-3">' +
+                    '<div class="summary-card"><div class="card-label">Pool TVL</div><div class="card-value">' + CommonRenderer.formatCurrency(totalAssets) + '</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Liquidity Cap</div><div class="card-value">' + CommonRenderer.formatCurrency(liquidityCap) + '</div>' +
+                        (capUtilPct != null ? '<div class="text-xs text-slate-400 mt-1">' + CommonRenderer.formatPercent(capUtilPct, 1) + ' used</div>' : '') +
+                    '</div>' +
+                '</div>' +
+                '<div class="grid grid-cols-2 gap-3">' +
+                    '<div class="summary-card"><div class="card-label">NAV per share</div><div class="card-value">' + (nav != null ? '$' + nav.toFixed(4) : '-') + '</div><div class="text-xs text-slate-400 mt-1">' + underlying + ' per share</div></div>' +
+                    '<div class="summary-card"><div class="card-label">Delegate fee</div><div class="card-value">' + (fee != null ? CommonRenderer.formatPercent(fee, 2) : '-') + '</div><div class="text-xs text-slate-400 mt-1">taken from gross</div></div>' +
+                '</div>' +
+            '</div>';
+
+        var coverage = backing && backing.coverage;
+        var coverageHtml = coverage && typeof coverage.priced_pct_all_principal === 'number'
+            ? '<div class="rounded border border-slate-200 p-3 mb-4 text-sm">' +
+                '<div class="font-semibold">Collateral valuation coverage: ' + coverage.priced_pct_all_principal.toFixed(2) + '% of enumerated principal</div>' +
+                '<div>' + coverage.priced_count + ' of ' + coverage.record_count + ' collateral records have numeric valuations; ' +
+                    CommonRenderer.formatCurrency(coverage.null_valuation_principal_usd) + ' of principal has no valuation.</div>' +
+                '<div class="text-xs text-slate-500">Valuation availability does not establish custody or recoverability. Missing-collateral record counts do not measure pricing coverage.</div>' +
+                '<details class="mt-2"><summary>Valuation scope and reconciliation</summary>' +
+                    '<div>Loan-classified principal coverage: ' + coverage.priced_pct_loans_only_principal.toFixed(2) + '%.</div>' +
+                    '<div>' + CommonRenderer._escapeAttr(backing.aggregate_reconciliation_status || '') + '</div></details></div>'
+            : '';
+        return '<div class="panel">' +
+            '<div class="panel-title">Backing</div>' +
+            kpiHeader +
+            coverageHtml +
+            '<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-2">' +
+                '<div class="lg:col-span-2">' +
+                    '<div class="text-sm font-semibold text-slate-700 mb-2">Asset composition</div>' +
+                    '<table class="data-table"><thead><tr>' +
+                        '<th>Source</th>' +
+                        '<th class="text-right">Value (USD)</th>' +
+                        '<th class="text-right">%</th>' +
+                        '<th style="width: 120px"></th>' +
+                    '</tr></thead><tbody>' + compRows + '</tbody></table>' +
+                '</div>' +
+                '<div>' +
+                    '<div class="text-sm font-semibold text-slate-700 mb-2">Allocation</div>' +
+                    '<div style="height: 220px; position: relative;"><canvas id="syrup-backing-donut"></canvas></div>' +
+                '</div>' +
+            '</div>' +
+            ulBadge +
+            pausedBadge +
+        '</div>';
+    },
+
+    _renderBackingDonut: function(specific, slug) {
+        var ctx = document.getElementById('syrup-backing-donut');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var v = specific.vault_state || {};
+        var lb = specific.loan_book || {};
+        var freeUsdc = v.free_usdc || 0;
+        var loansUsd = lb.principal_loans_only_usd;
+        var liqUsd = lb.principal_liquidity_usd;
+        var underlying = SyrupUSDCRenderer._underlying(slug);
+
+        // Three-segment view aligned with the asset-composition table:
+        // slate Free, green Loans (third-party credit), amber Liquidity layer.
+        // Falls back to the legacy 2-segment view if the loans/liquidity
+        // split isn't available in the snapshot.
+        var labels, data, colors;
+        if (loansUsd != null && liqUsd != null) {
+            labels = [
+                'Free ' + underlying,
+                'Loans (third-party credit)',
+                'Liquidity layer (pool-owned)'
+            ];
+            data = [freeUsdc, loansUsd, liqUsd];
+            colors = ['#64748b', '#22c55e', '#f59e0b'];
+        } else {
+            var deployed = (v.strategy_aum != null) ? v.strategy_aum :
+                ((v.total_assets || 0) - freeUsdc);
+            labels = ['Free ' + underlying, 'Deployed (loans + strategies)'];
+            data = [freeUsdc, deployed];
+            colors = ['#22c55e', '#6366f1'];
+        }
+
+        if (window._syrupBackingDonut) window._syrupBackingDonut.destroy();
+        window._syrupBackingDonut = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } },
+                    tooltip: {
+                        callbacks: {
+                            label: function(c) {
+                                var total = c.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                                var pct = total > 0 ? (c.raw / total * 100).toFixed(1) : '0.0';
+                                return c.label + ': ' + CommonRenderer.formatCurrency(c.raw) + ' (' + pct + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    // ----- §2 Loan Book (loans-only — third-party credit) -----------------
+    // Liquidity-layer positions (PYUSD/USTB/USDC/sUSDS/AMM) render as their
+    // own §2b panel below; this panel scopes strictly to crypto-overcollat
+    // third-party borrower credit.
+    _renderLoanBookHealth: function(specific) {
+        var lb = specific.loan_book;
+        if (!lb) return '';
+
+        var disclaimer = '<div class="risk-flag risk-warning"><strong>Important:</strong> These are open-term loans with off-chain custodied collateral. The smart contract holds no collateral and cannot auto-liquidate — enforcement requires Pool Delegate\'s call right (24h notice + 48h grace before contract-level default). See loan list below for per-loan collateral assets / init levels.</div>';
+
+        if (lb.active_loan_count === null || lb.active_loan_count === undefined) {
+            return '<div class="panel">' +
+                '<div class="panel-title">Loan Book</div>' +
+                disclaimer +
+                '<div class="text-slate-400 text-sm mt-3 italic">Loan-level data pending — per-loan enumeration ships in Phase 2.</div>' +
+            '</div>';
+        }
+
+        var allLoans = lb.loans || [];
+        var loanRows = allLoans.filter(SyrupUSDCRenderer._isLoan);
+        // The pool's on-chain credit alarm — the independent cross-check the
+        // corroboration gate runs against. Read from the pool contract, not
+        // from the same Maple GraphQL feed the per-loan reads come from.
+        var poolUL = (specific.vault_state || {}).unrealized_losses;
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Loan Book <span class="text-xs font-normal text-slate-500">(third-party credit)</span></div>' +
+            disclaimer +
+            this._renderLBH_status(specific, lb, loanRows) +
+            this._renderLBH_buffer(lb, poolUL) +
+            this._renderLBH_byAssetLoans(lb) +
+            this._renderTopLoansTable(lb, loanRows, poolUL) +
+        '</div>';
+    },
+
+    // ⚠️ CORRELATED EXPOSURE, STATED — because two rows of one price risk read as
+    // diversification. The payload categorises WBTC as `unknown`, so BTC 81.7%
+    // and WBTC 2.6% sit apart in the by-asset list and nothing on the page adds
+    // them. riskAnalyst's ruling prices exactly that sum ("BTC + WBTC = 84.27% of
+    // the lending book") and their re-cut trigger is denominated on it — `backing`
+    // 6.5 -> 6.0 above 88% — so the number a score moves on was the one number
+    // this dashboard did not show.
+    //
+    // ⚠️ SUMMED BY SYMBOL, NOT BY THE CATEGORY FIELD, and the note says so. The
+    // producer's own rows supply every figure; this adds no classification of its
+    // own beyond naming which symbols are the same underlying, and it never
+    // rewrites `category`. A wrapper this list does not name stays counted where
+    // the producer put it — the group is a stated set, not a heuristic.
+    SYRUP_BTC_SYMBOLS: ['BTC', 'WBTC', 'cbBTC', 'tBTC'],
+
+    _correlatedBtcHtml: function(rows, principalKey, classTotal, classLabel) {
+        if (!Array.isArray(rows) || !classTotal) return '';
+        var members = rows.filter(function(r) {
+            return SyrupUSDCRenderer.SYRUP_BTC_SYMBOLS.indexOf(r.asset) >= 0 &&
+                   (r[principalKey] || 0) > 0;
+        });
+        // One row is not a correlation to point out — the by-asset line already
+        // says it. This fires only where the exposure is SPLIT across symbols.
+        if (members.length < 2) return '';
+        var usd = members.reduce(function(a, r) { return a + (r[principalKey] || 0); }, 0);
+        var pct = usd / classTotal * 100;
+        var names = members.map(function(r) { return r.asset; }).join(' + ');
+        var cls = pct >= 80 ? 'risk-warning' : 'risk-info';
+        return '<div class="risk-flag ' + cls + ' mt-2">' +
+            '<span class="font-semibold">' + names + ' = ' +
+            CommonRenderer.formatCurrency(usd) + ' · ' + CommonRenderer.formatPercent(pct, 1) +
+            ' of the ' + classLabel + '</span> — one price risk across ' + members.length +
+            ' symbols. ' +
+            '<span class="text-xs text-slate-500">Summed by symbol from the rows above; the ' +
+            'payload categorises WBTC as <span class="font-mono">unknown</span>, so its own ' +
+            'category field understates this.</span>' +
+        '</div>';
+    },
+
+    // ----- §2b Liquidity Layer helpers ------------------------------------
+    // Map a liquidity position (by asset) to its functional sleeve id.
+    // `metaMap` is asset → {meta, venue} harvested from the visible loans[]
+    // (which carry loan_meta_type / custody.venue); by_asset tail entries
+    // that have no visible row fall through to category-only classification.
+    _liquiditySleeveKey: function(asset, category, metaMap) {
+        var m = SYRUP_COLLATERAL_META[asset] || {};
+        // ⚠️ "unknown" IS A VALUE, NOT AN ABSENCE, so `category || m.category`
+        // let the payload's non-answer outrank a category we hold. Latent until
+        // WBTC and USDtb started arriving as "unknown"; the sleeve fallback
+        // happened to land right, which is why it stayed invisible.
+        var cat = (category && category !== 'unknown') ? category : m.category;
+        var info = (metaMap && metaMap[asset]) || {};
+        var meta = info.meta;
+        var venue = info.venue || '';
+        if (cat === 'rwa') return 'rwa';                                   // USTB — genuine T-bill exposure
+        if (meta === 'amm' || /amm|lp/i.test(venue)) return 'amm';         // deployed market-making
+        // `tBills` on a stablecoin is a LoanManager artifact — parked cash
+        // held at par, NOT T-bills. Parked reserve is also the safe default
+        // for any at-par stablecoin sleeve we can't otherwise resolve.
+        return 'parked';
+    },
+
+    // Custody-level on-chain reconciliation for a custodied sleeve. Dedupes
+    // positions by custody.address (the JSON repeats the wallet-level balance
+    // on every position sharing a wallet — summing raw double-counts) and
+    // returns the on-chain total plus data-quality flags.
+    _reconcileCustody: function(positions) {
+        var seen = {}, onChain = 0, hasOnChain = false, anomaly = false;
+        (positions || []).forEach(function(l) {
+            var cu = l.custody || {};
+            if ((l.collateral || {}).usd_source === 'data_anomaly') anomaly = true;
+            var addr = cu.address, bal = cu.asset_balance_usd;
+            if (addr && bal != null && bal > 0 && !seen[addr]) {
+                seen[addr] = true;
+                onChain += bal;
+                hasOnChain = true;
+            }
+        });
+        return { onChain: onChain, hasOnChain: hasOnChain, anomaly: anomaly };
+    },
+
+    // ----- §2b Liquidity Layer (pool-owned positions) ---------------------
+    // Hidden when the analyzer hasn't shipped position_type yet (older
+    // snapshots) — the heuristic _isLiquidity classifier still works but
+    // the custody fields needed for the table only land with the new schema.
+    // Positions are grouped into functional sleeves (parked / market-making
+    // / RWA), sleeve subtotals come from the complete collateral_summary
+    // (not the top-25-truncated loans[]), and custodied sleeves reconcile
+    // booked GraphQL figures against on-chain wallet balances. Degrades on
+    // syrupUSDT (custody/venue null) to sleeve grouping + GraphQL-only badges.
+    _renderLiquidityLayer: function(specific, slug) {
+        var lb = specific.loan_book || {};
+        var ct = (specific.governance || {}).custody_topology || {};
+        var loans = (lb.loans || []).filter(SyrupUSDCRenderer._isLiquidity);
+        if (loans.length === 0) return '';
+
+        var vs = specific.vault_state || {};
+        var liqTotal = lb.principal_liquidity_usd ||
+            loans.reduce(function(s, l) { return s + (l.principal || 0); }, 0);
+        var pctOfPool = (vs.total_assets) ? (liqTotal / vs.total_assets * 100) : null;
+        var underlying = SyrupUSDCRenderer._underlying(slug);
+
+        // ---- Header row ----
+        var header =
+            '<div class="text-sm text-slate-700 mb-2">' +
+                '<span class="font-semibold">' + loans.length + ' position' + (loans.length === 1 ? '' : 's') + '</span> · ' +
+                '<span class="font-mono">' + CommonRenderer.formatCurrency(liqTotal) + '</span>' +
+                (pctOfPool != null ? ' · <span class="font-mono">' + CommonRenderer.formatPercent(pctOfPool, 1) + '</span> of pool' : '') +
+            '</div>';
+
+        // ---- Inline risk flags ----
+        var custodyEntries = (ct.entries || []).filter(function(e) {
+            return e.control_type === 'custody' && e.is_eoa;
+        });
+        var custodyEoaUsd = custodyEntries.reduce(function(s, e) { return s + (e.capital_under_control_usd || 0); }, 0);
+        var eoaFlag = custodyEntries.length > 0 ?
+            '<div class="risk-flag risk-info mb-2">ⓘ <strong>Maple-controlled MPC custody</strong> — ' +
+                CommonRenderer.formatCurrency(custodyEoaUsd) + ' across ' + custodyEntries.length +
+                ' MPC wallet' + (custodyEntries.length === 1 ? '' : 's') +
+                ' under Maple Labs operational control. Residual axis is centralization-of-control (a firm-level event affects all wallets), not custody-primitive weakness.</div>' : '';
+        // ---- Sleeve grouping -------------------------------------------
+        // meta/venue harvested from the visible rows, used to classify both
+        // the rows and the (complete) by_asset subtotals into sleeves.
+        var metaMap = {};
+        loans.forEach(function(l) {
+            var a = (l.collateral || {}).asset;
+            if (!a || metaMap[a]) return;
+            metaMap[a] = { meta: l.loan_meta_type, venue: (l.custody || {}).venue || '' };
+        });
+
+        var cs = lb.collateral_summary || {};
+        // Liquidity subset of the complete by_asset summary (crypto = borrower
+        // collateral; stablecoin/RWA = liquidity layer). Sums exactly to
+        // principal_liquidity_usd, so sleeve subtotals stay correct even when
+        // member rows are dropped by the top-25 truncation.
+        var assetTypes = SyrupUSDCRenderer._assetPositionTypes(lb);
+        var byAssetLiq = (cs.by_asset || []).filter(function(a) {
+            return !SyrupUSDCRenderer._isLoanAssetIn(a.asset, assetTypes);
+        });
+
+        // Accumulate sleeve subtotals from by_asset, members from loans[].
+        var sleeves = {};
+        function ensureSleeve(key) {
+            if (!sleeves[key]) sleeves[key] = { key: key, subtotal: 0, members: [] };
+            return sleeves[key];
+        }
+        byAssetLiq.forEach(function(a) {
+            var key = SyrupUSDCRenderer._liquiditySleeveKey(a.asset, a.category, metaMap);
+            ensureSleeve(key).subtotal += (a.principal_usd || 0);
+        });
+        loans.forEach(function(l) {
+            var c = l.collateral || {};
+            var key = SyrupUSDCRenderer._liquiditySleeveKey(c.asset, c.category, metaMap);
+            ensureSleeve(key).members.push(l);
+        });
+
+        // Render order: subtotal desc; drop sub-threshold dust sleeves (the
+        // ~$5 USTB slot, dormant lending) — their principal is acknowledged
+        // by the tail line below so nothing is silently lost.
+        var visibleSleeves = Object.keys(sleeves).map(function(k) { return sleeves[k]; })
+            .filter(function(s) { return s.subtotal >= SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD; })
+            .sort(function(a, b) { return b.subtotal - a.subtotal; });
+
+        // ---- Concentration line (Change 3) -----------------------------
+        var topAsset = byAssetLiq.slice().sort(function(a, b) {
+            return (b.principal_usd || 0) - (a.principal_usd || 0);
+        })[0];
+        var topAssetPct = (topAsset && liqTotal) ? (topAsset.principal_usd / liqTotal * 100) : null;
+        var walletTotals = {};
+        loans.forEach(function(l) {
+            var addr = (l.custody || {}).address;
+            if (!addr) return;
+            walletTotals[addr] = (walletTotals[addr] || 0) + (l.principal || 0);
+        });
+        var topWalletAddr = null, topWalletUsd = 0;
+        Object.keys(walletTotals).forEach(function(a) {
+            if (walletTotals[a] > topWalletUsd) { topWalletUsd = walletTotals[a]; topWalletAddr = a; }
+        });
+        var topWalletPct = (topWalletAddr && liqTotal) ? (topWalletUsd / liqTotal * 100) : null;
+        var concAmber = (topAssetPct != null && topAssetPct > 60) || (topWalletPct != null && topWalletPct > 60);
+        var concParts = [];
+        if (topAssetPct != null) concParts.push('top asset <strong>' + topAsset.asset + ' ' + CommonRenderer.formatPercent(topAssetPct, 1) + '</strong> of layer');
+        if (topWalletPct != null) concParts.push('top custody wallet <strong>' + CommonRenderer.formatPercent(topWalletPct, 1) + '</strong> <span class="font-mono text-xs">(' + SyrupUSDCRenderer._truncAddr(topWalletAddr) + ')</span>');
+        var concentration = concParts.length ?
+            '<div class="risk-flag ' + (concAmber ? 'risk-warning' : 'risk-info') + ' mb-2">' +
+                (concAmber ? '⚠ ' : 'ⓘ ') + '<strong>Layer concentration</strong> — ' + concParts.join(' · ') +
+                (concAmber ? '. Single-issuer / single-custody exposure is the dominant residual axis for this layer.' : '.') +
+            '</div>' : '';
+
+        // ---- Per-sleeve tables (Changes 1 + 2) -------------------------
+        var renderedRows = 0, renderedPrincipal = 0;
+        var sleeveHtml = visibleSleeves.map(function(s) {
+            var def = SYRUP_LIQUIDITY_SLEEVES[s.key] || { label: s.key, axis: '—', readiness: '—', custodied: false };
+            var recon = def.custodied ? SyrupUSDCRenderer._reconcileCustody(s.members) : { hasOnChain: false, anomaly: false };
+
+            // Sleeve header: label · axis chip · subtotal + readiness tag.
+            var head =
+                '<div class="flex items-center justify-between mt-3 mb-1">' +
+                    '<div class="text-sm font-semibold text-slate-700">' + def.label +
+                        ' <span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600" title="Primary risk axis">' + def.axis + '</span>' +
+                    '</div>' +
+                    '<div class="text-sm font-mono font-semibold text-slate-700">' + CommonRenderer.formatCurrency(s.subtotal) + '</div>' +
+                '</div>' +
+                '<div class="text-xs text-slate-500 mb-1">Redemption-readiness: ' + def.readiness + '</div>';
+
+            // Reconciliation summary (custodied sleeves with on-chain data).
+            var reconLine = '';
+            if (def.custodied && recon.hasOnChain) {
+                var delta = (recon.onChain - s.subtotal) / s.subtotal * 100;
+                var absD = Math.abs(delta);
+                var cls, icon;
+                if (recon.anomaly || absD > 5)      { cls = 'text-red-600';   icon = '✕'; }
+                else if (absD > 1)                    { cls = 'text-amber-600'; icon = '~'; }
+                else                                  { cls = 'text-green-600'; icon = '✓'; }
+                var sign = delta >= 0 ? '+' : '';
+                reconLine =
+                    '<div class="text-xs ' + cls + ' mb-1">Reconciliation: Booked ' + CommonRenderer.formatCurrency(s.subtotal) +
+                        ' · On-chain ' + CommonRenderer.formatCurrency(recon.onChain) +
+                        ' · Δ ' + sign + delta.toFixed(2) + '% ' + icon +
+                        (recon.anomaly ? ' <span class="text-slate-500">(data anomaly on a member position)</span>' : '') +
+                    '</div>';
+            }
+
+            // Member rows.
+            var rows = s.members.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).map(function(l) {
+                renderedRows++;
+                renderedPrincipal += (l.principal || 0);
+                var c = l.collateral || {};
+                var cu = l.custody || {};
+                var meta = SYRUP_COLLATERAL_META[c.asset] || {};
+                var issuer = meta.issuer && meta.issuer !== '—' ? meta.issuer : '—';
+                if (cu.venue) issuer += ' <span class="text-xs text-slate-400">· ' + cu.venue + '</span>';
+                var custodyAddr = cu.address || l.borrower || '—';
+                var custodyChain = (cu.chain || 'ethereum').charAt(0).toUpperCase() + (cu.chain || 'ethereum').slice(1);
+                var eoaBadge = cu.is_eoa ?
+                    '<span class="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600" title="MPC + policy (per Maple\'s 2026-05-04 attestation)">MPC</span>' : '';
+                var custodyCell = custodyAddr === '—' ?
+                    '<span class="text-slate-400">—</span>' :
+                    '<span class="font-mono text-xs" title="' + custodyAddr + '">' + SyrupUSDCRenderer._truncAddr(custodyAddr) + '</span> ' +
+                        SyrupUSDCRenderer._ethLink(custodyAddr) + eoaBadge;
+                // Source badge: on-chain-verified only for custodied, non-AMM,
+                // non-anomalous rows carrying a real wallet balance.
+                var verified = def.custodied && s.key !== 'amm' &&
+                    cu.address && cu.asset_balance_usd != null && cu.asset_balance_usd > 0 &&
+                    c.usd_source !== 'data_anomaly';
+                var srcBadge = verified ?
+                    '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-green-100 text-green-700" title="Booked figure reconciled to on-chain custody balance">on-chain</span>' :
+                    '<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-500" title="GraphQL-asserted; no on-chain reconciliation available">GraphQL-only</span>';
+                return '<tr>' +
+                    '<td><span class="font-mono font-semibold">' + (c.asset || '—') + '</span></td>' +
+                    '<td class="text-xs text-slate-600">' + issuer + '</td>' +
+                    '<td>' + custodyCell + '</td>' +
+                    '<td class="text-xs text-slate-500">' + custodyChain + '</td>' +
+                    '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(l.principal || 0) + '</td>' +
+                    '<td class="text-center">' + srcBadge + '</td>' +
+                '</tr>';
+            }).join('');
+
+            var table = rows ?
+                '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                    '<th>Asset</th><th>Issuer</th><th>Custody</th><th>Chain</th><th class="text-right">Principal</th><th class="text-center">Verified</th>' +
+                '</tr></thead><tbody>' + rows + '</tbody></table></div>' :
+                '<div class="text-xs text-slate-400 mb-1">Positions below top-25 display cutoff — see tail line.</div>';
+
+            return head + reconLine + table;
+        }).join('');
+
+        // ---- Tail line (Change 4): rows vs complete total --------------
+        var tailCount = (lb.liquidity_count != null ? lb.liquidity_count : loans.length) - renderedRows;
+        var tailUsd = liqTotal - renderedPrincipal;
+        var tail = (tailCount > 0 && tailUsd > 0.5) ?
+            '<div class="text-xs text-slate-400 mt-2">+ ' + tailCount + ' smaller position' + (tailCount === 1 ? '' : 's') +
+                ' · ' + CommonRenderer.formatCurrency(tailUsd) + ' (below display cutoff / dust — included in sleeve subtotals above)</div>' : '';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Liquidity Layer <span class="text-xs font-normal text-slate-500">(pool-owned positions)</span></div>' +
+            '<p class="text-sm text-slate-500 mb-3">Pool-owned redemption reserve, not third-party credit — split by function: ' +
+                '<strong>parked reserve</strong> (custodied stablecoin — issuer + custody risk), ' +
+                '<strong>market-making</strong> (AMM LP seeding the syrup token\'s secondary market — smart-contract / IL / reflexivity risk), and ' +
+                '<strong>RWA</strong> (tokenized T-bills — issuer + settlement risk). ' +
+                'Booked figures are reconciled against on-chain custody balances where available.</p>' +
+            header +
+            eoaFlag +
+            concentration +
+            sleeveHtml +
+            tail +
+        '</div>';
+    },
+
+    // §2 sub-block A — Status snapshot (loans-only)
+    // Recomputes status counts from the filtered loans-only set; the
+    // analyzer's lb.healthy_count etc. are book-wide and would mix
+    // liquidity positions into the health metric.
+    _renderLBH_status: function(specific, lb, loanRows) {
+        var rows = loanRows || (lb.loans || []).filter(SyrupUSDCRenderer._isLoan);
+        var loansCount = (lb.loans_only_count != null) ? lb.loans_only_count : rows.length;
+        var imp = 0, cal = 0, def = 0, healthy = 0;
+        rows.forEach(function(l) {
+            var s = (l.status || '').toLowerCase();
+            if (l.is_in_default || s === 'default' || s === 'defaulted') def++;
+            else if (l.is_called || s === 'called') cal++;
+            else if (l.is_impaired || s === 'impaired') imp++;
+            else healthy++;
+        });
+
+        var cs = lb.collateral_summary || {};
+        var poolCR = lb.credit_coverage ? lb.credit_coverage.collateral_ratio_pct : cs.collateral_ratio_loans_only_pct;
+        var rateText = (lb.weighted_avg_rate_pct != null) ? CommonRenderer.formatPercent(lb.weighted_avg_rate_pct, 2) : '—';
+        var poolCRText = (poolCR != null) ? CommonRenderer.formatPercent(poolCR, 1) : '—';
+
+        var co = lb.concentration_loans_only || {};
+        var borrowerCount = co.total_borrowers != null ? co.total_borrowers : co.borrower_count;
+        var borrowerText = borrowerCount != null ? borrowerCount + ' borrowers' : 'Loan-only borrower count unavailable';
+
+        function statusPill(label, count, cls) {
+            var color = count > 0 ? cls : 'text-slate-400';
+            return '<span class="' + color + '"><strong>' + label + '</strong> ' + count + '</span>';
+        }
+
+        return '<div class="mt-4 mb-4">' +
+            '<div class="text-sm text-slate-700 mb-1">' +
+                '<span class="font-semibold">' + loansCount + ' loans</span> · ' +
+                '<span class="font-semibold">' + borrowerText + '</span> · ' +
+                '<span class="font-mono">' + rateText + '</span> wtd-rate · ' +
+                'pool CR (loans-only) <span class="font-mono">' + poolCRText + '</span>' +
+            '</div>' +
+            '<div class="text-sm text-slate-600 flex flex-wrap gap-x-4 gap-y-1">' +
+                statusPill('Healthy', healthy, 'text-green-600') +
+                '<span class="text-slate-300">·</span>' +
+                statusPill('Impaired', imp, 'text-amber-600') +
+                '<span class="text-slate-300">·</span>' +
+                statusPill('Called', cal, 'text-orange-600') +
+                '<span class="text-slate-300">·</span>' +
+                statusPill('Default', def, 'text-red-600') +
+            '</div>' +
+        '</div>';
+    },
+
+    // §2 sub-block B — Buffer health (NEW). Reads PegTracker companion fields.
+    // Graceful-degrades to a placeholder when those fields aren't shipped yet.
+    _renderLBH_buffer: function(lb, poolUL) {
+        var cs = lb.collateral_summary;
+        if (!cs) return '';  // Collateral Mix sub-block handles the unavailable case below.
+
+        var hasBuffer = (cs.loans_below_init_count != null &&
+                        cs.weighted_avg_buffer_pp != null &&
+                        cs.tightest_loan) ||
+                        cs.set_a_collateral_health != null;
+
+        if (!hasBuffer) {
+            return '<div class="mb-4 p-3 rounded-lg" style="background:#f8fafc;border:1px solid #e2e8f0">' +
+                '<div class="text-sm font-semibold text-slate-700 mb-1">Buffer health</div>' +
+                '<div class="text-xs text-slate-400 italic">Buffer-health metrics pending pipeline update.</div>' +
+            '</div>';
+        }
+
+        // `above` / `aboveUsd` / `belowPct` / `abovePct` used to be computed
+        // here and were never read; dropped so the below-init figures have a
+        // single source (the filtered pass below when it applies).
+        var below = cs.loans_below_init_count || 0;
+        var belowUsd = cs.principal_below_init_usd || 0;
+
+        // The published tightest_loan / weighted_avg_buffer_pp / below-init
+        // tally are computed over every read including the ones the pool's own
+        // on-chain alarm contradicts — on syrupUSDC that puts an artifact loan
+        // in the headline. Recompute all three from one filtered pass so they
+        // stay consistent with each other, and say what was dropped. `stats`
+        // is null when nothing is excluded, in which case the published fields
+        // render unchanged.
+        var stats = SyrupUSDCRenderer._bufferStatsExUncorroborated(lb, poolUL);
+        var wab = stats ? (stats.weighted_avg_buffer_pp != null ? stats.weighted_avg_buffer_pp : 0)
+                        : (cs.weighted_avg_buffer_pp != null ? cs.weighted_avg_buffer_pp : 0);
+        var wabSign = wab >= 0 ? '+' : '';
+        if (stats) {
+            below = stats.below_init_count;
+            belowUsd = stats.below_init_usd;
+        }
+
+        var t = stats ? stats.tightest : cs.tightest_loan;
+        var tightestBlock = '';
+        if (t) {
+            var tSign = t.buffer_pp >= 0 ? '+' : '';
+            var pap = (t.points_above_par != null) ? t.points_above_par.toFixed(1) :
+                (t.current_level_pct != null ? (t.current_level_pct - 100).toFixed(1) : '?');
+            var papCls = t.points_above_par <= 0 ? 'text-red-600 font-semibold' :
+                         t.points_above_par <= 5 ? 'text-amber-600 font-semibold' : 'text-slate-700';
+            tightestBlock =
+                '<div class="text-sm mt-2">' +
+                    (stats ? 'Tightest remaining priced loan (uncorroborated reads excluded): ' : 'Tightest loan: ') + '<span class="font-mono">' + CommonRenderer.formatCurrency(t.principal_usd) + ' ' + t.asset + '</span> @ ' +
+                    CommonRenderer.formatPercent(t.current_level_pct, 1) +
+                    ' (init ' + CommonRenderer.formatPercent(t.init_level_pct, 0) + ', ' + tSign + t.buffer_pp.toFixed(1) + 'pp)' +
+                    ' — only <span class="' + papCls + '">' + pap + 'pp above par</span>' +
+                '</div>';
+        }
+
+        // Lead with Set A distance-to-par tiers — par (100%), not init, is the health threshold.
+        var h = cs.set_a_collateral_health;
+        var setACritPct = (h && h.crit_level_pct != null) ? h.crit_level_pct : 100;
+        var setAWarnPct = (h && h.warn_level_pct != null) ? h.warn_level_pct : 120;
+        var setABlock = '';
+        if (h) {
+            // Corroborated bucket drives the red 🚨 block. Fall back to the total
+            // crit_count when the split fields are absent (older cached JSON) so a
+            // real alarm is never silently hidden.
+            var corrN = (h.crit_corroborated_count != null) ? h.crit_corroborated_count : (h.crit_count || 0);
+            var corrUsd = (h.crit_corroborated_count != null) ? (h.crit_corroborated_principal_usd || 0) : (h.crit_principal_usd || 0);
+            var uncorrN = h.crit_uncorroborated_count || 0;
+            var uncorrUsd = h.crit_uncorroborated_principal_usd || 0;
+            var warnN = h.warn_count || 0;
+            if (corrN > 0) {
+                setABlock +=
+                    '<div class="text-sm text-red-700 mb-1">' +
+                        '🚨 <strong>' + corrN + ' Set A loan' + (corrN === 1 ? '' : 's') + ' below ' + setACritPct + '% collateralization</strong> · ' +
+                        CommonRenderer.formatCurrency(corrUsd) +
+                        '<div class="text-xs text-red-600 mt-1 ml-4">Collateral worth less than principal; delegate has discretion to call but has not.</div>' +
+                    '</div>';
+            }
+            if (uncorrN > 0) {
+                setABlock +=
+                    '<div class="text-sm text-slate-500 mb-1">' +
+                        'ⓘ ' + uncorrN + ' Set A loan' + (uncorrN === 1 ? '' : 's') + ' read below ' + setACritPct + '% in Maple GraphQL · ' +
+                        CommonRenderer.formatCurrency(uncorrUsd) +
+                        '<div class="text-xs text-slate-400 mt-1 ml-4">Collateral valuation and custody scope remain uncorroborated. Zero recognized losses and accounting PCR do not resolve these readings; neither a verified shortfall nor a safe recovery buffer is established.</div>' +
+                    '</div>';
+            }
+            if (warnN > 0) {
+                setABlock +=
+                    '<div class="text-sm text-amber-700 mb-1">' +
+                        '⚠ <strong>' + warnN + ' Set A loan' + (warnN === 1 ? '' : 's') + ' in ' + setACritPct + '–' + setAWarnPct + '% thin-buffer band</strong> · ' +
+                        CommonRenderer.formatCurrency(h.warn_principal_usd || 0) +
+                    '</div>';
+            }
+            if (corrN === 0 && uncorrN === 0 && warnN === 0) {
+                setABlock =
+                    '<div class="text-sm text-green-600 mb-1">All Set A loans ≥ ' + setAWarnPct + '% collateralized.</div>';
+            }
+        }
+
+        // Deliberately carries no share-of-book percentage: the producer already
+        // publishes one on its risk flag (39.6% of the total book) and a second
+        // denominator on the same page is the defect this pass exists to remove.
+        // The excluded/kept dollar pair gives the magnitude without a third basis.
+        var exclusionNote = '';
+        if (stats) {
+            // When the Set A block above is present it already states the excluded
+            // magnitude, from the producer's own published split — so point at it
+            // instead of restating a separately-derived pair that could drift.
+            var exN = stats.excluded_count;
+            var whichExcluded = h ?
+                'the uncorroborated read' + (exN === 1 ? '' : 's') + ' listed above' :
+                '<strong>' + exN + ' loan' + (exN === 1 ? '' : 's') + '</strong> (' +
+                    CommonRenderer.formatCurrency(stats.excluded_usd) + ') that Maple GraphQL prices below par ' +
+                    'while the pool\'s own on-chain <span class="font-mono">unrealizedLosses</span> is 0 ' +
+                    'and none is impaired, called or in default';
+            exclusionNote =
+                '<div class="text-xs text-slate-500 mt-2">' +
+                    'Figures above exclude ' + whichExcluded + ', and are computed over the ' + stats.kept_count +
+                    ' corroborated read' + (stats.kept_count === 1 ? '' : 's') + ' (' +
+                    CommonRenderer.formatCurrency(stats.kept_usd) + '). Those rows are marked ' +
+                    '<span class="text-slate-400">unverified</span> in the loan table — the number is still shown, ' +
+                    'it is just not treated as a finding.' +
+                '</div>';
+        }
+
+        return '<div class="mb-4 p-3 rounded-lg" style="background:#f8fafc;border:1px solid #e2e8f0">' +
+            '<div class="text-sm font-semibold text-slate-700 mb-2">Buffer health <span class="text-xs font-normal text-slate-500">(distance to par)</span></div>' +
+            setABlock +
+            tightestBlock +
+            exclusionNote +
+            (below > 0 ?
+                '<div class="text-xs text-slate-400 mt-2">' +
+                    below + ' loan' + (below === 1 ? '' : 's') + ' below their funding-time init level (' +
+                    CommonRenderer.formatCurrency(belowUsd) + ') — informational; init is not the health threshold, see distance-to-par above. ' +
+                    'Wtd-avg buffer-to-init ' + wabSign + wab.toFixed(1) + 'pp.' +
+                '</div>' : '') +
+        '</div>';
+    },
+
+    // §2 sub-block C — By collateral asset (loans-only). Drops Set A/B
+    // framing — the new framing splits the book into loans-only vs
+    // liquidity-layer panels, with this section showing the per-asset
+    // breakdown of crypto-overcollat third-party credit only.
+    _renderLBH_byAssetLoans: function(lb) {
+        var cs = lb.collateral_summary;
+        if (!cs) return '';
+
+        if (cs.data_source === 'unavailable') {
+            return '<div class="risk-flag risk-info mb-4">Collateral data temporarily unavailable from Maple API. Loan-level credit and timing fields above are unaffected.</div>';
+        }
+
+        var byAsset = cs.by_asset || [];
+        // The `init_level_pct_max > 105` escape hatch used to be the only reason
+        // WBTC appeared here at all; position_type now answers it directly, and
+        // the hatch stays as the fallback for rollup rows with no visible loan.
+        var loanTypes = SyrupUSDCRenderer._assetPositionTypes(lb);
+        var loanAssets = byAsset.filter(function(r) {
+            return SyrupUSDCRenderer._isLoanAssetIn(r.asset, loanTypes) || (r.init_level_pct_max || 0) > 105;
+        });
+        if (loanAssets.length === 0) return '';
+
+        var loansOnlyTotal = lb.principal_loans_only_usd ||
+            loanAssets.reduce(function(s, r) { return s + (r.principal_usd || 0); }, 0);
+
+        function bar(row) {
+            var raw = row.principal_usd || 0;
+            var pct = loansOnlyTotal > 0 ? (raw / loansOnlyTotal * 100) : 0;
+            var meta = SYRUP_COLLATERAL_META[row.asset] || {};
+            var issuerTag = meta.issuer && meta.issuer !== '—' ?
+                ' <span class="text-xs text-slate-500">' + meta.issuer + '</span>' : '';
+            var levelRange;
+            if (row.init_level_pct_min === row.init_level_pct_max) {
+                levelRange = CommonRenderer.formatPercent(row.init_level_pct_min, 0);
+            } else {
+                levelRange = CommonRenderer.formatPercent(row.init_level_pct_min, 0) + '–' + CommonRenderer.formatPercent(row.init_level_pct_max, 0);
+            }
+            return '<div class="mb-2">' +
+                '<div class="flex justify-between text-sm mb-1">' +
+                    '<span class="text-slate-700"><span class="font-mono font-semibold">' + row.asset + '</span>' + issuerTag + ' <span class="text-xs text-slate-400">' + (row.loans || 0) + ' loan' + (row.loans === 1 ? '' : 's') + ' · init ' + levelRange + '</span></span>' +
+                    '<span class="font-mono font-semibold">' + CommonRenderer.formatPercent(pct, 1) + ' · ' + CommonRenderer.formatCurrency(raw) + '</span>' +
+                '</div>' +
+                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + Math.min(pct, 100) + '%; background:#22c55e"></div></div>' +
+            '</div>';
+        }
+
+        return '<div class="mb-4">' +
+            '<div class="text-sm font-semibold text-slate-700 mb-2">By collateral asset</div>' +
+            '<div class="text-xs text-slate-400 mb-2">Percentages relative to ' + CommonRenderer.formatCurrency(loansOnlyTotal) + ' loans-only book.</div>' +
+            loanAssets.sort(function(a, b) { return (b.principal_usd || 0) - (a.principal_usd || 0); }).map(bar).join('') +
+            SyrupUSDCRenderer._correlatedBtcHtml(loanAssets, 'principal_usd', loansOnlyTotal, 'loans-only book') +
+        '</div>';
+    },
+
+    // §2 sub-block D — Top loans table (loans-only). The previous
+    // single-table version mixed third-party credit with pool-owned
+    // liquidity positions; liquidity positions now render as their own
+    // table inside the §2b Liquidity Layer panel.
+    _renderTopLoansTable: function(lb, loanRows, poolUL) {
+        var rows = loanRows || (lb.loans || []).filter(SyrupUSDCRenderer._isLoan);
+        if (rows.length === 0) return '';
+
+        var summary = lb.collateral_summary;
+        var hasCollateral = !!(summary && summary.data_source && summary.data_source !== 'unavailable')
+            || rows.some(function(l) { return l && l.collateral; });
+        var sorted = rows.slice().sort(function(a, b) { return (b.principal || 0) - (a.principal || 0); }).slice(0, 10);
+        // ⚠️ PAR IS THE HEALTH THRESHOLD, INIT IS NOT — init is simply the level the
+        // loan was originated at. The producer publishes the real bands; read them
+        // rather than colouring on distance-from-origination.
+        var saHealth = (summary && summary.set_a_collateral_health) || {};
+        var parBands = {
+            crit: (saHealth.crit_level_pct != null) ? saHealth.crit_level_pct : 100,
+            warn: (saHealth.warn_level_pct != null) ? saHealth.warn_level_pct : 120
+        };
+        var rowsHtml = sorted.map(function(l) {
+            return SyrupUSDCRenderer._renderLoanRow(l, hasCollateral, poolUL, parBands);
+        }).join('');
+
+        var collateralHeaders = hasCollateral ?
+            ('<th class="cursor-pointer" data-sort="collat">Collateral</th>' +
+             '<th class="text-right cursor-pointer" data-sort="init">Init</th>' +
+             '<th class="text-right cursor-pointer" data-sort="cur">Cur</th>' +
+             '<th class="text-right cursor-pointer" data-sort="buf">Buf</th>') : '';
+
+        // ⚠️ NEITHER COLUMN IS THE PROTOCOL'S THRESHOLD, AND THE PAGE SHOULD SAY SO.
+        // Maple's borrower docs define THREE per-loan levels, all set in the loan's
+        // term sheet: Initial Collateral Level ("the collateralization level the
+        // borrower must restore to after a Margin Call"), Margin Call Level ("the
+        // collateralization threshold at which a margin call is triggered; the
+        // borrower is notified and must cure within 24 hours"), and Liquidation
+        // Level ("if reached at any point, Maple has full rights to liquidate").
+        // ⚠️ Init is the RESTORE TARGET, not a trigger — which is a stronger reason
+        // not to colour on it than "it is where the loan started".
+        // ⚠️ AND PAR IS NOT THE TRIGGER EITHER: Maple states margin call and
+        // liquidation levels are "always set conservatively above 100%". The real
+        // levels are per-loan term-sheet parameters and are NOT in this feed, so
+        // the bands below are a proxy and neither colour is Maple's verdict.
+        var thresholdNote =
+            '<div class="text-xs text-slate-500 mt-2 leading-relaxed">' +
+                'Colour is distance to par, using the producer\'s ' +
+                parBands.crit + '% / ' + parBands.warn + '% bands. ' +
+                '<strong>Those are a proxy, not Maple\'s trigger.</strong> Maple sets three levels per ' +
+                'loan in its term sheet — an <em>initial</em> level (the level a borrower must restore ' +
+                '<em>to</em> after a margin call), a <em>margin call</em> level (24h to cure), and a ' +
+                '<em>liquidation</em> level — and states that the latter two sit ' +
+                '<strong>above 100%</strong>. ⚠️ <strong>Those per-loan levels are not published in this ' +
+                'feed</strong>, so a loan shown green here may already sit below its own margin-call ' +
+                'level, and Init is the restore target rather than a trigger. ' +
+                '<a href="https://docs.maple.finance/maple-for-borrowers/borrower-faq" target="_blank" ' +
+                'rel="noopener noreferrer" class="text-blue-600 hover:underline">Maple borrower FAQ ↗</a>' +
+            '</div>';
+
+        return '<div class="text-sm font-semibold text-slate-700 mb-2 mt-2">Top loans (sortable)</div>' +
+            '<div class="overflow-x-auto"><table class="data-table" id="syrup-loans-table"><thead><tr>' +
+                '<th class="cursor-pointer" data-sort="borrower">Borrower</th>' +
+                '<th class="text-right cursor-pointer" data-sort="principal">Princ. ▾</th>' +
+                '<th class="text-right cursor-pointer" data-sort="rate">Rate</th>' +
+                '<th class="text-right cursor-pointer" data-sort="days">Days</th>' +
+                '<th class="cursor-pointer" data-sort="status">S</th>' +
+                collateralHeaders +
+            '</tr></thead><tbody>' + rowsHtml + '</tbody></table></div>' +
+            thresholdNote;
+    },
+
+    _renderLoanRow: function(loan, hasCollateral, poolUL, parBands) {
+        var addr = loan.borrower || '';
+        var firmTag = loan.firm ? '<span class="text-xs text-slate-500 ml-1">' + loan.firm + '</span>' : '';
+        var borrowerCell = '<span class="font-mono text-xs" title="' + addr + '">' + SyrupUSDCRenderer._truncAddr(addr) + '</span>' +
+            ' ' + SyrupUSDCRenderer._ethLink(addr) + firmTag;
+
+        var days = null;
+        if (loan.payment_due_date) {
+            var due = typeof loan.payment_due_date === 'number' ?
+                new Date(loan.payment_due_date * 1000) :
+                new Date(loan.payment_due_date.endsWith && loan.payment_due_date.endsWith('Z') ? loan.payment_due_date : loan.payment_due_date + 'Z');
+            if (!isNaN(due.getTime())) {
+                days = Math.floor((due.getTime() - Date.now()) / 86400000);
+            }
+        }
+        var daysText, daysCls = '';
+        if (days === null) {
+            daysText = '—';
+        } else if (days < 0) {
+            // Convert to overdue hours (rough; abs days back to hours)
+            var overdueHours = Math.round(-days * 24);
+            daysText = 'Overdue ' + (overdueHours >= 24 ? Math.round(-days) + 'd' : overdueHours + 'h');
+            daysCls = 'text-red-600 font-semibold';
+        } else {
+            daysText = days + 'd';
+            if (days < 7) daysCls = 'text-red-600 font-semibold';
+            else if (days < 30) daysCls = 'text-amber-600';
+        }
+
+        var status = loan.status || '';
+        var statusCell = SyrupUSDCRenderer._statusEmoji(status);
+
+        var sortAttrs = {
+            principal: loan.principal || 0,
+            rate: loan.rate_pct || 0,
+            days: days === null ? '' : days,
+            status: status,
+            borrower: addr
+        };
+
+        var collateralCells = '';
+        if (hasCollateral) {
+            var c = loan.collateral || {};
+            var asset = c.asset || null;
+            var collatUsd = c.usd;
+            var isAnomaly = c.usd_source === 'data_anomaly';
+            // Second, distinct failure mode: the read is present but the pool's
+            // on-chain alarm contradicts it (see _collateralUncorroborated).
+            var isUncorroborated = SyrupUSDCRenderer._collateralUncorroborated(loan, poolUL);
+            // Distinguish data_anomaly cells (Maple GraphQL returns broken
+            // currentAssetAmount) from genuinely-unavailable: same — but with
+            // a ? glyph + tooltip so readers know it's a data-quality issue,
+            // not a missing oracle.
+            var anomalyAttrs = isAnomaly ?
+                ' title="Maple GraphQL data anomaly — click for methodology footnote" class="cursor-help"' : '';
+            // Anchor jumps to the AUM-coverage panel's methodology footnote
+            // so a careful reader can find the explanation in one click.
+            var anomalyGlyph = isAnomaly ?
+                ' <a href="#syrup-data-anomaly-note" class="text-amber-500 text-xs no-underline hover:underline" title="Maple GraphQL data anomaly — click for methodology footnote">?</a>' : '';
+
+            // Single combined "Collateral" cell — "PYUSD $152.7M" or "USTB — ?"
+            var collatCellText;
+            if (!asset) {
+                collatCellText = '<span class="text-slate-400">—</span>';
+            } else {
+                var meta = SYRUP_COLLATERAL_META[asset] || {};
+                var usdText;
+                if (collatUsd != null) {
+                    usdText = CommonRenderer.formatCurrency(collatUsd);
+                } else if (isAnomaly) {
+                    usdText = '<span class="text-slate-400"' + anomalyAttrs + '>—</span>' + anomalyGlyph;
+                } else {
+                    usdText = '<span class="text-slate-400">—</span>';
+                }
+                var issuerSuffix = meta.issuer && meta.issuer !== '—' ?
+                    ' <span class="text-xs text-slate-400">(' + meta.issuer + ')</span>' : '';
+                collatCellText = '<span class="font-mono text-xs">' + asset + '</span> ' +
+                    '<span class="font-mono text-sm">' + usdText + '</span>' + issuerSuffix;
+            }
+
+            var initLevel = c.init_level_pct;
+            var curLevel = c.current_level_pct;
+            var initText = (initLevel != null) ? CommonRenderer.formatPercent(initLevel, 0) : '—';
+            // ⚠️ THE HEALTH COLOUR MOVES TO THE COLUMN THE THRESHOLD APPLIES TO.
+            // It used to sit on Buf, which measures distance from the loan's
+            // ORIGINATION level — so a $50M loan funded at 125% and sitting at
+            // 124.9% rendered red ("delegate discretion to call") while being
+            // 24.9pp above par, and a 126% loan rendered amber. Meanwhile the
+            // panel four lines up said in words that init is not the health
+            // threshold. Cur is the number the producer's crit/warn bands are
+            // defined against, so it is the one that carries the colour.
+            var bands = parBands || { crit: 100, warn: 120 };
+            var curText;
+            if (curLevel != null && isUncorroborated) {
+                curText = '<span class="text-slate-400" title="' +
+                    SyrupUSDCRenderer._escapeAttrSafe(SyrupUSDCRenderer._uncorroboratedTitle(c)) + '">' +
+                    CommonRenderer.formatPercent(curLevel, 1) + '</span>';
+            } else if (curLevel != null && !c.is_at_par) {
+                var curCls = (curLevel < bands.crit) ? 'text-red-600 font-semibold' :
+                             (curLevel < bands.warn) ? 'text-amber-600 font-semibold' :
+                                                       'text-green-600';
+                var curTitle = (curLevel < bands.crit)
+                    ? 'Below ' + bands.crit + '% — collateral worth less than principal'
+                    : (curLevel < bands.warn)
+                        ? 'In the ' + bands.crit + '\u2013' + bands.warn + '% thin-buffer band'
+                        : 'At or above ' + bands.warn + '% collateralization';
+                curText = '<span class="' + curCls + '" title="' + curTitle + '">' +
+                    CommonRenderer.formatPercent(curLevel, 1) + '</span>';
+            } else if (curLevel != null) {
+                curText = CommonRenderer.formatPercent(curLevel, 1);
+            } else if (isAnomaly) {
+                curText = '<span' + anomalyAttrs + '>—</span>' + anomalyGlyph;
+            } else {
+                curText = '—';
+            }
+
+            collateralCells =
+                '<td>' + collatCellText + '</td>' +
+                '<td class="text-right font-mono text-slate-500">' + initText + '</td>' +
+                '<td class="text-right font-mono">' + curText + '</td>' +
+                SyrupUSDCRenderer._renderBufferCell(c, isUncorroborated);
+
+            sortAttrs.collat = asset || '';
+            sortAttrs.init = (initLevel != null) ? initLevel : '';
+            sortAttrs.cur = (curLevel != null) ? curLevel : '';
+            sortAttrs.buf = (c.buffer_pp != null) ? c.buffer_pp : '';
+        }
+
+        var dataAttrs = Object.keys(sortAttrs).map(function(k) {
+            return 'data-' + k.replace(/_/g, '-') + '="' + String(sortAttrs[k]).replace(/"/g, '&quot;') + '"';
+        }).join(' ');
+
+        return '<tr ' + dataAttrs + '>' +
+            '<td>' + borrowerCell + '</td>' +
+            '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(loan.principal || 0) + '</td>' +
+            '<td class="text-right font-mono">' + (loan.rate_pct != null ? CommonRenderer.formatPercent(loan.rate_pct, 2) : '—') + '</td>' +
+            '<td class="text-right font-mono ' + daysCls + '">' + daysText + '</td>' +
+            '<td>' + statusCell + '</td>' +
+            collateralCells +
+        '</tr>';
+    },
+
+    // ----- Collateral-read corroboration ----------------------------------
+    // Maple's per-loan GraphQL `currentAssetAmount` is understated on some
+    // crypto-collateralised loans, which makes `current_level_pct` read below
+    // par on loans that are not in distress. The producer already grades this:
+    // a below-par read only counts as a finding when the pool's on-chain
+    // `unrealizedLosses` is > 0 or the loan is impaired/called/defaulted. It
+    // publishes the verdict in aggregate (set_a_collateral_health
+    // .crit_corroborated_* vs .crit_uncorroborated_*) but stamps nothing on
+    // the loan record, so every consumer has to reconstruct the rule per row.
+    // Handoff filed upstream to stamp it; this reconstruction reproduces the
+    // published aggregate exactly (syrupUSDC 2026-09-14: 10 loans / $372.55M).
+    // Conservative by design: an unknown or live alarm leaves the read asserted.
+    // ✅ NOW READS THE PRODUCER'S OWN VERDICT. PegTracker stamped
+    // `read_corroborated` + `read_corroboration_basis` on every loan record
+    // (2026-09-14, from this repo's handoff), so the rule no longer has to be
+    // rebuilt from three separate fields on the consumer side.
+    // ⚠️ The reconstruction stays as a FALLBACK for snapshots predating the
+    // field — deleting it would blank the qualification on any older payload —
+    // but it is no longer what runs. Verified equivalent before switching:
+    // the published field flags 10 rows on syrupUSDC and 0 on syrupUSDT,
+    // matching the reconstruction exactly.
+    _collateralUncorroborated: function(loan, poolUL) {
+        var c = loan && loan.collateral;
+        if (!c) return false;
+        if (typeof c.read_corroborated === 'boolean') return c.read_corroborated === false;
+        // ---- fallback: pre-2026-09-14 payloads with no stamped verdict ----
+        if (c.current_level_pct == null) return false;
+        if (c.current_level_pct >= 100) return false;
+        if (poolUL == null || poolUL > 0) return false;
+        if (loan.is_impaired || loan.is_called || loan.is_in_default) return false;
+        return true;
+    },
+
+    // Prefer the producer's own reason string over ours (design rule R2).
+    _uncorroboratedTitle: function(coll) {
+        var basis = coll && coll.read_corroboration_basis;
+        return basis
+            ? 'Reads below par in Maple GraphQL but uncorroborated — ' + basis +
+              '. The valuation and custody scope remain unresolved; accounting PCR does not resolve this reading.'
+            : SYRUP_UNCORROBORATED_TITLE;
+    },
+
+    // Buffer-health aggregates recomputed over the reads that survive the
+    // corroboration gate, so the tightest loan, the weighted-average buffer
+    // and the below-init tally are consistent with each other BY CONSTRUCTION
+    // rather than by re-checking. Returns null when nothing is excluded, so a
+    // pool with no suspect reads (syrupUSDT today) keeps rendering the
+    // producer's published fields verbatim. Same formula as the producer:
+    // principal-weighted over loans-only rows carrying a buffer_pp.
+    _bufferStatsExUncorroborated: function(lb, poolUL) {
+        var kept = [], excl = [];
+        (lb.loans || []).filter(SyrupUSDCRenderer._isLoan).forEach(function(l) {
+            if (!l.collateral || l.collateral.buffer_pp == null) return;
+            (SyrupUSDCRenderer._collateralUncorroborated(l, poolUL) ? excl : kept).push(l);
+        });
+        if (excl.length === 0) return null;
+        function sumP(rows) { return rows.reduce(function(s, l) { return s + (l.principal || 0); }, 0); }
+        var keptUsd = sumP(kept);
+        var belowInit = kept.filter(function(l) { return l.collateral.buffer_pp < 0; });
+        var tightest = null;
+        kept.forEach(function(l) {
+            if (l.collateral.current_level_pct == null) return;
+            if (!tightest || l.collateral.current_level_pct < tightest.collateral.current_level_pct) tightest = l;
+        });
+        return {
+            excluded_count: excl.length,
+            excluded_usd: sumP(excl),
+            kept_count: kept.length,
+            kept_usd: keptUsd,
+            weighted_avg_buffer_pp: keptUsd > 0 ? kept.reduce(function(s, l) {
+                return s + (l.principal || 0) * l.collateral.buffer_pp;
+            }, 0) / keptUsd : null,
+            below_init_count: belowInit.length,
+            below_init_usd: sumP(belowInit),
+            tightest: tightest ? {
+                principal_usd: tightest.principal,
+                asset: tightest.collateral.asset,
+                init_level_pct: tightest.collateral.init_level_pct,
+                current_level_pct: tightest.collateral.current_level_pct,
+                buffer_pp: tightest.collateral.buffer_pp,
+                points_above_par: tightest.collateral.current_level_pct - 100
+            } : null
+        };
+    },
+
+    // Per-Set buffer-color decision rule (master spec §3).
+    _renderBufferCell: function(coll, uncorroborated) {
+        var buf = coll && coll.buffer_pp;
+        if (buf === null || buf === undefined) {
+            // Distinguish data_anomaly (collateral state unverifiable) from
+            // genuinely-unavailable so readers understand the difference.
+            if (coll && coll.usd_source === 'data_anomaly') {
+                return '<td class="text-right font-mono text-slate-400">— <a href="#syrup-data-anomaly-note" class="text-amber-500 text-xs no-underline hover:underline cursor-help" title="Maple GraphQL data anomaly — click for methodology footnote">?</a></td>';
+            }
+            return '<td class="text-right font-mono text-slate-400">—</td>';
+        }
+        var sign = buf >= 0 ? '+' : '';
+        var label = sign + buf.toFixed(1) + 'pp';
+
+        // Below-par read the pool's own on-chain alarm contradicts: show the
+        // number, but qualified rather than asserted as distress. The verdict
+        // is the producer's, not a heuristic invented here.
+        if (uncorroborated) {
+            return '<td class="text-right font-mono text-slate-400" title="' +
+                SyrupUSDCRenderer._escapeAttrSafe(SyrupUSDCRenderer._uncorroboratedTitle(coll)) + '">' +
+                label + ' <a href="#syrup-data-anomaly-note" class="text-slate-400 text-xs no-underline hover:underline cursor-help">unverified</a></td>';
+        }
+
+        if (coll.is_at_par) {
+            // Set B: gray "at-par" tag unless asset has depegged below par
+            if (buf < -1) {
+                return '<td class="text-right font-mono text-red-600 font-semibold" title="Collateral asset depegged below par">' + label + ' 🔴</td>';
+            }
+            return '<td class="text-right font-mono text-slate-500" title="At par by design">' + label + ' <span class="text-xs">at-par</span></td>';
+        }
+        // Set A — ⚠️ NO HEALTH COLOUR HERE ANY MORE. buffer_pp is distance from the
+        // level the loan was ORIGINATED at, which is not a solvency threshold: a
+        // loan funded at 167% and sitting at 150% is -16.7pp and perfectly healthy,
+        // while this cell used to paint it red. The crit/warn bands are defined
+        // against par and now colour the Cur column, where they belong.
+        // The number stays — it is real and it is what the "below their funding-time
+        // init level" line in Buffer health counts — it just no longer asserts
+        // distress on its own.
+        return '<td class="text-right font-mono text-slate-500" title="' +
+            'Distance from the level this loan was originated at (' +
+            (coll.init_level_pct != null ? coll.init_level_pct.toFixed(0) + '%' : 'its init level') +
+            '). Informational: init is where the loan started, not a health threshold. ' +
+            'Health is measured against par and is coloured in the Cur column.">' + label + '</td>';
+    },
+
+    _attachLoanTableSort: function() {
+        var table = document.getElementById('syrup-loans-table');
+        if (!table) return;
+        var headers = table.querySelectorAll('th[data-sort]');
+        var STRING_KEYS = { borrower: 1, status: 1, collat: 1 };
+        headers.forEach(function(th) {
+            th.addEventListener('click', function() {
+                var key = th.getAttribute('data-sort');
+                var attr = 'data-' + key.replace(/_/g, '-');
+                var tbody = table.querySelector('tbody');
+                var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+                // Default click → asc (so Buf ascending = tightest first); subsequent click toggles.
+                var dir = th.getAttribute('data-dir') === 'asc' ? 'desc' : 'asc';
+                headers.forEach(function(h) { h.removeAttribute('data-dir'); });
+                th.setAttribute('data-dir', dir);
+                rows.sort(function(a, b) {
+                    var av = a.getAttribute(attr) || '';
+                    var bv = b.getAttribute(attr) || '';
+                    if (STRING_KEYS[key]) {
+                        return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+                    }
+                    var aEmpty = av === '';
+                    var bEmpty = bv === '';
+                    if (aEmpty && bEmpty) return 0;
+                    if (aEmpty) return 1;
+                    if (bEmpty) return -1;
+                    var an = parseFloat(av);
+                    var bn = parseFloat(bv);
+                    return dir === 'asc' ? an - bn : bn - an;
+                });
+                rows.forEach(function(r) { tbody.appendChild(r); });
+            });
+        });
+    },
+
+    // ----- §2c Strategy contract slots (unused) ---------------------------
+    // Configured-but-empty wrapper-contract strategy slots. Distinct from
+    // the §2b Liquidity Layer panel: that panel covers Maple's ACTIVE
+    // DeFi-strategy deployment ($304M+ syrupUSDC / $43M syrupUSDT) routed
+    // via Strategy 0's loan-record accounting path. This panel covers the
+    // PARALLEL audited-wrapper-contract path (Aave V3 deposit, Sky/sUSDS
+    // DSR, etc.) that the Pool Delegate could activate but currently isn't
+    // using. Both paths are delegate-discretionary.
+    //
+    // Slug-aware: syrupUSDT has 2 dormant slots (FixedTerm + Aave),
+    // syrupUSDC has 3 (FixedTerm + Aave + Sky). The historical Aave note
+    // only renders for syrupUSDC.
+    _renderStrategySlots: function(specific, slug) {
+        var v = specific.vault_state || {};
+        var strategies = v.strategies || [];
+        var dormant = [];
+        strategies.forEach(function(st, i) {
+            var aum = st.aum_usd || 0;
+            var isActive = st.is_loan_manager || aum >= SYRUP_SLEEVE_ACTIVE_THRESHOLD_USD;
+            if (!isActive) dormant.push({ st: st, index: i });
+        });
+        if (dormant.length === 0) return '';
+
+        var sleeveItems = dormant.map(function(d) {
+            var st = d.st;
+            var implName = st.strategy_impl_name;
+            var nameLabel;
+            if (implName) {
+                var desc = SYRUP_STRATEGY_IMPL_INFO[implName] || 'configured DeFi sleeve';
+                nameLabel = '<span class="font-mono">' + implName + '</span>' +
+                    ' <span class="text-slate-400">(' + desc + ')</span>';
+            } else {
+                nameLabel = '<span class="font-mono text-xs" title="' + st.address + '">' +
+                    SyrupUSDCRenderer._truncAddr(st.address) + '</span>';
+            }
+            return '<li class="flex items-center gap-2 py-1">' +
+                '<span class="text-slate-500">Strategy ' + d.index + ' —</span> ' +
+                nameLabel + ' ' +
+                SyrupUSDCRenderer._ethLink(st.address) +
+                ' <span class="ml-auto text-xs font-semibold uppercase tracking-wide text-slate-400">Dormant · $0</span>' +
+            '</li>';
+        }).join('');
+
+        var historicalNote = (slug === 'syrupusdc') ?
+            ' <strong>Historical context (syrupUSDC only):</strong> Strategy 2 (Aave V3) was deployed at $26–42M scale March–April 2026, wound down before the Kelp DAO/rsETH incident.' :
+            '';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Strategy contract slots <span class="text-xs font-normal text-slate-500">(unused — separate from Liquidity layer above)</span></div>' +
+            '<p class="text-sm text-slate-500 mb-3 leading-relaxed">' +
+                '↺ Configured contract slots that the Pool Delegate could activate to deploy capital via audited wrapper contracts (Aave V3 deposit, Sky/sUSDS DSR). ' +
+                'Maple\'s <strong>active DeFi-strategy deployment</strong> is via the Liquidity Layer panel above — that uses Strategy 0\'s loan-record accounting rather than these wrapper contracts. ' +
+                'Both mechanisms are delegate-discretionary; this block tracks the wrapper-contract path.' +
+                historicalNote +
+            '</p>' +
+            '<ul class="text-sm text-slate-600">' + sleeveItems + '</ul>' +
+        '</div>';
+    },
+
+    // ----- §3 Borrower Concentration (loans-only) -------------------------
+    // Uses concentration_loans_only when present so the HHI / top-N stats
+    // describe producer-classified credit concentration only — including liquidity
+    // custodies overstates loan-book concentration. Falls back to
+    // book-wide concentration for older snapshots.
+    _renderBorrowerConcentration: function(specific) {
+        var lb = specific.loan_book;
+        if (!lb) return '';
+        var c = lb.concentration_loans_only || lb.concentration;
+        if (!c) return '';
+        var isLoansOnly = !!lb.concentration_loans_only;
+
+        if (!c.borrowers || c.borrowers.length === 0) {
+            return '<div class="panel">' +
+                '<div class="panel-title">Borrower Concentration</div>' +
+                '<div class="text-slate-400 text-sm italic">No active loans — concentration not applicable.</div>' +
+            '</div>';
+        }
+
+        var bucketCls = c.hhi_bucket === 'unconcentrated' ? 'bg-green-100 text-green-800' :
+                        c.hhi_bucket === 'moderate' ? 'bg-amber-100 text-amber-800' :
+                        'bg-red-100 text-red-800';
+        var bucketLabel = (c.hhi_bucket || '').charAt(0).toUpperCase() + (c.hhi_bucket || '').slice(1);
+        var bucketBadge = '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ' + bucketCls + '">' + bucketLabel + '</span>';
+
+        function bar(label, pct) {
+            var p = pct || 0;
+            return '<div class="mb-2">' +
+                '<div class="flex justify-between text-sm mb-1">' +
+                    '<span class="text-slate-600">' + label + '</span>' +
+                    '<span class="font-mono font-semibold">' + CommonRenderer.formatPercent(p, 1) + '</span>' +
+                '</div>' +
+                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + Math.min(p, 100) + '%; background:#6366f1"></div></div>' +
+            '</div>';
+        }
+
+        var bars = bar('Top 1', c.top_1_share_pct) +
+                   bar('Top 3', c.top_3_share_pct) +
+                   bar('Top 5', c.top_5_share_pct) +
+                   bar('Top 10', c.top_10_share_pct);
+
+        var rows = c.borrowers.map(function(b) {
+            // borrower_meta_tag is a structural classifier (e.g. "Multi-product
+            // credit (PYUSD/USTB)"), not a legal-entity name — column header is
+            // "TAG" rather than "FIRM".
+            var tag = b.borrower_meta_tag || b.firm || null;
+            var tagCell = tag ?
+                '<span class="text-xs text-slate-600">' + tag + '</span>' :
+                '<span class="text-xs text-slate-400">—</span>';
+            return '<tr>' +
+                '<td><span class="font-mono text-xs" title="' + b.address + '">' + SyrupUSDCRenderer._truncAddr(b.address) + '</span> ' + SyrupUSDCRenderer._ethLink(b.address) + '</td>' +
+                '<td>' + tagCell + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(b.principal_usd) + '</td>' +
+                '<td class="text-right font-mono">' + (b.loan_count || 0) + '</td>' +
+                '<td class="text-right font-mono">' + CommonRenderer.formatPercent(b.share_pct, 2) + '</td>' +
+            '</tr>';
+        }).join('');
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Borrower Concentration' + (isLoansOnly ? ' <span class="text-xs font-normal text-slate-500">(Loans-only)</span>' : ' <span class="text-xs font-normal text-slate-500">(All enumerated positions)</span>') + '</div>' +
+            (isLoansOnly ? '<p class="text-sm text-slate-500 mb-3">Producer-classified loan concentration. Membership follows the producer classification.</p>' : '<p class="text-sm text-slate-500 mb-3">Book-wide concentration includes loan and liquidity positions. Loan-only concentration is unavailable.</p>') +
+            '<div class="flex items-center gap-3 mb-4">' +
+                '<span class="text-sm text-slate-700"><span class="font-semibold">' + (c.total_borrowers || 0) + '</span> ' + (isLoansOnly ? 'loan ' : '') + 'borrowers · HHI <span class="font-mono font-semibold">' + (c.hhi || 0) + '</span></span>' +
+                bucketBadge +
+                '<span class="text-xs text-slate-400">FTC merger-review thresholds: &lt;1500 unconcentrated · 1500-2500 moderate · &gt;2500 concentrated</span>' +
+            '</div>' +
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">' +
+                '<div>' + bars + '</div>' +
+                '<div class="text-xs text-slate-500">' +
+                    '<p class="mb-2"><strong>HHI</strong> (Herfindahl-Hirschman Index) is the sum of squared market shares — a single dominant borrower with 100% gives HHI = 10,000; perfectly even distribution gives HHI close to 0.</p>' +
+                    '<p>Top-N shares show how much of the ' + (isLoansOnly ? 'producer-classified loan principal' : 'all-enumerated position principal') + ' is held by the largest 1, 3, 5, 10 addresses.</p>' +
+                '</div>' +
+            '</div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
+                '<th>Borrower</th><th>Tag</th><th class="text-right">Principal</th><th class="text-right"># Loans</th><th class="text-right">Share</th>' +
+            '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
+        '</div>';
+    },
+
+    // ----- §4 Repayment Schedule (renamed from Payment Ladder) ------------
+    _renderRepaymentSchedule: function(specific) {
+        var lb = specific.loan_book;
+        if (!lb || !lb.payment_ladder) return '';
+        var pl = lb.payment_ladder;
+
+        if (!pl.buckets || pl.buckets.length === 0) {
+            return '<div class="panel">' +
+                '<div class="panel-title">Repayment Schedule (next ' + (pl.horizon_days || 180) + ' days)</div>' +
+                '<div class="text-slate-400 text-sm italic">No active loans — no scheduled inflows.</div>' +
+            '</div>';
+        }
+
+        var t = pl.totals || {};
+        var overdueCount = pl.overdue_loan_count || 0;
+        var overduePrincipal = pl.overdue_principal_usd || 0;
+        var overdueCls = overdueCount > 0 ? 'risk-flag risk-warning' : 'text-xs text-slate-500';
+
+        function statBlock(label, val) {
+            return '<div class="summary-card"><div class="card-label">' + label + '</div><div class="card-value">' + CommonRenderer.formatCurrency(val || 0) + '</div></div>';
+        }
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Repayment Schedule (next ' + (pl.horizon_days || 180) + ' days)</div>' +
+            '<p class="text-sm text-slate-500 mb-3">Expected interest-only inflows from active open-term loans, bucketed by next payment-due date. Principal repays only on a Pool-Delegate call (24h notice + 48h grace) and is not modelled here.</p>' +
+            '<div class="text-xs text-slate-500 mb-2">Cumulative interest expected through each horizon (chart below shows per-bucket detail).</div>' +
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+                statBlock('Within 30d', t.expected_inflow_30d_usd) +
+                statBlock('Within 60d', t.expected_inflow_60d_usd) +
+                statBlock('Within 90d', t.expected_inflow_90d_usd) +
+                statBlock('Within 180d', t.expected_inflow_180d_usd) +
+            '</div>' +
+            '<div style="height: 220px; position: relative;"><canvas id="syrup-ladder-chart"></canvas></div>' +
+            (overdueCount > 0 ?
+                '<div class="' + overdueCls + ' mt-3"><strong>Overdue:</strong> ' + overdueCount + ' loan' + (overdueCount > 1 ? 's' : '') + ' · ' + CommonRenderer.formatCurrencyExact(overduePrincipal) + ' principal past payment-due date</div>' :
+                '<div class="text-xs text-slate-500 mt-3">Overdue: 0 loans · $0</div>') +
+            '<div class="text-xs text-slate-400 mt-2">Method: <span class="font-mono">' + (pl.method || 'rate_estimate') + '</span></div>' +
+        '</div>';
+    },
+
+    _renderRepaymentScheduleChart: function(specific) {
+        var ctx = document.getElementById('syrup-ladder-chart');
+        if (!ctx || typeof Chart === 'undefined') return;
+        var pl = specific.loan_book && specific.loan_book.payment_ladder;
+        if (!pl || !pl.buckets || pl.buckets.length === 0) return;
+
+        var labels = pl.buckets.map(function(b) {
+            var d = new Date(b.period_end_iso + 'T00:00:00Z');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
+        });
+        var values = pl.buckets.map(function(b) { return b.expected_inflow_usd || 0; });
+        var loanCounts = pl.buckets.map(function(b) { return b.loan_count || 0; });
+        var total = values.reduce(function(a, b) { return a + b; }, 0);
+        var maxBucket = Math.max.apply(null, values);
+        var concentrated = total > 0 && (maxBucket / total) > 0.4;
+        var color = concentrated ? '#f59e0b' : '#22c55e';
+
+        if (window._syrupLadderChart) window._syrupLadderChart.destroy();
+        window._syrupLadderChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Expected interest inflow',
+                    data: values,
+                    backgroundColor: color,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                var n = loanCounts[ctx.dataIndex];
+                                return CommonRenderer.formatCurrency(ctx.raw) + ' · ' + n + ' loan' + (n === 1 ? '' : 's');
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: { display: false },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(val, idx) { return labels[idx] + ' (' + loanCounts[idx] + ')'; }
+                        }
+                    },
+                    y: {
+                        grid: { color: '#f1f5f9' },
+                        ticks: {
+                            font: { size: 11 },
+                            callback: function(v) { return '$' + (v / 1e6).toFixed(1) + 'M'; }
+                        },
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    },
+
+    // ----- §2 Liquidity (Exit Realism + free buffer + Stress Anchor) ------
+    // §2 Liquidity panel — exit/free-liquidity only. The market-vs-NAV peg
+    // deviation that used to live here moved to the §1 Peg panel
+    // (_renderPegPanel); this panel is now liquidity-pure to match its axis.
+    // ⚠️ `topLiq` added: the free-liquidity share and the exit note live on the
+    // TOP-LEVEL liquidity block, not on asset_specific, and this function only
+    // ever received asset_specific. The absent-ladder branch below needs them.
+    _renderLiquidityAndPeg: function(specific, s, slug, topLiq) {
+        var wq = specific.withdrawal_queue;
+        var liq = specific.liquidity;
+        var lb = specific.loan_book || {};
+        var underlying = SyrupUSDCRenderer._underlying(slug);
+
+        var html = '<div class="panel"><div class="panel-title">Liquidity</div>' +
+            '<p class="text-sm text-slate-500 mb-3">Two distinct liquidity types, not to be conflated: <span class="font-semibold text-slate-600">Redemption (at NAV)</span> is the primary full-size exit via Maple\'s queue — constraint is <span class="font-semibold">time</span>; <span class="font-semibold text-slate-600">Secondary market</span> is an instant-but-thin DEX alternative at a small discount — constraint is <span class="font-semibold">size / price</span>.</p>';
+
+        // ===== Sub-section A: Redemption (at NAV) =========================
+        // Free-liquidity %, withdrawal queue / request IDs, deployment ratio.
+        // The primary full-size exit; constraint is TIME (queue) not price.
+        html += '<div class="text-sm font-semibold text-slate-700 mt-1 mb-1 flex items-center gap-2">' +
+            '<span class="inline-block w-1.5 h-3.5 rounded-sm" style="background:#6366f1"></span>' +
+            'Redemption (at NAV)</div>' +
+            '<p class="text-xs text-slate-400 mb-3">Full-size exit: redeems against free ' + underlying + ' at NAV instantly; the rest queues until loan repayments return capital. Constraint is time.</p>';
+
+        // Free underlying + queue-based time-context cards. Maple Syrup's
+        // WithdrawalManager is queue-based (NOT cyclical) — getCurrentCycleId()
+        // reverts on the deployed impl. Render last-fill, head-request age (or
+        // empty state), queue depth, and request-id strip. Do not render
+        // current_cycle_* / cycle_duration_seconds — permanently null for Syrup.
+        if (wq) {
+            // Two DIFFERENT measures live here and were both being labelled
+            // "Free <underlying>", which is how one page showed $7.1M and $9.5M
+            // for the same words:
+            //   vault_state.free_usdc      = usdc.balanceOf(pool) — idle in the
+            //                                pool contract, the instant-exit float
+            //   vault_state.free_liquidity = total_assets - principal_out — that
+            //                                float PLUS accrued interest still
+            //                                inside the strategies
+            // summary.collateral_ratio_alt carries free_liquidity together with
+            // the producer's own label and note; use them rather than a label
+            // invented here, and name the pool balance alongside so a reader can
+            // reconcile this card with the Free-<underlying> row in Backing.
+            var cra = s.collateral_ratio_alt;
+            var craIsCurrency = !!(cra && cra.is_currency);
+            var poolBalance = (specific.vault_state && specific.vault_state.free_usdc);
+            var freeUsd = craIsCurrency ? cra.value : (poolBalance || null);
+            var freeLabel = (craIsCurrency && cra.label) ? cra.label : ('Free ' + underlying);
+            var freeNote = (craIsCurrency && cra.note) ? cra.note : '';
+            var freeSubtext = SyrupUSDCRenderer._freeLiquidityPct(s) != null ?
+                CommonRenderer.formatPercent(SyrupUSDCRenderer._freeLiquidityPct(s), 1) + ' of pool assets' : '';
+            if (craIsCurrency && poolBalance != null && poolBalance !== cra.value) {
+                freeSubtext += (freeSubtext ? ' · ' : '') + 'pool ' + underlying + ' balance ' +
+                    CommonRenderer.formatCurrency(poolBalance);
+            }
+            var freePct = SyrupUSDCRenderer._freeLiquidityPct(s);
+            var queueEmpty = wq.is_empty === true;
+            var depthUsd = (wq.queue_depth_usdc_est === null || wq.queue_depth_usdc_est === undefined) ? (queueEmpty ? 0 : null) : wq.queue_depth_usdc_est;
+            var slots = wq.queue_depth_slots;
+            var nextId = wq.next_request_id;
+            var lastId = wq.last_request_id;
+            var depthCls = depthUsd !== null && depthUsd > 10000000 ? 'warning' : '';
+            var depthText = depthUsd === null ? '—' :
+                            (slots != null ? slots + ' request' + (slots === 1 ? '' : 's') + ' · ' + CommonRenderer.formatCurrency(depthUsd) : CommonRenderer.formatCurrency(depthUsd));
+
+            var lastFillAge = SyrupUSDCRenderer._formatRelativeAge(wq.last_filled_age_seconds);
+            var lastFillIso = wq.last_filled_timestamp_iso ? wq.last_filled_timestamp_iso.replace('+00:00', 'Z') : '—';
+            var lastFillCard =
+                '<div class="summary-card">' +
+                    '<div class="card-label">Last fill</div>' +
+                    '<div class="card-value text-base">' + lastFillAge + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1 font-mono">' + lastFillIso + '</div>' +
+                '</div>';
+
+            var headCard;
+            if (queueEmpty) {
+                headCard =
+                    '<div class="summary-card">' +
+                        '<div class="card-label">Queue status</div>' +
+                        '<div class="card-value text-base">Empty <span class="text-slate-400 text-sm">(0 pending)</span></div>' +
+                        '<div class="text-xs text-slate-400 mt-1">Next request fills on submission</div>' +
+                    '</div>';
+            } else {
+                var headAge = SyrupUSDCRenderer._formatRelativeAge(wq.next_request_age_seconds);
+                var headSubtext = (nextId != null && wq.next_request_age_seconds != null) ?
+                    'request ' + nextId + ' waiting' : 'head of queue';
+                headCard =
+                    '<div class="summary-card">' +
+                        '<div class="card-label">Head request age</div>' +
+                        '<div class="card-value text-base ' + (wq.next_request_age_seconds > 86400 ? 'warning' : '') + '">' + headAge + '</div>' +
+                        '<div class="text-xs text-slate-400 mt-1">' + headSubtext + '</div>' +
+                    '</div>';
+            }
+
+            html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
+                '<div class="summary-card"><div class="card-label"' +
+                    (freeNote ? ' title="' + freeNote.replace(/"/g, '&quot;') + '"' : '') + '>' + freeLabel +
+                    (freeNote ? ' <span class="text-slate-400 cursor-help">ⓘ</span>' : '') + '</div>' +
+                    '<div class="card-value positive">' + CommonRenderer.formatCurrency(freeUsd) + '</div>' +
+                    '<div class="text-xs text-slate-400 mt-1">' + freeSubtext + '</div></div>' +
+                lastFillCard +
+                headCard +
+                '<div class="summary-card"><div class="card-label">' + (queueEmpty ? 'Request IDs' : 'Queue depth') + '</div>' +
+                    (queueEmpty ?
+                        '<div class="card-value text-base font-mono">' + (lastId != null ? lastId : '—') + ' / ' + (nextId != null ? nextId : '—') + '</div>' +
+                        '<div class="text-xs text-slate-400 mt-1">last filled / next to file</div>'
+                      :
+                        '<div class="card-value ' + depthCls + '">' + depthText + '</div>' +
+                        '<div class="text-xs text-slate-400 mt-1">' + underlying + ' est.</div>'
+                    ) +
+                '</div>' +
+            '</div>';
+        }
+
+        // Stress anchor — redemption-path context: how far free liquidity
+        // carries an exit before it queues, and what (loan repayments) clears
+        // the queue. Belongs under Redemption (constraint = time), not the
+        // secondary market.
+        var freePct2 = SyrupUSDCRenderer._freeLiquidityPct(s);
+        var freeUsd2 = (s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency) ? s.collateral_ratio_alt.value : null;
+        var paymentInterval = lb.weighted_avg_payment_interval_days;
+        if (paymentInterval == null) paymentInterval = lb.weighted_avg_remaining_days_to_due;
+        var freePctText = freePct2 != null ? freePct2.toFixed(1) + '%' : '?';
+        // Was hand-rounded to whole millions, which printed free liquidity of
+        // $9.47M as "$9M" — understating the anchor it is the anchor for.
+        var freeUsdText = freeUsd2 != null ? CommonRenderer.formatCurrency(freeUsd2) : '?';
+        // The anchor figure is free_liquidity, which per the producer is the pool
+        // balance PLUS accrued interest sitting in the strategies. Name the split
+        // instead of letting one number stand for both — the instantly-available
+        // float is the smaller of the two.
+        var poolBal = (specific.vault_state || {}).free_usdc;
+        var freeSplitFragment = (freeUsd2 != null && poolBal != null && poolBal !== freeUsd2) ?
+            ' — <span class="font-mono">' + CommonRenderer.formatCurrency(poolBal) + '</span> of that is the pool\'s own ' +
+            underlying + ' balance, the remainder accrued interest booked in the strategies' : '';
+        var intervalText = paymentInterval != null ? paymentInterval.toFixed(0) + '-day' : 'multi-week';
+        var monthlyInflow = lb.payment_ladder && lb.payment_ladder.totals && lb.payment_ladder.totals.expected_inflow_30d_usd;
+        var inflowFragment = (monthlyInflow != null) ?
+            ' (interest-only ≈ <span class="font-mono">' + CommonRenderer.formatCurrency(monthlyInflow) + '/30d</span>)' : '';
+
+        html += '<div class="text-sm font-semibold text-slate-700 mt-4 mb-1">Stress anchor</div>' +
+            '<p class="text-sm text-slate-700">' +
+                'Free liquidity (<span class="font-semibold">' + freePctText + '</span>, ' + freeUsdText + ') covers redemptions to ~<span class="font-semibold">' + freeUsdText + '</span> before queueing' + freeSplitFragment + '. ' +
+                'Above that, exits depend on incoming loan repayments' + inflowFragment + '. ' +
+                'Avg loan payment interval <span class="font-semibold">' + intervalText + '</span>; the pool has 24h notice + 48h grace to call a delinquent loan.' +
+            '</p>' +
+            // Filled by _loadCushionHistory after render; removed if the history
+            // carries no usable series, so the panel degrades to the spot figure.
+            '<div id="syrup-cushion-hist"></div>';
+
+        // ===== Sub-section B: Secondary market ===========================
+        // DEX-aggregator slippage→underlying ladder + pool depth. Instant but
+        // thin; an alternative at a small discount. Constraint is SIZE / price.
+        html += '<div class="text-sm font-semibold text-slate-700 mt-6 mb-1 flex items-center gap-2">' +
+            '<span class="inline-block w-1.5 h-3.5 rounded-sm" style="background:#94a3b8"></span>' +
+            'Secondary market</div>' +
+            '<p class="text-xs text-slate-400 mb-3">Instant-but-thin alternative to the redemption queue: sell into DEX/aggregator liquidity for ' + underlying + ' immediately, taking a slippage hit. Constraint is size / price.</p>';
+
+        // DEX aggregator slippage
+        //
+        // ⚠️ THE CANONICAL PATH WINS, AND THIS ORDER EXISTS TO AVOID A DOUBLE RENDER.
+        //
+        // PegTracker cc14b11 PROMOTES syrupUSDC's ladder to liquidity.exit_mark.quotes
+        // while KEEPING asset_specific.liquidity — its own test asserts both. That is
+        // the right producer change and I asked for it: a consumer sweeping the
+        // canonical key found no ladder here, and I acted on that absence and nearly
+        // cost our reports session a true sentence.
+        //
+        // ⚠️ But common.js ALSO draws an exit-mark ladder whenever
+        // liquidity.exit_mark.quotes exists, and nothing here suppresses it. Verified
+        // against the promoted shape: BOTH fire, so the same four rungs would render
+        // twice on this page the moment that commit is pushed. My handoff created
+        // this; the fix belongs here.
+        //
+        // So: if the canonical path carries the ladder, render NOTHING here and let
+        // the shared renderer own it — which is a strict improvement, because that one
+        // now distinguishes a FAILED quote from an unattempted one and this bespoke
+        // copy does not. The bespoke branch stays as the pre-migration fallback.
+        var canonicalLadder = !!(topLiq && topLiq.exit_mark && topLiq.exit_mark.quotes);
+        if (canonicalLadder) {
+            // Rendered by CommonRenderer._renderLiquiditySection. Intentionally silent.
+        } else if (liq && liq.quotes) {
+            var sizes = Object.keys(liq.quotes).sort(function(a, b) { return parseFloat(a) - parseFloat(b); });
+            var rows = sizes.map(function(sz) {
+                var q = liq.quotes[sz];
+                var bps = q.slippage_bps;
+                var cls = bps > 50 ? 'text-red-600 font-semibold' : bps > 20 ? 'text-amber-600' : '';
+                return '<tr>' +
+                    '<td class="font-mono">$' + Number(sz).toLocaleString() + '</td>' +
+                    '<td class="text-right font-mono ' + cls + '">' + (bps != null ? bps.toFixed(1) + ' bps' : '—') + '</td>' +
+                    '<td class="text-right font-mono">' + (q.output_usd != null ? '$' + q.output_usd.toLocaleString('en-US', { maximumFractionDigits: 2 }) : '—') + '</td>' +
+                '</tr>';
+            }).join('');
+            var sourceLabel = liq.source ? ' (' + liq.source + ')' : '';
+            html += '<div class="text-sm font-semibold text-slate-700 mt-2 mb-1">DEX aggregator slippage → ' + underlying + sourceLabel + '</div>' +
+                '<table class="data-table"><thead><tr><th>Notional</th><th class="text-right">Slippage</th><th class="text-right">Output</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+                (liq.pool_tvl ? '<div class="text-xs text-slate-400 mt-2">DEX pool TVL: ' + CommonRenderer.formatCurrency(liq.pool_tvl) + (liq.pool_count ? ' across ' + liq.pool_count + ' pools' : '') + '</div>' : '');
+        } else {
+            // ⚠️ THERE WAS NO ELSE BRANCH, SO AN ABSENT LADDER RENDERED AS NOTHING.
+            //
+            // This renderer serves BOTH syrup pools. syrupUSDC carries
+            // asset_specific.liquidity.quotes and draws the table above;
+            // syrupUSDT's asset_specific.liquidity is null, so the branch never
+            // fired and the section heading rendered with a silent gap beneath it.
+            //
+            // ⚠️ A reader comparing the two saw a slippage table on one and blank
+            // space on the other, with nothing saying which of "not measured",
+            // "measured at zero" or "we forgot" applied. An unavailable
+            // measurement is not a measurement of unavailability.
+            //
+            // The feed is not empty — it publishes the free-liquidity share, the
+            // deployment ratio and a note explaining that larger exits QUEUE
+            // rather than clear at a price. That is the honest answer to "how do
+            // I size an exit here", and it was already in the payload.
+            topLiq = topLiq || {};
+            var freePct = topLiq.free_liquidity_pct;
+            var deployed = topLiq.deployment_ratio_pct;
+            html += '<div class="text-sm font-semibold text-slate-700 mt-2 mb-1">' +
+                    'DEX aggregator slippage \u2014 not published for this pool</div>' +
+                '<div class="risk-flag risk-warning">' +
+                    '<strong>No tiered slippage ladder is published for this asset.</strong> ' +
+                    'That is an absent measurement, not a finding of zero depth' +
+                    (freePct != null
+                        ? ' \u2014 exit sizing here comes from the free-liquidity share (' +
+                          CommonRenderer.formatPercent(freePct, 2) + ' of the pool' +
+                          (deployed != null
+                              ? ', ' + CommonRenderer.formatPercent(deployed, 2) + ' deployed'
+                              : '') + ') and the withdrawal queue rather than from a price ladder.'
+                        : '.') +
+                    (topLiq.note ? ' <span class="text-xs">' + topLiq.note + '</span>' : '') +
+                '</div>';
+        }
+
+        html += '</div>';
+        return html;
+    },
+
+    // ----- §6 Trust Stack (renamed from Governance + audit roll-up) -------
+    _renderTrustStack: function(specific) {
+        var g = specific.governance;
+        if (!g) return '';
+
+        function addrOf(v) {
+            if (!v) return null;
+            if (typeof v === 'string') return v;
+            if (typeof v === 'object' && v.address) return v.address;
+            return null;
+        }
+
+        var rows = [];
+        function row(label, addr, extra) {
+            if (!addr) return '';
+            var addrCell = '<span class="font-mono text-xs" title="' + addr + '">' + SyrupUSDCRenderer._truncAddr(addr) + '</span> ' + SyrupUSDCRenderer._ethLink(addr);
+            return '<tr>' +
+                '<td class="font-medium">' + label + '</td>' +
+                '<td>' + addrCell + '</td>' +
+                '<td class="text-xs text-slate-500">' + (extra || '-') + '</td>' +
+            '</tr>';
+        }
+
+        var govAddr = addrOf(g.governor);
+        if (govAddr) {
+            var govExtra = 'timelock';
+            var hrs = g.timelock_hours;
+            if (hrs === undefined && typeof g.governor === 'object' && g.governor.min_delay_s) {
+                hrs = g.governor.min_delay_s / 3600;
+            }
+            if (hrs != null) govExtra += ' · min delay ' + hrs + 'h';
+            rows.push(row('Governor', govAddr, govExtra));
+        }
+        var opAddr = addrOf(g.operational_admin);
+        if (opAddr) {
+            var opExtra = 'safe';
+            var opThresh = (typeof g.operational_admin === 'object') ? g.operational_admin.threshold : g.operational_admin_threshold;
+            if (opThresh) opExtra += ' · ' + opThresh;
+            rows.push(row('Operational Safe', opAddr, opExtra));
+        }
+        var secAddr = addrOf(g.security_admin);
+        if (secAddr) {
+            var secExtra = 'safe';
+            var secThresh = (typeof g.security_admin === 'object') ? g.security_admin.threshold : g.security_admin_threshold;
+            if (secThresh) secExtra += ' · ' + secThresh;
+            rows.push(row('Security Safe', secAddr, secExtra));
+        }
+        var pdAddr = addrOf(g.pool_delegate);
+        if (pdAddr) {
+            // New analyzer schema: pool_delegate is an object {address,
+            // firm_name, is_eoa}. Older snapshots used a string + sibling
+            // pool_delegate_firm/_is_eoa fields — keep both paths working.
+            var pdObj = (typeof g.pool_delegate === 'object' && g.pool_delegate) ? g.pool_delegate : null;
+            var firm = (pdObj && (pdObj.firm_name || pdObj.firm)) || g.pool_delegate_firm || null;
+            var isEoa = (pdObj && 'is_eoa' in pdObj) ? pdObj.is_eoa :
+                        (g.pool_delegate_is_eoa !== undefined ? g.pool_delegate_is_eoa :
+                         (pdObj && pdObj.type === 'eoa'));
+            var pdExtra = firm || '—';
+            if (isEoa) pdExtra += ' · <span class="text-slate-500">MPC + policy (per Maple)</span>';
+            rows.push(row('Pool Delegate', pdAddr, pdExtra));
+        }
+        var coverAddr = (typeof g.pool_delegate_cover === 'string') ? g.pool_delegate_cover :
+                        (g.pool_delegate_cover && g.pool_delegate_cover.address) || null;
+        var coverBal = g.pool_delegate_cover_usdc;
+        if (coverBal === undefined && g.pool_delegate_cover && typeof g.pool_delegate_cover === 'object') {
+            coverBal = g.pool_delegate_cover.balance;
+        }
+        var coverReq = g.min_cover_amount;
+        if (coverReq === undefined && g.pool_delegate_cover && typeof g.pool_delegate_cover === 'object') {
+            coverReq = g.pool_delegate_cover.min_required;
+        }
+        if (coverAddr || coverBal !== undefined || coverReq !== undefined) {
+            var coverCls = (coverBal || 0) < (coverReq || 0) || (coverBal || 0) === 0 ? 'text-amber-600 font-semibold' : '';
+            var coverCell = '<span class="font-mono ' + coverCls + '">' + CommonRenderer.formatCurrency(coverBal || 0) + '</span> / required ' + CommonRenderer.formatCurrency(coverReq || 0);
+            if (coverAddr) coverCell += ' ' + SyrupUSDCRenderer._ethLink(coverAddr);
+            rows.push('<tr>' +
+                '<td class="font-medium">PD First-Loss Cover</td>' +
+                '<td>' + coverCell + '</td>' +
+                '<td class="text-xs text-slate-500">Pool Delegate skin-in-the-game</td>' +
+            '</tr>');
+        }
+        if (g.protocol_paused !== undefined) {
+            var pausedCls = g.protocol_paused ? 'text-red-600 font-semibold' : 'text-green-600';
+            rows.push('<tr>' +
+                '<td class="font-medium">Protocol Paused</td>' +
+                '<td><span class="' + pausedCls + '">' + (g.protocol_paused ? 'YES' : 'No') + '</span></td>' +
+                '<td class="text-xs text-slate-500">MapleGlobals master switch</td>' +
+            '</tr>');
+        }
+
+        var lastTx = '';
+        if (g.last_admin_tx_timestamp) {
+            lastTx = '<div class="text-xs text-slate-400 mt-2">Last admin tx: ' + CommonRenderer.formatDate(g.last_admin_tx_timestamp) + '</div>';
+        }
+
+        // ---- Maple-controlled MPC topology — surfaces the full set of
+        // EOA-shaped addresses (eth_getCode == 0x) that hold real capital.
+        // Per Maple's 2026-05-04 attestation, all such addresses are MPC
+        // wallets with strict policy controls under Maple Labs operational
+        // control — institutional-grade custody primitive, NOT single-key.
+        // Pool Delegate is already in the table above; the "custody"
+        // entries here are the liquidity-layer custodians the analyzer
+        // enumerates separately. Hidden when custody_topology is empty.
+        var ct = g.custody_topology || {};
+        var custodyEntries = (ct.entries || []).filter(function(e) {
+            return e && e.is_eoa && e.control_type === 'custody';
+        });
+        var topologyBlock = '';
+        if (ct.single_key_eoa_count != null && ct.single_key_eoa_count > 0) {
+            var topologyHeader =
+                '<div class="text-sm font-semibold text-slate-700 mt-4 mb-1">' +
+                    'Maple-controlled MPC topology' +
+                    ' <span class="text-xs font-normal text-slate-500">— ' +
+                        ct.single_key_eoa_count + ' MPC wallet' + (ct.single_key_eoa_count === 1 ? '' : 's') +
+                        ' control ' +
+                        CommonRenderer.formatCurrency(ct.total_capital_under_eoa_control_usd || 0) +
+                        ' of pool capital' +
+                    '</span>' +
+                '</div>';
+            var topologyRows = custodyEntries.map(function(e) {
+                var addr = e.address || '';
+                var addrCell = '<span class="font-mono text-xs" title="' + addr + '">' + SyrupUSDCRenderer._truncAddr(addr) + '</span> ' + SyrupUSDCRenderer._ethLink(addr);
+                var capUsd = e.capital_under_control_usd || e.loan_book_principal_usd || 0;
+                var note = '<span class="text-slate-600">MPC + policy (per Maple)</span> · holds ' + CommonRenderer.formatCurrency(capUsd);
+                if (e.venue) note += ' · ' + e.venue;
+                if (e.chain && e.chain !== 'ethereum') note += ' · ' + e.chain.charAt(0).toUpperCase() + e.chain.slice(1);
+                return '<tr>' +
+                    '<td class="font-medium">' + (e.role || 'Custody') + '</td>' +
+                    '<td>' + addrCell + '</td>' +
+                    '<td class="text-xs text-slate-500">' + note + '</td>' +
+                '</tr>';
+            }).join('');
+            // Methodology footer — institutional-grade custody primitive
+            // is Maple's off-chain attestation; on-chain reads can't
+            // independently verify MPC vs single-key.
+            var topologyFooter =
+                '<div class="text-xs text-slate-400 italic mt-2 leading-relaxed">' +
+                    'ⓘ Per Maple\'s response 2026-05-04: these are MPC wallets with strict policy controls. ' +
+                    'On-chain reads cannot independently verify MPC vs single-key (both produce standard Ethereum signatures off-chain) — ' +
+                    '<span class="font-mono">eth_getCode == 0x</span> rules out smart-contract multi-sigs but the MPC + policy claim is Maple\'s off-chain attestation.' +
+                '</div>';
+            topologyBlock = topologyHeader +
+                (topologyRows ?
+                    '<table class="data-table"><tbody>' + topologyRows + '</tbody></table>' + topologyFooter :
+                    '<div class="text-xs text-slate-400 italic">No additional custody addresses at this snapshot.</div>');
+        }
+
+        // See the note at SYRUP_AUDIT_INFO's former definition: the audit/bounty line was
+        // ours, unsourced and wrong on all four counts, and is deliberately replaced by
+        // nothing rather than by a declared absence that would itself be false.
+        var auditLine = '';
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Trust Stack</div>' +
+            '<table class="data-table"><thead><tr><th>Role</th><th>Address</th><th>Notes</th></tr></thead><tbody>' + rows.join('') + '</tbody></table>' +
+            topologyBlock +
+            lastTx +
+            auditLine +
+        '</div>';
+    },
+
+    // ----- §7 Yield (demoted) ---------------------------------------------
+    // PegTracker now sources yield live from Maple's syrupGlobals.apyTimeSeries
+    // (headline_apy_source: "syrup_graphql"). core_apy_pct = organic loan
+    // interest; boost_apy_pct = SYRUP-token Drips boost (0 since campaign ended
+    // Feb 2026, but live-sourced so a future Season 2 would render correctly).
+    _renderYield: function(specific) {
+        var y = specific.yield;
+        if (!y) return '';
+        // Prefer live core/headline; fall back to base_apy_pct for older snapshots.
+        var liveApy = y.core_apy_pct;
+        if (liveApy == null) liveApy = y.headline_apy_pct;
+        if (liveApy == null) liveApy = y.base_apy_pct;
+        var boost = (y.boost_apy_pct != null) ? y.boost_apy_pct : 0;
+        var fee = y.delegate_fee_pct;
+        var isLiveSource = y.headline_apy_source === 'syrup_graphql';
+
+        var maxApy = Math.max((liveApy || 0) + (boost || 0), 1) * 1.2;
+        function bar(val, color, label, tag) {
+            if (val === null || val === undefined) return '';
+            var pct = Math.max(0, Math.min(100, val / maxApy * 100));
+            return '<div class="mb-2">' +
+                '<div class="flex justify-between text-sm mb-1">' +
+                    '<span class="text-slate-700 font-semibold">' + label + (tag ? ' <span class="text-xs text-slate-400 font-normal">(' + tag + ')</span>' : '') + '</span>' +
+                    '<span class="font-mono font-semibold text-slate-700">' + CommonRenderer.formatPercent(val, 2) + '</span>' +
+                '</div>' +
+                '<div class="pct-bar-container"><div class="pct-bar" style="width:' + pct + '%; background:' + color + '"></div></div>' +
+            '</div>';
+        }
+
+        // Drips boost: render as a regular secondary bar when > 0 (future
+        // campaign), otherwise as a small gray zero-line with historical note.
+        var boostBlock;
+        if (boost > 0) {
+            boostBlock = '<div class="mt-3 pt-3 border-t border-slate-200">' +
+                bar(boost, '#a855f7', 'Drips boost', 'SYRUP token, live') +
+            '</div>';
+        } else {
+            boostBlock = '<div class="mt-3 pt-3 border-t border-slate-200">' +
+                '<div class="flex justify-between text-xs text-slate-400 mb-1">' +
+                    '<span>Drips boost <span class="text-slate-400">(SYRUP token campaign — ended Feb 2026)</span></span>' +
+                    '<span class="font-mono">' + CommonRenderer.formatPercent(boost, 2) + '</span>' +
+                '</div>' +
+                '<div class="pct-bar-container"><div class="pct-bar" style="width:0%; background:#cbd5e1"></div></div>' +
+            '</div>';
+        }
+
+        // "as of" timestamp + source tag — small footer line.
+        var sourceLine = '';
+        if (isLiveSource) {
+            var asOfText = '';
+            if (y.apy_as_of) {
+                var d = new Date(y.apy_as_of * 1000);
+                if (!isNaN(d.getTime())) asOfText = ' · as of ' + d.toISOString().slice(0, 10);
+            }
+            sourceLine = '<div class="text-xs text-slate-400 mt-1">Source: <span class="font-mono">syrupGlobals.apyTimeSeries</span> (Maple GraphQL)' + asOfText + '</div>';
+        }
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Yield Decomposition</div>' +
+            '<p class="text-sm text-slate-500 mb-3">Live APY is the organic loan-interest stream — the durable yield depositors receive going forward.</p>' +
+            bar(liveApy, '#22c55e', 'Live APY', 'organic loan interest') +
+            boostBlock +
+            (fee != null ? '<div class="text-sm text-slate-500 mt-3">Pool Delegate management fee: <span class="font-mono font-semibold">' + CommonRenderer.formatPercent(fee, 2) + '</span> taken from gross before share-holders.</div>' : '') +
+            (y.apr_24h_pct != null ? '<div class="text-xs text-slate-400 mt-1">24h realised APR (NAV): ' + CommonRenderer.formatPercent(y.apr_24h_pct, 2) + ' — trailing window, can be noisy</div>' : '') +
+            sourceLine +
+        '</div>';
+    },
+
+    // ----- Multi-Chain Distribution (Phase 1: per-chain token supply) -----
+    // Backward-compat: schema_version < 2 OR multi_chain.deferred === true
+    // (the pre-Phase-1 stub) falls through to a placeholder card so the
+    // brief deploy window between analyzer push + cron regenerating JSON
+    // doesn't visibly regress.
+    _renderMultiChain: function(specific, slug) {
+        var mc = specific.multi_chain;
+        if (!mc || mc.deferred || !Array.isArray(mc.chains) || mc.chains.length === 0) {
+            return SyrupUSDCRenderer._renderMultiChainPlaceholder(slug);
+        }
+
+        var isUSDT = slug === 'syrupusdt';
+        var chains = mc.chains;  // already sorted desc by share_pct per analyzer contract
+        var totalSupply = mc.total_supply_usd_across_chains;
+
+        var rowsHtml = chains.map(function(c) { return SyrupUSDCRenderer._renderChainRow(c); }).join('');
+
+        // Total row — share column locked to 100% (per-chain shares sum to it
+        // by construction; reconciliation pct is shown separately below).
+        // ⚠️ A SUM OF OVERLAPPING LEGS IS NOT A TOTAL. syrupUSDT rendered
+        // "Total $526.3M" by adding Ethereum's $393.3M to Plasma's $133.0M — but
+        // Ethereum's totalSupply already CONTAINS the bridged shares, because its
+        // CCIP pool is LockRelease (measured: LockReleaseTokenPool 1.5.1 holding
+        // 168.18M syrupUSDT). The same shares were counted on both chains and the
+        // page overstated global supply by ~34%.
+        //
+        // ⚠️ Detected from arithmetic, NOT from asserting a mechanism: if the
+        // enumerated sum exceeds the vault's OWN share base, the legs cannot all
+        // be disjoint. usdat already models this correctly per chain and says so
+        // in global_supply_note — "Ethereum bridges by LockRelease ... summing
+        // chains would double-count" — so the fix belongs upstream as a published
+        // per-chain mechanism, and this flag is what stops a wrong total shipping
+        // meanwhile.
+        var vsTot = (specific && specific.vault_state && typeof specific.vault_state.total_assets === 'number')
+            ? specific.vault_state.total_assets : null;
+        var sumExceedsBase = (totalSupply != null && vsTot != null && totalSupply > vsTot * 1.01);
+        var totalRow =
+            '<tr class="font-bold border-t-2 border-slate-200">' +
+                '<td>Total' + (sumExceedsBase ? ' <span class="text-amber-700">(sum of legs)</span>' : '') + '</td>' +
+                '<td class="text-right font-mono' + (sumExceedsBase ? ' text-amber-700' : '') + '">' +
+                    (totalSupply != null ? CommonRenderer.formatCurrency(totalSupply) : '-') + '</td>' +
+                '<td class="text-right font-mono">' + (totalSupply != null ? '100%' : '—') + '</td>' +
+                '<td colspan="3"></td>' +
+            '</tr>' +
+            (sumExceedsBase
+                ? '<tr><td colspan="6" class="text-xs text-amber-700" style="line-height:1.45;">' +
+                  '\u26a0\ufe0f This sum EXCEEDS the vault\u2019s own share base of ' +
+                  CommonRenderer.formatCurrency(vsTot) + ', so the legs are not all disjoint and ' +
+                  'this is not a global supply figure. A lock-release bridge leaves locked shares in ' +
+                  'the source chain\u2019s totalSupply and mints them again on the destination \u2014 ' +
+                  'the same shares counted twice.</td></tr>'
+                : '');
+
+        var subheader;
+        if (isUSDT) {
+            // ⚠️ WAS A HARDCODED DEPLOYMENT CLAIM: "syrupUSDT is currently
+            // Ethereum-only. CCIP+CCT cross-chain expansion is planned but not
+            // yet deployed." No producer said that — the renderer asserted it,
+            // and it is now contradicted on its own page: security_analyst's
+            // hand-walk carries plasma asset-permission and plasma bridge layers
+            // at a 3h timelock.
+            //
+            // ⚠️ THE TWO ARE NOT ACTUALLY IN CONFLICT, WHICH IS WHY THE CLAIM WAS
+            // WRONG RATHER THAN THE WALK. This block's own `data_source` is
+            // `phase_1_supply_only`: 100% ethereum_share_pct is a statement about
+            // where SUPPLY sits, not about where contracts EXIST. A chain can be
+            // deployed and hold nothing. The renderer converted a supply share
+            // into a deployment assertion.
+            //
+            // Same rule as axis 5's absence line: a renderer must not assert a
+            // claim about an asset, because it cannot know when the claim stops
+            // being true. Derived from the fields, scoped to what they measure.
+            var ethShare = (mc && typeof mc.ethereum_share_pct === 'number')
+                ? mc.ethereum_share_pct : null;
+            subheader = (ethShare != null
+                    ? CommonRenderer.formatPercent(ethShare, 1) + ' of syrupUSDT supply sits on Ethereum. '
+                    : '') +
+                'This is a SUPPLY view' +
+                (mc && mc.data_source ? ' (' + CommonRenderer._escapeAttr(String(mc.data_source)) + ')' : '') +
+                ' \u2014 it does not establish which chains the contracts are deployed on. ' +
+                '\u26a0\ufe0f A chain can carry deployed contracts and no supply; see the ' +
+                'Contract &amp; Admin walk for authority layers measured per chain.';
+        } else {
+            var nonStub = chains.filter(function(c) { return c.kind !== 'stub'; }).length;
+            subheader = 'syrupUSDC is deployed natively on ' + nonStub + ' chains via Chainlink CCIP+CCT ' +
+                       '(burn-and-mint). Per-chain supply via direct token-contract reads. DEX depth ' +
+                       'per chain is Phase 2 — for now, only Ethereum has aggregator-route slippage ' +
+                       'data (see Liquidity &amp; Peg panel above).';
+        }
+
+        // Detected, not assumed: the declared denominator is a vault figure whose
+        // share base equals ONE enumerated chain's supply, while the numerator
+        // spans more than one.
+        var vs = (specific && specific.vault_state) || {};
+        var nChains = Array.isArray(mc.chains) ? mc.chains.length : null;
+        var scopeMismatch = false;
+        if (nChains && nChains > 1 && typeof vs.total_supply === 'number') {
+            scopeMismatch = mc.chains.some(function(c) {
+                return typeof c.supply_native === 'number' &&
+                       Math.abs(c.supply_native - vs.total_supply) < 0.01;
+            });
+        }
+        var recon = SyrupUSDCRenderer._reconciliationLine(
+            mc.cross_chain_supply_reconciliation_pct, nChains, scopeMismatch);
+
+        var emptyStateFooter = '';
+        if (isUSDT) {
+            emptyStateFooter =
+                '<div class="text-xs text-slate-500 mt-3 italic">' +
+                    CommonRenderer._escapeAttr(mc.note || 'Chain observations do not establish global supply reconciliation.') +
+                    (mc.cross_chain_supply_reconciliation_complete === false ? ' Bridge reconciliation incomplete; canonical supply includes locked shares and remote representations are not additive.' : '') +
+                '</div>';
+        }
+
+        return '<div class="panel">' +
+            '<div class="panel-title">Multi-Chain Distribution</div>' +
+            '<div class="text-xs text-slate-500 mb-3">' + subheader + '</div>' +
+            '<table class="data-table">' +
+                '<thead><tr>' +
+                    '<th>Chain</th>' +
+                    '<th class="text-right">Supply</th>' +
+                    '<th class="text-right">Share</th>' +
+                    '<th>Kind</th>' +
+                    '<th>Token Address</th>' +
+                    '<th>Source</th>' +
+                '</tr></thead>' +
+                '<tbody>' + rowsHtml + totalRow + '</tbody>' +
+            '</table>' +
+            recon +
+            emptyStateFooter +
+        '</div>';
+    },
+
+    // Per-chain explorer base URLs. Ink stub carries a verified token address;
+    // Plasma kept as a placeholder for the upcoming syrupUSDT chain expansion
+    // (URL to be re-verified when activating).
+    _CHAIN_EXPLORERS: {
+        ethereum: { name: 'Ethereum', base: 'https://etherscan.io/address/' },
+        arbitrum: { name: 'Arbitrum', base: 'https://arbiscan.io/address/' },
+        base:     { name: 'Base',     base: 'https://basescan.org/address/' },
+        solana:   { name: 'Solana',   base: 'https://solscan.io/token/' },
+        ink:      { name: 'Ink',      base: 'https://explorer.inkonchain.com/address/' },
+        plasma:   { name: 'Plasma',   base: 'https://plasmascan.to/address/' }
+    },
+
+    _renderChainRow: function(c) {
+        var meta = SyrupUSDCRenderer._CHAIN_EXPLORERS[c.chain] || { name: c.chain, base: null };
+        var displayName = meta.name || (c.chain.charAt(0).toUpperCase() + c.chain.slice(1));
+        var isStub = c.kind === 'stub' || c.data_source === 'stub';
+        var rowClass = isStub ? ' class="text-slate-400 italic"' : '';
+
+        // Supply / share — stub rows render '~' prefix to telegraph estimate.
+        var supplyCell, shareCell;
+        if (isStub) {
+            supplyCell = c.supply_usd != null ? '~' + CommonRenderer.formatCurrency(c.supply_usd) : '—';
+            shareCell  = c.share_pct  != null ? '~' + CommonRenderer.formatPercent(c.share_pct, 1) : '—';
+        } else {
+            supplyCell = c.supply_usd != null ? CommonRenderer.formatCurrency(c.supply_usd) : '-';
+            shareCell  = c.share_pct  != null ? CommonRenderer.formatPercent(c.share_pct, 1) : '-';
+        }
+
+        var kindLabel = ({ evm: 'EVM', solana: 'Solana', stub: 'stub' })[c.kind] || c.kind || '-';
+
+        // Stubs with a verified token_address still render the linked address
+        // — the row's italic/grey styling already telegraphs "not live-probed
+        // yet." Lets readers verify the deployment exists on-chain even
+        // before live data wires up.
+        var addrCell;
+        if (!c.token_address) {
+            addrCell = isStub ? 'n/a' : '—';
+        } else {
+            var truncated = SyrupUSDCRenderer._truncAddr(c.token_address);
+            if (meta.base) {
+                addrCell = '<span class="font-mono text-xs">' + truncated + '</span>' +
+                    ' <a href="' + meta.base + c.token_address + '" target="_blank" ' +
+                    'class="text-blue-500 hover:underline text-xs" title="' + c.token_address + '">↗</a>';
+            } else {
+                addrCell = '<span class="font-mono text-xs">' + truncated + '</span>';
+            }
+        }
+
+        var sourceCell = isStub ? 'Phase 2 stub' :
+                         c.data_source === 'on_chain_token_supply' ? 'on-chain' :
+                         (c.data_source || '—');
+
+        return '<tr' + rowClass + '>' +
+            '<td class="font-medium">' + displayName + '</td>' +
+            '<td class="text-right font-mono">' + supplyCell + '</td>' +
+            '<td class="text-right font-mono">' + shareCell + '</td>' +
+            '<td class="text-xs">' + kindLabel + '</td>' +
+            '<td>' + addrCell + '</td>' +
+            '<td class="text-xs">' + sourceCell + '</td>' +
+        '</tr>';
+    },
+
+    // Reconciliation badge — color-coded against the analyzer's 98–102%
+    // tolerance band. Outside that, the analyzer also fires a risk flag
+    // (already surfaced in §Risk Flags), so this is a passive readout.
+    // ⚠️ A RECONCILIATION OVER ONE CHAIN IS A TAUTOLOGY, NOT A CHECK. syrupUSDT
+    // published 100.0% against a chain list containing exactly `['ethereum']` —
+    // it reconciled Ethereum against itself and rendered green, "per-chain
+    // supplies match canonical Pool total". It could not have reported a
+    // shortfall it never looked for. Roughly 235.7M of supply on Plasma, ~37% of
+    // the real total, sat outside a figure declaring itself fully reconciled.
+    //
+    // ⚠️ The guard is DERIVED from the chain count, not from knowing about
+    // Plasma: any asset whose enumeration covers a single chain gets the scope
+    // stated instead of a green pass. It fires for the next asset too, before
+    // anyone knows which chain is missing.
+    _reconciliationLine: function(pct, chainCount, scopeMismatch) {
+        if (pct == null) return '';
+        // ⚠️ CROSS-SCOPE RATIO: WITHHOLD THE VERDICT, DO NOT COLOUR IT.
+        //
+        // syrupUSDT publishes 133.82% with denominator `vault_state.total_assets`
+        // — and vault_state.total_supply is IDENTICAL to Ethereum's chain supply
+        // to the cent, so the denominator's share base is ONE chain while the
+        // numerator now spans two. A global numerator over a single-chain
+        // denominator is not a reconciliation, and rendering it red as "material
+        // drift" asserts a 34% shortfall the measurement cannot establish.
+        //
+        // ⚠️ Two readings fit and they are opposite in severity: if bridging
+        // LOCKS on Ethereum the supplies overlap and the gap is arithmetic; if it
+        // BURNS, the Plasma shares sit outside the vault's share base and NAV is
+        // computed over 75% of the claims. riskAnalyst's burn-vs-lock test came
+        // back a NULL RESULT — both supplies fell, which a bridge flow would not
+        // produce — so nothing distinguishes them yet. Colouring it picks one.
+        //
+        // Overstating risk is not the safe direction. The scope mismatch is the
+        // finding until the mechanism is measured.
+        if (scopeMismatch) {
+            return '<div class="text-xs mt-3">' +
+                '<span class="text-slate-500">Reconciliation: </span>' +
+                '<span class="text-amber-700 font-mono">' + CommonRenderer.formatPercent(pct, 1) + '</span> ' +
+                '<span class="text-amber-700 font-semibold">\u26a0\ufe0f CROSS-SCOPE \u2014 verdict ' +
+                'withheld.</span> <span class="text-slate-500">The numerator spans ' +
+                (chainCount != null ? chainCount : 'several') + ' chains; the denominator\u2019s share ' +
+                'base matches a single chain exactly, so the legs may count the same shares twice. ' +
+                'This ratio does not establish a surplus or a shortfall. \u26a0\ufe0f A lock-release ' +
+                'bridge leaves the locked shares in the SOURCE chain\u2019s totalSupply while minting ' +
+                'them again on the destination; a burn-mint bridge does not. Until the producer ' +
+                'publishes the mechanism per chain, the sum is not a global supply.</span></div>';
+        }
+        if (chainCount != null && chainCount <= 1) {
+            return '<div class="text-xs mt-3">' +
+                '<span class="text-slate-500">Reconciliation: </span>' +
+                '<span class="text-amber-700 font-mono">' + CommonRenderer.formatPercent(pct, 1) + '</span> ' +
+                '<span class="text-amber-700 font-semibold">\u26a0\ufe0f over ONE enumerated chain ' +
+                '\u2014 this reconciles that chain against itself and cannot detect supply on a ' +
+                'chain that was not enumerated. Not a multi-chain reconciliation.</span></div>';
+        }
+        var cls, label;
+        if (pct >= 99 && pct <= 101) {
+            cls = 'text-green-600';
+            label = '(per-chain supplies match canonical Pool total, across ' +
+                    (chainCount != null ? chainCount + ' enumerated chains' : 'the enumerated chains') + ')';
+        } else if ((pct >= 98 && pct < 99) || (pct > 101 && pct <= 102)) {
+            cls = 'text-amber-600';
+            label = '(minor drift — possibly CCT bridge messages in flight)';
+        } else {
+            cls = 'text-red-600 font-semibold';
+            label = '(material drift — bridge-in-flight or analyzer issue; see Risk Flags)';
+        }
+        return '<div class="text-xs mt-3">' +
+            '<span class="text-slate-500">Reconciliation: </span>' +
+            '<span class="' + cls + ' font-mono">' + CommonRenderer.formatPercent(pct, 1) + '</span> ' +
+            '<span class="text-slate-500">' + label + '</span>' +
+        '</div>';
+    },
+
+    _renderMultiChainPlaceholder: function(slug) {
+        var note = slug === 'syrupusdt'
+            ? 'Multi-chain tracking is rolling out — current snapshot pre-dates the Phase-1 schema bump.'
+            : 'Multi-chain tracking is rolling out — current snapshot pre-dates the Phase-1 schema bump. ' +
+              'syrupUSDC is deployed on Ethereum, Solana, Arbitrum, Base, and Plasma via CCIP+CCT.';
+        return '<div class="panel">' +
+            '<div class="panel-title">Multi-Chain Distribution</div>' +
+            '<div class="text-sm text-slate-500">' + note + '</div>' +
+        '</div>';
+    }
+};

@@ -43,6 +43,6 @@ const family=JSON.parse(fs.readFileSync('data/syrup_family.json'));
 const base=JSON.parse(fs.readFileSync('data/syrupusdt_backing.json'));
 const sibling=JSON.parse(fs.readFileSync('data/syrupusdc_backing.json'));
 const familyHtml=ctx.syrup._renderCrossPoolFamilyContent(family,base,sibling);
-assert.match(familyHtml,/mixed definitions/);
+assert.ok(familyHtml.includes(ctx.common._escapeAttr(family.combined.classification_basis)), 'Render the source-declared family definition, including later reconciled versions');
 assert.match(familyHtml,/unavailable \/ incomplete scope/);
 assert.doesNotMatch(familyHtml,/pending classification fix/);

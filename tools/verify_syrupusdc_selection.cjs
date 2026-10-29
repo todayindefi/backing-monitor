@@ -1,6 +1,7 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
 const phase=process.argv[2]||'before';assert.ok(['before','after'].includes(phase));
-const root=path.resolve(__dirname,'../specs/reviews/syrupusdc-source-refresh-2026-10-29',phase);
+const review=process.argv[3]||path.resolve(__dirname,'../specs/reviews/syrupusdc-source-refresh-2026-10-29');
+const root=path.join(review,phase);
 const read=n=>JSON.parse(fs.readFileSync(path.join(root,'data__'+n+'.json')));
 const ctx={console,window:{}};vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(root,'js__renderers__common.js'),'utf8')+'\nglobalThis.c=CommonRenderer',ctx);

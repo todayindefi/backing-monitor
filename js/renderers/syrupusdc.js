@@ -3357,7 +3357,10 @@ var SyrupUSDCRenderer = {
                 : '');
 
         var subheader;
-        if (isUSDT) {
+        if (mc.chain_resident_decomposition_complete === false && mc.total_supply_usd_across_chains == null) {
+            subheader = 'Canonical and remote token observations are non-additive. ' + CommonRenderer._escapeAttr(mc.note || '') +
+                ' Bridge reconciliation and chain-resident decomposition remain incomplete. Supply enumeration does not establish executable exits or replacement-pool authority.';
+        } else if (isUSDT) {
             // ⚠️ WAS A HARDCODED DEPLOYMENT CLAIM: "syrupUSDT is currently
             // Ethereum-only. CCIP+CCT cross-chain expansion is planned but not
             // yet deployed." No producer said that — the renderer asserted it,
