@@ -6404,7 +6404,7 @@ const CommonRenderer = {
         var c = data.contract || {};
         if (!d) return 'admin authority & delay';
         var parts = ['shortest of ' + d.total + ' admin path' + (d.total === 1 ? '' : 's')];
-        parts.push(d.delayed ? d.delayed + ' delayed' : 'none delayed');
+        parts.push(d.delayed ? d.delayed + ' delayed' : (d.unresolved ? 'delays unmeasured' : 'none delayed'));
         if (d.unresolved) parts.push(d.unresolved + ' unmeasured');
         if (c.method) parts.push(c.method);
         return parts.join(' \u00b7 ');
@@ -10507,13 +10507,14 @@ const CommonRenderer = {
                         return p.reach === 'full' || p.value_at_risk_scope === 'core';
                     });
                     delayText = noDelay ? 'no execution delay' : delays.join(', ');
-                    delayClass = noDelay ? (full ? 'tw-bad' : 'tw-unknown') : 'tw-ok';
+                    delayClass = noDelay ? (full ? 'tw-bad' : 'tw-unknown')
+                        : (delays.indexOf('unresolved') !== -1 ? 'tw-unknown' : 'tw-ok');
                     reachText = Array.from(new Set(active.map(function(p) {
                         return p.reach + (p.value_at_risk_scope ? ' · ' + p.value_at_risk_scope : '');
                     }))).join(', ');
                 }
                 return '<tr>' +
-                    '<td>' + esc(l.authority_layer || '—') + '</td>' +
+                    '<td>' + esc(l.authority_layer || '—') + (l.target_name ? '<div class="tw-sub">' + esc(l.target_name) + '</div>' : '') + '</td>' +
                     '<td>' + ((l.keys || []).map(esc).join(', ') || '—') + '</td>' +
                     '<td class="' + delayClass + '">' + delayText + '</td>' +
                     '<td>' + esc(l.topology || '—') + '</td>' +
@@ -10528,7 +10529,7 @@ const CommonRenderer = {
             var undelayed = !tl || tl === 'none';
             var unknown = tl === 'unresolved';
             return '<tr>' +
-                '<td>' + esc(l.authority_layer || '—') + '</td>' +
+                '<td>' + esc(l.authority_layer || '—') + (l.target_name ? '<div class="tw-sub">' + esc(l.target_name) + '</div>' : '') + '</td>' +
                 '<td>' + ((l.keys || []).map(esc).join(', ') || '—') + '</td>' +
                 // ⚠️ A CONFIGURED DELAY IS NOT AN ENFORCED ONE, and the column now
                 // says so in two words instead of a paragraph. `timelock: 48h`

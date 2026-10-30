@@ -50,6 +50,7 @@ function dataUrl(path) {
 // can be keyed by slug (thusd) when the analyzer's type field is
 // too generic to use safely (e.g. "rwa-stable").
 var ASSET_RENDERERS = {
+    gho:       typeof GHORenderer       !== 'undefined' ? GHORenderer       : null,
     ousd:      typeof OUSDRenderer      !== 'undefined' ? OUSDRenderer      : null,
     frax:      typeof FRAXRenderer      !== 'undefined' ? FRAXRenderer      : null,
     crvusd:    typeof CrvUSDRenderer    !== 'undefined' ? CrvUSDRenderer    : null,

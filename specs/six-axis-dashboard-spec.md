@@ -526,6 +526,47 @@ the venue stamp is more than 24h older. Silent where the two halves share a cloc
 carry pools under the block's own `as_of`, and a second identical date would assert a split the
 asset does not have. Shipped `2e351bc0f`.
 
+### Adaptive 50 bps ladder — quote budget (owner decision 2026-10-30)
+
+Target **five quote requests**, allow a sixth when unresolved, and an exceptional
+seventh; **seven is the hard ceiling per asset refresh**. Every outbound quote
+request counts, including failures, retries and provider fallbacks. No hidden
+retry loop or second-provider search may evade the ceiling. Existing fixed-grid
+collectors remain legacy until explicitly migrated; this rule does not assert
+that fleet adoption has already happened.
+
+Use a small reference quote and a larger probe. USD defaults are $1k reference,
+$100k initial probe, ×10 expansion and a declared $50m notional safety ceiling.
+These are configurable starting/safety values, not universal market capacities.
+Other quote denominations require an explicit USD sizing conversion; do not
+apply USD amounts as token counts. Threshold is 50 bps of **size impact relative
+to the smallest successful reference**, preserving all-in output separately.
+
+A previous bracket may choose initial sizes only while no older than the
+producer's three-hour interval and for the same token, chain and exit leg.
+Requote every endpoint: remembered sizes are not current evidence. Expand until
+the samples straddle 50 bps, then refine using geometric midpoints. After five
+requests, stop if the largest clearing quote is within 5 bps below the target,
+or the bracket's upper/lower size ratio is at most 1.25. Otherwise use the sixth
+and, if still unresolved, seventh request. Stop earlier at a declared notional
+ceiling, unavailable route, quote failure or exhausted size resolution. Material
+non-monotonicity (>5 bps reversal across sizes) withholds a single crossing;
+do not force route-changing observations into a monotone curve.
+
+Publish the largest **tested** size at or below 50 bps, its actual impact, the
+first tested size above 50 bps and the bracket width. A near-target quote is not
+an exact 50 bps measurement. Never publish an interpolated executable quote.
+With no crossing, publish a floor and its stopping reason, not maximum depth.
+A failure is not a crossing; a failed reference leaves depth unmeasured. Fixed
+pricing or a proven capacity ceiling must be named as such; flat samples alone
+do not establish either mechanism. Retain per-rung errors, observation clocks,
+request count, policy version, sizing mark and source. Gas remains separately
+qualified. Primary redemption execution and holder eligibility stay separate.
+
+Initial implementation: standalone PegTracker candidate
+`adaptive_exit_ladder.py`, staged GHO adoption only. Fleet scheduling and
+DexTracker alignment are tracked in the dated adaptive-ladder handoff.
+
 ### Venue inventory presentation — one fleet rule
 
 The venue payload is an enumeration, not a demand that every discovered pool receive equal visual

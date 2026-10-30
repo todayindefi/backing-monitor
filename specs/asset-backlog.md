@@ -76,6 +76,46 @@ For each asset, in this order:
 
 ## Entries
 
+### gho — v2: independent backing reconciliation
+```
+affects     gho · Axis 2 Backing
+raised      2026-10-30 by the user
+status      OPEN — deferred to v2 / next GHO refresh; not in the active queue
+v1 decision User accepted the current standard dashboard as v1 on 2026-10-30.
+            Its TokenLogic source-qualified collateral ratio, history and
+            composition remain the accepted v1 basis. This is not a publication
+            instruction or acceptance of independently verified backing.
+what        Build our own reproducible backing reconciliation, beyond reproducing
+            TokenLogic's accounting. Keep the source-reported series separately
+            attributed and compare it with our independently derived results.
+scope       Reconcile origin facilitator issuance and non-circulating inventory;
+            borrower collateral and competing debts; minter, outside-supplier and
+            treasury claims; reserve deficits and accrued fees; remote reserves,
+            wrapper look-through and original bridge-funding/custody attribution.
+            Use pinned chain observations and explicit cross-chain clocks. Avoid
+            counting idle GHO or bridged representations as extra external backing.
+carry over  Prime/Horizon positive lending-book residuals remain unattributed;
+            original bridge-funding receipts were not replayed. The daily borrower
+            source is not an independently complete block-pinned borrower census.
+            These are v2 verification work, not reasons to reopen accepted v1.
+owner       PegTracker: canonical measurements and retained reconciliation history;
+            backing-monitor: consume and display the results under the six-axis spec;
+            riskAnalyst: interpretation and any justified score reassessment.
+            Scope recorded here; no new producer dispatch or schedule activated.
+closes when A repeatable producer reconciles assets, liabilities, netting and residuals
+            on stated scopes; derives defensible coverage or states precisely why
+            it cannot; retains history and failure states; and the dashboard shows
+            our results beside the separately labelled TokenLogic measure using
+            the standard history, breakdown and evidence layout. Validate arithmetic,
+            independent controls, clocks and rendered figures before v2 review.
+references  specs/gho-dashboard-plan.md
+            specs/gho-standard-dashboard-review-2026-10-30.md
+            specs/reviews/gho-dashboard-2026-10-30/backing-v2-source-reconciliation/
+            (historical folder name: this was source reconciliation during v1,
+            not completion of the newly requested independent v2 reconciliation)
+Last reviewed 2026-10-30
+```
+
 ### frxusd — independent backing verification remains partial
 ```
 affects     frxusd
