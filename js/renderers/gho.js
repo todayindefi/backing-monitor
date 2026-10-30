@@ -27,7 +27,7 @@ var GHORenderer = {
         ['peg', 'backing', 'liquidity', 'dependencies', 'contract', 'issuer'].forEach(function(axis) {
             var section = document.getElementById('section-' + axis);
             if (!section) return;
-            section.querySelectorAll('.gho-evidence, .gho-overview, .gho-axis5-proposal').forEach(function(node) { node.remove(); });
+            section.querySelectorAll('.gho-evidence, .gho-overview, .gho-axis5-proposal, .gho-axis5-authority').forEach(function(node) { node.remove(); });
             section.querySelectorAll('.gho-detail').forEach(function(node) { node.remove(); });
             if (detail.gaps && detail.gaps[axis]) section.insertAdjacentHTML('beforeend',
                 self._panel('Evidence still needed', '<p class="text-sm">' + self._e(detail.gaps[axis]) + '</p>'));
@@ -147,14 +147,20 @@ var GHORenderer = {
                 '<p class="text-sm">' + this._e(review5.code_half) + '</p><p class="text-sm">' +
                 this._e(review5.authority_half) + '</p><p class="text-sm">' + this._e(review5.combined_decision) + '</p>'));
         }
-        if (detail.axis5_assessment && data.contract && typeof data.contract.proposed_structural_score === 'number') {
+        if (detail.axis5_assessment && data.contract && (typeof data.contract.structural_score === 'number' || typeof data.contract.proposed_structural_score === 'number')) {
             var axis5Body = document.getElementById('axis-contract-body');
             if (axis5Body) axis5Body.insertAdjacentHTML('beforeend',
                 '<details class="gho-axis5-proposal"><summary>' +
                 (detail.axis5_assessment.score_adopted ? 'Contract &amp; Admin score — ' : 'Proposed Contract &amp; Admin score — ') +
-                data.contract.proposed_structural_score.toFixed(1) + (detail.axis5_assessment.score_adopted ? '/10 · staged</summary>' : '/10 · not adopted</summary>') +
+                (detail.axis5_assessment.score_adopted ? data.contract.structural_score : data.contract.proposed_structural_score).toFixed(1) + (detail.axis5_assessment.score_adopted ? '/10 · staged</summary>' : '/10 · not adopted</summary>') +
                 this._panel('Combined assessment rationale',
                     '<p class="text-sm">' + this._e(detail.axis5_assessment.score_adopted ? data.contract.structural_score_basis : data.contract.proposed_structural_score_basis) + '</p>') + '</details>');
+        }
+        if (detail.axis5_assessment && data.contract && data.contract.authority_note) {
+            var authorityBody = document.getElementById('axis-contract-body');
+            if (authorityBody) authorityBody.insertAdjacentHTML('beforeend',
+                '<details class="gho-axis5-authority"><summary>Authority finding and limits</summary><p class="text-sm">' +
+                this._e(data.contract.authority_note) + '</p></details>');
         }
         var oldIssuer = (data.issuer || {}).historical_assessment;
         if (oldIssuer && issuer) issuer.insertAdjacentHTML('beforeend', this._panel('Historical issuer assessment — ' +

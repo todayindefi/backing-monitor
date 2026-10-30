@@ -106,8 +106,8 @@ fs.mkdirSync(output, {recursive: true});
                 assert.match(state.remaining[0], /44\.35% of origin issuance/);
                 if (axis5Candidate) {
                     assert.match(state.remaining[1], /2-of-3 Council can expand the mainnet bucket and mint without a DAO queue/);
-                    assert.match(state.remaining[1], /Next eligible increase adds 310m/);
-                    assert.match(state.remaining[1], /not evidence of exploitation/);
+                    if (!axis5Candidate.owner_review_complete) assert.match(state.remaining[1], /Next eligible increase adds 310m/);
+                    if (!axis5Candidate.owner_review_complete) assert.match(state.remaining[1], /not evidence of exploitation/);
                     if (axis5Candidate.score_adopted) {
                         assert.match(state.contractCard, /4(?:\.0)?\/10/);
                         assert.match(state.contractHead, /4(?:\.0)?\/10/);
@@ -145,12 +145,16 @@ fs.mkdirSync(output, {recursive: true});
                         assert.ok(all.includes(selectedFeed.contract.structural_score_basis));
                         assert.doesNotMatch(all, /not adopted|current numeric score is adopted|Contract & Admin remains unrated/);
                         assert.equal(selectedFeed.contract.structural_score, 4.0);
+                        if (axis5Candidate.owner_review_complete) {
+                            assert.equal(selectedFeed.contract.structural_score_source, 'riskAnalyst:authored');
+                            assert.doesNotMatch(all, /proposal_pending|unreviewed BM proposal/);
+                        }
                     } else {
                         assert.match(all, /Proposed Contract & Admin score — 4\.0\/10 · not adopted/);
                         assert.ok(all.includes(selectedFeed.contract.proposed_structural_score_basis));
                     }
-                    assert.match(all, /not a permanent lifetime ceiling/);
-                    assert.match(all, /guardian protect the queued DAO route, not this immediate Council path/);
+                    assert.match(all, /not a permanent lifetime ceiling|not a lifetime ceiling|No immutable aggregate ceiling/);
+                    assert.ok(all.includes(selectedFeed.contract.authority_note));
                     assert.match(all, /Current Immunefi AAVE terms list a \$1m critical maximum/);
                     assert.doesNotMatch(all, /No repeat blanket authority handoff is needed.*No current producer/);
                 } else {

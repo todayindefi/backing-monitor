@@ -1,0 +1,1129 @@
+{
+  "schema_version": "contract-overlay/1",
+  "producer": "riskanalyst",
+  "asset": "gho",
+  "as_of": "2026-10-30T10:24:13.735971+00:00",
+  "staged_only": true,
+  "owner_review_complete": true,
+  "approval_scope": "Current scoped editorial assessment and score for staged review; not production publication or canonical adoption",
+  "contract": {
+    "as_of": "2026-10-30T10:24:13.735971+00:00",
+    "observed_at": "2026-10-30T07:45:11+00:00",
+    "method": "riskAnalyst code-risk and combined editorial assessment; accepted SA authority evidence, static source/audit review; no independent fork/prover run",
+    "headline": "2-of-3 Council can expand the mainnet bucket and mint without a DAO queue",
+    "headline_basis": "2of3 Risk Council can increase mainnet direct facilitator capacity310m to620m at the pinned eligible state and mint to arbitrary recipients without DAO queue. Fork actually minted1wei to reserve; arbitrary-recipient reach is source-derived. Additional310m is next-update headroom, not a lifetime ceiling.",
+    "coverage_summary": "Current scoped code-risk assessment completed with explicit audit/deployment and remote-control gaps; immediate2of3 Council core mint path constrains combined4.0.",
+    "coverage_note": "Reviewed owner return for staging only. Source and authority observations retain their original clocks. No automatic production adoption or full-surface audit clearance.",
+    "authority_note": "Council path: next eligible 310m \u2192 620m capacity, then mint. Next-update headroom is 310m, not a lifetime ceiling. DAO one-day delay and guardian cancellation do not pre-veto this path. Authorized capability, not evidence of exploitation. Fork minted one wei to reserve; arbitrary-recipient reach is source-derived.",
+    "layers": [
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "DEFAULT_ADMIN_ROLE",
+          "FACILITATOR_MANAGER_ROLE",
+          "BUCKET_MANAGER_ROLE",
+          "MINTER_ROLE",
+          "mintAndSupply",
+          "withdrawAndBurn"
+        ],
+        "observed_at": "2026-10-30T07:45:11+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Core role administration",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "GHO DEFAULT_ADMIN_ROLE / FACILITATOR_MANAGER_ROLE / BUCKET_MANAGER_ROLE -> executor L1 -> PayloadsController",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          },
+          {
+            "name": "Core issuance through direct GSM facilitator",
+            "holder": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "via": "Risk Council -> Bucket Steward -> token bucket increase; Risk Council MINTER_ROLE -> GhoDirectFacilitator.mint(recipient,amount)",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Existing full bucket 310M -> at most 620M on the next eligible steward update, enabling up to 310M additional core GHO. No immutable aggregate ceiling; further increases require >86400 seconds between updates.",
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "n": 2,
+            "m": 3,
+            "owners": [
+              "0x4b752551fc6345a7de82f76fd7a5015ca16d1a74",
+              "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+              "0x9de1d45e2786b03498289959203f25b29b4d1193"
+            ]
+          },
+          {
+            "name": "Lending-pool GHO issuance and burn",
+            "holder": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "via": "Risk Council as guardian -> three GhoDirectMinter.mintAndSupply / withdrawAndBurn functions",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Core, Prime and Horizon existing facilitator buckets; mint destination is the fixed Aave pool and burn withdraws to the minter. This is not an arbitrary-recipient mint method.",
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "n": 2,
+            "m": 3,
+            "owners": [
+              "0x4b752551fc6345a7de82f76fd7a5015ca16d1a74",
+              "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+              "0x9de1d45e2786b03498289959203f25b29b4d1193"
+            ]
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "EIP1967 implementation",
+          "ProxyAdmin.owner",
+          "upgradeAndCall"
+        ],
+        "observed_at": "2026-10-30T07:45:11+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Ethereum token implementation replacement",
+            "holder": null,
+            "via": "Directly deployed GhoToken; complete matched runtime/source has no proxy/delegate/upgrade route",
+            "control_state": "absent",
+            "actionable": false,
+            "execution_delay": "not-applicable",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "none",
+            "reach_bound": null,
+            "value_at_risk_scope": "core",
+            "changeability": "immutable",
+            "terminal_kind": "no-controller",
+            "terminal_address": null,
+            "holder_kind": null,
+            "independent_canceller": "not-applicable",
+            "delay_floor": "not-applicable"
+          },
+          {
+            "name": "Facilitators, GSMs, reserve and governance controller upgrades",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Measured EIP-1967 implementations and ProxyAdmins -> executor L1 -> PayloadsController; three lending minters and both live GSMs are upgradeable",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "LIMIT_MANAGER_ROLE",
+          "ENTITY_MANAGER_ROLE",
+          "TRANSFER_ROLE",
+          "CONFIGURATOR_ROLE",
+          "GhoGsmSteward"
+        ],
+        "observed_at": "2026-10-30T07:45:11+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "DAO configuration and allocation",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Token/default admin; registry owner; reserve entity/transfer admin; GSM configurator -> executor L1",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          },
+          {
+            "name": "Reserve limits",
+            "holder": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "via": "Risk Council LIMIT_MANAGER_ROLE -> GhoReserve.setLimit(existingEntity,limit)",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Current two registered Ethereum GSM entities and available reserve inventory; uint128 storage bound. No mint permission is conferred by LIMIT_MANAGER_ROLE alone.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "n": 2,
+            "m": 3,
+            "owners": [
+              "0x4b752551fc6345a7de82f76fd7a5015ca16d1a74",
+              "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+              "0x9de1d45e2786b03498289959203f25b29b4d1193"
+            ]
+          },
+          {
+            "name": "GSM caps and fees",
+            "holder": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "via": "Risk Council -> immutable-caller GSM Steward -> CONFIGURATOR_ROLE",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Exposure cap may change by up to 100% of current cap; buy/sell fees by at most 50 bps each per update. >86400-second per-parameter cooldown; no queue or veto.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "n": 2,
+            "m": 3,
+            "owners": [
+              "0x4b752551fc6345a7de82f76fd7a5015ca16d1a74",
+              "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+              "0x9de1d45e2786b03498289959203f25b29b4d1193"
+            ]
+          }
+        ]
+      },
+      {
+        "authority_layer": "governance",
+        "chain": "ethereum",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "executePayload",
+          "updateExecutors",
+          "cancelPayload",
+          "ProxyAdmin.owner"
+        ],
+        "observed_at": "2026-10-30T07:45:11+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Current execution scheduling and delay floor",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Authenticated cross-chain delivery from Ethereum Governance -> PayloadsController queue -> >86400 seconds -> L1 executor; guardian can cancel Created/Queued payloads",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "core",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "monad",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "LIMIT_MANAGER_ROLE",
+          "ENTITY_MANAGER_ROLE",
+          "TRANSFER_ROLE",
+          "CONFIGURATOR_ROLE"
+        ],
+        "observed_at": "2026-10-30T07:45:18+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Existing remote reserve limit",
+            "holder": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "via": "Risk Council LIMIT_MANAGER_ROLE -> 0x307707A53Cb51670a8bcC8a2808A349C65E1Fb92.setLimit(0x3Cf3779EEf770931543ACd2C7f6ECd1b37E35caB,limit)",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Existing registered module only; 50,000,000 GHO current reserve limit, inventory constrained; LIMIT_MANAGER_ROLE is not a direct GHO mint or reserve TRANSFER permission.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "n": 2,
+            "m": 3,
+            "owners": [
+              "0x4b752551fc6345a7de82f76fd7a5015ca16d1a74",
+              "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+              "0x9de1d45e2786b03498289959203f25b29b4d1193"
+            ]
+          },
+          {
+            "name": "Remote module cap and fees",
+            "holder": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "via": "Risk Council -> 0x6C4b8AC66a3C879129282C137fc038519b883AE6 -> CONFIGURATOR_ROLE on 0x3Cf3779EEf770931543ACd2C7f6ECd1b37E35caB",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Matched deployed steward: \u00b1100% cap delta, \u00b150 bps fee delta, >86400-second cooldown between same-parameter updates; first eligible change executes immediately.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "n": 2,
+            "m": 3,
+            "owners": [
+              "0x4b752551fc6345a7de82f76fd7a5015ca16d1a74",
+              "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+              "0x9de1d45e2786b03498289959203f25b29b4d1193"
+            ]
+          },
+          {
+            "name": "Remote reserve/module administration",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Local executor 0xa9d0EAFF48cE1DF468f9eAeb7e628c413343F6A2 -> reserve DEFAULT_ADMIN/ENTITY_MANAGER/TRANSFER and GSM DEFAULT_ADMIN/CONFIGURATOR",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "monad",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "EIP1967 implementation",
+          "ProxyAdmin.owner",
+          "upgradeAndCall"
+        ],
+        "observed_at": "2026-10-30T07:45:18+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Remote reserve, module and controller proxy administration",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Matched implementation/admin code -> ProxyAdmin owner 0xa9d0EAFF48cE1DF468f9eAeb7e628c413343F6A2 -> PayloadsController 0x442CA936e5E6Db875357d0A16481145c96dd9a82",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          },
+          {
+            "name": "Remote token upgrade source gap",
+            "holder": null,
+            "via": "Token proxy implementation/admin slots measured; token ProxyAdmin owner getter points to local L1, but token ProxyAdmin executable-source match is unresolved. Token implementation source is also unresolved on Monad and Plasma.",
+            "control_state": "unresolved",
+            "actionable": "unresolved",
+            "execution_delay": "unresolved",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "unresolved",
+            "reach_bound": null,
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "unresolved",
+            "terminal_address": null,
+            "holder_kind": null,
+            "independent_canceller": "unresolved",
+            "delay_floor": "unresolved"
+          }
+        ]
+      },
+      {
+        "authority_layer": "governance",
+        "chain": "monad",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "MIN_EXECUTION_DELAY",
+          "getExecutorSettingsByAccessControl",
+          "cancelPayload"
+        ],
+        "observed_at": "2026-10-30T07:45:18+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Destination execution delay",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Matched PayloadsController implementation at 0xb7E4093C5b5De44E2314A0132ABa7a1Fab8b07fc -> L1 executor; 1-day minimum and configured delay, distinct cancellation Safe",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          }
+        ]
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "monad",
+        "topology": "unknown",
+        "keys": [
+          "CCIP token pool",
+          "FACILITATOR_MANAGER_ROLE",
+          "BUCKET_MANAGER_ROLE"
+        ],
+        "observed_at": "2026-10-30T07:45:18+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Remote CCIP mint authority not fully walked",
+            "holder": null,
+            "via": "getFacilitatorsList returns only the official CCIP pool; local GSM has zero facilitator bucket",
+            "control_state": "unresolved",
+            "actionable": "unresolved",
+            "execution_delay": "unresolved",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "unresolved",
+            "reach_bound": null,
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "unresolved",
+            "terminal_address": null,
+            "holder_kind": null,
+            "independent_canceller": "unresolved",
+            "delay_floor": "unresolved"
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "plasma",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "LIMIT_MANAGER_ROLE",
+          "ENTITY_MANAGER_ROLE",
+          "TRANSFER_ROLE",
+          "CONFIGURATOR_ROLE"
+        ],
+        "observed_at": "2026-10-30T07:45:19+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Existing remote reserve limit",
+            "holder": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "via": "Risk Council LIMIT_MANAGER_ROLE -> 0x6aC541605b0317dE076C9FeC2842902c844dEa74.setLimit(0xd06114F714beCD6f373e5cE94E07278eF46eBF37,limit)",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Existing registered module only; 50,000,000 GHO current reserve limit, inventory constrained; LIMIT_MANAGER_ROLE is not a direct GHO mint or reserve TRANSFER permission.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "n": 2,
+            "m": 3,
+            "owners": [
+              "0x4b752551fc6345a7de82f76fd7a5015ca16d1a74",
+              "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+              "0x9de1d45e2786b03498289959203f25b29b4d1193"
+            ]
+          },
+          {
+            "name": "Remote module cap and fees",
+            "holder": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "via": "Risk Council -> 0x86992b2E2385E478dd2eeBfaE06369636e0a64E8 -> CONFIGURATOR_ROLE on 0xd06114F714beCD6f373e5cE94E07278eF46eBF37",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Matched deployed steward: \u00b1100% cap delta, \u00b150 bps fee delta, >86400-second cooldown between same-parameter updates; first eligible change executes immediately.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "n": 2,
+            "m": 3,
+            "owners": [
+              "0x4b752551fc6345a7de82f76fd7a5015ca16d1a74",
+              "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+              "0x9de1d45e2786b03498289959203f25b29b4d1193"
+            ]
+          },
+          {
+            "name": "Remote reserve/module administration",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Local executor 0x47aAdaAE1F05C978E6aBb7568d11B7F6e0FC4d6A -> reserve DEFAULT_ADMIN/ENTITY_MANAGER/TRANSFER and GSM DEFAULT_ADMIN/CONFIGURATOR",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "plasma",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "EIP1967 implementation",
+          "ProxyAdmin.owner",
+          "upgradeAndCall"
+        ],
+        "observed_at": "2026-10-30T07:45:19+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Remote reserve, module and controller proxy administration",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Matched implementation/admin code -> ProxyAdmin owner 0x47aAdaAE1F05C978E6aBb7568d11B7F6e0FC4d6A -> PayloadsController 0xe76EB348E65eF163d85ce282125FF5a7F5712A1d",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          },
+          {
+            "name": "Remote token upgrade source gap",
+            "holder": null,
+            "via": "Token proxy implementation/admin slots measured; token ProxyAdmin owner getter points to local L1, but token ProxyAdmin executable-source match is unresolved. Token implementation source is also unresolved on Monad and Plasma.",
+            "control_state": "unresolved",
+            "actionable": "unresolved",
+            "execution_delay": "unresolved",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "unresolved",
+            "reach_bound": null,
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "unresolved",
+            "terminal_address": null,
+            "holder_kind": null,
+            "independent_canceller": "unresolved",
+            "delay_floor": "unresolved"
+          }
+        ]
+      },
+      {
+        "authority_layer": "governance",
+        "chain": "plasma",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "MIN_EXECUTION_DELAY",
+          "getExecutorSettingsByAccessControl",
+          "cancelPayload"
+        ],
+        "observed_at": "2026-10-30T07:45:19+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Destination execution delay",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Matched PayloadsController implementation at 0x7120b1f8e5b73c0C0DC99C6e52Fe4937E7EA11e0 -> L1 executor; 1-day minimum and configured delay, distinct cancellation Safe",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          }
+        ]
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "plasma",
+        "topology": "unknown",
+        "keys": [
+          "CCIP token pool",
+          "FACILITATOR_MANAGER_ROLE",
+          "BUCKET_MANAGER_ROLE"
+        ],
+        "observed_at": "2026-10-30T07:45:19+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Remote CCIP mint authority not fully walked",
+            "holder": null,
+            "via": "getFacilitatorsList returns only the official CCIP pool; local GSM has zero facilitator bucket",
+            "control_state": "unresolved",
+            "actionable": "unresolved",
+            "execution_delay": "unresolved",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "unresolved",
+            "reach_bound": null,
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "unresolved",
+            "terminal_address": null,
+            "holder_kind": null,
+            "independent_canceller": "unresolved",
+            "delay_floor": "unresolved"
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "arbitrum",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "LIMIT_MANAGER_ROLE",
+          "ENTITY_MANAGER_ROLE",
+          "TRANSFER_ROLE",
+          "CONFIGURATOR_ROLE"
+        ],
+        "observed_at": "2026-10-30T07:45:18+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Existing remote reserve limit",
+            "holder": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "via": "Risk Council LIMIT_MANAGER_ROLE -> 0xC912D64F9F649897dC0244da3835869d410d053e.setLimit(0x1aEe7A618B0CC687cCED9aB796e464062f1508CA,limit)",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "none",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Existing registered module only; 25,000,000 GHO current reserve limit, inventory constrained; LIMIT_MANAGER_ROLE is not a direct GHO mint or reserve TRANSFER permission.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "not-applicable",
+            "n": 2,
+            "m": 3,
+            "owners": [
+              "0x4b752551fc6345a7de82f76fd7a5015ca16d1a74",
+              "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+              "0x9de1d45e2786b03498289959203f25b29b4d1193"
+            ]
+          },
+          {
+            "name": "Remote module cap and fees",
+            "holder": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "via": "Risk Council -> 0x4DFfA29C526b5CFB419e14E3111516Fbf929797D -> CONFIGURATOR_ROLE on 0x1aEe7A618B0CC687cCED9aB796e464062f1508CA",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "unresolved",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Matched deployed steward: \u00b1100% cap delta, \u00b150 bps fee delta, >86400-second cooldown between same-parameter updates; first eligible change executes immediately. Current cooldown eligibility at the Arbitrum pin was not established; do not infer immediate eligibility from source alone.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "multisig",
+            "terminal_address": "0x8513e6F37dBc52De87b166980Fa3F50639694B60",
+            "holder_kind": "contract",
+            "independent_canceller": false,
+            "delay_floor": "unresolved",
+            "n": 2,
+            "m": 3,
+            "owners": [
+              "0x4b752551fc6345a7de82f76fd7a5015ca16d1a74",
+              "0xb291232f480f41c75802c4a60f1d2ac03404afef",
+              "0x9de1d45e2786b03498289959203f25b29b4d1193"
+            ]
+          },
+          {
+            "name": "Remote reserve/module administration",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Local executor 0xFF1137243698CaA18EE364Cc966CF0e02A4e6327 -> reserve DEFAULT_ADMIN/ENTITY_MANAGER/TRANSFER and GSM DEFAULT_ADMIN/CONFIGURATOR",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "bounded",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "bounded-pool",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          }
+        ]
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "arbitrum",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "EIP1967 implementation",
+          "ProxyAdmin.owner",
+          "upgradeAndCall"
+        ],
+        "observed_at": "2026-10-30T07:45:18+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Remote reserve, module and controller proxy administration",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Matched implementation/admin code -> ProxyAdmin owner 0xFF1137243698CaA18EE364Cc966CF0e02A4e6327 -> PayloadsController 0x89644CA1bB8064760312AE4F03ea41b05dA3637C",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          },
+          {
+            "name": "Remote token upgrade source gap",
+            "holder": null,
+            "via": "Token proxy implementation/admin slots measured; token ProxyAdmin owner getter points to local L1, but token ProxyAdmin executable-source match is unresolved. Token implementation source is also unresolved on Monad and Plasma.",
+            "control_state": "unresolved",
+            "actionable": "unresolved",
+            "execution_delay": "unresolved",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "unresolved",
+            "reach_bound": null,
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "unresolved",
+            "terminal_address": null,
+            "holder_kind": null,
+            "independent_canceller": "unresolved",
+            "delay_floor": "unresolved"
+          }
+        ]
+      },
+      {
+        "authority_layer": "governance",
+        "chain": "arbitrum",
+        "topology": "token-weighted-dao",
+        "keys": [
+          "MIN_EXECUTION_DELAY",
+          "getExecutorSettingsByAccessControl",
+          "cancelPayload"
+        ],
+        "observed_at": "2026-10-30T07:45:18+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Destination execution delay",
+            "holder": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "via": "Matched PayloadsController implementation at 0x118DFD5418890c0332042ab05173Db4A2C1d283c -> L1 executor; 1-day minimum and configured delay, distinct cancellation Safe",
+            "control_state": "active",
+            "actionable": true,
+            "execution_delay": "1d",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "full",
+            "reach_bound": "Current implementation/role configuration only; the same level-1 route can upgrade its controller or regrant core roles after the current delay.",
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "DAO",
+            "terminal_address": "0x9AEE0B04504CeF83A65AC3f0e838D0593BCb2BC7",
+            "holder_kind": "contract",
+            "independent_canceller": "unresolved",
+            "delay_floor": "1d"
+          }
+        ]
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "arbitrum",
+        "topology": "unknown",
+        "keys": [
+          "CCIP token pool",
+          "FACILITATOR_MANAGER_ROLE",
+          "BUCKET_MANAGER_ROLE"
+        ],
+        "observed_at": "2026-10-30T07:45:18+00:00",
+        "walked_by": "hand",
+        "paths": [
+          {
+            "name": "Remote CCIP mint authority not fully walked",
+            "holder": null,
+            "via": "getFacilitatorsList returns only the official CCIP pool; local GSM has zero facilitator bucket",
+            "control_state": "unresolved",
+            "actionable": "unresolved",
+            "execution_delay": "unresolved",
+            "reaction_window": {
+              "type": "none",
+              "basis": "No mandatory additional advance-notice interval on this path; a steward debounce is a between-update cooldown, not a queued execution delay.",
+              "minimum_window_seconds": 0,
+              "maximum_window_seconds": 0
+            },
+            "reach": "unresolved",
+            "reach_bound": null,
+            "value_at_risk_scope": "bridge",
+            "changeability": "mutable",
+            "terminal_kind": "unresolved",
+            "terminal_address": null,
+            "holder_kind": null,
+            "independent_canceller": "unresolved",
+            "delay_floor": "unresolved"
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "Remote role holder sets are not closed merely by checking named candidates. Full historical log queries, enumeration outcomes and scope limits are retained in remote-history files. Extra remote role holders or past implementation changes are not ruled out.",
+      "Arbitrum archive failures were recovered through a second provider at the same block: token/reserve/module/controller proxy bindings, reserve/module/controller/executor source and council immediate-limit controls are now measured. Its role-event history, CCIP pool authority and remaining proxy-admin source/permission closure are not complete; it is not a fully closed chain.",
+      "Remote CCIP token-pool ownership, bridge operator/rate-limit upgrades, cross-chain emergency adapters and all other GHO chains remain unwalked. Only Ethereum origin mint/facilitator authority and the named remote reserve/module paths are approved here.",
+      "Remote token implementation source equivalence remains unresolved on Monad and Plasma. Remote token ProxyAdmin executable-source matches remain unresolved on Arbitrum, Monad and Plasma; their measured owner getters are not proof that no other upgrade route exists. Reserve, GSM and payload-controller proxy-admin sources are matched. Token upgrade uncertainty is explicitly modelled as an unresolved path, not absorbed into the known one-day route.",
+      "The 1-day floor is enforced in each matched current controller and zero-delay owner simulations revert. Controllers are upgradeable by the local L1 route; the floor is not immutable and roles can be regranted by authorized governance. The Ethereum L2 executor configured at seven days is not the governing floor for GHO.",
+      "Cancellation Safes are distinct 5-of-9 contracts with owner addresses disjoint from the Risk Council. Human/operator independence, governance voter capture, off-chain key custody and monitoring/reaction effectiveness are not established. Guardian cancellation does not gate immediate council transactions.",
+      "Ethereum full role reconstruction relies on exhaustive topic-filtered Blockscout pagination plus receipt/current-state checks; receipt validation proves returned events, not the indexer completeness itself. Historical implementations of upgradeable modules were not exhaustively diffed.",
+      "Automatic oracle-freezer authority appears in GSM role history, but its full price-trigger/oracle governance path and ordinary flash-minter fee ACL administration are not closed. No all-surface authority-complete or safety claim is made.",
+      "SA authority-only return did not include a code-risk score or audit verdict; this separate riskAnalyst return supplies the scoped combined judgment, without claiming incident clearance or audit-to-entire-runtime equivalence.",
+      "Current role-based reserve/direct-facilitator migration lacks complete audit-to-deployed-source equivalence in the reviewed report set; absence of a match is not absence of an audit.",
+      "Inherited dependencies, full implementation history, current wrapper/pool/bridge versions and all external invariants are not exhaustively reviewed.",
+      "Current low-severity submission technical details and full incident/remediation completeness are not publicly established by the reviewed sources.",
+      "No independent fork rerun, formal prover execution, novel exploit audit or key-custody/organizational independence assessment is claimed."
+    ],
+    "unmeasured": [
+      "Remote role holder sets are not closed merely by checking named candidates. Full historical log queries, enumeration outcomes and scope limits are retained in remote-history files. Extra remote role holders or past implementation changes are not ruled out.",
+      "Arbitrum archive failures were recovered through a second provider at the same block: token/reserve/module/controller proxy bindings, reserve/module/controller/executor source and council immediate-limit controls are now measured. Its role-event history, CCIP pool authority and remaining proxy-admin source/permission closure are not complete; it is not a fully closed chain.",
+      "Remote CCIP token-pool ownership, bridge operator/rate-limit upgrades, cross-chain emergency adapters and all other GHO chains remain unwalked. Only Ethereum origin mint/facilitator authority and the named remote reserve/module paths are approved here.",
+      "Remote token implementation source equivalence remains unresolved on Monad and Plasma. Remote token ProxyAdmin executable-source matches remain unresolved on Arbitrum, Monad and Plasma; their measured owner getters are not proof that no other upgrade route exists. Reserve, GSM and payload-controller proxy-admin sources are matched. Token upgrade uncertainty is explicitly modelled as an unresolved path, not absorbed into the known one-day route.",
+      "The 1-day floor is enforced in each matched current controller and zero-delay owner simulations revert. Controllers are upgradeable by the local L1 route; the floor is not immutable and roles can be regranted by authorized governance. The Ethereum L2 executor configured at seven days is not the governing floor for GHO.",
+      "Cancellation Safes are distinct 5-of-9 contracts with owner addresses disjoint from the Risk Council. Human/operator independence, governance voter capture, off-chain key custody and monitoring/reaction effectiveness are not established. Guardian cancellation does not gate immediate council transactions.",
+      "Ethereum full role reconstruction relies on exhaustive topic-filtered Blockscout pagination plus receipt/current-state checks; receipt validation proves returned events, not the indexer completeness itself. Historical implementations of upgradeable modules were not exhaustively diffed.",
+      "Automatic oracle-freezer authority appears in GSM role history, but its full price-trigger/oracle governance path and ordinary flash-minter fee ACL administration are not closed. No all-surface authority-complete or safety claim is made.",
+      "SA authority-only return did not include a code-risk score or audit verdict; this separate riskAnalyst return supplies the scoped combined judgment, without claiming incident clearance or audit-to-entire-runtime equivalence.",
+      "Current role-based reserve/direct-facilitator migration lacks complete audit-to-deployed-source equivalence in the reviewed report set; absence of a match is not absence of an audit.",
+      "Inherited dependencies, full implementation history, current wrapper/pool/bridge versions and all external invariants are not exhaustively reviewed.",
+      "Current low-severity submission technical details and full incident/remediation completeness are not publicly established by the reviewed sources.",
+      "No independent fork rerun, formal prover execution, novel exploit audit or key-custody/organizational independence assessment is claimed."
+    ],
+    "code_facts": [
+      "Deployed-code history: Ethereum GHO token deployment is July 15 2023. Current USDC/USDT GSM implementation deployments are October 28 2025; reserve implementation and mainnet DirectFacilitator date to January 24 2026. Deployment age is not proof of continuous unchanged proxy use; full implementation history is not reviewed.",
+      "Audit coverage is component-specific: newer maintained gho-origin reports extend beyond the old seven-link catalogue. Gsm4626 file matches one audited revision; changed inheritance, AccessControl reserve and direct-facilitator code prevent a whole-deployment audit equivalence claim.",
+      "RemoteGSM H-01 deactivation: report marks fixed. Current source requires both used and limit to be zero before removal; use rejects zero amounts and enforces the remaining limit. This supports the stated removal invariant by static inspection; no independent stateful regression suite was run.",
+      "RemoteGSM M-01 fee accrual: report calls the finding fixed through documentation/sequence guidance (7de25e9). Matched Gsm4626 has no rescueTokens override and inherited rescue does not first accrue yield. Do not describe this as an automatically patched accrual invariant. SA found no current TOKEN_RESCUER grants on the two Ethereum modules; authorized future grants remain possible.",
+      "Formal verification evidence covers specified steward and upgradeability properties under assumptions. No fresh prover run or complete current-system verification is claimed. Verified intended permissions do not establish that the governance trust model is safe.",
+      "Current Immunefi AAVE terms list a $1m critical maximum (not the Aave marketing page\u2019s up-to-$5m). Named active GHO subsystems include tokens, GSM/4626, stewards and remote facilitators; precise listed chain/version coverage limits apply. The terms exclude leaked-key/privileged-access and centralization risks: the authorized Council route is not insured or neutralized by this bounty.",
+      "2023 GHO discount integration: official Aave postmortem describes a self-transfer balance double-count affecting borrow discounts, reports remediation via AIP 399 on December 12 2023 and no exploitation. This is integration history, not evidence that the current Council capability was exploited.",
+      "October 7 2026 Aave Labs publication reports a valid low-severity GHO submission and requests a payout. Technical root cause, deployed component and patch status are not disclosed there; this review does not infer an unpatched vulnerability or a complete incident clearance.",
+      "Remediation: fixed Ethereum token logic cannot be upgraded in place; administrable facilitator/bucket roles and upgradeable module/reserve/controller logic remain separate surfaces. DAO-delayed remediation cannot advance-veto an immediate Council transaction.",
+      "Integration invariants reviewed by source/accepted controls: bucket level must not exceed capacity; reserve use/restore must respect per-entity accounting; wrapper conversion and accrued fees must remain consistent; bridge representations and their upgrades remain separately exposed. No end-to-end liquidation, bridge or adversarial wrapper test suite was executed."
+    ],
+    "structural_score": 4.0,
+    "structural_score_status": "riskanalyst_reviewed_staged_only",
+    "structural_score_basis": "Combined4.0/10: source-bound contracts, operating history and component audits provide positive code evidence, but a2of3 Council can expand the full310m mainnet facilitator bucket and mint without a DAO queue or advance guardian veto. The next eligible update permits310m additional headroom; cooldown and per-update bounds do not provide notice or a lifetime ceiling. Code/deployment coverage gaps and remote bridge/token/history gaps limit assurance. This is an editorial judgment, not an average of code/admin subscores and not evidence of active exploitation."
+  },
+  "audit_matrix": [
+    {
+      "component": "GHO token / original lending integration",
+      "report": "2022-08-12_Openzeppelin-v1.pdf",
+      "scope": "Original token and Aave lending integration; 2022-11 v2 report is integration changes, not a new token-wide review.",
+      "binding": "Current Ethereum token source/runtime is bound by SA; original audit commit equivalence is not established here.",
+      "status": "Historical audit evidence, not current whole-system coverage",
+      "source": "https://github.com/aave-dao/gho-origin/blob/2af44932a8a632fd74b44adb4c92a4b51700e25a/audits/2022-08-12_Openzeppelin-v1.pdf"
+    },
+    {
+      "component": "Upgradeable remote token",
+      "report": "2024-06-11_UpgradeableGHO_Certora.pdf",
+      "scope": "UpgradeableGhoToken and UpgradeableERC20; upgradeability focus with existing token rules.",
+      "binding": "Report revision a9647e1 was not resolved in the maintained repository during this pass; Monad/Plasma executable source closure remains an SA gap.",
+      "status": "Partial; no blanket current remote-token clearance",
+      "source": "https://github.com/aave-dao/gho-origin/blob/2af44932a8a632fd74b44adb4c92a4b51700e25a/audits/2024-06-11_UpgradeableGHO_Certora.pdf"
+    },
+    {
+      "component": "Modular stewards",
+      "report": "2024-09-15_ModularGhoStewards_Certora.pdf",
+      "scope": "Bucket, GSM, Aave and CCIP stewards plus RiskCouncilControlled; specified formal properties and manual review.",
+      "binding": "Report revision 3684128 was not resolved in maintained repo; deployed BucketSteward differs from current/audited RemoteGSM tree. SA fork/controls establish authority consequences, not complete audit equivalence.",
+      "status": "Four listed low/informational findings marked fixed; trusted-council assumptions do not constrain authorized minting",
+      "source": "https://github.com/aave-dao/gho-origin/blob/2af44932a8a632fd74b44adb4c92a4b51700e25a/audits/2024-09-15_ModularGhoStewards_Certora.pdf"
+    },
+    {
+      "component": "RemoteGSM / reserve / wrapper accounting",
+      "report": "2025-07-15_RemoteGSM_Certora.pdf",
+      "scope": "Reserve, Gsm, Gsm4626, OwnableFacilitator and interfaces; manual review, July 7\u201315 2025. Archived PDF has a Draft watermark.",
+      "binding": "Gsm4626 file is exactly equal to audit revision 6ea6b04; parent Gsm and current AccessControl reserve differ; current DirectFacilitator is not the audited OwnableFacilitator.",
+      "status": "High/medium/low findings marked fixed; see separate implementation/operating-sequence qualifications",
+      "source": "https://github.com/aave-dao/gho-origin/blob/2af44932a8a632fd74b44adb4c92a4b51700e25a/audits/2025-07-15_RemoteGSM_Certora.pdf"
+    },
+    {
+      "component": "sGHO (excluded from parent GHO audit credit)",
+      "report": "2026.03.04 - Final - TokenLogic Collaborative Audit Report 1772584390.pdf",
+      "scope": "Savings vault and sGhoSteward, final commit 646ab32b290b0dd34934c867a69b26579a9b3ef4.",
+      "binding": "Downstream vault scope; not evidence that parent token minting or RemoteGSM ACL migrations were reviewed.",
+      "status": "Excluded from GHO origin/admin coverage credit",
+      "source": "https://github.com/aave-dao/gho-origin/blob/2af44932a8a632fd74b44adb4c92a4b51700e25a/audits/2026.03.04%20-%20Final%20-%20TokenLogic%20Collaborative%20Audit%20Report%201772584390.pdf"
+    }
+  ],
+  "finding_assessment": [
+    "RemoteGSM H-01 deactivation: report marks fixed. Current source requires both used and limit to be zero before removal; use rejects zero amounts and enforces the remaining limit. This supports the stated removal invariant by static inspection; no independent stateful regression suite was run.",
+    "RemoteGSM M-01 fee accrual: report calls the finding fixed through documentation/sequence guidance (7de25e9). Matched Gsm4626 has no rescueTokens override and inherited rescue does not first accrue yield. Do not describe this as an automatically patched accrual invariant. SA found no current TOKEN_RESCUER grants on the two Ethereum modules; authorized future grants remain possible.",
+    "2023 GHO discount integration: official Aave postmortem describes a self-transfer balance double-count affecting borrow discounts, reports remediation via AIP 399 on December 12 2023 and no exploitation. This is integration history, not evidence that the current Council capability was exploited.",
+    "October 7 2026 Aave Labs publication reports a valid low-severity GHO submission and requests a payout. Technical root cause, deployed component and patch status are not disclosed there; this review does not infer an unpatched vulnerability or a complete incident clearance."
+  ],
+  "cross_axis": {
+    "underlying_score": 6.0,
+    "issuer_score": 6.5,
+    "same_capability_penalized_elsewhere": false,
+    "note": "Council issuance-control weakness is priced on Axis5. Dependencies/Issuer unchanged. Potential dilution/depeg is a consequence, not a measured loss."
+  },
+  "input_provenance": {
+    "candidate_manifest_sha256": "ba6dc9bfe09c7b6d31408158a6f7ead67d2be15d67c584650be120f44fa60601",
+    "candidate_assessment_sha256": "1f00463d664892339dc28c77b199806dc306f3457b7e53e4201cb5e1fec022fa",
+    "candidate_files_verified": 60,
+    "candidate_hash_mismatches": [],
+    "authority_files_verified_at_acceptance": 326,
+    "source_file_comparisons_repeated": true,
+    "fork_rerun": false,
+    "formal_prover_run": false
+  },
+  "adoption": {
+    "canonical_report_changed": false,
+    "live_axes_written": false,
+    "published": false,
+    "overall_score_proposed": null
+  }
+}

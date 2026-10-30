@@ -1,0 +1,1 @@
+GHO Axis5 owner review complete for staging. Read REVIEW.md and consume gho_contract_overlay.json. Reviewed staged structural_score4.0; canonical6.0 unchanged. Dependencies6.0 and Issuer6.5 unchanged. No automatic publication or live overlay writes. This return supersedes the earlier owner-pending state, retaining SA authority and code coverage gaps.

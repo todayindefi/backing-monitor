@@ -295,7 +295,30 @@ def adopt_axis5_in_staged_preview(candidate, candidate_path, receipt_path):
     return adopted, receipt
 
 
-def assemble(out, peg_root=PEG, state_path=None, report_check=None, backing_dir=None, coverage_dir=None, ladder_path=None, remaining_axes_dir=None, score_review_dir=None, axis5_candidate_dir=None, axis5_adoption_path=None):
+def select_axis5_owner_review(directory, candidate_directory, adopted_score):
+    manifest = json.loads((directory / 'manifest.json').read_text())
+    if manifest.get('producer') != 'riskanalyst' or manifest.get('staged_only') is not True:
+        raise ValueError('Axis 5 owner return must be staged riskAnalyst data')
+    for name in ('gho_contract_overlay.json', 'REVIEW.md', 'HANDOFF.md'):
+        if hashlib.sha256((directory / name).read_bytes()).hexdigest() != manifest['files'].get(name):
+            raise ValueError('Axis 5 owner-return integrity mismatch: ' + name)
+    overlay = json.loads((directory / 'gho_contract_overlay.json').read_text())
+    provenance = overlay.get('input_provenance', {})
+    contract = overlay.get('contract', {})
+    if (overlay.get('schema_version') != 'contract-overlay/1' or overlay.get('producer') != 'riskanalyst'
+            or overlay.get('asset') != 'gho' or overlay.get('staged_only') is not True
+            or overlay.get('owner_review_complete') is not True or not instant(overlay.get('as_of'))
+            or contract.get('structural_score') != adopted_score or not contract.get('structural_score_basis')
+            or provenance.get('candidate_assessment_sha256') != hashlib.sha256((candidate_directory / 'gho_axis5_assessment.json').read_bytes()).hexdigest()
+            or provenance.get('candidate_manifest_sha256') != hashlib.sha256((candidate_directory / 'manifest.json').read_bytes()).hexdigest()
+            or provenance.get('candidate_hash_mismatches') != []
+            or overlay.get('cross_axis', {}).get('underlying_score') != 6.0
+            or overlay.get('cross_axis', {}).get('issuer_score') != 6.5):
+        raise ValueError('Axis 5 owner review does not match the adopted assessment')
+    return overlay, manifest
+
+
+def assemble(out, peg_root=PEG, state_path=None, report_check=None, backing_dir=None, coverage_dir=None, ladder_path=None, remaining_axes_dir=None, score_review_dir=None, axis5_candidate_dir=None, axis5_adoption_path=None, axis5_owner_dir=None):
     out = out.resolve()
     if out == ROOT or ROOT in out.parents or out == Path('/') or out in ROOT.parents:
         raise ValueError('Preview must be outside the serving repository and its ancestors')
@@ -478,6 +501,19 @@ def assemble(out, peg_root=PEG, state_path=None, report_check=None, backing_dir=
         shutil.copytree(axis5_candidate_dir, destination, dirs_exist_ok=True)
         manifest['sources'].append({'path': str(axis5_candidate_dir), 'role': 'accepted_authority_and_code_assessment',
                                     'manifest': candidate_manifest, 'score_adopted': candidate['score_adopted']})
+    if axis5_owner_dir:
+        if not axis5_candidate_dir or feed['contract'].get('structural_score') is None:
+            raise ValueError('Owner review requires the adopted staged assessment')
+        owner, owner_manifest = select_axis5_owner_review(axis5_owner_dir, axis5_candidate_dir, feed['contract']['structural_score'])
+        feed['contract'] = owner['contract'].copy()
+        feed['contract']['structural_score_source'] = 'riskAnalyst:authored'
+        feed['contract']['structural_score_generated_at'] = owner['as_of']
+        detail = feed['asset_specific']['gho']
+        detail['axis5_assessment'].update({'owner_review_complete': True, 'owner_reviewed_at': owner['as_of']})
+        detail['gaps']['contract'] = owner['contract']['coverage_note']
+        destination = out / 'evidence/axis5-owner-return'
+        shutil.copytree(axis5_owner_dir, destination, dirs_exist_ok=True)
+        manifest['sources'].append({'path': str(axis5_owner_dir), 'role': 'completed_axis5_owner_review', 'manifest': owner_manifest})
     for folder in ('js', 'css'):
         shutil.copytree(ROOT / folder, out / folder, dirs_exist_ok=True)
     html = (ROOT / 'index.html').read_text()
@@ -493,6 +529,8 @@ def assemble(out, peg_root=PEG, state_path=None, report_check=None, backing_dir=
     manifest['remaining_axes_owner_approved'] = False
     manifest['partially_measured_axes'] = ['dependencies', 'contract', 'issuer'] if remaining_axes_dir else []
     manifest['reviewed_axes'] = ['dependencies', 'issuer'] if score_review_dir else []
+    if axis5_owner_dir:
+        manifest['reviewed_axes'].append('contract')
     manifest['pending_authored_scores'] = ['contract'] if score_review_dir else ['dependencies', 'contract', 'issuer']
     manifest['staged_adopted_axes'] = ['contract'] if axis5_adoption_path and axis5_candidate_dir else []
     if manifest['staged_adopted_axes']:
@@ -526,5 +564,8 @@ if __name__ == '__main__':
     parser.add_argument('--axis5-candidate-dir', type=Path, default=Path('/home/danger/riskAnalyst/data/reviews/gho-axis5-assessment-2026-10-30'), help='Accepted authority plus explicitly unadopted code/score proposal')
     parser.add_argument('--axis5-adoption', type=Path, default=ROOT / 'specs/gho-axis5-staged-adoption-2026-10-30.json',
                         help='User-authorized, hash-bound adoption for the staged dashboard only')
+    parser.add_argument('--axis5-owner-dir', type=Path,
+                        default=Path('/home/danger/riskAnalyst/data/reviews/gho-axis5-assessment-2026-10-30/owner-return'),
+                        help='Completed riskAnalyst Axis 5 owner return for the already adopted staged score')
     args = parser.parse_args()
-    assemble(args.out, args.peg_root, args.state, args.report_check, args.backing_dir, args.coverage_dir, args.ladder, args.remaining_axes_dir, args.score_review_dir, args.axis5_candidate_dir, args.axis5_adoption)
+    assemble(args.out, args.peg_root, args.state, args.report_check, args.backing_dir, args.coverage_dir, args.ladder, args.remaining_axes_dir, args.score_review_dir, args.axis5_candidate_dir, args.axis5_adoption, args.axis5_owner_dir)

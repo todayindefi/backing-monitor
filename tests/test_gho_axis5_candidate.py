@@ -60,6 +60,30 @@ class AuthorityAcceptance(unittest.TestCase):
             with self.assertRaisesRegex(ValueError,'authorized assessment'):
                 consumer.adopt_axis5_in_staged_preview(candidate,source,path)
 
+    def test_owner_review_is_hash_bound_and_cannot_change_adopted_score(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);candidate=root/'candidate';candidate.mkdir();owner=root/'owner';owner.mkdir()
+            (candidate/'gho_axis5_assessment.json').write_bytes(b'assessment')
+            (candidate/'manifest.json').write_bytes(b'manifest')
+            overlay={'schema_version':'contract-overlay/1','producer':'riskanalyst','asset':'gho','staged_only':True,
+                'owner_review_complete':True,'as_of':'2026-10-30T10:24:00Z',
+                'contract':{'structural_score':4.0,'structural_score_basis':'Reviewed basis'},
+                'cross_axis':{'underlying_score':6.0,'issuer_score':6.5},
+                'input_provenance':{'candidate_assessment_sha256':builder.sha(b'assessment'),
+                    'candidate_manifest_sha256':builder.sha(b'manifest'),'candidate_hash_mismatches':[]}}
+            def prepare():
+                (owner/'gho_contract_overlay.json').write_text(json.dumps(overlay))
+                (owner/'REVIEW.md').write_text('Owner review')
+                (owner/'HANDOFF.md').write_text('Staged only')
+                files={p.name:builder.sha(p.read_bytes()) for p in owner.iterdir() if p.name!='manifest.json'}
+                (owner/'manifest.json').write_text(json.dumps({'producer':'riskanalyst','staged_only':True,'files':files}))
+            prepare();accepted,_=consumer.select_axis5_owner_review(owner,candidate,4.0)
+            self.assertEqual(accepted['contract']['structural_score'],4.0)
+            overlay['contract']['structural_score']=6.0;prepare()
+            with self.assertRaisesRegex(ValueError,'adopted assessment'):consumer.select_axis5_owner_review(owner,candidate,4.0)
+            overlay['contract']['structural_score']=4.0;prepare();(owner/'REVIEW.md').write_text('Tampered')
+            with self.assertRaisesRegex(ValueError,'integrity mismatch'):consumer.select_axis5_owner_review(owner,candidate,4.0)
+
     def test_candidate_can_show_proposal_but_never_adopt_a_score(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);(root/'accepted-authority').mkdir()
