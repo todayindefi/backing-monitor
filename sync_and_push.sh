@@ -320,6 +320,14 @@ if [ -f tools/reconcile_spark_star.py ]; then
     fi
 fi
 
+# Independent Syrup pool-cash / queued-share reads after all producer copies.
+# Write unavailable status on failure so a prior success cannot look current.
+if [ -f tools/refresh_syrup_redemptions.py ]; then
+    if ! PYTHONPYCACHEPREFIX=/tmp/backing-monitor-pycache timeout 150 python3 tools/refresh_syrup_redemptions.py; then
+        echo "$(date): WARNING Syrup redemption refresh incomplete; inspect observation status" >&2
+    fi
+fi
+
 # Integrate any remote changes first (e.g. dashboard claude's commits) so our
 # data-only push fast-forwards. Without this, a non-fast-forward push is
 # rejected, the cron silently strands data commits, and dashboards go stale.

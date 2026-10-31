@@ -2871,6 +2871,36 @@ var SyrupUSDCRenderer = {
     // ⚠️ `topLiq` added: the free-liquidity share and the exit note live on the
     // TOP-LEVEL liquidity block, not on asset_specific, and this function only
     // ever received asset_specific. The absent-ladder branch below needs them.
+    _renderRedemptions: function(specific, slug) {
+        var r = specific.redemptions || {};
+        var esc = function(x) { return CommonRenderer._escapeAttr(String(x)); };
+        var age = r.block_timestamp ? (Date.now() - Date.parse(r.block_timestamp)) / 1000 : NaN;
+        var usable = r.status === 'ok' && Number.isFinite(age) && age >= -300 && age <= 7200;
+        var number = function(x) { return typeof x === 'number' && Number.isFinite(x) && x >= 0; };
+        var money = function(x) { return usable && number(x) ? CommonRenderer.formatCurrency(x) : 'Unavailable'; };
+        var percent = function(x) { return usable && number(x) ? x.toFixed(1) + '%' : 'Unavailable'; };
+        var processedText = usable && r.processing_status === 'observed' && r.last_processed_at ? new Date(r.last_processed_at).toLocaleString('en-GB', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', timeZone: 'UTC'}) + ' UTC' : 'Unavailable';
+        var cards = [
+            ['Pool cash', money(r.pool_cash), 'Underlying held directly in the pool'],
+            ['Pending redemptions', money(r.queued_assets), usable && number(r.queue_supply_pct) ? r.queue_supply_pct.toFixed(2) + '% of share supply · current NAV' : 'Queue value at current NAV'],
+            ['Cash coverage of queue', usable && r.queued_assets === 0 ? 'No queue' : percent(r.cash_coverage_pct), 'Pool cash divided by pending redemption value'],
+            ['Additional funding needed', money(r.additional_funding_needed), 'Queue value less pool cash, floored at zero'],
+            ['Queued shares', usable && number(r.queued_shares) ? r.queued_shares.toLocaleString('en-US', {maximumFractionDigits: 2}) : 'Unavailable', 'Shares awaiting processing'],
+            ['Last processed', processedText, r.processing_status === 'not_found_in_scan_window' ? 'No event found in the recent scan window' : 'Latest observed redemption processing event']
+        ];
+        var html = '<div class="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-3">';
+        cards.forEach(function(c) {
+            html += '<div class="summary-card"><div class="card-label">' + esc(c[0]) + '</div>' +
+                '<div class="card-value text-base">' + esc(c[1]) + '</div>' +
+                '<div class="text-xs text-slate-400 mt-1">' + esc(c[2]) + '</div></div>';
+        });
+        html += '</div><p class="text-xs text-slate-500 mb-2">Pool cash is an upper bound on funding capacity. Existing requests have priority and operator processing is required. Strategy principal and accrued interest are excluded from cash. Queue size and cash coverage do not predict a payout time.</p>';
+        html += '<p class="text-xs text-slate-400 mb-3">' +
+            (usable ? 'Observed ' + esc(r.block_timestamp) + ' · Ethereum block ' + esc(r.block_number) + ' · ' + esc(r.underlying_symbol) + ' amounts at current NAV · refreshes hourly.' :
+                'Current redemption observation unavailable' + (r.block_timestamp ? ' (last observation ' + esc(r.block_timestamp) + '; stale after 2 hours)' : '') + '.') + '</p>';
+        return html;
+    },
+
     _renderLiquidityAndPeg: function(specific, s, slug, topLiq) {
         var wq = specific.withdrawal_queue;
         var liq = specific.liquidity;
@@ -2886,131 +2916,11 @@ var SyrupUSDCRenderer = {
         html += '<div class="text-sm font-semibold text-slate-700 mt-1 mb-1 flex items-center gap-2">' +
             '<span class="inline-block w-1.5 h-3.5 rounded-sm" style="background:#6366f1"></span>' +
             'Redemption (at NAV)</div>' +
-            '<p class="text-xs text-slate-400 mb-3">Full-size exit: redeems against free ' + underlying + ' at NAV instantly; the rest queues until loan repayments return capital. Constraint is time.</p>';
+            '<p class="text-xs text-slate-400 mb-3">Requests enter Maple’s redemption queue and are processed at NAV as underlying funding becomes available. Processing time is variable.</p>';
 
-        // Free underlying + queue-based time-context cards. Maple Syrup's
-        // WithdrawalManager is queue-based (NOT cyclical) — getCurrentCycleId()
-        // reverts on the deployed impl. Render last-fill, head-request age (or
-        // empty state), queue depth, and request-id strip. Do not render
-        // current_cycle_* / cycle_duration_seconds — permanently null for Syrup.
-        if (wq) {
-            // Two DIFFERENT measures live here and were both being labelled
-            // "Free <underlying>", which is how one page showed $7.1M and $9.5M
-            // for the same words:
-            //   vault_state.free_usdc      = usdc.balanceOf(pool) — idle in the
-            //                                pool contract, the instant-exit float
-            //   vault_state.free_liquidity = total_assets - principal_out — that
-            //                                float PLUS accrued interest still
-            //                                inside the strategies
-            // summary.collateral_ratio_alt carries free_liquidity together with
-            // the producer's own label and note; use them rather than a label
-            // invented here, and name the pool balance alongside so a reader can
-            // reconcile this card with the Free-<underlying> row in Backing.
-            var cra = s.collateral_ratio_alt;
-            var craIsCurrency = !!(cra && cra.is_currency);
-            var poolBalance = (specific.vault_state && specific.vault_state.free_usdc);
-            var freeUsd = craIsCurrency ? cra.value : (poolBalance || null);
-            var freeLabel = (craIsCurrency && cra.label) ? cra.label : ('Free ' + underlying);
-            var freeNote = (craIsCurrency && cra.note) ? cra.note : '';
-            var freeSubtext = SyrupUSDCRenderer._freeLiquidityPct(s) != null ?
-                CommonRenderer.formatPercent(SyrupUSDCRenderer._freeLiquidityPct(s), 1) + ' of pool assets' : '';
-            if (craIsCurrency && poolBalance != null && poolBalance !== cra.value) {
-                freeSubtext += (freeSubtext ? ' · ' : '') + 'pool ' + underlying + ' balance ' +
-                    CommonRenderer.formatCurrency(poolBalance);
-            }
-            var freePct = SyrupUSDCRenderer._freeLiquidityPct(s);
-            var queueEmpty = wq.is_empty === true;
-            var depthUsd = (wq.queue_depth_usdc_est === null || wq.queue_depth_usdc_est === undefined) ? (queueEmpty ? 0 : null) : wq.queue_depth_usdc_est;
-            var slots = wq.queue_depth_slots;
-            var nextId = wq.next_request_id;
-            var lastId = wq.last_request_id;
-            var depthCls = depthUsd !== null && depthUsd > 10000000 ? 'warning' : '';
-            var depthText = depthUsd === null ? '—' :
-                            (slots != null ? slots + ' request' + (slots === 1 ? '' : 's') + ' · ' + CommonRenderer.formatCurrency(depthUsd) : CommonRenderer.formatCurrency(depthUsd));
-
-            var lastFillAge = SyrupUSDCRenderer._formatRelativeAge(wq.last_filled_age_seconds);
-            var lastFillIso = wq.last_filled_timestamp_iso ? wq.last_filled_timestamp_iso.replace('+00:00', 'Z') : '—';
-            var lastFillCard =
-                '<div class="summary-card">' +
-                    '<div class="card-label">Last fill</div>' +
-                    '<div class="card-value text-base">' + lastFillAge + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1 font-mono">' + lastFillIso + '</div>' +
-                '</div>';
-
-            var headCard;
-            if (queueEmpty) {
-                headCard =
-                    '<div class="summary-card">' +
-                        '<div class="card-label">Queue status</div>' +
-                        '<div class="card-value text-base">Empty <span class="text-slate-400 text-sm">(0 pending)</span></div>' +
-                        '<div class="text-xs text-slate-400 mt-1">Next request fills on submission</div>' +
-                    '</div>';
-            } else {
-                var headAge = SyrupUSDCRenderer._formatRelativeAge(wq.next_request_age_seconds);
-                var headSubtext = (nextId != null && wq.next_request_age_seconds != null) ?
-                    'request ' + nextId + ' waiting' : 'head of queue';
-                headCard =
-                    '<div class="summary-card">' +
-                        '<div class="card-label">Head request age</div>' +
-                        '<div class="card-value text-base ' + (wq.next_request_age_seconds > 86400 ? 'warning' : '') + '">' + headAge + '</div>' +
-                        '<div class="text-xs text-slate-400 mt-1">' + headSubtext + '</div>' +
-                    '</div>';
-            }
-
-            html += '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">' +
-                '<div class="summary-card"><div class="card-label"' +
-                    (freeNote ? ' title="' + freeNote.replace(/"/g, '&quot;') + '"' : '') + '>' + freeLabel +
-                    (freeNote ? ' <span class="text-slate-400 cursor-help">ⓘ</span>' : '') + '</div>' +
-                    '<div class="card-value positive">' + CommonRenderer.formatCurrency(freeUsd) + '</div>' +
-                    '<div class="text-xs text-slate-400 mt-1">' + freeSubtext + '</div></div>' +
-                lastFillCard +
-                headCard +
-                '<div class="summary-card"><div class="card-label">' + (queueEmpty ? 'Request IDs' : 'Queue depth') + '</div>' +
-                    (queueEmpty ?
-                        '<div class="card-value text-base font-mono">' + (lastId != null ? lastId : '—') + ' / ' + (nextId != null ? nextId : '—') + '</div>' +
-                        '<div class="text-xs text-slate-400 mt-1">last filled / next to file</div>'
-                      :
-                        '<div class="card-value ' + depthCls + '">' + depthText + '</div>' +
-                        '<div class="text-xs text-slate-400 mt-1">' + underlying + ' est.</div>'
-                    ) +
-                '</div>' +
-            '</div>';
-        }
-
-        // Stress anchor — redemption-path context: how far free liquidity
-        // carries an exit before it queues, and what (loan repayments) clears
-        // the queue. Belongs under Redemption (constraint = time), not the
-        // secondary market.
-        var freePct2 = SyrupUSDCRenderer._freeLiquidityPct(s);
-        var freeUsd2 = (s.collateral_ratio_alt && s.collateral_ratio_alt.is_currency) ? s.collateral_ratio_alt.value : null;
-        var paymentInterval = lb.weighted_avg_payment_interval_days;
-        if (paymentInterval == null) paymentInterval = lb.weighted_avg_remaining_days_to_due;
-        var freePctText = freePct2 != null ? freePct2.toFixed(1) + '%' : '?';
-        // Was hand-rounded to whole millions, which printed free liquidity of
-        // $9.47M as "$9M" — understating the anchor it is the anchor for.
-        var freeUsdText = freeUsd2 != null ? CommonRenderer.formatCurrency(freeUsd2) : '?';
-        // The anchor figure is free_liquidity, which per the producer is the pool
-        // balance PLUS accrued interest sitting in the strategies. Name the split
-        // instead of letting one number stand for both — the instantly-available
-        // float is the smaller of the two.
-        var poolBal = (specific.vault_state || {}).free_usdc;
-        var freeSplitFragment = (freeUsd2 != null && poolBal != null && poolBal !== freeUsd2) ?
-            ' — <span class="font-mono">' + CommonRenderer.formatCurrency(poolBal) + '</span> of that is the pool\'s own ' +
-            underlying + ' balance, the remainder accrued interest booked in the strategies' : '';
-        var intervalText = paymentInterval != null ? paymentInterval.toFixed(0) + '-day' : 'multi-week';
-        var monthlyInflow = lb.payment_ladder && lb.payment_ladder.totals && lb.payment_ladder.totals.expected_inflow_30d_usd;
-        var inflowFragment = (monthlyInflow != null) ?
-            ' (interest-only ≈ <span class="font-mono">' + CommonRenderer.formatCurrency(monthlyInflow) + '/30d</span>)' : '';
-
-        html += '<div class="text-sm font-semibold text-slate-700 mt-4 mb-1">Stress anchor</div>' +
-            '<p class="text-sm text-slate-700">' +
-                'Free liquidity (<span class="font-semibold">' + freePctText + '</span>, ' + freeUsdText + ') covers redemptions to ~<span class="font-semibold">' + freeUsdText + '</span> before queueing' + freeSplitFragment + '. ' +
-                'Above that, exits depend on incoming loan repayments' + inflowFragment + '. ' +
-                'Avg loan payment interval <span class="font-semibold">' + intervalText + '</span>; the pool has 24h notice + 48h grace to call a delinquent loan.' +
-            '</p>' +
-            // Filled by _loadCushionHistory after render; removed if the history
-            // carries no usable series, so the panel degrades to the spot figure.
-            '<div id="syrup-cushion-hist"></div>';
+        html += SyrupUSDCRenderer._renderRedemptions(specific, slug);
+        // Historical accounting buffer is distinct from immediately held cash.
+        html += '<div class="text-xs text-slate-500 mt-3">Historical accounting buffer includes accrued interest in strategies; it is not immediately available pool cash.</div><div id="syrup-cushion-hist"></div>';
 
         // ===== Sub-section B: Secondary market ===========================
         // DEX-aggregator slippage→underlying ladder + pool depth. Instant but
