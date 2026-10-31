@@ -76,6 +76,92 @@ For each asset, in this order:
 
 ## Entries
 
+### usde · susde — reconcile issuer aggregate backing against detailed positions
+```
+affects     usde, susde · backing / inherited USDe coverage
+raised      2026-10-31; user requested reconciliation findings be parked in the asset backlog
+triage      NEXT MANUAL ETHENA REFRESH — recorded here, out of the active queue
+status      OPEN. Issuer-reported 117.78% is unreconciled; double counting or stale overlapping
+            balances is a supported hypothesis, not a proved accounting error or reserve loss.
+
+ISSUER      October 31 08:00:17 UTC status: $5,265,047,808.75 backing BEFORE Reserve Fund,
+            $62,042,216.18 fund, $4,522,956,687.88507 supply denominator -> 117.7789% with fund.
+            Puppeteer confirmed Ethena's own transparency page displays 117.78%, $5.33B including
+            fund and 4.52B supply; its backing-assets page repeats the ratio but lists strategies
+            totalling $4,679,324,515 (03:00:02 UTC). Both pages carry different component clocks.
+RATIOS      Using that detailed $4.679324515B total against the separately timed $4.522956688B
+            supply gives ~103.46% EXCLUDING / ~104.83% INCLUDING the issuer's $62.04M fund.
+            These are indicative ratios from issuer detail, NOT independently verified coverage
+            or a synchronized substitute for the canonical headline. Never compare the $5.33B
+            fund-inclusive headline with fund-exclusive detail and call the result the gap.
+GAP         Latest aggregate-minus-detail is ~$585.72M. Better time alignment: collateral history
+            at 01:59:27 UTC $5,268,852,168.25 versus detailed positions at 02:01:52 $4,679,839,209
+            leaves $589,012,959.25. Of this, $588,943,101.25 (99.988%) is broad Liquid Cash versus
+            detailed stables/lending/RWA; noncash differs by $69,858. No separate $589M asset is
+            identified by Ethena: this is a computed residual between its own views.
+STALE       Every current category-breakdown amount exactly matches the final historical category
+            row, October 27 17:59:53 UTC. Six categories total $4,567,522,080. Cache-bypass requests
+            return the same data. Do not use this old category total as current reconciled backing.
+
+MEASURED    Fixed-block target October 31 02:00 UTC across six EVM chains (0–1 second block skew).
+            ~2.608896377B nominal underlying stablecoin units of operating balances/claims at an
+            assumed $1; excludes USDe self-issued holdings and separately measured Reserve Fund
+            ~42.019153M units, mostly USDtb. This is a partial par-value reconciliation proxy,
+            NOT full independent dollar valuation, executable liquidity or proof of insolvency.
+            Ratios against the later issuer supply are ~57.68% operating / ~58.61% including that
+            fund subset: observed scope coverage only; unmeasured assets are not assumed absent.
+MATCHES     Aave V3 ~803.943720M units matches issuer $803.942602M within ~$1,118 at par.
+            Maple wallet claims 229.969303M USDC + queued claim 19.139310M = 249.108613M USDC,
+            within $151 of issuer $249.108462M; queue owner, shares and pool conversion verified.
+            Morpho vaults ~453.847882M units are partial; custom fixed-term positions excluded.
+            Total measured subtotal already includes these claims: DO NOT add them again.
+UNMEASURED  ~$1.390121B of the detailed $3.999017319B stables/lending/RWA view remains outside
+            this reconstruction or unmatched by scope. Includes both Solana wallets, custom
+            Midnight/Aave V4, historical Robinhood USDG, Base JAAA/NAV, custodial balances and
+            institutional loans beyond measured Maple. This is distinct from the ~$589M
+            aggregate/detail inconsistency; neither residual is a proved shortfall.
+
+DUPLICATION Seven internal PYUSD transfers moved 505,862,335 units from Reserve 3 to a second
+            address already disclosed in the issuer's liquid-stable data. Combined holdings stay
+            exactly 505,862,589.438863 PYUSD while aggregate cash jumps $414.660786M. During a
+            later $195.242750M cash rise, idle USDC/RLUSD becomes Aave receipts; combined wallet
+            plus receipt amounts change only by small accruals. Five archive reads match a
+            second RPC provider byte-for-byte. These movements create no new backing.
+MODEL       Duplicating the full PYUSD relocation would explain ~85.89% of the cash residual,
+            leaving ~$83.08M; that inclusion is NOT proved. Adding all identified Aave deposits
+            overshoots the residual by ~$115.94M. Do not mechanically subtract transfers or fit
+            arbitrary subsets to manufacture a corrected coverage ratio.
+POR         Latest retrieved primary LlamaRisk proof 2608: October 30 04:03:46 source data,
+            $4.531140423B backing / $4.593121814B including fund / 4.530882039B supply -> 101.3737%.
+            HT Digital shows matching rounded figures. This dated observation precedes the large
+            cash jumps; provider verification is not our own custody/signature audit and does
+            not validate the later 117.78% headline.
+
+NEXT        1. Obtain/reconstruct the issuer contribution ledger bridging the near-time detailed
+               $3.999017319B stables/lending/RWA subtotal to $4.587960420B Liquid Cash.
+            2. Check source timestamps and removal of pre-transfer PYUSD wallet entries when
+               destination balances appear; check idle-to-Aave receipt netting likewise.
+            3. Identify custodial amounts, receivables/payables, debt and valuation adjustments;
+               finish the missing onchain positions without adding receipts and underlying twice.
+            4. Repair/label the stale category feed; retain prospective history, failure states
+               and per-component clocks. Preserve issuer aggregate, issuer-detail calculation and
+               independent observed subset as separate measures; sUSDe inherits USDe backing.
+            5. Review common-clock evidence and rationale before any coverage correction or score
+               reassessment. Do not substitute stale categories, old PoR or partial wallet totals.
+owner       PegTracker: canonical source accounting and reconciliation measurements;
+            backing-monitor: consume/render scope, clocks, discrepancies and evidence;
+            riskAnalyst: interpretation and justified score reassessment.
+closes when A reproducible common-clock ledger reconciles aggregate and detail (or quantifies and
+            explains every residual), with independent controls for the measurable subset and
+            explicit offchain/valuation limits. The served dashboard must distinguish reported,
+            detail-derived and independently measured coverage; verify actual public rendering.
+references  specs/reviews/ethena-discrepancy-2026-10-31/README.md
+            specs/reviews/ethena-onchain-reconciliation-2026-10-31/README.md
+            specs/reviews/ethena-onchain-reconciliation-2026-10-31/followup/README.md
+            specs/reviews/ethena-site-display-2026-10-31/ (Puppeteer text, API responses, screenshots)
+Last reviewed 2026-10-31
+```
+
 ### frxusd — independent backing verification remains partial
 ```
 affects     frxusd
