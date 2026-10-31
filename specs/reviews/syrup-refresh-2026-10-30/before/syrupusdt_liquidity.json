@@ -1,0 +1,507 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "syrupusdt",
+ "asset_symbol": "syrupUSDT",
+ "producer": "dextracker",
+ "as_of": "2026-10-30T00:18:00Z",
+ "refresh_cadence": "daily",
+ "scope": "venue_inventory_only",
+ "publishes": [
+  "venues",
+  "venues_by_role",
+  "chains",
+  "non_swap_listings",
+  "venue_diagnostics"
+ ],
+ "does_not_publish": [
+  "depth",
+  "primary_exit",
+  "rating"
+ ],
+ "scope_note": "VENUE-ONLY BY DESIGN. This payload deliberately carries no depth, crossing, redemption path or rating; those belong to PegTracker's ladder. Absence of `depth` here is a declaration, not a failed write -- a consumer should keep the ladder from its other source.",
+ "venues_by_role": {
+  "dollar_exit": {
+   "pool_count": 4,
+   "tvl_usd": 8552618.7289,
+   "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
+  },
+  "family_swap": {
+   "pool_count": 0,
+   "tvl_usd": 0,
+   "meaning": "Swaps the asset for its own sister token: NOT a way out."
+  },
+  "other_pair": {
+   "pool_count": 1,
+   "tvl_usd": 2817.853,
+   "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
+  }
+ },
+ "chains": {
+  "eth": {
+   "status": "queried",
+   "token": "0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d",
+   "queried_at": "2026-10-30T00:18:09Z",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 9,
+   "published_pool_count": 1,
+   "below_floor_count": 8,
+   "dollar_exit_pool_count": 1,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 4960498.2437,
+   "local_dollar_exit": true
+  },
+  "bsc": {
+   "status": "queried",
+   "token": "0x8e9d4cea39299323fe8eda678cad449718556c4e",
+   "queried_at": "2026-10-30T00:18:38Z",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 4,
+   "published_pool_count": 1,
+   "below_floor_count": 3,
+   "dollar_exit_pool_count": 1,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 246365.7237,
+   "local_dollar_exit": true
+  },
+  "plasma": {
+   "status": "queried",
+   "token": "0xc4374775489cb9c56003bf2c9b12495fc64f0771",
+   "queried_at": "2026-10-30T00:19:02Z",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 8,
+   "published_pool_count": 3,
+   "below_floor_count": 5,
+   "dollar_exit_pool_count": 2,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 3345754.7615,
+   "local_dollar_exit": true
+  }
+ },
+ "enumeration": {
+  "as_of": "2026-10-30T00:18:00Z",
+  "source": "GeckoTerminal token-pools API, paginated, by exact chain-specific address",
+  "venue_count": 21,
+  "published_venue_count": 5,
+  "tvl_floor_usd": 1000.0,
+  "chains_queried": [
+   "bsc",
+   "eth",
+   "plasma"
+  ],
+  "chains_query_failed": [],
+  "chains_not_queried": [],
+  "chains_truncated": [],
+  "chains_without_local_dollar_exit": [],
+  "chains_none_found": [],
+  "finding_meanings": {
+   "venues_found": "Pools at or above the $1,000 TVL floor were found.",
+   "none_found": "Searched, and nothing at or above the floor was found: a market fact as far as the indexer reaches.",
+   "not_checked": "Not searched, for the stated reason: a gap in what this tool can reach, NOT a finding about the market.",
+   "unknown": "The search failed or the token could not be confirmed: NOT empty."
+  },
+  "chain_count_is_floor": true,
+  "chain_count_note": "FLOOR, not a census: chains are the asset's CoinGecko platforms. A deployment CoinGecko does not list is not queried here.",
+  "live_venue_count": 0,
+  "excluded_venue_count": 0,
+  "unestablished_venue_count": 5,
+  "live_venue_count_is_floor": true,
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 5 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
+ },
+ "venues": [
+  {
+   "name": "syrupUSDT / USDT 0.08%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0xd861038a98942312d1495dd1313fb66c7e7de48f549a15edf3a45decf7338e1d",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 0.993190616524208
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 4960498.2437,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 2195476.02885094,
+   "as_of": "2026-10-30T00:18:09Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xd861038a98942312d1495dd1313fb66c7e7de48f549a15edf3a45decf7338e1d",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null
+  },
+  {
+   "name": "syrupUSDT / USDT0 0.05%",
+   "chain": "plasma",
+   "dex": "oku-trade-plasma",
+   "kind": "swap",
+   "address": "0x6ba44eaed40e85bd4e5ff0636336ea35827a5939",
+   "counter_asset": {
+    "symbol": "USDT0",
+    "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+    "decimals": 6,
+    "price_usd": 1.00335307297004
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 3344466.4482,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 149.8586936992,
+   "as_of": "2026-10-30T00:19:02Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/plasma/pools/0x6ba44eaed40e85bd4e5ff0636336ea35827a5939",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 285852.722339,
+    "counter_units_in_pool": 3003736.222126,
+    "two_leg_usd_onchain": 3343340.763920121,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null
+  },
+  {
+   "name": "syrupUSDT / USDT 0.08%",
+   "chain": "bsc",
+   "dex": "uniswap-v4-bsc",
+   "kind": "swap",
+   "address": "0x48466ed2d31d41819ba79cd7100c26ea50a8c59ca44f9e8d3f1ee75ed9542d2c",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 0.997874045122583
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 246365.7237,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 110453.800757884,
+   "as_of": "2026-10-30T00:18:38Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0x48466ed2d31d41819ba79cd7100c26ea50a8c59ca44f9e8d3f1ee75ed9542d2c",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null
+  },
+  {
+   "name": "syrupUSDT / waPlaUSDT0 0.02%",
+   "chain": "plasma",
+   "dex": "balancer-v3-plasma",
+   "kind": "swap",
+   "address": "0x699153933db85fb32e8937fabeb8a16b3bace4a7",
+   "counter_asset": {
+    "symbol": "waPlaUSDT0",
+    "address": "0xe0126f0c4451b2b917064a93040fd4770d6774b5",
+    "decimals": 6,
+    "price_usd": 1.0035636979
+   },
+   "role": "other_pair",
+   "tvl_usd": 2817.853,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-30T00:19:02Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/plasma/pools/0x699153933db85fb32e8937fabeb8a16b3bace4a7",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null
+  },
+  {
+   "name": "USDT0 / syrupUSDT",
+   "chain": "plasma",
+   "dex": "fluid-plasma",
+   "kind": "swap",
+   "address": "0x2886a01a0645390872a9eb99dae1283664b0c524",
+   "counter_asset": {
+    "symbol": "USDT0",
+    "address": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+    "decimals": 6,
+    "price_usd": 0.9974279347
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1288.3133,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-10-30T00:19:02Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/plasma/pools/0x2886a01a0645390872a9eb99dae1283664b0c524",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null
+  }
+ ],
+ "venue_diagnostics": {
+  "reason_meanings": {
+   "below_tvl_floor": "Reported TVL under $1,000: dust. Left out of `venues` and every total.",
+   "duplicate_listing": "The same pool address returned twice by the indexer; kept once in `venues`.",
+   "tvl_exceeds_supply": "Kept in `venues`, but its TVL is out of every total: it exceeds the token's whole value on the chain.",
+   "tvl_exceeds_onchain_custody": "Kept in `venues`, but its TVL is out of every total: it is far above what the pool holds on-chain.",
+   "counter_token_value_implausible": "Kept in `venues`, but its TVL is out of every total: it rests on a price for a token with no real market value."
+  },
+  "rejected_count": 16,
+  "rejected_by_reason": {
+   "below_tvl_floor": 16
+  },
+  "rejected": [
+   {
+    "chain": "eth",
+    "address": "0xff88f3237f81766e687cb36456b9e3b03d8f2998d95c89697d9421db14e5bc2c",
+    "name": "syrupUSDT / USDC 84%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 327.788,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xdde6d0a099430c7d82324a3330c06bdb61e8f6c932309a71baa5a7d4caadb527",
+    "name": "syrupUSDT / ETH 90%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "other_pair",
+    "tvl_usd": 313.8324,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x9f8a40d9f9e017fbe88f0defaca101d2d0e60bc5dec4f1c3f70fc9964ed5d559",
+    "name": "syrupUSDT / USDC 85%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 309.2616,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xd5db421df398d638602a74edb94730371672cc7c",
+    "name": "syrupUSDT / WETH",
+    "dex": "dodo-pmm-ethereum",
+    "role": "other_pair",
+    "tvl_usd": 180.7557,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x93b17a6497f045dc60309921e47c1fa4dc792302",
+    "name": "syrupUSDT / USDT",
+    "dex": "fluid-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 103.483,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x74a4f1c4d36a11a56f158f17549e95206a2d114d3431f01d4ad8ce4f6c70383c",
+    "name": "syrupUSDT / USDT 0.08%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 94.181,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x1424865f6d1721104085f807b451414a87ee74f9884a1c0e5fdf49830d24618e",
+    "name": "syrupUSDT / USDT 90%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 50.8363,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "plasma",
+    "address": "0xc800b0e15c40a1ff0539218100c86f4c1bac8d9c",
+    "name": "GHO / syrupUSDT",
+    "dex": "fluid-plasma",
+    "role": "other_pair",
+    "tvl_usd": 22.7625,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "bsc",
+    "address": "0xc7870d8bbcdd10f106b21663bd681c6208b15ffc",
+    "name": "syrupUSDT / SnBNB 1%",
+    "dex": "pancakeswap-v3-bsc",
+    "role": "other_pair",
+    "tvl_usd": 13.7586845121,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "bsc",
+    "address": "0x45b2d91a4da433c784a374a347176666d74f0253",
+    "name": "CMC20 / syrupUSDT 1%",
+    "dex": "pancakeswap-v3-bsc",
+    "role": "other_pair",
+    "tvl_usd": 13.183,
+    "volume_24h_usd": 0.2161369494,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "plasma",
+    "address": "0x03c566336c2f22e9392e6b8be98328eb475413ac",
+    "name": "syrupUSDT / USDT0",
+    "dex": "curve-plasma",
+    "role": "dollar_exit",
+    "tvl_usd": 2.9174,
+    "volume_24h_usd": 0.0001135797507,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "plasma",
+    "address": "0x36151aceb3e2e1442d6239e7651ee3fa676c0936",
+    "name": "syrupUSDT / waPlaUSDT0 / ebUSD 0.1%",
+    "dex": "balancer-v3-plasma",
+    "role": "other_pair",
+    "tvl_usd": 1.6274,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "plasma",
+    "address": "0xda046178840fb08c7ff73c01162bc73ed0891917",
+    "name": "USDT0 / syrupUSDT 0.01%",
+    "dex": "oku-trade-plasma",
+    "role": "dollar_exit",
+    "tvl_usd": 0.002507217426,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "bsc",
+    "address": "0xece25641d782cab81dafe2ca56b9a3b95f3b4fbe",
+    "name": "syrupUSDT / USDT 0.05%",
+    "dex": "uniswap-bsc",
+    "role": "dollar_exit",
+    "tvl_usd": 6.683076032e-06,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x97d82d3fb2992bb4aee78fe6bb2fe6e2f3eac89d",
+    "name": "syrupUSDC / syrupUSDT",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 0.0,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "plasma",
+    "address": "0x576ab9325fdc1ade3c02d09e1882c0385e353cfe",
+    "name": "syrupUSDT / USDT0",
+    "dex": "curve-plasma",
+    "role": "dollar_exit",
+    "tvl_usd": 0.0,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   }
+  ],
+  "published_zero_volume_count": 2,
+  "volume_policy": "24h volume is published as context and is never a reason to reject a pool: a quiet day is not a dead pool (backing-monitor's fleet venue rule 5).",
+  "dedup_basis": "One source (GeckoTerminal) keyed by pool address, so the same pool cannot enter twice. Liquidity wrappers that re-list a pool (Convex, Yearn, StakeDAO, Beefy, Aura) are kept out of `venues` and marked `lp_wrapper` in `non_swap_listings`."
+ },
+ "non_swap_listings": {
+  "status": "ok",
+  "source": "defillama:yields.llama.fi/pools",
+  "match": "by symbol, NOT by address: names may collide, treat as a pointer",
+  "chains": "all",
+  "kind_meanings": {
+   "lending": "Deposits in a lending market: concentration context, not spot depth.",
+   "issuer_vault": "The issuer's own vault TVL: not secondary liquidity.",
+   "pendle_market": "Pendle yield market: see `pendle` for live vs matured.",
+   "lp_wrapper": "A receipt for a DEX pool already counted in `venues`: double-counts the same tokens.",
+   "unclassified": "Not sorted: a pointer to read, not a category."
+  },
+  "listings": [
+   {
+    "project": "aave-v3",
+    "chain": "Ethereum",
+    "symbol": "SYRUPUSDT",
+    "tvl_usd": 114979280,
+    "kind": "lending"
+   },
+   {
+    "project": "aave-v3",
+    "chain": "Plasma",
+    "symbol": "SYRUPUSDT",
+    "tvl_usd": 57462677,
+    "kind": "lending"
+   },
+   {
+    "project": "aave-v3",
+    "chain": "Mantle",
+    "symbol": "SYRUPUSDT",
+    "tvl_usd": 45973021,
+    "kind": "lending"
+   },
+   {
+    "project": "tydro",
+    "chain": "Ink",
+    "symbol": "SYRUPUSDT",
+    "tvl_usd": 5451508,
+    "kind": "unclassified"
+   },
+   {
+    "project": "morpho-blue",
+    "chain": "Ethereum",
+    "symbol": "SYRUPUSDT",
+    "tvl_usd": 107223,
+    "kind": "lending"
+   },
+   {
+    "project": "fluid-lending",
+    "chain": "Ethereum",
+    "symbol": "SYRUPUSDT",
+    "tvl_usd": 13969,
+    "kind": "lending"
+   }
+  ]
+ },
+ "payload_revised_at": "2026-10-30T00:19:07Z"
+}
