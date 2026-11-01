@@ -1,7 +1,7 @@
 {
  "schema_version": "liquidity/1",
  "asset_slug": "syzusd",
- "as_of": "2026-10-30T23:50:09Z",
+ "as_of": "2026-10-31T23:49:37Z",
  "producer": "dextracker",
  "note": "Axis 3 (Liquidity & Exit), single producer. MEASURED 2026-09-22 per chain, no cross-chain scalar. syzUSD = Staked Yuzu USD; FOUR deployments at four different addresses, resolved on-chain; Sei's is unmeasurable (no router endpoint), not absent -- see enumeration.correction_2026_09_22. Measured exit evidence only; no risk score.",
  "depth": {
@@ -20,7 +20,7 @@
    "fair_value": 1.104967,
    "fair_value_basis": "market",
    "fair_value_source": "peg_tracker:geckoterminal_pool",
-   "fair_value_as_of": "2026-10-30T22:18:10.409919Z",
+   "fair_value_as_of": "2026-10-31T22:17:53.632168Z",
    "fair_value_choice": "pool_mark",
    "fair_value_choice_mode": "explicit",
    "market_price_cross_check": {
@@ -28,13 +28,13 @@
     "pool_venue": "geckoterminal syzUSD/wnAUSD (Monad)",
     "pool_reserve_usd": 106572,
     "pool_volume_24h_usd": 0.0,
-    "routed_mark": 1.068915,
+    "routed_mark": 1.06891,
     "routed_venue": "KyberSwap routed \u2192 csUSDC (Monad)",
     "spread_bps": -326.3,
-    "as_of": "2026-10-30T23:03:49Z",
-    "premium_discount_pct_pool": 1.162,
-    "premium_discount_pct_routed": -2.139,
-    "note": "\u26a0\ufe0f THE TWO MARKS DISAGREE BY 326bps AND BOTH ARE LIVE. The published mark is the SMALLER Monad pool ($106,572 reserve, $0.00 traded in 24h); routing reaches the 3.5x larger csUSDC pool. Against NAV that is 1.162% versus -2.139% \u2014 so the headline discount depends on which venue you call the market. Two pools 3.5x apart quoting one asset differently, unarbitraged, IS the liquidity finding; it is published rather than resolved by picking a side."
+    "as_of": "2026-10-31T23:02:41Z",
+    "premium_discount_pct_pool": 1.143,
+    "premium_discount_pct_routed": -2.158,
+    "note": "\u26a0\ufe0f THE TWO MARKS DISAGREE BY 326bps AND BOTH ARE LIVE. The published mark is the SMALLER Monad pool ($106,572 reserve, $0.00 traded in 24h); routing reaches the 3.5x larger csUSDC pool. Against NAV that is 1.143% versus -2.158% \u2014 so the headline discount depends on which venue you call the market. Two pools 3.5x apart quoting one asset differently, unarbitraged, IS the liquidity finding; it is published rather than resolved by picking a side."
    },
    "self_referential": false,
    "self_referential_determination": "source_prefix_heuristic",
@@ -47,7 +47,7 @@
     "monad",
     "ethereum"
    ],
-   "quoted_as_of": "2026-10-30T23:49:29Z",
+   "quoted_as_of": "2026-10-31T23:49:14Z",
    "baseline_size_usd": 1000.0,
    "addresses": {
     "plasma": {
@@ -87,33 +87,18 @@
     "baseline_rung": null
    },
    "monad": {
-    "status": "bracketed",
-    "depth_usd": 1131.8359375,
-    "is_floor": true,
-    "bracket": {
-     "last_clearing_size_usd": 1131.8359375,
-     "last_clearing_marginal_impact_bps": -199.0537749266619,
-     "first_crossing_size_usd": 1140.625,
-     "first_crossing_marginal_impact_bps": -207.98947917808226,
-     "width_usd": 8.7890625,
-     "monotonic_in_bracket": true,
-     "threshold_bps": -200.0,
-     "meets_precision_obligation": true
-    },
+    "status": "ladder_exhausted",
+    "depth_usd": null,
+    "is_floor": null,
+    "bracket": null,
     "termination": "crossed_threshold",
     "successful_rungs": 2,
     "attempted_rungs": 2,
     "baseline_rung": {
      "size_usd": 100.0,
-     "slippage_bps": -370.71089999999975,
-     "amount_out_tokens": 96.292891
+     "slippage_bps": -370.81330000000025,
+     "amount_out_tokens": 96.291867
     },
-    "refinement": {
-     "status": "refined",
-     "stopped_on": "precision_obligation_met",
-     "probe_count": 10
-    },
-    "basis": "The -200bps marginal crossing is BRACKETED between $1,131.84 and $1,140.62, both ends re-quoted. `depth_usd` is the lower bound.",
     "bracket_50bps": {
      "threshold_bps": -50.0,
      "convention": "marginal",
@@ -121,24 +106,23 @@
      "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
      "bracketed_from_baseline": true,
      "refinement": {
-      "status": "salvaged_from_probes",
+      "status": "refined",
       "stopped_on": "precision_obligation_met",
-      "probe_count": 7,
-      "wobble_above_crossing": []
+      "probe_count": 8
      },
      "bracket": {
-      "last_clearing_size_usd": 908.59375,
-      "last_clearing_marginal_impact_bps": -49.581733533964325,
-      "first_crossing_size_usd": 915.625,
-      "first_crossing_marginal_impact_bps": -50.190495221842355,
-      "width_usd": 7.03125,
+      "last_clearing_size_usd": 546.484375,
+      "last_clearing_marginal_impact_bps": -49.90392544674705,
+      "first_crossing_size_usd": 550.0,
+      "first_crossing_marginal_impact_bps": -50.446681818181446,
+      "width_usd": 3.515625,
       "monotonic_in_bracket": true,
       "threshold_bps": -50.0,
       "meets_precision_obligation": true
      },
-     "depth_usd": 908.59375,
+     "depth_usd": 546.484375,
      "is_floor": true,
-     "basis": "Re-quoting the refined ends did not straddle (-50.19321467576884 / -50.60824242167695 bps); the FIRST crossing was salvaged from the search's probes and both ends re-quoted: $908.59 - $915.62."
+     "basis": "The -50bps marginal crossing is BRACKETED between $546.48 and $550.00, both ends re-quoted. `depth_usd` is the lower bound."
     }
    },
    "ethereum": {
@@ -159,7 +143,7 @@
     "status": "quote_failed",
     "failure_kind": "no_route_found",
     "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"fc7ffb2e-9b57-40ec-b464-2e6132717fed\"}",
+    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"0a3daa65-83e6-4fb2-94d8-2fcb4e6333ac\"}",
     "is_finding_about_the_asset": true,
     "chain": "plasma",
     "rung_kind": "decade"
@@ -169,7 +153,7 @@
     "status": "quote_failed",
     "failure_kind": "no_route_found",
     "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"fdf00b60-475b-4083-92c3-a2de694f29c1\"}",
+    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"b0fbb151-4d48-41cb-93e9-ca411f0d4c7c\"}",
     "is_finding_about_the_asset": true,
     "chain": "plasma",
     "rung_kind": "decade"
@@ -179,7 +163,7 @@
     "status": "quote_failed",
     "failure_kind": "no_route_found",
     "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"97fb91cf-3b03-4a76-a026-9efbccf7a742\"}",
+    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"85b57551-c5c8-4a80-a375-0c89842f30d1\"}",
     "is_finding_about_the_asset": true,
     "chain": "plasma",
     "rung_kind": "decade"
@@ -189,7 +173,7 @@
     "status": "quote_failed",
     "failure_kind": "no_route_found",
     "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"ad829a25-a636-4e39-a54e-63cb61d97667\"}",
+    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"d05922cf-36a3-4a53-8b7f-305f5d22a5f2\"}",
     "is_finding_about_the_asset": true,
     "chain": "plasma",
     "rung_kind": "decade"
@@ -199,7 +183,7 @@
     "status": "quote_failed",
     "failure_kind": "no_route_found",
     "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"abec14f7-ed27-4f5e-8aff-de6d7d6df867\"}",
+    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"8edf841e-0eb7-45a5-b1a5-107ba9a21ebf\"}",
     "is_finding_about_the_asset": true,
     "chain": "plasma",
     "rung_kind": "decade"
@@ -208,11 +192,11 @@
     "size_usd": 1000.0,
     "status": "ok",
     "amount_in_tokens": 905.0044028464198,
-    "amount_out_tokens": 956.760913,
-    "slippage_bps": -432.3908700000001,
+    "amount_out_tokens": 665.596387,
+    "slippage_bps": -3344.03613,
     "route_venues": [
      "balancer-v3-stable",
-     "curve-stable-ng"
+     "uniswap-v4"
     ],
     "route_leg_count": 2,
     "route_hops": [
@@ -221,53 +205,43 @@
       "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
       "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
       "token_out": "0xe1bca19baa63894d374578320551633320436523",
-      "swap_amount_raw": "553651595025009754923",
-      "amount_out_raw": "584999686",
-      "block_number": 118033597
+      "swap_amount_raw": "662533886604758282189",
+      "amount_out_raw": "649972299",
+      "block_number": 118319544
      },
      {
-      "exchange": "balancer-v3-stable",
-      "pool": "0xc71c30914bc7790218b1adee782ba307b7867b08",
+      "exchange": "uniswap-v4",
+      "pool": "0x35d5eefeedc6150c777dbbd51e0187863556ca2cd00bc41d1a873d5fdf2056ae",
       "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-      "token_out": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
-      "swap_amount_raw": "351352807821410024661",
-      "amount_out_raw": "383712789",
-      "block_number": 118033599
-     },
-     {
-      "exchange": "curve-stable-ng",
-      "pool": "0x942644106b073e30d72c2c5d7529d5c296ea91ab",
-      "token_in": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
       "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
-      "swap_amount_raw": "383712789",
-      "amount_out_raw": "383626535",
-      "block_number": 118030802
+      "swap_amount_raw": "242470516241661497395",
+      "amount_out_raw": "16126276",
+      "block_number": 93091354
      },
      {
       "exchange": "balancer-v3-stable",
-      "pool": "0x0626c7bcd2fd1f6072044b7ff2050301d9f7d6b3",
+      "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
       "token_in": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
       "token_out": "0xe1bca19baa63894d374578320551633320436523",
-      "swap_amount_raw": "383626535",
-      "amount_out_raw": "371761227",
-      "block_number": 118033597
+      "swap_amount_raw": "16126276",
+      "amount_out_raw": "15624088",
+      "block_number": 118319544
      }
     ],
     "quote_block_numbers": [
-     118030802,
-     118033597,
-     118033599
+     93091354,
+     118319544
     ],
-    "quote_as_of": "2026-10-30T23:49:35Z",
+    "quote_as_of": "2026-10-31T23:49:20Z",
     "quote_expiry": null,
     "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
     "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
-    "route_id": "7992b3c1vIpM1Kz7",
-    "gas_usd": "0.0025109200983703932",
-    "router_price_in": 1.1016647204756453,
-    "router_price_out": 1.0191540712182738,
-    "slippage_bps_debiased": -61.67997000000037,
-    "price_bias_bps": -370.71089999999975,
+    "route_id": "50cdb25aGixMFLJ0",
+    "gas_usd": "0.0015786610328751395",
+    "router_price_in": 1.0972034839804141,
+    "router_price_out": 1.0071161422179773,
+    "slippage_bps_debiased": -2973.2228299999997,
+    "price_bias_bps": -370.81330000000025,
     "chain": "monad",
     "rung_kind": "decade"
    },
@@ -275,11 +249,11 @@
     "size_usd": 10000.0,
     "status": "ok",
     "amount_in_tokens": 9050.044028464199,
-    "amount_out_tokens": 1321.405008,
-    "slippage_bps": -8678.594992,
+    "amount_out_tokens": 760.113208,
+    "slippage_bps": -9239.886792000001,
     "route_venues": [
      "balancer-v3-stable",
-     "curve-stable-ng",
+     "kuru-ob-v2",
      "kyberswap-limit-order-v2",
      "uniswap-v4"
     ],
@@ -290,73 +264,71 @@
       "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
       "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
       "token_out": "0xe1bca19baa63894d374578320551633320436523",
-      "swap_amount_raw": "799015675219259997174",
-      "amount_out_raw": "652030906",
-      "block_number": 118033597
-     },
-     {
-      "exchange": "balancer-v3-stable",
-      "pool": "0xc71c30914bc7790218b1adee782ba307b7867b08",
-      "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-      "token_out": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
-      "swap_amount_raw": "759079019186512172602",
-      "amount_out_raw": "592027539",
-      "block_number": 118033599
+      "swap_amount_raw": "775113680708185752031",
+      "amount_out_raw": "651906479",
+      "block_number": 118319577
      },
      {
       "exchange": "uniswap-v4",
       "pool": "0x35d5eefeedc6150c777dbbd51e0187863556ca2cd00bc41d1a873d5fdf2056ae",
       "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
       "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
-      "swap_amount_raw": "4199508988017036269983",
-      "amount_out_raw": "76906013",
+      "swap_amount_raw": "3763670843370541607744",
+      "amount_out_raw": "74903041",
       "block_number": 93091354
+     },
+     {
+      "exchange": "kyberswap-limit-order-v2",
+      "pool": "limit_order_pool_0xee8c0e9f1bffb4eb878d8f15f368a02a35481242_0x484be0540ad49f351eaa04eeb35df0f937d4e73f_0xcab2fa2eeab7065b45cbcf6e3936dde2506b4f6c",
+      "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+      "token_out": "0xee8c0e9f1bffb4eb878d8f15f368a02a35481242",
+      "swap_amount_raw": "1401770166891862026215",
+      "amount_out_raw": "6996507555701449",
+      "block_number": 0
      },
      {
       "exchange": "kyberswap-limit-order-v2",
       "pool": "limit_order_pool_0x754704bc059f8c67012fed69bc8a327a5aafb603_0x484be0540ad49f351eaa04eeb35df0f937d4e73f_0xcab2fa2eeab7065b45cbcf6e3936dde2506b4f6c",
       "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
       "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
-      "swap_amount_raw": "3292440346041390666801",
-      "amount_out_raw": "21940134",
+      "swap_amount_raw": "3109489337493609720570",
+      "amount_out_raw": "21026301",
       "block_number": 0
      },
      {
-      "exchange": "curve-stable-ng",
-      "pool": "0x942644106b073e30d72c2c5d7529d5c296ea91ab",
-      "token_in": "0x00000000efe302beaa2b3e6e1b18d08d69a9012a",
+      "exchange": "kuru-ob-v2",
+      "pool": "0x8121ee960066e4344a213f9ac7502395502aee7a",
+      "token_in": "0xee8c0e9f1bffb4eb878d8f15f368a02a35481242",
       "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
-      "swap_amount_raw": "592027539",
-      "amount_out_raw": "591892868",
-      "block_number": 118030802
+      "swap_amount_raw": "6996507555701449",
+      "amount_out_raw": "15755355",
+      "block_number": 118319577
      },
      {
       "exchange": "balancer-v3-stable",
-      "pool": "0x0626c7bcd2fd1f6072044b7ff2050301d9f7d6b3",
+      "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
       "token_in": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
       "token_out": "0xe1bca19baa63894d374578320551633320436523",
-      "swap_amount_raw": "690739015",
-      "amount_out_raw": "669374102",
-      "block_number": 118033597
+      "swap_amount_raw": "111684697",
+      "amount_out_raw": "108206729",
+      "block_number": 118319577
      }
     ],
     "quote_block_numbers": [
      0,
      93091354,
-     118030802,
-     118033597,
-     118033599
+     118319577
     ],
-    "quote_as_of": "2026-10-30T23:49:36Z",
+    "quote_as_of": "2026-10-31T23:49:21Z",
     "quote_expiry": null,
     "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
     "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
-    "route_id": "ea18916b10VFRIa3",
-    "gas_usd": "0.003909458649583035",
-    "router_price_in": 1.1016647204756453,
-    "router_price_out": 1.0191540745353804,
-    "slippage_bps_debiased": -8307.884092,
-    "price_bias_bps": -370.71089999999975,
+    "route_id": "8216f50ef55M-qtH",
+    "gas_usd": "0.003804661437161781",
+    "router_price_in": 1.0972034830014494,
+    "router_price_out": 1.0071161654124003,
+    "slippage_bps_debiased": -8869.073492000001,
+    "price_bias_bps": -370.81330000000025,
     "chain": "monad",
     "rung_kind": "decade"
    },
@@ -365,7 +337,7 @@
     "status": "quote_failed",
     "failure_kind": "no_route_found",
     "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"78fcdfe1-c660-4d01-9149-b6778f45ca9b\"}",
+    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"95ef1a65-5364-4865-b856-651aba45ac78\"}",
     "is_finding_about_the_asset": true,
     "chain": "ethereum",
     "rung_kind": "decade"
@@ -375,7 +347,7 @@
     "status": "quote_failed",
     "failure_kind": "no_route_found",
     "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"044fb38d-fc79-485a-87a8-5b13147da523\"}",
+    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"a0ff1c02-88b0-4ae2-959f-2cbb3d34e759\"}",
     "is_finding_about_the_asset": true,
     "chain": "ethereum",
     "rung_kind": "decade"
@@ -385,7 +357,7 @@
     "status": "quote_failed",
     "failure_kind": "no_route_found",
     "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"560b75be-7048-4ff7-8532-c16a137befaf\"}",
+    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"b925d66c-4cdb-487a-b6c5-80923f108678\"}",
     "is_finding_about_the_asset": true,
     "chain": "ethereum",
     "rung_kind": "decade"
@@ -395,7 +367,7 @@
     "status": "quote_failed",
     "failure_kind": "amount_exceeds_router_max",
     "http_status": 400,
-    "failure_detail": "{\"code\":4009,\"message\":\"amountIn is greater than max allowed\",\"details\":null,\"requestId\":\"feebaead-3287-49fa-a8ab-353da8041868\"}",
+    "failure_detail": "{\"code\":4009,\"message\":\"amountIn is greater than max allowed\",\"details\":null,\"requestId\":\"a17b2b6f-5849-46a9-a027-ecf282ab4dca\"}",
     "is_finding_about_the_asset": true,
     "chain": "ethereum",
     "rung_kind": "decade"
@@ -405,7 +377,7 @@
     "status": "quote_failed",
     "failure_kind": "amount_exceeds_router_max",
     "http_status": 400,
-    "failure_detail": "{\"code\":4009,\"message\":\"amountIn is greater than max allowed\",\"details\":null,\"requestId\":\"fe7d9a5e-b62f-4498-bc9b-b26508d4174c\"}",
+    "failure_detail": "{\"code\":4009,\"message\":\"amountIn is greater than max allowed\",\"details\":null,\"requestId\":\"a111d184-630f-48f6-aa1c-8489044bb8a8\"}",
     "is_finding_about_the_asset": true,
     "chain": "ethereum",
     "rung_kind": "decade"
@@ -479,7 +451,7 @@
   "unestablished_venue_count": 10,
   "live_venue_count_is_floor": true,
   "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 10 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead.",
-  "routed_measurement_as_of": "2026-10-30T23:50:09Z",
+  "routed_measurement_as_of": "2026-10-31T23:49:37Z",
   "by_chain_measurement": {
    "plasma": {
     "status": "quote_failed",
@@ -492,33 +464,18 @@
     "baseline_rung": null
    },
    "monad": {
-    "status": "bracketed",
-    "depth_usd": 1131.8359375,
-    "is_floor": true,
-    "bracket": {
-     "last_clearing_size_usd": 1131.8359375,
-     "last_clearing_marginal_impact_bps": -199.0537749266619,
-     "first_crossing_size_usd": 1140.625,
-     "first_crossing_marginal_impact_bps": -207.98947917808226,
-     "width_usd": 8.7890625,
-     "monotonic_in_bracket": true,
-     "threshold_bps": -200.0,
-     "meets_precision_obligation": true
-    },
+    "status": "ladder_exhausted",
+    "depth_usd": null,
+    "is_floor": null,
+    "bracket": null,
     "termination": "crossed_threshold",
     "successful_rungs": 2,
     "attempted_rungs": 2,
     "baseline_rung": {
      "size_usd": 100.0,
-     "slippage_bps": -370.71089999999975,
-     "amount_out_tokens": 96.292891
+     "slippage_bps": -370.81330000000025,
+     "amount_out_tokens": 96.291867
     },
-    "refinement": {
-     "status": "refined",
-     "stopped_on": "precision_obligation_met",
-     "probe_count": 10
-    },
-    "basis": "The -200bps marginal crossing is BRACKETED between $1,131.84 and $1,140.62, both ends re-quoted. `depth_usd` is the lower bound.",
     "bracket_50bps": {
      "threshold_bps": -50.0,
      "convention": "marginal",
@@ -526,24 +483,23 @@
      "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
      "bracketed_from_baseline": true,
      "refinement": {
-      "status": "salvaged_from_probes",
+      "status": "refined",
       "stopped_on": "precision_obligation_met",
-      "probe_count": 7,
-      "wobble_above_crossing": []
+      "probe_count": 8
      },
      "bracket": {
-      "last_clearing_size_usd": 908.59375,
-      "last_clearing_marginal_impact_bps": -49.581733533964325,
-      "first_crossing_size_usd": 915.625,
-      "first_crossing_marginal_impact_bps": -50.190495221842355,
-      "width_usd": 7.03125,
+      "last_clearing_size_usd": 546.484375,
+      "last_clearing_marginal_impact_bps": -49.90392544674705,
+      "first_crossing_size_usd": 550.0,
+      "first_crossing_marginal_impact_bps": -50.446681818181446,
+      "width_usd": 3.515625,
       "monotonic_in_bracket": true,
       "threshold_bps": -50.0,
       "meets_precision_obligation": true
      },
-     "depth_usd": 908.59375,
+     "depth_usd": 546.484375,
      "is_floor": true,
-     "basis": "Re-quoting the refined ends did not straddle (-50.19321467576884 / -50.60824242167695 bps); the FIRST crossing was salvaged from the search's probes and both ends re-quoted: $908.59 - $915.62."
+     "basis": "The -50bps marginal crossing is BRACKETED between $546.48 and $550.00, both ends re-quoted. `depth_usd` is the lower bound."
     }
    },
    "ethereum": {
@@ -840,7 +796,7 @@
  ],
  "total_tvl_usd": 60384678.0,
  "swap_tvl_usd": 625407.0,
- "payload_revised_at": "2026-10-30T23:50:09Z",
+ "payload_revised_at": "2026-10-31T23:49:37Z",
  "axis_binding_constraint": {
   "leg": "secondary_market_depth_per_chain",
   "basis": "Monad is the only chain with an executable exit (~$205K csUSDC ceiling, 2% marginal crossing ~$202K) against 11.9M local supply; Plasma's 55.6M (73%) has no route; Sei's 8.44M (11%) has no venue or router endpoint; Ethereum's 276K has dust. ~84% of supply has no reachable secondary exit. No cross-chain scalar is published.",
