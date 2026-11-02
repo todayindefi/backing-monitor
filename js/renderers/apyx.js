@@ -2608,13 +2608,24 @@ var ApyxRenderer = {
                 'subject to a 72-hour AccessManager delay, so future changes surface with a 3-day window. ' +
                 '<strong>Drain rate</strong> is a 7-day rolling sum of UnlockToken Withdraw events; ' +
                 '<strong>implied wait</strong> = queue depth ÷ drain rate. When implied wait exceeds ' +
-                'the nominal cooldown, the queue is back-loaded — new entrants nominally face the ' +
-                docDays + '-day SLA but the existing queue-tail has been there longer, so realized exit ' +
-                'time tracks implied wait, not nominal cooldown.' +
+                'the nominal cooldown, this describes the legacy queue inventory. The derived quotient ' +
+                'is not a measured holder waiting time and does not describe current receipt-NFT unlocks.' +
             '</div>';
 
         return '<div class="panel">' +
-            '<div class="panel-title">Unlock Queue</div>' +
+            '<div class="panel-title">Unlock paths — current receipt and legacy monitor</div>' +
+            '<div class="risk-flag risk-warning" id="apyx-unlock-scope">' +
+                '<strong>Dated deployment check — November 2, 2026 03:47:59 UTC, Ethereum block 26,324,501:</strong> ' +
+                'apyUSD.receipt() points to <a href="https://etherscan.io/address/0x9bf51f33955ec70f87c4b5c49441815589043237#readProxyContract" target="_blank" rel="noopener noreferrer">Unlock Receipt NFT ↗</a>. ' +
+                'New redeems mint a receipt, rather than joining the legacy UnlockToken queue below. ' +
+                'Observed vault upfront fee: <strong>0.1%</strong>. Receipt claims start after <strong>3 days</strong>; ' +
+                'the additional receipt fee is <strong>2.5% at day 3, falling to 0% at day 20</strong>, on a nonlinear curve (curvature 0.75). ' +
+                'These are dated, mutable configuration observations, not a live quote or a guaranteed settlement window. ' +
+                'The documentation’s 3.5%-to-0.1% example differs from this deployed configuration. ' +
+                'The producer does not yet monitor receipt liabilities, claims or configuration changes; current receipt queue coverage is unavailable. ' +
+                'PT maturity pays through SY into apyUSD, not directly into cash. Unlock fees and an apxUSD cash exit remain separate steps.' +
+            '</div>' +
+            '<details class="mt-3"><summary>Legacy UnlockToken observations — not the current receipt queue</summary>' +
             '<div class="grid grid-cols-2 md:grid-cols-5 gap-3">' +
                 '<div class="summary-card"><div class="card-label">Queue depth</div>' +
                     '<div class="card-value">' + CommonRenderer.formatCurrency(depth) + '</div>' +
@@ -2632,6 +2643,7 @@ var ApyxRenderer = {
             '</div>' +
             durationCaveat +
             methodology +
+            '</details>' +
         '</div>';
     },
 
