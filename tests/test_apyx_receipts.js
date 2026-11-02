@@ -1,0 +1,12 @@
+const assert=require('node:assert/strict'),fs=require('fs'),vm=require('vm');
+const ctx={Date,Number,CommonRenderer:{}}; vm.createContext(ctx);
+vm.runInContext(fs.readFileSync('/home/danger/backing-monitor/js/renderers/apyx.js','utf8'),ctx);
+const r=ctx.ApyxRenderer, now=Date.now();
+const x={status:'complete',source_timestamp:new Date(now-1000).toISOString(),maximum_source_age_seconds:3600,source_block:1,source_block_hash:'0x'+'a'.repeat(64),implementation:'0x54f1c7ffe10bc392f08ae9432a7e21a6e86bb982',runtime_hash:'ae89d4b99f8590a5045c314350c7e1a0a7fdd69fd1adeb11aa554d6e2edeb1eb',face_liabilities_apxusd_raw:'10000000000000000000001',net_at_current_fee_apxusd_raw:'9999999999999999999999',held_apxusd_raw:'10000000000000000000001',vault_upfront_fee_raw:'1000',asset_decimals:18,fee_curve_raw:['0','25','3','20','75'],counter:2,ids_examined:2,counts:{live:1,burned_or_nonexistent:1,time_eligible:1,locked_up_to_1d:0,locked_1_to_3d:0,locked_over_3d:0},vault_paused:false,receipt_paused:false};
+assert.equal(r._activeReceiptState(x,now),'complete');
+assert.match(r._renderActiveReceipt({active_receipt:x}),/10000000000000000000001/);
+for (const bad of [{status:'unavailable'},{source_timestamp:null},{source_timestamp:'bad'},{source_timestamp:new Date(now+1000).toISOString()},{ids_examined:1},{face_liabilities_apxusd_raw:1},{implementation:'changed'},{fee_curve_raw:null}]) assert.equal(r._activeReceiptState({...x,...bad},now),'unavailable');
+assert.equal(r._activeReceiptState(x,now+3601000),'stale');
+assert.equal(r._activeReceiptState({...x,maximum_source_age_seconds:1},now+1000),'stale');
+assert.match(r._renderActiveReceipt({active_receipt:{...x,status:'unavailable'},unlock_queue:{queue_depth_apxusd:10}}),/coverage are unavailable or stale/);
+console.log('Receipt complete, missing, invalid, future, stale, strict age, precision and legacy isolation checks passed');

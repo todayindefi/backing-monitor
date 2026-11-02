@@ -2526,6 +2526,37 @@ var ApyxRenderer = {
     // ============================================================
     // §3b Unlock Queue  (apyUSD only)
     // ============================================================
+    _activeReceiptState: function(r, now) {
+        r = r || {};
+        var clock = typeof r.source_timestamp === 'string' && /(?:Z|[+-]\d{2}:\d{2})$/.test(r.source_timestamp) ? Date.parse(r.source_timestamp) : NaN;
+        var age = ((now == null ? Date.now() : now) - clock) / 1000;
+        var limit = Math.min(3600, r.maximum_source_age_seconds);
+        var raw = ['face_liabilities_apxusd_raw', 'net_at_current_fee_apxusd_raw', 'held_apxusd_raw', 'vault_upfront_fee_raw'];
+        var valid = r.status === 'complete' && Number.isFinite(clock) && Number.isFinite(limit) && limit > 0 && age >= 0 && age <= limit;
+        valid = valid && Number.isSafeInteger(r.source_block) && r.source_block > 0 && /^0x[0-9a-f]{64}$/i.test(r.source_block_hash || '');
+        valid = valid && String(r.implementation).toLowerCase() === '0x54f1c7ffe10bc392f08ae9432a7e21a6e86bb982' && r.runtime_hash === 'ae89d4b99f8590a5045c314350c7e1a0a7fdd69fd1adeb11aa554d6e2edeb1eb';
+        valid = valid && raw.every(function(k) { return typeof r[k] === 'string' && /^\d+$/.test(r[k]); }) && r.asset_decimals === 18;
+        valid = valid && Array.isArray(r.fee_curve_raw) && r.fee_curve_raw.length === 5 && r.fee_curve_raw.every(function(v) { return typeof v === 'string' && /^\d+$/.test(v); });
+        var c = r.counts || {};
+        valid = valid && ['live','burned_or_nonexistent','time_eligible','locked_up_to_1d','locked_1_to_3d','locked_over_3d'].every(function(k) { return Number.isSafeInteger(c[k]) && c[k] >= 0; });
+        valid = valid && Number.isSafeInteger(r.counter) && r.counter >= 0 && r.counter === r.ids_examined && c.live + c.burned_or_nonexistent === r.counter && c.time_eligible + c.locked_up_to_1d + c.locked_1_to_3d + c.locked_over_3d === c.live;
+        valid = valid && typeof r.vault_paused === 'boolean' && typeof r.receipt_paused === 'boolean';
+        return valid ? 'complete' : (Number.isFinite(age) && age > 0 && Number.isFinite(limit) && age > limit ? 'stale' : 'unavailable');
+    },
+
+    _renderActiveReceipt: function(specific) {
+        var r = specific.active_receipt || {}, state = ApyxRenderer._activeReceiptState(r);
+        var esc = function(v) { return String(v).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
+        var html = '<div class="risk-flag risk-warning break-words" id="apyx-unlock-scope"><strong>Active receipt coverage: ' + state + '</strong>';
+        if (r.source_timestamp) html += '<div>Original source: ' + esc(r.source_timestamp) + ' · Ethereum block ' + esc(r.source_block) + '</div>';
+        if (state === 'complete') {
+            html += '<div>IDs reconciled: ' + r.ids_examined + '/' + r.counter + '; live: ' + r.counts.live + '; time-eligible: ' + r.counts.time_eligible + '. Time eligibility does not establish authorization, claim success or cash eligibility.</div>';
+            html += '<div>Face liabilities / current-fee net / held apxUSD (raw 18-decimal units): ' + esc(r.face_liabilities_apxusd_raw) + ' / ' + esc(r.net_at_current_fee_apxusd_raw) + ' / ' + esc(r.held_apxusd_raw) + '.</div>';
+            html += '<div>Vault upfront fee (raw 1e18): ' + esc(r.vault_upfront_fee_raw) + '. Additional receipt fee curve (min fee, max fee, min seconds, max seconds, curvature; fee/curvature scale 1e18): ' + r.fee_curve_raw.map(esc).join(', ') + '. Vault paused: ' + r.vault_paused + '; receipt paused: ' + r.receipt_paused + '.</div>';
+        } else html += '<div>Current receipt liabilities and configuration coverage are unavailable or stale; legacy queue observations do not replace them.</div>';
+        return html + '<div>Held apxUSD units do not establish issuer reserves or fiat solvency. Final issuer/fiat eligibility remains unverified. PT maturity pays through SY into apyUSD; unlock fees and an apxUSD cash exit remain separate. Claim history is not enumerated.</div></div>';
+    },
+
     _renderUnlockQueue: function(specific) {
         var u = specific.unlock_queue || {};
         var depth = u.queue_depth_apxusd;
@@ -2614,17 +2645,7 @@ var ApyxRenderer = {
 
         return '<div class="panel">' +
             '<div class="panel-title">Unlock paths — current receipt and legacy monitor</div>' +
-            '<div class="risk-flag risk-warning" id="apyx-unlock-scope">' +
-                '<strong>Dated deployment check — November 2, 2026 03:47:59 UTC, Ethereum block 26,324,501:</strong> ' +
-                'apyUSD.receipt() points to <a href="https://etherscan.io/address/0x9bf51f33955ec70f87c4b5c49441815589043237#readProxyContract" target="_blank" rel="noopener noreferrer">Unlock Receipt NFT ↗</a>. ' +
-                'New redeems mint a receipt, rather than joining the legacy UnlockToken queue below. ' +
-                'Observed vault upfront fee: <strong>0.1%</strong>. Receipt claims start after <strong>3 days</strong>; ' +
-                'the additional receipt fee is <strong>2.5% at day 3, falling to 0% at day 20</strong>, on a nonlinear curve (curvature 0.75). ' +
-                'These are dated, mutable configuration observations, not a live quote or a guaranteed settlement window. ' +
-                'The documentation’s 3.5%-to-0.1% example differs from this deployed configuration. ' +
-                'The producer does not yet monitor receipt liabilities, claims or configuration changes; current receipt queue coverage is unavailable. ' +
-                'PT maturity pays through SY into apyUSD, not directly into cash. Unlock fees and an apxUSD cash exit remain separate steps.' +
-            '</div>' +
+            ApyxRenderer._renderActiveReceipt(specific) +
             '<details class="mt-3"><summary>Legacy UnlockToken observations — not the current receipt queue</summary>' +
             '<div class="grid grid-cols-2 md:grid-cols-5 gap-3">' +
                 '<div class="summary-card"><div class="card-label">Queue depth</div>' +
