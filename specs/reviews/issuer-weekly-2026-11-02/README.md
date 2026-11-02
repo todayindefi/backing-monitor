@@ -33,3 +33,5 @@ See `source-clocks.json` and `served-acceptance.json` for exact clocks, public f
 PegTracker full hook suite: 2477 passed, 12 skipped, four failures outside these scoped changes (`test_crvusd_backing_alternatives`, dependency links, syzUSD fill ratio, yzUSD pool price). All53 relevant USDm tests and the three semantic clock/history tests passed. The scoped producer commit deliberately used the hook's documented `SKIP_TESTS=1` escape hatch; the broader suite is not represented as green. Producer commits: PegTracker `f4db68c`, DexTracker `7f1bab1`, both pushed.
 
 Mobile layout: all changed evidence cards fit390px; existing reserve/supply/authority tables scroll within their containers. Re pages retain an inherited document scroll-width excess outside the changed evidence cards; this is recorded in browser acceptance rather than claimed fixed.
+
+Normal USDm output was checked for separate EUROP/native ETH reserve rows and decoded FPMM limits of2.5M/5M for all three Monad pools; no additional collector repair was needed. The Celo inventory bound remains chain-specific and is not Monad execution evidence.
