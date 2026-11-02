@@ -34,3 +34,5 @@ Validation:58 relevant producer tests passed. The full producer hook had2479 pas
 Latest manual producer refresh encountered CoinGecko429 and explicitly used the existing last-good BTC mark. Its quote observation clock is not provided, so no fresh BTC quote clock is inferred. Independent MSTR/STRC quote fetch clocks remain available.
 
 Dashboard-wide conformance returned one unrelated stale-USDD feed failure (6.2h against6h limit) and48 warnings; this is not claimed green and no out-of-scope USDD collector was run.
+
+Served acceptance: dashboard `881aa57e23`, producer `ffaff0e`;16 exact served code/data hashes and12 desktop/mobile views passed. Screenshots, field clocks and remaining blockers are retained in `served-acceptance.json`. Apyx receipt code and accepted release behavior remain unchanged.
