@@ -35,3 +35,5 @@ PegTracker full hook suite: 2477 passed, 12 skipped, four failures outside these
 Mobile layout: all changed evidence cards fit390px; existing reserve/supply/authority tables scroll within their containers. Re pages retain an inherited document scroll-width excess outside the changed evidence cards; this is recorded in browser acceptance rather than claimed fixed.
 
 Normal USDm output was checked for separate EUROP/native ETH reserve rows and decoded FPMM limits of2.5M/5M for all three Monad pools; no additional collector repair was needed. The Celo inventory bound remains chain-specific and is not Monad execution evidence.
+
+Final served acceptance: `9d7ab68b41`, successful Pages deployment41470375742;15 exact served code/data hashes and10 desktop/mobile views passed. Saved screenshots and detailed blockers are in `served-acceptance.json`. Dashboard feed conformance returned0 failures/49 warnings across36 assets; these broader coverage warnings remain visible.
