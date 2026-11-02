@@ -41,7 +41,7 @@ Changed consumers: `js/renderers/apyx.js`, `js/renderers/saturn.js`, `css/portfo
 
 Apyx invariant tests cover source-clock aging independent of generation, missing source clocks, netted/gross reconciliation, disagreement and quorum fallback. Feed suite: 0 failures, 46 warnings across 36 assets after repairing the pre-existing fxUSD/fxSAVE cache tokens. Warnings are retained in the check logs and are not counted as passed measurements.
 
-Local browser triage covers all 17 registered families at 1280px and 390px. No JavaScript page errors were observed; pre-existing mobile overflow remains on several other families (see local-browser.json). The repaired five routes have a separate clean committed-tree release candidate and served checks, recorded in release-browser.json / served-browser.json. Screenshots, text and hashes are retained beside those manifests. Only an explicitly recorded served pass constitutes publication acceptance.
+Local browser triage covers all 16 registered families at 1280px and 390px. No JavaScript page errors were observed; pre-existing mobile overflow remains on several other families (see local-browser.json). The repaired five routes have a separate clean committed-tree release candidate and served checks, recorded in release-browser.json / served-browser.json. Screenshots, text and hashes are retained beside those manifests. Only an explicitly recorded served pass constitutes publication acceptance.
 
 ## Source-owner work still required
 
