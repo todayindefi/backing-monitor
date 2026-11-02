@@ -88,7 +88,7 @@ def main():
                               'status':'captured_owner_input_not_remeasured','missing':['market_oracle_basis_and_clock','current_caps_utilization','held_size_executable_unwind_and_fees']})
     pendle=Path('/home/danger/PendleTracker/data/pendle_markets.json')
     private = ROOT/'.private-reviews/six-portfolio-refresh-2026-11-02'
-    private.mkdir(exist_ok=True)
+    private.mkdir(parents=True, exist_ok=True)
     if pendle.exists():capture(pendle,private,'owner-inputs')
     # Strict JSON: upstream inventory includes non-standard NaN debt markers.
     def clean(x):
