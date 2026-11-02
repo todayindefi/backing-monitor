@@ -9,7 +9,9 @@ const now=Date.parse('2026-11-02T03:00:00Z');
 assert.equal(r._attestationAge({attestation_timestamp:'2026-11-01T09:59:07Z',attestation_age_seconds:0},now),61253);
 assert.equal(r._attestationAge({attestation_age_seconds:0},now),null);
 assert.equal(r._attestationFreshness(r._attestationAge({},now)),'critical');
-const ba=JSON.parse(fs.readFileSync('data/apxusd_backing.json')).asset_specific.backing_attestation;
+// Fixed captured operands: hourly live feeds must not make this invariant test drift.
+const ba={total_reserves_usd:288705019.43,total_supply_usd:285873514.82,
+    pol_usd:73456079.33690907,inventory_usd:67185962.47,collateralization_pct:101.9496};
 const before=JSON.stringify(ba);
 const html=r._renderRatioBasis(ba,'apyusd');
 assert.match(html,/101\.94965%/);
