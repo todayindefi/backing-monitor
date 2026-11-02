@@ -1,0 +1,3005 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "frxusd",
+ "asset_symbol": "frxUSD",
+ "producer": "dextracker",
+ "as_of": "2026-11-02T00:50:17Z",
+ "refresh_cadence": "daily",
+ "scope": "venue_inventory_only",
+ "publishes": [
+  "venues",
+  "venues_by_role",
+  "chains",
+  "non_swap_listings",
+  "venue_diagnostics",
+  "redemption_probe",
+  "absorbing_side"
+ ],
+ "does_not_publish": [
+  "depth",
+  "primary_exit",
+  "rating"
+ ],
+ "scope_note": "VENUE-ONLY BY DESIGN. This payload deliberately carries no depth, crossing, redemption path or rating; those belong to PegTracker's ladder. Absence of `depth` here is a declaration, not a failed write -- a consumer should keep the ladder from its other source.",
+ "venues_by_role": {
+  "dollar_exit": {
+   "pool_count": 5,
+   "tvl_usd": 1150582.041,
+   "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
+  },
+  "family_swap": {
+   "pool_count": 1,
+   "tvl_usd": 11183835.335,
+   "meaning": "Swaps the asset for its own sister token: NOT a way out."
+  },
+  "other_pair": {
+   "pool_count": 36,
+   "tvl_usd": 45162928.70369999,
+   "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
+  }
+ },
+ "chains": {
+  "fraxtal": {
+   "status": "not_queried",
+   "finding": "not_checked",
+   "basis": "Out of scope: the dashboard is canonical Ethereum only. frxUSD is also on Fraxtal (0xfc00\u20260001) and other chains; none of them is searched here, so this says nothing about their pools."
+  },
+  "eth": {
+   "status": "queried",
+   "token": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+   "queried_at": "2026-11-02T00:50:26Z",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 81,
+   "published_pool_count": 44,
+   "below_floor_count": 37,
+   "dollar_exit_pool_count": 5,
+   "implausible_tvl_count": 2,
+   "dollar_exit_tvl_usd": 1150582.041,
+   "local_dollar_exit": true
+  }
+ },
+ "enumeration": {
+  "as_of": "2026-11-02T00:50:17Z",
+  "source": "GeckoTerminal token-pools API, paginated, by exact chain-specific address",
+  "venue_count": 81,
+  "published_venue_count": 44,
+  "tvl_floor_usd": 1000.0,
+  "chains_queried": [
+   "eth"
+  ],
+  "chains_query_failed": [],
+  "chains_not_queried": [
+   "fraxtal"
+  ],
+  "chains_truncated": [],
+  "chains_without_local_dollar_exit": [],
+  "chains_none_found": [],
+  "finding_meanings": {
+   "venues_found": "Pools at or above the $1,000 TVL floor were found.",
+   "none_found": "Searched, and nothing at or above the floor was found: a market fact as far as the indexer reaches.",
+   "not_checked": "Not searched, for the stated reason: a gap in what this tool can reach, NOT a finding about the market.",
+   "unknown": "The search failed or the token could not be confirmed: NOT empty."
+  },
+  "chain_count_is_floor": true,
+  "chain_count_note": "FLOOR, not a census: chains are the asset's CoinGecko platforms. A deployment CoinGecko does not list is not queried here.",
+  "live_venue_count": 0,
+  "excluded_venue_count": 0,
+  "unestablished_venue_count": 44,
+  "live_venue_count_is_floor": true,
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 44 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
+ },
+ "venues": [
+  {
+   "name": "frxUSD / crvUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x13e12bb0e6a2f1a3d6901a59a9d585e89a6243e1",
+   "counter_asset": {
+    "symbol": "crvUSD",
+    "address": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+    "decimals": 18,
+    "price_usd": 0.999516838738293
+   },
+   "role": "other_pair",
+   "tvl_usd": 14186391.7811,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 77547.9405879149,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x13e12bb0e6a2f1a3d6901a59a9d585e89a6243e1",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 3271207.6945815934,
+    "counter_units_in_pool": 10924372.90418838,
+    "two_leg_usd_onchain": 14209029.142528422,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 2124557690.77462
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 3271207.6945815934,
+    "asset_usd": 3289934.472135788,
+    "counter_symbol": "crvUSD",
+    "counter_units": 10924372.90418838,
+    "counter_usd": 10919094.670392634,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "sfrxUSD / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xf292eb6c5dcb693eaaf392d0562a01c3710e5978",
+   "counter_asset": {
+    "symbol": "sfrxUSD",
+    "address": "0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
+    "decimals": 18,
+    "price_usd": 0.9924918996
+   },
+   "role": "family_swap",
+   "tvl_usd": 11183835.335,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 108938.335401323,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xf292eb6c5dcb693eaaf392d0562a01c3710e5978",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 7716697.5791066,
+    "counter_units_in_pool": 3448318.2959538926,
+    "two_leg_usd_onchain": 11183301.557498656,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 7716697.5791066,
+    "asset_usd": 7760873.581521941,
+    "counter_symbol": "sfrxUSD",
+    "counter_units": 3448318.2959538926,
+    "counter_usd": 3422427.975976714,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / msUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x9a9e2e70919c75d80aaaa1d483c46cdbb8ac4d1b",
+   "counter_asset": {
+    "symbol": "msUSD",
+    "address": "0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+    "decimals": 18,
+    "price_usd": 0.848425486715292
+   },
+   "role": "other_pair",
+   "tvl_usd": 6579489.204,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 72144.0812721435,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x9a9e2e70919c75d80aaaa1d483c46cdbb8ac4d1b",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 671075.8945342225,
+    "counter_units_in_pool": 6917663.19600759,
+    "two_leg_usd_onchain": 6544039.386174065,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 43594945.3235747
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 671075.8945342225,
+    "asset_usd": 674917.6221688635,
+    "counter_symbol": "msUSD",
+    "counter_units": 6917663.19600759,
+    "counter_usd": 5869121.764005202,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / DUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x104d6a1b97a6cef88d905d7b865a378d90be932a",
+   "counter_asset": {
+    "symbol": "DUSD",
+    "address": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+    "decimals": 18,
+    "price_usd": 1.00205604780788
+   },
+   "role": "other_pair",
+   "tvl_usd": 4340908.289,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 5.7295868933,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x104d6a1b97a6cef88d905d7b865a378d90be932a",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 2801399.4297323925,
+    "counter_units_in_pool": 1528796.9372540577,
+    "two_leg_usd_onchain": 4349376.899133958,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 1806689.62115705
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 2801399.4297323925,
+    "asset_usd": 2817436.682288365,
+    "counter_symbol": "DUSD",
+    "counter_units": 1528796.9372540577,
+    "counter_usd": 1531940.2168455925,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "FRAX / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xbbaf8b2837cbbc7146f5bc978d6f84db0be1cacc",
+   "counter_asset": {
+    "symbol": "FRAX",
+    "address": "0x853d955acef822db058eb8505911ed77f175b99e",
+    "decimals": 18,
+    "price_usd": 0.9937428568
+   },
+   "role": "other_pair",
+   "tvl_usd": 4100072.5802,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 491.0330129739,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xbbaf8b2837cbbc7146f5bc978d6f84db0be1cacc",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 242214.62225350903,
+    "counter_units_in_pool": 3871643.1887036455,
+    "two_leg_usd_onchain": 4091018.99817837,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 217956772.468902
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 242214.62225350903,
+    "asset_usd": 243601.23532574775,
+    "counter_symbol": "FRAX",
+    "counter_units": 3871643.1887036455,
+    "counter_usd": 3847417.762852622,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "alUSD / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x17f9682c9cd1a448b31c0428f1d0783ed13a9fa3",
+   "counter_asset": {
+    "symbol": "alUSD",
+    "address": "0xbc6da0fe9ad5f3b0d58160288917aa56653660e9",
+    "decimals": 18,
+    "price_usd": 0.9576787687
+   },
+   "role": "other_pair",
+   "tvl_usd": 2139399.0801,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 23712.0614828723,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x17f9682c9cd1a448b31c0428f1d0783ed13a9fa3",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 219273.92673228198,
+    "counter_units_in_pool": 2003520.8209751032,
+    "two_leg_usd_onchain": 2139258.5634358404,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 10356837.7923738
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 219273.92673228198,
+    "asset_usd": 220529.21053959016,
+    "counter_symbol": "alUSD",
+    "counter_units": 2003520.8209751032,
+    "counter_usd": 1918729.35289625,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / USD3",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x7ba89bc658c07569cfa6d7947adaa80181a24568",
+   "counter_asset": {
+    "symbol": "USD3",
+    "address": "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+    "decimals": 6,
+    "price_usd": 1.19915987117062
+   },
+   "role": "other_pair",
+   "tvl_usd": 2002700.0534,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 856242.022097508,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x7ba89bc658c07569cfa6d7947adaa80181a24568",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 1682687.157587,
+    "counter_units_in_pool": 258247.913585,
+    "two_leg_usd_onchain": 2002000.6203406358,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 116183532.767069
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 1682687.157587,
+    "asset_usd": 1692320.0855559658,
+    "counter_symbol": "USD3",
+    "counter_units": 258247.913585,
+    "counter_usd": 309680.53478467,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "WFRAX / frxUSD",
+   "chain": "eth",
+   "dex": "fraxswap_ethereum",
+   "kind": "swap",
+   "address": "0x0fe046a9027d8ce9a909f0c93ea2ddcfd8090f87",
+   "counter_asset": {
+    "symbol": "WFRAX",
+    "address": "0x04acaf8d2865c0714f79da09645c13fd2888977f",
+    "decimals": 18,
+    "price_usd": 0.2538094064
+   },
+   "role": "other_pair",
+   "tvl_usd": 1847359.0365,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 19061.7526802365,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x0fe046a9027d8ce9a909f0c93ea2ddcfd8090f87",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 14054941.0747621
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "pmUSD / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xbf5047039f2980c21eb5692c790bad8a9533b900",
+   "counter_asset": {
+    "symbol": "pmUSD",
+    "address": "0xc0c17dd08263c16f6b64e772fb9b723bf1344ddf",
+    "decimals": 18,
+    "price_usd": 0.5328721602
+   },
+   "role": "other_pair",
+   "tvl_usd": 1835222.8383,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 984.6106380296,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xbf5047039f2980c21eb5692c790bad8a9533b900",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 86459.32083490177,
+    "counter_units_in_pool": 3265137.4867865476,
+    "two_leg_usd_onchain": 1826855.142950152,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 50090624.4325141
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 86459.32083490177,
+    "asset_usd": 86954.27701620563,
+    "counter_symbol": "pmUSD",
+    "counter_units": 3265137.4867865476,
+    "counter_usd": 1739900.8659339463,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / USG",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xefc056790bb19702b2164ec6ea6ba3ae01d81195",
+   "counter_asset": {
+    "symbol": "USG",
+    "address": "0xb1c2db5d6ca03fce73dbd304d320bf76c55ae1b1",
+    "decimals": 18,
+    "price_usd": 0.993951102497515
+   },
+   "role": "other_pair",
+   "tvl_usd": 1597478.8334,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 2330.0615749031,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xefc056790bb19702b2164ec6ea6ba3ae01d81195",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 419208.4774249468,
+    "counter_units_in_pool": 1183907.722374217,
+    "two_leg_usd_onchain": 1598354.718261882,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 6724550.26814447
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 419208.4774249468,
+    "asset_usd": 421608.3323527072,
+    "counter_symbol": "USG",
+    "counter_units": 1183907.722374217,
+    "counter_usd": 1176746.3859091748,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / sUSDS",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x81a2612f6dea269a6dd1f6deab45c5424ee2c4b7",
+   "counter_asset": {
+    "symbol": "sUSDS",
+    "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+    "decimals": 18,
+    "price_usd": 0.909305717107278
+   },
+   "role": "other_pair",
+   "tvl_usd": 1561207.0882,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 3131.4897557772,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x81a2612f6dea269a6dd1f6deab45c5424ee2c4b7",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 816907.8584078939,
+    "counter_units_in_pool": 813186.7695712026,
+    "two_leg_usd_onchain": 1561019.8131623426,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 3660793675.79031
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 816907.8584078939,
+    "asset_usd": 821584.4345152494,
+    "counter_symbol": "sUSDS",
+    "counter_units": 813186.7695712026,
+    "counter_usd": 739435.3786470932,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / trUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xd1d954bc94c843815ec7b8119f2de00af27fa6ff",
+   "counter_asset": {
+    "symbol": "trUSD",
+    "address": "0xd0580192e98ea6ceb9c7b6191ed2e27560911697",
+    "decimals": 18,
+    "price_usd": 0.99911450949334
+   },
+   "role": "other_pair",
+   "tvl_usd": 1064098.6906,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 40872.8832498252,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xd1d954bc94c843815ec7b8119f2de00af27fa6ff",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 455406.64342611074,
+    "counter_units_in_pool": 607466.7979326057,
+    "two_leg_usd_onchain": 1064942.6148944502,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 72303439.0969641
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 455406.64342611074,
+    "asset_usd": 458013.72304452484,
+    "counter_symbol": "trUSD",
+    "counter_units": 607466.7979326057,
+    "counter_usd": 606928.8918499253,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / USDT",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xd6937ea8d33b0c21348f36f7895fde3054ba4927",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "decimals": 6,
+    "price_usd": 0.996110091368156
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 999242.4402,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 207279.358967548,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xd6937ea8d33b0c21348f36f7895fde3054ba4927",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 112417.2767786687,
+    "counter_units_in_pool": 893054.487019,
+    "two_leg_usd_onchain": 1002641.4218843824,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 112417.2767786687,
+    "asset_usd": 113060.83522314458,
+    "counter_symbol": "USDT",
+    "counter_units": 893054.487019,
+    "counter_usd": 889580.5866612378,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / sUSDe",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x47ab5f9d8c9c7d002a92320f23a696d348c56a7f",
+   "counter_asset": {
+    "symbol": "sUSDe",
+    "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+    "decimals": 18,
+    "price_usd": 1.24949873543957
+   },
+   "role": "other_pair",
+   "tvl_usd": 736606.3936,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 81236.9098140445,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x47ab5f9d8c9c7d002a92320f23a696d348c56a7f",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 178065.535605468,
+    "counter_units_in_pool": 445028.6224711303,
+    "two_leg_usd_onchain": 735147.6135531402,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 1170909468.07864
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 178065.535605468,
+    "asset_usd": 179084.91254104915,
+    "counter_symbol": "sUSDe",
+    "counter_units": 445028.6224711303,
+    "counter_usd": 556062.701012091,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / sDOLA",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x9d8afd5ce19a3b948049468188f1de13951a4383",
+   "counter_asset": {
+    "symbol": "sDOLA",
+    "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
+    "decimals": 18,
+    "price_usd": 1.15777060619452
+   },
+   "role": "other_pair",
+   "tvl_usd": 611544.2947,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 14009.3623731767,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x9d8afd5ce19a3b948049468188f1de13951a4383",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 141437.8026812947,
+    "counter_units_in_pool": 404209.7182611923,
+    "two_leg_usd_onchain": 610229.6263129774,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 16841472.463745
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 141437.8026812947,
+    "asset_usd": 142247.49577200058,
+    "counter_symbol": "sDOLA",
+    "counter_units": 404209.7182611923,
+    "counter_usd": 467982.1305409768,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / sGho",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x68e392e7875cc23806a8bbc5b1a5d53a366c2c7e",
+   "counter_asset": {
+    "symbol": "sGho",
+    "address": "0xe1753f2e00940cc31213dd92013cf019dfe4ca1d",
+    "decimals": 18,
+    "price_usd": 1.02299953870467
+   },
+   "role": "other_pair",
+   "tvl_usd": 509488.3919,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 8.7889775085,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x68e392e7875cc23806a8bbc5b1a5d53a366c2c7e",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 132082.261323697,
+    "counter_units_in_pool": 369790.0458788487,
+    "two_leg_usd_onchain": 511133.4428271233,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 228350846.006172
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 132082.261323697,
+    "asset_usd": 132838.39647548232,
+    "counter_symbol": "sGho",
+    "counter_units": 369790.0458788487,
+    "counter_usd": 378295.04635164095,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / sUSDai",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x1fce0b50c48a7bf67022a82dec9c26e02683bf52",
+   "counter_asset": {
+    "symbol": "sUSDai",
+    "address": "0x0b2b2b2076d95dda7817e785989fe353fe955ef9",
+    "decimals": 18,
+    "price_usd": 1.11988954633762
+   },
+   "role": "other_pair",
+   "tvl_usd": 393766.6752,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 7082.6264125874,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x1fce0b50c48a7bf67022a82dec9c26e02683bf52",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 113200.14538691532,
+    "counter_units_in_pool": 249005.45894582773,
+    "two_leg_usd_onchain": 392706.7959964499,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 362165903.639625
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 113200.14538691532,
+    "asset_usd": 113848.18554201601,
+    "counter_symbol": "sUSDai",
+    "counter_units": 249005.45894582773,
+    "counter_usd": 278858.6104544339,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "avUSD / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xf76329c6dc10fdfbee6ca520d0bf4d474e95e46e",
+   "counter_asset": {
+    "symbol": "avUSD",
+    "address": "0xf4c13d631450de6b12a19829e37c8e2826891dc4",
+    "decimals": 18,
+    "price_usd": 1.0049289891
+   },
+   "role": "other_pair",
+   "tvl_usd": 298002.7801,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 19357.9128667239,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xf76329c6dc10fdfbee6ca520d0bf4d474e95e46e",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 94926.71847949186,
+    "counter_units_in_pool": 201572.2500673517,
+    "two_leg_usd_onchain": 298035.94570844236,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 18720711.0529841
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 94926.71847949186,
+    "asset_usd": 95470.14821764625,
+    "counter_symbol": "avUSD",
+    "counter_units": 201572.2500673517,
+    "counter_usd": 202565.79749079613,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "CADD / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x384ca8992f955009bdd94849488e580559590157",
+   "counter_asset": {
+    "symbol": "CADD",
+    "address": "0x16f93ebc5320c89efc8701577efe49d14a276a06",
+    "decimals": 18,
+    "price_usd": 0.7139418484
+   },
+   "role": "other_pair",
+   "tvl_usd": 224943.1087,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 16630.2525122527,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x384ca8992f955009bdd94849488e580559590157",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 98265.8308930867,
+    "counter_units_in_pool": 177032.79799125163,
+    "two_leg_usd_onchain": 225219.49917020745,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 1501725.61431206
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 98265.8308930867,
+    "asset_usd": 98828.37614490946,
+    "counter_symbol": "CADD",
+    "counter_units": 177032.79799125163,
+    "counter_usd": 126391.12302529799,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / sVUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xf3ef7c2f7bff49eb6a7b4c7bf613a1c2cb2a48e2",
+   "counter_asset": {
+    "symbol": "sVUSD",
+    "address": "0x476310e34d2810f7d79c43a74e4d79405bd7a925",
+    "decimals": 18,
+    "price_usd": 1.02121449152744
+   },
+   "role": "other_pair",
+   "tvl_usd": 167279.411,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 193.808520724,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xf3ef7c2f7bff49eb6a7b4c7bf613a1c2cb2a48e2",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 65346.52414693973,
+    "counter_units_in_pool": 99800.35531557756,
+    "two_leg_usd_onchain": 167638.1843966283,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 187004.020634615
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 65346.52414693973,
+    "asset_usd": 65720.61528877291,
+    "counter_symbol": "sVUSD",
+    "counter_units": 99800.35531557756,
+    "counter_usd": 101917.56910785538,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "fxUSD / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x851907cac684797eee43669798d78004e269cb5e",
+   "counter_asset": {
+    "symbol": "fxUSD",
+    "address": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+    "decimals": 18,
+    "price_usd": 0.9946127992
+   },
+   "role": "other_pair",
+   "tvl_usd": 158266.632,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 14786.0966234246,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x851907cac684797eee43669798d78004e269cb5e",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 77492.63094779696,
+    "counter_units_in_pool": 80928.8610185712,
+    "two_leg_usd_onchain": 158429.13625321898,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 77319654.5554517
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 77492.63094779696,
+    "asset_usd": 77936.25525947011,
+    "counter_symbol": "fxUSD",
+    "counter_units": 80928.8610185712,
+    "counter_usd": 80492.88099374887,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "sdUSD / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x5e9ce43c5b1e2872755977e0a57eac44c0c0f951",
+   "counter_asset": {
+    "symbol": "sdUSD",
+    "address": "0x7cb20517776636ed76b68edb3d99dcce356abf02",
+    "decimals": 18,
+    "price_usd": 1.0263581432
+   },
+   "role": "other_pair",
+   "tvl_usd": 135160.0174,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x5e9ce43c5b1e2872755977e0a57eac44c0c0f951",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 27013.51425153729,
+    "counter_units_in_pool": 101325.02107130844,
+    "two_leg_usd_onchain": 131163.919786414,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 179432.14556534
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 27013.51425153729,
+    "asset_usd": 27168.15929996498,
+    "counter_symbol": "sdUSD",
+    "counter_units": 101325.02107130844,
+    "counter_usd": 103995.760486449,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / OUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x68d03ed49800e92d7aa8ab171424007e55fd1f49",
+   "counter_asset": {
+    "symbol": "OUSD",
+    "address": "0x2a8e1e676ec238d8a992307b495b45b3feaa5e86",
+    "decimals": 18,
+    "price_usd": 1.00014730788528
+   },
+   "role": "other_pair",
+   "tvl_usd": 131633.2167,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 803.176602309,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x68d03ed49800e92d7aa8ab171424007e55fd1f49",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 62559.95519784429,
+    "counter_units_in_pool": 68919.05657273091,
+    "two_leg_usd_onchain": 131847.30288081424,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 6431329.56556212
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 62559.95519784429,
+    "asset_usd": 62918.09398760409,
+    "counter_symbol": "OUSD",
+    "counter_units": 68919.05657273091,
+    "counter_usd": 68929.20889321015,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / deUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x4eeb03b2b8f55159f47b3548faafe3efaff43eb9",
+   "counter_asset": {
+    "symbol": "deUSD",
+    "address": "0x15700b564ca08d9439c58ca5053166e8317aa138",
+    "decimals": 18,
+    "price_usd": 0.0002332191671
+   },
+   "role": "other_pair",
+   "tvl_usd": 112771.614841939,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x4eeb03b2b8f55159f47b3548faafe3efaff43eb9",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "implausible",
+   "tvl_exclusion_basis": "Reported TVL $112,772 is over 20x the $36 the pool holds on-chain in its two named legs: an indexer error (typically a drained leg breaking its price maths), excluded from every total. The pool itself exists.",
+   "tvl_exclusion_code": "tvl_exceeds_onchain_custody",
+   "custody_check": {
+    "token_units_in_pool": 9.628563292059535,
+    "counter_units_in_pool": 112313.48091386324,
+    "two_leg_usd_onchain": 35.87734068039886,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 9.628563292059535,
+    "asset_usd": 9.683684207565925,
+    "counter_symbol": "deUSD",
+    "counter_units": 112313.48091386324,
+    "counter_usd": 26.19365647283293,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "AUDF / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xe79fb88c7937b39b3e1cabd44faefa5258578b2d",
+   "counter_asset": {
+    "symbol": "AUDF",
+    "address": "0xd2a530170d71a9cfe1651fb468e2b98f7ed7456b",
+    "decimals": 6,
+    "price_usd": 0.7000868871
+   },
+   "role": "other_pair",
+   "tvl_usd": 112512.5672,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xe79fb88c7937b39b3e1cabd44faefa5258578b2d",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 54246.4603490475,
+    "counter_units_in_pool": 79016.247587,
+    "two_leg_usd_onchain": 109875.24543726076,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_value_check": {
+    "status": "ok",
+    "counter_cap_usd": 3675704.87098799
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 54246.4603490475,
+    "asset_usd": 54557.00663375504,
+    "counter_symbol": "AUDF",
+    "counter_units": 79016.247587,
+    "counter_usd": 55318.23880350572,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / USDS",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x9edf5d6cec09a3c4886993b7b341d1a0a82ac668a6dfbb097cbb19cf6652d9c4",
+   "counter_asset": {
+    "symbol": "USDS",
+    "address": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+    "decimals": 18,
+    "price_usd": 0.995144070214485
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 100061.4873,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 165109.913450285,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x9edf5d6cec09a3c4886993b7b341d1a0a82ac668a6dfbb097cbb19cf6652d9c4",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "frxUSD / KRWQ",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x26d85588b9ed20aba4fa8fb9b3c8977c4aad133c",
+   "counter_asset": {
+    "symbol": "KRWQ",
+    "address": "0xc00db6b41473d065027f5ed6fada20fde75f142e",
+    "decimals": 18,
+    "price_usd": 0.000696865682794101
+   },
+   "role": "other_pair",
+   "tvl_usd": 85358.5532,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x26d85588b9ed20aba4fa8fb9b3c8977c4aad133c",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 42127.586150913725,
+    "asset_usd": 42368.75516505186,
+    "counter_symbol": "KRWQ",
+    "counter_units": 60652899.87348764,
+    "counter_usd": 42266.9244837802,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / USP",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xd50492de3541d75e61edc34d1aa79c7dc2d20da9",
+   "counter_asset": {
+    "symbol": "USP",
+    "address": "0x098697ba3fee4ea76294c5d6a466a4e3b3e95fe6",
+    "decimals": 18,
+    "price_usd": 1.1474975157
+   },
+   "role": "other_pair",
+   "tvl_usd": 68329.2114,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xd50492de3541d75e61edc34d1aa79c7dc2d20da9",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 31560.731088387984,
+    "asset_usd": 31741.40772091088,
+    "counter_symbol": "USP",
+    "counter_units": 35145.7450088327,
+    "counter_usd": 40329.655085061204,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / VUSD 0.01%",
+   "chain": "eth",
+   "dex": "uniswap_v3",
+   "kind": "swap",
+   "address": "0x410da528a866dc26a28a40bb5c0a458111f123f5",
+   "counter_asset": {
+    "symbol": "VUSD",
+    "address": "0xca83dde9c22254f58e771be5e157773212acbac3",
+    "decimals": 18,
+    "price_usd": 0.998267332584553
+   },
+   "role": "other_pair",
+   "tvl_usd": 48132.0438,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 84.8880184217,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x410da528a866dc26a28a40bb5c0a458111f123f5",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 25047.10942007693,
+    "asset_usd": 25190.497333740215,
+    "counter_symbol": "VUSD",
+    "counter_units": 22863.51536880618,
+    "counter_usd": 22823.900500724078,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDaf / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x20d4c49a873eaeff76efbd0cf19002f6e19ef52c",
+   "counter_asset": {
+    "symbol": "USDaf",
+    "address": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
+    "decimals": 18,
+    "price_usd": 0.9919445628
+   },
+   "role": "other_pair",
+   "tvl_usd": 41059.397,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 686.0773678717,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x20d4c49a873eaeff76efbd0cf19002f6e19ef52c",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 8843.911519931276,
+    "asset_usd": 8894.54051668286,
+    "counter_symbol": "USDaf",
+    "counter_units": 32336.874832012923,
+    "counter_usd": 32076.387167559384,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "YUSD / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x2cc565dde7c078a8e477763a34c40e52b13e6396",
+   "counter_asset": {
+    "symbol": "YUSD",
+    "address": "0x4274cd7277c7bb0806bd5fe84b9adae466a8da0a",
+    "decimals": 18,
+    "price_usd": 1.0019112081
+   },
+   "role": "other_pair",
+   "tvl_usd": 40478.9656,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x2cc565dde7c078a8e477763a34c40e52b13e6396",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 19515.37101682899,
+    "asset_usd": 19627.091227234792,
+    "counter_symbol": "YUSD",
+    "counter_units": 20539.11860686597,
+    "counter_usd": 20578.373136714272,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / sUSDat",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xcaf1969e9ba98c05113b75d8633a17196e2d02a5",
+   "counter_asset": {
+    "symbol": "sUSDat",
+    "address": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+    "decimals": 18,
+    "price_usd": 1.04925180398832
+   },
+   "role": "other_pair",
+   "tvl_usd": 38396.741,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 17595.5308782872,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xcaf1969e9ba98c05113b75d8633a17196e2d02a5",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 13028.418926618502,
+    "asset_usd": 13103.003094271864,
+    "counter_symbol": "sUSDat",
+    "counter_units": 24200.313815131984,
+    "counter_usd": 25392.2229276107,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "ZARP / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x57c881ada3fa218f8c720e10123a8b46ccc75b81",
+   "counter_asset": {
+    "symbol": "ZARP",
+    "address": "0xb755506531786c8ac63b756bab1ac387bacb0c04",
+    "decimals": 18,
+    "price_usd": 0.05769181944
+   },
+   "role": "other_pair",
+   "tvl_usd": 30827.9912,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 526.4858099501,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x57c881ada3fa218f8c720e10123a8b46ccc75b81",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 8363.059464429536,
+    "asset_usd": 8410.93571347428,
+    "counter_symbol": "ZARP",
+    "counter_units": 389330.62193484546,
+    "counter_usd": 22461.191943128008,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / DFiUSD 0.01%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x7a3a53e9eb87bac8f20e341d0aac8248f571711b674579c4bd1ae4862ade0354",
+   "counter_asset": {
+    "symbol": "DFiUSD",
+    "address": "0xdf100b8abd3cd41fc5cc1236ad7c6629a901afbf",
+    "decimals": 18,
+    "price_usd": 1.00040694609613
+   },
+   "role": "other_pair",
+   "tvl_usd": 30240.1404,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x7a3a53e9eb87bac8f20e341d0aac8248f571711b674579c4bd1ae4862ade0354",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "frxUSD / USDS 0.01%",
+   "chain": "eth",
+   "dex": "aero-slipstream-ethereum",
+   "kind": "swap",
+   "address": "0xaca0cce4ce934cbffb836c46c884758b7706d8fe",
+   "counter_asset": {
+    "symbol": "USDS",
+    "address": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+    "decimals": 18,
+    "price_usd": 0.999066953225362
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 28899.8135,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 2904.896541141,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xaca0cce4ce934cbffb836c46c884758b7706d8fe",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 9796.964241970149,
+    "asset_usd": 9853.049207278118,
+    "counter_symbol": "USDS",
+    "counter_units": 19144.5936432464,
+    "counter_usd": 19126.730841895813,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDe / frxUSD 0.01%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x2552e53ca27046e78f09e330a5fb1873ace5078fd9d3a3ac8d2219c0053a1847",
+   "counter_asset": {
+    "symbol": "USDe",
+    "address": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+    "decimals": 18,
+    "price_usd": 0.9996409722
+   },
+   "role": "other_pair",
+   "tvl_usd": 21757.0023,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 1201.7039996011,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x2552e53ca27046e78f09e330a5fb1873ace5078fd9d3a3ac8d2219c0053a1847",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "frxUSD / USDC 0.008%",
+   "chain": "eth",
+   "dex": "uniswap-v4-ethereum",
+   "kind": "swap",
+   "address": "0x76dbd3b36d5f0a1fa1c38b75984a9ed57aa1a36a6dbab77b9503ef9349dbb617",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 0.99929955767107
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 21000.0756,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+   "volume_24h_usd": 4450.353376277,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x76dbd3b36d5f0a1fa1c38b75984a9ed57aa1a36a6dbab77b9503ef9349dbb617",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  },
+  {
+   "name": "srRoyUSDC / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x8fc753f96752b35f64d1bae514e6cf8db0b9322e",
+   "counter_asset": {
+    "symbol": "srRoyUSDC",
+    "address": "0xcd9f5907f92818bc06c9ad70217f089e190d2a32",
+    "decimals": 6,
+    "price_usd": 0.9512008875
+   },
+   "role": "other_pair",
+   "tvl_usd": 12475.1391,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x8fc753f96752b35f64d1bae514e6cf8db0b9322e",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 164.90497408720827,
+    "asset_usd": 165.84901037460955,
+    "counter_symbol": "srRoyUSDC",
+    "counter_units": 832.053108,
+    "counter_usd": 791.4496547767333,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "uniBTC / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x7780884a24e4d84a6fbb5eff5aba8b944d5ca52c",
+   "counter_asset": {
+    "symbol": "uniBTC",
+    "address": "0x004e9c3ef86bc1ca1f0bb5c7662861ee93350568",
+    "decimals": 8,
+    "price_usd": 120671.983789351
+   },
+   "role": "other_pair",
+   "tvl_usd": 6773.0565969523,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x7780884a24e4d84a6fbb5eff5aba8b944d5ca52c",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "implausible",
+   "tvl_exclusion_basis": "Reported TVL $6,773 is over 20x the $0 the pool holds on-chain in its two named legs (read by balanceOf, block in `onchain_balances`): an indexer error, excluded from every total. The pool itself exists.",
+   "tvl_exclusion_code": "tvl_exceeds_onchain_custody",
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 0.0,
+    "asset_usd": 0.0,
+    "counter_symbol": "uniBTC",
+    "counter_units": 0.0,
+    "counter_usd": 0.0,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "dUSD / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x249839821b7b673bc68a6d9bc74811fa33a8a49f",
+   "counter_asset": {
+    "symbol": "dUSD",
+    "address": "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+    "decimals": 18,
+    "price_usd": 0.9953566705
+   },
+   "role": "other_pair",
+   "tvl_usd": 4427.3762,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 170.4139222936,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x249839821b7b673bc68a6d9bc74811fa33a8a49f",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 899.3644280899418,
+    "asset_usd": 904.5130457129967,
+    "counter_symbol": "dUSD",
+    "counter_units": 3544.1417110225316,
+    "counter_usd": 3527.6850932635602,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "evaUSDT / frxUSD",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x552827613fea5eada3871f83b2d407d50cb04116",
+   "counter_asset": {
+    "symbol": "evaUSDT",
+    "address": "0x501ebf66d76a96d4fb26ccead42957653e16b8b8",
+    "decimals": 6,
+    "price_usd": 0.9975205655
+   },
+   "role": "other_pair",
+   "tvl_usd": 3987.5181,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 509.4288592485,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x552827613fea5eada3871f83b2d407d50cb04116",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 782.4341342240991,
+    "asset_usd": 786.9133576028817,
+    "counter_symbol": "evaUSDT",
+    "counter_units": 3219.682254,
+    "counter_usd": 3211.6992627403947,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / USDf",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0x98e9599dab3a936c35de48e13e026ef4ea20b5e6",
+   "counter_asset": {
+    "symbol": "USDf",
+    "address": "0xfa2b947eec368f42195f24f36d2af29f7c24cec2",
+    "decimals": 18,
+    "price_usd": 0.989495010596347
+   },
+   "role": "other_pair",
+   "tvl_usd": 2218.5628,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x98e9599dab3a936c35de48e13e026ef4ea20b5e6",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 275.737782412739,
+    "asset_usd": 277.3163064921129,
+    "counter_symbol": "USDf",
+    "counter_units": 1948.8204708567803,
+    "counter_usd": 1928.3481324608078,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "frxUSD / USDG 0.01%",
+   "chain": "eth",
+   "dex": "aero-slipstream-ethereum",
+   "kind": "swap",
+   "address": "0x1cd817b9fdcbacbb2c46602f5abdc27166ad3361",
+   "counter_asset": {
+    "symbol": "USDG",
+    "address": "0xe343167631d89b6ffc58b88d6b7fb0228795491d",
+    "decimals": 6,
+    "price_usd": 1.00193726400547
+   },
+   "role": "other_pair",
+   "tvl_usd": 1709.0983,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 345.3114750459,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x1cd817b9fdcbacbb2c46602f5abdc27166ad3361",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "read",
+    "chain": "eth",
+    "block": 26323644,
+    "block_basis": null,
+    "read_at": "2026-11-02T00:55:59Z",
+    "asset_units": 880.4791869885416,
+    "asset_usd": 885.5196917241914,
+    "counter_symbol": "USDG",
+    "counter_units": 828.727292,
+    "counter_usd": 830.3327555531423,
+    "absorbing_side": "counter",
+    "note": "A sell is absorbed by the counter side; asset_units is inventory a BUYER could take. Two named legs only: a third coin in a multi-coin pool is not read. USD at indexer prices. An upper bound on what a sell could pull out, NOT depth."
+   }
+  },
+  {
+   "name": "USDC / frxUSD",
+   "chain": "eth",
+   "dex": "bunni-ethereum",
+   "kind": "swap",
+   "address": "0x690f92bc0598b82fa7dfea7cba108f54da349da46b22bc634795a9d34617b22c",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 1.0005217491
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1378.2244,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:50:26Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x690f92bc0598b82fa7dfea7cba108f54da349da46b22bc634795a9d34617b22c",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null,
+   "onchain_balances": {
+    "status": "not_read",
+    "basis": "This pool type keeps its tokens outside the pool address (Uniswap v4 singleton, Balancer vault, Fluid liquidity layer), so balanceOf on the pool reads ~0. Only the indexer's TVL is available."
+   }
+  }
+ ],
+ "venue_diagnostics": {
+  "reason_meanings": {
+   "below_tvl_floor": "Reported TVL under $1,000: dust. Left out of `venues` and every total.",
+   "duplicate_listing": "The same pool address returned twice by the indexer; kept once in `venues`.",
+   "tvl_exceeds_supply": "Kept in `venues`, but its TVL is out of every total: it exceeds the token's whole value on the chain.",
+   "tvl_exceeds_onchain_custody": "Kept in `venues`, but its TVL is out of every total: it is far above what the pool holds on-chain.",
+   "counter_token_value_implausible": "Kept in `venues`, but its TVL is out of every total: it rests on a price for a token with no real market value."
+  },
+  "rejected_count": 39,
+  "rejected_by_reason": {
+   "below_tvl_floor": 37,
+   "tvl_exceeds_onchain_custody": 2
+  },
+  "rejected": [
+   {
+    "chain": "eth",
+    "address": "0x4eeb03b2b8f55159f47b3548faafe3efaff43eb9",
+    "name": "frxUSD / deUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 112771.614841939,
+    "volume_24h_usd": 0.0,
+    "reason": "tvl_exceeds_onchain_custody"
+   },
+   {
+    "chain": "eth",
+    "address": "0x7780884a24e4d84a6fbb5eff5aba8b944d5ca52c",
+    "name": "uniBTC / frxUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 6773.0565969523,
+    "volume_24h_usd": 0.0,
+    "reason": "tvl_exceeds_onchain_custody"
+   },
+   {
+    "chain": "eth",
+    "address": "0xe4c15b9be45065c67f4a57d979390ecaa82af8cf",
+    "name": "frxUSD / USDte",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 943.3412,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x5f2e7b2891523e18c86bc73685117631805778d44e528a84e63c0534431bb0b6",
+    "name": "USDC / frxUSD 85%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 770.2816,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x96bca2cea58a8e08e7da5c9d68b8acbb28419d1d",
+    "name": "frxUSD / USPC",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 701.928886646,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xed9cac2d1b7b3d42d7cfe15cf8b5c583244d432d",
+    "name": "frxUSD / FRAX 0.01%",
+    "dex": "aero-slipstream-ethereum",
+    "role": "other_pair",
+    "tvl_usd": 686.7682,
+    "volume_24h_usd": 248.5037115314,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x2c68a521a923e27ddfb7d7f0603b4a58317036d9f598ae41a20ee43f6c122aac",
+    "name": "KRWQ / frxUSD 0.05%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "other_pair",
+    "tvl_usd": 464.2193,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xde0576968c898bbe7bf13d79862f252c58443f96",
+    "name": "frxUSD / VUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 417.4072004484,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xdbb1d219d84eacefb850ee04cacf2f1830934580",
+    "name": "frxUSD / USDe",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 345.7115,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x46cc7336ebf065b2919afcfac0e502446a2013c4bff35b0686e4766f23c7ee98",
+    "name": "frxUSD / ETH 99.9%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "other_pair",
+    "tvl_usd": 258.024,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x2efc11c7bb2e0fbdba8a05a3712398860e6a8e53",
+    "name": "USDFI / frxUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 222.4231,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x4d968a5db8da0822a2f08840f553de4129aae5f3",
+    "name": "frxUSD / scrvUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 221.7957764844,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x31d563e7d382cd934014bec8c6c931751e6b3a9a",
+    "name": "frxUSD / ebUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 214.7681290074,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x421194e547eb49304b3e99ffd26b164f9832d395",
+    "name": "reUSD / frxUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 206.7787,
+    "volume_24h_usd": 9.5988089092,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x917213760af19e938e1c5cf4c6c3a963f6f32152",
+    "name": "frxUSD / savUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 202.823046257,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x3e823bd1015ba1a12f2f8afd631c822a1cba0de7",
+    "name": "iUSD / frxUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 198.5590473612,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x6dd7522c83ecd5d67f8eaf11a973219c6a9f7493",
+    "name": "tmvUSDC / frxUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 190.8714134853,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x51a57b0a36ef63828929683609fa1fc12c72a776",
+    "name": "tGBP / frxUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 181.5679,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x993099bb2143818c50ab59d853c3a7915dfd5d9038cd56fb4429f7fdf0640660",
+    "name": "UDS / frxUSD 10%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "other_pair",
+    "tvl_usd": 178.893,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x3d7d791343ea8d23d24a628a770849d7f421f0c2fc3ff9fb37346c0667eead70",
+    "name": "frxUSD / USDT 88%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 171.8293,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xe1bcb621836377c708386329242b609603706368e2efe192eb69ca33d5e5b253",
+    "name": "frxUSD / crvUSD 0.008%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "other_pair",
+    "tvl_usd": 100.0051,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x35364a18efde0169d214e7c72f4ee0e4c522ba63",
+    "name": "frxUSD / DUSD",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 98.5104056373,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xb3fc0d6cd41427ffa4a6059eca2090fb76350b89",
+    "name": "frxUSD / BOLD / USDaf",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 63.2579,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x6461050a09c4e4c6cf258ee98190ca0e85cfddbf8fea7b4be9c29bfea127234d",
+    "name": "USDC / frxUSD",
+    "dex": "bunni-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 26.5998,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xd83c937113a2560b2c0da4a140f31bac61f2b798",
+    "name": "frxUSD / USDat",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 20.1142287515,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x01646f6fe0d75ced6e514fab0ea2f4ed5e1a5c9f",
+    "name": "frxUSD / muBOND",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 18.2616926361,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xb439d36aab1bbecf5ddea2acceb9458f6d2227e18c1c58da94ba366411f361ff",
+    "name": "frxUSD / USDC 0.008%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 15.3181,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x16a973f8e466f44e9ea67e7e2d3166bd460ea852",
+    "name": "frxUSD / AZND",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 14.8058755849,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xd730f6ea649f19da07781030ed9ec42a50dbddad7b1ed5a41ea8c17ae0a49cad",
+    "name": "frxUSD / USDC 0.05%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 10.0889,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x78b8f4abaeac80f5c8c932a0d42ba0f14b6820bc",
+    "name": "DUSD / frxUSD 0.01%",
+    "dex": "uniswap_v3",
+    "role": "other_pair",
+    "tvl_usd": 3.8315609383,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x7f695d22a76c59e7d8cd4da8bf7353773103fc64",
+    "name": "FRAX / frxUSD 0.01%",
+    "dex": "uniswap_v3",
+    "role": "other_pair",
+    "tvl_usd": 0.6805700376,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x310a9fd2906c6a3ee97289095b183f96309c56ae",
+    "name": "frxUSD / srRoyUSDC",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 0.05895507872,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x19e66d324a60ccf35b1b4b5a985b43d8afbab325902caf42be29200040075727",
+    "name": "frxUSD / crvUSD 0.008%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "other_pair",
+    "tvl_usd": 0.0346139436454677,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x02fb178cac55b4a7d868841cc9dbf2ddadcdea8d",
+    "name": "frxUSD / USDT 0.01%",
+    "dex": "uniswap_v3",
+    "role": "dollar_exit",
+    "tvl_usd": 0.001028241212,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xb3ba0b10262c5205261aa6ee7f158c19480bab67",
+    "name": "frxUSD / GHO",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 1.996719526e-18,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xf41df3c4f7a3c6663df602241505f21586a41c72",
+    "name": "frxUSD / DOLA",
+    "dex": "curve",
+    "role": "other_pair",
+    "tvl_usd": 0.0,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xc7018f03ac1d421236cf00695285ad80ef3745080a4f93c6fd1fc9e06179c8b0",
+    "name": "frxUSD / USDG",
+    "dex": "uniswap-v4-ethereum",
+    "role": "other_pair",
+    "tvl_usd": 0.0,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x4537a284c1a4e64491e09b2b259b10714f06aca34c9280fbedc31e3d0a6d99a4",
+    "name": "frxUSD / USDC 0.25%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 0.0,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x34fb2cb331bb18e17e34b84223867e5ae379984e",
+    "name": "frxUSD / WETH",
+    "dex": "dodo-pmm-ethereum",
+    "role": "other_pair",
+    "tvl_usd": 0.0,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   }
+  ],
+  "published_zero_volume_count": 11,
+  "volume_policy": "24h volume is published as context and is never a reason to reject a pool: a quiet day is not a dead pool (backing-monitor's fleet venue rule 5).",
+  "dedup_basis": "One source (GeckoTerminal) keyed by pool address, so the same pool cannot enter twice. Liquidity wrappers that re-list a pool (Convex, Yearn, StakeDAO, Beefy, Aura) are kept out of `venues` and marked `lp_wrapper` in `non_swap_listings`."
+ },
+ "redemption_probe": {
+  "as_of": "2026-11-02T00:56:21Z",
+  "block": 26323645,
+  "chain": "eth",
+  "kind": "on_chain_observation",
+  "routes": [
+   {
+    "name": "Frax USDC custodian",
+    "contract": "0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c",
+    "pays_out": "USDC",
+    "pays_out_token": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "status": "read",
+    "redeemable_now_units": 462353.112986,
+    "payout_inventory_units": 462353.112986,
+    "fee_bps": 0.0,
+    "fee_basis": "previewRedeem vs convertToAssets of 1,000 units: the fee the contract itself would charge.",
+    "settlement": "Atomic: USDC is paid in the redeeming transaction.",
+    "eligibility": {
+     "status": "open_to_any_address",
+     "basis": "redeem() is a public ERC-4626 call and USDC has no holder allowlist."
+    }
+   },
+   {
+    "name": "Frax WTGXX custodian",
+    "contract": "0x860cc723935fc9a15ff8b1a94237a711dfef7857",
+    "pays_out": "WTGXX (WisdomTree Government Money Market Digital Fund)",
+    "pays_out_token": "0x1fecf3d9d4fee7f2c02917a66028a48c6706c179",
+    "status": "read",
+    "redeemable_now_units": 14599327.83211888,
+    "payout_inventory_units": 14597867.89933567,
+    "fee_bps": 1.0,
+    "fee_basis": "previewRedeem vs convertToAssets of 1,000 units: the fee the contract itself would charge.",
+    "settlement": "Atomic to WTGXX. Turning WTGXX into cash is a fund redemption with WisdomTree, off-chain, not observed here.",
+    "eligibility": {
+     "status": "gated",
+     "observed": "execution reverted: transfer: Address not whitelisted",
+     "basis": "WTGXX moves only between allowlisted addresses: the frxUSD burns, but a non-allowlisted holder cannot receive the payout."
+    }
+   }
+  ],
+  "redeems": "frxUSD",
+  "open_redeemable_now_units": 462353.112986,
+  "semantics": "Primary redemption read on-chain, published SEPARATELY from the venues. It never adds to secondary-market depth. A gated route is listed with its gate and is not counted as open capacity.",
+  "not_enumerated": "Only these two custodians were read. Frax reports BUIDL and USTB reserves too; no custodian for them was found by address, so they are NOT read, not absent."
+ },
+ "absorbing_side": {
+  "buckets": {
+   "independent_exit": {
+    "pool_count": 2,
+    "counter_usd": 908707.3175031336
+   },
+   "circular_counter": {
+    "pool_count": 0,
+    "counter_usd": 0.0
+   },
+   "family_swap": {
+    "pool_count": 1,
+    "counter_usd": 3422427.975976714
+   },
+   "other_pair": {
+    "pool_count": 33,
+    "counter_usd": 31296023.061420493
+   },
+   "not_read": {
+    "pool_count": 6,
+    "counter_usd": 2021795.9664999999,
+    "semantics": "Whole-pool indexer TVL of pools whose balances could not be read: NOT counter-side."
+   }
+  },
+  "semantics": "Counter-asset units held by the pools, by what they are. Do NOT add circular_counter to independent_exit: a counter backed by this asset fails with it. None of this is depth."
+ },
+ "non_swap_listings": {
+  "status": "ok",
+  "source": "defillama:yields.llama.fi/pools",
+  "match": "by symbol, NOT by address: names may collide, treat as a pointer",
+  "chains": [
+   "Ethereum"
+  ],
+  "kind_meanings": {
+   "lending": "Deposits in a lending market: concentration context, not spot depth.",
+   "issuer_vault": "The issuer's own vault TVL: not secondary liquidity.",
+   "pendle_market": "Pendle yield market: see `pendle` for live vs matured.",
+   "lp_wrapper": "A receipt for a DEX pool already counted in `venues`: double-counts the same tokens.",
+   "unclassified": "Not sorted: a pointer to read, not a category."
+  },
+  "listings": [
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "SFRXUSD-FRXUSD",
+    "tvl_usd": 11918489,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-CRVUSD",
+    "tvl_usd": 10019073,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "fraxlend",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 4592647,
+    "kind": "lending"
+   },
+   {
+    "project": "aave-v4",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 4216308,
+    "kind": "lending"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-MSUSD",
+    "tvl_usd": 4181583,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-CRVUSD",
+    "tvl_usd": 4057401,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-DUSD",
+    "tvl_usd": 2710694,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-MSUSD",
+    "tvl_usd": 2352866,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "ALUSD-FRXUSD",
+    "tvl_usd": 1898861,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "frax",
+    "chain": "Ethereum",
+    "symbol": "WFRAX-FRXUSD",
+    "tvl_usd": 1841167,
+    "kind": "unclassified"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-SUSDS",
+    "tvl_usd": 1333656,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-DUSD",
+    "tvl_usd": 1318906,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-USD3",
+    "tvl_usd": 1181885,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "PMUSD-FRXUSD",
+    "tvl_usd": 1139269,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-USD3",
+    "tvl_usd": 1068046,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-SUSDS",
+    "tvl_usd": 967075,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-USG",
+    "tvl_usd": 941449,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-SDOLA",
+    "tvl_usd": 716437,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "PMUSD-FRXUSD",
+    "tvl_usd": 653118,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-USG",
+    "tvl_usd": 652194,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "fraxlend",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 625463,
+    "kind": "lending"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-SUSDE",
+    "tvl_usd": 596891,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "SDUSD-FRXUSD",
+    "tvl_usd": 496795,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "SDUSD-FRXUSD",
+    "tvl_usd": 496698,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "beefy",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-MSUSD",
+    "tvl_usd": 470608,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "fraxlend",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 453436,
+    "kind": "lending"
+   },
+   {
+    "project": "beefy",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-MSUSD",
+    "tvl_usd": 426867,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-SGHO",
+    "tvl_usd": 388268,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "ALUSD-FRXUSD",
+    "tvl_usd": 247668,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-AVUSD",
+    "tvl_usd": 239176,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "fraxlend",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 218670,
+    "kind": "lending"
+   },
+   {
+    "project": "fraxlend",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 209619,
+    "kind": "lending"
+   },
+   {
+    "project": "resupply",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 193153,
+    "kind": "unclassified"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-USPC",
+    "tvl_usd": 193126,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-SUSDAI",
+    "tvl_usd": 191136,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "beefy",
+    "chain": "Ethereum",
+    "symbol": "PMUSD-FRXUSD",
+    "tvl_usd": 155704,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-SVUSD",
+    "tvl_usd": 151265,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "resupply",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 141310,
+    "kind": "unclassified"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-SUSDE",
+    "tvl_usd": 139072,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-SGHO",
+    "tvl_usd": 128240,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "SDUSD-FRXUSD",
+    "tvl_usd": 123727,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "resupply",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 105806,
+    "kind": "unclassified"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-OUSD",
+    "tvl_usd": 81652,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "fraxlend",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 59863,
+    "kind": "lending"
+   },
+   {
+    "project": "resupply",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 57160,
+    "kind": "unclassified"
+   },
+   {
+    "project": "yearn-finance",
+    "chain": "Ethereum",
+    "symbol": "AV-FRXUSD",
+    "tvl_usd": 56926,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "convex-finance",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-AVUSD",
+    "tvl_usd": 54472,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "USDAF-FRXUSD",
+    "tvl_usd": 40275,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-OUSD",
+    "tvl_usd": 38883,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "stake-dao-yield",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-SUSDAT",
+    "tvl_usd": 37343,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "beefy",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD",
+    "tvl_usd": 17776,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "beefy",
+    "chain": "Ethereum",
+    "symbol": "FRXUSD-SGHO",
+    "tvl_usd": 13825,
+    "kind": "lp_wrapper"
+   },
+   {
+    "project": "beefy",
+    "chain": "Ethereum",
+    "symbol": "USD3-FRXUSD",
+    "tvl_usd": 11992,
+    "kind": "lp_wrapper"
+   }
+  ]
+ },
+ "payload_revised_at": "2026-11-02T00:56:23Z"
+}

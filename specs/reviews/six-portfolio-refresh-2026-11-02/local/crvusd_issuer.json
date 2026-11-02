@@ -1,0 +1,24 @@
+{
+ "schema_version": "issuer/1",
+ "producer": "riskanalyst",
+ "asset": "crvusd",
+ "as_of": "2026-09-10T12:00:00Z",
+ "issuer": {
+  "summary": "crvUSD has no corporate issuer — a DAO mints it, so there is no entity to claim against and no custodian holding reserves off-chain. Curve is among DeFi's most established protocols, and its governance terminates in a 7-day vote with a genuine 7-day floor. The concentration risk is a person rather than a balance sheet: Michael Egorov founded both Curve and YieldBasis, the counterparty minted 47.5% of all crvUSD, and Curve's own emergency multisig holds kill authority over it directly. See the full report for the credit line, the drawn ceiling and the governance wiring.",
+  "summary_source": "On-chain measurement: the YieldBasis debt ceiling and drawn residual, the idle-versus-deployed split, the factory's emergency_admin registration and the DAO's early-execution voting mode. [verified 2026-09-10]",
+  "facts": [
+   "There is no issuing company. crvUSD is minted by Curve's on-chain governance; the terminal is a 7-day Aragon vote with a REAL 7-day floor — the verified Voting source has no voteTime setter and _canExecute refuses while a vote is open, so even upgrading the Voting app must first clear 7 days.",
+   "Curve Finance is among DeFi's most established protocols — ten-plus audit firms and a multi-year TVL history. Removes the offshore-entity, undisclosed-domicile and off-chain-custodian questions entirely.",
+   "⚠️ Michael Egorov founded BOTH Curve and YieldBasis. YieldBasis is the counterparty minted 47.5% of all crvUSD in existence — a $1,000,000,000 debt ceiling, 100% drawn (debt_ceiling_residual = 1e9), against a crvUSD totalSupply of $2.105B.",
+   "⚠️ Scale check on that dependency: YieldBasis's IDLE buffer alone ($669.3M) is 31.8% of total crvUSD supply, and its DEPLOYED portion ($330.8M) is 4.3x the entire original CDP mechanism ($76.8M).",
+   "⚠️ MEASURED 2026-09-10 AND CLOSER THAN PERSONNEL: Curve's own 5-of-9 emergency Safe 0x467947ee34af926cb1dfa08d63b7fbdf0ad1e0c is registered as YieldBasis Factory's emergency_admin — enforced via LT.set_killed(), emergency_withdraw() and gauge redeem(). Curve holds kill authority over its largest borrower DIRECTLY, not through governance.",
+   "⚠️ YieldBasis's DAO runs votingMode() = 1 = EarlyExecution, so its nominal 7-day vote is NOT a reaction window a crvUSD holder can rely on for notice.",
+   "✅ Bounding the above, because the concentration reads worse than it acts: the ceiling is fully drawn, so the undelayed YieldBasis path ALLOCATES already-minted crvUSD and CANNOT create new supply. Expanding it requires ControllerFactory.admin -> ControllerAdmin.dao = the Curve Ownership Agent at 7 days with a 7-day floor.",
+   "✅ Disclosure posture is structurally different from an attested issuer: the credit line, ceiling, drawn balance, idle buffer and emergency wiring are all ON-CHAIN and independently readable at any block. No monthly PDF, no scope limitation, no attestation lag.",
+   "⚠️ CRV tokenomics make governance capture a live question rather than a theoretical one — vote-escrow concentration is the mechanism by which the dual-role influence above would actually be exercised.",
+   "⚠️ NO RECOURSE ENTITY. In a failure there is no company to claim against, no regulator with jurisdiction and no balance sheet behind the token. That is the trade a DAO-issued stablecoin makes, and it cuts both ways versus apxUSD-style issuers.",
+   "⚠️ NOT priced on this axis and stated so the two are not double-counted: the YieldBasis concentration itself is priced on Dependencies (4.5), and the authority mechanism on Contract & Admin (5.5). This axis prices the STEWARD."
+  ],
+  "producer_note": "PRODUCER BOOKKEEPING, never rendered. Prior summary_source claimed which findings were or were not reflected in the published report. ⚠️ FOUR OF FIVE SUCH CLAIMS WERE FALSE when checked 2026-09-10: the published pages carried the findings, and the claims were built by grepping our API identifiers against prose that renders them as words — a check blind to the form the thing takes. Cross-surface coverage claims are removed from rendered fields entirely; they cannot be kept current and they are a statement about someone else's page. Prior value retained here: riskAnalyst internal assessment, assets/crvusd.md (Issuer row, Dependencies row authored 2026-09-09, and the axis-5 overlay re-argued 2026-09-10). ⚠️ MEASURED THIS SESSION, not carried: the YieldBasis debt_ceiling / debt_ceiling_residual pair, the idle-vs-deployed split, the emergency_admin registration and votingMode() = EarlyExecution were all read on-chain 2026-09-09/10. ⚠️ NOT reflected in the published report — tidresearch's crvUSD page does not carry the emergency_admin finding, the EarlyExecution point, or the fully-drawn-ceiling bound that limits the concentration. The published report"
+ }
+}

@@ -1,0 +1,366 @@
+Risk Dashboard USDm (monad) Full report ↗
+Updated: Nov 2, 2026, 09:52 AM GMT+8
+← All assets
+PEG
+-0.57% ▲
+premium / discount
+Current · Material deviation7d band · 6/10
+BACKING
+98.87% ⓘ
+deficit −$163.5K
+Watch · 6/10
+LIQUIDITY & EXIT
+n/a
+quote returns the same answer at every size
+Authored 5/10
+DEPENDENCIES
+8 up · downstream not tracked
+upstream / downstream
+View links →
+SMART CONTRACT & ADMIN
+0h warning
+shortest of 10 admin paths · 1 delayed · hand-walk
+Structural 4/10
+ISSUER
+6.5/10
+editorial · subjective
+Report →
+Live: Peg, Backing and Liquidity. Authored: Smart Contract & Admin and Issuer. They measure different things. Read the full risk report for the authored scores →
+1
+Peg
+7d peg performance · market vs NAV · mento_fpmm
+Current · Material deviation
+7d band · 6/10
+16d old
+mixed · risk desk · 5 fields
+Why the report scores peg differently
+Peg Performance
+MARKET PRICE
+0.9943
+source not named · 1.7h old
+NAV / THEORETICAL
+1.0000
+PREMIUM / DISCOUNT
+-0.572%
+STATUS
+Material deviation
+2
+Backing
+live reserves & collateral ratio
+Watch · 6/10
+16d old
+mixed · risk desk · 5 fields
+Coverage basis — claims versus reserves
+Surplus basis: Stable-only reserve minus all Mento stablecoin debt — the SAME basis as collateral_ratio, so B/(B - surplus_deficit) recovers it. The gross surplus includes volatile collateral and is published separately; see alternatives.gross_surplus_deficit_usd.
+Why this backing score
+Coverage History — pre-Oct 17 incomplete-sweep observations excluded; no historical restatement
+Min: 112.74%
+Max: 114.86%
+Range: 2.12pp
+Today 113.57% — the 17th percentile of this window ⓘ
+378 obs over 30 days
+341 flagged observations excluded as incomplete reads ⓘ
+Backing Breakdown
+STRATEGY	VALUE (USD)	%	
+USD stable assets	$12,249,753	74.4%	
+
+EUR stable assets (USD marked)	$2,082,513	12.7%	
+
+Volatile assets (CELO / ETH / stETH)	$2,130,195	12.9%	
+
+Total	$16,462,461	100%	
+
+Percentages are each line’s share of total displayed backing (the 100% row) — not share of token supply.
+ⓘ Measured scope: Ethereum wallet sweep plus Monad ReserveV2 and issuer-reported other legs. Custodian subtotals are not reconciled to this narrower scope.
+
+Risk Flags
+Measured stable-only coverage of all Mento debt is below 1.0x (now 0.989x, on-chain-corrected) — Reserve excluding CELO/ETH/stETH is below par on this narrower wallet scope; not a legal recovery estimate.
+Monad ReserveV2-only / full local USDm supply is below 75% (now 37.8%). LP collateral is excluded; this is not a proven legal recovery cap.
+API vs RPC Monad-bucket drift 8.5% — within expected baseline (pool-resident reserves accounted in API).
+Monad Reserve Tier-1 (Circle USDC) share fell below 80% (now 12.5%) — concentration shifting to Agora AUSD or USDT0.
+Allocation
+Mento Dollar — Reserve-Backed Stable
+Celo
+Monad
+TOTAL SUPPLY (USDM)
+$16,033,935
+TOTAL BACKING
+$16,462,461
+COLLATERAL RATIO measured legs
+113.57%
+Issuer scope 114.13% ⓘ Scope difference
+Includes $2,130,195 volatile collateral (CELO + ETH + stETH); see Stable-Only Coverage for the stable-asset view (including EUR/USD risk).
+STABLE-ONLY COVERAGE measured legs
+98.87%
+Issuer scope 99.51% ⓘ Scope difference
+Reserve excluding CELO + ETH + stETH ÷ all Mento stablecoin debt. Strips $2,130,195 of volatile assets from the headline.
+SURPLUS / DEFICIT
+$1,966,695
+
+Custodian allocation is not reconciled for the measured-leg scope. Reserve buckets and per-chain holdings are shown below.
+
+RESERVE / USDM ONLY measured legs
+102.67%
+Issuer scope 103.18% ⓘ Scope difference
+Shared reserve divided by USDm supply only; does not establish coverage of all Mento liabilities.
+RESERVE / ALL STABLECOIN DEBT measured legs
+113.57%
+Issuer scope 114.13% ⓘ Scope difference
+Reserve vs USDm + EURm + GBPm + JPYm + CHFm combined.
+Measured scope combines four Ethereum wallets (including EUROP and native ETH), Monad ReserveV2, and issuer-reported other legs. Monad protocol-owned LP collateral and smaller operational balances are excluded from the narrower wallet lens. Issuer full scope and measured scope are different observations. Historical observations before the repaired sweep are incomplete and excluded from the coverage chart, without restating balances.
+Reserve Composition by Bucket stable vs volatile · measured legs
+Mento Reserve totals $16,462,461. The Volatile bucket (CELO + ETH + stETH) is the slice that pulls the headline Collateral Ratio above the Stable-Only Coverage figure.
+BUCKET	USD VALUE	% OF RESERVE
+USD-stable	$12,249,753	74.4%
+EUR-stable	$2,082,513	12.7%
+Volatile (CELO + ETH + stETH)
+Stripped from Stable-Only Coverage
+	$2,130,195	12.9%
+Other	$0	0.0%
+ⓘ Measured-leg scope includes EUROP at EUR/USD and native ETH separately from stETH. Monad ReserveV2 excludes protocol-owned LP collateral. Stable-only includes EUR exposure; it is not all dollar cash.
+Monad Reserve Composition on-chain ReserveV2
+Live ReserveV2 holdings on Monad. Tier-1 (USDC) is the trust anchor; Tier-3 (USDT0) is a bridged dependency.
+ASSET	BALANCE	USD VALUE	BUCKET %	TIER
+USDC	122,647.60	$122,648	12.53%	Tier 1
+AUSD	628,952.67	$628,953	64.27%	Tier 2
+USDT0	227,058.98	$227,059	23.20%	Tier 3
+On-chain ReserveV2: $978,659
+·
+API reports: $1,069,081
+·
+API↔RPC drift 8.46%
+Monad USDm Supply Distribution where does the float sit?
+USDm circulating on Monad: 2,587,081.53 USDm. FX pools (OLS) are largely Mento-seeded today — high in-pool % is expected.
+RLS Pools
+1,523,418.79 USDm (58.89%)
+Stablecoin/USDm liquidity (USDC, AUSD, USDT0)
+OLS Pools
+818,314.23 USDm (31.63%)
+FX/USDm liquidity (GBPm, EURm, JPYm, CHFm)
+Retail / Other
+245,348.51 USDm (9.48%)
+Wallets and non-Mento venues
+Chain Breakdown
+Celo
+Celo (home)
+USDm Supply
+13,446,853.35
+Reserve Debt
+$10,053,679
+Reserve Held
+$3,322,797
+Lost
+70,377.67 USDm
+Monad
+Monad (spoke)
+USDm Supply
+2,587,081.53
+ReserveV2 (on-chain)
+$978,659
+Coverage (gross)
+37.83%
+ReserveV2 ÷ Retail Float (ex-POL)
+398.89%
+The full-supply denominator includes USDm held in Mento-seeded RLS + OLS pools. Ex-POL is a narrower denominator, not a recovery or retail-priority guarantee. Pool-held USDm remains a claim; ReserveV2 excludes LP collateral.
+Ethereum
+Ethereum (cold + ops)
+On-chain reserves
+$12,899,653
+Per Mento API
+$12,890,265
+Scope difference
+$0.01M (0.1%)
+PER-TOKEN (LARGEST FIRST)
+sUSDS @ reserve safe cold
+$4,720,999
+AUSD @ ops safe
+$4,298,163
+USDT @ reserve safe cold
+$1,222,799
+EUROP @ reserve safe cold
+$1,115,500
+EURC @ reserve safe cold
+$762,601
+stETH @ reserve safe cold
+$582,631
+ETH @ reserve safe cold
+$196,961
+USDC @ ops safe
+$0
+Reserve wallets swept directly on-chain (V2 Liquidity Reserve, Reserve Safe Cold, Ops Safe, Rebalancer Bot). Tokens marked absent from API drive the corrected Collateral Ratio above.
+Data Integrity
+Mento API: live
+Monad RPC: live
+Celo RPC: live
+Ethereum RPC: live
+API↔RPC drift 8.46%
+Monad RPC is non-blocking — if down, the on-chain ReserveV2 cross-check is skipped and only the API value is shown above. API↔RPC drift <5% is the expected baseline (pool-resident reserves count in the API but not in the raw RPC balance).
+3
+Liquidity & Exit
+live venue depth & primary redemption
+Authored 5/10
+refreshes daily
+56d old
+mixed · depth feed + risk desk · 5 fields
+⚠️ Depth not published
+Depth scope and measurement limits
+Depth threshold and quote methodology
+Why the report scores liquidity differently
+⚠️ unread blocks: identity, separate_market_observation
+Additional overlay notes (2)
+Liquidity & Exit
+EXIT CAPACITY
+$20.3K
+Depth threshold and quote methodology
+no curve to measure — see exit capacity ⓘ
+MAX ≤25 BPS
+n/a
+POOL TVL
+n/a
+24H VOLUME
+n/a
+not published
+ladder measured 2026-11-01 23:50Z · 3.2h old, not the 56d on the heading — that is the venue sweep ⓘ
+Exit capacity — fixed price mm, bounded by counter asset inventory
+CAPACITY
+$20,336
+the ceiling, not a depth figure ⓘ
+COST, FLAT
+0.70 bps
+same at every size ⓘ
+BOOK
+USDm 40,801
+USDC 20,336
+reserves verified ⓘ
+⚠️ The quoter does not check this ceiling. It returns the same rate however large the ask, so a quote from this venue is not a statement that the trade can be filled — only the book above bounds it.
+celo · 0x462fe04b… · read 2026-11-01 23:50Z
+Primary exit: Mento V3 USDm/USDC FPMM
+Not gated — Public router route. Inventory bounds do not prove executable capacity; remaining two-sided trading allowance and an at-size swap are not simulated.
+Material venuesenumerated 2026-09-07 01:00Z · 56d old ⓘ
+VENUE	CHAIN	STATUS	ROLE
+Mento V3 USDm/USDCmento	celo	live	Canonical Celo exit route measured above; pool balance/TVL is not substituted for depth.
+1 venue confirmed live
+4
+Dependencies
+top 8 of 8 upstream · downstream not tracked
+Dependencies 4/10
+16d old
+mixed · risk desk · 5 fields
+Dependencies
+Why this dependencies score
+2026-10-17 reserve refreshed from issuer collateral list and independent Ethereum balances; Monad wallet-only subtotal is not full reserve collateral. EUROP/native ETH omissions explain most alleged Ethereum API overstatement. Cross-chain USDm bridge availability remains unverified; analyzer false flags are static. Polygon USDC is reserve custody, not evidence of a USDm deployment.
+UPSTREAM — WHAT THIS ASSET DEPENDS ON
+USDC — reserve and exit asset
+material shared-reserve exposure; see October 17 report for scope and balances
+Source & context
+No dashboard
+USDT — Ethereum/Celo reserve holdings
+material shared-reserve exposure; see October 17 report for scope and balances
+Source & context
+No dashboard
+sUSDS — Sky reserve yield position on Ethereum
+dominant shared-reserve exposure; see October 17 report for scope and balances
+Source & context
+No dashboard
+AUSD — Ethereum and Monad reserve holdings
+dominant shared-reserve exposure; see October 17 report for scope and balances
+Source & context
+No dashboard
+USDT0 — Monad reserve holdings
+material shared-reserve exposure; see October 17 report for scope and balances
+Source & context
+No dashboard
+stETH — volatile Ethereum reserve holding
+material shared-reserve exposure; see October 17 report for scope and balances
+Source & context
+No dashboard
+Native ETH — volatile Ethereum reserve holding
+material shared-reserve exposure; see October 17 report for scope and balances
+Source & context
+No dashboard
+EUROP / EURC / axlEUROC / axlUSDC / CELO — reserve assets without reports
+unquantified shared-reserve exposure; see October 17 report for scope and balances
+Source & context
+No dashboard
+About this dependency set
+DOWNSTREAM — WHAT DEPENDS ON THIS ASSET
+Downstream not tracked
+Consumer tracking (Morpho / Pendle / etc.) coming in a future version.
+FX Synthetics on Monad EURm / GBPm / JPYm / CHFm
+Mento's non-USD stablecoins paired with USDm on Monad. >99% pool-resident = seed liquidity dominated (informational, not alarming).
+ASSET	TOTAL SUPPLY	IN USDM POOL	% IN POOL
+EURm	213,212.37	205,793.52	96.52%
+GBPm	92,407.73	91,570.13	99.09%
+CHFm	20,790.46	19,239.53	92.54%
+JPYm	4,255,984.92	4,025,480.29	94.58%
+5
+Smart Contract & Admin
+shortest of 10 admin paths · 1 delayed · hand-walk
+Structural 4/10
+56d old
+⚠️ security desk + risk desk · no field in common
+Why this contract score
+Additional overlay notes (1)
+Authority walk — hand-walk
+Delayed: governance 2d. NO established delay: asset-permission (owner), contract-upgrade (eip1967_admin), parameter (owner), custody (reserveManagerSpender, liquidityStrategySpender), custody (safe).
+Walked 2026-09-07
+Authority	Keys	Delay	Topology	Reach
+asset-permission
+Mento Dollar (USDm; rebranded cUSD)
+	owner	⚠️ none	nofm-multisig	full
+contract-upgrade
+USDm token, Mento Reserve (legacy), MentoGovernor/Timelock, ReserveV2
+	eip1967_admin	⚠️ none	nofm-multisig	full
+↳ safe (safe)	4 of 6	⚠️ none	eip1967_admin	full
+↳ timelock (timelock)	—	2d	eip1967_admin	full
+↳ timelock (timelock)	—	2d	eip1967_admin -> ProxyAdmin.owner	full
+↳ safe (safe)	4 of 6	⚠️ none	eip1967_admin -> ProxyAdmin.owner	full
+governance
+MentoGovernor / TimelockController
+	timelock	2d · no floor	timelocked	full
+parameter
+Mento Reserve (legacy/shared) and ReserveV2
+	owner	⚠️ none	nofm-multisig	full
+↳ timelock (timelock)	—	2d	owner / asset whitelist / spender configuration	full
+↳ safe (safe)	4 of 6	⚠️ none	owner / asset and spender registration	full
+custody
+ReserveV2
+	reserveManagerSpender, liquidityStrategySpender	⚠️ none	nofm-multisig	full
+asset-permission
+Mento Dollar (USDm StableTokenSpoke)
+	owner	⚠️ none	nofm-multisig	full
+contract-upgrade
+USDm StableTokenSpoke, ReserveV2
+	eip1967_admin	⚠️ none	nofm-multisig	full
+parameter
+ReserveV2
+	owner	⚠️ none	nofm-multisig	full
+custody
+ReserveV2
+	reserveManagerSpender, liquidityStrategySpender	⚠️ none	nofm-multisig	full
+custody
+Mento Reserve holding wallet
+	safe	⚠️ none	nofm-multisig	full
+⚠️ Not established — 7 items: Celo USDm minter, burner, and operator m · Celo legacy Reserve isSpender is non-enu · Celo TimelockController roles are not en · Monad USDm minter/burner mappings are no · No Wormhole NTT manager or transceiver i · Off-chain signer independence and custod · ⚠️ Safe 0x87647780180b8f55980c7d3ffefe08
+Code & audits — 4 points
+What this score does and does not cover — 3 notes
+Verification trail & walk notes (verbatim, 35 lines)
+Governance
+Celo Timelock — Mento V3 governance upgrade path
+getMinDelay() = 2 days
+Monad Admin — 4-of-6 Safe (observed 2026-10-17; riskAnalyst)
+0x5809...a458 ↗
+No timelock
+Structural concern: Monad admin is a multisig with no timelock. Reserve composition and pool parameters can be changed without a public delay window.
+6
+Issuer
+editorial — subjective axis
+16d old
+mixed · risk desk · 8 fields
+Issuer
+Issuer 6.5/10
+Full issuer assessment
+6 assessment points
+Editorial axis — how this is rated ⓘ
+Read the full risk report →
+Data refreshes every hour. Dashboard auto-refreshes every 5 minutes.

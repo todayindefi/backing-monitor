@@ -1,0 +1,371 @@
+{
+  "schema_version": "contract/1",
+  "asset": "apyusd",
+  "producer": "security_analyst",
+  "as_of": "2026-09-10",
+  "generated_at": "2026-11-02T03:13:10Z",
+  "contract": {
+    "headline": "No authority layer is fully delayed — every measured layer contains at least one path with no established delay. Delays of 4h, 24h, 72h and 7d are measured on OTHER paths inside those same layers, and do not bound the undelayed ones.",
+    "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
+    "method": "hand-walk",
+    "observed_at": "2026-09-10",
+    "source_file": "security_analyst/topology/assets/apyusd.yaml",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "observed_at": "2026-09-10",
+        "walked_by": "hand",
+        "target_name": "apyUSD and current UnlockReceipt proxies",
+        "terminal_name": "Apyx MAINTAINER Safe / ADMIN Safe",
+        "topology": "mixed",
+        "keys": [
+          "authority",
+          "upgradeToAndCall"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "role_admin": {
+          "holder": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+          "kind": "safe",
+          "via": "ADMIN_ROLE 0 administers roles 21-25 and the manager's own target config",
+          "shortest_route_to_vault": "72h",
+          "note": "Measured 2026-09-10. getRoleAdmin(21..25) is all 0, so the ADMIN Safe can re-point the vault's own upgrade gate. Three routes, and none is immediate: setTargetFunctionRole(vault, upgradeToAndCall, 0) is ADMIN-restricted with an operation delay of getTargetAdminDelay(vault) = 259200s, so it must be scheduled 72h ahead, after which a role-0 member upgrades with no further delay; grantRole(24, self, 0) is immediate to call but getRoleGrantDelay(24) = 604800s sets membership `since` 7 days out; setTargetAdminDelay(vault, 0) takes effect only after minSetback = 432000s (5 days). 72h is therefore the SHORTEST path by which the ADMIN Safe reaches the apyUSD vault, which is the same 72h the MAINTAINER Safe already faces. The 72h on this layer is NOT bypassable for the vault; it is bypassed only for the receipt contract."
+        },
+        "paths": [
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 24 -> upgradeToAndCall",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "72h",
+            "timelock_floor": "72h",
+            "delay_applies": true,
+            "reach": "full",
+            "hand_walk": "name/symbol identify apyUSD and asset() returns apxUSD. authority() returns the shared manager; the implementation is verified ApyUSD at 0xfd616567ecc1607f61073951a1e822f7315bb112. Role 24 and the vault target-admin delay are both 259200 seconds."
+          },
+          {
+            "holder": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "name": "Apyx ADMIN Safe",
+            "name_verified": true,
+            "via": "UnlockReceipt ADMIN_ROLE 0 -> upgradeToAndCall",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "bounded",
+            "reach_bound": "the UnlockReceipt contract only; the apyUSD vault and apxUSD are not reachable by this path",
+            "hand_walk": "RE-DERIVED 2026-09-10 at block 25,940,933; the earlier basis (\"its upgrade selector maps to role 0 with zero delay\") is WITHDRAWN as a non-discriminating read — getTargetFunctionRole returns 0 for every selector on this proxy AND for fabricated selector 0xdeadbeef AND for 0x...dEaD, which has no code. What discriminates: authority() on receipt proxy 0x9bf51f33955ec70f87c4b5c49441815589043237 returns this AccessManager, where 0x...dEaD errors (no code) and the unmanaged apxUSD implementation 0xdd71fd677fde2ed2579a3c45204f41a11016ccb4 returns 0x0. Its ERC-1967 slot holds verified implementation 0x54f1c7ffe10bc392f08ae9432a7e21a6e86bb982, whose _authorizeUpgrade carries OpenZeppelin's `restricted` modifier, so the manager is a real gate and roleId 0 means ADMIN_ROLE members only, not \"ungated\". hasRole(0, ADMIN Safe) is true with execution delay 0, while the MAINTAINER Safe, 0x...dEaD and 0x...0001 are all false — that read discriminates on the holder axis. The membership is an explicit grant, not a default: getAccess(0, ADMIN Safe) returns since=1774281275 (2026-03-23T15:54:35Z), and the manager's verified source writes `since` only in _grantRole, with hasRole special-casing PUBLIC_ROLE but NOT ADMIN_ROLE. getRoleGrantDelay(0)=604800 is a GRANT delay, not an execution delay, and is not recorded as a timelock. REACH IS BOUNDED TO THE RECEIPT: getTargetFunctionRole(apyUSD vault, upgradeToAndCall) is 24 and hasRole(24, ADMIN Safe) is false, so this zero-delay path does not reach the vault or apxUSD. The ADMIN Safe does reach the vault, but only through the manager's own admin surface at 72h — recorded on this layer as role_admin, not here, because it is a different path with a different delay."
+          }
+        ]
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "observed_at": "2026-09-10",
+        "walked_by": "hand",
+        "target_name": "apyUSD vault and current UnlockReceipt",
+        "terminal_name": "MAINTAINER Safe / ADMIN Safe",
+        "topology": "mixed",
+        "keys": [
+          "pause",
+          "unpause"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "vault role 21 -> pause",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "vault role 22 -> unpause",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "4h",
+            "timelock_floor": "4h",
+            "delay_applies": true,
+            "reach": "full"
+          },
+          {
+            "holder": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "name": "Apyx ADMIN Safe",
+            "name_verified": true,
+            "via": "UnlockReceipt ADMIN_ROLE 0 -> pause / unpause",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "RE-DERIVED 2026-09-10 at block 25,940,933. The earlier basis is WITHDRAWN on both halves: \"tested restricted selectors map to root role 0\" does not discriminate (0x...dEaD with a fabricated selector returns the same 0), and \"the receipt target-admin delay is zero\" is the wrong quantity as well as non-discriminating — getTargetAdminDelay delays manager admin operations on a target, not restricted calls, and it returns 0 for 0x...dEaD too. What stands: pause() 0x8456cb59 and unpause() 0x3f4ba83a both carry `restricted` in verified implementation 0x54f1c7ffe10bc392f08ae9432a7e21a6e86bb982, the proxy's authority() is this AccessManager, and hasRole(0, ADMIN Safe) is true with execution delay 0 against false for the MAINTAINER Safe and for 0x...dEaD. The vault and receipt were both unpaused at the pinned block, and verified code makes pause block mint and claim with no holder emergency-exit bypass. Reach is the receipt; pause on the apyUSD vault itself is role 21, which the ADMIN Safe does not hold."
+          }
+        ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "observed_at": "2026-09-10",
+        "walked_by": "hand",
+        "target_name": "apyUSD vault and unlock parameters",
+        "terminal_name": "MAINTAINER Safe / ADMIN Safe",
+        "topology": "mixed",
+        "keys": [
+          "setUnlockReceipt",
+          "setUnlockingFee",
+          "setFeeCurve",
+          "setFeeWallet",
+          "setVesting",
+          "setDenyList"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 21 -> setUnlockReceipt",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 23 -> unlocking fee / deny-list",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "24h",
+            "timelock_floor": "24h",
+            "delay_applies": true,
+            "reach": "bounded"
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 24 -> vesting / vault fee wallet",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "72h",
+            "timelock_floor": "72h",
+            "delay_applies": true,
+            "reach": "full"
+          },
+          {
+            "holder": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "name": "Apyx ADMIN Safe",
+            "name_verified": true,
+            "via": "UnlockReceipt ADMIN_ROLE 0 -> setFeeCurve / setFeeWallet",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "threshold": 4,
+            "owners": 6,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full",
+            "hand_walk": "RE-DERIVED 2026-09-10 at block 25,940,933. apyUSD 0x38eeb52f...fe8a6a returns receipt() 0x9bf51f33955ec70f87c4b5c49441815589043237, whose asset()/vault() are apxUSD 0x98a878b1...674665 and apyUSD respectively. The live curve is 0 minimum fee, 3.4% maximum fee, 3-day minimum and 20-day maximum duration, and verified source says curve changes affect in-flight receipts. \"role 0 is immediate\" is re-established rather than assumed: setFeeCurve 0xa462aaa4 and setFeeWallet 0x90d49b9d both carry `restricted`, the proxy's authority() is this AccessManager, and hasRole(0, ADMIN Safe) is true with execution delay 0 while the MAINTAINER Safe and 0x...dEaD are false. The role-0 mapping itself was NOT taken as evidence — getTargetFunctionRole returns 0 for fabricated selectors and for 0x...dEaD alike."
+          }
+        ]
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "observed_at": "2026-09-09",
+        "walked_by": "hand",
+        "target_name": "apyUSD administrative burn and CCIP registration",
+        "terminal_name": "Apyx MAINTAINER Safe",
+        "topology": "nofm-multisig",
+        "n": 4,
+        "m": 7,
+        "keys": [
+          "burnWithAssets",
+          "setCCIPAdmin"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "full",
+        "impl_upgradeable": true,
+        "paths": [
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 21 -> burnWithAssets",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "full"
+          },
+          {
+            "holder": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "name": "Apyx MAINTAINER Safe",
+            "name_verified": true,
+            "via": "role 25 -> setCCIPAdmin",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "threshold": 4,
+            "owners": 7,
+            "timelock": "7d",
+            "timelock_floor": "7d",
+            "delay_applies": true,
+            "reach": "full"
+          }
+        ]
+      }
+    ],
+    "unresolved": [
+      "Ethereum unlock processing was checked: the live UnlockReceipt at 0x9bf51f33955ec70f87c4b5c49441815589043237 has no privileged queue processor; each receipt owner claims its own matured receipt. The supplied 0x93775e2dfa4e716c361a1f53f212c7ae031bf4e6 UnlockToken is deprecated, still reports a 20-day delay, and remains governed through the pause and parameter paths above rather than being presented as the current queue.",
+      "ethereum complete AccessManager role populations are not asserted. Direct reads establish the named Safe memberships and selector delays, but tested role-enumeration getters revert.",
+      "base: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "bnb: declared deployment not hand-walked. No authority, delay, or supply share is inferred from Ethereum.",
+      "The attestation Safe and signing key were not treated as authority roots. Direct role checks did not establish them as holders of tested AccessManager roles; attestation context is not administration."
+    ],
+    "authority_shared_with": [
+      {
+        "asset": "apxusd",
+        "shares": [
+          {
+            "kind": "access-manager",
+            "address": "0xe167330e2eac88666de253e9607c6d9ae0ca2824",
+            "delay": "72h",
+            "roles": [
+              "ethereum-authority",
+              "target-admin"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xabdd8c8ee69e5f5180eb9352aeffc5ceead65e96",
+            "n": 4,
+            "m": 6,
+            "delay": "none",
+            "roles": [
+              "root-admin"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "none",
+            "roles": [
+              "pause",
+              "maintenance"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "4h",
+            "roles": [
+              "unpause"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "24h",
+            "roles": [
+              "parameters"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "72h",
+            "roles": [
+              "upgrade"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0xf9862efc1704ac05e687f66e5cd8c130e5663ce2",
+            "n": 4,
+            "m": 7,
+            "delay": "7d",
+            "roles": [
+              "ccip-admin-rotation"
+            ]
+          }
+        ]
+      }
+    ],
+    "review": null,
+    "walk_notes": [
+      "Hand-walked at Ethereum block 25,940,505 using read-only calls. This replaces",
+      "refused generator output and distinguishes the live receipt from the legacy queue.",
+      "",
+      "2026-09-10: the three Apyx ADMIN Safe paths were RE-DERIVED at block 25,940,933.",
+      "Their original evidence — getTargetFunctionRole returning role 0 — does not",
+      "discriminate: a burn address with a fabricated selector returns the same 0. The",
+      "paths survive on different evidence (the target's authority() plus the verified",
+      "`restricted` modifiers plus hasRole on the holder axis); the reads that failed and",
+      "the controls that discriminate are in audits/apyusd-role0-rederive-2026-09-10.md."
+    ]
+  }
+}

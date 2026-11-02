@@ -1,0 +1,857 @@
+{
+  "schema_version": 2,
+  "schema_transition": {
+    "from": 1,
+    "to": 2,
+    "effective": "2026-10-15",
+    "reason": "Schema 1 compared all reserve holdings with totalAssets(), which counts alternative assets only under implementation 0x496a4A33\u2026702c (live since 2026-08-19), and so reported a 1:1 PYUSDx reserve as 100% unaccounted.",
+    "retired": {
+      "summary.accounting_divergence_usd": "Removed. Replaced by summary.backing_shortfall_usd.",
+      "summary.accounting_divergence_pct_of_supply": "Removed. Shortfall flags state their own % of supply.",
+      "summary.contract_total_assets_usd": "Renamed summary.alternative_assets_accounted_usd (same totalAssets() read).",
+      "backing.breakdown[].tags 'not_contract_allowlisted'": "Removed. Tags now carry the asset's role: 'primary_asset' or 'alternative_asset'. isAllowedAsset() remains in detail.allowed_by_contract with its meaning.",
+      "trust_stack.implementation_published": "Kept, now the reviewed baseline; see trust_stack.implementation_status / _history.",
+      "risk_flags 'USDat accounting divergence: \u2026'": "Retired. Replaced by 'USDat primary backing shortfall', 'USDat alternative backing shortfall', 'USDat alternative backing unidentified' and 'USDat accounting reads incomplete'.",
+      "risk_flags 'USDat implementation drifted from published: \u2026'": "Retired. Replaced by 'USDat implementation drifted from reviewed baseline' and 'USDat implementation runtime changed at reviewed address'."
+    },
+    "added": [
+      "accounting",
+      "coverage_qualifications",
+      "summary.accounting_status",
+      "summary.accounting_model",
+      "summary.implementation_status",
+      "summary.alternative_assets_accounted_usd",
+      "summary.alternative_assets_unidentified_usd",
+      "summary.primary_backing_required_usd",
+      "summary.primary_backing_held_usd",
+      "summary.primary_backing_shortfall_usd",
+      "summary.primary_backing_coverage_ratio",
+      "summary.backing_shortfall_usd",
+      "summary.backing_assets_unread",
+      "asset_specific.composition.*.role",
+      "asset_specific.composition.*.contract_asset_cap"
+    ],
+    "history": "usdat_backing_history.json no longer exports accounting_divergence_usd; raw rows in backing_history.json keep it. New shortfall columns are null before 2026-10-15 (not computed, not zero)."
+  },
+  "asset": "USDat",
+  "asset_slug": "usdat",
+  "chain": "ethereum",
+  "timestamp": "2026-11-02T02:46:51Z",
+  "as_of": "2026-11-02T02:46:51Z",
+  "block_number": 26324189,
+  "summary": {
+    "supply_usd": 108111830.81,
+    "backing_total_usd": 108111830.81,
+    "backing_ratio": 1.0,
+    "net_buffer_usd": 0.0,
+    "backing_basis": "raw_token_holdings",
+    "supply_scope": "ethereum_only",
+    "supply_scope_note": "Supply and backing are both read on Ethereum. The rated ratio is an Ethereum statement. Global supply and the chains it spans are in asset_specific.multi_chain; the BSC leg exposes no backing accessor, so its backing is UNREAD, not absent.",
+    "global_supply_usd": null,
+    "global_supply_note": "Ethereum bridges by LockRelease and BSC by BurnMint, so Ethereum's totalSupply already contains the bridged portion and summing chains would double-count. See asset_specific.multi_chain for the locked balance and the per-chain figures that ARE measured.",
+    "accounting_status": "assessed",
+    "accounting_model": "multimint_pyusdx_primary_v1",
+    "implementation_status": "reviewed",
+    "alternative_assets_accounted_usd": 0.0,
+    "alternative_assets_unidentified_usd": 0.0,
+    "primary_backing_required_usd": 108111830.809784,
+    "primary_backing_held_usd": 108111830.809784,
+    "primary_backing_shortfall_usd": 0.0,
+    "primary_backing_coverage_ratio": 1.0,
+    "backing_shortfall_usd": 0.0,
+    "backing_assets_unpriceable": [],
+    "backing_assets_unread": [],
+    "peg_curve_usdc": 0.999253,
+    "peg_deviation_pct": -0.0747,
+    "paused": false,
+    "implementation": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
+    "admin_role_holder": "0xfD5782E3BFF366601da3973aE30C583dE4F08A67",
+    "admin_role_holder_kind": "timelock",
+    "admin_eoa_nonce": 40,
+    "liquidity_depth_derived": {
+      "score": 3.0,
+      "as_of": "2026-11-02T02:46:51Z",
+      "components": {
+        "depth_tier": 4.5,
+        "effective_max_under_25bps_usd": 59892,
+        "peg_band_30d_bps": 24.76,
+        "peg_band_30d_partial": false,
+        "peg_adj": 0.5,
+        "deep_venues_count": 1,
+        "venue_adj": -1.0,
+        "turnover_ratio_24h": 0.1389,
+        "turnover_adj": 0.5,
+        "pool_supply_ratio": 0.0111,
+        "pool_adj": -1.5
+      }
+    },
+    "liquidity_depth_derived_score": 3.0
+  },
+  "risk_flags": [],
+  "accounting": {
+    "implementation": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
+    "implementation_status": "reviewed",
+    "implementation_runtime_keccak256": "0x3714895307e431cc890645e430d74d07c4d5ac7d101ae763e5d16f2844f9aadc",
+    "implementation_runtime_matches_review": true,
+    "accounting_model": "multimint_pyusdx_primary_v1",
+    "status": "assessed",
+    "status_detail": null,
+    "unit": "USDat token units (6dp); par is not verified",
+    "semantics": {
+      "totalAssets()": "USDat units minted against ALTERNATIVE assets only. Primary PYUSDx is excluded by design, so 0 is the normal value for an all-PYUSDx reserve.",
+      "primary_backing_required": "totalSupply() - totalAssets(), floored at 0: the contract's _pyusdxBacking(), the PYUSDx it must hold. Unwraps beyond it revert.",
+      "isAllowedAsset(asset)": "assetCap(asset) != 0: whether an ALTERNATIVE asset may be wrapped. False for PYUSDx is expected; the primary asset has no cap.",
+      "assetBalanceOf(asset)": "Units of that alternative asset the contract records as backing.",
+      "yield()": "PYUSDx above primary_backing_required plus PYUSDx-level accrued yield; claimable by the yield recipient, not backing."
+    },
+    "evidence": [
+      "https://tidresearch.com/evidence/saturn/usdat-reassessment-2026-10-14.json",
+      "https://github.com/saturn-organization/saturn-dollar",
+      "riskAnalyst data/research/usdat-technical-2026-10-14/MultiMint.sol"
+    ],
+    "reviewed_at": "2026-10-15",
+    "primary": {
+      "asset": "0xeBDB0942cE16386Ab90718C7BD10C91CDb66b14d",
+      "symbol": "PYUSDx",
+      "held_units": 108111830.809784,
+      "required_units": 108111830.809784,
+      "required_basis": "totalSupply() - totalAssets(), floored at 0 (_pyusdxBacking)",
+      "excess_units": 0.0,
+      "shortfall_units": 0.0,
+      "coverage_ratio": 1.0,
+      "pending_yield_units": 30068.88463,
+      "pending_yield_note": "yield(): PYUSDx above required plus PYUSDx-level accrued yield, claimable by the yield recipient; not backing.",
+      "alternative_cap_raw": 0
+    },
+    "alternatives": {
+      "accounted_units": 0.0,
+      "accounted_basis": "totalAssets(): USDat minted against alternative assets",
+      "identified_units": 0.0,
+      "unidentified_units": 0.0,
+      "checked_assets": [
+        "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+        "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+      ],
+      "enumeration_note": "Alternatives are not enumerable on-chain; checked the contract-declared assets plus M and USDC.",
+      "assets": [
+        {
+          "asset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+          "symbol": "USDC",
+          "cap_units": 10000000.0,
+          "allowed_by_contract": true,
+          "recorded_units": 0.0,
+          "held_units": 0.0,
+          "shortfall_units": 0.0,
+          "excess_units": 0.0
+        }
+      ]
+    },
+    "shortfall_units": 0.0
+  },
+  "coverage_qualifications": [
+    {
+      "topic": "par_mark",
+      "statement": "Coverage is token units with every asset marked at par. It is not a verified dollar figure."
+    },
+    {
+      "topic": "upstream_reserves_custody",
+      "statement": "PYUSDx's reserves and custody sit upstream of USDat at the M^0/PYUSD layer, which this analyzer does not walk."
+    },
+    {
+      "topic": "primary_exit_eligibility",
+      "statement": "Wrap and unwrap go through the SwapFacility and, while isWhitelistEnabled() is true, require a whitelisted account. Unwrapping to PYUSDx is not a redemption route for every holder."
+    },
+    {
+      "topic": "bridge_reconciliation",
+      "statement": "Ethereum supply includes USDat locked in the CCIP pool for other chains. Remote supply has not been reconciled against the locked balance at a common time, so global coverage is unresolved."
+    },
+    {
+      "topic": "dependency_audit_parity",
+      "statement": "The USDat main file matches the audit-final commit. Audit parity for every dependency is not established."
+    }
+  ],
+  "asset_specific": {
+    "type": "usdat",
+    "multi_chain": {
+      "ethereum": {
+        "address": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+        "supply": 108111830.81,
+        "backing_usd": 108111830.81,
+        "backing_readable_on_chain": true
+      },
+      "bsc": {
+        "supply": 157861.443798,
+        "implementation": "0x65458213bb2398f968ca1760b806956966b9adac",
+        "address": "0x0bB150dFA86ea5D7742f07feFcd8e8EdA81d64EF",
+        "bridge": "ccip_burn_mint",
+        "backing_readable_on_chain": false,
+        "implementation_matches_baseline": true
+      },
+      "ethereum_locked_in_bridge_pool": 68770685.02,
+      "ethereum_locked_pct_of_supply": 63.6107,
+      "global_supply": null,
+      "holder_concentration": {
+        "top_holders": [
+          {
+            "address": "0xa0de671eb84de9dee1d311d996d25c41f63a0d86",
+            "balance": 68770685.02,
+            "pct_of_supply": 63.6107,
+            "role": "CCIP LockRelease bridge pool",
+            "is_contract": true,
+            "unlabelled_contract": false
+          },
+          {
+            "address": "0x7a7de491e1be5287874904e2b7c8488249a4d0a9",
+            "balance": 31062686.6,
+            "pct_of_supply": 28.732,
+            "role": "Pendle SY-USDat wrapper",
+            "is_contract": true,
+            "unlabelled_contract": false
+          },
+          {
+            "address": "0xecf9dea79f1df6fc4c28ed47e4b86f0d7cd4b4c3",
+            "balance": 5000017.0,
+            "pct_of_supply": 4.6249,
+            "role": null,
+            "is_contract": false,
+            "unlabelled_contract": false
+          },
+          {
+            "address": "0xb3c29aa9196785f0aa5eca6cb0bcf1e92d83a468",
+            "balance": 708080.32,
+            "pct_of_supply": 0.655,
+            "role": null,
+            "is_contract": false,
+            "unlabelled_contract": false
+          },
+          {
+            "address": "0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
+            "balance": 691068.92,
+            "pct_of_supply": 0.6392,
+            "role": "Curve USDC/USDat pool",
+            "is_contract": true,
+            "unlabelled_contract": false
+          },
+          {
+            "address": "0xd166337499e176bbc38a1fbd113ab144e5bd2df7",
+            "balance": 530269.51,
+            "pct_of_supply": 0.4905,
+            "role": "sUSDat vault",
+            "is_contract": true,
+            "unlabelled_contract": false
+          },
+          {
+            "address": "0x3dc0aa75a6fd01c3dcf9f6fdaf08308b6489f5b5",
+            "balance": 449312.93,
+            "pct_of_supply": 0.4156,
+            "role": null,
+            "is_contract": false,
+            "unlabelled_contract": false
+          },
+          {
+            "address": "0x0c944ef7ba8f75da6ae4499c5d1754fbc8bd5133",
+            "balance": 352585.76,
+            "pct_of_supply": 0.3261,
+            "role": null,
+            "is_contract": false,
+            "unlabelled_contract": false
+          },
+          {
+            "address": "0xd889c65b7c7338940eb9d70a6aa725ee6225e7c5",
+            "balance": 91465.29,
+            "pct_of_supply": 0.0846,
+            "role": null,
+            "is_contract": false,
+            "unlabelled_contract": false
+          },
+          {
+            "address": "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
+            "balance": 69428.16,
+            "pct_of_supply": 0.0642,
+            "role": null,
+            "is_contract": true,
+            "unlabelled_contract": true
+          }
+        ],
+        "holder_count": 1472,
+        "top_1_pct": 4.6249,
+        "top_5_pct": 6.1062,
+        "top_10_pct": 6.1704,
+        "structural_holders_excluded": [
+          "0xa0de671eb84de9dee1d311d996d25c41f63a0d86",
+          "0x7a7de491e1be5287874904e2b7c8488249a4d0a9",
+          "0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
+          "0xd166337499e176bbc38a1fbd113ab144e5bd2df7"
+        ],
+        "unlabelled_contracts": [
+          {
+            "address": "0x4bc9fec04f0f95e9b42a3ef18f3c96fb57923d2e",
+            "pct_of_supply": 0.0642
+          }
+        ],
+        "unlabelled_contract_note": "Contracts in the top holders with no role label. They are counted as POSITIONS here, which overstates concentration if they are in fact structural (a pool, a vault, a bridge). \u26a0\ufe0f KNOWN_ROLES is hardcoded and nothing else reports when it falls behind; this is the prompt.",
+        "basis": "Balances reconstructed from Transfer logs since deployment block 24,608,744; the holder set is not enumerable on-chain (isWhitelisted is a lookup, and this deployment exposes no whitelistedCount/getWhitelist). Percentages are of the Ethereum supply only \u2014 see summary.supply_scope."
+      },
+      "note": "\u26a0\ufe0f ASYMMETRIC BRIDGE. Ethereum's pool (0xa0de671e\u20260d86) is CCIP LockReleaseTokenPool 1.6.1; the BSC pool (0x904939a9\u20260c61) is BurnWithFromMintTokenPool 1.6.1. Ethereum LOCKS and the destination MINTS, so Ethereum's totalSupply already contains the bridged portion and summing the chains would DOUBLE-COUNT it. An earlier version of this field published such a sum, having read the BSC pool's type and assumed Ethereum's. ethereum_locked_in_bridge_pool is the part of Ethereum supply that no account holds. Global circulating supply is UNRESOLVED. TO ESTABLISH IT: reconcile every destination chain's minted supply against this pool's locked balance \u2014 two chain selectors are configured and only one is identified, and the locked balance far exceeds the known remote mints, which is either more destinations or liquidity provided for return trips."
+    },
+    "composition": {
+      "M": {
+        "balance": 0.0,
+        "pct_of_supply": 0.0,
+        "address": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+        "verifiable": "onchain",
+        "par_assumed": true,
+        "role": "declared_inactive",
+        "declared_by_contract": true,
+        "allowed_by_contract": false,
+        "allowed_by_contract_meaning": "isAllowedAsset(): alternative-asset cap is non-zero",
+        "contract_asset_balance": 0.0,
+        "contract_asset_cap": 0.0
+      },
+      "PYUSDx": {
+        "balance": 108111830.81,
+        "pct_of_supply": 1.0,
+        "address": "0xeBDB0942cE16386Ab90718C7BD10C91CDb66b14d",
+        "verifiable": "onchain",
+        "par_assumed": true,
+        "role": "primary",
+        "declared_by_contract": true,
+        "allowed_by_contract": false,
+        "allowed_by_contract_meaning": "isAllowedAsset(): alternative-asset cap is non-zero",
+        "contract_asset_balance": 0.0,
+        "contract_asset_cap": 0.0
+      },
+      "USDC": {
+        "balance": 0.0,
+        "pct_of_supply": 0.0,
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "verifiable": "onchain",
+        "par_assumed": true,
+        "role": "alternative",
+        "declared_by_contract": false,
+        "allowed_by_contract": true,
+        "allowed_by_contract_meaning": "isAllowedAsset(): alternative-asset cap is non-zero",
+        "contract_asset_balance": 0.0,
+        "contract_asset_cap": 10000000.0
+      },
+      "OTHER": [
+        {
+          "symbol": "AIMevBot.com",
+          "address": "0x06B9A0cf7dAEAEC447a36BE7b90baDA4B8c96EFE",
+          "units": 1000.0,
+          "flagged": false
+        },
+        {
+          "symbol": "AIFreeUse.cc",
+          "address": "0x13F52241B2B6829401f459aE7219483D25fd96e2",
+          "units": 1000.0,
+          "flagged": false
+        },
+        {
+          "symbol": "AIFreeUse.cc",
+          "address": "0x4A3f71219508B3b9033D21e99bA0443d691bbE8D",
+          "units": 1000.0,
+          "flagged": false
+        },
+        {
+          "symbol": "yRise",
+          "address": "0x6051C1354Ccc51b4d561e43b02735DEaE64768B8",
+          "units": 9e-05,
+          "flagged": false
+        },
+        {
+          "symbol": "AIFreeUse.cc",
+          "address": "0xb1c719FB5687e221f165AE617802FB6b7317Fd37",
+          "units": 1000.0,
+          "flagged": false
+        },
+        {
+          "symbol": "AIFreeUse.pro",
+          "address": "0xd26B998b876dfdc12F1Ba486Ab06F8598FE27587",
+          "units": 1000.0,
+          "flagged": false
+        },
+        {
+          "symbol": "FiFaAI.cc",
+          "address": "0xdf40b862465cB3C963FEab7e235519e37D9eB347",
+          "units": 1000.0,
+          "flagged": false
+        },
+        {
+          "symbol": "WorldCupAI.pro",
+          "address": "0xE03ca22ee8EaF4FD1eF97286F2aD4F671e0aa1bF",
+          "units": 1000.0,
+          "flagged": false
+        },
+        {
+          "symbol": "AIMevBot.cc",
+          "address": "0xf6D59AF673D6aa277e31d6FA765C6f3Bd0A74CB5",
+          "units": 1000.0,
+          "flagged": false
+        }
+      ]
+    },
+    "drift_probe": {
+      "allowlist": [
+        "M",
+        "USDC"
+      ],
+      "scanner": "alchemy_getTokenBalances",
+      "non_allowlist_holdings": [
+        {
+          "address": "0x06B9A0cf7dAEAEC447a36BE7b90baDA4B8c96EFE",
+          "symbol": "AIMevBot.com",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "price_usd": null,
+          "value_usd": null,
+          "unpriced": true,
+          "material_unpriced": false,
+          "flagged": false
+        },
+        {
+          "address": "0x13F52241B2B6829401f459aE7219483D25fd96e2",
+          "symbol": "AIFreeUse.cc",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "price_usd": null,
+          "value_usd": null,
+          "unpriced": true,
+          "material_unpriced": false,
+          "flagged": false
+        },
+        {
+          "address": "0x4A3f71219508B3b9033D21e99bA0443d691bbE8D",
+          "symbol": "AIFreeUse.cc",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "price_usd": null,
+          "value_usd": null,
+          "unpriced": true,
+          "material_unpriced": false,
+          "flagged": false
+        },
+        {
+          "address": "0x6051C1354Ccc51b4d561e43b02735DEaE64768B8",
+          "symbol": "yRise",
+          "decimals": 18,
+          "raw": "90000000000000",
+          "units": 9e-05,
+          "price_usd": 1.93,
+          "value_usd": 0.0001737,
+          "unpriced": false,
+          "material_unpriced": false,
+          "flagged": false
+        },
+        {
+          "address": "0xb1c719FB5687e221f165AE617802FB6b7317Fd37",
+          "symbol": "AIFreeUse.cc",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "price_usd": null,
+          "value_usd": null,
+          "unpriced": true,
+          "material_unpriced": false,
+          "flagged": false
+        },
+        {
+          "address": "0xd26B998b876dfdc12F1Ba486Ab06F8598FE27587",
+          "symbol": "AIFreeUse.pro",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "price_usd": null,
+          "value_usd": null,
+          "unpriced": true,
+          "material_unpriced": false,
+          "flagged": false
+        },
+        {
+          "address": "0xdf40b862465cB3C963FEab7e235519e37D9eB347",
+          "symbol": "FiFaAI.cc",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "price_usd": null,
+          "value_usd": null,
+          "unpriced": true,
+          "material_unpriced": false,
+          "flagged": false
+        },
+        {
+          "address": "0xE03ca22ee8EaF4FD1eF97286F2aD4F671e0aa1bF",
+          "symbol": "WorldCupAI.pro",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "price_usd": null,
+          "value_usd": null,
+          "unpriced": true,
+          "material_unpriced": false,
+          "flagged": false
+        },
+        {
+          "address": "0xf6D59AF673D6aa277e31d6FA765C6f3Bd0A74CB5",
+          "symbol": "AIMevBot.cc",
+          "decimals": 6,
+          "raw": "1000000000",
+          "units": 1000.0,
+          "price_usd": null,
+          "value_usd": null,
+          "unpriced": true,
+          "material_unpriced": false,
+          "flagged": false
+        }
+      ],
+      "dust": [
+        {
+          "address": "0x2b591e99afE9f32eAA6214f7B7629768c40Eeb39",
+          "label": "HEX",
+          "raw": "100000000"
+        }
+      ],
+      "airdrop_dust_count": 9,
+      "airdrop_dust_total_usd": 0.0,
+      "drift_value_threshold_usd": 10000.0,
+      "tier1_drift_flagged": false
+    },
+    "secondary": {
+      "curve_usdat_usdc": {
+        "address": "0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
+        "tvl_usd": 1197842.73,
+        "vol_24h_usd": 166359.860406977,
+        "implied_price": 0.999253,
+        "deviation_pct": -0.0747
+      }
+    },
+    "slippage_tiers": {
+      "usdat_to_usdc": {
+        "1000": {
+          "output_token": 999.250009,
+          "output_usd": 999.25,
+          "slippage_bps": -7.5,
+          "gas_usd": "0.03312352805707557"
+        },
+        "10000": {
+          "output_token": 9992.149324,
+          "output_usd": 9992.15,
+          "slippage_bps": -7.85,
+          "gas_usd": "0.03313622662163596"
+        },
+        "100000": {
+          "output_token": 99881.445795,
+          "output_usd": 99881.45,
+          "slippage_bps": -11.86,
+          "gas_usd": "0.03313622662163596"
+        },
+        "500000": {
+          "output_token": 492698.763596,
+          "output_usd": 492698.76,
+          "slippage_bps": -146.02,
+          "gas_usd": "0.06641910893734475"
+        },
+        "1000000": {
+          "output_token": 555991.020476,
+          "output_usd": 555991.02,
+          "slippage_bps": -4440.09,
+          "gas_usd": "0.155455597616406"
+        },
+        "2000000": {
+          "output_token": 556811.03171,
+          "output_usd": 556811.03,
+          "slippage_bps": -7215.94,
+          "gas_usd": "0.20368230141985072"
+        },
+        "5000000": {
+          "output_token": 525199.769902,
+          "output_usd": 525199.77,
+          "slippage_bps": -8949.6,
+          "gas_usd": "0.20146203011651412"
+        }
+      }
+    },
+    "trust_stack": {
+      "proxy_type": "TransparentUpgradeableProxy",
+      "implementation": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
+      "implementation_published": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
+      "implementation_reviewed": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
+      "implementation_status": "reviewed",
+      "implementation_history": [
+        {
+          "implementation": "0x17cAC25c6D6BBcB592837FEA083A5c8Eb4D1E52E",
+          "status": "superseded",
+          "accounting_model": null,
+          "accounting_model_note": "Legacy M-backed JMIExtension; accounting not assessed by this analyzer.",
+          "active_until_block": 25789910
+        },
+        {
+          "implementation": "0x496a4A33b6181F4536203488d9a05AC1429E702c",
+          "status": "reviewed",
+          "accounting_model": "multimint_pyusdx_primary_v1",
+          "adopted_at_block": 25789911,
+          "adopted_at": "2026-08-19T15:00:11Z",
+          "runtime_keccak256": "0x3714895307e431cc890645e430d74d07c4d5ac7d101ae763e5d16f2844f9aadc",
+          "reviewed_at": "2026-10-15",
+          "evidence": [
+            "https://tidresearch.com/evidence/saturn/usdat-reassessment-2026-10-14.json",
+            "https://github.com/saturn-organization/saturn-dollar",
+            "riskAnalyst data/research/usdat-technical-2026-10-14/MultiMint.sol"
+          ]
+        }
+      ],
+      "proxy_admin_contract": "0xcf1072DA5f0D127AEf99136489BAd08bFa3D1A7D",
+      "proxy_admin_owner": "0xfD5782E3BFF366601da3973aE30C583dE4F08A67",
+      "proxy_admin_owner_kind": "timelock",
+      "proxy_admin_owner_is_eoa": false,
+      "proxy_admin_owner_is_saturn_eoa": false,
+      "upgrade_authority_path": "proxy_admin_owner",
+      "admin_role_holder": "0xfD5782E3BFF366601da3973aE30C583dE4F08A67",
+      "admin_role_holder_label": "timelock",
+      "admin_role_holder_kind": "timelock",
+      "admin_role_held": true,
+      "admin_role_holder_resolved": true,
+      "admin_role_holder_unresolved": false,
+      "admin_role_holder_probe_incomplete": false,
+      "admin_role_multiple_holders": false,
+      "admin_role_holders": [
+        {
+          "label": "timelock",
+          "address": "0xfD5782E3BFF366601da3973aE30C583dE4F08A67"
+        }
+      ],
+      "admin_role_candidates_tested": [
+        "0xfD5782E3BFF366601da3973aE30C583dE4F08A67",
+        "0x610182581C93687Ca03F4a8E7f124f8cEC616820",
+        "0xcf1072da5f0d127aef99136489bad08bfa3d1a7d"
+      ],
+      "admin_role_holder_is_eoa": false,
+      "published_eoa_still_holds_admin": false,
+      "timelock": true,
+      "multisig": false,
+      "admin_controller": {
+        "kind": "timelock",
+        "address": "0xfD5782E3BFF366601da3973aE30C583dE4F08A67",
+        "code_size": 5497,
+        "min_delay_seconds": 432000,
+        "min_delay_days": 5.0,
+        "self_administered": true,
+        "operator_holds_timelock_admin": false,
+        "execution_permissionless": true,
+        "delay_binding": true,
+        "operator_is_proposer": true,
+        "operator_is_canceller": true,
+        "operator_address": "0x610182581C93687Ca03F4a8E7f124f8cEC616820",
+        "role_membership_enumerable": false
+      },
+      "timelock_min_delay_seconds": 432000,
+      "timelock_min_delay_days": 5.0,
+      "timelock_delay_binding": true,
+      "timelock_sole_operator_risk": true,
+      "audits": [
+        {
+          "firm": "Three Sigma",
+          "id": "Audit #1"
+        },
+        {
+          "firm": "Certora",
+          "id": "Audit #2"
+        },
+        {
+          "firm": "Certora",
+          "id": "Audit #3"
+        }
+      ]
+    },
+    "admin_eoa": {
+      "address": "0x610182581C93687Ca03F4a8E7f124f8cEC616820",
+      "nonce": 40,
+      "balance_eth": 0.013847044360682424,
+      "code_present": false,
+      "outbound_tx_this_cycle": false
+    },
+    "axis_thresholds": {
+      "backing": {
+        "cr_pct": [
+          100.5,
+          100.0,
+          99.5,
+          99.0
+        ],
+        "basis": "Anchored on design shape, not on an analyzer constant: USDat is a 1:1 PYUSDx-backed reserve, structurally the same as USDai, so par is the design target rather than a floor being approached. The generic [130,110,100,90] rates a fully-reserved asset 3/5 'Watch' at exactly the number it aims for. \u26a0\ufe0f Deliberately NOT anchored on COVERAGE_CRIT_PCT, which guards the Strata tranche floor and is a different quantity.",
+        "anchor_type": "design_parity_with_usdai",
+        "expires": false,
+        "expires_reason": "Par does not drift."
+      }
+    }
+  },
+  "report_url": "https://tidresearch.com/reports/usdat",
+  "peg": {
+    "market_price": 0.999253,
+    "nav": 1.0,
+    "premium_discount_pct": -0.0747,
+    "source": "curve",
+    "history_ref": "usdat_backing_history.json",
+    "history_field": "peg_curve_usdc"
+  },
+  "liquidity": {
+    "as_of": "2026-11-02T02:46:51Z",
+    "total_tvl": 1197842.73,
+    "total_2pct_depth": 500000.0,
+    "total_2pct_depth_is_floor": false,
+    "two_pct_depth_status": "bracketed",
+    "two_pct_depth_bracket": [
+      500000.0,
+      1000000.0
+    ],
+    "two_pct_depth_basis": "The 200bps crossing is BRACKETED between $500,000 (clears) and $1,000,000 (4,440bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
+    "primary_threshold_bps": 200.0,
+    "depth_50bps": {
+      "threshold_bps": 50.0,
+      "depth_usd": 100000.0,
+      "is_floor": false,
+      "status": "bracketed",
+      "bracket": [
+        100000.0,
+        500000.0
+      ],
+      "basis": "The 50bps crossing is BRACKETED between $100,000 (clears) and $500,000 (146bps). Published figure is the last rung that cleared, so the true depth sits inside the bracket and above what is shown. Not interpolated -- rung spacing is too coarse to locate it and the curve is not linear across the gap. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
+    },
+    "volume_24h": null,
+    "exit_mark": {
+      "source": "kyberswap",
+      "sell_into": "USDC",
+      "fair_value": 0.999253,
+      "fair_value_basis": "market",
+      "quotes": {
+        "1000": {
+          "slippage_bps": -7.5,
+          "output_usd": 999.25,
+          "fill_ratio": 0.99925
+        },
+        "10000": {
+          "slippage_bps": -7.85,
+          "output_usd": 9992.15,
+          "fill_ratio": 0.999215
+        },
+        "100000": {
+          "slippage_bps": -11.86,
+          "output_usd": 99881.45,
+          "fill_ratio": 0.998814
+        },
+        "500000": {
+          "slippage_bps": -146.02,
+          "output_usd": 492698.76,
+          "fill_ratio": 0.985398
+        },
+        "1000000": {
+          "slippage_bps": -4440.09,
+          "output_usd": 555991.02,
+          "fill_ratio": 0.555991
+        },
+        "2000000": {
+          "slippage_bps": -7215.94,
+          "output_usd": 556811.03,
+          "fill_ratio": 0.278406
+        },
+        "5000000": {
+          "slippage_bps": -8949.6,
+          "output_usd": 525199.77,
+          "fill_ratio": 0.10504
+        }
+      },
+      "slippage_bps_basis": "ALL-IN COST against notional: (output_usd - size) / size. Includes the venue's base spread, so it is not comparable rung-for-rung with a price-impact figure measured against a venue's own spot rung."
+    },
+    "primary_exit": {
+      "venue": "Saturn redemption router",
+      "into": "USDat reserve assets",
+      "gated": null,
+      "gated_basis": "unmeasured",
+      "gated_note": "\u26a0\ufe0f UNMEASURED, NOT OPEN. Redemption reachability is not probed for this asset, so the Liquidity axis currently rests on the DEX leg alone. TO ESTABLISH IT: a redeem() simulation through the router. \u26a0\ufe0f Note the router is DEMONSTRABLY reachable -- one EOA exited 15.6% of supply through it over 2026-08-21..27 in 108 transactions -- but a past fill is not a current probe, and size is not gating."
+    },
+    "derived_score": 3.0,
+    "derived_score_status": "computed",
+    "pools": [
+      {
+        "venue": "curve",
+        "chain": "ethereum",
+        "pair": "USDat/USDC",
+        "address": "0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
+        "depth_usd": 1197842.73,
+        "volume_24h": 166359.860406977,
+        "implied_price": 0.999253
+      }
+    ]
+  },
+  "backing": {
+    "collateral_ratio": 100.0,
+    "collateral_ratio_scale": "percent",
+    "collateral_ratio_basis": "Ethereum reserve-token holdings / Ethereum USDat supply, read at one block, with every asset marked at PAR. Under the reviewed implementation, totalAssets() counts only alternative assets and PYUSDx must cover the rest of supply; each part is checked against its holding in `accounting`. This is token-unit coverage: PYUSDx's own reserves and custody sit upstream at the M^0 layer, unwalked here, and it is not a redemption route for every holder (see coverage_qualifications). USDat is 1:1 by design: par is the target, not a floor.",
+    "total_backing": 108111830.81,
+    "surplus_deficit": 0.0,
+    "surplus_deficit_basis": "Reserve total minus USDat supply \u2014 the net buffer, which is ~0 by design on a 1:1 mint. \u26a0\ufe0f Whether a subordinated layer sits inside it is NOT ESTABLISHED: USDat itself has no tranche, but its backing moved to PYUSDx and this feed does not measure that structure's capital stack. There is also little to hide in a buffer this size \u2014 the exposure here is the MARK and the mint authority, not surplus composition.",
+    "breakdown": [
+      {
+        "label": "PYUSDx",
+        "value": 108111830.81,
+        "pct": 100.0,
+        "tags": [
+          "par_assumed",
+          "primary_asset"
+        ],
+        "detail": {
+          "verifiable": "onchain",
+          "address": "0xeBDB0942cE16386Ab90718C7BD10C91CDb66b14d",
+          "role": "primary",
+          "declared_by_contract": true,
+          "allowed_by_contract": false,
+          "allowed_by_contract_meaning": "isAllowedAsset(): alternative-asset cap is non-zero",
+          "contract_asset_balance": 0.0
+        }
+      },
+      {
+        "label": "M (M^0)",
+        "value": 0.0,
+        "pct": 0.0,
+        "tags": [
+          "par_assumed"
+        ],
+        "detail": {
+          "verifiable": "onchain",
+          "address": "0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b",
+          "role": "declared_inactive",
+          "declared_by_contract": true,
+          "allowed_by_contract": false,
+          "allowed_by_contract_meaning": "isAllowedAsset(): alternative-asset cap is non-zero",
+          "contract_asset_balance": 0.0
+        }
+      }
+    ]
+  },
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "PYUSDx",
+        "metric": "100.00% of backing",
+        "link": null,
+        "link_type": "none"
+      }
+    ],
+    "downstream": [],
+    "downstream_tracked": false
+  },
+  "issuer": {
+    "report_url": "https://tidresearch.com/reports/usdat",
+    "report_url_status": "published",
+    "badge": "Issuer 5.0/10",
+    "issuer_score": 5.0,
+    "issuer_score_source": "risk-feed@2026-11-02T01:45:04Z",
+    "issuer_score_status": "ok",
+    "issuer_score_generated_at": "2026-11-02T01:45:04Z",
+    "issuer_score_age_hours": 1.03,
+    "attestation_age_days": null
+  }
+}

@@ -1,0 +1,234 @@
+Risk Dashboard fxUSD (ethereum) Staging report ↗
+Updated: Nov 2, 2026, 09:56 AM GMT+8
+← All assets
+⚠️ STAGED — not linked from the index. This page is deliberately absent from the asset index and has not been published. It may be incomplete, unrated, or still under review — axes may be wrong. Do not cite figures from it until it is published.
+PEG
+-0.02% ▶
+premium / discount
+Current · Near reference7d band · 10/10
+BACKING
+130.62% ⓘ
+collateral ratio
+Healthy · 10/10 ⚠️
+LIQUIDITY & EXIT
+≥$3.8M
+0.5% depth (bracketed) · vol n/a · no holder exit through this leg (measured)
+Authored 4.5/10
+DEPENDENCIES
+4 up · downstream not tracked
+upstream / downstream
+View links →
+SMART CONTRACT & ADMIN
+Active undelayed core authority
+Structural 5/10Bounded path · no execution timelock
+ISSUER
+5.5/10
+editorial · subjective
+Staging report →
+Live: Peg, Backing and Liquidity. Authored: Smart Contract & Admin and Issuer. They measure different things. Read the full risk report for the authored scores →
+1
+Peg
+7d peg performance · market vs NAV · CoinGecko aggregate USD price
+Current · Near reference
+7d band · 10/10
+1.8h old
+⚠️ risk desk overlay not used
+Peg Performance
+MARKET PRICE
+0.9998
+CoinGecko id f-x-protocol-fxusd (aggregate); peg row for fxUSD in peg_tracker_latest_usd.json · 1.8h old
+NAV / THEORETICAL
+1.0000
+vs fxUSD is minted at $1 against pool collateral and redeemable for collateral at $1 through PoolManager.redeem() when isRedeemAllowed() — a designed state gate on the Curve EMA (< $0.998), not a holder's floor
+PREMIUM / DISCOUNT
+-0.025%
+STATUS
+Near reference
+⚠️ PegTracker hourly rows since the asset was configured; see the export's own span
+2
+Backing
+live reserves & collateral ratio
+Healthy · 10/10
+41d old
+⚠️ risk desk overlay not used
+Coverage basis — claims versus reserves
+Why this backing score
+Authored vs band
+Collateral Ratio History
+Min: 127.85%
+Max: 152.66%
+Range: 24.81pp
+Today 130.62% — the 12th percentile of this window ⓘ
+971 obs over 40 days
+Backing Breakdown
+STRATEGY	VALUE (USD)	%	
+wstETH pool debt	$8,839,925	11.3%	
+
+WBTC pool debt	$69,325,328	88.7%	
+
+Total	$78,165,253	100%	
+
+Percentages are each line’s share of total displayed backing (the 100% row) — not share of token supply.
+
+Risk Flags
+No risk flags
+Allocation
+3
+Liquidity & Exit
+live venue depth & primary redemption
+Authored 4.5/10
+refreshes daily
+41d old
+mixed · depth feed + risk desk · 6 fields
+Binding leg: secondary market depth — Protocol redemption is refused, so the located secondary crossing is the axis, with nothing beneath it. Depth to 2% is ~$4.27M against a $20.1M redeemable stress size (Morpho's 27% of fxSAVE).
+crossing solved — bracket $35,156 wide ⓘ
+Why the report scores liquidity differently
+Authored vs band
+Liquidity & Exit
+0.5% DEPTH
+≥$3.8M
+crossing solved — bracket $35,156 wide ⓘ
+MAX ≤25 BPS
+n/a
+POOL TVL
+n/a
+24H VOLUME
+n/a
+not published
+ladder measured 2026-11-01 23:48Z · 3.3h old, not the 41d on the heading — that is the venue sweep ⓘ
+Primary exit: f(x) PoolManager redeem()
+⚠️ Gated — not an exit a holder can take. Capacity $0. Redemption disabled at the protocol level for holders. Zero holder redemption capacity while ErrorRedeemNotAllowed holds. This is primary-redemption capacity, not secondary-market depth. With the protocol exit refused, the secondary ladder in `depth` is the whole exit. A normal payload scores the worse of two operands; here there is one.
+Gated — riskAnalyst measured 2026-09-22: redeem(address,uint256,uint256) reverts ErrorRedeemNotAllowed() from a holder of 77.1M fxUSD on both the wstETH and WBTC pools, against a clean negative control. NOT re-derived here.
+Exit mark
+Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. ⓘ
+Sign-inversion check: abstained — 0 of 3 below-par rungs ⓘ
+SIZE SOLD	SLIPPAGE	NET OUT
+$1.0K	0.4 bps	—
+$10.0K	0.0 bps	—
+$100.0K	-0.1 bps	—
+$1.0M	-1.8 bps	—
+$5.0M	-689.4 bps	—
+$10.0M	-5141.1 bps	—
+$20.0M	-7568.2 bps	—
+Material venuesenumerated 2026-09-22 07:47Z · 41d old ⓘ
+VENUE	CHAIN	TVL (USD)	STATUS	ROLE
+ETH/fxUSDcurve	Ethereum	$128,608	live	NOT in riskAnalyst's stable-ng list. The router dumps into it only past the plateau ($10M+ in): selling fxUSD for ETH is where the -50% rungs come from, not a dollar exit.
+USDC/fxUSDcurve	Ethereum	$10,003,543	live	THE exit. Single-hop route for every size through ~$4M; its USDC side (4,166,489 at the pinned block) is the binding inventory. Alone it crosses 2% at [$4,112,500 - $4,150,000].
+reUSD/fxUSDcurve	Ethereum	$1,386,670	unverified	Exits into reUSD, which then needs its own hop; the router did NOT route through it at any tested size up to $20M.
+USDnr/fxUSDcurve	Ethereum	$711,164	unverified	Exits into USDnr; never selected by the router; 24h volume 0 per GeckoTerminal.
+msUSD/fxUSDcurve	Ethereum	$429,769	live	Second venue the router opens above ~$4.1M: fxUSD -> msUSD -> frxUSD -> Frax custodian -> USDC, priced end-to-end. Its 449K msUSD bounds what it adds.
+fxUSD/frxUSDcurve	Ethereum	$163,256	live	Routed at large sizes; frxUSD then exits 1:1 through the Frax custodian pocket (255K USDC at the pinned block).
+alUSD/fxUSDcurve	Ethereum	$153,083	live	Routed above ~$4.35M; alUSD then needs its own USDC hop. 134K alUSD bounds it.
+GHO/fxUSDcurve	Ethereum	$112,243	live	Routed at large sizes; 79K GHO bounds it.
+eUSD/fxUSDcurve	Ethereum	$42,194	live	Routed at large sizes; 21K eUSD bounds it.
+fxUSD/USDC/USDaf/BOLD (DeFi Stable Avengers)curve	Ethereum	$29,381	live	NOT in riskAnalyst's list. Holds USDC directly (4,214 at the pinned block); routed at $20M for its BOLD and USDC legs.
+Showing 10 material venues from 14 in dashboard scope.
+Show 4 additional material venues
+10 venues confirmed live — a FLOOR, not a total: 4 never resolved on-chain — 23 further venues enumerated and excluded as dust below the producer’s threshold, $3,067 between them — not omitted, and not a gap in the enumeration — 33 Curve pools hold fxUSD (32 stable-ng + 1 twocrypto). No UniV3, UniV2, Sushi or Balancer pool exists. Everything DefiLlama lists by address is one of these pools or a wrapper of it (Convex, Beefy, f(x)'s own gauges).
+4
+Dependencies
+4 upstream · downstream not tracked
+9d old
+⚠️ risk desk overlay not used
+Dependencies
+UPSTREAM — WHAT THIS ASSET DEPENDS ON
+WBTC (BitGo) — 87.61% of all debt
+1,092.00 WBTC raw collateral against 68,527,240 fxUSD debt; pool CR 128.35%
+Source & context
+No dashboard
+wstETH (Lido) — 12.39% of debt
+6,609.49 stETH-equivalent raw collateral against 9,692,707 fxUSD debt; pool CR 161.96%
+Source & context
+No dashboard
+Collateral price oracles
+wstETH 0x0C5C61025f047cB7e3e85852dC8eAFd7b9a4Abfb · WBTC 0xb3c90e64EB6f456A5F5C17Aa99b6aecA6f4a6390
+Source & context
+No dashboard
+Curve USDC/fxUSD 0x5018BE882DccE5E3F2f3B0913AE2096B9b3fB61f
+USDC side about 4.30m at the October 23 read; major direct dollar exit venue
+Source & context
+No dashboard
+About this dependency set
+DOWNSTREAM — WHAT DEPENDS ON THIS ASSET
+Downstream not tracked
+Consumer tracking (Morpho / Pendle / etc.) coming in a future version.
+5
+Smart Contract & Admin
+7 active core paths · 3 active bounded paths
+Structural 5/10
+Bounded path · no execution timelock
+41d old
+⚠️ security desk + risk desk · no field in common
+Why this contract score
+Authority evidence · partial refresh
+
+Checked 2026-10-24T07:00:47Z at Ethereum block 26260870. Scope: partial refresh: upgrade root, collateral-oracle ownership and long-pool EMERGENCY_ROLE.
+
+The refreshed table below distinguishes revoked paths from active powers. Untouched observations retain their original dates; the baseline walk remains 2026-09-22. This is not a full new authority walk.
+
+Additional overlay notes (1)
+Authority walk · partial refresh
+Active undelayed core authority
+Walked 2026-09-22
+Authority	Keys	Delay	Topology	Reach
+contract-upgrade
+fxUSD TransparentUpgradeableProxy
+	eip1967_admin, owner, PROPOSER_ROLE, CANCELLER_ROLE, EXECUTOR_ROLE, TIMELOCK_ADMIN_ROLE	72h	timelocked	full · core
+asset-permission
+fxUSD mint, burn and legacy unwrap
+	mint, burn, MIGRATOR_ROLE, DEFAULT_ADMIN_ROLE, wrap, debtCapacity	no execution delay	mixed	bounded · core, bounded · bounded-pool
+↳ role admin (timelock)	0x68863fb8…	⚠️ route not measured	DEFAULT_ADMIN_ROLE	meta
+pause
+PoolManager global pause and per-pool borrow/redeem status
+	setPause, updateBorrowAndRedeemStatus, EMERGENCY_ROLE	no execution delay	mixed	full · core
+↳ role admin (timelock)	0x68863fb8…	⚠️ route not measured	DEFAULT_ADMIN_ROLE	meta
+↳ f(x) deployer EOA (no-controller)	—	not-applicable	historical EMERGENCY_ROLE on WBTC long pool; revoked at block 26158898	none — revoked from WBTC pool at block 26158898; current reads are false on both long pools
+↳ f(x) Safe C (3 of 4; all four owners are among Safe A's nine) (safe)	3 of 4	⚠️ none	EMERGENCY_ROLE on PoolManager and all four pools -> setPause / updateBorrowAndRedeemStatus	full
+↳ f(x) Safe A (6 of 9) (safe)	6 of 9	⚠️ none	EMERGENCY_ROLE on PoolManager and all four pools	full
+parameter
+pool price-oracle pointer, capacities, ratios, fees, rate provider, redemption band
+	updatePriceOracle, updateRateProvider, updatePoolCapacity, updateDebtRatioRange, updateLiquidateRatios, updateRebalanceRatios, updateMaxPriceDeviation, updateCurvePool, updatePoolFeeRatio, alloc	no execution delay	mixed	full · core
+↳ role admin (timelock)	0x68863fb8…	⚠️ route not measured	DEFAULT_ADMIN_ROLE	meta
+↳ f(x) deployer EOA (no-controller)	—	not-applicable	historical WBTC EMERGENCY_ROLE -> updatePriceOracle; revoked at block 26158898	none — Historical WBTC-only reach; current hasRole is false on both long pools after the block 26,158,898 revocation.
+↳ f(x) Safe C (3 of 4 from Safe A's nine) (safe)	3 of 4	⚠️ none	EMERGENCY_ROLE on both long pools and both short pools -> updatePriceOracle; ASSET_MANAGER_ROLE on the PoolManager and the stability pool -> manage	full
+↳ f(x) Safe A (6 of 9) (safe)	6 of 9	⚠️ none	EMERGENCY_ROLE on all four pools -> updatePriceOracle; ASSET_MANAGER_ROLE on the PoolManager and the stability pool -> manage	full
+↳ f(x) TimelockController (72h) (timelock)	6 of 9	72h	DEFAULT_ADMIN_ROLE on PoolManager, both pools, PoolConfiguration and FxUSDPriceOracle	full
+oracle
+StETHPriceOracle and WBTCPriceOracle (collateral prices), FxUSDPriceOracle (peg gate)
+	owner, updateOnchainSpotEncodings, updateMaxPriceDeviation, acceptOwnership, updateCurvePool	72h	timelocked	full · core
+custody
+pool collateral held by the PoolManager
+	ASSET_MANAGER_ROLE, manage, alloc, kill	no execution delay	nofm-multisig	bounded · core
+↳ role admin (timelock)	0x68863fb8…	⚠️ route not measured	DEFAULT_ADMIN_ROLE	meta
+Review provenance — partial refresh: upgrade root, collateral-oracle ownership and long-pool EMERGENCY_ROLE review
+⚠️ Shares admin authority with fxsave
+The same addresses hold these roles over both assets — measured on each proxy separately, not inherited.
+Shared	Address	Holds
+proxy admin	0x9b54b7…dda4	eip1967_admin
+timelock	0x68863f…e61a	proxy-admin-owner, DEFAULT_ADMIN_ROLE
+safe	0x26b2ec…7bbf	PROPOSER_ROLE, CANCELLER_ROLE, EXECUTOR_ROLE · 6-of-9
+safe	0x26b2ec…7bbf	EMERGENCY_ROLE, ASSET_MANAGER_ROLE · 6-of-9
+timelock	0x68863f…e61a	collateral-oracle-owner
+safe	0x28c921…ef62	EMERGENCY_ROLE, ASSET_MANAGER_ROLE · 3-of-4
+safe	0xa0fb1b…4e99	fxSAVE-DEFAULT_ADMIN_ROLE · 6-of-9
+contract	0x33636d…c708	MIGRATOR_ROLE, OPERATOR_ROLE, CLAIM_FOR_ROLE
+⚠️ Not established — 6 items: Who operates the nine Safe keys and whet · The Diamond router at 0x33636d49fbefbe79 · Legacy v1 markets remain wrappable into · Chainlink aggregator governance behind t · The short pools carry the same EMERGENCY · Both collateral price oracles carry the 
+Code & audits — 9 points
+What this score does and does not cover — 3 notes
+Verification trail & walk notes (verbatim, 28 lines)
+6
+Issuer
+editorial — subjective axis
+41d old
+risk desk · 11 fields
+Issuer
+Issuer 5.5/10
+f(x) Protocol (AladdinDAO)
+Full issuer assessment — f(x) Protocol (AladdinDAO)
+Protocol TVL $134.3M, Ethereum only (DefiLlama, 2026-09-22).
+Two audits. OpenZeppelin f(x) v2, commit 56a47eab, 2025-03-27 → 2025-05-05: 1 Critical / 2 High / 7 Medium / 13 Low / 23 Note, 5 resolved.
+ChainSecurity router-peripheral finding: auditor-found, responsibly disclosed, fixed, NEVER EXPLOITED. ⚠️ No ChainSecurity engagement is locatable publicly beyond the blog post — an unconfirmed absence.
+⚠️ Held below 6.0: a small DAO with no external governance check over a complex multi-contract system. The disclosure response evidences engagement, not the absence of further issues.
+Editorial axis — how this is rated ⓘ
+Read the staged risk report →
+Data refreshes every hour. Dashboard auto-refreshes every 5 minutes.

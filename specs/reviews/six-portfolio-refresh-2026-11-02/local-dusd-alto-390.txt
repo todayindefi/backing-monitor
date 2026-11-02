@@ -1,0 +1,314 @@
+Risk Dashboard DUSD (Alto) (ethereum)
+Updated: Nov 2, 2026, 09:55 AM GMT+8
+← All assets
+⚠️ STAGED — not linked from the index. This page is deliberately absent from the asset index and has not been published. It may be incomplete, unrated, or still under review — axes may be wrong. Do not cite figures from it until it is published.
+PEG
++0.04% ▼
+premium / discount
+Current · Near reference7d band · 10/10
+BACKING
+100.00% · 0 buffer
+Universal Stability Module (frxUSD) — 88% of supply · zero buffer by construction
+Authored 5.5/10
+LIQUIDITY & EXIT
+$1.8M
+0.5% depth · vol n/a · no holder exit through this leg (measured)
+Authored 5.5/10
+DEPENDENCIES
+6 up · downstream not tracked
+upstream / downstream
+View links →
+SMART CONTRACT & ADMIN
+0h warning
+shortest of 4 admin paths · 3 delayed · hand-walk
+Structural 5/10
+ISSUER
+4.5/10
+editorial · subjective
+Report not published
+Live: Peg, Backing and Liquidity. Authored: Smart Contract & Admin and Issuer. They measure different things.
+1
+Peg
+7d peg performance · market vs NAV · Curve get_dy DUSD/frxUSD swap rate multiplied by Chainlink frxUSD/USD
+Current · Near reference
+7d band · 10/10
+42d old
+mixed · risk desk · 8 fields
+Why the report scores peg differently
+Authored vs band
+Current deviation is a premium
+Premium cannot close by trading
+Peg Performance
+MARKET PRICE
+1.0004
+single source: Curve StableSwap-NG DUSD (Alto token 0x63d74d22E689C715a04F2C13962b1f77F443d35b) / frxUSD pool 0x104d6a1b97A6CEf88D905d7b865A378d90be932A get_dy, composed with tracked Chainlink frxUSD/USD; no second live Alto DUSD venue exists · 1.8h old
+NAV / THEORETICAL
+1.0000
+vs FixedPriceStrategy mint/redeem reference is fixed at 1e18 against frxUSD; this is the declared reference, not a holder-accessible redemption quote
+PREMIUM / DISCOUNT
++0.036%
+STATUS
+Near reference
+⚠️ forward-only from 2026-09-21 (live hourly rows). An independent 283-sample archive reconstruction exists as data/dusd_alto_peg_backfill.json and is HELD standalone by operator decision; it is not spliced into this series.
+Lifetime peg record (283 archive samples — a separate series)
+Not spliced into the live chart, deliberately. This is an archive reconstruction whose VENUE changes mid-life (univ3_dusd_usdc 153 · curve_dusd_frxusd 130), so joining it to the hourly series would imply one continuous measurement basis. The producer holds it standalone; this renders it as what it is. 102 samples carry the producer’s own exclusion flag and are plotted as gaps.
+LOW 0.9993
+HIGH 1.0019
+SAMPLES 283
+sampled point reading at each sampled block (NOT a daily minimum or mean)
+2
+Backing
+what backs it · no per-token ratio derivable
+Authored 5.5/10
+42d old
+⚠️ risk desk overlay not used
+Coverage basis — claims versus reserves
+Why this backing score
+Zero buffer
+No backstop
+Blended ratio
+Verifiability
+Concentration
+Collateral Ratio History
+No single collateral ratio is published for this asset, by declaration — the reason is in collateral_ratio_basis, shown with the axis score above. Per-segment coverage is rendered separately where the asset publishes segments.
+Backing Breakdown
+STRATEGY	VALUE (USD)	%	
+USM — frxUSD	$223,113	12.4%	
+
+isolated CDP markets	$1,577,928	87.5%	
+
+Total	$1,801,042	100%	
+
+Percentages are each line’s share of total displayed backing (the 100% row) — not share of token supply.
+
+Risk Flags
+No risk flags
+Allocation
+Resolve this asset by address, not by ticker. Four live Ethereum tokens answer to DUSD/dUSD; this page is 0x63d74d22E689C715a04F2C13962b1f77F443d35b ↗ — every figure on this page is read at that address. Source: riskAnalyst canonical dusd-alto.md, address-disambiguation table.
+Coverage by tranche (no single ratio is derivable)
+
+The producer publishes collateral_ratio: null for this asset by declaration, not by omission. The two tranches have OPPOSITE failure modes, so they are shown separately and never averaged into a headline.
+
+USM — FRXUSD TRANCHE
+100.00%
+⚠️ Zero buffer by construction — 1:1 to the wei against frxUSD, so 100.00% is the WORST SUSTAINABLE reading, not a cushion. There is no surplus to absorb anything and 99.9% would mean insolvency.
+✅ minted reconciles to the underlying balance to the wei
+$223.1K DUSD against $223.1K frxUSD
+CDP TRANCHE
+8.77%
+⚠️ This cushion is not a DUSD-holder claim. It backs those isolated markets’ own borrowers and is liquidatable to them.
+$138.3K collateral against $1.6M debt
+USD collateral value from each market's own Alto oracle divided by isolated market DUSD debt; collateral is liquidatable and not a general DUSD-holder claim
+BLEND
+20.0%
+⚠️ Arithmetic only — do not read as coverage. It averages a zero-buffer tranche carrying ~88% of supply with a tranche whose cushion belongs to someone else.
+Universal Stability Module (~88% of supply is minted here)
+Not a holder redemption route. The swap is PERMISSIONED; SWAPPER_ROLE holders not enumerable this run — a holder cannot exit through this module at par. Access mode is the producer’s own field; the sole-SWAPPER_ROLE finding and the 16-lifetime-swap count are riskAnalyst’s, carried in the Liquidity axis’ primary-exit basis.
+Module	0x1BD0…4c91 ↗
+Underlying	frxUSD ↗
+Minted / underlying held	$223.1K / $223.1K reconciled to the wei
+Buffer	0.00% by construction
+Backstop	none
+Swap fee	0 bps
+Exposure cap	$5000.0M token units
+Frozen	no
+Seized	no
+Treasury Safe	0xA114…4228 ↗ ⚠️ 1 of 3 Safes, one owner set — two thresholds
+seize() is a solvency path, not an admin nicety. solvency-critical: seize() transfers the entire underlying balance to stableTokenTreasury while DUSD remains outstanding
+CDP markets (~12% of supply · isolated)
+
+Each market is isolated: its collateral answers to its own borrowers, and a shortfall in one does not reach the others. Collateral is marked with each market’s own Alto oracle.
+
+COLLATERAL	MARKET	DUSD DEBT	COLLATERAL (USD)	RATIO	MARK
+frxUSDDUSD	0x6b34…D852 ↗	$1.5M	$0	0.0%	market's own Alto oracle 0x6eD6F809abedE70a2f13a828eC59EFfE2d197bB7
+wstETH	0x4Ad5…E3A3 ↗	$45.6K	$90.4K	198.3%	market's own Alto oracle 0xE1C7DD173C1CafF4Fd3a03B09694C4fc1c78f460
+frxUSD	0x37Ab…E9b1 ↗	$29.2K	$37.3K	127.6%	market's own Alto oracle 0xdb6CB99e27DF7DeD10eB864cca7F806d409AB579
+WETH	0x81b2…566e ↗	$2.3K	$3.6K	156.0%	market's own Alto oracle 0xC3842dE42853A901EaB267e5b98EE59a56F5fE49
+WETH	0x8DED…59ff ↗	$1.7K	$3.5K	201.1%	market's own Alto oracle 0xFaa114a9f19d86837c373D13fbf3cC154d03459D
+rETH	0x12C2…8Dcf ↗	$1.5K	$2.7K	179.0%	market's own Alto oracle 0xE860bC68C90CF97e681802fF348E1D365b237242
+8 dust markets: mETH, rETH, sUSDe, syrupUSDC, tBTC, wstETH	—	$493	$891	180.7%	each market's own Alto oracle; grouped because individual values are immaterial
+Who can mint (17 live minters)
+
+mint-tx receipt log emitters probed with minterConfig(); reconciled sum(minted)==totalSupply to the wei
+
+0x12C2…8Dcf
+↗
+0x1BD0…4c91
+↗
+0x210b…D2a2
+↗
+0x2dE8…8398
+↗
+0x37Ab…E9b1
+↗
+0x4Ad5…E3A3
+↗
+0x6b34…D852
+↗
+0x81b2…566e
+↗
+0x8DED…59ff
+↗
+0xD2D7…7C3E
+↗
+0xD2eA…c87e
+↗
+0xD5EF…b45a
+↗
+0xE17F…71e1
+↗
+0xEb75…95c7
+↗
+0xF897…D47b
+↗
+0xc0E2…fFbf
+↗
+0xfd8c…C2eF
+↗
+Scanned through block 26087788 · Sep 30, 2026, 12:55 PM GMT+8
+3
+Liquidity & Exit
+live venue depth & primary redemption
+Authored 5.5/10
+refreshes daily
+42d old
+mixed · depth feed + risk desk · 11 fields
+Binding leg: circulation — Depth is not the constraint: the route clears 2% only above $3.37M, 2.5x the entire $1.32M supply, so every DUSD in existence sells inside 0.5%. What binds is circulation: at most $26.5K is outside the pool (see depth.holdings). Holders have no primary redemption. LP-withdrawal regime, as measured 2026-09-21: if the treasury withdrew its then-61.9% of LP, ~517,907 DUSD would reach the market and the crossing would fall to ~$961K -- distribution and depth move together in that case only.
+the whole supply clears — the crossing sits above everything in existence, at $2.6M ⓘ
+Why the report scores liquidity differently
+Authored vs band
+Treasury share refresh
+Treasury exit regime refresh
+Venue composition is the leading signal
+Liquidity & Exit
+0.5% DEPTH
+$1.8M
+the whole supply clears — the crossing sits above everything in existence, at $2.6M ⓘ
+MAX ≤25 BPS
+n/a
+POOL TVL
+n/a
+24H VOLUME
+per pool
+see table
+ladder measured 2026-11-01 23:47Z · 3.3h old, not the 42d on the heading — that is the venue sweep ⓘ
+Primary exit: Alto Universal Stability Module (frxUSD)
+⚠️ Gated — not an exit a holder can take. Capacity $0. No holder redemption. Only the Alto treasury Safe can swap DUSD to frxUSD at par. Zero HOLDER redemption capacity, not zero reserves. Not re-derived here; sourced from riskAnalyst's canonical. A holder's only exit is the secondary market measured in `depth`.
+Gated — riskAnalyst canonical dusd-alto.md §II: the USM's swap functions are permissioned to a single Safe (sole SWAPPER_ROLE holder, 16 lifetime swaps all by the treasury); the USDC module holds 0.01 USDC with getAvailableLiquidity()=0.
+Exit mark
+Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. ⓘ
+Sign-inversion check: abstained — 0 of 3 below-par rungs ⓘ
+SIZE SOLD	SLIPPAGE	NET OUT
+$1.0K	-0.0 bps	—
+$10.0K	-0.1 bps	—
+$100.0K	-0.7 bps	—
+$1.0M	-6.0 bps	—
+$10.0M	-7208.8 bps	—
+Material venuesenumerated 2026-09-21 01:25Z · 42d old ⓘ
+VENUE	CHAIN	TVL (USD)	24H VOL	STATUS	ROLE
+DUSD/frxUSDcurve	Ethereum	$3,301,749	$205.43	live	The only live venue; hop 1 of every route. Its frxUSD side (2.502M) is the binding inventory for the whole DUSD->USDC exit.
+DUSD/USDC 0.01%uniswap	Ethereum	$31	$0.00	excluded · dead zero liquidity	Excluded: DEAD. liquidity()=0 since block 25,329,865 (2026-06-16, per riskAnalyst bisection); slot0 still reports ~1.0000 and must not be quoted.
+DUSD/frxUSD 0.01%uniswap	Ethereum	$4	$0.00	excluded · dead zero liquidity	Excluded: liquidity()=0, 2.55 DUSD dust. Not previously known to riskAnalyst.
+1 venue confirmed live — 1 further venue enumerated and excluded as dust below the producer’s threshold, $100 between them — not omitted, and not a gap in the enumeration — Four Ethereum pools hold Alto DUSD; one is live. Every DefiLlama row matching by address is the same Curve pool or a wrapper of it (Convex, StakeDAO, Yearn).
+Exit reality (one venue, and the float is the cap)
+POOL COMPOSITION
+24.18% DUSD
+$797.9K DUSD against $2.5M frxUSD. DUSD is the SCARCE coin here, which is why the unit quotes at a premium. A move toward 50% is the premium inverting. Pool balances read at 2026-09-21T01:25:35Z, block 26022595.
+Float ladder measured 2026-09-25T10:00:47Z · block 26053732
+Total supply	822,855.16 DUSD
+Supply outside the pool
+⚠️ NOT the tradable float — DUSD minted into a borrow market inflates this and never reaches a holder.
+	24,936.18 DUSD
+Third-party float
+method: residual — errs generous
+	946.70 DUSD
+How the residual is computed, and what it cannot bound
+Cross-check against the full enumeration
+⚠️ Supply moved — and only one of the two floats moved with it
+Holder count and largest holder are a different basis
+DexTracker separately enumerates the non-venue holders that make up the gap — AltoBorrowMarket 0x5d8fA5E1 (17,747 DUSD); AltoBorrowMarket 0x053B53Ca (809 DUSD); AltoTimelockController (3,425 DUSD); Morpho UniversalRewardsDistributor (77 DUSD); CoW settlement/burner (86 DUSD). Holders of DUSD that are not venues; listed so the holder census reconciles.
+Binding leg — circulation: Depth is not the constraint: the route clears 2% only above $3.37M, 2.5x the entire $1.32M supply, so every DUSD in existence sells inside 0.5%. What binds is circulation: at most $26.5K is outside the pool (see depth.holdings). Holders have no primary redemption. LP-withdrawal regime, as measured 2026-09-21: if the treasury withdrew its then-61.9% of LP, ~517,907 DUSD would reach the market and the crossing would fall to ~$961K -- distribution and depth move together in that case only.
+If the issuer withdraws its LP — the producer’s scaled ladder
+The dollar legs after DUSD (hops 2–3)
+What was measured when — one clock per figure
+4
+Dependencies
+6 upstream · downstream not tracked
+42d old
+⚠️ risk desk overlay not used
+Dependencies
+⚠️ NO SCORE IS PUBLISHED ON THIS AXIS BY DELIBERATE CHOICE. riskAnalyst's internal underlying_score for dusd-alto is 4.5 and is the lowest of its six axes alongside issuer — but axis 4 is unrated fleet-wide, and one asset scoring it would redefine what a blank means on every other page. The internal report is the place that number lives. ⚠️ Not verified this pass: the Alto market oracles were read but not audited, and the custodian's USDC pocket was read at single blocks with no history.
+UPSTREAM — WHAT THIS ASSET DEPENDS ON
+frxUSD — 92.5% of all collateral value, AND the exit venue's quote asset
+722,605 frxUSD in the stability module + 37,270 frxUSD posted in the frxUSD mint market = 759,875 of ~$909,388 total collateral value
+Source & context
+No dashboard
+⚠️ One issuer's four keys reach the reserve, the quote asset and the dollar leg
+Frax Safe 0xfFFffF4F3baC444b2C0ecf2A1840d018bE783937, 4-of-7, seven EOAs; Timelock 0xb898Ad2976b4d8f2E21521C9db16b7497825E503 delay 86,400s / MINIMUM_DELAY 7,200s
+Source & context
+No dashboard
+Frax frxUSD→USDC redemption custodian — free, and Frax's inventory rather than DUSD's property
+ERC-4626, asset() = USDC, previewRedeem(1000e18) = 1000.000000 (1:1, zero fee); USDC pocket read 59,195.58 → 72,836.03 → 32,919.58 across 2026-09-21
+Source & context
+No dashboard
+Curve StableSwap-NG DUSD/frxUSD — the only live venue; three others enumerated and dead
+0x104d6a1b97A6CEf88D905d7b865A378d90be932A, A=1000, fee 0.01%, ~$3.29M; 62% of LP is the Alto treasury's, never burned
+Source & context
+No dashboard
+CDP collateral set — wstETH, WETH, rETH, mETH, tBTC, sUSDe, syrupUSDC, frxUSD
+~$186,806 backing 99,251 DUSD across 14 isolated mint markets; 188% aggregate
+Source & context
+No dashboard
+ALTO / ARO emissions — the demand side
+borrow, supply and mint are rewarded with Alto Reward Options
+Source & context
+No dashboard
+DOWNSTREAM — WHAT DEPENDS ON THIS ASSET
+Downstream not tracked
+Consumer tracking (Morpho / Pendle / etc.) coming in a future version.
+5
+Smart Contract & Admin
+shortest of 4 admin paths · 3 delayed · hand-walk
+Structural 5/10
+42d old
+⚠️ security desk + risk desk · no field in common
+Why this contract score
+Structural score rescore pending
+One authority three safes
+Power surface by delay
+Authority walk — hand-walk
+Delayed: asset-permission 1h, parameter 1h, contract-upgrade 1h. NO established delay: pause.
+Walked 2026-09-26
+Coverage — which chains this walk covers
+Authority	Keys	Delay	Topology	Reach
+asset-permission
+Alto DUSD issuance and burn permissions
+	setMinterStatus, setMinterCeiling, setBurnerStatus, mint, burn	1h · no floor	timelock-multisig	full
+↳ Alto governance Safe (timelock)	4 of 7	1h	PROPOSER/EXECUTOR/CANCELLER -> AltoTimelockController -> DUSD owner functions	full
+↳ 13 AltoMintMarket proxies, three USMs, one DUSDFlashMinter, and one AltoConvexCreditLineMarket (18 total) (timelock)	—	1h	DUSD.allowedMinter/minterConfig	bounded — each minterConfig ceiling; every live minter had current minted <= ceiling
+parameter
+USM configuration, seizure, and market risk parameters
+	seize, updateExposureCap, updatePriceStrategy, updateFeeStrategy, market_parameters	1h · no floor	timelock-multisig	full
+contract-upgrade
+Alto market, USM, and EmergencyController UUPS proxies
+	upgradeToAndCall	1h · no floor	timelock-multisig	full
+pause
+DUSD, registered market, USM, and rewards emergency halt
+	pauseDusd, pauseMarket, freezeMarket, freezeUsm, pauseUniversalRewardsDistributor	⚠️ none · no floor	single-key	bounded
+⚠️ Not established — 3 items: Signer custody, legal identity, funding · The audit review establishes report-disc · The bug bounty is publicly documented in
+Code & audits — 22 points
+Verification trail & walk notes (verbatim, 20 lines)
+6
+Issuer
+editorial — subjective axis
+42d old
+risk desk · 8 fields
+Issuer
+Issuer 4.5/10
+Regulator: None — no regulated entity, licence or jurisdiction is disclosed
+Alto Foundation
+Full issuer assessment — Alto Foundation
+9 assessment points
+Editorial axis — how this is rated ⓘ
+Report not yet published ⓘ
+Data refreshes every hour. Dashboard auto-refreshes every 5 minutes.

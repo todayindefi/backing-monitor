@@ -1,0 +1,592 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "usdat",
+ "asset_symbol": "USDat",
+ "producer": "dextracker",
+ "as_of": "2026-11-02T00:09:52Z",
+ "refresh_cadence": "daily",
+ "scope": "venue_inventory_only",
+ "publishes": [
+  "venues",
+  "venues_by_role",
+  "chains",
+  "non_swap_listings",
+  "venue_diagnostics"
+ ],
+ "does_not_publish": [
+  "depth",
+  "primary_exit",
+  "rating"
+ ],
+ "scope_note": "VENUE-ONLY BY DESIGN. This payload deliberately carries no depth, crossing, redemption path or rating; those belong to PegTracker's ladder. Absence of `depth` here is a declaration, not a failed write -- a consumer should keep the ladder from its other source.",
+ "venues_by_role": {
+  "dollar_exit": {
+   "pool_count": 4,
+   "tvl_usd": 3558541.5951,
+   "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
+  },
+  "family_swap": {
+   "pool_count": 0,
+   "tvl_usd": 0,
+   "meaning": "Swaps the asset for its own sister token: NOT a way out."
+  },
+  "other_pair": {
+   "pool_count": 1,
+   "tvl_usd": 1351.7913,
+   "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
+  }
+ },
+ "chains": {
+  "eth": {
+   "status": "queried",
+   "token": "0x23238f20b894f29041f48d88ee91131c395aaa71",
+   "queried_at": "2026-11-02T00:10:12Z",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 25,
+   "published_pool_count": 3,
+   "below_floor_count": 22,
+   "dollar_exit_pool_count": 2,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 1235948.1720999999,
+   "local_dollar_exit": true
+  },
+  "bsc": {
+   "status": "queried",
+   "token": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+   "queried_at": "2026-11-02T00:10:38Z",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 1,
+   "published_pool_count": 1,
+   "below_floor_count": 0,
+   "dollar_exit_pool_count": 1,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 33047.3291,
+   "local_dollar_exit": true
+  },
+  "monad": {
+   "status": "queried",
+   "token": "0x0bb150dfa86ea5d7742f07fefcd8e8eda81d64ef",
+   "queried_at": "2026-11-02T00:11:02Z",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 3,
+   "published_pool_count": 1,
+   "below_floor_count": 2,
+   "dollar_exit_pool_count": 1,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 2289546.0939,
+   "local_dollar_exit": true
+  }
+ },
+ "enumeration": {
+  "as_of": "2026-11-02T00:09:52Z",
+  "source": "GeckoTerminal token-pools API, paginated, by exact chain-specific address",
+  "venue_count": 29,
+  "published_venue_count": 5,
+  "tvl_floor_usd": 1000.0,
+  "chains_queried": [
+   "bsc",
+   "eth",
+   "monad"
+  ],
+  "chains_query_failed": [],
+  "chains_not_queried": [],
+  "chains_truncated": [],
+  "chains_without_local_dollar_exit": [],
+  "chains_none_found": [],
+  "finding_meanings": {
+   "venues_found": "Pools at or above the $1,000 TVL floor were found.",
+   "none_found": "Searched, and nothing at or above the floor was found: a market fact as far as the indexer reaches.",
+   "not_checked": "Not searched, for the stated reason: a gap in what this tool can reach, NOT a finding about the market.",
+   "unknown": "The search failed or the token could not be confirmed: NOT empty."
+  },
+  "chain_count_is_floor": true,
+  "chain_count_note": "FLOOR, not a census: chains are the asset's CoinGecko platforms. A deployment CoinGecko does not list is not queried here.",
+  "live_venue_count": 0,
+  "excluded_venue_count": 0,
+  "unestablished_venue_count": 5,
+  "live_venue_count_is_floor": true,
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 5 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
+ },
+ "venues": [
+  {
+   "name": "USDat / USDC",
+   "chain": "monad",
+   "dex": "curve-monad",
+   "kind": "swap",
+   "address": "0xfd945d71d4e9609a1fab0ae9c30da8088e7aee1e",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+    "decimals": 6,
+    "price_usd": 1.00000329510855
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 2289546.0939,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 182230.142808587,
+   "as_of": "2026-11-02T00:11:02Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/monad/pools/0xfd945d71d4e9609a1fab0ae9c30da8088e7aee1e",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 1343091.850508,
+    "counter_units_in_pool": 977758.857129,
+    "two_leg_usd_onchain": 2320100.6386654,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null
+  },
+  {
+   "name": "USDat / USDC",
+   "chain": "eth",
+   "dex": "curve",
+   "kind": "swap",
+   "address": "0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 1.00036559034304
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 1206179.1216,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 241595.207977015,
+   "as_of": "2026-11-02T00:10:12Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xf4d0cf32908b2c7f1021339c43df0f77f06896d7",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 691027.445096,
+    "counter_units_in_pool": 506920.731324,
+    "two_leg_usd_onchain": 1197992.5095486618,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null
+  },
+  {
+   "name": "USDat / USDT 0.01%",
+   "chain": "bsc",
+   "dex": "pancakeswap-v3-bsc",
+   "kind": "swap",
+   "address": "0xf80ab3cc041d8ccc1c51acc295afdba26ad70aa9",
+   "counter_asset": {
+    "symbol": "USDT",
+    "address": "0x55d398326f99059ff775485246999027b3197955",
+    "decimals": 18,
+    "price_usd": 1.00136376972136
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 33047.3291,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 1150.2246341566,
+   "as_of": "2026-11-02T00:10:38Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/bsc/pools/0xf80ab3cc041d8ccc1c51acc295afdba26ad70aa9",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null
+  },
+  {
+   "name": "USDat / USDC 0.006%",
+   "chain": "eth",
+   "dex": "maverick-v2-eth",
+   "kind": "swap",
+   "address": "0x00f46c6729d29d50ec7d114b3fde856237ccbf57",
+   "counter_asset": {
+    "symbol": "USDC",
+    "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "decimals": 6,
+    "price_usd": 1.0004554001
+   },
+   "role": "dollar_exit",
+   "tvl_usd": 29769.0505,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:10:12Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x00f46c6729d29d50ec7d114b3fde856237ccbf57",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null
+  },
+  {
+   "name": "USDat / waEthUSDC 0.002%",
+   "chain": "eth",
+   "dex": "balancer-v3-ethereum",
+   "kind": "swap",
+   "address": "0x32d4c5bb72b96a52cf7b9a54fff12ea4340d2314",
+   "counter_asset": {
+    "symbol": "waEthUSDC",
+    "address": "0xd4fa2d31b7968e448877f69a96de69f5de8cd23e",
+    "decimals": 6,
+    "price_usd": 1.1802043447
+   },
+   "role": "other_pair",
+   "tvl_usd": 1351.7913,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-02T00:10:12Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x32d4c5bb72b96a52cf7b9a54fff12ea4340d2314",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+   "exclusion_reason": null,
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": "not_checked",
+   "counter_is_independent": true,
+   "counter_backing_note": null
+  }
+ ],
+ "venue_diagnostics": {
+  "reason_meanings": {
+   "below_tvl_floor": "Reported TVL under $1,000: dust. Left out of `venues` and every total.",
+   "duplicate_listing": "The same pool address returned twice by the indexer; kept once in `venues`.",
+   "tvl_exceeds_supply": "Kept in `venues`, but its TVL is out of every total: it exceeds the token's whole value on the chain.",
+   "tvl_exceeds_onchain_custody": "Kept in `venues`, but its TVL is out of every total: it is far above what the pool holds on-chain.",
+   "counter_token_value_implausible": "Kept in `venues`, but its TVL is out of every total: it rests on a price for a token with no real market value."
+  },
+  "rejected_count": 24,
+  "rejected_by_reason": {
+   "below_tvl_floor": 24
+  },
+  "rejected": [
+   {
+    "chain": "eth",
+    "address": "0xd16e6359a0ca951907e378a9ed88b08b0bc9034a",
+    "name": "USDat / USDC",
+    "dex": "fluid-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 168.5447,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x1d01f4b0da82239af9994dd43d89123fd99be0c72e566ce84b13a5eada30a4cf",
+    "name": "USDat / USDC 88%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 95.5459,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x3234f4627ba5f6a8d0a34168f490f5c13a05b9d00654bae4525a2e5bb9098ef6",
+    "name": "USDat / USDC 0.019%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 73.2605,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x2a8fcf3943dd8c9229778ce497c686cd082eb410a3b7d27228ecfd1ea1d66afa",
+    "name": "USDat / USDC 0.019%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 67.9697,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xa2cae80f0509601e78bbfd80e811321a108d5ca84ebbe8f59b38dee6d3de80cf",
+    "name": "USDat / USDC 0.019%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 63.4536,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xfaef72a4af2dc0c22d5fa34e102fe88445a9732e2ac893cc68bc9df1fd570050",
+    "name": "USDat / USDC 0.019%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 58.6734,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x75dfbbaf76372bfae6dab72b11ee2d2a249cf7b2a499b7dedadb7a6bc2db7ee8",
+    "name": "USDat / USDC 0.02%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 47.5022,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xb4bb7f26a8a6b9be9be35579869fc678d836ec48984549cd0fc9fd1dfc039e17",
+    "name": "USDat / USDC 0.019%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 47.2529,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x202ef46698bd9eda5d1a56d6a42d77e381823bdb5178369ff36716f9e08b2ce6",
+    "name": "USDat / USDC 0.02%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 45.9887,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xda96fb59108d115740d23fc5937858a6618806552840a81216538ca9cbee59e6",
+    "name": "USDat / USDC 0.02%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 43.8899,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x44f71b83f1a2da335c7b9d0fa190320c80c2471eb777010fc4e3cc4c32921015",
+    "name": "USDat / USDC 0.019%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 38.2169,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xcede82ca3689a5d2d17eb82257ceb934c7d1e09ee889d9ea6b4e9efaa0a3bf4c",
+    "name": "USDat / USDC 0.019%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 26.8476,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xd83c937113a2560b2c0da4a140f31bac61f2b798",
+    "name": "frxUSD / USDat",
+    "dex": "curve",
+    "role": "dollar_exit",
+    "tvl_usd": 20.1142287515,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "monad",
+    "address": "0x5eac207fa978be0c8c3daab84b93b908227e2e01511965cdd49e5f5d7ec4e8be",
+    "name": "USDat / USDC 90%",
+    "dex": "uniswap-v4-monad",
+    "role": "dollar_exit",
+    "tvl_usd": 19.8652,
+    "volume_24h_usd": 0.2000766727,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x6e6696c57f4f2bafa4f70bf1318e0b40a0880e82e3c334cc3d6317285357357d",
+    "name": "USDat / USDC 0.02%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 19.09,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x7d4a48f1b53a9459dda111d7475a70466e252144cf0791b450e049de6497f1cd",
+    "name": "USDat / USDC 0.02%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 18.4187,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xd91c27621ae50f319b3fe51c20129b49056ff2dda6dc915aea411306ebaf3c64",
+    "name": "USDat / USDC 0.015%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 9.376,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x56362fbec486219e14d1225701274d02a7d8ac23656941b3676f06eda0fb50ad",
+    "name": "USDat / USDC 0.019%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 0.7471,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "monad",
+    "address": "0x34fd2c797d5dd58ea6041de9799c66cd97e90ff840aadb7f0a2a795f4a8c1fa9",
+    "name": "USDat / USDC 0.01%",
+    "dex": "uniswap-v4-monad",
+    "role": "dollar_exit",
+    "tvl_usd": 0.1008,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xbbd0eb94e43d26fc83698ab6ed8ad2e0271b914fe1df428a9f9248d00887a1ff",
+    "name": "USDat / USDC 0.007%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 0.0233992958279331,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x37665711c2876d6615e6d381b3181dd6698ca1053935f8a0c3da2763d5956f02",
+    "name": "USDat / USDC 0.02%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 0.0,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xbc1aec7c7ad0d3f9cdf2ef6fadc91c85ba3984ce29b575b03597937b94799aa3",
+    "name": "USDat / USDC 0.025%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 0.0,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xd9d23b4a357980f197f377bb9ad2ddaa55d0cdf7ad66ec9e3a93d4662a5ce4cb",
+    "name": "USDat / USDC 0.019%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 0.0,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0xc6769218ab4070fd37027f91654710ad4cd117e1c97efb1c890bfaf4f89cdac8",
+    "name": "USDat / USDC 0.05%",
+    "dex": "uniswap-v4-ethereum",
+    "role": "dollar_exit",
+    "tvl_usd": 0.0,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   }
+  ],
+  "published_zero_volume_count": 2,
+  "volume_policy": "24h volume is published as context and is never a reason to reject a pool: a quiet day is not a dead pool (backing-monitor's fleet venue rule 5).",
+  "dedup_basis": "One source (GeckoTerminal) keyed by pool address, so the same pool cannot enter twice. Liquidity wrappers that re-list a pool (Convex, Yearn, StakeDAO, Beefy, Aura) are kept out of `venues` and marked `lp_wrapper` in `non_swap_listings`."
+ },
+ "non_swap_listings": {
+  "status": "ok",
+  "source": "defillama:yields.llama.fi/pools",
+  "match": "by symbol, NOT by address: names may collide, treat as a pointer",
+  "chains": "all",
+  "kind_meanings": {
+   "lending": "Deposits in a lending market: concentration context, not spot depth.",
+   "issuer_vault": "The issuer's own vault TVL: not secondary liquidity.",
+   "pendle_market": "Pendle yield market: see `pendle` for live vs matured.",
+   "lp_wrapper": "A receipt for a DEX pool already counted in `venues`: double-counts the same tokens.",
+   "unclassified": "Not sorted: a pointer to read, not a category."
+  },
+  "listings": [
+   {
+    "project": "morpho-blue",
+    "chain": "Monad",
+    "symbol": "PT-USDAT-14JAN2027",
+    "tvl_usd": 34743936,
+    "kind": "lending"
+   },
+   {
+    "project": "morpho-blue",
+    "chain": "Ethereum",
+    "symbol": "PT-USDAT-14JAN2027",
+    "tvl_usd": 11527025,
+    "kind": "lending"
+   },
+   {
+    "project": "morpho-blue",
+    "chain": "Ethereum",
+    "symbol": "PT-USDAT-14JAN2027",
+    "tvl_usd": 8450300,
+    "kind": "lending"
+   },
+   {
+    "project": "pendle-v2",
+    "chain": "Ethereum",
+    "symbol": "USDAT",
+    "tvl_usd": 1570315,
+    "kind": "pendle_market"
+   },
+   {
+    "project": "pendle-v2",
+    "chain": "Monad",
+    "symbol": "USDAT",
+    "tvl_usd": 1398570,
+    "kind": "pendle_market"
+   },
+   {
+    "project": "pendle-v2",
+    "chain": "BSC",
+    "symbol": "USDAT",
+    "tvl_usd": 41522,
+    "kind": "pendle_market"
+   }
+  ]
+ },
+ "payload_revised_at": "2026-11-02T00:11:24Z"
+}

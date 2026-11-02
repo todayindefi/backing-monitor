@@ -1,0 +1,2790 @@
+{
+ "schema_version": "liquidity/1",
+ "asset_slug": "reusd_re",
+ "as_of": "2026-11-01T23:49:24Z",
+ "producer": "dextracker",
+ "note": "Axis 3 (Liquidity & Exit), single producer. The axis is the worse of executable venue depth and primary redemption. Pool TVL is context only and is never substituted for executable depth.",
+ "depth": {
+  "status": "not_measured",
+  "depth_usd": null,
+  "is_floor": null,
+  "threshold_bps": -200.0,
+  "slippage_convention": "Per-chain marginal execution-rate deterioration from each chain's $100 baseline rung; signed cost. No cross-chain scalar is computed.",
+  "basis": "Fresh chain-local routed ladders were measured independently on Ethereum, Arbitrum, Base, and Avalanche. A single asset-level depth is deliberately withheld because balances cannot be assumed movable between chains at zero cost, delay, or bridge risk. PegTracker's cross-chain [10M, 20M] aggregate is not used.",
+  "denomination_scope": {
+   "measured_leg": "chain-local reUSD -> native USDC",
+   "excluded_leg": "cross-chain bridging and fiat conversion",
+   "reduction_policy": "refuse_cross_chain_scalar"
+  },
+  "anchor": {
+   "fair_value": 1.1089205899205703,
+   "fair_value_basis": "market",
+   "fair_value_source": "peg_tracker:CoinGecko API external aggregate mid for re-protocol-reusd; off-chain market-data API, not an on-chain read and not the issuer API",
+   "fair_value_as_of": "2026-11-01T23:05:02Z",
+   "fair_value_choice": "market_price",
+   "fair_value_choice_mode": "inherited",
+   "market_price_cross_check": null,
+   "self_referential": false,
+   "self_referential_determination": "source_prefix_heuristic",
+   "self_referential_basis": null
+  },
+  "quote": {
+   "method": "KyberSwap GET /api/v1/routes exact-input reUSD -> native USDC, measured independently on each chain",
+   "chains": [
+    "ethereum",
+    "arbitrum",
+    "base",
+    "avalanche"
+   ],
+   "quoted_as_of": "2026-11-01T23:48:03Z",
+   "baseline_size_usd": 1000.0,
+   "addresses": {
+    "ethereum": {
+     "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+     "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+    },
+    "arbitrum": {
+     "token_in": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+     "token_out": "0xaf88d065e77c8cc2239327c5edb3a432268e5831"
+    },
+    "base": {
+     "token_in": "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
+     "token_out": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+    },
+    "avalanche": {
+     "token_in": "0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
+     "token_out": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e"
+    }
+   },
+   "retry_policy": {
+    "attempts_per_size": 4,
+    "backoff_schedule_seconds": [
+     2.0,
+     4.0,
+     8.0
+    ]
+   }
+  },
+  "per_chain": {
+   "ethereum": {
+    "status": "bracketed",
+    "depth_usd": 8031250.0,
+    "is_floor": true,
+    "bracket": {
+     "last_clearing_size_usd": 8031250.0,
+     "last_clearing_marginal_impact_bps": -158.85642556451418,
+     "first_crossing_size_usd": 8101562.5,
+     "first_crossing_marginal_impact_bps": -549.1187335197678,
+     "width_usd": 70312.5,
+     "monotonic_in_bracket": true,
+     "threshold_bps": -200.0,
+     "meets_precision_obligation": true
+    },
+    "termination": "crossed_threshold",
+    "successful_rungs": 5,
+    "attempted_rungs": 5,
+    "baseline_rung": {
+     "size_usd": 100.0,
+     "slippage_bps": 0.0628999999996438,
+     "amount_out_tokens": 100.000629
+    },
+    "refinement": {
+     "status": "refined",
+     "stopped_on": "precision_obligation_met",
+     "probe_count": 7
+    },
+    "basis": "The -200bps marginal crossing is BRACKETED between $8,031,250.00 and $8,101,562.50, both ends re-quoted. `depth_usd` is the lower bound.",
+    "bracket_50bps": {
+     "threshold_bps": -50.0,
+     "convention": "marginal",
+     "status": "bracketed",
+     "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
+     "refinement": {
+      "status": "discarded",
+      "stopped_on": "precision_obligation_met",
+      "probe_count": 7
+     },
+     "bracket": {
+      "last_clearing_size_usd": 1000000.0,
+      "last_clearing_marginal_impact_bps": -3.3431390599991673,
+      "first_crossing_size_usd": 10000000.0,
+      "first_crossing_marginal_impact_bps": -2075.5152016720012,
+      "width_usd": 9000000.0,
+      "monotonic_in_bracket": true,
+      "threshold_bps": -50.0,
+      "meets_precision_obligation": false
+     },
+     "depth_usd": 1000000.0,
+     "is_floor": true,
+     "basis": "Refined ends did not reproduce (-17.495409304704168 / -18.050526794578523 bps) and no straddling pair could be salvaged; the coarse decade bracket is published."
+    }
+   },
+   "arbitrum": {
+    "status": "bracketed",
+    "depth_usd": 1000000.0,
+    "is_floor": true,
+    "bracket": {
+     "last_clearing_size_usd": 1000000.0,
+     "last_clearing_marginal_impact_bps": -7.883877600001199,
+     "first_crossing_size_usd": 10000000.0,
+     "first_crossing_marginal_impact_bps": -8382.943771209,
+     "width_usd": 9000000.0,
+     "monotonic_in_bracket": true,
+     "threshold_bps": -200.0,
+     "meets_precision_obligation": false
+    },
+    "termination": "crossed_threshold",
+    "successful_rungs": 5,
+    "attempted_rungs": 5,
+    "baseline_rung": {
+     "size_usd": 100.0,
+     "slippage_bps": 1.5251000000016113,
+     "amount_out_tokens": 100.015251
+    },
+    "refinement": {
+     "status": "discarded",
+     "stopped_on": "precision_obligation_met",
+     "probe_count": 10
+    },
+    "basis": "Refined ends did not reproduce (-492.28726455680106 / -492.3521045887902 bps) and no straddling pair could be salvaged; the coarse decade bracket is published.",
+    "bracket_50bps": {
+     "threshold_bps": -50.0,
+     "convention": "marginal",
+     "status": "bracketed",
+     "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
+     "refinement": {
+      "status": "discarded",
+      "stopped_on": "precision_obligation_met",
+      "probe_count": 10
+     },
+     "bracket": {
+      "last_clearing_size_usd": 1000000.0,
+      "last_clearing_marginal_impact_bps": -7.883877600001199,
+      "first_crossing_size_usd": 10000000.0,
+      "first_crossing_marginal_impact_bps": -8382.943771209,
+      "width_usd": 9000000.0,
+      "monotonic_in_bracket": true,
+      "threshold_bps": -50.0,
+      "meets_precision_obligation": false
+     },
+     "depth_usd": 1000000.0,
+     "is_floor": true,
+     "basis": "Refined ends did not reproduce (-492.28705923840096 / -492.3519001451848 bps) and no straddling pair could be salvaged; the coarse decade bracket is published."
+    }
+   },
+   "base": {
+    "status": "invalid_quote",
+    "depth_usd": null,
+    "is_floor": null,
+    "bracket": null,
+    "termination": "crossed_threshold",
+    "successful_rungs": 0,
+    "attempted_rungs": 2,
+    "baseline_rung": {
+     "size_usd": 100.0,
+     "slippage_bps": -204.97180000000003,
+     "amount_out_tokens": 97.950282
+    }
+   },
+   "avalanche": {
+    "status": "bracketed",
+    "depth_usd": 6097.65625,
+    "is_floor": true,
+    "bracket": {
+     "last_clearing_size_usd": 6097.65625,
+     "last_clearing_marginal_impact_bps": -198.66667481101888,
+     "first_crossing_size_usd": 6132.8125,
+     "first_crossing_marginal_impact_bps": -200.97579070063819,
+     "width_usd": 35.15625,
+     "monotonic_in_bracket": true,
+     "threshold_bps": -200.0,
+     "meets_precision_obligation": true
+    },
+    "termination": "crossed_threshold",
+    "successful_rungs": 2,
+    "attempted_rungs": 2,
+    "baseline_rung": {
+     "size_usd": 100.0,
+     "slippage_bps": -345.3658999999998,
+     "amount_out_tokens": 96.546341
+    },
+    "refinement": {
+     "status": "refined",
+     "stopped_on": "precision_obligation_met",
+     "probe_count": 8
+    },
+    "basis": "The -200bps marginal crossing is BRACKETED between $6,097.66 and $6,132.81, both ends re-quoted. `depth_usd` is the lower bound.",
+    "bracket_50bps": {
+     "threshold_bps": -50.0,
+     "convention": "marginal",
+     "status": "bracketed",
+     "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
+     "bracketed_from_baseline": true,
+     "refinement": {
+      "status": "refined",
+      "stopped_on": "precision_obligation_met",
+      "probe_count": 10
+     },
+     "bracket": {
+      "last_clearing_size_usd": 133.3984375,
+      "last_clearing_marginal_impact_bps": -49.17466573938657,
+      "first_crossing_size_usd": 134.27734375,
+      "first_crossing_marginal_impact_bps": -50.13840487272603,
+      "width_usd": 0.87890625,
+      "monotonic_in_bracket": true,
+      "threshold_bps": -50.0,
+      "meets_precision_obligation": true
+     },
+     "depth_usd": 133.3984375,
+     "is_floor": true,
+     "basis": "The -50bps marginal crossing is BRACKETED between $133.40 and $134.28, both ends re-quoted. `depth_usd` is the lower bound."
+    }
+   }
+  },
+  "bracket": null,
+  "rungs": [
+   {
+    "size_usd": 1000.0,
+    "status": "ok",
+    "amount_in_tokens": 901.7778270954713,
+    "amount_out_tokens": 999.993774,
+    "slippage_bps": -0.062259999999980664,
+    "route_venues": [
+     "curve-stable-ng",
+     "metric-propamm/aero-cl",
+     "metric-propamm/ekubo-v3"
+    ],
+    "route_leg_count": 1,
+    "route_hops": [
+     {
+      "exchange": "curve-stable-ng",
+      "pool": "0x5c2ab69eb2bf12a2f4572d178687bd4660512972",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "swap_amount_raw": "901777827095471194112",
+      "amount_out_raw": "797132510548419449930",
+      "block_number": 26323301
+     },
+     {
+      "exchange": "metric-propamm/ekubo-v3",
+      "pool": "0x5b9d015787d1e1b91f1edaacc214aa75090a5493",
+      "token_in": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "token_out": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+      "swap_amount_raw": "797132510548419449930",
+      "amount_out_raw": "1000981874961620022601",
+      "block_number": 26312556
+     },
+     {
+      "exchange": "metric-propamm/aero-cl",
+      "pool": "0xfe484cbc4cf7cf8820e820a92c86dbce5c4b709d",
+      "token_in": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "1000981874961620022601",
+      "amount_out_raw": "999993774",
+      "block_number": 26203852
+     }
+    ],
+    "quote_block_numbers": [
+     26203852,
+     26312556,
+     26323301
+    ],
+    "quote_as_of": "2026-11-01T23:48:05Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "a4bef96e4LZDEb0E",
+    "gas_usd": "0.09685696548681198",
+    "router_price_in": 1.109298654817506,
+    "router_price_out": 1.0000128051976418,
+    "slippage_bps_debiased": -0.12515999999962446,
+    "price_bias_bps": 0.0628999999996438,
+    "chain": "ethereum",
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 10000.0,
+    "status": "ok",
+    "amount_in_tokens": 9017.778270954712,
+    "amount_out_tokens": 9999.401212,
+    "slippage_bps": -0.5987879999991286,
+    "route_venues": [
+     "curve-stable-ng",
+     "metric-propamm/aero-cl",
+     "metric-propamm/ekubo-v3"
+    ],
+    "route_leg_count": 1,
+    "route_hops": [
+     {
+      "exchange": "curve-stable-ng",
+      "pool": "0x5c2ab69eb2bf12a2f4572d178687bd4660512972",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "swap_amount_raw": "9017778270954711941120",
+      "amount_out_raw": "7971240849986660497861",
+      "block_number": 26323301
+     },
+     {
+      "exchange": "metric-propamm/ekubo-v3",
+      "pool": "0x5b9d015787d1e1b91f1edaacc214aa75090a5493",
+      "token_in": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "token_out": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+      "swap_amount_raw": "7971240849986660497861",
+      "amount_out_raw": "10009446259638458706380",
+      "block_number": 26312556
+     },
+     {
+      "exchange": "metric-propamm/aero-cl",
+      "pool": "0xfe484cbc4cf7cf8820e820a92c86dbce5c4b709d",
+      "token_in": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "10009446259638458706380",
+      "amount_out_raw": "9999401212",
+      "block_number": 26203852
+     }
+    ],
+    "quote_block_numbers": [
+     26203852,
+     26312556,
+     26323301
+    ],
+    "quote_as_of": "2026-11-01T23:48:06Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "40619bd3sqxBOJua",
+    "gas_usd": "0.12110007289557831",
+    "router_price_in": 1.1091542243252033,
+    "router_price_out": 1.0003098426909294,
+    "slippage_bps_debiased": -0.6616879999987724,
+    "price_bias_bps": 0.0628999999996438,
+    "chain": "ethereum",
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 100000.0,
+    "status": "ok",
+    "amount_in_tokens": 90177.78270954713,
+    "amount_out_tokens": 99978.7674,
+    "slippage_bps": -2.123259999999849,
+    "route_venues": [
+     "curve-stable-ng",
+     "dodo-gsp",
+     "fluid-dex-t1",
+     "frxusd",
+     "metric-propamm/aero-cl",
+     "metric-propamm/ekubo-v3",
+     "metric-propamm/taurusfi-prop",
+     "metric-propamm/uniswap-v4",
+     "uniswap-v4",
+     "uniswap-v4-fairflow",
+     "uniswapv3"
+    ],
+    "route_leg_count": 13,
+    "route_hops": [
+     {
+      "exchange": "curve-stable-ng",
+      "pool": "0x5c2ab69eb2bf12a2f4572d178687bd4660512972",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "swap_amount_raw": "17987199708627121937163",
+      "amount_out_raw": "15899541788175974740258",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xb96cee75211700bc148b95b1c907d726791f4457",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "72190583000920001668341",
+      "amount_out_raw": "80116570014",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "metric-propamm/ekubo-v3",
+      "pool": "0x5b9d015787d1e1b91f1edaacc214aa75090a5493",
+      "token_in": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "token_out": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+      "swap_amount_raw": "9165126581222590117700",
+      "amount_out_raw": "11508551385682046225438",
+      "block_number": 26312556
+     },
+     {
+      "exchange": "uniswap-v4",
+      "pool": "0xb20351bcf606dcc3525d2ed36760a86a5dec7423b77d41125bd4a416ba93448b",
+      "token_in": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "5293366893647622829958",
+      "amount_out_raw": "6645987943",
+      "block_number": 26323265
+     },
+     {
+      "exchange": "curve-stable-ng",
+      "pool": "0x47ab5f9d8c9c7d002a92320f23a696d348c56a7f",
+      "token_in": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "token_out": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+      "swap_amount_raw": "1441048313305761792600",
+      "amount_out_raw": "1807463285109679557999",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "metric-propamm/aero-cl",
+      "pool": "0xfe484cbc4cf7cf8820e820a92c86dbce5c4b709d",
+      "token_in": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "11508551385682046225438",
+      "amount_out_raw": "11496967213",
+      "block_number": 26203852
+     },
+     {
+      "exchange": "uniswap-v4-fairflow",
+      "pool": "0x3b1bd35a555160a9b60c7524db56029c2025ab93b69d97d33ca3f1c23b6494ad",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "2642848573",
+      "amount_out_raw": "2640151678",
+      "block_number": 26323175
+     },
+     {
+      "exchange": "metric-propamm/taurusfi-prop",
+      "pool": "0x99125a7187d8a730345b0bf9ba5af7465e58292e",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "swap_amount_raw": "2392416468",
+      "amount_out_raw": "1052227715233709746",
+      "block_number": 26204052
+     },
+     {
+      "exchange": "metric-propamm/uniswap-v4",
+      "pool": "0xaef2ad7abb651945e6d24276715f25bded0ad41e",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "4003139369",
+      "amount_out_raw": "3999090912",
+      "block_number": 26204062
+     },
+     {
+      "exchange": "dodo-gsp",
+      "pool": "0x04571c32a4e1c5f39bc3a238cb95b215058c432c",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "8006349402",
+      "amount_out_raw": "7998202596",
+      "block_number": 26323300
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0x667701e51b4d1ca244f17c78f7ab8744b4c99f9b",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "69717804145",
+      "amount_out_raw": "69646814977",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "uniswapv3",
+      "pool": "0xe0554a476a092703abdb3ef35c80e0d76d32939f",
+      "token_in": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "1052227715233709746",
+      "amount_out_raw": "2390076739",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "frxusd",
+      "pool": "0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c",
+      "token_in": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "1807463285109679557999",
+      "amount_out_raw": "1807463285",
+      "block_number": 26323302
+     }
+    ],
+    "quote_block_numbers": [
+     26203852,
+     26204052,
+     26204062,
+     26312556,
+     26323175,
+     26323265,
+     26323300,
+     26323302,
+     26323304
+    ],
+    "quote_as_of": "2026-11-01T23:48:08Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "825ca481cZ1K-6f3",
+    "gas_usd": "0.39918024456537915",
+    "router_price_in": 1.1092986548175061,
+    "router_price_out": 1.0000128051976418,
+    "slippage_bps_debiased": -2.186159999999493,
+    "price_bias_bps": 0.0628999999996438,
+    "chain": "ethereum",
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 1000000.0,
+    "status": "ok",
+    "amount_in_tokens": 901777.8270954712,
+    "amount_out_tokens": 999671.976094,
+    "slippage_bps": -3.2802390599995235,
+    "route_venues": [
+     "aero-cl",
+     "curve-stable-ng",
+     "fluid-dex-t1",
+     "lite-psm",
+     "metric-propamm/ekubo-v3",
+     "metric-propamm/uniswap-v4-stable-stable",
+     "uniswap-v4",
+     "uniswap-v4-stable-stable"
+    ],
+    "route_leg_count": 12,
+    "route_hops": [
+     {
+      "exchange": "curve-stable-ng",
+      "pool": "0x5c2ab69eb2bf12a2f4572d178687bd4660512972",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "swap_amount_raw": "59390964509656556575125",
+      "amount_out_raw": "52494435108421788388052",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xb96cee75211700bc148b95b1c907d726791f4457",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "842386862585814713034347",
+      "amount_out_raw": "934787184260",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "metric-propamm/ekubo-v3",
+      "pool": "0x5b9d015787d1e1b91f1edaacc214aa75090a5493",
+      "token_in": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "token_out": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+      "swap_amount_raw": "31883728260109201764077",
+      "amount_out_raw": "40032678385396347657628",
+      "block_number": 26312556
+     },
+     {
+      "exchange": "uniswap-v4",
+      "pool": "0x20814562cc12ac3f69fb903279ec77c74e9fa2a315204fa2c636fb992d90cca4",
+      "token_in": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "20610706848312586623975",
+      "amount_out_raw": "25850502590",
+      "block_number": 26323208
+     },
+     {
+      "exchange": "metric-propamm/uniswap-v4-stable-stable",
+      "pool": "0xaef2ad7abb651945e6d24276715f25bded0ad41e",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "397873521868",
+      "amount_out_raw": "397468016648",
+      "block_number": 26204062
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0x667701e51b4d1ca244f17c78f7ab8744b4c99f9b",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "240163581867",
+      "amount_out_raw": "239917233706",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "uniswap-v4",
+      "pool": "0x3b1b1f2e775a6db1664f8e7d59ad568605ea2406312c11aef03146c0cf89d5b9",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+      "swap_amount_raw": "200126671749",
+      "amount_out_raw": "199920694869061182347569",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "uniswap-v4-stable-stable",
+      "pool": "0x2b21c65d9a7dc6926ee330a1c6e5a8037fd81774f3dc066536f800128e39f634",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "96421810161",
+      "amount_out_raw": "96322940341",
+      "block_number": 26323299
+     },
+     {
+      "exchange": "aero-cl",
+      "pool": "0x2d90ebffc87bbe29e4d78e7627adfe9d0f3d7978",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "480006",
+      "amount_out_raw": "479512",
+      "block_number": 26323283
+     },
+     {
+      "exchange": "uniswap-v4",
+      "pool": "0x0fb0e40cec3bb23e13abc585958a93c796fbea56955e19a23727a716a0423239",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "201118609",
+      "amount_out_raw": "200912738",
+      "block_number": 26323301
+     },
+     {
+      "exchange": "lite-psm",
+      "pool": "0xa188eec8f81263234da3622a406892f3d630f98c",
+      "token_in": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "199920694869061182347569",
+      "amount_out_raw": "199920694869",
+      "block_number": 26323303
+     },
+     {
+      "exchange": "aero-cl",
+      "pool": "0x37e4734317efabe114b56eadeda8cef5c35b4009",
+      "token_in": "0x4c9edd5852cd905f086c759e8383e09bff1e68b3",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "40032678385396347657628",
+      "amount_out_raw": "39991195690",
+      "block_number": 26323266
+     }
+    ],
+    "quote_block_numbers": [
+     26204062,
+     26312556,
+     26323208,
+     26323266,
+     26323283,
+     26323299,
+     26323301,
+     26323303,
+     26323304
+    ],
+    "quote_as_of": "2026-11-01T23:48:08Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "8d5c858b1MNF4IKZ",
+    "gas_usd": "0.36252452303316335",
+    "router_price_in": 1.108909815408885,
+    "router_price_out": 0.9999329655400193,
+    "slippage_bps_debiased": -3.3431390599991673,
+    "price_bias_bps": 0.0628999999996438,
+    "chain": "ethereum",
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 10000000.0,
+    "status": "ok",
+    "amount_in_tokens": 9017778.270954713,
+    "amount_out_tokens": 7924547.698328,
+    "slippage_bps": -2075.452301672002,
+    "route_venues": [
+     "aero-cl",
+     "curve-stable-ng",
+     "fluid-dex-t1",
+     "hashflow-v3/fluid-dex-t1",
+     "lite-psm",
+     "metric-propamm/fluid-dex-t1",
+     "native-v2/fluid-dex-t1",
+     "supernova-v4",
+     "uniswap-v4",
+     "uniswap-v4-stable-stable",
+     "uniswapv3"
+    ],
+    "route_leg_count": 14,
+    "route_hops": [
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xb96cee75211700bc148b95b1c907d726791f4457",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "451418372032151234698933",
+      "amount_out_raw": "500957659265",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "metric-propamm/fluid-dex-t1",
+      "pool": "0xaef2ad7abb651945e6d24276715f25bded0ad41e",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "500957659265",
+      "amount_out_raw": "500445598666",
+      "block_number": 26204062
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xb96cee75211700bc148b95b1c907d726791f4457",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "1082133392514565620168129",
+      "amount_out_raw": "1200664541445",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0x667701e51b4d1ca244f17c78f7ab8744b4c99f9b",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "1200664541445",
+      "amount_out_raw": "1199382109357",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xb96cee75211700bc148b95b1c907d726791f4457",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "1442844523352754160224172",
+      "amount_out_raw": "1600395157230",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "uniswap-v4-stable-stable",
+      "pool": "0x2b21c65d9a7dc6926ee330a1c6e5a8037fd81774f3dc066536f800128e39f634",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "1600395157230",
+      "amount_out_raw": "1598687466800",
+      "block_number": 26323299
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xb96cee75211700bc148b95b1c907d726791f4457",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "1082133392514565620168129",
+      "amount_out_raw": "1199928355660",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "uniswap-v4",
+      "pool": "0x3b1b1f2e775a6db1664f8e7d59ad568605ea2406312c11aef03146c0cf89d5b9",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+      "swap_amount_raw": "1199928355660",
+      "amount_out_raw": "1198645467531606811292487",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "lite-psm",
+      "pool": "0xa188eec8f81263234da3622a406892f3d630f98c",
+      "token_in": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "1198645467531606811292487",
+      "amount_out_raw": "1198645467531",
+      "block_number": 26323303
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xb96cee75211700bc148b95b1c907d726791f4457",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "1082133392514565620168129",
+      "amount_out_raw": "1199613054723",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "aero-cl",
+      "pool": "0x2d90ebffc87bbe29e4d78e7627adfe9d0f3d7978",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "1199613054723",
+      "amount_out_raw": "1198329797663",
+      "block_number": 26323283
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xb96cee75211700bc148b95b1c907d726791f4457",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "360711130838188540056043",
+      "amount_out_raw": "399800972844",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "hashflow-v3/fluid-dex-t1",
+      "pool": "hashflow_v3_mm46_1_0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48_0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "399800972844",
+      "amount_out_raw": "399350339747",
+      "block_number": null
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xb96cee75211700bc148b95b1c907d726791f4457",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "360711130838188540056043",
+      "amount_out_raw": "399765957815",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "native-v2/fluid-dex-t1",
+      "pool": "native_v2_0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48_0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "399765957815",
+      "amount_out_raw": "399315086451",
+      "block_number": 0
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xb96cee75211700bc148b95b1c907d726791f4457",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "360711130838188540056043",
+      "amount_out_raw": "399730947385",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "uniswap-v4",
+      "pool": "0x0fb0e40cec3bb23e13abc585958a93c796fbea56955e19a23727a716a0423239",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "399730947385",
+      "amount_out_raw": "399295233366",
+      "block_number": 26323301
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xb96cee75211700bc148b95b1c907d726791f4457",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "360711130838188540056043",
+      "amount_out_raw": "399695941554",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "uniswapv3",
+      "pool": "0x3416cf6c708da44db2624d63ea0aaef7113527c6",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "399695941554",
+      "amount_out_raw": "399250698830",
+      "block_number": 26323302
+     },
+     {
+      "exchange": "curve-stable-ng",
+      "pool": "0x5c2ab69eb2bf12a2f4572d178687bd4660512972",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "swap_amount_raw": "360711130838188540056043",
+      "amount_out_raw": "316139438305177729364507",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xdd5f2afab5ae5484339f9ad40fb4d51fc5c96be3",
+      "token_in": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "token_out": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+      "swap_amount_raw": "316139438305177729364507",
+      "amount_out_raw": "396151360271336233000000",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "uniswap-v4",
+      "pool": "0xb3ec039dd452a0c23404fec0bcaf6a6e4e1111469f2bfe7b7b5f41a0e366c03c",
+      "token_in": "0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "396151360271336233000000",
+      "amount_out_raw": "394979783003",
+      "block_number": 26321891
+     },
+     {
+      "exchange": "curve-stable-ng",
+      "pool": "0xf74c91b36c26543a0aa820bef407a577e5498bf0",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "1082133392514565620168129",
+      "amount_out_raw": "216137203571",
+      "block_number": 26323292
+     },
+     {
+      "exchange": "curve-stable-ng",
+      "pool": "0x5c2ab69eb2bf12a2f4572d178687bd4660512972",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "swap_amount_raw": "360711130838188540056043",
+      "amount_out_raw": "16288665416212964855395",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "curve-stable-ng",
+      "pool": "0x744793b5110f6ca9cc7cdfe1ce16677c3eb192ef",
+      "token_in": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+      "token_out": "0x865377367054516e17014ccded1e7d814edc9ce4",
+      "swap_amount_raw": "16288665416212964855395",
+      "amount_out_raw": "20490058062850072545808",
+      "block_number": 26323304
+     },
+     {
+      "exchange": "aero-cl",
+      "pool": "0x8751b7494b206c73a49ba034225ef36466569545",
+      "token_in": "0x865377367054516e17014ccded1e7d814edc9ce4",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "20490058062850072545808",
+      "amount_out_raw": "20427214370",
+      "block_number": 26323273
+     },
+     {
+      "exchange": "uniswap-v4",
+      "pool": "0x790f08128d42adede5a4b0bac67b97f5eaade532080e7543ffcdba0bea9af350",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0x2162fdb116bc95d85b898bdae77e053ef0c36eaa",
+      "swap_amount_raw": "360711130838188540056043",
+      "amount_out_raw": "199145040927840938373",
+      "block_number": 25771713
+     },
+     {
+      "exchange": "uniswapv3",
+      "pool": "0x56ae3561f6c62ace22aab1dfa78009ed8ba69222",
+      "token_in": "0x2162fdb116bc95d85b898bdae77e053ef0c36eaa",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "199145040927840938373",
+      "amount_out_raw": "199120819",
+      "block_number": 26322997
+     },
+     {
+      "exchange": "supernova-v4",
+      "pool": "0xa6bb68ff426a57029ec06162cb1a9f7aadde5354",
+      "token_in": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "270003889644225845413166",
+      "amount_out_raw": "102578154",
+      "block_number": 26201717
+     }
+    ],
+    "quote_block_numbers": [
+     0,
+     25771713,
+     26201717,
+     26204062,
+     26321891,
+     26322997,
+     26323273,
+     26323283,
+     26323292,
+     26323299,
+     26323301,
+     26323302,
+     26323303,
+     26323304
+    ],
+    "quote_as_of": "2026-11-01T23:48:09Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "7fa5e2a3SEJM6ZC_",
+    "gas_usd": "0.7557438327611671",
+    "router_price_in": 1.1091542243252033,
+    "router_price_out": 1.000355512797923,
+    "slippage_bps_debiased": -2075.5152016720012,
+    "price_bias_bps": 0.0628999999996438,
+    "chain": "ethereum",
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 1000.0,
+    "status": "ok",
+    "amount_in_tokens": 901.7778270954713,
+    "amount_out_tokens": 1000.151807,
+    "slippage_bps": 1.5180699999994829,
+    "route_venues": [
+     "fluid-dex-t1"
+    ],
+    "route_leg_count": 1,
+    "route_hops": [
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xdd72157a021804141817d46d9852a97addfb9f59",
+      "token_in": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+      "token_out": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "swap_amount_raw": "901777827095471194112",
+      "amount_out_raw": "1000151807",
+      "block_number": 520413035
+     }
+    ],
+    "quote_block_numbers": [
+     520413035
+    ],
+    "quote_as_of": "2026-11-01T23:48:31Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "30ca0486RF9EXba-",
+    "gas_usd": "0.017691764246631193",
+    "router_price_in": 1.1096866089856117,
+    "router_price_out": 1.0000959620412762,
+    "slippage_bps_debiased": -0.007030000002128389,
+    "price_bias_bps": 1.5251000000016113,
+    "chain": "arbitrum",
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 10000.0,
+    "status": "ok",
+    "amount_in_tokens": 9017.778270954712,
+    "amount_out_tokens": 10001.447052,
+    "slippage_bps": 1.4470519999987275,
+    "route_venues": [
+     "fluid-dex-t1"
+    ],
+    "route_leg_count": 1,
+    "route_hops": [
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xdd72157a021804141817d46d9852a97addfb9f59",
+      "token_in": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+      "token_out": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "swap_amount_raw": "9017778270954711941120",
+      "amount_out_raw": "10001447052",
+      "block_number": 520413040
+     }
+    ],
+    "quote_block_numbers": [
+     520413040
+    ],
+    "quote_as_of": "2026-11-01T23:48:32Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "f29325a3Rd9Hw5Xo",
+    "gas_usd": "0.017691764246631193",
+    "router_price_in": 1.1096866089856117,
+    "router_price_out": 1.0003378856363596,
+    "slippage_bps_debiased": -0.07804800000288381,
+    "price_bias_bps": 1.5251000000016113,
+    "chain": "arbitrum",
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 100000.0,
+    "status": "ok",
+    "amount_in_tokens": 90177.78270954713,
+    "amount_out_tokens": 100007.369281,
+    "slippage_bps": 0.7369281000002559,
+    "route_venues": [
+     "fluid-dex-t1"
+    ],
+    "route_leg_count": 1,
+    "route_hops": [
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xdd72157a021804141817d46d9852a97addfb9f59",
+      "token_in": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+      "token_out": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "swap_amount_raw": "90177782709547123605504",
+      "amount_out_raw": "100007369281",
+      "block_number": 520413040
+     }
+    ],
+    "quote_block_numbers": [
+     520413040
+    ],
+    "quote_as_of": "2026-11-01T23:48:33Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "c5fca0a1vbhO06u1",
+    "gas_usd": "0.017637089269894518",
+    "router_price_in": 1.1096866089856117,
+    "router_price_out": 1.0003378856363596,
+    "slippage_bps_debiased": -0.7881719000013554,
+    "price_bias_bps": 1.5251000000016113,
+    "chain": "arbitrum",
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 1000000.0,
+    "status": "ok",
+    "amount_in_tokens": 901777.8270954712,
+    "amount_out_tokens": 999364.12224,
+    "slippage_bps": -6.358777599999588,
+    "route_venues": [
+     "fluid-dex-t1"
+    ],
+    "route_leg_count": 1,
+    "route_hops": [
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xdd72157a021804141817d46d9852a97addfb9f59",
+      "token_in": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+      "token_out": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "swap_amount_raw": "901777827095471269609472",
+      "amount_out_raw": "999364122240",
+      "block_number": 520413040
+     }
+    ],
+    "quote_block_numbers": [
+     520413040
+    ],
+    "quote_as_of": "2026-11-01T23:48:34Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "18aeca0cCilIQZMe",
+    "gas_usd": "0.017637089269894518",
+    "router_price_in": 1.109410653074347,
+    "router_price_out": 1.0003378856363596,
+    "slippage_bps_debiased": -7.883877600001199,
+    "price_bias_bps": 1.5251000000016113,
+    "chain": "arbitrum",
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 10000000.0,
+    "status": "ok",
+    "amount_in_tokens": 9017778.270954713,
+    "amount_out_tokens": 1618581.328791,
+    "slippage_bps": -8381.418671209,
+    "route_venues": [
+     "fluid-dex-t1",
+     "kyberswap-limit-order-v2",
+     "uniswap-v4-fairflow",
+     "uniswapv3"
+    ],
+    "route_leg_count": 4,
+    "route_hops": [
+     {
+      "exchange": "fluid-dex-t1",
+      "pool": "0xdd72157a021804141817d46d9852a97addfb9f59",
+      "token_in": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+      "token_out": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "swap_amount_raw": "1460946324854553151390556",
+      "amount_out_raw": "1618252229878",
+      "block_number": 520413048
+     },
+     {
+      "exchange": "kyberswap-limit-order-v2",
+      "pool": "limit_order_pool_0xaf88d065e77c8cc2239327c5edb3a432268e5831_0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609_0xcab2fa2eeab7065b45cbcf6e3936dde2506b4f6c",
+      "token_in": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+      "token_out": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "swap_amount_raw": "3145320865446129338183339",
+      "amount_out_raw": "139245823",
+      "block_number": 0
+     },
+     {
+      "exchange": "kyberswap-limit-order-v2",
+      "pool": "limit_order_pool_0x82af49447d8a07e3bd95bd0d56f35241523fbab1_0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609_0xcab2fa2eeab7065b45cbcf6e3936dde2506b4f6c",
+      "token_in": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+      "token_out": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+      "swap_amount_raw": "1937614468315551212109857",
+      "amount_out_raw": "44930596769236178",
+      "block_number": 0
+     },
+     {
+      "exchange": "uniswapv3",
+      "pool": "0x6f38e884725a116c9c7fbf208e79fe8828a2595f",
+      "token_in": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1",
+      "token_out": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "swap_amount_raw": "44930596769236178",
+      "amount_out_raw": "102045477",
+      "block_number": 520412744
+     },
+     {
+      "exchange": "kyberswap-limit-order-v2",
+      "pool": "limit_order_pool_0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9_0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609_0xcab2fa2eeab7065b45cbcf6e3936dde2506b4f6c",
+      "token_in": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+      "token_out": "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+      "swap_amount_raw": "2473896612338479799717336",
+      "amount_out_raw": "87897304",
+      "block_number": 0
+     },
+     {
+      "exchange": "uniswap-v4-fairflow",
+      "pool": "0x13fd8faf63c1b0dbd44157df1a390224d734bdcf1f60451fb84a8b48dd3d388a",
+      "token_in": "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+      "token_out": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+      "swap_amount_raw": "87897304",
+      "amount_out_raw": "87807613",
+      "block_number": 520408366
+     }
+    ],
+    "quote_block_numbers": [
+     0,
+     520408366,
+     520412744,
+     520413048
+    ],
+    "quote_as_of": "2026-11-01T23:48:35Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "4201bb05jhlNraCU",
+    "gas_usd": "0.3117648016705194",
+    "router_price_in": 1.1096866089856117,
+    "router_price_out": 1.0003378856363596,
+    "slippage_bps_debiased": -8382.943771209,
+    "price_bias_bps": 1.5251000000016113,
+    "chain": "arbitrum",
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 1000.0,
+    "status": "invalid_quote",
+    "amount_in_tokens": 901.7778270954713,
+    "amount_out_tokens": 428.574339,
+    "slippage_bps": -5714.2566099999995,
+    "route_venues": [
+     "aerodrome",
+     "aerodrome-cl-3"
+    ],
+    "route_leg_count": 2,
+    "route_hops": [
+     {
+      "exchange": "aerodrome-cl-3",
+      "pool": "0x2e2df48ea21d9ff5dfbb79b1008f128767caced8",
+      "token_in": "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
+      "token_out": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "swap_amount_raw": "335803618907865275345",
+      "amount_out_raw": "363154812",
+      "block_number": 53378543
+     },
+     {
+      "exchange": "aerodrome",
+      "pool": "0x1ba8cbb3bac0bc9054228a8f1849cbaa8329514b",
+      "token_in": "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
+      "token_out": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "swap_amount_raw": "565974208187605918767",
+      "amount_out_raw": "65419527",
+      "block_number": 52268408
+     }
+    ],
+    "quote_block_numbers": [
+     52268408,
+     53378543
+    ],
+    "quote_as_of": "2026-11-01T23:49:00Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "971b33a7ExpCeKyl",
+    "gas_usd": "0.008740061537163482",
+    "router_price_in": 1.5165141849763506,
+    "router_price_out": 1.0003423575524333,
+    "slippage_bps_debiased": -5509.284809999999,
+    "price_bias_bps": -204.97180000000003,
+    "chain": "base",
+    "rung_kind": "decade",
+    "reason": "Successful router response returned less than 50% of input notional at the smallest rung; retained as evidence, not counted as executable depth."
+   },
+   {
+    "size_usd": 10000.0,
+    "status": "invalid_quote",
+    "amount_in_tokens": 9017.778270954712,
+    "amount_out_tokens": 121.383766,
+    "slippage_bps": -9878.616234000001,
+    "route_venues": [
+     "aerodrome",
+     "alien-base-cl",
+     "kyberswap-limit-order-v2",
+     "pancake-infinity-cl"
+    ],
+    "route_leg_count": 3,
+    "route_hops": [
+     {
+      "exchange": "aerodrome",
+      "pool": "0x1ba8cbb3bac0bc9054228a8f1849cbaa8329514b",
+      "token_in": "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
+      "token_out": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "swap_amount_raw": "978190644481870179674",
+      "amount_out_raw": "68500555",
+      "block_number": 52268408
+     },
+     {
+      "exchange": "kyberswap-limit-order-v2",
+      "pool": "limit_order_pool_0x7d214438d0f27afccc23b3d1e1a53906ace5cfea_0x4200000000000000000000000000000000000006_0xcab2fa2eeab7065b45cbcf6e3936dde2506b4f6c",
+      "token_in": "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
+      "token_out": "0x4200000000000000000000000000000000000006",
+      "swap_amount_raw": "4739816609449792637721",
+      "amount_out_raw": "13638531909533278",
+      "block_number": 0
+     },
+     {
+      "exchange": "alien-base-cl",
+      "pool": "0x331c12605938d2a9ab893c495cfd5f4e875e3313",
+      "token_in": "0x4200000000000000000000000000000000000006",
+      "token_out": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "swap_amount_raw": "13638531909533278",
+      "amount_out_raw": "30975749",
+      "block_number": 53393697
+     },
+     {
+      "exchange": "kyberswap-limit-order-v2",
+      "pool": "limit_order_pool_0xfde4c96c8593536e31f229ea8f37b2ada2699bb2_0x7d214438d0f27afccc23b3d1e1a53906ace5cfea_0xcab2fa2eeab7065b45cbcf6e3936dde2506b4f6c",
+      "token_in": "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
+      "token_out": "0xfde4c96c8593536e31f229ea8f37b2ada2699bb2",
+      "swap_amount_raw": "3299771017023049123725",
+      "amount_out_raw": "21932753",
+      "block_number": 0
+     },
+     {
+      "exchange": "pancake-infinity-cl",
+      "pool": "0x9ed2b133457a9debb64997f932b15a0a81f61718e8a267a4b36fab7b960d788a",
+      "token_in": "0xfde4c96c8593536e31f229ea8f37b2ada2699bb2",
+      "token_out": "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913",
+      "swap_amount_raw": "21932753",
+      "amount_out_raw": "21907462",
+      "block_number": 53393571
+     }
+    ],
+    "quote_block_numbers": [
+     0,
+     52268408,
+     53393571,
+     53393697
+    ],
+    "quote_as_of": "2026-11-01T23:49:01Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "5977dbacDN9ChoLb",
+    "gas_usd": "0.02419190707607825",
+    "router_price_in": 1.5165141849763508,
+    "router_price_out": 1.00031975891867,
+    "slippage_bps_debiased": -9673.644434000002,
+    "price_bias_bps": -204.97180000000003,
+    "chain": "base",
+    "rung_kind": "decade",
+    "reason": "Successful router response returned less than 50% of input notional at the smallest rung; retained as evidence, not counted as executable depth."
+   },
+   {
+    "size_usd": 1000.0,
+    "status": "ok",
+    "amount_in_tokens": 901.7778270954713,
+    "amount_out_tokens": 947.780225,
+    "slippage_bps": -522.1977500000008,
+    "route_venues": [
+     "blackhole-v4"
+    ],
+    "route_leg_count": 1,
+    "route_hops": [
+     {
+      "exchange": "blackhole-v4",
+      "pool": "0x64b9b45dbf624d63d15c04c576faf5c8366d0696",
+      "token_in": "0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
+      "token_out": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+      "swap_amount_raw": "901777827095471194112",
+      "amount_out_raw": "947780225",
+      "block_number": 98855615
+     }
+    ],
+    "quote_block_numbers": [
+     98855615
+    ],
+    "quote_as_of": "2026-11-01T23:49:02Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "dc1f4d4dNI1L2qG2",
+    "gas_usd": "0.013793322858478058",
+    "router_price_in": 1.0727888562545977,
+    "router_price_out": 0.9998751195248994,
+    "slippage_bps_debiased": -176.83185000000105,
+    "price_bias_bps": -345.3658999999998,
+    "chain": "avalanche",
+    "rung_kind": "decade"
+   },
+   {
+    "size_usd": 10000.0,
+    "status": "ok",
+    "amount_in_tokens": 9017.778270954712,
+    "amount_out_tokens": 6193.493132,
+    "slippage_bps": -3806.5068680000004,
+    "route_venues": [
+     "blackhole-v2",
+     "blackhole-v4",
+     "uniswap-v4",
+     "uniswapv3"
+    ],
+    "route_leg_count": 3,
+    "route_hops": [
+     {
+      "exchange": "blackhole-v4",
+      "pool": "0x64b9b45dbf624d63d15c04c576faf5c8366d0696",
+      "token_in": "0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
+      "token_out": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+      "swap_amount_raw": "6132089224249204119968",
+      "amount_out_raw": "6082332278",
+      "block_number": 98855615
+     },
+     {
+      "exchange": "blackhole-v2",
+      "pool": "0xc26e546b632348e76ebbd2811f4458a32ea29b7a",
+      "token_in": "0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
+      "token_out": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+      "swap_amount_raw": "326823806586510854345",
+      "amount_out_raw": "67888218",
+      "block_number": 98843054
+     },
+     {
+      "exchange": "uniswap-v4",
+      "pool": "0x6f0b57447a70c89e27e5e4a5f1369071c4fe31ae70fcbe19ae5363eb0a16f9cf",
+      "token_in": "0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
+      "token_out": "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+      "swap_amount_raw": "2558865240118996966807",
+      "amount_out_raw": "43307110",
+      "block_number": 80836487
+     },
+     {
+      "exchange": "uniswapv3",
+      "pool": "0xf49aa8ffffdcb2c21c3d1e39369ff34b67c9db0a",
+      "token_in": "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+      "token_out": "0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
+      "swap_amount_raw": "43307110",
+      "amount_out_raw": "38835003",
+      "block_number": 99169766
+     },
+     {
+      "exchange": "blackhole-v2",
+      "pool": "0x65f83ccacabaac4ed2f80289a02df4d35d744ae8",
+      "token_in": "0xc891eb4cbdeff6e073e859e987815ed1505c2acd",
+      "token_out": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+      "swap_amount_raw": "38835003",
+      "amount_out_raw": "43272636",
+      "block_number": 99171824
+     }
+    ],
+    "quote_block_numbers": [
+     80836487,
+     98843054,
+     98855615,
+     99169766,
+     99171824
+    ],
+    "quote_as_of": "2026-11-01T23:49:03Z",
+    "quote_expiry": null,
+    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+    "route_id": "39d7622aWAVOQ5ex",
+    "gas_usd": "0.037247534451436505",
+    "router_price_in": 1.072788856254598,
+    "router_price_out": 0.9998751195248994,
+    "slippage_bps_debiased": -3461.1409680000006,
+    "price_bias_bps": -345.3658999999998,
+    "chain": "avalanche",
+    "rung_kind": "decade"
+   }
+  ],
+  "asset_category": "stable",
+  "primary_threshold_bps": -50.0,
+  "primary_threshold_basis": "stable asset: each chain's 0.5% marginal crossing is its headline (spec \u00a77.8); the 2% bracket is retained per chain. No cross-chain scalar for either threshold.",
+  "depth_usd_semantics": "null by design: no cross-chain scalar. Each per_chain entry's depth_usd is that chain's bracket lower bound, never its crossing."
+ },
+ "primary_exit": {
+  "venue": "Re Protocol primary redemption",
+  "contract": null,
+  "at_nav": null,
+  "gated": null,
+  "gate": "not_measured",
+  "cadence": null,
+  "capacity_usd": null,
+  "capacity_basis": "No reUSD primary-redemption contract, live capacity, or chain-specific redemption path was verified in this measurement; reUSDe's quarterly WindowRedemption terms are not copied to reUSD.",
+  "oversubscription_treatment": null,
+  "first_window": null,
+  "capacity_pct_of_tranche": null,
+  "full_exit_years_at_same_capacity": null,
+  "note": "Primary exit is deliberately unrated rather than inferred from the sibling reUSDe tranche."
+ },
+ "enumeration": {
+  "source": "CoinGecko contract registry; GeckoTerminal token-pool search; DefiLlama yields pool search; DexTracker live KyberSwap routed queries",
+  "as_of": "2026-09-08T05:59:53Z",
+  "venue_count": 23,
+  "chain_count_is_floor": false,
+  "chain_count_note": "All four chains in the supplied reUSD registry were searched: Ethereum, Arbitrum, Base, and Avalanche. Ethereum, Base, and Avalanche returned indexed swap venues. Arbitrum returned no GeckoTerminal pools and only economically invalid KyberSwap limit-order dust; this is recorded as nothing found by the searched sources, not proof that no on-chain venue exists. Solana, Ink, and BNB Chain appeared in the contemporaneous CoinGecko platform list but were outside the supplied four-chain registry and were not searched; they are explicitly not absence findings.",
+  "by_chain": {
+   "Ethereum": {
+    "search_status": "searched_venues_found",
+    "indexed_swap_venue_count": 12,
+    "routed_quote_status": "ok",
+    "largest_tested_clearing_rung_usd": 10000000.0
+   },
+   "Arbitrum": {
+    "search_status": "searched_nothing_found",
+    "indexed_swap_venue_count": 0,
+    "routed_quote_status": "invalid_quote",
+    "reason": "No indexed pools; router returned limit-order dust only."
+   },
+   "Base": {
+    "search_status": "searched_venues_found",
+    "indexed_swap_venue_count": 6,
+    "routed_quote_status": "ok",
+    "tested_crossing_bracket_usd": [
+     100.0,
+     1000.0
+    ]
+   },
+   "Avalanche": {
+    "search_status": "searched_venues_found",
+    "indexed_swap_venue_count": 5,
+    "routed_quote_status": "ok",
+    "tested_crossing_bracket_usd": [
+     5000.0,
+     10000.0
+    ]
+   }
+  },
+  "not_searched": [
+   "Solana",
+   "Ink",
+   "BNB Chain"
+  ],
+  "completeness": "Complete for the four-chain registry supplied in the handoff; not a complete census of every chain reported by CoinGecko at measurement time.",
+  "routed_measurement_as_of": "2026-11-01T23:49:24Z",
+  "by_chain_measurement": {
+   "ethereum": {
+    "status": "bracketed",
+    "depth_usd": 8031250.0,
+    "is_floor": true,
+    "bracket": {
+     "last_clearing_size_usd": 8031250.0,
+     "last_clearing_marginal_impact_bps": -158.85642556451418,
+     "first_crossing_size_usd": 8101562.5,
+     "first_crossing_marginal_impact_bps": -549.1187335197678,
+     "width_usd": 70312.5,
+     "monotonic_in_bracket": true,
+     "threshold_bps": -200.0,
+     "meets_precision_obligation": true
+    },
+    "termination": "crossed_threshold",
+    "successful_rungs": 5,
+    "attempted_rungs": 5,
+    "baseline_rung": {
+     "size_usd": 100.0,
+     "slippage_bps": 0.0628999999996438,
+     "amount_out_tokens": 100.000629
+    },
+    "refinement": {
+     "status": "refined",
+     "stopped_on": "precision_obligation_met",
+     "probe_count": 7
+    },
+    "basis": "The -200bps marginal crossing is BRACKETED between $8,031,250.00 and $8,101,562.50, both ends re-quoted. `depth_usd` is the lower bound.",
+    "bracket_50bps": {
+     "threshold_bps": -50.0,
+     "convention": "marginal",
+     "status": "bracketed",
+     "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
+     "refinement": {
+      "status": "discarded",
+      "stopped_on": "precision_obligation_met",
+      "probe_count": 7
+     },
+     "bracket": {
+      "last_clearing_size_usd": 1000000.0,
+      "last_clearing_marginal_impact_bps": -3.3431390599991673,
+      "first_crossing_size_usd": 10000000.0,
+      "first_crossing_marginal_impact_bps": -2075.5152016720012,
+      "width_usd": 9000000.0,
+      "monotonic_in_bracket": true,
+      "threshold_bps": -50.0,
+      "meets_precision_obligation": false
+     },
+     "depth_usd": 1000000.0,
+     "is_floor": true,
+     "basis": "Refined ends did not reproduce (-17.495409304704168 / -18.050526794578523 bps) and no straddling pair could be salvaged; the coarse decade bracket is published."
+    }
+   },
+   "arbitrum": {
+    "status": "bracketed",
+    "depth_usd": 1000000.0,
+    "is_floor": true,
+    "bracket": {
+     "last_clearing_size_usd": 1000000.0,
+     "last_clearing_marginal_impact_bps": -7.883877600001199,
+     "first_crossing_size_usd": 10000000.0,
+     "first_crossing_marginal_impact_bps": -8382.943771209,
+     "width_usd": 9000000.0,
+     "monotonic_in_bracket": true,
+     "threshold_bps": -200.0,
+     "meets_precision_obligation": false
+    },
+    "termination": "crossed_threshold",
+    "successful_rungs": 5,
+    "attempted_rungs": 5,
+    "baseline_rung": {
+     "size_usd": 100.0,
+     "slippage_bps": 1.5251000000016113,
+     "amount_out_tokens": 100.015251
+    },
+    "refinement": {
+     "status": "discarded",
+     "stopped_on": "precision_obligation_met",
+     "probe_count": 10
+    },
+    "basis": "Refined ends did not reproduce (-492.28726455680106 / -492.3521045887902 bps) and no straddling pair could be salvaged; the coarse decade bracket is published.",
+    "bracket_50bps": {
+     "threshold_bps": -50.0,
+     "convention": "marginal",
+     "status": "bracketed",
+     "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
+     "refinement": {
+      "status": "discarded",
+      "stopped_on": "precision_obligation_met",
+      "probe_count": 10
+     },
+     "bracket": {
+      "last_clearing_size_usd": 1000000.0,
+      "last_clearing_marginal_impact_bps": -7.883877600001199,
+      "first_crossing_size_usd": 10000000.0,
+      "first_crossing_marginal_impact_bps": -8382.943771209,
+      "width_usd": 9000000.0,
+      "monotonic_in_bracket": true,
+      "threshold_bps": -50.0,
+      "meets_precision_obligation": false
+     },
+     "depth_usd": 1000000.0,
+     "is_floor": true,
+     "basis": "Refined ends did not reproduce (-492.28705923840096 / -492.3519001451848 bps) and no straddling pair could be salvaged; the coarse decade bracket is published."
+    }
+   },
+   "base": {
+    "status": "invalid_quote",
+    "depth_usd": null,
+    "is_floor": null,
+    "bracket": null,
+    "termination": "crossed_threshold",
+    "successful_rungs": 0,
+    "attempted_rungs": 2,
+    "baseline_rung": {
+     "size_usd": 100.0,
+     "slippage_bps": -204.97180000000003,
+     "amount_out_tokens": 97.950282
+    }
+   },
+   "avalanche": {
+    "status": "bracketed",
+    "depth_usd": 6097.65625,
+    "is_floor": true,
+    "bracket": {
+     "last_clearing_size_usd": 6097.65625,
+     "last_clearing_marginal_impact_bps": -198.66667481101888,
+     "first_crossing_size_usd": 6132.8125,
+     "first_crossing_marginal_impact_bps": -200.97579070063819,
+     "width_usd": 35.15625,
+     "monotonic_in_bracket": true,
+     "threshold_bps": -200.0,
+     "meets_precision_obligation": true
+    },
+    "termination": "crossed_threshold",
+    "successful_rungs": 2,
+    "attempted_rungs": 2,
+    "baseline_rung": {
+     "size_usd": 100.0,
+     "slippage_bps": -345.3658999999998,
+     "amount_out_tokens": 96.546341
+    },
+    "refinement": {
+     "status": "refined",
+     "stopped_on": "precision_obligation_met",
+     "probe_count": 8
+    },
+    "basis": "The -200bps marginal crossing is BRACKETED between $6,097.66 and $6,132.81, both ends re-quoted. `depth_usd` is the lower bound.",
+    "bracket_50bps": {
+     "threshold_bps": -50.0,
+     "convention": "marginal",
+     "status": "bracketed",
+     "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
+     "bracketed_from_baseline": true,
+     "refinement": {
+      "status": "refined",
+      "stopped_on": "precision_obligation_met",
+      "probe_count": 10
+     },
+     "bracket": {
+      "last_clearing_size_usd": 133.3984375,
+      "last_clearing_marginal_impact_bps": -49.17466573938657,
+      "first_crossing_size_usd": 134.27734375,
+      "first_crossing_marginal_impact_bps": -50.13840487272603,
+      "width_usd": 0.87890625,
+      "monotonic_in_bracket": true,
+      "threshold_bps": -50.0,
+      "meets_precision_obligation": true
+     },
+     "depth_usd": 133.3984375,
+     "is_floor": true,
+     "basis": "The -50bps marginal crossing is BRACKETED between $133.40 and $134.28, both ends re-quoted. `depth_usd` is the lower bound."
+    }
+   }
+  },
+  "live_venue_count": 4,
+  "excluded_venue_count": 0,
+  "unestablished_venue_count": 2,
+  "live_venue_count_is_floor": true,
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 2 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead.",
+  "superseded_for_chain_coverage_by": "venue_census: every chain the issuer lists, searched daily by exact address. This block's by_chain search is a one-off from its own as_of and is retained as the record of that search."
+ },
+ "venues": [
+  {
+   "name": "reUSD/USDT",
+   "project": "fluid-dex",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "fluid-dex-t1",
+   "pool_id": "0xb96cee75211700bc148b95b1c907d726791f4457",
+   "tvl_usd": 24788193.0792,
+   "underlying_tokens": [
+    "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+    "0xdac17f958d2ee523a2206206994597c13d831ec7"
+   ],
+   "depth_role": "Routed ladder is canonical; TVL is context only.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Carried in this payload's own routed ladder; the venue answered quotes at measurement time. Liveness is inherited from that role, not re-read on-chain in this migration."
+  },
+  {
+   "name": "reUSD/sUSDe",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable",
+   "pool_id": "0x5c2ab69eb2bf12a2f4572d178687bd4660512972",
+   "tvl_usd": 2284077.6032,
+   "underlying_tokens": [
+    "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+    "0x9d39a5de30e57443bf2a8307a4256c8797a3497"
+   ],
+   "depth_role": "Enumerated route component; TVL is context only.",
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
+  },
+  {
+   "name": "reUSD/USDC",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve-stable-ng",
+   "pool_id": "0xf74c91b36c26543a0aa820bef407a577e5498bf0",
+   "tvl_usd": 450386.1525,
+   "underlying_tokens": [
+    "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+    "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"
+   ],
+   "depth_role": "Routed ladder component; TVL is context only.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Carried in this payload's own routed ladder; the venue answered quotes at measurement time. Liveness is inherited from that role, not re-read on-chain in this migration."
+  },
+  {
+   "name": "sUSG/reUSD",
+   "project": "curve",
+   "chain": "Ethereum",
+   "kind": "swap",
+   "pool_type": "curve",
+   "pool_id": "0xc6ac08424ee6d1373f03611b96f5da849594b6d8",
+   "tvl_usd": 1029307.7167,
+   "underlying_tokens": [
+    "0xf17d6f98a5c6eaa99d149079984119e0a4ef6900",
+    "0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+   ],
+   "depth_role": "Enumerated route component; TVL is context only.",
+   "is_live": null,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent."
+  },
+  {
+   "name": "reUSD/USDC venues",
+   "project": "multiple",
+   "chain": "Base",
+   "kind": "swap",
+   "pool_type": "aerodrome, SectorOne, and Uniswap-family venues",
+   "pool_id": "multiple; see routed venue labels",
+   "tvl_usd": 1111.0284165,
+   "underlying_tokens": [
+    "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
+    "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+   ],
+   "depth_role": "Six indexed pools; routed ladder is canonical and TVL is context only.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Carried in this payload's own routed ladder; the venue answered quotes at measurement time. Liveness is inherited from that role, not re-read on-chain in this migration."
+  },
+  {
+   "name": "reUSD/USDC and reUSD/USDt venues",
+   "project": "multiple",
+   "chain": "Avalanche",
+   "kind": "swap",
+   "pool_type": "Blackhole and Uniswap-family venues",
+   "pool_id": "multiple; see routed venue labels",
+   "tvl_usd": 6332.8022304,
+   "underlying_tokens": [
+    "0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
+    "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e"
+   ],
+   "depth_role": "Five material indexed pools plus dust pools; routed ladder is canonical and TVL is context only.",
+   "is_live": true,
+   "exclusion_reason": null,
+   "exclusion_reason_note": null,
+   "liveness_basis": "Carried in this payload's own routed ladder; the venue answered quotes at measurement time. Liveness is inherited from that role, not re-read on-chain in this migration."
+  }
+ ],
+ "total_tvl_usd": 28565447.5293,
+ "swap_tvl_usd": 28565447.5293,
+ "axis_binding_constraint": {
+  "leg": "not_determined",
+  "basis": "Neither a single cross-chain secondary-depth scalar nor reUSD primary-redemption capacity was established. The file therefore replaces the unverifiable $10M substitute with a declared unrated result while retaining the measured chain-local evidence."
+ },
+ "refresh_cadence": "daily",
+ "payload_revised_at": "2026-11-01T23:49:24Z",
+ "venue_census": {
+  "producer": "dextracker:venue_inventory.py",
+  "as_of": "2026-11-02T00:45:15Z",
+  "refresh_cadence": "daily",
+  "scope_note": "Which pools trade this asset on every chain it is deployed to, and what each pool is for. Pool TVL, not depth: the measured depth stays in `depth`.",
+  "venues_by_role": {
+   "dollar_exit": {
+    "pool_count": 5,
+    "tvl_usd": 29938315.0487,
+    "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
+   },
+   "family_swap": {
+    "pool_count": 2,
+    "tvl_usd": 2288135.2423,
+    "meaning": "Swaps the asset for its own sister token: NOT a way out."
+   },
+   "other_pair": {
+    "pool_count": 2,
+    "tvl_usd": 7163982.3996,
+    "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
+   }
+  },
+  "chains": {
+   "eth": {
+    "status": "queried",
+    "token": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+    "queried_at": "2026-11-02T00:45:35Z",
+    "finding": "venues_found",
+    "token_indexed": true,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 17,
+    "published_pool_count": 5,
+    "below_floor_count": 12,
+    "dollar_exit_pool_count": 2,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 25451909.8561,
+    "local_dollar_exit": true
+   },
+   "avax": {
+    "status": "queried",
+    "token": "0x180af87b47bf272b2df59dccf2d76a6eafa625bf",
+    "queried_at": "2026-11-02T00:46:03Z",
+    "finding": "venues_found",
+    "token_indexed": true,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 12,
+    "published_pool_count": 1,
+    "below_floor_count": 11,
+    "dollar_exit_pool_count": 1,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 6046.4171,
+    "local_dollar_exit": true
+   },
+   "arbitrum": {
+    "status": "queried",
+    "token": "0x76ce01f0ef25aa66cc5f1e546a005e4a63b25609",
+    "queried_at": "2026-11-02T00:46:26Z",
+    "finding": "venues_found",
+    "token_indexed": true,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 1,
+    "published_pool_count": 1,
+    "below_floor_count": 0,
+    "dollar_exit_pool_count": 1,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 3514207.3628,
+    "local_dollar_exit": true
+   },
+   "base": {
+    "status": "queried",
+    "token": "0x7d214438d0f27afccc23b3d1e1a53906ace5cfea",
+    "queried_at": "2026-11-02T00:46:55Z",
+    "finding": "none_found",
+    "token_indexed": true,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 6,
+    "published_pool_count": 0,
+    "below_floor_count": 6,
+    "dollar_exit_pool_count": 0,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 0,
+    "local_dollar_exit": false
+   },
+   "megaeth": {
+    "status": "queried",
+    "token": "0xd25f563e12ff616262f8c947fec108db934f8059",
+    "finding": "none_found",
+    "token_indexed": false,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 0,
+    "published_pool_count": 0,
+    "below_floor_count": 0,
+    "dollar_exit_pool_count": 0,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 0.0,
+    "local_dollar_exit": false,
+    "basis": "The token is deployed here (symbol() read on-chain = reUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed."
+   },
+   "katana": {
+    "status": "queried",
+    "token": "0xe08853433fdbc504240455e295b644e0f44c3b29",
+    "finding": "none_found",
+    "token_indexed": false,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 0,
+    "published_pool_count": 0,
+    "below_floor_count": 0,
+    "dollar_exit_pool_count": 0,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 0.0,
+    "local_dollar_exit": false,
+    "basis": "The token is deployed here (symbol() read on-chain = reUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed."
+   },
+   "bsc": {
+    "status": "queried",
+    "token": "0xba9425ec55ee0e72216d18e0ad8bbba2553bfb60",
+    "queried_at": "2026-11-02T00:47:49Z",
+    "finding": "none_found",
+    "token_indexed": true,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 0,
+    "published_pool_count": 0,
+    "below_floor_count": 0,
+    "dollar_exit_pool_count": 0,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 0,
+    "local_dollar_exit": false
+   },
+   "ink": {
+    "status": "queried",
+    "token": "0x5bcf6b008bf80b9296238546bace1797657b05d6",
+    "queried_at": "2026-11-02T00:48:12Z",
+    "finding": "none_found",
+    "token_indexed": true,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 0,
+    "published_pool_count": 0,
+    "below_floor_count": 0,
+    "dollar_exit_pool_count": 0,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 0,
+    "local_dollar_exit": false
+   },
+   "plasma": {
+    "status": "queried",
+    "token": "0xe08853433fdbc504240455e295b644e0f44c3b29",
+    "finding": "none_found",
+    "token_indexed": false,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 0,
+    "published_pool_count": 0,
+    "below_floor_count": 0,
+    "dollar_exit_pool_count": 0,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 0.0,
+    "local_dollar_exit": false,
+    "basis": "The token is deployed here (symbol() read on-chain = reUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed."
+   },
+   "berachain": {
+    "status": "queried",
+    "token": "0xd156a8e80a6593ddafa099f76754fdce0f808a55",
+    "finding": "none_found",
+    "token_indexed": false,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 0,
+    "published_pool_count": 0,
+    "below_floor_count": 0,
+    "dollar_exit_pool_count": 0,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 0.0,
+    "local_dollar_exit": false,
+    "basis": "The token is deployed here (symbol() read on-chain = reUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed."
+   },
+   "monad": {
+    "status": "queried",
+    "token": "0xd25f563e12ff616262f8c947fec108db934f8059",
+    "queried_at": "2026-11-02T00:49:06Z",
+    "finding": "none_found",
+    "token_indexed": true,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 0,
+    "published_pool_count": 0,
+    "below_floor_count": 0,
+    "dollar_exit_pool_count": 0,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 0,
+    "local_dollar_exit": false
+   },
+   "tempo": {
+    "status": "queried",
+    "token": "0x20c000000000000000000000383a23bacb546ab9",
+    "finding": "none_found",
+    "token_indexed": false,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 0,
+    "published_pool_count": 0,
+    "below_floor_count": 0,
+    "dollar_exit_pool_count": 0,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 0.0,
+    "local_dollar_exit": false,
+    "basis": "The token is deployed here (symbol() read on-chain = reUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed."
+   },
+   "solana": {
+    "status": "queried",
+    "token": "2uxaYT1fVrp6Fg2BrxQcyKSW91hefM6dG9krpbeDiirT",
+    "queried_at": "2026-11-02T00:49:39Z",
+    "finding": "venues_found",
+    "token_indexed": true,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 6,
+    "published_pool_count": 2,
+    "below_floor_count": 4,
+    "dollar_exit_pool_count": 1,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 966151.4127,
+    "local_dollar_exit": true
+   },
+   "sei-evm": {
+    "status": "queried",
+    "token": "0x0a790e1f85594e27d8eb26907fe280f0e0f166de",
+    "finding": "none_found",
+    "token_indexed": false,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 0,
+    "published_pool_count": 0,
+    "below_floor_count": 0,
+    "dollar_exit_pool_count": 0,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 0.0,
+    "local_dollar_exit": false,
+    "basis": "The token is deployed here (symbol() read on-chain = reUSD) but GeckoTerminal indexes no pool holding it. Nothing found by this source; a venue it does not index would be missed."
+   }
+  },
+  "enumeration": {
+   "as_of": "2026-11-02T00:45:15Z",
+   "source": "GeckoTerminal token-pools API, paginated, by exact chain-specific address",
+   "venue_count": 42,
+   "published_venue_count": 9,
+   "tvl_floor_usd": 1000.0,
+   "chains_queried": [
+    "arbitrum",
+    "avax",
+    "base",
+    "berachain",
+    "bsc",
+    "eth",
+    "ink",
+    "katana",
+    "megaeth",
+    "monad",
+    "plasma",
+    "sei-evm",
+    "solana",
+    "tempo"
+   ],
+   "chains_query_failed": [],
+   "chains_not_queried": [],
+   "chains_truncated": [],
+   "chains_without_local_dollar_exit": [
+    "base",
+    "berachain",
+    "bsc",
+    "ink",
+    "katana",
+    "megaeth",
+    "monad",
+    "plasma",
+    "sei-evm",
+    "tempo"
+   ],
+   "chains_none_found": [
+    "base",
+    "berachain",
+    "bsc",
+    "ink",
+    "katana",
+    "megaeth",
+    "monad",
+    "plasma",
+    "sei-evm",
+    "tempo"
+   ],
+   "finding_meanings": {
+    "venues_found": "Pools at or above the $1,000 TVL floor were found.",
+    "none_found": "Searched, and nothing at or above the floor was found: a market fact as far as the indexer reaches.",
+    "not_checked": "Not searched, for the stated reason: a gap in what this tool can reach, NOT a finding about the market.",
+    "unknown": "The search failed or the token could not be confirmed: NOT empty."
+   },
+   "chain_count_is_floor": true,
+   "chain_count_note": "FLOOR, not a census: chains are the asset's CoinGecko platforms. A deployment CoinGecko does not list is not queried here.",
+   "live_venue_count": 0,
+   "excluded_venue_count": 0,
+   "unestablished_venue_count": 9,
+   "live_venue_count_is_floor": true,
+   "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 9 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
+  },
+  "venues": [
+   {
+    "name": "reUSD / USDT",
+    "chain": "eth",
+    "dex": "fluid-ethereum",
+    "kind": "swap",
+    "address": "0xb96cee75211700bc148b95b1c907d726791f4457",
+    "counter_asset": {
+     "symbol": "USDT",
+     "address": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+     "decimals": 6,
+     "price_usd": 0.995086936703166
+    },
+    "role": "dollar_exit",
+    "tvl_usd": 25000999.1176,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": null,
+    "volume_24h_usd": 1254419.31155284,
+    "as_of": "2026-11-02T00:45:35Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xb96cee75211700bc148b95b1c907d726791f4457",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": "not_checked",
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   },
+   {
+    "name": "JupUSD / reUSD",
+    "chain": "solana",
+    "dex": "jup-lend-amm",
+    "kind": "swap",
+    "address": "AM8rYsQewRaDXt5wimrzEoJuJ7LxLdr1Pur897fkXDgT",
+    "counter_asset": {
+     "symbol": "JupUSD",
+     "address": "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD",
+     "decimals": 6,
+     "price_usd": 0.9989168289
+    },
+    "role": "other_pair",
+    "tvl_usd": 6001798.0646,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": null,
+    "volume_24h_usd": 30581.1089360484,
+    "as_of": "2026-11-02T00:49:39Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/solana/pools/AM8rYsQewRaDXt5wimrzEoJuJ7LxLdr1Pur897fkXDgT",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": "not_checked",
+    "counter_value_check": {
+     "status": "ok",
+     "counter_cap_usd": 38707039.4895224
+    },
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   },
+   {
+    "name": "reusd / USDC",
+    "chain": "arbitrum",
+    "dex": "fluid-arbitrum",
+    "kind": "swap",
+    "address": "0xdd72157a021804141817d46d9852a97addfb9f59",
+    "counter_asset": {
+     "symbol": "USDC",
+     "address": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+     "decimals": 6,
+     "price_usd": 1.0014371075354
+    },
+    "role": "dollar_exit",
+    "tvl_usd": 3514207.3628,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": null,
+    "volume_24h_usd": 140137.972714053,
+    "as_of": "2026-11-02T00:46:26Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/arbitrum/pools/0xdd72157a021804141817d46d9852a97addfb9f59",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": "not_checked",
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   },
+   {
+    "name": "reUSD / sUSDe",
+    "chain": "eth",
+    "dex": "curve",
+    "kind": "swap",
+    "address": "0x5c2ab69eb2bf12a2f4572d178687bd4660512972",
+    "counter_asset": {
+     "symbol": "sUSDe",
+     "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+     "decimals": 18,
+     "price_usd": 1.256405616578
+    },
+    "role": "family_swap",
+    "tvl_usd": 2228700.2047,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": null,
+    "volume_24h_usd": 174373.614930827,
+    "as_of": "2026-11-02T00:45:35Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x5c2ab69eb2bf12a2f4572d178687bd4660512972",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": {
+     "token_units_in_pool": 1628618.4069108437,
+     "counter_units_in_pool": 332597.60942699504,
+     "two_leg_usd_onchain": 2217173.974766543,
+     "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+    },
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   },
+   {
+    "name": "sUSG / reUSD",
+    "chain": "eth",
+    "dex": "curve",
+    "kind": "swap",
+    "address": "0xc6ac08424ee6d1373f03611b96f5da849594b6d8",
+    "counter_asset": {
+     "symbol": "sUSG",
+     "address": "0xf17d6f98a5c6eaa99d149079984119e0a4ef6900",
+     "decimals": 18,
+     "price_usd": 0.9939662698
+    },
+    "role": "other_pair",
+    "tvl_usd": 1162184.335,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": null,
+    "volume_24h_usd": 0.0,
+    "as_of": "2026-11-02T00:45:35Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xc6ac08424ee6d1373f03611b96f5da849594b6d8",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": {
+     "token_units_in_pool": 292684.639231856,
+     "counter_units_in_pool": 903709.3040882273,
+     "two_leg_usd_onchain": 1221614.34948784,
+     "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+    },
+    "counter_value_check": {
+     "status": "ok",
+     "counter_cap_usd": 1238032.27282
+    },
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   },
+   {
+    "name": "reUSD / USDC",
+    "chain": "solana",
+    "dex": "meteora",
+    "kind": "swap",
+    "address": "55BdJbxWBC3ykdbMXkWfVJwvB84bKn92xzYse6cHK9mV",
+    "counter_asset": {
+     "symbol": "USDC",
+     "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+     "decimals": 6,
+     "price_usd": 1.0004781186
+    },
+    "role": "dollar_exit",
+    "tvl_usd": 966151.4127,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": null,
+    "volume_24h_usd": 0.0,
+    "as_of": "2026-11-02T00:49:39Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/solana/pools/55BdJbxWBC3ykdbMXkWfVJwvB84bKn92xzYse6cHK9mV",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": "not_checked",
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   },
+   {
+    "name": "reUSD / USDC",
+    "chain": "eth",
+    "dex": "curve",
+    "kind": "swap",
+    "address": "0xf74c91b36c26543a0aa820bef407a577e5498bf0",
+    "counter_asset": {
+     "symbol": "USDC",
+     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+     "decimals": 6,
+     "price_usd": 0.999816382418102
+    },
+    "role": "dollar_exit",
+    "tvl_usd": 450910.7385,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": null,
+    "volume_24h_usd": 18665.5472362027,
+    "as_of": "2026-11-02T00:45:35Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xf74c91b36c26543a0aa820bef407a577e5498bf0",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": {
+     "token_units_in_pool": 213023.8157715576,
+     "counter_units_in_pool": 215412.671123,
+     "two_leg_usd_onchain": 450721.67937138065,
+     "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+    },
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   },
+   {
+    "name": "reUSD / sUSDe 0.038%",
+    "chain": "eth",
+    "dex": "uniswap-v4-ethereum",
+    "kind": "swap",
+    "address": "0x8c4ca345d69b1aaa75e139fbe185bf5cebc7cd12d4958c12d6cb97b0569b8954",
+    "counter_asset": {
+     "symbol": "sUSDe",
+     "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+     "decimals": 18,
+     "price_usd": 1.25058164298011
+    },
+    "role": "family_swap",
+    "tvl_usd": 59435.0376,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+    "volume_24h_usd": 0.0,
+    "as_of": "2026-11-02T00:45:35Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x8c4ca345d69b1aaa75e139fbe185bf5cebc7cd12d4958c12d6cb97b0569b8954",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": "not_checked",
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   },
+   {
+    "name": "reUSD / USDC 0.5%",
+    "chain": "avax",
+    "dex": "blackhole-v3",
+    "kind": "swap",
+    "address": "0x64b9b45dbf624d63d15c04c576faf5c8366d0696",
+    "counter_asset": {
+     "symbol": "USDC",
+     "address": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+     "decimals": 6,
+     "price_usd": 1.00046428704403
+    },
+    "role": "dollar_exit",
+    "tvl_usd": 6046.4171,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": null,
+    "volume_24h_usd": 0.0,
+    "as_of": "2026-11-02T00:46:03Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/avax/pools/0x64b9b45dbf624d63d15c04c576faf5c8366d0696",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": "not_checked",
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   }
+  ],
+  "non_swap_listings": {
+   "status": "not_queried",
+   "listings": null,
+   "basis": "Ticker is shared with unrelated tokens; a symbol match would list strangers."
+  },
+  "venue_diagnostics": {
+   "reason_meanings": {
+    "below_tvl_floor": "Reported TVL under $1,000: dust. Left out of `venues` and every total.",
+    "duplicate_listing": "The same pool address returned twice by the indexer; kept once in `venues`.",
+    "tvl_exceeds_supply": "Kept in `venues`, but its TVL is out of every total: it exceeds the token's whole value on the chain.",
+    "tvl_exceeds_onchain_custody": "Kept in `venues`, but its TVL is out of every total: it is far above what the pool holds on-chain.",
+    "counter_token_value_implausible": "Kept in `venues`, but its TVL is out of every total: it rests on a price for a token with no real market value."
+   },
+   "rejected_count": 33,
+   "rejected_by_reason": {
+    "below_tvl_floor": 33
+   },
+   "rejected": [
+    {
+     "chain": "solana",
+     "address": "9T6M11tfA5cWmcGez1pYeNsyr7CKjGxi4iFWSC4rJzw3",
+     "name": "reUSD / USDC",
+     "dex": "meteora",
+     "role": "dollar_exit",
+     "tvl_usd": 645.093,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "base",
+     "address": "0x303be8d9d1d830a16994f9b14a3405867f67a1b74b4dc06695e3a3329d77db34",
+     "name": "reUSD / USDC 24.35%",
+     "dex": "uniswap-v4-base",
+     "role": "dollar_exit",
+     "tvl_usd": 543.7983,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "base",
+     "address": "0x2e2df48ea21d9ff5dfbb79b1008f128767caced8",
+     "name": "reUSD / USDC",
+     "dex": "aerodrome-slipstream-3",
+     "role": "dollar_exit",
+     "tvl_usd": 417.8374,
+     "volume_24h_usd": 42.9563989074,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "solana",
+     "address": "3v7i1bqX6wqGWfMuYeyr6ZRXBkrecZQw3qnPuQzsupGw",
+     "name": "reUSD / EDS",
+     "dex": "orca",
+     "role": "other_pair",
+     "tvl_usd": 343.2173,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x421194e547eb49304b3e99ffd26b164f9832d395",
+     "name": "reUSD / frxUSD",
+     "dex": "curve",
+     "role": "dollar_exit",
+     "tvl_usd": 206.7787,
+     "volume_24h_usd": 9.5988089092,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0xa6bb68ff426a57029ec06162cb1a9f7aadde5354",
+     "name": "reUSD / USDC 0.05%",
+     "dex": "supernova-cl",
+     "role": "dollar_exit",
+     "tvl_usd": 202.8578,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0xa51646649b547427ce0f080149ecbfc286a59a2cef327976e97fe35b453a9037",
+     "name": "reUSD / USDC 88%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 146.0469,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "base",
+     "address": "0x1ba8cbb3bac0bc9054228a8f1849cbaa8329514b",
+     "name": "reUSD / USDC",
+     "dex": "aerodrome-base",
+     "role": "dollar_exit",
+     "tvl_usd": 134.0572,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "solana",
+     "address": "85MmkyvQL4tJoe1TMjxqFHZDhjuCW8SiBR2h5Zrk3mhh",
+     "name": "reUSD / USDC",
+     "dex": "jup-lend-amm",
+     "role": "dollar_exit",
+     "tvl_usd": 104.3972,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "avax",
+     "address": "0xc26e546b632348e76ebbd2811f4458a32ea29b7a",
+     "name": "reUSD / USDC",
+     "dex": "blackhole-v2",
+     "role": "dollar_exit",
+     "tvl_usd": 99.7125,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "avax",
+     "address": "0x6f0b57447a70c89e27e5e4a5f1369071c4fe31ae70fcbe19ae5363eb0a16f9cf",
+     "name": "reUSD / USDt 88%",
+     "dex": "uniswap-v4-avalanche",
+     "role": "dollar_exit",
+     "tvl_usd": 88.3784,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x2a5bfd24a671ab06f4b81efb502097958ac43c4011e24c89a238bb8d2d588bd3",
+     "name": "reUSD / USDT 0.3%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 9.9456,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x16bf53912b70132b8da775e20d7d7be625e82ceebee822c2af5c89856f0090ba",
+     "name": "reUSD / sUSDe 0.01%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "family_swap",
+     "tvl_usd": 9.7736,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x78c2c085d2a82054e70fa2d1da86fc31e2e96fd59b2f8a9df1872dd3befd47e2",
+     "name": "reUSD / USDC 0.03%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 6.9794,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0xa4fbd1594eeb399a46732c4a1edc095b577c359242f3bb4eeddcd11ab565b39e",
+     "name": "reUSD / USDC 0.038%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 6.9621,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "avax",
+     "address": "0xf1b1e4b095d3ef5bf4479bd1eae6662281e75ce9",
+     "name": "reUSD / USDC",
+     "dex": "pharaoh-exchange-v1",
+     "role": "dollar_exit",
+     "tvl_usd": 2.96,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x639e4b3612960af5d9ea9f69388b2c95afed39e294b3378389ab0050c4c8367e",
+     "name": "reUSD / sUSDe 0.05%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "family_swap",
+     "tvl_usd": 2.7257,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "base",
+     "address": "0x7cbf53a3b322fc7d7e2afcc65185799368bce5de70c8badd19f901b08078df95",
+     "name": "reUSD / USDC 10%",
+     "dex": "uniswap-v4-base",
+     "role": "dollar_exit",
+     "tvl_usd": 2.0781,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0xc383c89b7bb96d74b072d3f6342b38cd23327df94d9a41a0ec2fa86d75733a01",
+     "name": "reUSD / USDT 0.008%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 1.5892,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "base",
+     "address": "0x26b75147ed60bd6b912447b68234fc3f3dc7fa2c9b2a29cabc38a2904a496722",
+     "name": "reUSD / USDC 20%",
+     "dex": "uniswap-v4-base",
+     "role": "dollar_exit",
+     "tvl_usd": 1.0892,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "avax",
+     "address": "0xb334b51848cc1c7e85e2e7c0944c11a712e89c2fa98a0504223e810808c04226",
+     "name": "reUSD / USDC 0.5%",
+     "dex": "uniswap-v4-avalanche",
+     "role": "dollar_exit",
+     "tvl_usd": 0.3772,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "avax",
+     "address": "0x0fc0a653b07a5baabd467d25a84ed1a5e06f4d5ced22b4176114e415a4ba6c7d",
+     "name": "reUSD / USDC 1%",
+     "dex": "uniswap-v4-avalanche",
+     "role": "dollar_exit",
+     "tvl_usd": 0.1379,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "avax",
+     "address": "0xf3a7df1d9c45ab902559d2b491e0f2b198320fa7",
+     "name": "reUSD / USDC 0.01%",
+     "dex": "uniswap-v3-avalanche",
+     "role": "dollar_exit",
+     "tvl_usd": 0.00106239772,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "avax",
+     "address": "0x9953762caa4abb9c60700acf92e6c4293dfdd10adbd8831838d5f7a873a74d89",
+     "name": "reUSD / USDC 0.01%",
+     "dex": "uniswap-v4-avalanche",
+     "role": "dollar_exit",
+     "tvl_usd": 0.0002875503083,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "avax",
+     "address": "0x3b4a75cbab9aaa56643920a63d6f21a4ea85cf01",
+     "name": "reUSD / USDC 0.01%",
+     "dex": "pharaoh-exchange",
+     "role": "dollar_exit",
+     "tvl_usd": 0.0002700141293,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "base",
+     "address": "0x6998ac660fa94aefca0c2c735a5c511a0f333f53",
+     "name": "reUSD / USDC 0.05%",
+     "dex": "aerodrome-slipstream",
+     "role": "dollar_exit",
+     "tvl_usd": 0.0001165295046,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "avax",
+     "address": "0x924dc5806c00ab447f1808f30998a196964e5f7b",
+     "name": "reUSD / USDC 0.005%",
+     "dex": "pharaoh-exchange",
+     "role": "dollar_exit",
+     "tvl_usd": 5.001705043e-06,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "avax",
+     "address": "0xf727242f2e1e8d318ed1a4f9ce40b453b67581f9",
+     "name": "reUSD / USDC 0.025%",
+     "dex": "pharaoh-exchange",
+     "role": "dollar_exit",
+     "tvl_usd": 2.99573435e-06,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "avax",
+     "address": "0xb0da4a9e7ee2d3ac7368f60bffe0875b12727439",
+     "name": "reUSD / USDC 0.05%",
+     "dex": "uniswap-v3-avalanche",
+     "role": "dollar_exit",
+     "tvl_usd": 1.997804629e-06,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0xe07d7652a92ec25eb44fa1f487431793da831a68d85144b06c5fc5f05a5398b3",
+     "name": "reUSD / USDC 1%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 0.0,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x0dcd2ddad32b6b7f41032e51fbb21873bb99bd824ad10fed96a166d1e918d416",
+     "name": "reUSD / PT-reUSD-10DEC2026 88.2%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "other_pair",
+     "tvl_usd": 0.0,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x55ccea72ec81a578f739a3b5a42d12c820f1fa6ab5569bb287c360eaee35f0a2",
+     "name": "reUSD / USDT 0.038%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 0.0,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "solana",
+     "address": "34p2uMhLbsVs58tUSv4Yd77DjWDeScr3NqvhnKuMX34L",
+     "name": "reUSD / USDC",
+     "dex": "manifest",
+     "role": "dollar_exit",
+     "tvl_usd": 0.0,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    }
+   ],
+   "published_zero_volume_count": 4,
+   "volume_policy": "24h volume is published as context and is never a reason to reject a pool: a quiet day is not a dead pool (backing-monitor's fleet venue rule 5).",
+   "dedup_basis": "One source (GeckoTerminal) keyed by pool address, so the same pool cannot enter twice. Liquidity wrappers that re-list a pool (Convex, Yearn, StakeDAO, Beefy, Aura) are kept out of `venues` and marked `lp_wrapper` in `non_swap_listings`."
+  }
+ }
+}

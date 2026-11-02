@@ -1,0 +1,247 @@
+Risk Dashboard BOLD (ethereum) Full report ↗
+Updated: Nov 2, 2026, 09:37 AM GMT+8
+← All assets
+PEG
+-0.32% ▼
+premium / discount
+Current · Moderate deviation7d band · 6/10
+BACKING
+238.50% ⓘ
+collateral ratio
+Healthy · 10/10 ⚠️
+LIQUIDITY & EXIT
+≥$1.0M
+0.5% depth floor · crossing below $8.0M
+Healthy · 10/10 ⚠️
+DEPENDENCIES
+2 up · downstream not tracked
+upstream / downstream
+View links →
+SMART CONTRACT & ADMIN
+No core admin path
+Structural 8.5/10Allocator · no execution timelock
+ISSUER
+8/10
+editorial · subjective
+Report →
+Live: Peg, Backing and Liquidity. Authored: Smart Contract & Admin and Issuer. They measure different things. Read the full risk report for the authored scores →
+1
+Peg
+7d peg performance · market vs NAV · CoinGecko simple/token_price Ethereum contract-address USD aggregate
+Current · Moderate deviation
+7d band · 6/10
+49d old
+mixed · risk desk · 4 fields
+Why the report scores peg differently
+Peg Performance
+MARKET PRICE
+0.9968
+CoinGecko simple/token_price Ethereum contract-address USD aggregate · 1.4h old
+NAV / THEORETICAL
+1.0000
+vs BOLD's explicit fixed par reference; not the redemption-cost floor
+PREMIUM / DISCOUNT
+-0.317%
+STATUS
+Moderate deviation
+Redemption mechanics — spot is not size execution
+BASE RATE
+0.439%
+SPOT REDEMPTION FEE
+0.939%
+SPOT IMPLIED FLOOR
+$0.9906
+MARKET VS SPOT FLOOR
+62.9 bps above
+mechanism-relative position
+
+The implied floor is the size-zero rate. It is not an executable floor for a large holder; protocol redemption cost rises with size.
+
+REDEMPTION SIZE	EFFECTIVE FEE
+$100.0K	0.88%
+$1.0M	3.32%
+$2.0M	6.03%
+$10.0M	27.72%
+2
+Backing
+live reserves & collateral ratio
+Healthy · 10/10
+49d old
+mixed · risk desk · 5 fields
+Coverage basis — claims versus reserves
+Why this backing score
+Collateral Ratio History
+Min: 227.52%
+Max: 299.58%
+Range: 72.06pp
+Today 238.50% — the 21th percentile of this window ⓘ
+2117 obs over 3 months
+Backing Breakdown
+STRATEGY	VALUE (USD)	%	
+WETH	$22,789,114	25.9%	
+
+wstETH	$50,162,918	57.0%	
+
+rETH	$15,031,743	17.1%	
+
+Total	$87,983,775	100%	
+
+Percentages are each line’s share of total displayed backing (the 100% row) — not share of token supply.
+
+Risk Flags
+No BOLD backing alert thresholds currently breached
+Allocation
+Independent branch health
+
+Aggregate CR can hide an individual branch nearing its own floor. MCR / CCR / SCR and warning bands come from producer fields.
+
+BRANCH	DEBT	CR	MCR / CCR / SCR	SP COVERAGE	TROVES	STATE
+WETH	$12.7M	179.4%	110% / 150% / 110%	67.8%	106	active
+wstETH	$20.1M	249.0%	120% / 160% / 120%	43.8%	75	active
+rETH	$4.0M	372.6%	120% / 160% / 120%	116.8%	18	active
+Supply ↔ branch-debt reconciliation
+TOKEN SUPPLY
+$36.9M
+SUMMED BRANCH DEBT
+$36.9M
+GAP
+0.0006%
+alert above 0.10%
+
+This is a data-integrity invariant, not a solvency ratio.
+
+3
+Liquidity & Exit
+usable market exit & primary redemption
+Healthy · 10/10 ⚠️
+refreshes daily
+49d old
+mixed · depth feed + risk desk · 4 fields
+Headline uses 0.5% marginal sell depth; the 2% crossing remains folded as severe-stress evidence.
+Usable market exit
+0.5% DEPTH
+≥$1.0M
+measured floor
+CURRENT BRACKET
+$1.0M–$8.0M
+targeted solver not yet enabled
+QUOTED AT
+2026-11-01T23:45:37Z
+routed BOLD → USDC
+Market depth ladder
+SELL SIZE	ADDITIONAL IMPACT	NET OUTPUT	ROUTE
+$1.0K	0.06%	$998	1 venue
+$10.0K	0.01%	$10.0K	2 venues
+$100.0K	0.05%	$99.7K	5 venues
+$1.0M	0.09%	$997.0K	4 venues
+$8.0M	14.00%	$6.9M	9 venues
+$10.0M	31.74%	$6.8M	9 venues
+$20.0M	65.67%	$6.8M	11 venues
+
+⚠️ The depth figure above is a lower bound — a size that cleared, not the crossing itself. The true crossing is above it.
+
+Producer basis for the 2% figure (a different threshold from the 0.5% headline above): The -200bps crossing is BRACKETED between $6,695,312.50 and $6,765,625.00. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor.
+
+Stress and methodology
+Protocol redemption — separate exit route
+ACCESS
+permissionless
+continuous protocol call · fee rises with size
+
+BOLD is exchanged for a protocol-selected mix of WETH, wstETH and rETH. This is not the same settlement as a market sale to USDC.
+
+REDEMPTION SIZE	EFFECTIVE FEE
+$100.0K	0.88%
+$1.0M	3.32%
+$2.0M	6.03%
+$10.0M	27.72%
+Stability Pool loss-absorption coverage
+
+Pre-funded BOLD available to absorb branch liquidations before redistribution to surviving troves.
+
+WETH
+67.8%
+warning below 35%
+WSTETH
+43.8%
+warning below 35%
+RETH
+116.8%
+warning below 35%
+4
+Dependencies
+2 upstream · downstream not tracked
+Dependencies 7/10
+49d old
+mixed · risk desk · 4 fields
+Dependencies
+Why this dependencies score
+UPSTREAM — WHAT THIS ASSET DEPENDS ON
+Permanently closed collateral set: WETH / wstETH / rETH
+3 collateral branches; getToken(0..2) = WETH / wstETH / rETH and getToken(3) = address(0)
+Source & context
+No dashboard
+Chainlink ETH/USD and LST rate feeds
+ETH/USD 24h; stETH/USD 24h; rETH/ETH 48h staleness thresholds
+Source & context
+No dashboard
+About this dependency set
+DOWNSTREAM — WHAT DEPENDS ON THIS ASSET
+Downstream not tracked
+Consumer tracking (Morpho / Pendle / etc.) coming in a future version.
+sBOLD downstream wrapper
+SHARE OF BOLD SUPPLY
+10.6%
+ASSETS PER SHARE
+1.0928
+ADMIN STATE
+active
+
+Wrapper owner 0x2dF68EA583B8394A8Cc71EeBcd4fA7c6746027D5. This mutable wrapper is downstream of immutable BOLD core; its authority is priced on Contract & Admin.
+
+5
+Smart Contract & Admin
+4 immutable/renounced layers · 1 active bounded allocator
+Structural 8.5/10
+Allocator · no execution timelock
+49d old
+⚠️ security desk + risk desk · no field in common
+Why this contract score
+Additional overlay notes (1)
+Authority walk — hand-walk
+No core admin path
+Walked 2026-09-14
+Authority	Keys	Delay	Topology	Reach
+contract-upgrade
+BOLD core and Governance (30 contracts)
+	eip1967_implementation, owner, governance	not applicable	immutable-renounced	none
+parameter
+branch wiring and BOLD authorized-contract set
+	setAddresses, setBranchAddresses, setCollateralRegistry	not applicable	immutable-renounced	none
+asset-permission
+BOLD mint, burn, and Stability Pool transfer permissions
+	mint, burn, sendToPool, returnFromPool	not applicable	immutable-renounced	none
+oracle
+WETH, wstETH, and rETH branch PriceFeeds
+	ethUsdOracle, stEthUsdOracle, rEthEthOracle	not applicable	no-controller-found	none
+governance
+Protocol Initiative Liquidity allocation
+	registerInitiative, allocateLQTY, unregisterInitiative, claimForInitiative	no execution delay	token-weighted-dao	bounded · bounded-pool
+Review provenance — full review · 4 claims re-measured · reviewed by security desk · 2026-09-14
+⚠️ Not established — 6 items: ownership renouncement EVENT not read on · Chainlink feed governance and node-opera · Collateral token administration was not · Controls internal to a funded initiative · LQTY voter concentration and the cost of · Branch shutdown state is LIVE STATE, not
+Code & audits — 6 points
+What this score does and does not cover — 4 notes
+Verification trail & walk notes (verbatim, 15 lines)
+6
+Issuer
+editorial — subjective axis
+49d old
+risk desk · 11 fields
+Issuer
+Issuer 8.0/10
+Liquity (immutable protocol, no issuer counterparty)
+Full issuer assessment — Liquity (immutable protocol, no issuer counterparty)
+7 assessment points
+Editorial axis — how this is rated ⓘ
+Read the full risk report →
+Data refreshes every hour. Dashboard auto-refreshes every 5 minutes.

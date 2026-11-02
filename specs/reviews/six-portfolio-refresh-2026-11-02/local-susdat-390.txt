@@ -1,0 +1,220 @@
+Risk Dashboard sUSDat (ethereum) Full report ↗ View USDat ↗
+Updated: Nov 2, 2026, 09:46 AM GMT+8
+Asset
+Reserve
+NAV
+Liquidity
+Trust
+Family
+← All assets
+Critical risk flags for this asset:
+CRITICALsUSDat on-chain buffer critically low (1.41%; p41 of its 30-day history, median 2.37%; below 10% since 2026-10-14T16:45Z)
+sUSDat trading 0.78% below NAV on Curve
+CRITICALsUSDat implementation drifted from published: now 0x2b7074CF6681382b70E239063931ebE83C0f4E0A
+Shown here because this page’s layout does not display them elsewhere.
+Why the report scores peg differently
+crossing between $10.0K and $100.0K ⓘ
+Depth threshold and quote methodology
+pays 30.4 bps at the smallest quoted size ($1.0K), before any size impact — a cost of LEVEL, not of depth ⓘ
+Venue depth and primary-exit limits
+Why the report scores liquidity differently
+⚠️ unread block: basis_history
+Why this dependencies score
+Why this contract score
+PEG
+-0.78% ▼
+premium / discount
+Current · Material deviation7d band · 2/10
+BACKING
+104.96% ⓘ
+surplus +$1.8M · 1.4% on-chain verifiable
+Watch · 6/10 ⚠️
+LIQUIDITY & EXIT
+$10.0K – $100.0K
+0.5% depth (bracketed) · vol n/a · exit unprobed (declared)
+Stress · 2/10
+DEPENDENCIES
+2 up · downstream not tracked
+upstream / downstream
+View links →
+SMART CONTRACT & ADMIN
+5d warning
+shortest of 2 admin paths · 2 delayed · hand-walk
+Structural 3.5/10
+ISSUER
+5.0/10
+editorial · subjective
+Report →
+Live: Peg, Backing and Liquidity. Authored: Smart Contract & Admin and Issuer. They measure different things. Read the full risk report for the authored scores →
+sUSDat
+Saturn Labs · ERC-4626 vault share over USDat
+Source scope disagreement: Current Saturn disclosures describe STRC exposure through Ondo STRCon. This producer still labels the non-USDat remainder as off-chain STRC inferred from the vault oracle. Those labels do not verify STRCon holdings, custody or migration. Ethereum sUSDat observations do not establish Monad srUSDat or PT coverage. Issuer disclosure ↗
+Ethereum
+TOTAL ASSETS
+$37.6M
+USDat-denominated
+NAV PER SHARE
+1.049627
+USDat per share (not $/share)
+IMPLIED APY (30D)
+—
+vs 11% target
+STATUS
+Active
+1.41% on-chain buffer
+Self-consistency ✓ 0.009 bps
+Over the 715 observations plotted above the buffer ranged 0.13%–14.11% (median 2.37%); today sits at the 41th percentile of that range. It held 1.27% and moved to 1.41% in a single observation on 2026-10-31 — a step, not a drift. ⚠️ This is the same quantity the Backing tile shows as on-chain verifiable — when it falls, a larger share of the reserve rests on the oracle-marked off-chain claim.
+1
+Peg
+market price vs NAV
+Price vs NAV
+PRICE VS NAV
+-0.781%
+discount · trades below NAV · Curve sUSDat/USDC vs contract NAV
+Moderate deviation
+CURRENT NAV
+1.049627
+USDat / sUSDat
+CURVE MARKET PRICE
+$1.0414
+Curve sUSDat/USDC spot
+30-day price vs NAV (sUSDat)
+Vault-share peg is measured against contract NAV, not $1.00. NAV accrues over time (currently ~$1.0496 and growing under the 11% APY design target), so absolute-price comparisons would mis-state the true gap. Positive (+) = premium: market paying above NAV, often when buyers want to skip the vesting queue. Negative (-) = discount: market trading below NAV. A persistent small discount is not a peg break.
+2
+Backing
+reserve split and NAV trajectory
+What this ratio covers
+Ratio basis: NAV per share vs $1-par issuance (1 USDat/share). ⚠️ ATTESTED, NOT MEASURED: 98.6% of the reserve is an OFF-CHAIN STRC claim marked by oracle (breakdown tags it oracle_unverified); only 1.4% is on-chain USDat this repo can verify. The ratio is only as good as that mark, so it is left on the generic band rather than given tight cutoffs that would imply a precision the inputs do not have.
+Surplus basis: totalAssets minus shares — NAV accrued over $1-par issuance, which sUSDat holders own. ⚠️ NOT a junior-capital question: there is no tranche below this taking first loss, so nothing inside the surplus can be redeemed by someone else. The exposure that dominates it is the MARK, not the composition — ~97% of the reserve is an off-chain STRC claim priced by oracle and tagged oracle_unverified in the breakdown, so the surplus is only as good as that price and any multiple against it inherits that dependency.
+Reserve Composition
+Mixed verification
+Reserve split
+Self-consistency: ✓ 0.009 bps
+COMPONENT	USD VALUE	%	VERIFIABILITY
+On-chain USDat buffer	$530,270	1.41%	✓ on-chain
+Off-chain STRC (Strategy digital credit)	$37,049,300	98.59%	⚠ oracle-unverified
+Total assets	$37,579,570	100.00%	via totalAssets()
+Composition
+LTV-band policy (published — STRC % vs Strategy LTV)
+Current LTV not available (no live Strategy NAV input)
+IF LTV IS	TARGET STRC
+< 28.57%	100%
+< 33.33%	80%
+< 40.00%	60%
+< 50.00%	40%
+< 66.67%	20%
+< 100.00%	0%
+> 100.00%	0%
+~19% on-chain, ~81% oracle-unverified — the USDat buffer is readable directly via USDat.balanceOf(sUSDat); the STRC leg is reported by the vault's own totalAssets() with no independent oracle or proof-of-reserves verifying the off-chain custodian. Accountable + Chainlink NAV oracle pipeline is planned but not live as of this snapshot — until the feed activates, the 81% leg relies on the contract's own report (trust-the-oracle, where the contract is the oracle). Self-consistency only proves NAV × supply ≈ totalAssets — it does not prove the STRC actually exists at the reported value.
+NAV Trajectory — yield landing
+NAV PER SHARE
+1.049627
+USDat per share (not $/share)
+$ NAV PER SHARE
+$1.0931
+1.049627 USDat × $1.0414 (Curve)
+30D IMPLIED APY
+—
+—
+HEADLINE TARGET
+11.00%
+Saturn docs APY target
+NAV per share — 30d (solid = actual · dashed = 11% target line)
+NAV is not monotonic here, and a decline does not imply a loss event. ~99% of the reserve is an off-chain STRC claim carried at an oracle mark, so NAV is marked to that price between cycles and falls whenever the mark falls. Over the 714 transitions plotted above, 35 are declines (median -11.9 bps, largest -90.8 bps) while NAV is +0.94% net across the window. Vesting sets the upward drift; the mark sets the noise around it — read a decline by size and persistence, not by direction, because a single hourly tick is ordinary mark movement. Vesting intentionally delays yield landing, so a fresh sUSDat position accrues with a lag at first. Implied APY is computed from the NAV slope over the trailing window; the 11% headline target is a Saturn-disclosed design number, not a guarantee. sUSDat NAV is denominated in USDat (the vault's underlying), not USD. USDat's own peg deviation stacks on top, so $-equivalent NAV ≈ 4626 NAV × current USDat peg.
+3
+Liquidity & Exit
+exit depth, venue spread and slippage
+Liquidity
+Derived Score
+Live metric — recomputed each refresh from depth · peg · venues
+0.0 / 10
+▶ How this score is computed
+Secondary Market Depth
+PRICE VS NAV
+-0.781%
+discount · trades below NAV · Curve sUSDat/USDC vs contract NAV
+Moderate deviation
+CURVE SUSDAT/USDC
+$13.5K TVL
+$0 / 24h vol
+0x6206...9a7a ↗
+CURVE SUSDAT/FRXUSD (SECONDARY)
+$25.5K TVL
+- / 24h vol
+0xcaf1...02a5 ↗
+Slippage tiers — sUSDat → USDC
+SIZE	OUTPUT	SLIPPAGE
+$1K	—	30 bps
+$10K	—	1 bps
+$100K	—	-4188 bps
+$500K	—	-8428 bps
+Price-vs-NAV is the meaningful metric for a vault share — Curve sUSDat/USDC spot is not "the peg" because 1 sUSDat ≠ $1 by design. Positive (+) = premium above NAV; negative (-) = discount below NAV. Persistent small discount typically reflects the vesting queue (arbs can't close the gap atomically), not a backing problem.
+4
+Dependencies
+what this depends on, and what depends on it
+Dependencies 2.5/10
+Dependencies
+Upstream — what this depends on
+USDat →	~1% of backing
+STRC →	~99% of backing (off-chain)
+Downstream — what depends on this
+Not tracked — this feed does not measure downstream holders, which is not the same as there being none.
+5
+Contract & Admin
+trust stack — admin topology and attestation
+Trust Stack
+COMPONENT	VALUE	NOTES
+Proxy type	ERC1967Proxy	OZ ERC1967Proxy — upgrade authority is DEFAULT_ADMIN_ROLE holder
+DEFAULT_ADMIN_ROLE holder	0xfD57...8A67 ↗	Same address controls USDat + sUSDat
+Upgrade delay	5 days · self-administered	Shortening the delay must itself clear the delay · execution is permissionless once matured
+Timelock proposer / canceller	0x6101...6820 ↗ Saturn-stated Fireblocks 2-of-3 MPC ⓘ on-chain indistinguishable	⚠️ Holds BOTH roles — it can queue a full-reach upgrade and is also the only party that can cancel one, so there is no independent veto. It cannot execute.
+Exit / redemption delay	⚠️ Not established ⓘ both candidate figures ruled out	Unknown, not zero. ⚠️ The 5-day admin notice only protects if the exit is SHORTER than it — that comparison cannot be made from published sources.
+Deposit fee	10 bps	
+Min withdrawal	10 USDat	
+Timelock	
+Set
+	
+Audits: Three Sigma + Certora ×2 (shared with sibling) · audit set is shared across USDat + sUSDat
+6
+Issuer
+editorial — subjective axis
+Issuer
+Issuer 5.0/10
+Full issuer assessment
+9 assessment points
+Editorial axis — how this is rated ⓘ
+Read the full risk report →
+Saturn Family — cross-asset snapshot
+Aggregate AUM
+USDat supply
+$108,111,831
+sUSDat total assets
+$37,579,570
+Less USDat held by sUSDat
+−$530,270
+Combined family AUM
+$145,161,131
+combined_aum excludes USDat held by sUSDat to avoid double-count: usdat_supply + susdat_total_assets - usdat_in_susdat
+Shared admin MPC — watched key
+Saturn-stated Fireblocks 2-of-3 — on-chain EOA-shaped
+Address	0x6101...6820 ↗
+On-chain shape	
+EOA (no code)
+
+Listed authority	
+None — watch only
+
+Outbound nonce	40 (any tick is a signal)
+ETH balance	0.013847 ETH
+watch_only — holds none of the Saturn control paths; see shared_control for who does
+Control paths
+Single point of control over both layers
+PATH	HOLDER	KIND
+USDat DEFAULT_ADMIN_ROLE	0xfD57...8A67 ↗	timelock
+USDat ProxyAdmin owner	0xfD57...8A67 ↗	timelock
+sUSDat DEFAULT_ADMIN_ROLE	0xfD57...8A67 ↗	timelock
+All 3 control paths over USDat and sUSDat resolve to one authority (0xfD5782E3BFF366601da3973aE30C583dE4F08A67, timelock). These are NOT independent gates: the two layers of the stack share a single point of control, so they must not be counted as separate failures.
+Accountable feed: not live
+STRC PoR feed is planned per Saturn docs. Probing: 2 candidate endpoint(s).
+As of Nov 2, 2026, 09:46 AM GMT+8 · self-computed.
+Data refreshes every hour. Dashboard auto-refreshes every 5 minutes.

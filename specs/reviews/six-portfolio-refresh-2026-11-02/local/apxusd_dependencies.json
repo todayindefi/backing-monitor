@@ -1,0 +1,56 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "apxusd",
+  "as_of": "2026-10-26T15:37:10Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "Raw STRC implied residual",
+        "slug": "strc",
+        "edge_kind": "backing",
+        "materiality": "dominant",
+        "value_usd": 58312203.89,
+        "valuation_status": "implied_residual_not_custodian_verified",
+        "note": "October 26 total STRC bucket $127,437,270.44 less market-valued STRCx $69,125,066.55; implied residual, not independently verified custody."
+      },
+      {
+        "name": "STRCx in Apyx Safe",
+        "slug": "strcx",
+        "edge_kind": "backing",
+        "materiality": "material",
+        "value_usd": 69125066.55,
+        "note": "October 26 14:52 UTC: 696,380.0148426428 scaled tokens at $99.2634. Quantity and valuation assurance differ."
+      },
+      {
+        "name": "Cash/equivalents, protocol-owned liquidity and Other",
+        "unresolved": [
+          "Current instrument-level non-STRC reserve composition and POL underlying/counterparty look-through"
+        ],
+        "edge_kind": "backing",
+        "materiality": "material",
+        "note": "October 26 inventory $70,086,365.30 and POL $67,445,338.96 net from both sides for attested CR. Exact non-STRC reserve instruments remain unresolved."
+      }
+    ],
+    "upstream_resolution_rule": "⚠️ One resolution per entry: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL = nothing is missing. UNRESOLVED = a report is owed. Never merged. Bar set 2026-10-01: terminal requires the report to POSITIVELY STATE the backing; a peg_mechanism label is not evidence.",
+    "edge_kind_rule": "`backing` = my SOLVENCY depends on it. `venue` = my EXIT PRICE does.",
+    "coverage_note": "October 26 targeted review: both direct STRC and STRCx legs retained, wrapper slice counted once. Dependencies 3.0 held. Non-STRC look-through not fully resolved.",
+    "collateral_as_of": "2026-10-26",
+    "downstream_tracked": [
+      "apyusd",
+      "pt-apxusd"
+    ],
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "apyusd",
+        "pt-apxusd"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    }
+  }
+}

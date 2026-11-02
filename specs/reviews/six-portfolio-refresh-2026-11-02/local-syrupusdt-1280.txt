@@ -1,0 +1,462 @@
+Risk Dashboard syrupUSDT (Ethereum) Full report ↗
+Updated: Nov 2, 2026, 09:45 AM GMT+8
+← All assets
+PEG
+-0.31% ▲
+premium / discount
+Current · Moderate deviation7d band · 8/10
+BACKING
+100.00% ⓘ
+surplus +$5
+Healthy · 8/10 ⚠️
+LIQUIDITY & EXIT
+0.1% free
+redemption · free at NAV, rest queues
+Stress · 2/10 ⚠️
+DEPENDENCIES
+4 up · downstream not tracked
+upstream / downstream
+View links →
+SMART CONTRACT & ADMIN
+0h warning
+shortest of 6 admin paths · 3 delayed · 2 unmeasured · hand-walk
+Structural 4.5/10
+ISSUER
+5.5/10
+editorial · subjective
+Report →
+Live: Peg, Backing and Liquidity. Authored: Smart Contract & Admin and Issuer. They measure different things. Read the full risk report for the authored scores →
+1
+Peg
+7d peg performance · market vs NAV · coingecko
+Current · Moderate deviation
+7d band · 8/10
+5d old
+mixed · risk desk · 10 fields
+Why the report scores peg differently
+⚠️ unread blocks: market_observation, history_statistics
+Peg Performance
+MARKET PRICE
+1.1472
+NAV / THEORETICAL
+1.1508
+PREMIUM / DISCOUNT
+-0.313%
+STATUS
+Moderate deviation
+Primary redemption is full-size at NAV via Maple's withdrawal queue; secondary trades at a small discount (charted).
+2
+Backing
+live reserves & collateral ratio
+Healthy · 8/10
+5d old
+mixed · risk desk · 13 fields
+Coverage basis — claims versus reserves
+Surplus basis: pool.totalAssets() minus its independently-read components — the reconciliation residual, currently a few dollars on a book of hundreds of millions. NOT backing minus supply, which would be meaningless here because supply is in shares.
+Why this backing score
+⚠️ unread blocks: coverage, credit_coverage
+Additional overlay notes (2)
+Pool Coverage (live USD) — 7d
+7d Min: 99.39%
+7d Max: 104.03%
+7d Range: 4.64pp
+Source: poolV2.aumTimeSeries (Maple GraphQL) · collateralUsd ÷ loansUsd · as of 2026-10-31.
+Init-level commitment: 132.7% (from poolV2.collateralRatio) — the chart above shows live AUM-based coverage, which can sit below init-level when collateral prices drift.
+Note: Window narrowed to 7d to focus on the post-anomaly clean window. Maple's aumTimeSeries has documented aggregation inconsistencies (most recently seen Apr 3–20, 2026 with day-over-day swings of $300–500M on a $1B+ book). unrealizedLosses (the on-chain credit alarm) stayed at 0 throughout — the apparent dips were aggregation glitches, not real undercollateralization. Treat day-to-day swings >10pp as data-quality variance unless cross-validated against unrealizedLosses. Loan-level cells flagged with ? share this root cause — Maple GraphQL returns no usable currentAssetAmount for those at-par stablecoin/RWA positions, leaving their current-value and buffer cells blank.
+Pool Deployment Ratio — 30d
+30d Min: 97.08%
+30d Max: 99.94%
+Latest: 99.73%
+Free buffer: 0.27%
+Share of pool deployed into loans + DeFi strategies. Higher = less free USDT buffer for redemptions. <2% buffer triggers a risk flag on this page.
+Risk Flags
+Free liquidity <2% — exits forced into queue
+Pool Delegate first-loss cover: $0
+Pool Delegate is EOA (single-key for loan funding)
+Liquidity layer: 28% of pool — issuer/RWA/AMM risk axis (not borrower credit)
+Backing
+POOL TVL
+$298.1M
+LIQUIDITY CAP
+$2000.0M
+14.9% used
+NAV PER SHARE
+$1.1508
+USDT per share
+DELEGATE FEE
+0.00%
+taken from gross
+Collateral valuation coverage: 59.17% of enumerated principal
+7 of 18 collateral records have numeric valuations; $127.7M of principal has no valuation.
+Valuation availability does not establish custody or recoverability. Missing-collateral record counts do not measure pricing coverage.
+Valuation scope and reconciliation
+Asset composition
+SOURCE	VALUE (USD)	%	
+Free USDT ⓘ	$8,069	0.0%	
+
+Loans (third-party credit) ⓘ ↗	$215,052,547	72.1%	
+
+Liquidity layer (pool-owned strategies) ⓘ ↗	$82,608,170	27.7%	
+
+Total	$298,099,134	100%	
+Allocation
+Loan Book (third-party credit)
+Important: These are open-term loans with off-chain custodied collateral. The smart contract holds no collateral and cannot auto-liquidate — enforcement requires Pool Delegate's call right (24h notice + 48h grace before contract-level default). See loan list below for per-loan collateral assets / init levels.
+7 loans · 5 borrowers · 4.56% wtd-rate · pool CR (loans-only) —
+Healthy 7
+·
+Impaired 0
+·
+Called 0
+·
+Default 0
+Buffer health (distance to par)
+All Set A loans ≥ 120% collateralized.
+Tightest loan: $70.0M BTC @ 145.0% (init 160%, -15.0pp) — only 45.0pp above par
+2 loans below their funding-time init level ($90.0M) — informational; init is not the health threshold, see distance-to-par above. Wtd-avg buffer-to-init +5.3pp.
+By collateral asset
+Percentages relative to $215.1M loans-only book.
+BTC 5 loans · init 125%–160%
+51.1% · $109.9M
+XRP 1 loan · init 150%
+25.7% · $55.2M
+USDC Circle 1 loan · init 100%
+23.3% · $50.0M
+Top loans (sortable)
+BORROWER	PRINC. ▾	RATE	DAYS	S	COLLATERAL	INIT	CUR	BUF
+0x8fee...2628 ↗	$70.0M	5.88%	6d	🟢	BTC $101.5M	160%	145.0%	-15.0pp
+0x8669...f1e9 ↗	$55.2M	7.75%	27d	🟢	XRP $103.7M	150%	187.9%	+37.9pp
+0x1Af6...BAA5 ↗	$50.0M	0.75%	11d	🟢	USDC — ? (Circle)	100%	— ?	— ?
+0x8fee...2628 ↗	$20.0M	5.88%	5d	🟢	BTC $29.0M	160%	145.2%	-14.8pp
+0xb99a...BcF5 ↗	$15.0M	4.25%	20d	🟢	BTC $18.9M	125%	125.8%	+0.8pp
+0x6C80...93Ac ↗	$2.6M	10.00%	13d	🟢	BTC $4.8M	138%	181.4%	+43.5pp
+0x8fee...2628 ↗	$2.2M	5.60%	21d	🟢	BTC $4.6M	160%	206.3%	+46.3pp
+Colour is distance to par, using the producer's 100% / 120% bands. Those are a proxy, not Maple's trigger. Maple sets three levels per loan in its term sheet — an initial level (the level a borrower must restore to after a margin call), a margin call level (24h to cure), and a liquidation level — and states that the latter two sit above 100%. ⚠️ Those per-loan levels are not published in this feed, so a loan shown green here may already sit below its own margin-call level, and Init is the restore target rather than a trigger. Maple borrower FAQ ↗
+Yield Decomposition
+
+Live APY is the organic loan-interest stream — the durable yield depositors receive going forward.
+
+Live APY (organic loan interest)
+5.02%
+Drips boost (SYRUP token campaign — ended Feb 2026)
+0.00%
+Pool Delegate management fee: 0.00% taken from gross before share-holders.
+Source: syrupGlobals.apyTimeSeries (Maple GraphQL) · as of 2026-10-31
+3
+Liquidity & Exit
+live venue depth & primary redemption
+Stress · 2/10 ⚠️
+refreshes daily
+5d old
+mixed · depth feed + risk desk · 18 fields
+Scope: Measured scope: venue inventory only
+Depth threshold and quote methodology
+pays 9.8 bps at the smallest quoted size ($1.0K), before any size impact — a cost of LEVEL, not of depth ⓘ
+Why the report scores liquidity differently
+⚠️ unread blocks: quote_history, free_liquidity_history, queue_observation, primary_depth, route_assurance
+Additional overlay notes (3)
+Liquidity & Exit
+0.5% DEPTH
+≥$1.0M
+Depth threshold and quote methodology
+pays 9.8 bps at the smallest quoted size ($1.0K), before any size impact — a cost of LEVEL, not of depth ⓘ
+unmeasured, not zero ⓘ
+depth figure from this page’s base feed (ethereum) — the depth feed publishes none for this asset ⓘ
+MAX ≤25 BPS
+n/a
+POOL TVL
+n/a
+24H VOLUME
+per pool
+see table
+Exit mark — kyberswap sell into USDT
+PRICE IMPACT against this venue's own smallest quoted rung, which EXCLUDES that rung's own spread — it is not the holder's all-in cost. ⓘ
+Sign-inversion check: abstained — 0 of 3 below-par rungs ⓘ
+SIZE SOLD	SLIPPAGE	NET OUT	FILL
+$1.0K	0.0 bps	$1,001	1.0010
+$10.0K	0.0 bps	$10,010	1.0010
+$50.0K	-0.2 bps	$50,048	1.0010
+$100.0K	-0.4 bps	$100,094	1.0009
+$150.0K	-0.6 bps	$150,139	1.0009
+$250.0K	-1.0 bps	$250,221	1.0009
+$500.0K	-2.0 bps	$500,392	1.0008
+$1.0M	-4.0 bps	$1,000,584	1.0006
+Route measured: Canonical cost ladder unchanged: KyberSwap/Ethereum/USDT market sizing. October 28 sampled route confirmed one exact zero-hook v4 pool; Plasma local quotes and fixed-block identity/state/custody observed separately, not a new canonical ladder or executed exit. Assurance checked: 2026-10-28T15:56:49.726616+00:00. Not established: exact built-route simulation; actual trade/fill/settlement; primary Maple request-to-fill latency; independent stablecoin USD parity; complete bridge settlement.
+Material venuesenumerated 2026-11-02 00:17Z · 2.8h old ⓘ
+VENUE	CHAIN	TVL (USD)	24H VOL	STATUS	ROLE
+syrupUSDT / USDT 0.08%	eth	$5,001,554	$4,980	unverified	dollar exit
+syrupUSDT / USDT0 0.05%	plasma	$3,316,728	$104.41	unverified	dollar exit
+syrupUSDT / USDT 0.08%	bsc	$251,517	$0.08	unverified	dollar exit
+USDT0 / syrupUSDT	plasma	$1,344	$22.51	unverified	dollar exit
+syrupUSDT / waPlaUSDT0 0.02%	plasma	$2,818	$0.00	unverified	other pair
+4 of 5 not corroborated on-chain — pool types that do not custody their own tokens (Uniswap v4, Balancer, Fluid) cannot be checked this way. Not the same as verified.
+0 venues confirmed live — a FLOOR, not a total: 5 never resolved on-chain, so this is "not checked" rather than "nowhere to sell"
+Liquidity
+
+Two distinct liquidity types, not to be conflated: Redemption (at NAV) is the primary full-size exit via Maple's queue — constraint is time; Secondary market is an instant-but-thin DEX alternative at a small discount — constraint is size / price.
+
+Redemption (at NAV)
+
+Requests enter Maple’s redemption queue and are processed at NAV as underlying funding becomes available. Processing time is variable.
+
+POOL CASH
+$8.1K
+Underlying held directly in the pool
+PENDING REDEMPTIONS
+$12.9M
+4.32% of share supply · current NAV
+CASH COVERAGE OF QUEUE
+0.1%
+Pool cash divided by pending redemption value
+ADDITIONAL FUNDING NEEDED
+$12.9M
+Queue value less pool cash, floored at zero
+QUEUED SHARES
+11,185,000.48
+Shares awaiting processing
+LAST PROCESSED
+Unavailable
+Latest observed redemption processing event
+
+Pool cash is an upper bound on funding capacity. Existing requests have priority and operator processing is required. Strategy principal and accrued interest are excluded from cash. Queue size and cash coverage do not predict a payout time.
+
+Observed 2026-11-02T02:11:47Z · Ethereum block 26324021 · USDT amounts at current NAV · refreshes hourly.
+
+Historical accounting buffer includes accrued interest in strategies; it is not immediately available pool cash.
+Cushion history — free liquidity, hourly, 14d
+now 0.15% · 14d 0.14%–5.68% · median 2.15% · 139 of 335 reads under 2%
+free liquidity = total_assets − principal_out, read hourly from this pool’s own history (100 − deployment_ratio_pct) — the same construction as the spot figure above. The dashed line is the 2% flag. ⚠️ A single read is not the level: intraday spikes are deposits not yet deployed.
+Secondary market
+
+Instant-but-thin alternative to the redemption queue: sell into DEX/aggregator liquidity for USDT immediately, taking a slippage hit. Constraint is size / price.
+
+Non-credit strategies
+
+Exact source-classified strategy roles; the compatibility liquidity bucket is not immediately withdrawable cash. Settlement and executable exit readiness remain unmeasured.
+
+11 positions · $82.6M · 27.7% of pool
+ⓘ Layer concentration — top asset USDtb 58.2% of layer.
+Treasury strategy Source classification
+$68.1M
+Redemption-readiness: Unmeasured
+ASSET	ISSUER	CUSTODY	CHAIN	PRINCIPAL	VERIFIED
+USDtb	—	0x8DF6...6122 ↗	Ethereum	$48.1M	GraphQL-only
+PYUSD	Paxos	0x8DF6...6122 ↗	Ethereum	$20.0M	GraphQL-only
+USTB	Superstate	0x8DF6...6122 ↗	Ethereum	$5	GraphQL-only
+Trading strategy Source classification
+$7.6M
+Redemption-readiness: Unmeasured
+ASSET	ISSUER	CUSTODY	CHAIN	PRINCIPAL	VERIFIED
+USDT	Tether	0xd689...47F5 ↗	Ethereum	$7.6M	GraphQL-only
+DEX LP strategy Source classification
+$7.0M
+Redemption-readiness: Unmeasured
+ASSET	ISSUER	CUSTODY	CHAIN	PRINCIPAL	VERIFIED
+USDT	Tether	0xFbA4...5C81 ↗	Ethereum	$5.0M	GraphQL-only
+USDT	Tether	0xFbA4...5C81 ↗	Ethereum	$1.2M	GraphQL-only
+USDT	Tether	0xFbA4...5C81 ↗	Ethereum	$250.0K	GraphQL-only
+USDT	Tether	0xFbA4...5C81 ↗	Ethereum	$250.0K	GraphQL-only
+USDT	Tether	0xFbA4...5C81 ↗	Ethereum	$250.0K	GraphQL-only
++ 2 smaller positions · $10 (below display cutoff / dust — included in sleeve subtotals above)
+Repayment Schedule (next 180 days)
+
+Expected interest-only inflows from active open-term loans, bucketed by next payment-due date. Principal repays only on a Pool-Delegate call (24h notice + 48h grace) and is not modelled here.
+
+Cumulative interest expected through each horizon (chart below shows per-bucket detail).
+WITHIN 30D
+$935.7K
+WITHIN 60D
+$935.7K
+WITHIN 90D
+$935.7K
+WITHIN 180D
+$2.2M
+Overdue: 0 loans · $0
+Method: rate_estimate
+4
+Dependencies
+4 upstream · downstream not tracked
+Dependencies 4/10
+5d old
+mixed · risk desk · 11 fields
+Dependencies
+Why this dependencies score
+⚠️ unread blocks: all_enumerated_concentration, loans_only_concentration, family_concentration
+Additional overlay notes (1)
+UPSTREAM — WHAT THIS ASSET DEPENDS ON
+Top borrowers
+top-3 ≈ 92% of loan book · top-1 ≈ 43% of same loan book (inside top-3)
+No dashboard
+BTC collateral
+37% of loan principal by collateral asset · 5 loans
+No dashboard
+XRP collateral
+19% of loan principal by collateral asset · 1 loans
+No dashboard
+Maple Finance — curator
+Pool delegate / curator
+No dashboard
+About this dependency set
+These shares do not partition: they sum to 190.1%, not 100%. The displayed percentages sum to 190.14%, but they are not mutually exclusive slices. Top-1 borrower concentration is nested inside top-3, and borrower concentration and collateral composition are different dimensions.
+DOWNSTREAM — WHAT DEPENDS ON THIS ASSET
+Downstream not tracked
+Consumer tracking (Morpho / Pendle / etc.) coming in a future version.
+Borrower Concentration (Loans-only)
+
+Producer-classified loan concentration. Membership follows the producer classification.
+
+5 loan borrowers · HHI 3089
+Concentrated
+FTC merger-review thresholds: <1500 unconcentrated · 1500-2500 moderate · >2500 concentrated
+Top 1
+42.9%
+Top 3
+91.8%
+Top 5
+100.0%
+Top 10
+100.0%
+
+HHI (Herfindahl-Hirschman Index) is the sum of squared market shares — a single dominant borrower with 100% gives HHI = 10,000; perfectly even distribution gives HHI close to 0.
+
+Top-N shares show how much of the producer-classified loan principal is held by the largest 1, 3, 5, 10 addresses.
+
+BORROWER	TAG	PRINCIPAL	# LOANS	SHARE
+0x8fee...2628 ↗	—	$92,230,000	3	42.89%
+0x8669...f1e9 ↗	—	$55,186,488	1	25.66%
+0x1Af6...BAA5 ↗	—	$50,000,000	1	23.25%
+0xb99a...BcF5 ↗	—	$15,000,000	1	6.98%
+0x6C80...93Ac ↗	—	$2,636,059	1	1.23%
+Maple Syrup Family — Cross-Pool Snapshot
+Per-pool versioned exact economic membership; issuer assertions and metadata, not independently verified custody
+FAMILY LOANS
+$1113.8M
+31 loans · third-party credit
+FAMILY LIQUIDITY
+$102.6M
+20 positions · 8.4% of pool
+FAMILY TOTAL AUM
+$1216.4M
+USDC $930.6M + USDT $298.1M
+Per-pool collateral health
+METRIC	SYRUPUSDC	SYRUPUSDT
+Loans-only CR (current snapshot)	unavailable / incomplete scope	unavailable / incomplete scope
+Init-level pool CR (weighted-avg baseline)	173.02%	132.70%
+Loans / Liquidity count	24 / 9	7 / 11
+Set A loans near/under par (CRIT < 100% · WARN < 120%)	ⓘ 7 data-suspect · $355.0M
+1 WARN · $33.5M	all clear
+CR is per-pool: depositors in one pool aren't covered by collateral in the other. Set A health is measured as current collateralization vs par (100%) on the crypto-overcollateralized loan book: CRIT = collateral worth less than principal, WARN = thin buffer. Set B (at-par pool-owned positions) is excluded — it sits at ~100% by construction.
+By asset (Loans)
+ASSET	USDC POOL	USDT POOL	COMBINED	% OF CLASS
+BTC	18 loans / $717.8M	5 loans / $109.9M	$827.7M	74.3%
+XRP	2 loans / $96.6M	1 loan / $55.2M	$151.8M	13.6%
+ETH	3 loans / $50.8M	—	$50.8M	4.6%
+WBTC	1 loan / $33.5M	—	$33.5M	3.0%
+BTC is 74% of loans book — single-asset concentration risk axis.
+BTC + WBTC = $861.2M · 77.3% of the family loans class — one price risk across 2 symbols. Summed by symbol from the rows above; the payload categorises WBTC as unknown, so its own category field understates this.
+By asset (Liquidity)
+ASSET	USDC POOL	USDT POOL	COMBINED	% OF CLASS
+USDC	6 loans / $20.0M	1 loan / $50.0M	$70.0M	68.2%
+USDtb	1 loan / $5	1 loan / $48.1M	$48.1M	46.8%
+PYUSD	1 loan / $5	1 loan / $20.0M	$20.0M	19.5%
+USDT	—	6 loans / $14.6M	$14.6M	14.2%
+USTB	1 loan / $5	1 loan / $5	$10	0.0%
+USDG	—	1 loan / $5	$5	0.0%
+aUSDT	—	1 loan / $5	$5	0.0%
+Top cross-pool borrower exposures (Loans-only)
+BORROWER	FAMILY PRINCIPAL	% LOANS-ONLY
+0x09b8...6b8a ↗	$200.0M	17.96%
+0x198a...529a ↗	$185.0M	16.61%
+0x8669...f1e9 ↗	$151.8M	13.63%
+0x3692...ca97 ↗	$100.0M	8.98%
+0x282b...b30c ↗	$100.0M	8.98%
+0x8fee...2628 ↗	$92.2M	8.28%
+0x24b1...bcdd ↗	$67.0M	6.02%
+0x1af6...baa5 ↗	$50.0M	4.49%
+0xb624...d505 ↗	$40.0M	3.59%
+0xb99a...bcf5 ↗	$40.0M	3.59%
+Top 3 loan borrowers control ~48.2% of family loans-only book · HHI 1111 (unconcentrated). A credit event at any of these damages the family loan book.
+Shared governance
+Governor (24h timelock)	0x2eFF...426b ↗
+Operational Admin	0xCe1c...34E8 ↗
+Security Admin	0x6b1A...0818 ↗
+Pool Delegate — syrupUSDC	0xC1e1...B49f ↗
+Pool Delegate — syrupUSDT	0x93aA...501A ↗
+Currently viewing: syrupUSDT · Sibling pool: → syrupUSDC
+5
+Smart Contract & Admin
+shortest of 6 admin paths · 3 delayed · 2 unmeasured · hand-walk
+Structural 4.5/10
+57d old
+⚠️ security desk + risk desk · no field in common
+Why this contract score
+⚠️ unread block: assurance
+Additional overlay notes (4)
+Authority walk — hand-walk
+Delayed: governance 3d, asset-permission 3h (DEFAULT_ADMIN_ROLE, BURNER_ROLE), bridge 3h. NO established delay: asset-permission (poolPermissionManager). ⚠️ 2 layers NOT MEASURED: contract-upgrade (manager), pause (withdrawalManager) — an unknown delay, not an absent one.
+Walked 2026-09-06
+Authority	Keys	Delay	Topology	Reach
+asset-permission
+syrupUSDT
+	poolPermissionManager	⚠️ none	nofm-multisig	full
+contract-upgrade
+syrupUSDT
+	manager	⚠️ not measured	unknown	full
+↳ poolDelegate (eoa)	1 of 1	7d	manager.upgrade / poolDelegate	full
+↳ securityAdmin (safe)	3 of 6	⚠️ none	manager.upgrade / securityAdmin	full
+governance
+syrupUSDT
+	governor	3d · floor not measured	timelocked	full
+pause
+syrupUSDT
+	withdrawalManager	⚠️ not measured	unknown	full
+asset-permission
+Syrup USDT
+	DEFAULT_ADMIN_ROLE, BURNER_ROLE, MINTER_ROLE	3h · floor not measured	timelocked	full
+↳ GovernorTimelock (timelock)	—	3d	DEFAULT_ADMIN_ROLE	full
+↳ BurnMintTokenPool (timelock)	—	3h	BURNER_ROLE/MINTER_ROLE	full
+bridge
+BurnMintTokenPool
+	owner	3h · floor not measured	timelocked	full
+Review provenance — partial review · 5 claims re-measured · reviewed by security desk · 2026-09-09
+⚠️ Not established — 3 items: ethereum contract-upgrade · ethereum pause/exit · plasma asset-permission
+Code & audits — 8 points
+What this score does and does not cover — 2 notes
+Verification trail & walk notes (verbatim, 8 lines)
+Trust Stack
+ROLE	ADDRESS	NOTES
+Governor	0x2eFF...426b ↗	timelock · min delay 72h
+Operational Safe	0xCe1c...34E8 ↗	safe
+Security Safe	0x6b1A...0818 ↗	safe
+Pool Delegate	0x93aA...501A ↗	TBD — verify (different EOA from syrupUSDC delegate) · MPC + policy (per Maple)
+PD First-Loss Cover	$0 / required $0 ↗	Pool Delegate skin-in-the-game
+Protocol Paused	No	MapleGlobals master switch
+Maple-controlled MPC topology — 1 MPC wallet control $298.1M of pool capital
+No additional custody addresses at this snapshot.
+Multi-Chain Distribution
+Canonical and remote token observations are non-additive. Ethereum totalSupply includes bridge locks. Resident decomposition unavailable until current pool identities and locks reconcile; no excess backing or overissuance inference. Bridge reconciliation and chain-resident decomposition remain incomplete. Supply enumeration does not establish executable exits or replacement-pool authority.
+CHAIN	SUPPLY	SHARE	KIND	TOKEN ADDRESS	SOURCE
+Ethereum	$298.1M	-	EVM	0x356B...BA7D ↗	on-chain
+Plasma	$48.9M	-	EVM	0xC437...0771 ↗	on-chain
+mantle	$46.1M	-	EVM	0x0516...4ce0	on-chain
+Ink	$5.5M	-	EVM	0x8A76...03d7 ↗	on-chain
+bnb	$431.5K	-	EVM	0x8E9d...6c4e	on-chain
+Total	-	—	
+Ethereum totalSupply includes bridge locks. Resident decomposition unavailable until current pool identities and locks reconcile; no excess backing or overissuance inference. Bridge reconciliation incomplete; canonical supply includes locked shares and remote representations are not additive.
+6
+Issuer
+editorial — subjective axis
+25.3h old
+mixed · risk desk · 4 fields
+Issuer
+Issuer 5.5/10
+Full issuer assessment
+Risk disclosure: https://docs.maple.finance/legal/syrupusdc-and-syrupusdt-risks
+Maple operator/entity judgment, shared across both pools; underwriting discretion and v1 history remain. No audit/bounty credit.
+Current snapshot reports $0 recognized losses; this is not an independently proved lifetime loss history.
+No contract audit or bounty credit is used on Issuer. Shared governance/key risks are priced on Contract & Admin.
+Underwriting, collateral custody and loan realization remain discretionary. Legal portfolio separation does not separate shared operational keys.
+Editorial axis — how this is rated ⓘ
+Read the full risk report →
+Data refreshes every hour. Dashboard auto-refreshes every 5 minutes.
+This dashboard was created and maintained with support of a FireStarter Grant from ArbitrumDAO.

@@ -1,0 +1,64 @@
+{
+  "schema_version": "dependencies/1",
+  "producer": "riskanalyst",
+  "asset": "srusdat",
+  "as_of": "2026-10-26T15:37:10Z",
+  "dependencies": {
+    "upstream": [
+      {
+        "name": "sUSDat — the collateral pool",
+        "slug": "susdat",
+        "edge_kind": "backing",
+        "materiality": "dominant",
+        "note": "October 26: Strata collateral 6,053,695.634444 sUSDat × NAV 1.046447 = $6,334,871.64. USDat accounting denomination is not proof of actual collateral composition."
+      },
+      {
+        "name": "USDat",
+        "slug": "usdat",
+        "edge_kind": "backing",
+        "materiality": "material",
+        "note": "Declared directly as well as reached through sUSDat — the diamond is real, not a duplicate."
+      },
+      {
+        "name": "STRC / Strategy Inc — 99.2866% of sUSDat reserve",
+        "slug": "strc",
+        "edge_kind": "backing",
+        "materiality": "dominant",
+        "via": "susdat: off-chain STRC $45,309,060.27 / 99.2866%, oracle_unverified; USDat $325,554.99 / 0.7134%, October 26 14:48 UTC",
+        "note": "Indirect dependence via sUSDat, not a direct raw STRC holding. Raw STRC Overall 3.0 is the credit anchor; senior junior-protection mechanics are assessed separately."
+      },
+      {
+        "name": "Strata market contracts + StrataMasterChef",
+        "terminal": true,
+        "kind": "contract",
+        "materiality": "material",
+        "note": "Strata market contracts andMasterChef; current Contract&Admin3.5 afterOctober13 review. This filing pass does not reverify implementation or admin."
+      },
+      {
+        "name": "jrUSDat — the junior tranche that absorbs first loss",
+        "terminal": true,
+        "kind": "contract",
+        "materiality": "dominant",
+        "note": "October 26 14:48:56 UTC: coverage 121.2715%, junior buffer 17.5395%, junior TVL $1,111,106.06, junior NAV 0.510930, seven-day TVL decline 6.96%. Protection depends on oracle-valued collateral and redemption mechanics."
+      }
+    ],
+    "upstream_resolution_rule": "⚠️ EVERY upstream entry MUST carry exactly one resolution: `slug`, `slugs`, `terminal: true` + `kind`, or `unresolved`. ⚠️ `via` is NOT a resolution — it is an annotation on a resolved entry stating the ROUTE. An entry with `via` and a `slug` is a real dependency reached indirectly; it still resolves.",
+    "edge_kind_rule": "`backing` means my SOLVENCY depends on this; `venue` means my EXIT PRICE does.",
+    "coverage_note": "October 26: srUSDat Backing 3.5 / Dependencies 2.5 / Overall 4.0 held. Held PT-srUSDat market value $54,832.19; shared Saturn cash is not the Strata junior tranche.",
+    "downstream_tracked": [
+      "pt-srusdat"
+    ],
+    "downstream_basis": {
+      "derived_by_inversion": [
+        "pt-srusdat"
+      ],
+      "asserted_only": [],
+      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "rejected_as_inverted": [],
+      "rejected_as_inverted_note": "None.",
+      "generated_by": "scripts/dependency_graph.py build",
+      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+    },
+    "collateral_as_of": "2026-10-26"
+  }
+}
