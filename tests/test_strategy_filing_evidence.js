@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const c=vm.createContext({window:{},console});vm.runInContext(fs.readFileSync('js/renderers/common.js','utf8'),c);vm.runInContext(fs.readFileSync('js/strategy-filing-evidence.js','utf8'),c);
+const base=JSON.parse(fs.readFileSync('data/strc_backing.json')),context=JSON.parse(fs.readFileSync('data/strategy_filing_context.json'));
+let h=c.StrategyFilingEvidence.html(base,context,'mstr');for(const s of ['811','810','unreconciled','2026-11-01','2026-11-02','not STRC alone','not yet settled','current outstanding','Scores and full-verification dates are unchanged'])assert.ok(h.includes(s),s);
+assert.equal(base.tradfi.strc_dividend.outstanding_shares,null);assert.equal(base.tradfi.strc_dividend.annual_dividend_obligation_usd,null);
+for(const a of ['strcx','apxusd','apyusd','susdat'])assert.match(c.StrategyFilingEvidence.html(base,context,a),/does not measure this token/);
+for(const a of ['usdat','aptusd','alqUSD'])assert.equal(c.StrategyFilingEvidence.html(base,context,a),'');
+const wrong={...context,accession:'other'};assert.match(c.StrategyFilingEvidence.html(base,wrong,'mstr'),/Current owner interpretation unavailable/);
+const bad=JSON.parse(JSON.stringify(base));bad.mstr_view.digital_credit_framework.filing_update.filing_date='<script>bad()</script>';assert.ok(!c.StrategyFilingEvidence.html(bad,context,'mstr').includes('<script>'));
+console.log('PASS filing discrepancy, dated fields, unknown burden, exact downstream scope, missing judgment and escaping');

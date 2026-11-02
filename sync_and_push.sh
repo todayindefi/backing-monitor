@@ -389,6 +389,9 @@ if [ -f config/issuer_project_publication.json ]; then
     PYTHONDONTWRITEBYTECODE=1 python3 tools/build_issuer_project_evidence.py
 fi
 
+# Dated owner judgment; public allowlist, no score changes.
+PYTHONDONTWRITEBYTECODE=1 python3 tools/build_strategy_filing_context.py
+
 # Commit and push if changed
 git add data/
 if ! git diff --cached --quiet; then
