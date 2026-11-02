@@ -2,21 +2,21 @@
   "schema_version": "contract/1",
   "asset": "crvusd",
   "producer": "security_analyst",
-  "as_of": "2026-09-09",
-  "generated_at": "2026-11-02T14:12:02Z",
+  "as_of": "2026-11-02",
+  "generated_at": "2026-11-02T14:48:06Z",
   "contract": {
-    "headline": "Delayed: governance 7d. NO established delay: contract-upgrade, asset-permission, bridge (bridge, bridge_eip1967_admin), bridge (minter, owner). ⚠️ 2 layers NOT MEASURED: bridge (bridge), bridge (bridge, bridge_eip1967_admin, proxyadmin_owner, l1_alias) — an unknown delay, not an absent one.",
+    "headline": "Delayed: governance 7d. NO established delay: contract-upgrade, asset-permission, bridge (bridge, bridge_eip1967_admin), bridge (minter, owner), parameter. ⚠️ 2 layers NOT MEASURED: bridge (bridge), bridge (bridge, bridge_eip1967_admin, proxyadmin_owner, l1_alias) — an unknown delay, not an absent one.",
     "headline_basis": "Derived from the layer rows below, not authored here, so it changes when the walk changes.",
     "method": "hand-walk",
-    "observed_at": "2026-09-09",
+    "observed_at": "2026-11-02",
     "source_file": "security_analyst/topology/assets/crvusd.yaml",
     "layers": [
       {
         "authority_layer": "governance",
         "chain": "ethereum",
-        "observed_at": "2026-09-09",
+        "observed_at": "2026-11-02",
         "walked_by": "hand",
-        "target_name": "crvUSD Stablecoin",
+        "target_name": "crvUSD issuance factory and LLv1/LLv2 lending administration",
         "terminal_name": "Curve Ownership Voting / Emergency Safe",
         "topology": "timelocked",
         "keys": [
@@ -33,7 +33,7 @@
             "holder": "0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
             "name": "Curve Ownership Agent",
             "name_verified": true,
-            "via": "crvUSD.minter -> factory.admin -> ControllerAdmin.dao -> Agent EXECUTE_ROLE -> Ownership Voting",
+            "via": "crvUSD.minter -> factory.admin -> LendingOwnerProxy.dao -> Agent EXECUTE_ROLE -> Ownership Voting",
             "terminal": "timelock",
             "holder_kind": "token-voting",
             "timelock": "7d",
@@ -54,13 +54,13 @@
               ],
               "acl_history": "complete"
             },
-            "hand_walk": "Live minter() returned the factory; factory.admin() returned 0xb7400d2e...afB79; dao() returned this Agent. The Agent's derived EXECUTE_ROLE is held solely by Ownership Voting in complete SetPermission history and in live hasPermission checks; 0x...dEaD and Aragon's wildcard address returned false. Voting reports voteTime=604800, supportRequiredPct=0.51e18, and minAcceptQuorumPct=0.30e18. Verified source has no voteTime setter and _canExecute refuses while the seven-day vote is open. The first authority action therefore retains that seven-day floor even if the Voting app is subsequently upgraded through governance."
+            "hand_walk": "At Ethereum block 26327058, crvUSD.minter returns factory 0xc9332fdcb1c491dcc683bae86fe3cb70360738bc; its admin is now LendingOwnerProxy 0xeda020b067872717901916a3b8c724c21f6080d1, whose dao is this Agent. Vote 1510 executed at block 26300155, 2026-10-29T18:20:47Z, replacing old proxy 0xb7400d2ea0f6dc1d7b153aa430b9e572f28afb79. LLv1 factory 0xea6876dde9e3467564acbee1ed5bac88783205e0, LLv2 factory 0x8f6b56ec5ddf1f2691a1059f1d3cd97ac9eab0bd, and Configurator 0x6065858d0ef0aa240dfdf6f1a0b2ae34b41f49bc now use the same lending proxy. Only its DAO may execute arbitrary calls or replace emergency_dao. Current voteTime is 604800 seconds, supportRequiredPct 0.51e18 and minAcceptQuorumPct 0.30e18. The Voting grant remains live, while emergency Safe, wildcard and burn-address checks are false. Complete EXECUTE_ROLE permission-change logs from the September baseline through block 26327058 contain no changes. The seven-day floor retains the September verified Voting implementation basis; Voting upgrade history was not re-audited."
           },
           {
             "holder": "0x467947ee34af926cf1dcac093870f613c96b1e0c",
             "name": "GnosisSafeProxy",
             "name_verified": true,
-            "via": "crvUSD.minter -> factory.admin -> ControllerAdmin.emergency",
+            "via": "crvUSD.minter -> factory.admin -> LendingOwnerProxy.emergency_dao",
             "terminal": "safe",
             "holder_kind": "safe",
             "threshold": 5,
@@ -69,7 +69,7 @@
             "delay_applies": false,
             "reach": "bounded",
             "terminal_address": "0x467947ee34af926cf1dcac093870f613c96b1e0c",
-            "hand_walk": "emergency() returned this Safe; live getThreshold()=5 and getOwners() returned nine entries. Source uses dao-or-emergency authorization for bounded parameter actions; reduce_debt_ceiling is one-way. This is not represented as a full arbitrary-mint or upgrade path."
+            "hand_walk": "At Ethereum block 26327058, the new lending proxy's emergency_dao returns this Safe, with threshold 5, nine owners and no enabled modules. Runtime matches verified LendingOwnerProxy source. Emergency entrypoints include LLv1 policy/callback replacement, increasing loan discount with liquidation discount unchanged, reducing issuance ceilings, LLv2 policy/callback replacement, zeroing borrow caps and vault supply limits, removing custom admins, deployment pauses, gauge manager reassignment, and bidirectional Chainlink-path toggles. LLv2 oracle replacement requires the old oracle to fail bounded price()/price_w() probes and the replacement to return nonzero. LLv1 fee setters and the old two-discount setter are absent. These are restricted function surfaces with meaningful replacement power; they are not a contraction-only description. remove_emergency passes simulated calls from the Safe and rejects a stranger; execute rejects the Safe with Only DAO. This is not an arbitrary-mint or token-bytecode upgrade path. Guard/fallback and signer independence were not fully re-audited."
           }
         ]
       },
@@ -357,16 +357,93 @@
             "hand_walk": "Token 0xe2fb3f127f5450dee44afe054385d74c392bdef4 minter() returned 0xc417e91098402dd4f677782a2ec204c429ce513a, whose owner is Ownership Agent 0xc97e2328c5701572c0dfb199b9f860d6ccd74199. Relayer 0x37b6d6d425438a9f8e40c8b4c06c10560967b678 exposes the three agent immutables and messenger 0xbff1f56c8e48e2f2f52941e16feecc76c49f1825; source confirms the Ownership Agent can rotate that messenger. The messenger exposes BLOCK_HASH_ORACLE 0x7cde6ef7e2e2fd3b6355637f1303586d7262ba37 and RELAYER 0x37b6d6d425438a9f8e40c8b4c06c10560967b678. The oracle reports threshold=1 and one committer, but that committer 0x49cdecc38b4caf6a07c13558a32820333bc2ab61 is a contract: a LayerZero receiver, not an EOA. Its BNB endpoint uses receive version 5/library 0xff3da3a1cd39bbaeb8d7cb2deb83efc065cbb38f. The same-address Ethereum sender uses endpoint 0x66a71dcef29a0ffbdbe3c6a460a3b5bc225cd675, send version 4/library 0xd231084bfb234c107d3ee2b22f97f3346fdaf705, and targets LZ chain id 102. Destination getConfig(5,101,receiver,2) decodes to 15 confirmations, four required DVNs, zero optional DVNs, threshold zero. The four full BNB DVN addresses are recorded above. Internal DVN signer membership was not traversed, so no key threshold is filed."
           }
         ]
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "observed_at": "2026-11-02",
+        "walked_by": "hand",
+        "target_name": "YieldBasis WETH Twocrypto policy and signed-price dependency",
+        "terminal_name": "YB DAO / Curve eDAO / Curve Ownership Voting",
+        "topology": "mixed",
+        "keys": [
+          "POLICY",
+          "owner",
+          "EMERGENCY_ADMIN",
+          "set_oracle_config",
+          "set_policy_config",
+          "set_killed"
+        ],
+        "timelock": "none",
+        "timelock_floor": "none",
+        "reach": "bounded",
+        "impl_upgradeable": false,
+        "paths": [
+          {
+            "holder": "0x42f2a41a0d0e65a440813190880c8a65124895fa",
+            "name": "YieldBasis DAO",
+            "name_verified": true,
+            "via": "pool.POLICY -> policy.owner -> DAO execute -> TokenVoting",
+            "terminal": "token-voting",
+            "holder_kind": "token-voting",
+            "terminal_address": "0x2be6670de1ccec715bdbba2e3a6c1a05e496ec78",
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "bounded",
+            "reach_bound": "WETH pool policy parameters, report verifier and admission configuration; no direct crvUSD mint authority",
+            "hand_walk": "At block 26327058, pool 0x656341ef90b622c6634e0573772ffb7f3669b9f3 POLICY is 0xaea95d551154443e73565be724d59d63d72f8a7d and its owner is this DAO. The named plugin holds EXECUTE_PERMISSION; Curve Agent and burn-address controls are false. Current voting mode is 1 (early execution), minDuration 604800, support 550000, participation 300000 and proposer power 1. Seven days is not a guaranteed delay. Verified policy runtime permits owner replacement of fee/driver settings and oracle verifier, channel, price bounds and age windows within code bounds. The policy is not a token or debt-ceiling controller."
+          },
+          {
+            "holder": "0x467947ee34af926cf1dcac093870f613c96b1e0c",
+            "name": "Curve Emergency Safe",
+            "name_verified": true,
+            "via": "policy.EMERGENCY_ADMIN -> set_killed(bool)",
+            "terminal": "safe",
+            "holder_kind": "safe",
+            "terminal_address": "0x467947ee34af926cf1dcac093870f613c96b1e0c",
+            "threshold": 5,
+            "owners": 9,
+            "timelock": "none",
+            "timelock_floor": "none",
+            "delay_applies": false,
+            "reach": "bounded",
+            "reach_bound": "kill or revive this policy; does not select a new verifier or replace pool policy",
+            "hand_walk": "Policy EMERGENCY_ADMIN is this Safe. Verified source authorizes both owner and emergency admin for set_killed(True) and set_killed(False). Killing falls back to pool-native pricing/fees and disables report admission and the LT deviation gate. This is separate from gauge wrappers that hardcode kill=True."
+          },
+          {
+            "holder": "0x40907540d8a6c65c637785e8f8b742ae6b0b9968",
+            "name": "Curve Ownership Agent",
+            "name_verified": true,
+            "via": "pool.admin -> AmmOwnerProxy.dao -> execute -> set_policy_contract",
+            "terminal": "timelock",
+            "holder_kind": "token-voting",
+            "terminal_address": "0xe478de485ad2fe566d49342cbd03e49ed7db3356",
+            "timelock": "7d",
+            "timelock_floor": "7d",
+            "delay_applies": true,
+            "reach": "bounded",
+            "reach_bound": "attach, replace or remove WETH pool policy through pool administration",
+            "hand_walk": "Pool admin is new AMM proxy 0xeda0108d5bb8cde2ba4a59e22f3ed5d211c77187. Verified proxy source reserves arbitrary execute to this Agent; emergency endpoints do not include set_policy_contract. Vote 1508 attached the policy and set reserved_profit_fraction to 4300000000 (43%), admin_fee 0, at block 26298152. The current fraction is 43%; the proposal forum's 42.2% is not the executed value. The Voting floor uses the same implementation-history limitation as above."
+          }
+        ]
       }
     ],
     "unresolved": [
       "ethereum contract-upgrade: no layer is filed because live crvUSD is non-proxy bytecode, admin() reverts, and the prior five proxy-slot checks were zero. This is a measured absence of a reachable token upgrade surface, not an unresolved path; minter replacement and ControllerFactory administration are represented under asset-permission.",
       "optimism nested owners: the Safe's two owner entities were identified as contracts, but their internal signer populations, thresholds, and any enforced execution delay were not traversed. The observed 2-of-2 entity threshold must not be interpreted as a two-key compromise cost.",
       "bnb DVNs: the Ethereum-to-BNB LayerZero configuration requires four named DVN contracts, but the signer sets, signer thresholds, and operator independence inside those four DVNs were not traversed. Key cost therefore remains null; required_dvn_count is not substituted for a key count.",
-      "base bridge: the local token gate was measured, but the ultimate L1 governance/signature threshold, current execution delay, and delay floor behind Base L2StandardBridge were not traversed. The bridge layer therefore remains timelock unresolved by construction."
+      "base bridge: the local token gate was measured, but the ultimate L1 governance/signature threshold, current execution delay, and delay floor behind Base L2StandardBridge were not traversed. The bridge layer therefore remains timelock unresolved by construction.",
+      "2026-11-02 bounded refresh: other chain bridge layers and September YB issuance exposure values were not reverified. eDAO migration of child-gauge factories is not a change to crvUSD token bridge governance. L2 current bindings and destination execution limits are in the dated audit.",
+      "WETH policy Pyth verifier is an upgradeable external dependency at 0xacea761c27a909d4d3895128ebe6370fde2df481. Its observed owner is a contract, not an established Safe threshold. Ultimate verifier-owner governance and complete YB permission/upgrade history remain unresolved."
     ],
     "authority_shared_with": [],
-    "review": null,
+    "review": {
+      "author": "Codex",
+      "date": "2026-11-02",
+      "scope": "Ethereum eDAO migration and YB WETH policy; other layers retain their own observation dates",
+      "evidence": "audits/crvusd-edao-policy-review-2026-11-02.md"
+    },
     "walk_notes": [
       "crvUSD authority topology — hand-walked evidence. Judgment remains in",
       "riskAnalyst. Read-only live calls were made on 2026-09-09; no transaction was",

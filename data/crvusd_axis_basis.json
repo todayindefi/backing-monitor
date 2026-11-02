@@ -6,39 +6,39 @@
   "peg": {
     "peg_mechanism_score": 6.0,
     "peg_mechanism_score_source": "riskAnalyst:authored",
-    "peg_mechanism_score_basis": "MEASURES THE MECHANISM, NOT THE CURRENT DEVIATION. This scores how the peg is defended \u2014 PegKeeper arbitrage, the soft-liquidation AMM and the redemption path \u2014 not whether crvUSD is at par today. PERSISTENCE-FILTERED: it does not move on a spot reading. A live band showing par tells a reader the mechanism is working right now; this asks whether it holds under stress it has not yet met.",
+    "peg_mechanism_score_basis": "PegKeepers, LLAMMA lending/repayment and monetary policy support the dollar target. The rating measures the mechanism across stress, not a spot price. Zero current PegKeeper debt removes existing PK-issued burn capacity, not every peg-support mechanism.",
     "peg_mechanism_score_persistence": "filtered \u2014 not spot-responsive"
   },
   "backing": {
     "backing_score": 5.0,
     "backing_score_source": "riskAnalyst:authored",
-    "backing_score_basis": "MEASURES RESERVE COMPOSITION AND ITS CONCENTRATION, not the live collateral ratio. \u26a0\ufe0f EXPLICIT PERSISTENCE RULE: cut below 5.0 only if total_pegkeeper_debt / total_supply holds above 25% for MORE THAN 5 CONSECUTIVE DAILY READINGS. A four-day excursion with the peg at par is the mechanism working, not a deterioration. The rule has been applied against itself: a 2026-08-24 cut to 4.5 was REVERSED on 2026-09-07 because it had been made at the peak of a four-day transient that would not have fired the rule. Current reading 6.8%, well under the line.",
+    "backing_score_basis": "Collateral and exposure depend on issuance route: LLAMMA loans, YieldBasis borrowing, the Resupply lending operator and PegKeeper paired positions. Operator minting and actual borrowing are different. Deployed-basis coverage and a sensitivity counting idle minted allocation must remain separate; neither alone proves realizable collateral or insolvency.",
     "backing_score_persistence": "filtered \u2014 25% threshold over >5 consecutive daily readings"
   },
   "liquidity": {
     "liquidity_score": 8.0,
     "liquidity_score_source": "riskAnalyst:authored",
-    "liquidity_score_basis": "MEASURES THE DOLLAR EXIT SPECIFICALLY, which is why it sits below a live depth band. \u26a0\ufe0f NOT ONE YieldBasis cryptopool pairs crvUSD with a dollar \u2014 all eight are WBTC, cbBTC, tBTC or WETH \u2014 so selling into them leaves a holder in BTC or ETH. One-hop dollar exit is $27.68M, 11.91% of issuance-side supply; the two-hop BTC/ETH route is $144.8M and is a REAL exit, just not a dollar one. A live band aggregating both answers a different question from the one a seller asks. PERSISTENCE-FILTERED: prices the standing venue structure, not a daily depth quote. \u26a0\ufe0f UPDATED 2026-09-10: the exit ladder was repaired at source (12 failed rungs estate-wide to zero), and crvUSD's 2% depth is now BRACKETED rather than a floor \u2014 the crossing sits between $5M (2.2% of supply) and $50M (21.5%), a 10x range that the rung-selection algorithm will not narrow because it maximises distance from chosen rungs and never looks INSIDE a bracket. The published $5M is the last rung that cleared, so true depth is HIGHER. This score does not rest on that figure \u2014 it rests on the dollar-versus-BTC/ETH exit split, which is measured from pool balances.",
+    "liquidity_score_basis": "Holders sell on secondary markets. Dollar-stablecoin routes differ from BTC/ETH routes, which require another trade to reach dollars. The historical rating uses routed USDC proceeds and total cost, not pool TVL or a price-impact field alone. Quotes are not fills.",
     "liquidity_score_persistence": "filtered \u2014 venue structure, not spot depth",
-    "liquidity_score_depth_caveat": "2026-10-16: 200bps impact crossing bracketed $25M-$50M; $25M output $24,974,485.65, $50M output $42,005,564.28. Quotes omit gas.",
-    "liquidity_score_ladder": "\u26a0\ufe0f **RE-DERIVED 2026-09-12 ON THE LADDER (all-in). 6.0 \u2192 8.0.** **MEASURED EXIT COST BY SIZE:** $1,000\u2192-2.6bps \u00b7 $10,000\u2192-2.6bps \u00b7 $100,000\u2192-2.7bps \u00b7 $250,000\u2192-2.9bps \u00b7 $1,000,000\u2192-3.3bps \u00b7 $10,000,000\u2192-16.0bps \u00b7 $25,000,000\u2192-1078.4bps \u00b7 $50,000,000\u2192-4344.5bps. \u2705 **THE BEST LADDER IN THE CORPUS.** A seven-figure holder exits for **3.3bps all-in**; $10M for 16.0bps. \u26a0\ufe0f The cliff at **$25,000,000 (\u22121,078bps)** is real and sits above every size this axis scores for. \u26a0\ufe0f **The exit IS the market** \u2014 no redeem-at-NAV channel \u2014 so the ladder is nearly the whole answer. \u2705 **AND THE COMPOSITION OBJECTION IS ANSWERED, NOT IGNORED:** tidresearch measured by `coins()` that all eight YieldBasis pools pair crvUSD with BTC/ETH and only ~$27.16M sits in dollar pairs. **`exit_mark.sell_into` is USDC and the source is KyberSwap, a ROUTER \u2014 so any YieldBasis leg's spread is already inside the quoted cost.** Their finding explains the routing the ladder priced; it is not a second cost the quote missed. \u26a0\ufe0f $10M clearing at 16bps against a $27.16M stable side is ordinary Curve stableswap behaviour near peg. \u26a0\ufe0f\u26a0\ufe0f **ALL FIGURES HERE ARE ALL-IN REALISED COST, RECOMPUTED FROM `output_usd` \u2014 NOT the `slippage_bps` field.** The two differ and the difference is not noise: **on crvUSD the gap is a CONSTANT ~2.6bps across six orders of magnitude** ($1k through $10M), which is a **FEE/SPREAD the impact field excludes**. `slippage_bps` is PRICE IMPACT; `output_usd` is what the holder actually receives. **This axis scores what the holder receives.** \u26a0\ufe0f At $100,000 crvUSD reads \u22120.1bps on the field and **\u22122.7bps all-in \u2014 a 27\u00d7 difference on the same trade.** \u26a0\ufe0f AND ON `susdat` AND `usdai` THE FIELD IS ALSO SIGN-INVERTED relative to `output_usd` \u2014 two distinct defects, not one. **Cross-check `output_usd` before quoting any rung.**",
+    "liquidity_score_depth_caveat": "November 2 10:36 UTC review: routed 2% total-impact crossing coarsely bracketed $10M-$25M. The last passing rung is not an exact maximum exit size. Source clocks, fees, gas and execution conditions remain separate.",
+    "liquidity_score_ladder": "Historical September 12 routed USDC quote costs before gas: $100k 2.7bp; $1M 3.3bp; $10M 16bp; $25M approximately 1,078bp; $50M approximately 4,345bp. These are dated quotes, not current executable offers.",
     "liquidity_score_ladder_as_of": "2026-09-12T00:00:00Z",
     "liquidity_score_generated_at": "2026-09-12T00:00:00Z"
   },
   "dependencies": {
     "underlying_score": 4.5,
     "underlying_score_source": "riskAnalyst:authored",
-    "underlying_score_basis": "YieldBasis remains the largest deployed supply component: $117.761M market debt / $240.714M deployed supply = 48.92% at 2026-10-16. Facility and governance controls retain September verification dates. Prior claim of complete recipient enumeration is withdrawn: failed event windows are not cured by a ceiling-to-supply reconciliation.",
+    "underlying_score_basis": "YieldBasis creates material BTC/ETH rebalancing and supply concentration. At November 2 10:36 UTC, $98.833M recorded debt / $181.224M deployed-basis measure is 54.54%. Its attached WETH policy has a deployed 43% reserved-profit fraction. YieldBasis DAO configures it and its verifier; Curve emergency authority can kill and revive it. The verifier is upgradeable and owner-controlled; ultimate owner governance remains unresolved. These controls do not grant direct crvUSD mint authority.",
     "underlying_score_persistence": "filtered \u2014 supply architecture, not a daily balance",
-    "underlying_score_denominator": "Current deployed supply from BM; complete current grant enumeration not verified."
+    "underlying_score_denominator": "Dated deployed debt divided by deployed-basis supply; facility ceilings, raw ERC20 supply, pool token balances and collateral notionals are distinct measures. Complete current recipient enumeration is not established."
   },
   "issuer": {
     "issuer_score": 6.0,
     "issuer_score_source": "riskAnalyst:authored",
     "issuer_score_generated_at": "2026-09-11T00:00:00Z",
-    "issuer_score_basis": "MEASURES THE ENTITY AND THE CONCENTRATION OF INFLUENCE OVER IT. \u2705 Curve is one of DeFi's most established protocols \u2014 10+ audit firms and a $2B+ TVL history, which is a long operating record rather than a reputation. \u26a0\ufe0f CRV tokenomics add governance complexity: vote-escrow and gauge weighting mean influence is purchasable and concentrated rather than one-address-one-vote. \u26a0\ufe0f\u26a0\ufe0f AND THE BINDING FACT IS A PERSON, NOT A PROCESS: Egorov's DUAL Curve/YieldBasis ROLE creates concentrated influence over crvUSD's SUPPLY ARCHITECTURE specifically \u2014 the same party shapes both the issuer and a major consumer of its debt ceilings. \u26a0\ufe0f THAT IS A DEPENDENCY-ADJACENT FACT PRICED HERE RATHER THAN ON AXIS 4, because it is about who decides, not about what backs; do not dock it twice.",
+    "issuer_score_basis": "Curve has a long operating history and publicly identified founder Michael Egorov, whose shared involvement with YieldBasis concentrates influence. Swiss Stake AG is a disclosed developer/grantee, not an established crvUSD repayment obligor. Token-specific legal recourse, entity registry details and a complete current financial review remain unresolved. Issuer 6.0 is carried from the historical assessment, not newly derived.",
     "issuer_score_persistence": "filtered \u2014 governance structure, not spot-responsive",
-    "issuer_score_routing": "\u26a0\ufe0f UNROUTED \u2014 backing-monitor holding axis-6 registration pending the axis-4 render decision."
+    "issuer_score_routing": "Contract permissions and audit coverage belong to Contract & Admin; collateral concentration belongs to Dependencies and Backing. Issuer assesses accountability and governance conduct."
   },
   "operating_refresh": {
     "as_of": "2026-10-16T02:36:12Z",
@@ -50,5 +50,13 @@
     "deployed_supply_usd": 240714015.65,
     "yb_share_deployed_supply_pct": 48.921445,
     "note": "YB deployed headline is market debt, not physical pool balances. Prior dated observations are historical."
+  },
+  "scoped_review": {
+    "reviewed_at": "2026-11-02",
+    "authority_source_block": 26327058,
+    "authority_source_timestamp": "2026-11-02T12:20:23Z",
+    "scores_changed": false,
+    "full_verification_date_changed": false,
+    "scope": "Accepted bounded authority/policy/issuance findings; historical score and financial observation clocks retained."
   }
 }

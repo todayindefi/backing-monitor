@@ -80,13 +80,14 @@ var CrvUSDRenderer = {
                 // crvUSD MINTED TO YieldBasis (debt owed), "YB pool BTC/ETH" is the BTC it
                 // POSTED (asset securing it). Naming only the denominator would still imply
                 // one quantity measured two ways.
-                '<table class="data-table"><thead><tr><th colspan="3" class="text-xs uppercase tracking-wide text-slate-500">Minting Sources (create new crvUSD)</th></tr><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">% of minted supply</th></tr></thead><tbody>' +
+                '<table class="data-table"><thead><tr><th colspan="3" class="text-xs uppercase tracking-wide text-slate-500">Deployed issuance sources (reconciles to displayed supply)</th></tr><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">% of deployed-basis supply</th></tr></thead><tbody>' +
                 '<tr><td>YieldBasis deployed (AMM get_debt)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.yb_deployed) + '</td><td class="text-right">' + (sb.yb_deployed / total * 100).toFixed(1) + '%</td></tr>' +
                 '<tr><td>Minting markets (collateral-backed CDPs)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.minting_markets) + '</td><td class="text-right">' + (sb.minting_markets / total * 100).toFixed(1) + '%</td></tr>' +
-                (sb.operator_minted ? '<tr><td>CurveLendOperator (sreUSD market)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.operator_minted) + '</td><td class="text-right">' + (sb.operator_minted / total * 100).toFixed(1) + '%</td></tr>' : '') +
+                (sb.operator_deployed != null ? '<tr><td>CurveLendOperator deployed (sreUSD market)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.operator_deployed) + '</td><td class="text-right">' + (sb.operator_deployed / total * 100).toFixed(1) + '%</td></tr>' : '') +
                 '<tr><td>PegKeeper debt</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(sb.pegkeeper_debt) + '</td><td class="text-right">' + (sb.pegkeeper_debt / total * 100).toFixed(1) + '%</td></tr>' +
-                '<tr class="font-bold border-t-2 border-slate-200"><td>Total crvUSD minted (Ethereum, issuance-side)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(total) + '</td><td class="text-right">100%</td></tr>' +
-                '</tbody></table>' + reconciliationBlock +
+                '<tr class="font-bold border-t-2 border-slate-200"><td>Total deployed-basis supply (Ethereum)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(total) + '</td><td class="text-right">100%</td></tr>' +
+                '</tbody></table>' +
+                '<div class="mt-3 text-sm" id="crvusd-operator-accounting">Operator minted: <strong>' + CommonRenderer.formatCurrencyExact(sb.operator_minted) + '</strong> · deployed: <strong>' + CommonRenderer.formatCurrencyExact(sb.operator_deployed) + '</strong> · excluded idle: <strong>' + CommonRenderer.formatCurrencyExact(sb.operator_idle_excluded) + '</strong>.<br>Deployed collateral ratio: ' + CommonRenderer.formatPercent(s.collateral_ratio) + ' · minted-basis sensitivity: ' + CommonRenderer.formatPercent(s.collateral_ratio_minted_basis) + '. The sensitivity includes idle issuance; it does not establish realized insolvency.<br>YieldBasis deployed share: ' + (sb.yb_deployed / total * 100).toFixed(2) + '% · source ' + CommonRenderer._escapeAttr(data.timestamp || 'unavailable') + '. See the dated Contract &amp; Admin security follow-up for policy/eDAO authority scope; proposal status does not update current role measurements.</div>' + reconciliationBlock +
                 '<table class="data-table mt-4"><thead><tr><th colspan="2" class="text-xs uppercase tracking-wide text-slate-500">Recirculation (uses existing crvUSD, not minting)</th></tr></thead><tbody>' +
                 '<tr><td>LlamaLend borrowed</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(rc.llamalend_borrowed || 0) + '</td></tr>' +
                 '<tr><td>scrvUSD savings vault</td><td class="text-right font-mono">' + CommonRenderer.formatCurrency(rc.scrvusd_savings || 0) + '</td></tr>' +
@@ -147,7 +148,7 @@ var CrvUSDRenderer = {
             var pkDebt = s.total_pegkeeper_debt || 0;
             var pkDesc = pkDebt > 0 ?
                 'PK debt: ' + CommonRenderer.formatCurrency(pkDebt) + '. PegKeepers can actively withdraw and burn crvUSD from these pools to push price up (protocol-controlled defense).' :
-                'PK debt: $0 (no protocol-controlled burn capacity). Peg defense currently relies on market arbitrage only — if crvUSD depegs below $1, arbitrageurs can buy cheap crvUSD using the stablecoin reserves (' + CommonRenderer.formatCurrency(s.pk_stables) + '). PegKeeper active defense (withdraw + burn) is unavailable until PK debt > $0.';
+                'PK debt: $0 (no protocol-controlled burn capacity). PK withdraw-and-burn capacity is zero. Pool liquidity, market arbitrage and other protocol channels remain distinct. Pool stablecoin reserves (' + CommonRenderer.formatCurrency(s.pk_stables) + '). PegKeeper active defense (withdraw + burn) is unavailable until PK debt > $0.';
 
             // Aggregate crvUSD fraction across PK pools (relocated imbalance callout).
             var pkPools = specific.pk_pool_liquidity;
