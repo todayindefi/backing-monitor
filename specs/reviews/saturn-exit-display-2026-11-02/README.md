@@ -18,7 +18,7 @@ Oracle/HF copy now explains that protocol exchange-rate/NAV valuation and thresh
 
 Apyx receipt renderer/data and its complete/unavailable/stale logic are unchanged. Local tests cover both Saturn assets at1280px/390px, missing-review fallback and both Apyx viewports. The isolated test tree uses clean committed HEAD plus only these changes; unrelated GHO/Avant/Ethena work remains unstaged.
 
-Remaining normal-producer gaps and the proposed field ownership are documented in [source-owner handoff](../../handoffs/saturn-exit-review-source-owners-2026-11-02.md). This handoff is prepared, not sent. Continuously refreshed Monad quote sizes, local srUSDat conversion, delivery, queue eligibility/timing and complete settlement remain unmeasured; no execution or score claim follows.
+Remaining normal-producer gaps and the proposed field ownership are documented in [source-owner handoff](../../handoffs/saturn-exit-review-source-owners-2026-11-02.md). The handoff has been placed in all four owner repositories; acknowledgement and normal export remain pending. No external notification or new agent was launched. Continuously refreshed Monad quote sizes, local srUSDat conversion, delivery, queue eligibility/timing and complete settlement remain unmeasured; no execution or score claim follows.
 
 Validation commands:
 
@@ -27,4 +27,4 @@ node tests/test_saturn_exit_review.js
 python3 tests/test_saturn_exit_browser.py
 ```
 
-Served acceptance and public-file hashes are recorded separately after scoped publication.
+Scoped publication: `f83a73c00b`. [Served acceptance and file hashes](served-acceptance.json) confirm both Saturn assets at1280px/390px, missing-review fallback and Apyx receipt regression. All Saturn desktop/mobile cases have no horizontal overflow or JavaScript errors. Screenshots were visually inspected.
