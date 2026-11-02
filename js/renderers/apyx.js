@@ -145,7 +145,7 @@ var ApyxRenderer = {
     // other dashboards short-circuit. Idempotent — the #apyx-trust-disclaimer
     // id guard means re-renders (5-minute auto-refresh, anchor-nav clicks)
     // don't stack copies.
-    _renderTrustDisclaimer: function(slug) {
+    _renderTrustDisclaimer: function(slug, specific) {
         if (!ApyxRenderer._isApyx(slug)) return;
         var chartPanel = document.getElementById('chart-panel');
         if (!chartPanel || !chartPanel.parentNode) return;
@@ -162,7 +162,7 @@ var ApyxRenderer = {
             'off-chain, not on a per-mint on-chain invariant. ' +
             'Solvency is published via Accountable\'s real-time TEE-attested proof-of-solvency ' +
             'feed — not on-chain proof-of-reserves and not a PCAOB-firm audit. ' +
-            'Cash composition is not itemized, and the bridge-admin Safe (3-of-6) can re-configure ' +
+            'Cash composition is not itemized, and the bridge-admin Safe (' + ApyxRenderer._maintainerThreshold(specific) + ') can re-configure ' +
             'rate limits, chain peers, and RMN with no timelock. Treat panels below as analyst ' +
             'inference over the public attestation and on-chain state; the full report ' +
             '(link in header) carries the sourcing and limitations.';
@@ -240,6 +240,44 @@ var ApyxRenderer = {
         if (ageSeconds <= 1800) return 'ok';       // <=30m
         if (ageSeconds <= 14400) return 'warn';     // <=4h
         return 'critical';
+    },
+
+    _escapeText: function(value) {
+        return String(value).replace(/[&<>"']/g, function(c) {
+            return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+        });
+    },
+
+    _maintainerThreshold: function(specific) {
+        var g = (specific || {}).governance || {};
+        return /^(\d+)-of-(\d+)$/.test(g.maintainer_threshold || '') ? g.maintainer_threshold : 'threshold unavailable';
+    },
+
+    // A successful fetch or newly generated payload cannot reset the source clock.
+    _attestationAge: function(ba, now) {
+        var timestamp = Date.parse(ba.attestation_timestamp);
+        return Number.isFinite(timestamp) ? Math.max(0, ((now == null ? Date.now() : now) - timestamp) / 1000) : null;
+    },
+
+    _renderRatioBasis: function(ba, slug) {
+        var reserves = ba.total_reserves_usd, supply = ba.total_supply_usd;
+        var pol = ba.pol_usd, inventory = ba.inventory_usd;
+        var valid = [reserves, supply, pol, inventory].every(function(v) { return typeof v === 'number' && Number.isFinite(v); });
+        if (!valid || supply <= 0 || supply - pol - inventory <= 0) {
+            return '<div class="risk-flag risk-warning">Ratio reconciliation unavailable: reserve, supply or netting operands are missing or invalid.</div>';
+        }
+        var gross = reserves / supply * 100;
+        var netted = (reserves - pol - inventory) / (supply - pol - inventory) * 100;
+        var residual = typeof ba.collateralization_pct === 'number' ? ba.collateralization_pct - netted : null;
+        return '<div class="risk-flag risk-info mt-3" id="apyx-ratio-basis">' +
+            '<strong>Collateralization basis:</strong> Accountable nets POL and inventory from both sides: ' +
+            '(reserves − POL − inventory) / (supply − POL − inventory) = <strong>' + netted.toFixed(5) + '%</strong>. ' +
+            'Gross reserves / gross supply = <strong>' + gross.toFixed(5) + '%</strong>. ' +
+            'Netted denominator: ' + CommonRenderer.formatCurrencyExact(supply - pol - inventory) + '. ' +
+            'Netting moves coverage away from 100% in either direction; these are different scopes. ' +
+            (residual == null ? 'Attested ratio unavailable.' : 'Attested minus reconstructed ratio: ' + residual.toFixed(5) + ' percentage points' + (Math.abs(residual) > 0.01 ? ' — source disagreement unresolved.' : '.')) +
+            (slug === 'apyusd' ? ' The wrapper’s 100% share-accounting ratio is definitional, not independent solvency evidence; reserve coverage inherits apxUSD.' : '') +
+            '</div>';
     },
 
     _slippageState: function(pct) {
@@ -383,7 +421,7 @@ var ApyxRenderer = {
         // Top-of-page trust banner — mirrors the framing on the tidresearch
         // report so a reader who jumps between dashboard and report sees the
         // same language. Apyx-only; idempotent.
-        ApyxRenderer._renderTrustDisclaimer(slug);
+        ApyxRenderer._renderTrustDisclaimer(slug, specific);
 
         // R1: apyUSD CR is ~100% by ERC-4626 construction — annotate the
         // chart so visible rounding-level drift isn't misread as volatility.
@@ -661,7 +699,8 @@ var ApyxRenderer = {
 
         var feedState  = ba.fetch_status === 'ok' ? 'ok' : 'critical';
         var keyState   = ba.signing_key_match ? 'ok' : 'critical';
-        var freshState = ApyxRenderer._attestationFreshness(ba.attestation_age_seconds);
+        var age = ApyxRenderer._attestationAge(ba);
+        var freshState = ApyxRenderer._attestationFreshness(age);
         var crossState = ba.cross_source_supply_consistency ? 'ok' : 'warn';
         var collat = ba.collateralization_pct;
         var collatCls = (collat != null && collat >= 100) ? 'text-green-600' : 'text-red-600';
@@ -676,7 +715,7 @@ var ApyxRenderer = {
                 ApyxRenderer._statusPill('Accountable feed', feedState, ba.source || '') +
                 ApyxRenderer._statusPill('Signing key', keyState, truncKey) +
                 '<span title="Accountable enclave signing timestamp for this proof-of-solvency snapshot; underlying custodian and pricing observations may have their own observation times.">' +
-                    ApyxRenderer._statusPill('Last attested', freshState, ApyxRenderer._formatAge(ba.attestation_age_seconds)) +
+                    ApyxRenderer._statusPill('Last attested', freshState, ApyxRenderer._formatAge(age)) +
                 '</span>' +
                 '<span class="ml-auto text-xs text-slate-500">' +
                     'Collateralization <span class="text-slate-400">(Accountable, as-attested)</span>: ' +
@@ -684,7 +723,12 @@ var ApyxRenderer = {
                         CommonRenderer.formatPercent(collat, 2) +
                     '</span> ' + teePill +
                 '</span>' +
-            '</div>';
+            '</div>' +
+            '<div class="risk-flag ' + (age == null || age > 3600 ? 'risk-warning' : 'risk-info') + '">' +
+                '<strong>Source observation:</strong> ' + ApyxRenderer._escapeText(ba.attestation_timestamp || 'unavailable') +
+                (age == null ? ' — freshness unavailable.' : age > 3600 ? ' — STALE Accountable attestation.' : ' — within the one-hour source freshness window.') +
+                ' Payload generation and successful fetch do not establish fresh backing.</div>' +
+            ApyxRenderer._renderRatioBasis(ba, slug);
 
         // Reserves table — uses the canonical order in APYX_RESERVES_COLORS
         // so even an unexpected analyzer ordering renders predictably.
@@ -2939,7 +2983,7 @@ var ApyxRenderer = {
         var maintainerCallout =
             '<div class="risk-flag risk-warning mt-3">' +
                 '<strong>Bridge admin gap (structural):</strong> the MAINTAINER Safe owning the CCIP pools is ' +
-                '3-of-6 with <strong>no timelock</strong>, while the token-level ADMIN Safe is 4-of-6 with a ' +
+                ApyxRenderer._maintainerThreshold(specific) + ' with <strong>no timelock</strong>, while the token-level ADMIN Safe is ' + ApyxRenderer._escapeText(g.admin_threshold || 'threshold unavailable') + ' with a ' +
                 (adminDelayH != null ? adminDelayH + 'h' : '72h') + ' AccessManager delay. ' +
                 '3 signatures can re-configure rate limits, add chain peers, swap RMN/router, or set a ' +
                 'rebalancer with no review window. On-chain rate limits + Chainlink-canonical RMN provide ' +
@@ -3100,7 +3144,7 @@ var ApyxRenderer = {
             custodyBlock =
                 '<div class="mt-4">' +
                     '<div class="text-sm font-semibold text-slate-700 mb-2">Shared governance topology</div>' +
-                    '<table class="data-table"><tbody>' + entryRows + '</tbody></table>' +
+                    '<div class="data-table-scroll"><table class="data-table"><tbody>' + entryRows + '</tbody></table></div>' +
                 '</div>';
         }
 

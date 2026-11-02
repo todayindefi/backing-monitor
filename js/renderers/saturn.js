@@ -619,7 +619,9 @@ var SaturnRenderer = {
             // sUSDat
             headerLeft =
                 '<div class="text-xl font-bold text-slate-800">sUSDat</div>' +
-                '<div class="text-xs text-slate-500 mt-1">Saturn Labs · ERC-4626 vault share over USDat (on-chain buffer + off-chain STRC)</div>';
+                '<div class="text-xs text-slate-500 mt-1">Saturn Labs · ERC-4626 vault share over USDat</div>' +
+                '<div class="risk-flag risk-warning mt-3"><strong>Source scope disagreement:</strong> Current Saturn disclosures describe STRC exposure through Ondo STRCon. This producer still labels the non-USDat remainder as off-chain STRC inferred from the vault oracle. Those labels do not verify STRCon holdings, custody or migration. Ethereum sUSDat observations do not establish Monad srUSDat or PT coverage. ' +
+                '<a href="https://saturn.credit/" target="_blank" rel="noopener noreferrer">Issuer disclosure ↗</a></div>';
 
             var nav = s.nav_per_share;
             var apy = s.implied_apy_30d;
@@ -907,11 +909,10 @@ var SaturnRenderer = {
             '</div><div>' + CommonRenderer._escapeAttr(reserve.next) + '</div></details></div>' : '';
         var methodology =
             '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
-                'USDat treasury holds $M and USDC at the token contract address. Every dollar is readable ' +
-                'on-chain via <span class="font-mono">balanceOf</span> — no oracle, no enclave, no off-chain ' +
-                'custodian to trust. <strong>On-chain verification stops at $M.</strong> $M itself is T-bill ' +
-                'backed by M^0\'s federated minters off-chain; the $M issuer\'s reserves are a separate ' +
-                'trust layer beyond Saturn\'s control.' +
+                'The current Ethereum producer measures reserve-token holdings, including primary PYUSDx, ' +
+                'against Ethereum USDat supply at par. <strong>Token balances do not establish upstream solvency.</strong> ' +
+                'Saturn discloses PayPal USD backing through PYUSDx; upstream reserves, custody, eligibility and ' +
+                'settlement are separate checks. A balanceOf read is not a holder redemption simulation or global-chain coverage.' +
             '</div>';
 
         return '<div class="panel">' +
