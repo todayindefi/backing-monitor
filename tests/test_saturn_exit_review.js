@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const c=vm.createContext({console,Date,Number});vm.runInContext(fs.readFileSync('js/renderers/saturn.js','utf8'),c);
+const r=c.SaturnRenderer,review=JSON.parse(fs.readFileSync('data/saturn_exit_review.json'));
+const html=r._exitReviewHtml(review);
+for(const text of ['MoonPay Digital Assets Limited','Underlying PYUSD is issued by Paxos','both Ethereum and Monad','zero tranche cooldown does not mean immediate USDat delivery','asynchronous Saturn queue','Queue eligibility: unknown','Oracle / HF versus market exit','not a lending health factor','2026-11-02T09:51:59+00:00','2026-11-02T09:52:09+00:00'])assert.ok(html.includes(text),text);
+assert.doesNotMatch(fs.readFileSync('js/renderers/saturn.js','utf8'),/Paxos-issued/);
+assert.match(r._exitReviewHtml(null),/review unavailable/);
+const missing=structuredClone(review);missing.secondary_sales.observations=[review.secondary_sales.observations[0]];assert.match(r._exitReviewHtml(missing),/no two-chain liquidity conclusion/);
+const future=structuredClone(review);future.secondary_sales.observations[1].source_timestamp='2999-01-01T00:00:00Z';assert.match(r._exitReviewHtml(future),/no two-chain liquidity conclusion/);
+const xss=structuredClone(review);xss.issuer.pyusdx='<script>alert(1)</script>';assert.doesNotMatch(r._exitReviewHtml(xss),/<script>/);
+const raw=JSON.stringify(review);for(const banned of ['54791021350','54754629400','130.556','0xf7c409','balance','calldata','msg.value','native_fee','account_index'])assert.ok(!raw.includes(banned),banned);
+assert.equal(review.publisher,'BM owner-review adapter');assert.equal(review.kind,'dated_review_not_live_route_or_eligibility_monitor');
+console.log('PASS issuer layers, dated two-chain evidence, queue distinctions, oracle/HF scope, missing/future/escaping and privacy');

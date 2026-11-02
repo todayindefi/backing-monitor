@@ -30,7 +30,7 @@ var SATURN_ADDRS = {
 
 var SATURN_COLORS = {
     M:      '#10b981',  // emerald — $M (T-bill-backed)
-    PYUSDx: '#8b5cf6',  // violet — Paxos-issued wrapped dollar
+    PYUSDx: '#8b5cf6',  // violet — MoonPay-issued extension on M0 infrastructure
     USDC:   '#3b82f6',  // blue — on-chain dollar
     STRC:   '#f59e0b',  // amber — oracle-attested off-chain
     OTHER:  '#ef4444',  // red — would be a drift signal
@@ -43,7 +43,7 @@ var SATURN_COLORS = {
 // own symbol rather than being skipped.
 var SATURN_ASSET_LABELS = {
     M: '$M  <span class="text-xs text-slate-500 font-normal">(M^0 T-bill backed)</span>',
-    PYUSDx: 'PYUSDx  <span class="text-xs text-slate-500 font-normal">(Paxos-issued)</span>'
+    PYUSDx: 'PYUSDx  <span class="text-xs text-slate-500 font-normal">(MoonPay / M0 extension)</span>'
 };
 
 // Preferred display order; anything else follows in feed order.
@@ -355,6 +355,7 @@ var SaturnRenderer = {
         html += head(3, 'Liquidity & Exit', 'exit depth, venue spread and slippage');
         html += SaturnRenderer._axisRationaleSlot('liquidity',slug);
         html += anc('panel-liquidity', SaturnRenderer._renderLiquidityPanel(specific, s, slug));
+        html += '<div id="saturn-exit-review" aria-live="polite"></div>';
 
         html += head(4, 'Dependencies', 'what this depends on, and what depends on it',
             CommonRenderer.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies'));
@@ -389,6 +390,7 @@ var SaturnRenderer = {
         }
         SaturnRenderer._loadPegHistoryChart(slug, s);
         SaturnRenderer._loadFamilyPanel(slug);
+        SaturnRenderer._loadExitReview();
     },
 
     _axisRationaleSlot: function(axis,slug) {
@@ -2545,6 +2547,53 @@ var SaturnRenderer = {
     // ============================================================
     // §6 Family panel (async)
     // ============================================================
+    // Dated owner-review fields, separate from live backing/depth and queues.
+    // No portfolio quantities, holder identities or simulation payloads belong here.
+    _exitReviewHtml: function(review) {
+        var esc = SaturnRenderer._escHtml;
+        if (!review || review.schema_version !== 'saturn-exit-review/1' ||
+                review.kind !== 'dated_review_not_live_route_or_eligibility_monitor') {
+            return '<div class="panel"><div class="panel-title">USDat / srUSDat exit dependencies</div>' +
+                '<p class="text-sm text-slate-500">Dated exit review unavailable. Current queue eligibility, timing and complete-route settlement are unknown.</p></div>';
+        }
+        var sales = review.secondary_sales || {}, issuer = review.issuer || {}, valuation = review.valuation || {};
+        var observations = (Array.isArray(sales.observations) ? sales.observations : []).filter(function(o) {
+            var t = Date.parse(o.source_timestamp);
+            return ['eth', 'monad'].indexOf(o.chain) !== -1 && Number.isFinite(t) && t <= Date.now() && Number.isSafeInteger(o.block) && o.block > 0;
+        });
+        var both = observations.some(function(o) { return o.chain === 'eth'; }) && observations.some(function(o) { return o.chain === 'monad'; });
+        var html = '<div class="panel"><div class="panel-title">USDat / srUSDat exit dependencies</div>' +
+            '<p class="text-xs text-slate-500 mb-3">Dated owner review · ' + esc(review.review_date || 'date unavailable') +
+            ' · separate from live liquidity measurements and queue monitoring</p>' +
+            '<p class="text-sm mb-2"><strong>Issuer layers:</strong> ' + esc(issuer.pyusdx || 'PYUSDx issuer detail unavailable.') + ' ' + esc(issuer.underlying || '') + '</p>';
+        if (issuer.source_url && issuer.source_url.indexOf('https://www.m0.org/') === 0) {
+            html += '<p class="text-xs mb-3"><a href="' + esc(issuer.source_url) + '" target="_blank" rel="noopener noreferrer" class="text-blue-600 underline">M0 issuer disclosure</a> · ' + esc(issuer.source_date || '') + '</p>';
+        }
+        html += '<p class="text-sm mb-2"><strong>USDat secondary sale:</strong> ' +
+            (both && sales.status === 'positive_dated_size_specific_quotes' ? esc(sales.reading) : 'Chain-specific dated quote evidence is incomplete or unavailable; no two-chain liquidity conclusion is drawn.') + '</p>';
+        html += '<div class="text-xs text-slate-500 mb-3">' + observations.map(function(o) {
+            return esc(o.chain === 'eth' ? 'Ethereum' : 'Monad') + ' · block ' + esc(o.block) + ' · ' + esc(o.source_timestamp) + ' · ' + esc(o.evidence_class);
+        }).join('<br>') + '</div><p class="text-xs text-slate-500 mb-3">' + esc(sales.limits || '') + '</p>';
+        (Array.isArray(review.exit_stages) ? review.exit_stages : []).forEach(function(stage) {
+            html += '<div class="border-t border-slate-200 pt-2 mt-2"><div class="text-sm font-semibold">' + esc(stage.name) + '</div>' +
+                '<p class="text-sm">' + esc(stage.reading) + '</p>' +
+                (stage.eligibility ? '<p class="text-xs text-slate-500">Queue eligibility: ' + esc(stage.eligibility) + ' · timing: ' + esc(stage.timing || 'unknown') + '</p>' : '') + '</div>';
+        });
+        html += '<div class="border-t border-slate-200 pt-3 mt-3"><div class="text-sm font-semibold">Oracle / HF versus market exit</div><p class="text-sm">' +
+            esc(valuation.reading || 'Oracle/NAV and market-exit risks require separate evidence.') + '</p><p class="text-xs text-slate-500 mt-1">' + esc(valuation.scope || '') + '</p></div></div>';
+        return html;
+    },
+
+    _loadExitReview: function() {
+        var target = document.getElementById('saturn-exit-review');
+        if (!target) return;
+        target.innerHTML = SaturnRenderer._exitReviewHtml(null);
+        fetch('data/saturn_exit_review.json?review=' + Math.floor(Date.now() / 60000))
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(review) { if (target.isConnected) target.innerHTML = SaturnRenderer._exitReviewHtml(review); })
+            .catch(function() { if (target.isConnected) target.innerHTML = SaturnRenderer._exitReviewHtml(null); });
+    },
+
     _loadFamilyPanel: function(currentSlug) {
         var target = document.getElementById('saturn-family-panel');
         if (!target) return;
