@@ -1,12 +1,12 @@
 {
  "schema_version": "liquidity/1",
  "asset_slug": "bold",
- "as_of": "2026-10-31T23:45:57Z",
+ "as_of": "2026-11-01T23:46:30Z",
  "producer": "dextracker",
  "note": "Axis 3 (Liquidity & Exit), single producer. This payload contains measured exit evidence only and does not author a risk score. Pool TVL, wrapper TVL, and Stability Pool deposits are not substituted for executable depth.",
  "depth": {
   "status": "bracketed",
-  "depth_usd": 6660156.25,
+  "depth_usd": 6695312.5,
   "depth_usd_semantics": "lower_bound_of_bracket: a size that cleared the threshold, never the crossing itself. Read `bracket` for the located range and `bracket.meets_precision_obligation` for whether it is within 1% of midpoint; a false there with a wide bracket means depth_usd may understate the crossing by the bracket's width.",
   "is_floor": true,
   "threshold_bps": -200.0,
@@ -15,8 +15,8 @@
   "tested_through_input_usd": 20000000.0,
   "baseline_rung": {
    "size_usd": 100.0,
-   "slippage_bps": -15.043900000000221,
-   "amount_out_tokens": 99.849561
+   "slippage_bps": -21.191099999999796,
+   "amount_out_tokens": 99.788089
   },
   "rung_set": {
    "grid": "decade",
@@ -30,16 +30,16 @@
    "spec": "riskAnalyst liquidity-ladder-spec.md \u00a77 (178e54a)"
   },
   "slippage_convention": "Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. The dated external mid sizes the input notional and is NOT the impact reference.",
-  "basis": "The -200bps crossing is BRACKETED between $6,660,156.25 and $6,695,312.50. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor.",
+  "basis": "The -200bps crossing is BRACKETED between $6,695,312.50 and $6,765,625.00. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor.",
   "bracket": {
-   "last_clearing_size_usd": 6660156.25,
-   "last_clearing_marginal_impact_bps": -199.27033194163,
-   "first_crossing_size_usd": 6695312.5,
-   "first_crossing_marginal_impact_bps": -216.84577684032644,
-   "width_usd": 35156.25,
+   "last_clearing_size_usd": 6695312.5,
+   "last_clearing_marginal_impact_bps": -193.286457568822,
+   "first_crossing_size_usd": 6765625.0,
+   "first_crossing_marginal_impact_bps": -233.0049511911314,
+   "width_usd": 70312.5,
    "monotonic_in_bracket": true,
    "threshold_bps": -200.0,
-   "meets_precision_obligation": true
+   "meets_precision_obligation": false
   },
   "quote": {
    "method": "KyberSwap GET /api/v1/routes exact-input BOLD -> USDC; the router discovers and split-optimises Curve, Uniswap V3/V4, and any other executable venues at each size",
@@ -51,7 +51,7 @@
     "decimals": 18
    },
    "baseline_size_usd": 100.0,
-   "quoted_as_of": "2026-10-31T23:45:09Z",
+   "quoted_as_of": "2026-11-01T23:45:37Z",
    "token_out": {
     "symbol": "USDC",
     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
@@ -90,14 +90,6 @@
       "status": "quoted"
      },
      {
-      "venue": "balancer-v3-eclp",
-      "status": "quoted"
-     },
-     {
-      "venue": "balancer-v3-stable",
-      "status": "quoted"
-     },
-     {
       "venue": "curve",
       "status": "quoted"
      },
@@ -110,23 +102,19 @@
       "status": "quoted"
      },
      {
+      "venue": "ekubo-v3",
+      "status": "quoted"
+     },
+     {
+      "venue": "fluid-dex-t1",
+      "status": "quoted"
+     },
+     {
       "venue": "frxusd",
       "status": "quoted"
      },
      {
-      "venue": "lite-psm",
-      "status": "quoted"
-     },
-     {
-      "venue": "metric-propamm/goliath-prop",
-      "status": "quoted"
-     },
-     {
-      "venue": "native-v2/fluid-dex-t1",
-      "status": "quoted"
-     },
-     {
-      "venue": "native-v2/goliath-prop",
+      "venue": "metric-propamm/fluid-dex-t1",
       "status": "quoted"
      },
      {
@@ -142,6 +130,10 @@
       "status": "quoted"
      },
      {
+      "venue": "uniswap-v4-passthru",
+      "status": "quoted"
+     },
+     {
       "venue": "uniswapv3",
       "status": "quoted"
      }
@@ -154,7 +146,7 @@
    "fair_value": 1.0,
    "fair_value_basis": "par_input_sizing_only",
    "fair_value_source": "producer_declared_input_sizing",
-   "fair_value_as_of": "2026-10-31T23:45:01Z",
+   "fair_value_as_of": "2026-11-01T23:45:02Z",
    "fair_value_choice": "marginal_baseline",
    "fair_value_choice_mode": "producer_method",
    "market_price_cross_check": null,
@@ -179,120 +171,77 @@
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "swap_amount_raw": "1000000000000000000000",
       "amount_out_raw": "998495185",
-      "block_number": 26316112
+      "block_number": 26323288
      }
     ],
     "quote_block_numbers": [
-     26316112
+     26323288
     ],
-    "quote_as_of": "2026-10-31T23:45:02Z",
+    "quote_as_of": "2026-11-01T23:45:05Z",
     "quote_expiry": null,
     "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
     "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
-    "route_id": "7034625fu_1K6q2Z",
-    "gas_usd": "0.08931739194760469",
-    "router_price_in": 0.9977134017027771,
-    "router_price_out": 0.9999007293798807,
-    "slippage_bps_debiased": -0.004249999999705878,
-    "price_bias_bps": -15.043900000000221,
+    "route_id": "68631ae06zlP9Z1v",
+    "gas_usd": "0.11211058730102641",
+    "router_price_in": 0.9972026770501867,
+    "router_price_out": 1.000063825604096,
+    "slippage_bps_debiased": 6.142949999999869,
+    "price_bias_bps": -21.191099999999796,
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000.0,
     "status": "ok",
     "amount_in_tokens": 10000.0,
-    "amount_out_tokens": 9978.620217,
-    "slippage_bps": -21.37978300000065,
+    "amount_out_tokens": 9978.051817,
+    "slippage_bps": -21.94818300000012,
     "route_venues": [
-     "aero-cl",
-     "balancer-v3-eclp",
-     "balancer-v3-stable",
-     "native-v2/goliath-prop",
-     "uniswap-v4-euler",
-     "uniswapv3"
+     "curve-stable-ng",
+     "uniswap-v4-euler"
     ],
-    "route_leg_count": 3,
+    "route_leg_count": 2,
     "route_hops": [
      {
       "exchange": "uniswap-v4-euler",
       "pool": "0x2dbccce7cb1ad39f7a1369856f78ee39bd15e8a8",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "3542617626590602969600",
-      "amount_out_raw": "3537282260",
-      "block_number": 26316112
+      "swap_amount_raw": "3542218974413071576400",
+      "amount_out_raw": "3536884210",
+      "block_number": 26323288
      },
      {
-      "exchange": "balancer-v3-eclp",
-      "pool": "0x698a72bc8bc2eeb0f0f9a77cef0a2859399dc469",
-      "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
-      "token_out": "0xd4fa2d31b7968e448877f69a96de69f5de8cd23e",
-      "swap_amount_raw": "308934382952852822777",
-      "amount_out_raw": "258537808",
-      "block_number": 26316109
-     },
-     {
-      "exchange": "balancer-v3-stable",
-      "pool": "0x85b2b559bc2d21104c4defdd6efca8a20343361d",
-      "token_in": "0xd4fa2d31b7968e448877f69a96de69f5de8cd23e",
-      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-      "swap_amount_raw": "258537808",
-      "amount_out_raw": "308475481",
-      "block_number": 26316112
-     },
-     {
-      "exchange": "uniswapv3",
-      "pool": "0xc7bbec68d12a0d1830360f8ec58fa599ba1b0e9b",
-      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-      "token_out": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-      "swap_amount_raw": "308475481",
-      "amount_out_raw": "136876719291120872",
-      "block_number": 26316113
-     },
-     {
-      "exchange": "native-v2/goliath-prop",
-      "pool": "native_v2_0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48_0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-      "token_in": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "136876719291120872",
-      "amount_out_raw": "308277603",
-      "block_number": 0
-     },
-     {
-      "exchange": "aero-cl",
-      "pool": "0x82ccbb91c69e75037bb972f28cc01e704e325362",
+      "exchange": "curve-stable-ng",
+      "pool": "0xefc6516323fbd28e80b85a497b65a86243a54b3e",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "6148447990456544207623",
-      "amount_out_raw": "6133060354",
-      "block_number": 26315678
+      "swap_amount_raw": "6457781025586928423600",
+      "amount_out_raw": "6441167607",
+      "block_number": 26323129
      }
     ],
     "quote_block_numbers": [
-     0,
-     26315678,
-     26316109,
-     26316112,
-     26316113
+     26323129,
+     26323288
     ],
-    "quote_as_of": "2026-10-31T23:45:03Z",
+    "quote_as_of": "2026-11-01T23:45:08Z",
     "quote_expiry": null,
     "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
     "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
-    "route_id": "dd568009c0NLVaWc",
-    "gas_usd": "0.20967427375261471",
-    "router_price_in": 0.9977134017027771,
-    "router_price_out": 0.9998687372574682,
-    "slippage_bps_debiased": -6.335883000000429,
-    "price_bias_bps": -15.043900000000221,
+    "route_id": "f79d276982BEXJzw",
+    "gas_usd": "0.12632212692279446",
+    "router_price_in": 0.9972026770501867,
+    "router_price_out": 0.9994185413225842,
+    "slippage_bps_debiased": -0.7570830000003248,
+    "price_bias_bps": -21.191099999999796,
     "rung_kind": "decade"
    },
    {
     "size_usd": 100000.0,
     "status": "ok",
     "amount_in_tokens": 100000.0,
-    "amount_out_tokens": 99741.379093,
-    "slippage_bps": -25.86209070000067,
+    "amount_out_tokens": 99739.47541,
+    "slippage_bps": -26.05245899999997,
     "route_venues": [
      "aero-cl",
      "curve-stable-ng",
@@ -303,76 +252,76 @@
     "route_leg_count": 5,
     "route_hops": [
      {
-      "exchange": "aero-cl",
-      "pool": "0x82ccbb91c69e75037bb972f28cc01e704e325362",
-      "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
-      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "12771544141428047418328",
-      "amount_out_raw": "12738863031",
-      "block_number": 26315678
-     },
-     {
       "exchange": "curve-stable-ng",
       "pool": "0xefc6516323fbd28e80b85a497b65a86243a54b3e",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "27236616407334851054983",
-      "amount_out_raw": "27164873532",
-      "block_number": 26316092
+      "swap_amount_raw": "54027000355592437586894",
+      "amount_out_raw": "53884930581",
+      "block_number": 26323129
+     },
+     {
+      "exchange": "aero-cl",
+      "pool": "0x82ccbb91c69e75037bb972f28cc01e704e325362",
+      "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "7559248212998903397884",
+      "amount_out_raw": "7539361629",
+      "block_number": 26323122
      },
      {
       "exchange": "uniswap-v4",
       "pool": "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "54076382537745157045310",
-      "amount_out_raw": "53933771743",
-      "block_number": 26315209
+      "swap_amount_raw": "32280928139001093260075",
+      "amount_out_raw": "32194586014",
+      "block_number": 26323258
      },
      {
       "exchange": "uniswapv3",
       "pool": "0x1e4dbb639ebbf725fd243a6190df5440ee38740e",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "2372925837580367424945",
-      "amount_out_raw": "2366674947",
-      "block_number": 26314975
+      "swap_amount_raw": "2591803631407557663584",
+      "amount_out_raw": "2584910482",
+      "block_number": 26322883
      },
      {
       "exchange": "uniswap-v4-euler",
       "pool": "0x2dbccce7cb1ad39f7a1369856f78ee39bd15e8a8",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "3542531075911568667826",
-      "amount_out_raw": "3537195840",
-      "block_number": 26316112
+      "swap_amount_raw": "3541019660999999702955",
+      "amount_out_raw": "3535686704",
+      "block_number": 26323288
      }
     ],
     "quote_block_numbers": [
-     26314975,
-     26315209,
-     26315678,
-     26316092,
-     26316112
+     26322883,
+     26323122,
+     26323129,
+     26323258,
+     26323288
     ],
-    "quote_as_of": "2026-10-31T23:45:04Z",
+    "quote_as_of": "2026-11-01T23:45:14Z",
     "quote_expiry": null,
     "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
     "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
-    "route_id": "eb301008S-xCF6KP",
-    "gas_usd": "0.1509867370588785",
-    "router_price_in": 0.9976759980055755,
-    "router_price_out": 0.9999007293798806,
-    "slippage_bps_debiased": -10.81819070000045,
-    "price_bias_bps": -15.043900000000221,
+    "route_id": "f432d128sylBUJv2",
+    "gas_usd": "0.16646817595613478",
+    "router_price_in": 0.9971484339102388,
+    "router_price_out": 0.999480112667835,
+    "slippage_bps_debiased": -4.861359000000174,
+    "price_bias_bps": -21.191099999999796,
     "rung_kind": "decade"
    },
    {
     "size_usd": 1000000.0,
     "status": "ok",
     "amount_in_tokens": 1000000.0,
-    "amount_out_tokens": 997038.314742,
-    "slippage_bps": -29.61685258000002,
+    "amount_out_tokens": 996985.271163,
+    "slippage_bps": -30.14728836999936,
     "route_venues": [
      "aero-cl",
      "curve-stable-ng",
@@ -382,73 +331,74 @@
     "route_leg_count": 4,
     "route_hops": [
      {
-      "exchange": "uniswap-v4",
-      "pool": "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893",
-      "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
-      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "635079078399999989345145",
-      "amount_out_raw": "633197327312",
-      "block_number": 26315209
-     },
-     {
       "exchange": "curve-stable-ng",
       "pool": "0xefc6516323fbd28e80b85a497b65a86243a54b3e",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "289678650463500108579994",
-      "amount_out_raw": "288817278920",
-      "block_number": 26316092
+      "swap_amount_raw": "326982044701193165074157",
+      "amount_out_raw": "326006139018",
+      "block_number": 26323129
+     },
+     {
+      "exchange": "uniswap-v4",
+      "pool": "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893",
+      "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "599999999999999989933665",
+      "amount_out_raw": "598178901462",
+      "block_number": 26323258
      },
      {
       "exchange": "aero-cl",
       "pool": "0x82ccbb91c69e75037bb972f28cc01e704e325362",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "47689295806042823679906",
-      "amount_out_raw": "47552788525",
-      "block_number": 26315678
+      "swap_amount_raw": "43423342296381216351477",
+      "amount_out_raw": "43295239084",
+      "block_number": 26323122
      },
      {
       "exchange": "uniswapv3",
       "pool": "0x1e4dbb639ebbf725fd243a6190df5440ee38740e",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "27552975330457061617739",
-      "amount_out_raw": "27470919985",
-      "block_number": 26314975
+      "swap_amount_raw": "29594613002425611863485",
+      "amount_out_raw": "29504991599",
+      "block_number": 26322883
      }
     ],
     "quote_block_numbers": [
-     26314975,
-     26315209,
-     26315678,
-     26316092
+     26322883,
+     26323122,
+     26323129,
+     26323258
     ],
-    "quote_as_of": "2026-10-31T23:45:05Z",
+    "quote_as_of": "2026-11-01T23:45:20Z",
     "quote_expiry": null,
     "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
     "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
-    "route_id": "c03ebbb8SwVMs6GS",
-    "gas_usd": "0.08795613407881162",
-    "router_price_in": 0.9977999431244675,
-    "router_price_out": 0.9998287422126328,
-    "slippage_bps_debiased": -14.5729525799998,
-    "price_bias_bps": -15.043900000000221,
+    "route_id": "b428df639j9N0ZsF",
+    "gas_usd": "0.10311001100546603",
+    "router_price_in": 0.997148433910239,
+    "router_price_out": 0.999480112667835,
+    "slippage_bps_debiased": -8.956188369999563,
+    "price_bias_bps": -21.191099999999796,
     "rung_kind": "decade"
    },
    {
     "size_usd": 10000000.0,
     "status": "ok",
     "amount_in_tokens": 10000000.0,
-    "amount_out_tokens": 7009585.033201,
-    "slippage_bps": -2990.414966799,
+    "amount_out_tokens": 6804468.166289,
+    "slippage_bps": -3195.5318337110007,
     "route_venues": [
      "aero-cl",
      "curve",
      "curve-stable-ng",
+     "ekubo-v3",
+     "fluid-dex-t1",
      "frxusd",
-     "lite-psm",
-     "native-v2/fluid-dex-t1",
+     "metric-propamm/fluid-dex-t1",
      "uniswap-v4",
      "uniswapv3"
     ],
@@ -459,333 +409,345 @@
       "pool": "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "2928613426643756265323502",
-      "amount_out_raw": "2887644067951",
-      "block_number": 26315209
+      "swap_amount_raw": "2702930907600000244877351",
+      "amount_out_raw": "2657701965775",
+      "block_number": 26323258
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0xefc6516323fbd28e80b85a497b65a86243a54b3e",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "5749209096102819790446960",
-      "amount_out_raw": "3166666125669",
-      "block_number": 26316092
+      "swap_amount_raw": "5947059429099160434342592",
+      "amount_out_raw": "3181995622307",
+      "block_number": 26323129
      },
      {
       "exchange": "uniswapv3",
       "pool": "0x1e4dbb639ebbf725fd243a6190df5440ee38740e",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "641326734900000058102255",
-      "amount_out_raw": "634088331700",
-      "block_number": 26314975
+      "swap_amount_raw": "640482615491204884525780",
+      "amount_out_raw": "633246867089",
+      "block_number": 26322883
      },
      {
       "exchange": "aero-cl",
       "pool": "0x82ccbb91c69e75037bb972f28cc01e704e325362",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "146281909600000013252698",
-      "amount_out_raw": "145349651762",
-      "block_number": 26315678
+      "swap_amount_raw": "139132937618621882320335",
+      "amount_out_raw": "138526618631",
+      "block_number": 26323122
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0x7ed17e037b7d88a8270c89b3afa9c38e5218f12b",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
-      "swap_amount_raw": "423195787038043355046830",
-      "amount_out_raw": "110974379086909303363891",
-      "block_number": 26316092
+      "swap_amount_raw": "460134792628811512000062",
+      "amount_out_raw": "127299074498510612494498",
+      "block_number": 26323218
      },
      {
       "exchange": "curve",
       "pool": "0xed279fdd11ca84beef15af5d39bb4d4bee23f0ca",
       "token_in": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
-      "token_out": "0x6b175474e89094c44da98b954eedeac495271d0f",
-      "swap_amount_raw": "110974379086909303363891",
-      "amount_out_raw": "114433623251144859741116",
-      "block_number": 26315880
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "127299074498510612494498",
+      "amount_out_raw": "130295615057",
+      "block_number": 26323135
      },
      {
-      "exchange": "lite-psm",
-      "pool": "0xf6e72db5454dd049d0788e411b06cfaf16853042",
-      "token_in": "0x6b175474e89094c44da98b954eedeac495271d0f",
+      "exchange": "metric-propamm/fluid-dex-t1",
+      "pool": "0xaef2ad7abb651945e6d24276715f25bded0ad41e",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "114433623251144859741116",
-      "amount_out_raw": "114433623251",
-      "block_number": 26316106
+      "swap_amount_raw": "130295615057",
+      "amount_out_raw": "130163664511",
+      "block_number": 26204062
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0xc3b723b0dae2df9668f876236a1922f72bcb438d",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xf4c13d631450de6b12a19829e37c8e2826891dc4",
-      "swap_amount_raw": "86853219954025166594696",
-      "amount_out_raw": "45965375344867190652551",
-      "block_number": 26312353
+      "swap_amount_raw": "85692427026500134150198",
+      "amount_out_raw": "47053595781317415544209",
+      "block_number": 26322798
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0xf76329c6dc10fdfbee6ca520d0bf4d474e95e46e",
       "token_in": "0xf4c13d631450de6b12a19829e37c8e2826891dc4",
       "token_out": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
-      "swap_amount_raw": "45965375344867190652551",
-      "amount_out_raw": "45892765428059373167294",
-      "block_number": 26315761
+      "swap_amount_raw": "47053595781317415544209",
+      "amount_out_raw": "46996236472617630197176",
+      "block_number": 26322798
      },
      {
       "exchange": "frxusd",
       "pool": "0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c",
       "token_in": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "45892765428059373167294",
-      "amount_out_raw": "45892765428",
-      "block_number": 26316113
+      "swap_amount_raw": "46996236472617630197176",
+      "amount_out_raw": "46996236472",
+      "block_number": 26323288
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0x8b878afe454e31cf0a79c6d7cf2f077dd286c12f",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
-      "swap_amount_raw": "23956435984191311304014",
-      "amount_out_raw": "16466884242545296315956",
-      "block_number": 26315993
+      "swap_amount_raw": "24050529946679481571589",
+      "amount_out_raw": "15912696150080039264415",
+      "block_number": 26322799
      },
      {
       "exchange": "uniswap-v4",
       "pool": "0xcd799508ddaa319e608547d3291a1a512da9a9acdd40599d89019ec82e3cf1e8",
       "token_in": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
       "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-      "swap_amount_raw": "16466884242545296315956",
-      "amount_out_raw": "16161119891",
-      "block_number": 26315251
+      "swap_amount_raw": "15912696150080039264415",
+      "amount_out_raw": "15680288892",
+      "block_number": 26322794
      },
      {
-      "exchange": "native-v2/fluid-dex-t1",
-      "pool": "native_v2_0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48_0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "exchange": "fluid-dex-t1",
+      "pool": "0x667701e51b4d1ca244f17c78f7ab8744b4c99f9b",
       "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "16161119891",
-      "amount_out_raw": "15337471293",
-      "block_number": 0
+      "swap_amount_raw": "15680288892",
+      "amount_out_raw": "15664361565",
+      "block_number": 26323290
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0x8b878afe454e31cf0a79c6d7cf2f077dd286c12f",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
-      "swap_amount_raw": "563389777164945898709",
-      "amount_out_raw": "247279224090415573067",
-      "block_number": 26315993
+      "swap_amount_raw": "516360589022332181757",
+      "amount_out_raw": "225674200254015111882",
+      "block_number": 26322799
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0xd6982da59f1d26476e259559508f4135135cf9b8",
       "token_in": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
       "token_out": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
-      "swap_amount_raw": "247279224090415573067",
-      "amount_out_raw": "172991720",
+      "swap_amount_raw": "225674200254015111882",
+      "amount_out_raw": "172849350",
       "block_number": 26309022
      },
      {
-      "exchange": "curve-stable-ng",
-      "pool": "0x383e6b4437b59fff47b619cba855ca29342a8559",
+      "exchange": "ekubo-v3",
+      "pool": "0xb681058587d70a6554ac4008a9c5f14ae6f425013a3b1d240417395d25683748",
       "token_in": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "172991720",
-      "amount_out_raw": "172996147",
-      "block_number": 26316109
+      "swap_amount_raw": "172849350",
+      "amount_out_raw": "172829939",
+      "block_number": 26323289
      }
     ],
     "quote_block_numbers": [
-     0,
+     26204062,
      26309022,
-     26312353,
-     26314975,
-     26315209,
-     26315251,
-     26315678,
-     26315761,
-     26315880,
-     26315993,
-     26316092,
-     26316106,
-     26316109,
-     26316113
+     26322794,
+     26322798,
+     26322799,
+     26322883,
+     26323122,
+     26323129,
+     26323135,
+     26323218,
+     26323258,
+     26323288,
+     26323289,
+     26323290
     ],
-    "quote_as_of": "2026-10-31T23:45:06Z",
+    "quote_as_of": "2026-11-01T23:45:29Z",
     "quote_expiry": null,
     "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
     "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
-    "route_id": "7f28423e6PFJGKkC",
-    "gas_usd": "0.3369612796579226",
-    "router_price_in": 0.9977999431244675,
-    "router_price_out": 0.999868737257468,
-    "slippage_bps_debiased": -2975.371066799,
-    "price_bias_bps": -15.043900000000221,
+    "route_id": "3a05c99955dLSopD",
+    "gas_usd": "0.4506114436450724",
+    "router_price_in": 0.9971484339102389,
+    "router_price_out": 0.9993641836532977,
+    "slippage_bps_debiased": -3174.3407337110007,
+    "price_bias_bps": -21.191099999999796,
     "rung_kind": "decade"
    },
    {
     "size_usd": 8000000.0,
     "status": "ok",
     "amount_in_tokens": 8000000.0,
-    "amount_out_tokens": 6967658.421918,
-    "slippage_bps": -1290.4269726024997,
+    "amount_out_tokens": 6863064.852932,
+    "slippage_bps": -1421.1689338350009,
     "route_venues": [
      "aero-cl",
      "curve",
      "curve-stable-ng",
+     "ekubo-v3",
      "frxusd",
-     "lite-psm",
+     "metric-propamm/fluid-dex-t1",
      "uniswap-v4",
+     "uniswap-v4-passthru",
      "uniswapv3"
     ],
-    "route_leg_count": 7,
+    "route_leg_count": 8,
     "route_hops": [
      {
       "exchange": "uniswap-v4",
       "pool": "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "2911768739617448736343597",
-      "amount_out_raw": "2887462868821",
-      "block_number": 26315209
+      "swap_amount_raw": "2681614923839999955009981",
+      "amount_out_raw": "2657537086365",
+      "block_number": 26323258
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0xefc6516323fbd28e80b85a497b65a86243a54b3e",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "4028371600586414815548693",
-      "amount_out_raw": "3143479071807",
-      "block_number": 26316092
+      "swap_amount_raw": "4136896237861854184066292",
+      "amount_out_raw": "3161341368194",
+      "block_number": 26323129
      },
      {
       "exchange": "uniswapv3",
       "pool": "0x1e4dbb639ebbf725fd243a6190df5440ee38740e",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "641312772364160604920554",
-      "amount_out_raw": "634074646956",
-      "block_number": 26314975
+      "swap_amount_raw": "640495757018901515511687",
+      "amount_out_raw": "633259747163",
+      "block_number": 26322883
      },
      {
       "exchange": "aero-cl",
       "pool": "0x82ccbb91c69e75037bb972f28cc01e704e325362",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "146135668070243413868251",
-      "amount_out_raw": "145349591639",
-      "block_number": 26315678
+      "swap_amount_raw": "139543800779141506767954",
+      "amount_out_raw": "138527224310",
+      "block_number": 26323122
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0x7ed17e037b7d88a8270c89b3afa9c38e5218f12b",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
-      "swap_amount_raw": "214442074275285109682259",
-      "amount_out_raw": "108185646367386688873220",
-      "block_number": 26316092
+      "swap_amount_raw": "242705135025482769357475",
+      "amount_out_raw": "124827974522929088258722",
+      "block_number": 26323218
      },
      {
       "exchange": "curve",
       "pool": "0xed279fdd11ca84beef15af5d39bb4d4bee23f0ca",
       "token_in": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
-      "token_out": "0x6b175474e89094c44da98b954eedeac495271d0f",
-      "swap_amount_raw": "108185646367386688873220",
-      "amount_out_raw": "111566239760609879885507",
-      "block_number": 26315880
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "124827974522929088258722",
+      "amount_out_raw": "127771666311",
+      "block_number": 26323135
      },
      {
-      "exchange": "lite-psm",
-      "pool": "0xf6e72db5454dd049d0788e411b06cfaf16853042",
-      "token_in": "0x6b175474e89094c44da98b954eedeac495271d0f",
+      "exchange": "metric-propamm/fluid-dex-t1",
+      "pool": "0xaef2ad7abb651945e6d24276715f25bded0ad41e",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "111566239760609879885507",
-      "amount_out_raw": "111566239760",
-      "block_number": 26316106
+      "swap_amount_raw": "127771666311",
+      "amount_out_raw": "127642283624",
+      "block_number": 26204062
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0xc3b723b0dae2df9668f876236a1922f72bcb438d",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xf4c13d631450de6b12a19829e37c8e2826891dc4",
-      "swap_amount_raw": "57773941687109640782192",
-      "amount_out_raw": "45625291819988304639664",
-      "block_number": 26312353
+      "swap_amount_raw": "60174186254302339762615",
+      "amount_out_raw": "46767337740889381578240",
+      "block_number": 26322798
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0xf76329c6dc10fdfbee6ca520d0bf4d474e95e46e",
       "token_in": "0xf4c13d631450de6b12a19829e37c8e2826891dc4",
       "token_out": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
-      "swap_amount_raw": "45625291819988304639664",
-      "amount_out_raw": "45553830548087831723693",
-      "block_number": 26315761
+      "swap_amount_raw": "46767337740889381578240",
+      "amount_out_raw": "46710670939259168812271",
+      "block_number": 26322798
      },
      {
       "exchange": "frxusd",
       "pool": "0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c",
       "token_in": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "45553830548087831723693",
-      "amount_out_raw": "45553830548",
-      "block_number": 26316113
+      "swap_amount_raw": "46710670939259168812271",
+      "amount_out_raw": "46710670939",
+      "block_number": 26323288
+     },
+     {
+      "exchange": "uniswap-v4-passthru",
+      "pool": "0x025793319b41fb1fb7505ed01271d82b28b07f6c4291eca8139a9e766b34d2ac",
+      "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "98372768687939500109576",
+      "amount_out_raw": "97874226685",
+      "block_number": 26321387
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0x8b878afe454e31cf0a79c6d7cf2f077dd286c12f",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
-      "swap_amount_raw": "195203399337544636726",
-      "amount_out_raw": "194488616238901123761",
-      "block_number": 26315993
+      "swap_amount_raw": "197190532378095196692",
+      "amount_out_raw": "196585419914945265839",
+      "block_number": 26322799
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0xd6982da59f1d26476e259559508f4135135cf9b8",
       "token_in": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
       "token_out": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
-      "swap_amount_raw": "194488616238901123761",
-      "amount_out_raw": "172167982",
+      "swap_amount_raw": "196585419914945265839",
+      "amount_out_raw": "172264994",
       "block_number": 26309022
      },
      {
-      "exchange": "curve-stable-ng",
-      "pool": "0x383e6b4437b59fff47b619cba855ca29342a8559",
+      "exchange": "ekubo-v3",
+      "pool": "0xb681058587d70a6554ac4008a9c5f14ae6f425013a3b1d240417395d25683748",
       "token_in": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "172167982",
-      "amount_out_raw": "172172387",
-      "block_number": 26316109
+      "swap_amount_raw": "172264994",
+      "amount_out_raw": "172245652",
+      "block_number": 26323289
      }
     ],
     "quote_block_numbers": [
+     26204062,
      26309022,
-     26312353,
-     26314975,
-     26315209,
-     26315678,
-     26315761,
-     26315880,
-     26315993,
-     26316092,
-     26316106,
-     26316109,
-     26316113
+     26321387,
+     26322798,
+     26322799,
+     26322883,
+     26323122,
+     26323129,
+     26323135,
+     26323218,
+     26323258,
+     26323288,
+     26323289
     ],
-    "quote_as_of": "2026-10-31T23:45:08Z",
+    "quote_as_of": "2026-11-01T23:45:35Z",
     "quote_expiry": null,
     "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
     "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
-    "route_id": "f674c284rj1MFKxS",
-    "gas_usd": "0.2586189139790264",
-    "router_price_in": 0.9977999431244675,
-    "router_price_out": 0.999868737257468,
-    "slippage_bps_debiased": -1275.3830726024996,
-    "price_bias_bps": -15.043900000000221,
+    "route_id": "4da1ea15MEtAT5k5",
+    "gas_usd": "0.5265882952618873",
+    "router_price_in": 0.997148433910239,
+    "router_price_out": 0.9993641836532977,
+    "slippage_bps_debiased": -1399.977833835001,
+    "price_bias_bps": -21.191099999999796,
     "rung_kind": "envelope_probe",
     "excluded_from_bracket": true,
     "exclusion_reason": "Execution-envelope probe only. The crossing bracket is classified from the ascending decade grid; this post-crossing probe measures proceeds turnover and is not a refinement rung."
@@ -794,17 +756,17 @@
     "size_usd": 20000000.0,
     "status": "ok",
     "amount_in_tokens": 20000000.0,
-    "amount_out_tokens": 7014305.102093,
-    "slippage_bps": -6492.8474489535,
+    "amount_out_tokens": 6822807.908429,
+    "slippage_bps": -6588.5960457855,
     "route_venues": [
      "aero-cl",
      "curve",
      "curve-stable-ng",
      "ekubo",
+     "ekubo-v3",
+     "fluid-dex-t1",
      "frxusd",
-     "lite-psm",
-     "metric-propamm/goliath-prop",
-     "native-v2/fluid-dex-t1",
+     "metric-propamm/fluid-dex-t1",
      "tamaswap-v2",
      "uniswap-v4",
      "uniswapv3"
@@ -816,80 +778,80 @@
       "pool": "0x5d0ed52610c76d7bf729130ce7ddc0488b2f4bd0a0db1f12adbe6a32deaff893",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "3200000000000000289910295",
-      "amount_out_raw": "2887766741837",
-      "block_number": 26315209
+      "swap_amount_raw": "2951063952229802202011801",
+      "amount_out_raw": "2657799867672",
+      "block_number": 26323258
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0xefc6516323fbd28e80b85a497b65a86243a54b3e",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "11404153502366932596241268",
-      "amount_out_raw": "3174188002695",
-      "block_number": 26316092
+      "swap_amount_raw": "12407721504323953084112347",
+      "amount_out_raw": "3189039980983",
+      "block_number": 26323129
      },
      {
       "exchange": "aero-cl",
       "pool": "0x82ccbb91c69e75037bb972f28cc01e704e325362",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "147546743050843832567288",
-      "amount_out_raw": "145349718613",
-      "block_number": 26315678
+      "swap_amount_raw": "140251911200000012706398",
+      "amount_out_raw": "138527264784",
+      "block_number": 26323122
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0x7ed17e037b7d88a8270c89b3afa9c38e5218f12b",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
-      "swap_amount_raw": "1016457384529071212998589",
-      "amount_out_raw": "111797092492453539852040",
-      "block_number": 26316092
+      "swap_amount_raw": "1569095378400000142155281",
+      "amount_out_raw": "128155406510141890356724",
+      "block_number": 26323218
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0xc3b723b0dae2df9668f876236a1922f72bcb438d",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xf4c13d631450de6b12a19829e37c8e2826891dc4",
-      "swap_amount_raw": "148775957410850134968017",
-      "amount_out_raw": "46041363266903344749538",
-      "block_number": 26312353
+      "swap_amount_raw": "213064916355931154430973",
+      "amount_out_raw": "47150777654244204573786",
+      "block_number": 26322798
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0x8b878afe454e31cf0a79c6d7cf2f077dd286c12f",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
-      "swap_amount_raw": "45616957173482938360718",
-      "amount_out_raw": "16491805668596009098052",
-      "block_number": 26315993
-     },
-     {
-      "exchange": "curve-stable-ng",
-      "pool": "0x8b878afe454e31cf0a79c6d7cf2f077dd286c12f",
-      "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
-      "token_out": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
-      "swap_amount_raw": "228019733847466947454099",
-      "amount_out_raw": "4107074120255372282859",
-      "block_number": 26315993
+      "swap_amount_raw": "44872270546909466802170",
+      "amount_out_raw": "15933048287460589783433",
+      "block_number": 26322799
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0x8b878afe454e31cf0a79c6d7cf2f077dd286c12f",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "2368106757600000214543287",
-      "amount_out_raw": "4147582392",
-      "block_number": 26315993
+      "swap_amount_raw": "303643818934337369662480",
+      "amount_out_raw": "4331517525",
+      "block_number": 26322799
+     },
+     {
+      "exchange": "curve-stable-ng",
+      "pool": "0x8b878afe454e31cf0a79c6d7cf2f077dd286c12f",
+      "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
+      "token_out": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+      "swap_amount_raw": "1226122726277938372149094",
+      "amount_out_raw": "4172474541860716574415",
+      "block_number": 26322799
      },
      {
       "exchange": "tamaswap-v2",
       "pool": "0x7ac1a76f4570661543149a04c4be34d8e8deb11c",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
-      "swap_amount_raw": "400000000000000036238787",
-      "amount_out_raw": "445623194600126195",
+      "swap_amount_raw": "103730651841968256048724",
+      "amount_out_raw": "442435809246838879",
       "block_number": 26315610
      },
      {
@@ -898,139 +860,137 @@
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "swap_amount_raw": "400000000000000036238787",
-      "amount_out_raw": "793182147",
-      "block_number": 26315679
+      "amount_out_raw": "918395420",
+      "block_number": 26323259
      },
      {
       "exchange": "uniswapv3",
       "pool": "0x1e4dbb639ebbf725fd243a6190df5440ee38740e",
       "token_in": "0x6440f144b7e50d6a8439336510312d2f54beb01d",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "641322964021353572418193",
-      "amount_out_raw": "634084635845",
-      "block_number": 26314975
+      "swap_amount_raw": "640432869889161715621273",
+      "amount_out_raw": "633198111146",
+      "block_number": 26322883
+     },
+     {
+      "exchange": "curve",
+      "pool": "0xed279fdd11ca84beef15af5d39bb4d4bee23f0ca",
+      "token_in": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
+      "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "swap_amount_raw": "128155406510141890356724",
+      "amount_out_raw": "131170216607",
+      "block_number": 26323135
+     },
+     {
+      "exchange": "uniswapv3",
+      "pool": "0xe0554a476a092703abdb3ef35c80e0d76d32939f",
+      "token_in": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "442435809246838879",
+      "amount_out_raw": "1005561527",
+      "block_number": 26323291
      },
      {
       "exchange": "curve-stable-ng",
       "pool": "0xf76329c6dc10fdfbee6ca520d0bf4d474e95e46e",
       "token_in": "0xf4c13d631450de6b12a19829e37c8e2826891dc4",
       "token_out": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
-      "swap_amount_raw": "46041363266903344749538",
-      "amount_out_raw": "45968494049925188863727",
-      "block_number": 26315761
-     },
-     {
-      "exchange": "curve-stable-ng",
-      "pool": "0x5018be882dcce5e3f2f3b0913ae2096b9b3fb61f",
-      "token_in": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
-      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "4107073924647957490850",
-      "amount_out_raw": "4106870799",
-      "block_number": 26316103
-     },
-     {
-      "exchange": "curve-stable-ng",
-      "pool": "0xd6982da59f1d26476e259559508f4135135cf9b8",
-      "token_in": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
-      "token_out": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
-      "swap_amount_raw": "195607414792009",
-      "amount_out_raw": "195",
-      "block_number": 26309022
-     },
-     {
-      "exchange": "curve",
-      "pool": "0xed279fdd11ca84beef15af5d39bb4d4bee23f0ca",
-      "token_in": "0x5f98805a4e8be255a32880fdec7f6728c6568ba0",
-      "token_out": "0x6b175474e89094c44da98b954eedeac495271d0f",
-      "swap_amount_raw": "111797092492453539852040",
-      "amount_out_raw": "115279465800906214270087",
-      "block_number": 26315880
-     },
-     {
-      "exchange": "lite-psm",
-      "pool": "0xf6e72db5454dd049d0788e411b06cfaf16853042",
-      "token_in": "0x6b175474e89094c44da98b954eedeac495271d0f",
-      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "115279465800906214270087",
-      "amount_out_raw": "115279465800",
-      "block_number": 26316106
+      "swap_amount_raw": "47150777654244204573786",
+      "amount_out_raw": "47093181385667454858977",
+      "block_number": 26322798
      },
      {
       "exchange": "frxusd",
       "pool": "0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c",
       "token_in": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "45968494049925188863727",
-      "amount_out_raw": "45968494049",
-      "block_number": 26316113
-     },
-     {
-      "exchange": "curve-stable-ng",
-      "pool": "0x383e6b4437b59fff47b619cba855ca29342a8559",
-      "token_in": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
-      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "195",
-      "amount_out_raw": "195",
-      "block_number": 26316109
+      "swap_amount_raw": "47093181385667454858977",
+      "amount_out_raw": "47093181385",
+      "block_number": 26323291
      },
      {
       "exchange": "uniswap-v4",
       "pool": "0xcd799508ddaa319e608547d3291a1a512da9a9acdd40599d89019ec82e3cf1e8",
       "token_in": "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8",
       "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-      "swap_amount_raw": "16491805668596009098052",
-      "amount_out_raw": "16185449455",
-      "block_number": 26315251
+      "swap_amount_raw": "15933048287460589783433",
+      "amount_out_raw": "15700265182",
+      "block_number": 26322794
      },
      {
-      "exchange": "native-v2/fluid-dex-t1",
-      "pool": "native_v2_0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48_0xdac17f958d2ee523a2206206994597c13d831ec7",
+      "exchange": "aero-cl",
+      "pool": "0xe3fa9e3ec7ee6358dd6b4c53f9ee9e38cf2faca6",
+      "token_in": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "4172208577836269395856",
+      "amount_out_raw": "4172050496",
+      "block_number": 26323266
+     },
+     {
+      "exchange": "curve-stable-ng",
+      "pool": "0xd6982da59f1d26476e259559508f4135135cf9b8",
+      "token_in": "0x085780639cc2cacd35e474e71f4d000e2405d8f6",
+      "token_out": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+      "swap_amount_raw": "265964024447178559",
+      "amount_out_raw": "265995",
+      "block_number": 26309022
+     },
+     {
+      "exchange": "metric-propamm/fluid-dex-t1",
+      "pool": "0xaef2ad7abb651945e6d24276715f25bded0ad41e",
       "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "16185449455",
-      "amount_out_raw": "1616901148",
-      "block_number": 0
+      "swap_amount_raw": "131170216607",
+      "amount_out_raw": "131037393975",
+      "block_number": 26204062
      },
      {
-      "exchange": "metric-propamm/goliath-prop",
-      "pool": "0xe9c19e5bd10e5096519fe1d2a9d783f79b8211da",
-      "token_in": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2",
+      "exchange": "fluid-dex-t1",
+      "pool": "0x667701e51b4d1ca244f17c78f7ab8744b4c99f9b",
+      "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
       "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "swap_amount_raw": "445623194600126195",
-      "amount_out_raw": "1003506573",
-      "block_number": 26204052
+      "swap_amount_raw": "15700265182",
+      "amount_out_raw": "15684317551",
+      "block_number": 26323291
+     },
+     {
+      "exchange": "ekubo-v3",
+      "pool": "0xb681058587d70a6554ac4008a9c5f14ae6f425013a3b1d240417395d25683748",
+      "token_in": "0x6c3ea9036406852006290770bedfcaba0e23a0e8",
+      "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+      "swap_amount_raw": "265995",
+      "amount_out_raw": "265965",
+      "block_number": 26323289
      }
     ],
     "quote_block_numbers": [
-     0,
-     26204052,
+     26204062,
      26309022,
-     26312353,
-     26314975,
-     26315209,
-     26315251,
      26315610,
-     26315678,
-     26315679,
-     26315761,
-     26315880,
-     26315993,
-     26316092,
-     26316103,
-     26316106,
-     26316109,
-     26316113
+     26322794,
+     26322798,
+     26322799,
+     26322883,
+     26323122,
+     26323129,
+     26323135,
+     26323218,
+     26323258,
+     26323259,
+     26323266,
+     26323289,
+     26323291
     ],
-    "quote_as_of": "2026-10-31T23:45:09Z",
+    "quote_as_of": "2026-11-01T23:45:38Z",
     "quote_expiry": null,
     "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
     "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
-    "route_id": "d6b8705aO6dKgIoX",
-    "gas_usd": "71.5304463499543",
-    "router_price_in": 0.9977134017027771,
-    "router_price_out": 0.999868737257468,
-    "slippage_bps_debiased": -6477.8035489535,
-    "price_bias_bps": -15.043900000000221,
+    "route_id": "29023b1c6_tA4bO6",
+    "gas_usd": "94.7683273559466",
+    "router_price_in": 0.9971484339102389,
+    "router_price_out": 0.9994801126678349,
+    "slippage_bps_debiased": -6567.4049457855,
+    "price_bias_bps": -21.191099999999796,
     "rung_kind": "envelope_probe",
     "excluded_from_bracket": true,
     "exclusion_reason": "Execution-envelope probe only. The crossing bracket is classified from the ascending decade grid; this post-crossing probe measures proceeds turnover and is not a refinement rung."
@@ -1063,24 +1023,24 @@
      "blocking": false,
      "detail": "Depth is 18.1% of chain supply.",
      "evidence": {
-      "ratio": 0.1808967960221475
+      "ratio": 0.1814742002660527
      }
     }
    ]
   },
   "execution_envelope": {
-   "status": "no_turnover_observed",
+   "status": "turnover_observed",
    "tested_through_input_usd": 20000000.0,
-   "output_monotonic_within_tested_range": true,
+   "output_monotonic_within_tested_range": false,
    "monotonicity_guard": {
     "method": "lp_risk_engine.truncate_at_non_monotonic",
-    "truncated": false,
-    "kept_through_input_usd": 20000000.0,
-    "first_rejected_input_usd": null
+    "truncated": true,
+    "kept_through_input_usd": 8000000.0,
+    "first_rejected_input_usd": 10000000.0
    },
    "observed_peak": {
-    "input_size_usd": 20000000.0,
-    "output_value_usd": 7014305.102093
+    "input_size_usd": 8000000.0,
+    "output_value_usd": 6863064.852932
    },
    "basis": "Peak is the maximum successful routed output among tested rungs, not a claim that the exact global maximum was located."
   },
@@ -1097,7 +1057,7 @@
      "phase": "before_refinement",
      "sample": 1,
      "status": "ok",
-     "output_value_usd": 4397290.250028,
+     "output_value_usd": 4397341.249577,
      "failure_kind": null,
      "http_status": null
     },
@@ -1105,7 +1065,7 @@
      "phase": "before_refinement",
      "sample": 2,
      "status": "ok",
-     "output_value_usd": 4397290.249143,
+     "output_value_usd": 4397341.251357,
      "failure_kind": null,
      "http_status": null
     },
@@ -1113,7 +1073,7 @@
      "phase": "after_refinement",
      "sample": 1,
      "status": "ok",
-     "output_value_usd": 4397290.250031,
+     "output_value_usd": 4398741.631926,
      "failure_kind": null,
      "http_status": null
     },
@@ -1121,14 +1081,14 @@
      "phase": "after_refinement",
      "sample": 2,
      "status": "ok",
-     "output_value_usd": 4397290.249143,
+     "output_value_usd": 4398741.625504,
      "failure_kind": null,
      "http_status": null
     }
    ],
-   "output_spread_usd": 0.0008880002424120903,
-   "output_spread_bps": 2.0194260374226893e-06,
-   "precision_floor_usd": 0.0008880002424120903,
+   "output_spread_usd": 1400.3823490003124,
+   "output_spread_bps": 3.184104488021893,
+   "precision_floor_usd": 1400.3823490003124,
    "basis": "Same-size routed output spread across samples immediately before and after refinement. The published bracket must not be narrower than this observed spread."
   },
   "refinement": {
@@ -1138,10 +1098,10 @@
    "precision_target": "<=1% of bracket midpoint",
    "validation_cooldown_seconds": 8.0,
    "salvage": {
-    "basis": "Re-quoting the refined bracket ends did not reproduce the search: clearing end -182.42626129056583 bps, crossing end -199.27122614587734 bps against a -200 bps threshold. A bracket whose ends do not straddle the threshold on re-quote is an artefact of the search, not a measurement. The FIRST crossing was salvaged from the search's own probes and both ends re-quoted; they straddle.",
-    "probes_considered": 8,
+    "basis": "Re-quoting the refined bracket ends did not reproduce the search: clearing end -162.71159625811381 bps, crossing end -177.1769851226279 bps against a -200 bps threshold. A bracket whose ends do not straddle the threshold on re-quote is an artefact of the search, not a measurement. The FIRST crossing was salvaged from the search's own probes and both ends re-quoted; they straddle.",
+    "probes_considered": 9,
     "tightened_after_salvage": false,
-    "validation_requotes": 1,
+    "validation_requotes": 3,
     "wobble_above_crossing": [],
     "wobble_note": null
    }
@@ -1155,53 +1115,52 @@
    "status": "bracketed",
    "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
    "refinement": {
-    "status": "salvaged_from_probes",
+    "status": "refined",
     "stopped_on": "precision_obligation_met",
-    "probe_count": 8,
-    "wobble_above_crossing": []
+    "probe_count": 8
    },
    "bracket": {
-    "last_clearing_size_usd": 5359375.0,
-    "last_clearing_marginal_impact_bps": -49.194760009795274,
-    "first_crossing_size_usd": 5500000.0,
-    "first_crossing_marginal_impact_bps": -52.24376173090906,
-    "width_usd": 140625.0,
+    "last_clearing_size_usd": 5746093.75,
+    "last_clearing_marginal_impact_bps": -49.602110904365404,
+    "first_crossing_size_usd": 5781250.0,
+    "first_crossing_marginal_impact_bps": -50.844766836757316,
+    "width_usd": 35156.25,
     "monotonic_in_bracket": true,
     "threshold_bps": -50.0,
-    "meets_precision_obligation": false
+    "meets_precision_obligation": true
    },
-   "depth_usd": 5359375.0,
+   "depth_usd": 5746093.75,
    "is_floor": true,
-   "basis": "Re-quoting the refined ends did not straddle (-48.485108333851116 / -49.19476162752234 bps); the FIRST crossing was salvaged from the search's probes and both ends re-quoted: $5,359,375.00 - $5,500,000.00.",
+   "basis": "The -50bps marginal crossing is BRACKETED between $5,746,093.75 and $5,781,250.00, both ends re-quoted. `depth_usd` is the lower bound.",
    "note": "Primary figure for a STABLE asset per spec \u00a77.8; the 2% bracket above is retained for comparison across the corpus. Widths are independent: this one may be wider than the 2% bracket where it coincides with a router split boundary (\u00a77.7)."
   },
   "depth_50bps": {
    "shape": "bracket",
    "threshold_bps": -50.0,
    "convention": "marginal_from_first_successful_rung",
-   "depth_usd": 5359375.0,
+   "depth_usd": 5746093.75,
    "bracket": {
-    "last_clearing_size_usd": 5359375.0,
-    "last_clearing_marginal_impact_bps": -49.194760009795274,
-    "first_crossing_size_usd": 5500000.0,
-    "first_crossing_marginal_impact_bps": -52.24376173090906,
-    "width_usd": 140625.0,
+    "last_clearing_size_usd": 5746093.75,
+    "last_clearing_marginal_impact_bps": -49.602110904365404,
+    "first_crossing_size_usd": 5781250.0,
+    "first_crossing_marginal_impact_bps": -50.844766836757316,
+    "width_usd": 35156.25,
     "monotonic_in_bracket": true,
     "threshold_bps": -50.0,
-    "meets_precision_obligation": false
+    "meets_precision_obligation": true
    },
    "status": "bracketed",
-   "basis": "Re-quoting the refined ends did not straddle (-48.485108333851116 / -49.19476162752234 bps); the FIRST crossing was salvaged from the search's probes and both ends re-quoted: $5,359,375.00 - $5,500,000.00."
+   "basis": "The -50bps marginal crossing is BRACKETED between $5,746,093.75 and $5,781,250.00, both ends re-quoted. `depth_usd` is the lower bound."
   },
   "supply_check": {
    "status": "passed",
    "token": "0x6440f144b7e50D6a8439336510312d2F54beB01D",
-   "total_supply_units": 36817436.22028875,
-   "total_supply_usd": 36817436.22028875,
+   "total_supply_units": 36894018.48959382,
+   "total_supply_usd": 36894018.48959382,
    "non_float_holders": {},
-   "float_units": 36817436.22028875,
-   "float_usd": 36817436.22028875,
-   "read_as_of": "2026-10-31T23:45:56Z"
+   "float_units": 36894018.48959382,
+   "float_usd": 36894018.48959382,
+   "read_as_of": "2026-11-01T23:46:29Z"
   }
  },
  "primary_exit": {
@@ -1209,7 +1168,7 @@
   "contract": "0xf949982B91C8c61e952B3bA942cbbfaef5386684",
   "contract_role": "CollateralRegistry",
   "method": "getEffectiveRedemptionFeeInBold(uint256)",
-  "measured_as_of": "2026-10-31T23:45:57Z",
+  "measured_as_of": "2026-11-01T23:46:30Z",
   "at_nav": false,
   "gated": false,
   "gated_basis": "Permissionless protocol redemption with a size-dependent fee.",
@@ -1221,26 +1180,26 @@
    {
     "size_usd": 100000.0,
     "status": "ok",
-    "effective_redemption_fee_pct": 0.8949176968779184,
-    "effective_redemption_fee_bps": 89.49176968779184
+    "effective_redemption_fee_pct": 0.8848940866273303,
+    "effective_redemption_fee_bps": 88.48940866273303
    },
    {
     "size_usd": 1000000.0,
     "status": "ok",
-    "effective_redemption_fee_pct": 3.339411644297437,
-    "effective_redemption_fee_bps": 333.94116442974365
+    "effective_redemption_fee_pct": 3.324313908173336,
+    "effective_redemption_fee_bps": 332.43139081733364
    },
    {
     "size_usd": 2000000.0,
     "status": "ok",
-    "effective_redemption_fee_pct": 6.055516030319124,
-    "effective_redemption_fee_bps": 605.5516030319124
+    "effective_redemption_fee_pct": 6.034780376557787,
+    "effective_redemption_fee_bps": 603.4780376557787
    },
    {
     "size_usd": 10000000.0,
     "status": "ok",
-    "effective_redemption_fee_pct": 27.784351118492623,
-    "effective_redemption_fee_bps": 2778.4351118492623
+    "effective_redemption_fee_pct": 27.7185121236334,
+    "effective_redemption_fee_bps": 2771.85121236334
    }
   ]
  },
@@ -1425,5 +1384,5 @@
   "risk_score": null
  },
  "refresh_cadence": "daily",
- "payload_revised_at": "2026-10-31T23:45:57Z"
+ "payload_revised_at": "2026-11-01T23:46:30Z"
 }
