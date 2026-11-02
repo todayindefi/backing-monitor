@@ -383,6 +383,12 @@ if [ -n "$TOKEN_WARNINGS" ]; then
     printf '%s' "$TOKEN_WARNINGS" >> sync.log
 fi
 
+# Public-safe read-only project evidence, through the existing sync only.
+# Publication fingerprints do not auto-approve new or changed private rows.
+if [ -f config/issuer_project_publication.json ]; then
+    PYTHONDONTWRITEBYTECODE=1 python3 tools/build_issuer_project_evidence.py
+fi
+
 # Commit and push if changed
 git add data/
 if ! git diff --cached --quiet; then

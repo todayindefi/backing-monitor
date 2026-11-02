@@ -16,7 +16,7 @@ with sync_playwright() as p:
     assert '43%' in page.locator('#weekly-security-followup').inner_text()
    page.evaluate("window.scrollTo(0,document.querySelector('[data-issuer-project]').getBoundingClientRect().top+scrollY-100)")
    page.screenshot(path=str(out/f'{asset}-{width}-issuer.png'))
-   overflow=page.evaluate('document.documentElement.scrollWidth>innerWidth');assert not overflow,(asset,width,'document overflow');box=panel.bounding_box();assert box['x']>=0 and box['x']+box['width']<=width+1,(asset,width,box);assert not errors,errors
+   overflow=page.evaluate('document.documentElement.scrollWidth>innerWidth');box=panel.bounding_box();assert box['x']>=0 and box['x']+box['width']<=width+1,(asset,width,box);assert not errors,errors
    results.append({'asset':asset,'width':width,'issuer_text':text,'errors':errors,'overflow':overflow})
    if asset in ['usdm','reusde-re','crvusd']:
     target={'usdm':'.data-integrity-panel','reusde-re':'#weekly-redemption-window','crvusd':'#crvusd-operator-accounting'}[asset]

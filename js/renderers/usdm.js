@@ -602,7 +602,8 @@ var USDmRenderer = {
         var rpcTotal = monad.reserve_v2_usd_value;
         var apiTotal = monad.reserve_per_api_usd;
         var driftPct = (monad.api_vs_rpc_drift_pct != null) ? monad.api_vs_rpc_drift_pct * 100 : null;
-        var driftState = USDmRenderer._driftState(driftPct);
+        var comparison = monad.api_rpc_comparison || {};
+        var driftState = driftPct == null ? 'unknown' : (comparison.status === 'scope_difference_unreconciled' ? 'warn' : USDmRenderer._driftState(driftPct));
 
         return '<div class="panel">' +
             '<div class="panel-title">Monad Reserve Composition <span class="text-xs font-normal text-slate-500">on-chain ReserveV2</span></div>' +
@@ -622,7 +623,7 @@ var USDmRenderer = {
                 '<span class="text-slate-500">·</span>' +
                 '<span class="text-slate-600 dark:text-slate-300">API reports: <span class="font-mono font-semibold">' + CommonRenderer.formatCurrencyExact(apiTotal) + '</span></span>' +
                 '<span class="text-slate-500">·</span>' +
-                USDmRenderer._statusPill('API↔RPC drift', driftState, (driftPct != null ? driftPct.toFixed(2) + '%' : '—')) +
+                USDmRenderer._statusPill('API / wallet scope gap', driftState, (driftPct != null ? driftPct.toFixed(2) + '%' : '—')) +
             '</div>' +
         '</div>';
     },
@@ -869,10 +870,13 @@ var USDmRenderer = {
     // ============================================================
     _renderDataIntegrity: function(specific) {
         var ds = specific.data_sources || {};
+        var classification = (specific.aggregate || {}).debt_classification || {};
+        var esc = CommonRenderer._escapeAttr;
         var monad = specific.monad_state || {};
 
         var driftPct = (monad.api_vs_rpc_drift_pct != null) ? monad.api_vs_rpc_drift_pct * 100 : null;
-        var driftState = USDmRenderer._driftState(driftPct);
+        var comparison = monad.api_rpc_comparison || {};
+        var driftState = driftPct == null ? 'unknown' : (comparison.status === 'scope_difference_unreconciled' ? 'warn' : USDmRenderer._driftState(driftPct));
 
         function srcPill(label, ok, note) {
             var state = ok === true ? 'ok' : (ok === false ? 'critical' : 'unknown');
@@ -882,16 +886,17 @@ var USDmRenderer = {
 
         return '<div class="panel">' +
             '<div class="panel-title">Data Integrity</div>' +
+            '<div class="text-sm mb-3">Debt classification: ' + esc(classification.status || 'unavailable') + '. ' + esc(classification.documented_model || '') + ' ' + esc(classification.measurement_basis || 'Current deployment/API classification has not been published.') + '</div>' +
             '<div class="flex flex-wrap gap-2 text-xs">' +
                 srcPill('Mento API', ds.mento_api_ok) +
                 srcPill('Monad RPC', ds.monad_rpc_ok) +
                 srcPill('Celo RPC',  ds.celo_rpc_ok) +
                 (ds.ethereum_rpc_ok !== undefined ? srcPill('Ethereum RPC', ds.ethereum_rpc_ok) : '') +
-                USDmRenderer._statusPill('API↔RPC drift', driftState, (driftPct != null ? driftPct.toFixed(2) + '%' : '—')) +
+                USDmRenderer._statusPill('API / wallet scope gap', driftState, (driftPct != null ? driftPct.toFixed(2) + '%' : '—')) +
             '</div>' +
             '<div class="text-xs text-slate-500 mt-3">' +
                 'Monad RPC is non-blocking — if down, the on-chain ReserveV2 cross-check is skipped and only the API value is shown above. ' +
-                'API↔RPC drift &lt;5% is the expected baseline (pool-resident reserves count in the API but not in the raw RPC balance).' +
+                esc(comparison.basis || 'Scope reconciliation basis unavailable.') + ' Unexplained residual: ' + (comparison.unexplained_residual_usd == null ? 'unmeasured' : CommonRenderer.formatCurrency(comparison.unexplained_residual_usd)) +
             '</div>' +
         '</div>';
     }
