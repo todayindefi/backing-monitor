@@ -12,3 +12,9 @@ console.log('PASS issuer status/source/scope, governance execution/grouping, mis
 
 const sc=r.html(d,'strcx');assert.match(sc,/Backed Assets \(JE\) Limited/);assert.match(sc,/Backed Finance AG · tokenizer/);assert.match(sc,/Not exported; unavailable/);assert.doesNotMatch(sc,/Swiss DLT-regulated/);
 const su=r.html(d,'susdat');assert.match(su,/legal facts were not exported/i);assert.doesNotMatch(su,/British Virgin Islands|Delaware|STRC is preferred equity/);assert.match(r.html(d,'strc'),/Certificate and dividend legal clocks/);assert.match(r.html(d,'apyusd'),/cooldown/);assert.doesNotMatch(r.html(d,'apxusd'),/~20-day/);
+for (const asset of ['usdai','susdai','yzusd','syzusd']) {
+ const html=r.html(d,asset);assert.match(html,/data-issuer-summary/);assert.match(html,/Legal, custody and assurance details/);assert.doesNotMatch(html,/<details[^>]*\bopen\b/);assert.match(html,/What can holders claim/);
+}
+assert.doesNotMatch(r.html(d,'usdai'),/GPU Finance Ltd\./);assert.match(r.html(d,'susdai'),/GPU Finance Ltd\./);assert.doesNotMatch(r.html(d,'usdai'),/Genesys Protocol/);
+assert.match(r.html(d,'yzusd'),/immediate redemption nor par liquidity is guaranteed/);
+console.log('PASS bounded compact summaries, closed evidence, exact component scope and retained exit caveats');
