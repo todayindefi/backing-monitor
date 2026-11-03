@@ -392,6 +392,12 @@ fi
 # Dated owner judgment; public allowlist, no score changes.
 PYTHONDONTWRITEBYTECODE=1 python3 tools/build_strategy_filing_context.py
 
+# One shared third-party adapter; reads the existing issuer/verifier artifacts.
+# Failure preserves immutable last-good evidence with original clocks and health.
+if ! PYTHONDONTWRITEBYTECODE=1 python3 frxusd_defillama_evidence.py >/tmp/frxusd-shared-evidence.log; then
+    echo "$(date): ERROR frxUSD shared evidence degraded; see /tmp/frxusd-shared-evidence.log" >&2
+fi
+
 # Commit and push if changed
 git add data/
 if ! git diff --cached --quiet; then
