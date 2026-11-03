@@ -3,9 +3,40 @@ var IssuerProjectEvidence = {
     cache: null,
     esc: function(x) { return CommonRenderer._escapeAttr(String(x == null ? '' : x)); },
     sources: function(xs) { var self=this;return (xs||[]).filter(function(x){return typeof x==='string' && /^https:\/\//.test(x);}).map(function(x,i){return '<a class="text-blue-600 underline" target="_blank" rel="noopener noreferrer" href="'+self.esc(x)+'">Source '+(i+1)+'</a>';}).join(' · '); },
+    componentHtml: function(feed,asset) {
+        var p=feed.component_profiles[asset],e=this.esc,self=this;
+        if(!p||!Array.isArray(p.entities)||!Array.isArray(p.facts)||!p.coverage)return '<div class="panel mt-3" data-issuer-component="'+e(asset)+'">Selected component fields unavailable: incomplete source shape. No family/upstream substitution.</div>';
+        if(p.status!=='available_selected_fields')return '<div class="panel mt-3" data-issuer-component="'+e(p.component_slug)+'"><div class="panel-title">Issuer facts · '+e(p.name)+'</div><p class="text-sm">Selected component evidence unavailable or changed; no project, family or underlying rights are substituted.</p></div>';
+        var labels={holder_rights:'Holder rights',redemption_limitations:'Redemption and enforcement limits',governing_law:'Governing law',legal_framework:'Legal framework',access_restriction:'Primary access restrictions',custody_enforcement_design:'Custody and enforcement design',financial_assurance_scope:'Financial assurance scope',march_attestation_scope:'Dated reserve-asset examination',governance_path:'Documented governance',dispute_mechanism:'Dispute mechanism',dividend_legal_clock:'Certificate and dividend legal clocks'};
+        var states={verified:'Verified source',extracted:'Extracted · confirmation pending',searched_not_found:'Searched · not found',unknown:'Unknown'};
+        function record(x,value){return '<div class="mt-2 text-sm">'+e(value==null?'Not established in the reviewed source scope.':value)+'<div class="text-xs text-slate-500">'+e(states[x.status]||'Unknown')+' · '+e(x.basis||'basis unavailable')+' · checked '+e(x.checked||'unknown')+' · source date '+e(x.source_date||'not supplied')+' · observation '+e(x.as_of||'not supplied')+' · '+self.sources(x.source_urls)+'</div></div>';}
+        var h='<div class="panel mt-3" data-issuer-component="'+e(p.component_slug)+'" style="overflow-wrap:anywhere"><div class="panel-title">Issuer facts · '+e(p.name)+'</div><p class="text-xs text-slate-500">DeFiAnalyst selected component fields · handback checked '+e(p.handback_checked)+' · profile checked '+e(p.profile_checked||'not supplied')+'. RiskAnalyst owns the unchanged score and interpretation.</p><p class="text-xs text-slate-500 mt-2">This component’s issuer, rights and source clocks are separate from its underlying assets and other family products. Missing fields do not inherit upstream rights.</p>';
+        var roles=p.entities.filter(function(x){return ['custodian','broker'].indexOf(x.role)===-1;}),custody=p.entities.filter(function(x){return ['custodian','broker'].indexOf(x.role)!==-1;});
+        function entity(x){return record(x,(x.name||'Entity not established')+' · '+x.role+(x.jurisdiction?' · '+x.jurisdiction:''));}
+        h+='<div class="font-semibold text-sm mt-3">Entities and distinct roles</div>'+(roles.length?roles.map(entity).join(''):'<p class="text-sm mt-2">No issuer identity supplied in this selected component return; no group operator or upstream issuer is substituted.</p>');
+        if(custody.length)h+='<details class="mt-3"><summary class="text-sm cursor-pointer">Disclosed custody/broker roles · allocation unverified</summary>'+custody.map(entity).join('')+'</details>';
+        function fact(x){return '<div class="border-t border-slate-200 pt-2 mt-3"><div class="font-semibold text-sm">'+e(labels[x.key]||x.key.replace(/_/g,' '))+'</div>'+record(x,x.value)+(x.observation_dates?'<p class="text-xs text-slate-500">Observation dates: '+e(x.observation_dates.join(' · '))+'</p>':'')+'</div>';}
+        var core=['holder_rights','governing_law','access_restriction','financial_assurance_scope','march_attestation_scope','legal_framework','dividend_legal_clock'];
+        h+=p.facts.length?p.facts.filter(function(x){return core.indexOf(x.key)!==-1;}).map(fact).join(''):'<p class="text-sm mt-3">Component legal facts were not exported in this bounded return. They remain unavailable; this is not a finding that rights are absent.</p>';
+        var more=p.facts.filter(function(x){return core.indexOf(x.key)===-1;});
+        if(more.length)h+='<details class="mt-3"><summary class="text-sm cursor-pointer">Additional documented rights and controls</summary>'+more.map(fact).join('')+'</details>';
+        h+='<p class="text-xs text-slate-500 mt-3">Financial-statement audits, reserve-asset examinations and smart-contract audits have different scopes. Listed custodians do not prove current allocations. Documentary control design and legal effectiveness do not establish deployed authority, payment receipts or successful exits. Current receipt eligibility remains a separate measured surface.</p>';
+        h+='<details class="mt-3"><summary class="text-sm font-semibold cursor-pointer">Coverage and remaining gaps</summary>';
+        Object.keys(p.coverage).forEach(function(k){var x=p.coverage[k];h+='<p class="text-xs text-slate-500 mt-2"><strong>'+e(k.replace(/_/g,' '))+':</strong> '+e(x.state==='not_exported'?'Not exported; unavailable in this selected component return':states[x.state]||x.state)+'. '+e(x.meaning)+'</p>';});
+        p.limitations.forEach(function(x){h+='<p class="text-xs text-slate-500 mt-2">'+e(x)+'</p>';});
+        h+='<p class="text-xs text-slate-500 mt-2">Unknown is not a negative score. Full-verification and score-decision dates are not advanced by this source review.</p></details>';
+        var events=(feed.component_related_events||[]).filter(function(x){return x.project===p.project_slug;});
+        if(events.length)h+='<details class="mt-3"><summary class="text-sm font-semibold cursor-pointer">Dated project developments</summary>'+events.map(function(x){return '<p class="text-sm mt-2">Filing '+e(x.filing_date)+' · activity '+e(x.activity_start)+' to '+e(x.activity_end)+' · balances '+e(x.balance_as_of)+' · '+self.sources([x.url])+'. A filing is not a payment or implementation receipt.</p>';}).join('')+'</details>';
+        return h+'</div>';
+    },
+    viewAsset:function(data){return typeof location!=='undefined'?(new URLSearchParams(location.search).get('asset')||data.asset_slug||''):(data.asset_slug||'');},
+    getFeed:function(){var self=this;if(!self.cache||Date.now()-(self.cacheAt||0)>60000){self.cacheAt=Date.now();self.cache=fetch('data/issuer_project_evidence.json?v='+Math.floor(Date.now()/60000)).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}return self.cache;},
+    fillVisible:function(feed,asset){var self=this;document.querySelectorAll('[data-issuer-evidence-asset]').forEach(function(el){if(el.dataset.issuerEvidenceAsset===asset)el.innerHTML=el.getClientRects().length?self.html(feed,asset):'';});},
+    installFamilySurfaces:function(){var self=this;['MSTRRenderer','STRCRenderer','STRCxRenderer','ApyxRenderer','SaturnRenderer'].forEach(function(name){var renderer=window[name];if(!renderer||!renderer.render)return;var old=renderer.render;renderer.render=function(data){var result=old.apply(this,arguments),asset=self.viewAsset(data);self.getFeed().then(function(feed){if(self.viewAsset(data)!==asset)return;if(!feed){if(['MSTRRenderer','STRCRenderer'].indexOf(name)!==-1){var failedHost=document.getElementById('asset-specific-panels');if(failedHost)failedHost.insertAdjacentHTML('afterbegin','<div class="panel" data-issuer-component="'+self.esc(asset)+'">Structured issuer evidence unavailable; no underlying or family rights substituted.</div>');}return;}if(!(feed.component_profiles&&Object.prototype.hasOwnProperty.call(feed.component_profiles,asset)))return;var targets=Array.from(document.querySelectorAll('[data-issuer-evidence-asset]')).filter(function(el){return el.dataset.issuerEvidenceAsset===asset&&el.getClientRects().length;});if(!targets.length){var host=document.getElementById('asset-specific-panels');if(host)host.insertAdjacentHTML('afterbegin','<div data-issuer-evidence-asset="'+self.esc(asset)+'"></div>');}self.fillVisible(feed,asset);});return result;};});},
     html: function(feed,asset) {
         var self=this,e=this.esc;
         if(!feed || feed.status!=='available' || feed.schema_version!=='issuer-project-evidence/1')return '<p class="text-xs text-slate-500">Structured issuer evidence unavailable. The authored assessment remains separate.</p>';
+        if(feed.component_profiles&&Object.prototype.hasOwnProperty.call(feed.component_profiles,asset))return this.componentHtml(feed,asset);
         var m=(feed.asset_map||{})[asset],p=m&&(feed.projects||{})[m.project];
         if(!p)return '<p class="text-xs text-slate-500">Structured issuer profile not yet published for this asset.</p>';
         if(!Array.isArray(p.facts)||!Array.isArray(p.entities)||!Array.isArray(p.events))return '<p class="text-xs text-slate-500">Structured issuer fields unavailable: incomplete source shape.</p>';
@@ -28,9 +59,8 @@ var IssuerProjectEvidence = {
     install: function() {
         var self=this,original=CommonRenderer.issuerPanelHtml;
         CommonRenderer.issuerPanelHtml=function(data){
-            var asset=data.asset_slug||'';
-            if(!self.cache)self.cache=fetch('data/issuer_project_evidence.json?v='+Math.floor(Date.now()/60000)).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});
-            self.cache.then(function(feed){document.querySelectorAll('[data-issuer-evidence-asset]').forEach(function(el){if(el.dataset.issuerEvidenceAsset===asset)el.innerHTML=el.getClientRects().length?self.html(feed,asset):'';});});
+            var asset=self.viewAsset(data);
+            self.getFeed().then(function(feed){if(self.viewAsset(data)===asset)self.fillVisible(feed,asset);});
             return original.call(this,data)+'<div data-issuer-evidence-asset="'+self.esc(asset)+'"><p class="text-xs text-slate-500">Loading structured issuer evidence…</p></div>';
         };
     }

@@ -1,5 +1,7 @@
 """Public-safe RO projection of DeFiAnalyst; no scores or private DB exposure."""
-import argparse,datetime,hashlib,json,pathlib,sqlite3
+import argparse,datetime,hashlib,json,pathlib,sqlite3,sys
+sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
+from issuer_component_projection import add_components
 ROOT=pathlib.Path(__file__).resolve().parents[1];DB=pathlib.Path('/home/danger/DeFiAnalyst/db/projects.db');POLICY=ROOT/'config/issuer_project_publication.json'
 KEYS=['governing_law','dispute_mechanism','holder_rights','access_restriction','financial_audit','governance_path']
 def fingerprint(row):
@@ -21,7 +23,7 @@ def records(c,slug):
 def build(pilot=None):
  c=sqlite3.connect('file:'+str(DB)+'?mode=ro',uri=True);c.row_factory=sqlite3.Row
  if pilot:
-  policy={'authorization':'Owner approved structured public issuer pilot on2026-11-02; reviewed public-source fields only. Private defaults unchanged. New/changed private records require a new publication review.','projects':pilot,'approved_fingerprints':[]}
+  policy={**(json.loads(POLICY.read_text()) if POLICY.exists() else {}),'authorization':'Owner approved structured public issuer pilot on2026-11-02; reviewed public-source fields only. Private defaults unchanged. New/changed private records require a new publication review.','projects':pilot,'approved_fingerprints':[]}
   for slug in pilot:
    for kind,items in records(c,slug).items():
     for r in items:
@@ -59,7 +61,9 @@ def build(pilot=None):
    seen.add(row['dao']);g=json.loads(row['coverage']);statuses={k:v if v in ['ok','blocked','error','stale','missing'] else 'unknown' for k,v in g.get('source_status',{}).items()};coverage.append({'dao':row['dao'],'last_checked':g.get('last_checked'),'source_status':statuses,'history_since':g.get('history_since'),'history_complete':g.get('history_complete',False)})
   data['governance']={'status':('not_imported' if imported.get('status')!='imported' else 'mapped' if coverage else 'not_monitored_or_unmapped'),'feed_generated_at':govclock,'coverage':coverage,'stale_after_hours':48}
   out['projects'][slug]=data
- c.close();return out
+ c.close()
+ add_components(out,policy)
+ return out
 if __name__=='__main__':
  a=argparse.ArgumentParser();a.add_argument('--review-pilot',nargs='+');args=a.parse_args()
  try:result=build(args.review_pilot)
