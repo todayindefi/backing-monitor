@@ -16,7 +16,7 @@ def main():
     elif asset=='apyusd':assert '~20-day' in text;assert 'Active receipt coverage:' in page.locator('#apyx-unlock-scope').inner_text()
     if asset=='mstr':assert 'Strategy Inc' in text
     assert not errors,(asset,errors)
-    page.evaluate("window.scrollTo(0,document.querySelector('[data-issuer-component=\""+asset+"\"]').getBoundingClientRect().top+scrollY-100)")
+    card.evaluate("el=>window.scrollTo(0,el.getBoundingClientRect().top+scrollY-100)")
     box=card.bounding_box();assert box['x']>=-1 and box['x']+box['width']<=width+1,(asset,width,box);page.screenshot(path=str(out/f'{asset}-{width}.png'));results.append({'asset':asset,'width':width,'text':text,'errors':errors,'card_fits':True});page.close()
   page=b.new_page(viewport={'width':390,'height':960});page.route('**/issuer_project_evidence.json*',lambda r:r.fulfill(status=404,body='missing'));page.goto(base+'?asset=strc&issuer_missing=1',wait_until='networkidle');page.locator('[data-issuer-component="strc"]').wait_for();assert 'unavailable' in page.locator('[data-issuer-component="strc"]').inner_text();results.append({'scenario':'missing shared feed on raw STRC','status':'passed'});page.close();b.close()
  (out/'results.json').write_text(json.dumps({'base':base,'results':results},indent=2)+'\n');print('PASS14 desktop/mobile component views, exact roles/no inheritance, Apyx receipts and missing feed')
