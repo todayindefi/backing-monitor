@@ -19,3 +19,5 @@ Tests:10 adapter tests plus4 existing-verifier tests passed; UI unit checks cove
 ## Consumer integration gate
 
 Forward `specs/handoffs/frxusd-shared-evidence-consumer-adoption-2026-11-03.md` to riskAnalyst and TIDR. It requests the adopted snapshot ID/hash, displayed bases/clocks and failure-state checks. BM waits for their parity returns; it does not edit their reports or add their scrapers. An API/schema or freshness failure retains the prior immutable snapshot with visible degraded last-good health; without one it is unavailable.
+
+Published producer/UI commit `def09a14c6`;8 served artifact hashes and original-document decompression hashes passed, plus desktop/mobile and four failure-state views. Accepted frozen ID: `sha256:0f4730bbd9f0fd98eee873eb88741f5b98a35193a687a3b41f7a34b3171757cd`. Consumer adoption is pending, not represented as complete.
