@@ -335,6 +335,17 @@ var UsdaiRenderer = {
         var s = data.summary || {};
         var anc = UsdaiRenderer._anchor;
         var html = '';
+        var reviewedIssuer = data.issuer || {}, reviewedBacking = data.backing || {}, reviewedPeg = data.peg || {};
+        if (reviewedIssuer.issuer_score_status === 'provisional_retained') {
+            var provisionalAxes = ['Issuer'];
+            if (reviewedBacking.backing_score_status === 'provisional_retained') provisionalAxes.push('Backing');
+            if (reviewedPeg.volatility_score != null && reviewedBacking.backing_score_status === 'provisional_retained') provisionalAxes.push('Volatility');
+            html += '<div class="panel" data-documentary-review="true"><div class="panel-title">Documentary review · provisional assessment</div><p class="text-sm">' +
+                UsdaiRenderer._esc(provisionalAxes.join(', ')) + ' scores retained provisionally. Evidence reviewed ' +
+                UsdaiRenderer._esc(reviewedIssuer.issuer_evidence_reviewed || 'date unavailable') +
+                '. This is not a new measurement of reserves, loan performance, authority or exit capacity. Original score and observation clocks remain unchanged.</p></div>';
+        }
+
 
         // 5-axis grouping. Nothing is dropped or rewritten — the same panels are
         // regrouped under numbered axis heads so they read in the order the band
@@ -547,7 +558,7 @@ var UsdaiRenderer = {
         if (slug === 'usdai') {
             headerLeft =
                 '<div class="text-xl font-bold text-slate-800">USDai</div>' +
-                '<div class="text-xs text-slate-500 mt-1">Permian Labs · PYUSD-reserved synthetic dollar (100% on-chain verifiable)</div>';
+                '<div class="text-xs text-slate-500 mt-1">USD.AI · PYUSD reserve measurement; issuer obligations and migration status remain separate</div>';
 
             var covState = UsdaiRenderer._coverageState(s.coverage_ratio);
             var covCls = UsdaiRenderer._stateTextCls(covState);
@@ -618,7 +629,7 @@ var UsdaiRenderer = {
             // sUSDai
             headerLeft =
                 '<div class="text-xl font-bold text-slate-800">sUSDai</div>' +
-                '<div class="text-xs text-slate-500 mt-1">Permian Labs · ERC-7540 vault over USDai — GPU/equipment loan book (MetaStreet engine)</div>';
+                '<div class="text-xs text-slate-500 mt-1">USD.AI · asynchronous vault over USDai — GPU/equipment loan book (MetaStreet engine)</div>';
 
             var nav = UsdaiRenderer._susdaiNavBasis(s);
             var d = UsdaiRenderer._navDevDisplay(nav, s.peg_secondary_px, s.discount_to_nav_pct);

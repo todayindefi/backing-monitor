@@ -1,0 +1,9 @@
+# USDai/sUSDai issuer adoption — November 4, 2026
+
+User explicitly authorized publication after initial local-only candidate review. Normal DeFiAnalyst database/fingerprint projection reused: 40 reviewed public-document facts and 14 non-CHIP entities/role entries. Exact family/null plus token filtering; no CHIP issuer substitution. No private family profile, profile hash, holdings or internal simulations published.
+
+Normal authored RiskAnalyst issuer/axis-basis overlays adopted. Narrow existing-sync copy adapter removes private profile-hash bookkeeping. Every numeric axis and source as_of preserved; issuer overlay now repeats the existing axis-basis Issuer 5.0. Issuer remains provisional on both; sUSDai Backing 5.0 and Volatility 5.5 provisional. November 4 is documentary review, not new measurement or whole-report verification. Renderer shows provisional status and removes historical brand/absolute on-chain-verification subtitle.
+
+Four local desktop/mobile views passed, including correct entity/component scope, source dates, visible card fit and no JS errors. Whole rendered-page text checked for migration/access, DSRA/sCHIP, warranty/AUP, QEV/GLX and CHR boundaries. Shared projection privacy-mutation and JS scope/source tests, renderer syntax and shell syntax passed. Full local candidate stays ignored. Numeric score/source-clock consistency recorded separately.
+
+Remaining gaps: product-specific issuer/obligor, continuity/authorization, insolvency priority and enforceable warranty; complete reserve/supply and actual migration/access; loan population/impairments/valuation and funded protection; dual-price/fees/CHR; settled FIFO/GLX cash; chain-specific authority and governance onboarding/execution. Unknown evidence is not a newly measured loss. No transactions or other-repository edits.

@@ -163,7 +163,14 @@ for slug in $SLUGS; do
             if [ -n "$found" ]; then
                 echo "$(date): SYNC_COLLISION ${slug}${suf}.json in both $found and $root — using $root" >&2
             fi
-            cp "$src" data/
+            case "${slug}${suf}" in
+                usdai_issuer|susdai_issuer|usdai_axis_basis|susdai_axis_basis)
+                    if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/copy_public_axis_overlay.py "$src" "data/${slug}${suf}.json"; then
+                        echo "ERROR public overlay transport failed: $src" >&2
+                        continue
+                    fi ;;
+                *) cp "$src" data/ ;;
+            esac
             found="$root"
         done
         # ⚠️ A SERVED FILE WITH NO SOURCE IS THE LOUDEST THING THIS LOOP CAN MISS, AND IT
