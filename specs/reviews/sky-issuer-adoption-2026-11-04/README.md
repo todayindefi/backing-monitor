@@ -9,3 +9,5 @@ Normal authored issuer/axis-basis overlays adopted, stripping private profile-ha
 Explicit persistent project event hold prevents imported Sky event rows from certifying current execution while spell-expiry dates are repaired by their owner. No replacement collector or timeline. Held coverage is visible; it does not imply no governance.
 
 Four local desktop/mobile checks passed with exact component scope, concise card fit, visible original October issuer score dates, provisional status and no JS errors. Shared source/scope, privacy-mutation and public-overlay checks pass. Remaining owner work: legal chain/holder priority/shutdown, registration/controllers/authorization, complete signed assurance, governance clock repair; existing producers retain all live financial/exit/security measurements.
+
+Served acceptance: commit a223fa7d42, Pages deployment 41737801498 successful. Six served script/data hashes match; four served desktop/mobile views passed with original October score dates and provisional status. See served-hashes.json and served-browser.json.
