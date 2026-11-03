@@ -45,6 +45,7 @@ def build(pilot=None):
    for r in rs:
     if r.get('visibility')!='public' and fingerprint(r) not in approved:data['withheld_records']+=1;continue
     if kind=='events':
+     if policy.get('project_event_holds',{}).get(slug):continue
      evidence=json.loads(r.get('evidence') or '[]') if r.get('source_kind')=='gov' else urls(r.get('source'))
      evidence=[u for u in evidence if str(u).startswith('https://')]
      if not evidence:continue
@@ -62,6 +63,7 @@ def build(pilot=None):
    if row['dao'] in seen:continue
    seen.add(row['dao']);g=json.loads(row['coverage']);statuses={k:v if v in ['ok','blocked','error','stale','missing'] else 'unknown' for k,v in g.get('source_status',{}).items()};coverage.append({'dao':row['dao'],'last_checked':g.get('last_checked'),'source_status':statuses,'history_since':g.get('history_since'),'history_complete':g.get('history_complete',False)})
   data['governance']={'status':('not_imported' if imported.get('status')!='imported' else 'mapped' if coverage else 'not_monitored_or_unmapped'),'feed_generated_at':govclock,'coverage':coverage,'stale_after_hours':48}
+  if policy.get('project_event_holds',{}).get(slug):data['governance']['status']='events_withheld_pending_owner_repair';data['governance']['event_hold_reason']=policy['project_event_holds'][slug]
   out['projects'][slug]=data
  c.close()
  add_components(out,policy)
