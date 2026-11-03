@@ -20,8 +20,8 @@
     "backing_score_source": "riskAnalyst:authored",
     "backing_score_generated_at": "2026-10-12T01:22:29Z",
     "backing_score_measurement": "Measures reserve quality, coverage, concentration and verifiability, not merely the existence of named collateral.",
-    "backing_score_observations": "Frax Facts reported $108.458m of assets against $105.479m of circulating liabilities, or 102.82% coverage. At Ethereum block 26173067, backing-monitor independently matched the reported quantities for both WTGXX accounts, USTB, BUIDL and USDC and observed $106.454m, or 98.15% of issuer-reported assets, onchain. USTB used an independent timestamped Superstate NAV. The $2.004m Erebor cash line remained off-chain and remote OFT liabilities were not independently enumerated, so independent global coverage was withheld.",
-    "backing_score_basis": "The reserve assets are high-quality cash-equivalent instruments, and fixed-block public-balance reconciliation materially improves verifiability. The score remains 6.5 because the dominant $52.890m BitGo WTGXX account lacks independent beneficial-ownership evidence, Erebor cash is unverified off-chain, most non-USTB NAVs use par conventions, remote liabilities are incomplete, and WTGXX remains a 62.22% concentration.",
+    "backing_score_observations": "November 3 dated BM shared snapshot sha256:0f4730bbd9f0fd98eee873eb88741f5b98a35193a687a3b41f7a34b3171757cd: producer par coverage 103.43%, market-liability coverage 103.45% and WTGXX concentration 68.56%. These are third-party-record metrics, not a complete independent global-coverage ratio. Separate source clocks, original evidence and null independent coverage are preserved. October 12 quantities/98.15% onchain-share figures are historical, not mixed into a new ratio.",
+    "backing_score_basis": "Score held 6.5. Improved third-party disclosure does not close BM beneficial-ownership/offchain assurance, NAV, concentration or incomplete remote-liability limits. DeFiLlama now claims verification including BitGo/Erebor; do not describe those as universally unverified or promote the claim into BM independent assurance. The score-decision clock is unchanged.",
     "backing_score_persistence": "Recheck when remote OFT liabilities are independently complete, BitGo beneficial ownership or Erebor cash receives eligible evidence, independent NAV coverage expands, or reserve composition changes materially."
   },
   "liquidity": {
@@ -42,5 +42,72 @@
     "underlying_score_basis": "The score remains an explicitly unanchored authored judgment. Named managers provide some diversification, but the dominant WisdomTree exposure is not substitutable during a fund or custodian impairment, and deriving a clean ceiling from only the immaterial AUSD and USDC legs would misstate coverage. Detailed edges and unresolved states remain authoritative in frxusd_dependencies.json.",
     "underlying_score_persistence": "Recheck when WTGXX, USTB, BUIDL, Erebor or USDB receives an internal report, or when reserve concentration changes materially."
   },
-  "routing_note": "Axes 1-4 are packaged here from the reviewed 2026-10-12 assessment without rescoring. Axis 5 is deliberately omitted because frxusd_contract_overlay.json owns the authored 3.5 score and rendering basis. Axis 6 is transported through frxusd_issuer.json. Overall 5.5 is envelope metadata only and is not an axis score."
+  "routing_note": "Axes 1-4 are packaged here from the reviewed 2026-10-12 assessment without rescoring. Axis 5 is deliberately omitted because frxusd_contract_overlay.json owns the authored 3.5 score and rendering basis. Axis 6 is transported through frxusd_issuer.json. Overall 5.5 is envelope metadata only and is not an axis score.",
+  "shared_evidence": {
+    "snapshot_id": "sha256:0f4730bbd9f0fd98eee873eb88741f5b98a35193a687a3b41f7a34b3171757cd",
+    "snapshot_sha256": "0f4730bbd9f0fd98eee873eb88741f5b98a35193a687a3b41f7a34b3171757cd",
+    "snapshot_url": "https://todayindefi.github.io/backing-monitor/data/frxusd_evidence_snapshots/0f4730bbd9f0fd98eee873eb88741f5b98a35193a687a3b41f7a34b3171757cd.json",
+    "source_clocks": {
+      "independently_measured": "2026-11-03T09:07:59Z",
+      "issuer_reported": "2026-11-03T08:43:35Z",
+      "third_party_verified": "2026-11-03T09:00:07Z"
+    },
+    "retrieved_at": "2026-11-03T10:00:15.015411Z",
+    "adopted_at": "2026-11-03T14:48:21.913631+00:00",
+    "mode": "dated_immutable_snapshot",
+    "metrics": {
+      "coverage_market_pct": 103.45009069016939,
+      "coverage_par_pct": 103.4277191209483,
+      "liabilities_market_usd": 95473373.07703812,
+      "liabilities_tokens": 95494024.10939886,
+      "reserves_usd": 98767291.0331597,
+      "surplus_par_usd": 3273266.92376084
+    },
+    "concentration": [
+      {
+        "pct_of_reserves": 0.10112646730940215,
+        "strategy": "AUSD",
+        "value_usd": 99879.87227903033
+      },
+      {
+        "pct_of_reserves": 16.07751492816457,
+        "strategy": "BUIDL",
+        "value_usd": 15879325.96
+      },
+      {
+        "pct_of_reserves": 2.030561220239069,
+        "strategy": "Erebor Bank USD",
+        "value_usd": 2005530.31
+      },
+      {
+        "pct_of_reserves": 3.7448045723793663e-06,
+        "strategy": "USDB",
+        "value_usd": 3.6986420306250003
+      },
+      {
+        "pct_of_reserves": 0.6632805832815551,
+        "strategy": "USDC",
+        "value_usd": 655104.2640561328
+      },
+      {
+        "pct_of_reserves": 12.572441001181886,
+        "strategy": "USTB",
+        "value_usd": 12417459.393609611
+      },
+      {
+        "pct_of_reserves": 68.55507205501893,
+        "strategy": "WTGXX",
+        "value_usd": 67709987.53457288
+      }
+    ],
+    "coverage_basis": {
+      "coverage_par_pct": "reserves / token liabilities at USD1 per token; producer-calculated",
+      "coverage_market_pct": "reserves / market-valued liabilities; producer-calculated"
+    },
+    "financial_calculation_owner": "backing-monitor",
+    "additional_bridge_subtraction_tokens": 0,
+    "independent_global_coverage_pct": null,
+    "sfrxusd_scope": "upstream frxUSD context only; no strategy/PPS/liability/redemption/authority verification"
+  },
+  "evidence_adopted_at": "2026-11-03T14:50:48.242582+00:00"
 }
