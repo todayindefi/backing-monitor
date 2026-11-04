@@ -1,0 +1,19 @@
+"""Frozen LBTC rate/strategy observations; no net-liability inference."""
+import json,pathlib,datetime,base64
+from decimal import Decimal as D
+from cryptography.hazmat.primitives import serialization,hashes
+from cryptography.hazmat.primitives.asymmetric import ec
+
+def adopt(raw,slug,obs,sources,add):
+ if slug!='lbtc':return
+ root=pathlib.Path(raw);receipts=json.loads((root/'lbtc-api-receipts.private.json').read_text());block=obs['block']['result'];feeds=[]
+ for name,record in obs['oracles'].items():
+  calls=record['calls'];r=calls['latestRoundData()'].get('decoded');dec=calls['decimals()'].get('decoded');desc=calls['description()'].get('decoded')
+  if not isinstance(r,list) or not isinstance(dec,int):continue
+  feeds.append({'address':record['address'],'description':desc,'decimals':dec,'round_id':str(r[0]),'raw_answer':str(r[1]),'normalized_answer':str(D(r[1])/(D(10)**dec)),'quote_unit':'BTC/LBTC' if desc=='LBTC / BTC' else None,'started_at':datetime.datetime.fromtimestamp(r[2],datetime.timezone.utc).isoformat(),'updated_at':datetime.datetime.fromtimestamp(r[3],datetime.timezone.utc).isoformat(),'answered_in_round':str(r[4]),'checked_at':calls['latestRoundData()'].get('checked_at'),'verified_Gauntlet_leaf':None})
+ sources['lbtc_documented_feeds']={'owner':'BackingMonitor','url':'https://docs.lombard.finance/learn/transparency/oracles','status':'documented_pointer_reads','scope':'Documented feed pointer observations only; not proof of current consumer routing, fair net NAV, nonstale future state or actual Gauntlet oracle leaves'}
+ add('stability','documented_rate_feed_observations',feeds,'feed native/normalized answers as named','Chainlink description establishes reported BTC/LBTC unit; generic RedStone description does not establish quote unit. Original feed update clocks differ from RPC/fetch and protocol report clocks; no1:1LBTC assumption or error/solvency finding inferred','lbtc_documented_feeds',{'block':int(block['number'],16),'block_hash':block['hash'],'block_observed_at':datetime.datetime.fromtimestamp(int(block['timestamp'],16),datetime.timezone.utc).isoformat(),'feed_update_clocks':'embedded per feed'},status='dated_feed_observations')
+ snapshots=json.loads((root/'lbtc_strategy_snapshots.json').read_text())['snapshots'];snapshot=snapshots[0];d=json.loads(snapshot['data']);key=json.loads((root/'lbtc_public_key.json').read_text());pub=serialization.load_pem_public_key(key['publicKeyPem'].replace('\\n','\n').encode());assert snapshot['algo']=='ECDSA_SHA_256';pub.verify(base64.b64decode(snapshot['dataSignature']),snapshot['data'].encode(),ec.ECDSA(hashes.SHA256()))
+ sources['lbtc_manager_snapshot']={'owner':'BackingMonitor','url':receipts['lbtc_strategy_snapshots']['url'],'public_key_url':receipts['lbtc_public_key']['url'],'status':'publisher_signature_matches_same_publisher_key','scope':'Publisher signed strategy metrics, not independent financial/custody assurance or verified key identity'}
+ selected={k:d[k] for k in ['deployedPct','avgMaturityDays','maxMaturityDays','netSold']};selected['greeks']={k:v for k,v in d['greeks'].items() if k!='bands'};selected.update(publisher_signature_matches=True,key_identity_independently_verified=None,net_options_liabilities_btc=None)
+ add('backing','manager_signed_strategy_metrics',selected,'publisher strategy metrics with Greek units embedded','Deployment is a strategy-book metric, not measured percent of total LBTC reserves; target bands omitted. Greek risks/tenor/signed authenticity do not price options or reconcile account-bucket residual or residual Babylon staking','lbtc_manager_snapshot',{'strategy_as_of':snapshot['asOfInstant'],'received_at':receipts['lbtc_strategy_snapshots']['received_at'],'key_received_at':receipts['lbtc_public_key']['received_at']},status='publisher_reported_signed')
