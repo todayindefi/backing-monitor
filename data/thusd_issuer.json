@@ -1,20 +1,38 @@
 {
- "schema_version": "issuer/1",
- "producer": "riskanalyst",
- "asset": "thusd",
- "as_of": "2026-09-10T12:00:00Z",
- "issuer": {
-  "summary": "thUSD is issued by Theo Network, a Panama entity that is unlicensed and not bankruptcy-remote, so holders have no regulated claim and no insolvency ring-fence. The team is credentialed — ex-Optiver and IMC, with an institutional partner stack — which matters more here than for a passive wrapper, because thUSD runs an active basis trade. Roughly 57% of backing sits off-chain and unattested, disclosed only through the issuer's own transparency page. The admin chain is genuinely hardened on Ethereum but not elsewhere, and the weaker configuration governs most of the bridged supply. See the full report for the custody chain and the per-chain admin differences.",
-  "facts": [
-   "Issuer is Theo Network, Panama — UNLICENSED and NOT bankruptcy-remote. Holders have no regulated claim and no insolvency ring-fence.",
-   "✅ Credentialed team, ex-Optiver and IMC, with an institutional partner stack. This matters more than it would for a passive wrapper, because thUSD runs an ACTIVE basis trade — execution quality is part of the risk.",
-   "⚠️ Roughly 57% of supply is backed by assets NOT OBSERVABLE ON-CHAIN, disclosed only via the issuer's own transparency page. The on-chain share is independently measured; the remainder is taken on trust.",
-   "⚠️⚠️ ADMIN CONFIG DIFFERS BY CHAIN AT THE SAME CONTRACT ADDRESSES, and the weaker configuration governs the bridged supply. Ethereum: 48h timelock, 4-of-6 Safe, the Safe's DEFAULT_ADMIN on the timelock revoked. STABLE and Arbitrum: 18h timelock, 3-of-5 Safe, and the Safe STILL HOLDS DEFAULT_ADMIN — so 18h is a value that Safe can set, not a floor it must clear, and three signatures reach it rather than four.",
-   "⚠️ STABLE IS THE LEG THAT MATTERS, NOT ARBITRUM. Of 51,611,845 thUSD locked in the Ethereum bridge adapter, 51,416,246 (99.62%) is on Stable and 195,599 (0.38%) on Arbitrum. Earlier descriptions naming Arbitrum as the divergent leg pointed at the smaller one by a factor of 263.",
-   "⚠️ The hardening is real and it is ETHEREUM'S. Roughly 38% of supply-equivalent sits behind the weaker configuration, overwhelmingly on Stable.",
-   "⚠️ The chain set was resolved by enumerating the bridge adapter's configured peers rather than from a declared list, and the escrow reconciles to the cent across them. Two further peers are configured at zero supply — latent surface that needs no new authorisation to carry value."
-  ],
-  "summary_source": "Internal assessment of the issuing entity and its disclosure posture, with the per-chain admin configuration and the bridged-supply split measured on-chain. [verified 2026-09-10]",
-  "producer_note": "PRODUCER BOOKKEEPING, never rendered. This overlay supplies facts[] in MERGE MODE B, which REPLACES the producer's five facts on the dashboard. Four of those five were riskAnalyst text returning through the feed; the fifth was the producer's own and named ARBITRUM as the divergent admin leg when STABLE carries 99.62% of bridged supply. ⚠️ THE OVERRIDE IS A DISPLAY FIX, NOT A CORRECTION — thusd_backing.json still ships the Arbitrum claim to every other consumer. Routed to the analyzer owner 2026-09-10 (msg 2b946ea3) after it sat several hours while being described as 'flagged'. If this note is still here and the producer fact still names Arbitrum, the routing did not take."
- }
+  "schema_version": "issuer/1",
+  "producer": "riskanalyst",
+  "asset": "thusd",
+  "as_of": "2026-09-10T12:00:00Z",
+  "issuer": {
+    "summary": "A disclosed Panama operator provides a point of contractual accountability, but underlying fund/custodian brands and trading-team credentials do not establish wrapper title or token repayment protection. Retain distinct legacy token issuer marks provisionally; their old prestige-based difference is not freshly validated. thBILL requires KYC/KYB, returns stablecoins and denies claims on underlying fund units. thUSD is separate from yield-bearing sthUSD; staking queues must not be assigned to the base token. Gold leasing/futures risks and insurance claims are not proof of complete backing.",
+    "facts": [
+      "thBILL requires KYC/KYB, returns stablecoins and denies claims on underlying fund units. thUSD is separate from yield-bearing sthUSD; staking queues must not be assigned to the base token. Gold leasing/futures risks and insurance claims are not proof of complete backing."
+    ],
+    "summary_source": "Canonical researched primary-source packet checked November 4; exact primary links and original clocks below. Documentary scope only; no renewed financial/security verification.",
+    "producer_note": "RiskAnalyst-authored scoped documentary correction; no private profile publication, new measurement or score change. Historical issuer rationale superseded. Consumer field/publication review applies.",
+    "issuer_score": 5.5,
+    "issuer_score_source": "riskAnalyst:authored",
+    "issuer_score_status": "provisional_retained",
+    "issuer_evidence_reviewed": "2026-11-04",
+    "canonical_project": "theo",
+    "canonical_component": "thusd",
+    "profile_sha256": "d5cb37b77d4012f2a6babdd2afeb9674c6bab547f06bab6ac55218b8065b4e48",
+    "primary_sources": [
+      {
+        "url": "https://docs.theo.xyz/legal/terms",
+        "as_of": "2026-11-04",
+        "checked": "2026-11-04"
+      },
+      {
+        "url": "https://docs.theo.xyz/products/thusd",
+        "as_of": "2026-11-04",
+        "checked": "2026-11-04"
+      },
+      {
+        "url": "https://docs.theo.xyz/products/thusd/mint-and-redeem",
+        "as_of": "2026-11-04",
+        "checked": "2026-11-04"
+      }
+    ]
+  }
 }
