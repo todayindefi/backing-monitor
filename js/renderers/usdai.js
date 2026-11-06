@@ -319,7 +319,7 @@ var UsdaiRenderer = {
             (slug === 'susdai' ? UsdaiRenderer._details('Yield and share-price details', anc('panel-nav', UsdaiRenderer._renderSusdaiNav(specific, s))) : ''));
         var backing = CommonRenderer.backingBasisPanelHtml(data) + UsdaiRenderer._renderFreshness(data) +
             (slug === 'usdai' ? '<p class="text-sm text-slate-500">Supply perimeter: ' + UsdaiRenderer._esc(Object.keys(s.supply_by_chain || {}).join(', ') || s.supply_scope || 'not supplied') + '. Coverage is limited to the producer’s declared chains. Check historical row scope before comparing periods.</p>' : '') +
-            (slug === 'usdai' ? anc('panel-coverage', UsdaiRenderer._renderUsdaiCoverage(specific, s)) :
+            (slug === 'usdai' ? '<div class="panel" id="panel-reserve-health"><div class="panel-title">Reserve backing and loan health are separate</div><p class="text-sm">The ratio below compares reported reserves with supply across the declared chains. It does not independently establish reserve quality, immediately available cash or redemption settlement.</p><p class="text-sm mt-2">Loan records and payment-evidence gaps are shown on the <a class="text-blue-500 hover:underline" href="?asset=susdai#panel-loan-evidence">sUSDai loan-health panel ↗</a>.</p></div>' + anc('panel-coverage', UsdaiRenderer._renderUsdaiCoverage(specific, s)) :
                 '<p class="text-sm text-slate-500">NAV accounting vault: no independent collateral ratio is established.</p>' + anc('panel-decomp', UsdaiRenderer._renderSusdaiDecomposition(specific, s)) + UsdaiRenderer._renderCreditEvidence(data)) +
             UsdaiRenderer._details('Asset model and measurement scope', anc('panel-headline', UsdaiRenderer._renderHeadlineCard(specific, s, slug))) +
             '<div id="usdai-family-panel"></div>';
@@ -440,7 +440,13 @@ var UsdaiRenderer = {
                 e(a ? a.start_inclusive + ' → ' + a.end_exclusive + ' (exclusive)' : 'Unknown') + '</td></tr>';
         }).join('');
         var counter = d.liquidation_event_counter || {};
-        return '<div class="panel-title">Reported loan book — partial population</div>' +
+        return '<div class="panel-title">Loan health — performance not established</div>' +
+            '<p class="text-sm">We can observe part of the reported loan book and its scheduled payments. We cannot establish current repayment performance or recoverable loan value from these sources.</p>' +
+            '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">' +
+            '<div><div class="text-sm font-semibold">What the evidence shows</div><p class="text-sm">A partial loan population, concentration within that population and future scheduled principal and interest.</p></div>' +
+            '<div><div class="text-sm font-semibold">What remains unknown</div><p class="text-sm">Matched payment receipts, arrears and impairments, funded debt-service reserves and current independent collateral valuations. Missing evidence does not establish missed payments or losses.</p></div></div>' +
+            '<p class="text-xs text-slate-500 mt-3">sUSDai credit evidence is separate from USDai’s reported reserve-to-supply accounting. Neither establishes immediate cash-exit availability.</p>' +
+            '<div class="text-sm font-semibold mt-4">Reported loan book — partial population</div>' +
             '<p class="text-sm text-amber-700">Issuer reporting, not independent underwriting. The visible schedules do not reconcile to the full reported loan metric.</p>' +
             '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">' +
             metric('API-active records', p.reported_active_count == null ? 'Unknown' : p.reported_active_count, 'Of ' + p.published_deal_count + ' published deals; ' + p.other_status_count + ' other-status records excluded') +
@@ -449,7 +455,7 @@ var UsdaiRenderer = {
             metric('Top five visible records', p.largest_five_visible_pct == null ? 'Unknown' : Number(p.largest_five_visible_pct).toFixed(1) + '%', 'Of visible principal only; not global borrower concentration') + '</div>' +
             '<p class="text-sm text-amber-700 mt-3">Scope difference: ' + (p.scope_difference == null ? 'unmeasured' : money(p.scope_difference)) +
             ' — not a demonstrated loss or missing-assets finding.</p>' +
-            '<div class="text-sm font-semibold mt-4">Largest visible loan records</div>' + table(records.slice(0,5)) +
+            '<div class="text-sm font-semibold mt-4">Largest visible loan records</div><p class="text-xs text-slate-500 sm:hidden">Swipe tables horizontally for payment dates and source clocks.</p>' + table(records.slice(0,5)) +
             UsdaiRenderer._details('All ' + records.length + ' API-active loan records and original schedule dates', table(records)) +
             '<div class="text-sm font-semibold mt-4">Next 30 days — scheduled, not paid</div>' +
             '<p class="text-sm">' + (next.principal == null ? 'Unknown principal' : money(next.principal) + ' principal') + ' + ' +
