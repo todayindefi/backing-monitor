@@ -62,7 +62,7 @@ fi
 SUFFIXES="_backing _backing_history _peg_history _critical_events _flow \
           _nav_history _coverage_history _reserve_known_destinations _family \
           _treasury _treasury_history _backing_last_attempt \
-          _liquidity _contract _dependencies _issuer _backing_overlay _contract_overlay \
+          _liquidity _chain_liquidity _contract _dependencies _issuer _backing_overlay _contract_overlay \
           _axis_basis _minters _peg_backfill _exit_ladder \
           _backing_verification _backing_verification_history"
 

@@ -1,30 +1,9 @@
 /**
- * USD.AI renderer — USDai (PYUSD-reserve peg leg) + sUSDai (ERC-7540 GPU-loan
- * credit/yield vault). Permian Labs, Arbitrum.
- *
- * Single renderer registered for both slugs; the two assets share the audit
- * set, governance topology (48h timelock + 3-of-3 Safe), the api.usd.ai
- * aggregate, and the cross-asset family panel. Asset-specific divergence lives
- * in asset_specific.type ('usdai' | 'susdai') and the per-leg panels:
- *   - _renderUsdaiCoverage      (USDai only — PYUSD coverage + on-chain-verifiable badge)
- *   - _renderSusdaiDecomposition + _renderSusdaiNav (sUSDai only — totalAssets stacked bar + NAV)
- *
- * Two distinctions from the Saturn sibling this is modeled on:
- *   1. USDai coverage is two reads (PYUSD.balanceOf / totalSupply), no oracle —
- *      same "100% on-chain verifiable" treatment as Saturn's USDat.
- *   2. sUSDai's hero is the totalAssets decomposition: idle + DepositTimelock
- *      escrow (committed-undrawn loans) + drawn loans — the credit pipeline.
- * And one framing flip: governance is a STRENGTH here (48h timelock visible on
- * a 3-of-3 Safe), not a single-EOA weakness.
- *
- * Data sources (Arbitrum):
- *   - data/usdai_backing.json  + data/usdai_backing_history.json
- *   - data/susdai_backing.json + data/susdai_backing_history.json
- *   - data/usdai_family.json (async — shared governance + combined AUM + api echo)
- *
- * Global-scope namespacing: backing-monitor renderers share JS global scope;
- * every top-level identifier here is prefixed USDAI_ / UsdaiRenderer so it can't
- * collide with saturn.js / apyx.js.
+ * USDai / sUSDai: Arbitrum peg/NAV and backing observations, standard six-axis
+ * placement, and separately sourced chain-specific liquidity. Code/authority,
+ * documentary review, valuation and quote clocks retain their own provenance.
+ * Financial marks and fresh aggregate accounting do not verify credit quality,
+ * payment performance, custody rights or actual cash execution.
  */
 
 // Verified contract constants (Arbitrum) — used for the illustrative cast
@@ -312,8 +291,6 @@ var UsdaiRenderer = {
                 if (e.collateral_ratio == null) {
                     if (specific.type === 'usdai' && e.coverage_ratio != null) {
                         e.collateral_ratio = e.coverage_ratio * 100;
-                    } else {
-                        e.collateral_ratio = 100;
                     }
                 }
             });
@@ -325,105 +302,173 @@ var UsdaiRenderer = {
     // ============================================================
     render: function(data) {
         var container = document.getElementById('asset-specific-panels');
-        if (!container) return;
-        var specific = data.asset_specific || {};
-        if (!UsdaiRenderer._isUsdai(specific.type)) return;
-
+        var specific = data.asset_specific || {}, slug = data.asset_slug;
+        if (!container || !UsdaiRenderer._isUsdai(specific.type)) return;
         UsdaiRenderer._suppressCommonPanels(data);
-
-        var slug = data.asset_slug;
-        var s = data.summary || {};
-        var anc = UsdaiRenderer._anchor;
-        var html = '';
-        var reviewedIssuer = data.issuer || {}, reviewedBacking = data.backing || {}, reviewedPeg = data.peg || {};
-        if (reviewedIssuer.issuer_score_status === 'provisional_retained') {
-            var provisionalAxes = ['Issuer'];
-            if (reviewedBacking.backing_score_status === 'provisional_retained') provisionalAxes.push('Backing');
-            if (reviewedPeg.volatility_score != null && reviewedBacking.backing_score_status === 'provisional_retained') provisionalAxes.push('Volatility');
-            html += '<div class="panel" data-documentary-review="true"><div class="panel-title">Documentary review · provisional assessment</div><p class="text-sm">' +
-                UsdaiRenderer._esc(provisionalAxes.join(', ')) + ' scores retained provisionally. Evidence reviewed ' +
-                UsdaiRenderer._esc(reviewedIssuer.issuer_evidence_reviewed || 'date unavailable') +
-                '. This is not a new measurement of reserves, loan performance, authority or exit capacity. Original score and observation clocks remain unchanged.</p></div>';
+        container.innerHTML = '';
+        function mount(axis, html) {
+            var section = document.getElementById('section-' + axis);
+            var body = document.getElementById('axis-' + axis + '-body');
+            var extra = document.getElementById(axis + '-extra-panels');
+            if (section) { section.style.display = ''; section.classList.remove('hidden'); }
+            if (body) body.innerHTML = html;
+            else if (extra) extra.innerHTML = html;
         }
-
-
-        // 5-axis grouping. Nothing is dropped or rewritten — the same panels are
-        // regrouped under numbered axis heads so they read in the order the band
-        // above presents them. The heads render whether or not the analyzer has
-        // emitted the axis blocks yet: they are structure, not ratings, and the
-        // page is more legible with them either way.
-        var head = UsdaiRenderer._axisHead;
-
-        html += anc('panel-headline', UsdaiRenderer._renderHeadlineCard(specific, s, slug));
-
-        if (slug === 'usdai') {
-            // §1 Peg and §2 Liquidity both live inside the Secondary Market panel
-            // (peg price + deviation, then the slippage ladder). Splitting a working
-            // panel to satisfy the grouping would be a rewrite, not a regroup, so the
-            // head names both and the panel stays whole.
-            html += head(1, 'Peg', 'market price vs $1');
-            html += UsdaiRenderer._renderPegChartPanel(data, slug);
-            html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'peg'));
-
-            html += head(2, 'Backing', 'PYUSD reserve held by the USDai contract');
-            html += CommonRenderer.backingBasisPanelHtml(data);
-            html += anc('panel-coverage', UsdaiRenderer._renderUsdaiCoverage(specific, s));
-
-            html += head(3, 'Liquidity & Exit', 'exit depth, slippage and route');
-            html += anc('panel-liquidity', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'liquidity'));
-
-            html += head(4, 'Dependencies', 'what this depends on, and what depends on it',
-                CommonRenderer.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies'));
-            html += UsdaiRenderer._renderDependenciesPanel(data);
-        } else {
-            // sUSDai's §1 is discount-to-NAV, not a peg. It has two NAVs ~0.65%
-            // apart by design with the market between them, so the NAV panel — which
-            // shows deposit, redemption and market together — is the honest §1: a
-            // single deviation number would report construction as deviation.
-            html += head(1, 'NAV band', 'deposit / redemption / market \u2014 a band, not a point');
-            html += anc('panel-nav', UsdaiRenderer._renderSusdaiNav(specific, s));
-            html += UsdaiRenderer._renderPegChartPanel(data, slug);
-
-            html += anc('panel-secondary', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'peg'));
-
-            html += head(2, 'Backing', 'asset decomposition \u2014 NAV vault, no collateral ratio');
-            html += CommonRenderer.backingBasisPanelHtml(data);
-            html += anc('panel-decomp', UsdaiRenderer._renderSusdaiDecomposition(specific, s));
-
-            html += head(3, 'Liquidity & Exit', 'secondary market and the async redemption queue');
-            html += anc('panel-liquidity', UsdaiRenderer._renderSecondaryMarket(specific, s, slug, 'liquidity'));
-
-            // No collateral ratio here — sUSDai is a NAV vault and has none. The
-            // backing axis carries the decomposition and the two residual pills.
-            html += head(4, 'Dependencies', 'what this depends on, and what depends on it',
-                CommonRenderer.authoredScoreChipHtml(data.dependencies, ['underlying_score'], 'Dependencies'));
-            html += UsdaiRenderer._renderDependenciesPanel(data);
-        }
-
-        // ⚠️ "authority by action, upgrade timelock and admin topology" was never
-        // an Issuer subtitle — it is the Contract & Admin axis, and USDai is the
-        // asset that proved a single authority field cannot express it: 48h on
-        // upgrades while a 3-of-3 holding DEFAULT_ADMIN can grant mint authority
-        // in one transaction with no delay.
-        html += head(5, 'Contract & Admin', 'authority by action, upgrade timelock and admin topology');
-        html += '<div id="usdai-gov-panel"></div>';      // governance (async, family)
-
-        html += head(6, 'Issuer', 'editorial \u2014 subjective axis');
-        html += CommonRenderer.issuerPanelHtml(data) + CommonRenderer._issuerContextHtml(data);
-        html += '<div id="usdai-family-panel"></div>';   // family (async, below the axes)
-
-        container.innerHTML = html;
-
+        var s = data.summary || {}, anc = UsdaiRenderer._anchor;
+        mount('peg', UsdaiRenderer._renderMarketTiles(data) + UsdaiRenderer._renderPegChartPanel(data, slug) +
+            (slug === 'susdai' ? UsdaiRenderer._details('Yield and share-price details', anc('panel-nav', UsdaiRenderer._renderSusdaiNav(specific, s))) : ''));
+        var backing = CommonRenderer.backingBasisPanelHtml(data) + UsdaiRenderer._renderFreshness(data) +
+            (slug === 'usdai' ? '<p class="text-sm text-slate-500">Supply perimeter: ' + UsdaiRenderer._esc(Object.keys(s.supply_by_chain || {}).join(', ') || s.supply_scope || 'not supplied') + '. Coverage is limited to the producer’s declared chains. Check historical row scope before comparing periods.</p>' : '') +
+            (slug === 'usdai' ? anc('panel-coverage', UsdaiRenderer._renderUsdaiCoverage(specific, s)) :
+                '<p class="text-sm text-slate-500">NAV accounting vault: no independent collateral ratio is established.</p>' + anc('panel-decomp', UsdaiRenderer._renderSusdaiDecomposition(specific, s)) + UsdaiRenderer._renderCreditEvidence(data)) +
+            UsdaiRenderer._details('Asset model and measurement scope', anc('panel-headline', UsdaiRenderer._renderHeadlineCard(specific, s, slug))) +
+            '<div id="usdai-family-panel"></div>';
+        var bx = document.getElementById('backing-extra-panels');
+        if (bx) bx.innerHTML = backing;
+        var bs = document.getElementById('section-backing');
+        if (bs) { bs.style.display = ''; bs.classList.remove('hidden'); }
+        // Canonical liquidity renderer retains depth status/floor, source clocks,
+        // primary eligibility, venue inventory and the complete published ladder.
+        mount('liquidity', CommonRenderer.liquidityPanelHtml(data) + '<p class="text-sm text-amber-700">' +
+            ((data.liquidity || {}).primary_exit ? 'Asynchronous primary exit: holder eligibility, funded capacity and realized queue time are not established by these aggregate getters.' :
+                'Primary redemption: holder eligibility and currently available capacity are not established in this feed.') + '</p>');
+        var lx = document.getElementById('liquidity-extra-panels');
+        if (lx) lx.innerHTML = '<div id="usdai-chain-liquidity"><p class="text-sm text-slate-500">Chain-specific liquidity observations loading; Arbitrum remains the peg/NAV measurement chain.</p></div>';
+        // Preserve the standard dependency and code/authority panels, including
+        // their producer clocks, explicit unknowns, sources and authored notes.
+        var cx = document.getElementById('contract-extra-panels');
+        if (cx) cx.innerHTML = '<div id="usdai-gov-panel"></div>';
         UsdaiRenderer._setupAnchorNav(slug);
         UsdaiRenderer._setupCompanionLink(slug);
-
-        // Post-render: charts (DOM must exist first) + async family fetch that
-        // fills both the governance (§5) and family (§6) panels.
-        if (slug === 'susdai') {
-            UsdaiRenderer._loadNavChart(slug);
-        }
         UsdaiRenderer._loadPegChart(data, slug);
+        if (slug === 'susdai') UsdaiRenderer._loadNavChart(slug);
         UsdaiRenderer._loadFamily(slug, data);
+        UsdaiRenderer._loadChainLiquidity(slug);
+        UsdaiRenderer._compactEvidence();
+    },
+
+    _details: function(label, html) {
+        return '<details class="panel mt-3"><summary class="cursor-pointer text-sm font-semibold">' +
+            UsdaiRenderer._esc(label) + '</summary><div class="mt-3">' + html + '</div></details>';
+    },
+
+    _renderMarketTiles: function(data) {
+        var peg = data.peg || {}, s = data.summary || {}, vault = data.asset_slug === 'susdai';
+        var market = peg.market_price, low = peg.nav_band ? peg.nav_band.low : peg.nav;
+        var high = peg.nav_band && peg.nav_band.high;
+        // Derive the signed comparison from the named reference, never reinterpret
+        // the producer's unsigned band-distance magnitude as a premium.
+        var dev = market != null && low > 0 ? (market / low - 1) * 100 : null;
+        function price(x) { return x == null ? 'Unknown' : '$' + Number(x).toFixed(6); }
+        function tile(label, val, note) {
+            return '<div class="summary-card"><div class="card-label">' + label + '</div><div class="card-value text-lg">' + val + '</div><div class="text-xs text-slate-500">' + UsdaiRenderer._esc(note) + '</div></div>';
+        }
+        return '<div class="panel" id="panel-secondary"><div class="panel-title">Arbitrum market vs ' + (vault ? 'NAV band' : '$1 reference') + '</div>' +
+            '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">' +
+            tile('Market', price(market), peg.source || 'Price source not published') +
+            tile(vault ? 'Redemption NAV' : 'Reference', price(low), vault ? 'Share-price mark; cash settlement is separate' : 'USDai par reference') +
+            tile('Signed premium / discount', dev == null ? 'Unknown' : (dev > 0 ? '+' : '') + (dev * 100).toFixed(2) + ' bps', vault ? 'Versus redemption NAV; negative means discount' : 'Versus $1; negative means discount') +
+            tile(vault ? 'Deposit NAV' : 'Cross-source check', vault ? price(high) : 'Not independently established', vault ? 'Entry mark, separate from redemption price' : 'One published market-price source') + '</div>' +
+            '<p class="text-xs text-slate-500 mt-2">Price source clock: ' + UsdaiRenderer._esc(peg.market_price_as_of || 'not supplied; file refresh does not establish price age') + '.</p></div>';
+    },
+
+    _renderFreshness: function(data) {
+        var p = CommonRenderer.AXIS_PROVENANCE || {}, stamp = data.as_of || data.timestamp;
+        function row(label, time) {
+            return '<tr><td>' + label + '</td><td>' + UsdaiRenderer._esc(time || 'Unknown') + '</td></tr>';
+        }
+        var rows = row('Backing snapshot (Arbitrum)', stamp);
+        ['dependencies', 'contract', 'issuer'].forEach(function(axis) {
+            var block = data[axis] || {}, provenance = p[axis] || {};
+            rows += row(axis + ' review / overlay', block.as_of || provenance.overlay_as_of);
+        });
+        return '<div class="panel"><div class="panel-title">Measurement and review dates</div>' +
+            '<p class="text-sm">A current backing snapshot does not renew older credit, authority or issuer reviews.</p>' +
+            '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Evidence</th><th>Original clock</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
+    },
+
+    _renderCreditEvidence: function(data) {
+        var s = data.summary || {};
+        var residual = s.implied_deployed_loans_usd;
+        return '<div class="panel" id="panel-loan-evidence"><div class="panel-title">Loan health and payments — verification incomplete</div>' +
+            '<p class="text-sm text-amber-700">Fresh vault accounting is not a current loan-quality or repayment audit.</p>' +
+            '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Evidence</th><th>Current feed coverage</th></tr></thead><tbody>' +
+            '<tr><td>Implied deployed credit</td><td>' + (residual == null ? 'Unknown' : CommonRenderer.formatCurrencyExact(residual)) + ' — accounting residual, not independently verified recoverable principal</td></tr>' +
+            '<tr><td>Loan-level principal, arrears and impairments</td><td>Not supplied by this aggregate feed</td></tr>' +
+            '<tr><td>Scheduled vs settled repayments</td><td>No reconciled payment ledger supplied</td></tr>' +
+            '<tr><td>Funded DSRA and enforceable recovery coverage</td><td>Current loan-specific amounts not established here</td></tr>' +
+            '</tbody></table></div><p class="text-xs text-slate-500 mt-2">Accounting snapshot: ' + UsdaiRenderer._esc(data.as_of || data.timestamp || 'unknown') +
+            '. Missing credit/payment evidence is not a finding of missed payments or realized losses.</p></div>';
+    },
+
+    _loadChainLiquidity: function(slug) {
+        var target = document.getElementById('usdai-chain-liquidity');
+        if (!target) return;
+        fetch('data/' + slug + '_chain_liquidity.json?nocache=' + Math.floor(Date.now() / 60000))
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(d) {
+                target.innerHTML = UsdaiRenderer._renderChainLiquidity(d, slug);
+            }).catch(function() {
+                target.innerHTML = UsdaiRenderer._renderChainLiquidity(null, slug);
+            });
+    },
+
+    _renderChainLiquidity: function(d, slug) {
+        if (!d || d.schema_version !== 'chain-exit-observations/1' || d.asset_slug !== slug) {
+            return '<div class="panel"><div class="panel-title">Other-chain liquidity unmeasured</div><p class="text-sm">No supported chain-specific evidence is available here. This is not zero liquidity; Arbitrum peg/NAV tracking is unchanged.</p></div>';
+        }
+        var esc = UsdaiRenderer._esc, currency = CommonRenderer.formatCurrency;
+        var rows = '', contextRows = '', details = '';
+        Object.keys(d.per_chain || {}).forEach(function(key) {
+            var c = d.per_chain[key], depth = c.depth_50bps || {};
+            var size = depth.depth_usd == null ? 'Unmeasured — not zero' :
+                (depth.is_floor ? '≥' : '') + currency(depth.depth_usd) + ' observed sample';
+            var bracket = depth.bracket || {};
+            var status = depth.status || 'Unmeasured';
+            var recommendation = (d.display_recommendation || {})[key] || {};
+            var row = '<tr><td>' + esc(c.chain || key) + '</td><td>' + esc(size) + '</td><td>' + esc(status) +
+                (bracket.first_failing_size_usd != null ? '; first failing sample ' + currency(bracket.first_failing_size_usd) : '') +
+                '</td><td>' + esc(c.quote_observed_at || 'Unknown') + '</td></tr>';
+            if (recommendation.recommended_primary_display === true) rows += row;
+            else contextRows += row;
+            var rungs = (c.rungs || []).map(function(r) {
+                var ok = r.status === 'quoted';
+                return '<tr><td>' + currency(r.target_nav_notional_usd) + '</td><td>' +
+                    (ok && r.output_tokens != null ? esc(r.output_tokens) + ' ' + esc(c.output_symbol || '') : 'Quote unavailable') +
+                    '</td><td>' + (ok && r.added_average_rate_cost_bps != null ? esc(Number(r.added_average_rate_cost_bps).toFixed(2)) + ' bps' : 'Unknown') +
+                    '</td><td>' + (ok && r.signed_nominal_return_vs_nav_bps != null ? esc(Number(r.signed_nominal_return_vs_nav_bps).toFixed(2)) + ' bps' : 'Unknown') +
+                    '</td><td>' + esc((r.route_summary || {}).gasUsd || 'Unknown') +
+                    '</td><td>' + esc(r.received_at || 'Unknown') + '</td></tr>';
+            }).join('');
+            details += UsdaiRenderer._details((c.chain || key) + ' quote samples and limitations',
+                '<p class="text-sm">' + esc(depth.basis || 'Resolution not established') + '</p>' +
+                '<p class="text-xs">' + esc(recommendation.display_basis || 'Significance not established') + '</p>' +
+                '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Dated NAV size</th><th>Output</th><th>Added average-rate cost</th><th>Return vs NAV</th><th>Provider gas USD</th><th>Receipt clock</th></tr></thead><tbody>' + rungs + '</tbody></table></div>' +
+                '<p class="text-xs">Minimum output: ' + esc(c.minimum_out == null ? 'not established' : c.minimum_out) +
+                '; expiry: ' + esc(c.quote_expiry || 'not supplied') + '. Gas is separate; no execution or settlement is established.</p>');
+        });
+        return '<div class="panel"><div class="panel-title">Chain-specific liquidity — DexTracker</div>' +
+            '<p class="text-sm">Primary coverage follows DexTracker’s measured significance recommendation. Observed samples are not capacity limits; chain depths are not additive.</p>' +
+            '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Chain</th><th>50 bps size impact</th><th>Status / resolution</th><th>Quote clock</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+            '<p class="text-sm text-amber-700 mt-2">Sparse or failed samples leave gaps. An unavailable route is not zero liquidity. Output stablecoins are valued nominally at $1.</p>' +
+            (contextRows ? UsdaiRenderer._details('Other reviewed chains — limited or unestablished', '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Chain</th><th>Observed sample</th><th>Limitation</th><th>Quote clock</th></tr></thead><tbody>' + contextRows + '</tbody></table></div>') : '') +
+            '<p class="text-xs text-slate-500 mt-2">Denomination: ' + esc((d.nav_denomination || {}).basis || 'not supplied') +
+            '. Original NAV clock: ' + esc((d.nav_denomination || {}).source_as_of || 'unknown') + '. Smallest-rung spread and gas are not included in added size impact.</p>' + details + '</div>';
+    },
+
+    // Collapse supporting prose intact, while warnings, limits, active authority
+    // and compact tables stay visible. This is scoped to these two dashboards.
+    _compactEvidence: function() {
+        if (!document.querySelectorAll) return;
+        document.querySelectorAll('.axis-section .text-xs, .axis-section p').forEach(function(el) {
+            if (el.closest('details, table, summary, .risk-flag, .axis-head')) return;
+            if (el.children.length || (el.textContent || '').trim().length <= 240) return;
+            if (/not established|unmeasured|unresolved|stale|no delay|not verified|denominator|not independently/i.test(el.textContent)) return;
+            var details = document.createElement('details'), summary = document.createElement('summary');
+            summary.textContent = 'Source and method';
+            summary.className = 'cursor-pointer text-xs text-slate-500';
+            el.parentNode.insertBefore(details, el); details.appendChild(summary); details.appendChild(el);
+        });
     },
 
     _suppressCommonPanels: function(data) {
@@ -443,34 +488,19 @@ var UsdaiRenderer = {
         var summaryCards = document.getElementById('summary-cards');
         if (summaryCards) summaryCards.style.display = hasAxes ? '' : 'none';
 
-        if (hasAxes) {
-            // Band-only: hide the generic per-axis SECTIONS so they do not duplicate
-            // the bespoke panels, and clear the hidden bodies. Those bodies contain
-            // duplicate-id nodes — notably a #peg-chart canvas from renderAxisSections
-            // — which would shadow a same-named bespoke canvas under getElementById
-            // and bind the chart to a hidden 0x0 element. usdai.js currently names its
-            // only canvas #usdai-nav-chart, so there is no live collision; clearing the
-            // bodies keeps it that way if a §1 chart is ever added.
-            // ⚠️ 'section-contract' added with the six-axis split. Every one of these
-            // lists was written when there were five sections, and a new section
-            // leaks through a hardcoded list silently — it rendered a SECOND,
-            // empty Contract & Admin axis under the bespoke one on all five pages.
-            ['section-peg', 'section-liquidity', 'section-contract', 'section-backing',
-             'section-dependencies', 'section-issuer'].forEach(function(id) {
-                var el = document.getElementById(id);
-                if (el) el.style.display = 'none';
-            });
-            ['axis-peg-body', 'axis-liquidity-body',
-             'axis-dependencies-body', 'axis-issuer-body'].forEach(function(id) {
-                var b = document.getElementById(id);
-                if (b) b.innerHTML = '';
-            });
-            var bh = document.getElementById('axis-backing-head');
-            if (bh) bh.innerHTML = '';
-        }
+        ['peg', 'backing', 'liquidity', 'dependencies', 'contract', 'issuer'].forEach(function(axis) {
+            var section = document.getElementById('section-' + axis);
+            if (section) { section.style.display = ''; section.classList.remove('hidden'); }
+            var extra = document.getElementById(axis + '-extra-panels');
+            if (extra) extra.innerHTML = '';
+        });
 
         var chartPanel = document.getElementById('chart-panel');
-        if (chartPanel) chartPanel.style.display = 'none';
+        if (chartPanel) {
+            chartPanel.style.display = data.asset_slug === 'usdai' ? '' : 'none';
+            var title = chartPanel.querySelector('.panel-title');
+            if (title && data.asset_slug === 'usdai') title.textContent = 'Reported reserve coverage history';
+        }
 
         var bd = document.getElementById('breakdown-table');
         if (bd) { var p = bd.closest('.panel'); if (p) p.style.display = 'none'; }
@@ -500,27 +530,11 @@ var UsdaiRenderer = {
         var inner = document.getElementById('asset-anchor-nav-inner');
         if (!navEl || !inner) return;
 
-        var items;
-        if (slug === 'usdai') {
-            items = [
-                { id: 'panel-headline',     label: 'Asset' },
-                { id: 'panel-coverage',     label: 'Coverage' },
-                { id: 'panel-secondary',    label: 'Market' },
-                { id: 'usdai-gov-panel',    label: 'Governance' },
-                { id: 'usdai-family-panel', label: 'Family' }
-            ];
-        } else if (slug === 'susdai') {
-            items = [
-                { id: 'panel-headline',     label: 'Asset' },
-                { id: 'panel-decomp',       label: 'Decomposition' },
-                { id: 'panel-nav',          label: 'NAV' },
-                { id: 'panel-secondary',    label: 'Market' },
-                { id: 'usdai-gov-panel',    label: 'Governance' },
-                { id: 'usdai-family-panel', label: 'Family' }
-            ];
-        } else {
-            return;
-        }
+        var items = [
+            {id:'section-peg', label:'Peg / NAV'}, {id:'section-backing', label:'Backing'},
+            {id:'section-liquidity', label:'Liquidity & exit'}, {id:'section-dependencies', label:'Dependencies'},
+            {id:'section-contract', label:'Contract & admin'}, {id:'section-issuer', label:'Issuer'}
+        ];
 
         inner.innerHTML = items.map(function(item) {
             return '<a href="#' + item.id + '" ' +
@@ -548,8 +562,8 @@ var UsdaiRenderer = {
     // §1 Headline card
     // ============================================================
     _renderHeadlineCard: function(specific, s, slug) {
-        var pausedState = s.paused ? 'critical' : 'ok';
-        var pausedLabel = s.paused ? 'PAUSED' : 'Active';
+        var pausedState = s.paused === true ? 'critical' : s.paused === false ? 'ok' : 'unknown';
+        var pausedLabel = s.paused === true ? 'PAUSED' : s.paused === false ? 'Unpaused (measured)' : 'Pause state unknown';
         var chainBadge =
             '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700">Arbitrum</span>';
 
@@ -724,7 +738,7 @@ var UsdaiRenderer = {
 
             badgeRow =
                 '<div class="flex flex-wrap items-center gap-2 mt-3">' +
-                    UsdaiRenderer._statusPill('Recon closes', reconState, reconTxt) +
+                    UsdaiRenderer._statusPill('Reconciliation Δ', reconState, reconTxt) +
                     tiePill +
                     UsdaiRenderer._statusPill('Idle buffer', bufState, bufTxt) +
                     spreadPill +
@@ -847,6 +861,8 @@ var UsdaiRenderer = {
                 'scope that is narrow, not the measurement.' +
             '</div>' : '';
 
+        if (basisCaveat) basisCaveat = '<p class="text-sm text-amber-700 mt-3">Arbitrum-only supply denominator: any excess is not verified global reserve headroom.</p>' + UsdaiRenderer._details('Coverage perimeter and denominator', basisCaveat);
+
         var crossCheck = (apiRes != null) ?
             '<div class="mt-4 flex flex-wrap items-center gap-2 text-xs">' +
                 '<span class="text-slate-500">Cross-check (api.usd.ai):</span>' +
@@ -877,7 +893,7 @@ var UsdaiRenderer = {
             basisCaveat +
             crossCheck +
             verifyBlock +
-            methodology +
+            UsdaiRenderer._details('Reserve measurement method', methodology) +
         '</div>';
     },
 
@@ -1018,13 +1034,14 @@ var UsdaiRenderer = {
                 '<div class="panel-title" style="margin-bottom:0;">Asset Decomposition' +
                     ' <span class="text-xs font-normal text-slate-500">— totalAssets ' + UsdaiRenderer._usdShort(total) + '</span>' +
                 '</div>' +
-                UsdaiRenderer._statusPill('Recon closes', reconState, reconTxt) +
+                UsdaiRenderer._statusPill('Reconciliation Δ', reconState, reconTxt) +
             '</div>' +
             bar +
             legend +
             pipeline +
             crossCheck +
-            escrowNote +
+            '<p class="text-sm mt-3">Loan values are reported credit marks; independent recoverability is unverified. Committed-undrawn escrow is not free redemption cash.</p>' +
+            UsdaiRenderer._details('Escrow and NAV accounting method', escrowNote) +
         '</div>';
     },
 
@@ -1060,20 +1077,13 @@ var UsdaiRenderer = {
                 '<a href="#panel-peg-chart" class="text-blue-500 hover:underline">NAV band chart</a> above.' +
             '</div>';
 
-        var methodology =
-            '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
-                'NAV should rise monotonically as loan interest accrues — a drop between cycles is a loan-loss signal ' +
-                '(<span class="font-mono">nav_regression</span> alert). sUSDai is an ERC-7540 async vault with an ' +
-                'epoch/vesting redemption queue, so realized yield lands with a lag and a fresh position accrues slowly ' +
-                'at first. Realized APY is derived from the NAV slope over the available window; the 10–15% target is ' +
-                'a Permian-disclosed design number on the loan tier, not a promise.' +
-            '</div>';
+        var methodology = '<p class="text-xs text-slate-500">Share-price history measures reported NAV changes, not independently realized holder returns. Fees, losses and valuation updates can affect it; cash settlement remains separate.</p>';
 
         return '<div class="panel">' +
             '<div class="panel-title">NAV Trajectory <span class="text-xs font-normal text-slate-500">— yield landing</span></div>' +
             statCards +
             chartBlock +
-            methodology +
+            UsdaiRenderer._details('Reserve measurement method', methodology) +
         '</div>';
     },
 
@@ -1125,9 +1135,9 @@ var UsdaiRenderer = {
                 'price, below it a discount.</div>' +
             '</div>';
         }
-        if (!peg.history_field) return '';
+        if (!peg.history_field) return '<p>No peg history is published.</p>';
         return '<div class="panel" id="panel-peg-chart">' +
-            '<div class="panel-title">Deviation from $1 ' +
+            '<div class="panel-title">USDai market price vs $1 ' +
                 '<span class="text-xs font-normal text-slate-500">\u2014 history</span></div>' +
             '<div style="height: 240px; position: relative;"><canvas id="usdai-peg-chart"></canvas></div>' +
         '</div>';
@@ -1138,7 +1148,7 @@ var UsdaiRenderer = {
         if (!ctx) return;
         if (slug === 'susdai') return UsdaiRenderer._loadBandChart(ctx, data, slug);
         var peg = data.peg || {};
-        var field = String(peg.history_field || '').replace('entries[].', '');
+        var field = 'peg_secondary_px';
         var ref = peg.history_ref || (slug + '_backing_history.json');
         if (!field) return;
         var nocache = Math.floor(Date.now() / 60000);
@@ -1153,7 +1163,7 @@ var UsdaiRenderer = {
                     }).sort(function(a, b) { return a.x - b.x; });
                 if (typeof Chart === 'undefined' || !pts.length) {
                     ctx.parentElement.innerHTML =
-                        '<div class="text-xs text-slate-400 italic">No deviation history yet.</div>';
+                        '<div class="text-xs text-slate-400 italic">No market-price history is available.</div>';
                     return;
                 }
                 if (pts.length < 2) {
@@ -1169,7 +1179,7 @@ var UsdaiRenderer = {
             })
             .catch(function() {
                 if (ctx) ctx.parentElement.innerHTML =
-                    '<div class="text-xs text-slate-400 italic">Deviation history unavailable.</div>';
+                    '<div class="text-xs text-slate-400 italic">Market-price history unavailable.</div>';
             });
     },
 
@@ -1251,26 +1261,27 @@ var UsdaiRenderer = {
         window._usdaiPegChart = new Chart(ctx, {
             type: 'line',
             data: { datasets: [{
-                label: (slug === 'susdai') ? 'Deviation from band (%)' : 'Deviation from $1 (%)',
+                label: 'USDai market price (USD)',
                 data: pts,
                 borderColor: '#6366f1',
                 backgroundColor: 'rgba(99,102,241,0.10)',
-                fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2
+                fill: false, tension: 0, pointRadius: 0, borderWidth: 2
             }] },
             options: {
                 responsive: true, maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    tooltip: { callbacks: { label: function(c) { return c.parsed.y.toFixed(3) + '%'; } } },
-                    annotation: { annotations: { zero: {
-                        type: 'line', yMin: 0, yMax: 0,
+                    tooltip: { callbacks: { label: function(c) { return '$' + c.parsed.y.toFixed(6); } } },
+                    annotation: { annotations: { par: {
+                        type: 'line', yMin: 1, yMax: 1,
+                        label: { display: true, content: '$1 reference', position: 'end' },
                         borderColor: '#94a3b8', borderWidth: 1, borderDash: [4, 4]
                     } } }
                 },
                 scales: {
                     x: { type: 'time', time: { unit: 'day' }, grid: { display: false },
                          ticks: { font: { size: 10 } } },
-                    y: { ticks: { font: { size: 10 }, callback: function(v) { return v + '%'; } } }
+                    y: { ticks: { font: { size: 10 }, callback: function(v) { return '$' + Number(v).toFixed(4); } } }
                 }
             }
         });
@@ -1583,17 +1594,7 @@ var UsdaiRenderer = {
                 '</div>';
         }
 
-        var note =
-            '<div class="text-xs text-slate-500 italic leading-relaxed mt-4 pt-3 border-t border-slate-200">' +
-                'No CEX listings; on-chain DEX only. Depth is thin against supply, so a large holder cannot exit ' +
-                'at par through the secondary market alone — expect material slippage approaching $500k. Quotes via ' +
-                (sec.source || 'GeckoTerminal') + '/KyberSwap. ' +
-                (isVault ?
-                    'For a vault share, price-vs-NAV (not price-vs-$1) is the meaningful peg metric — 1 sUSDai ≠ $1 by ' +
-                    'design. Positive (+) = premium above NAV; negative (-) = discount below NAV. A persistent small ' +
-                    'discount typically reflects the redemption queue, not a backing problem.' :
-                    'USDai is a $1 claim; deviation is measured vs $1.00.') +
-            '</div>';
+        var note = '<p class="text-xs text-slate-500 mt-3">Published chain-specific quotes only; pool TVL is not executable capacity. NAV marks, size impact and actual cash settlement are separate.</p>';
 
         if (part === 'peg') {
             return '<div class="panel">' +
@@ -1669,221 +1670,36 @@ var UsdaiRenderer = {
             .then(function(r) { return r.ok ? r.json() : null; })
             .then(function(fam) {
                 if (govEl) govEl.innerHTML = UsdaiRenderer._renderGovPanel(fam, data, slug);
-                if (famEl) famEl.innerHTML = fam ? UsdaiRenderer._renderFamilyHtml(fam, slug) : '';
+                if (famEl) famEl.innerHTML = fam ? UsdaiRenderer._details('Family accounting and source reconciliation', UsdaiRenderer._renderFamilyHtml(fam, slug)) : '<p class="text-sm text-amber-700">Family accounting snapshot unavailable.</p>';
+                UsdaiRenderer._compactEvidence();
             })
             .catch(function() {
                 if (govEl) govEl.innerHTML = UsdaiRenderer._renderGovPanel(null, data, slug);
-                if (famEl) famEl.innerHTML = '';
+                if (famEl) famEl.innerHTML = '<p class="text-sm text-amber-700">Family accounting snapshot unavailable.</p>';
             });
     },
 
     _renderGovPanel: function(fam, data, slug) {
-        var gov = (fam && fam.governance) || {};
-        var s = (data && data.summary) || {};
-        var proxies = gov.proxies || {};
-        // Prefer family per-asset proxy data; fall back to the backing summary.
-        var uImpl = (proxies.usdai && proxies.usdai.implementation) || (slug === 'usdai' ? s.implementation : null);
-        var uAdmin = (proxies.usdai && proxies.usdai.proxy_admin_slot) || (slug === 'usdai' ? s.admin_slot : null);
-        var sImpl = (proxies.susdai && proxies.susdai.implementation) || (slug === 'susdai' ? s.implementation : null);
-        var sAdmin = (proxies.susdai && proxies.susdai.proxy_admin_slot) || (slug === 'susdai' ? s.admin_slot : null);
-
-        var minDelay = gov.min_delay_seconds;
-        var delayHrs = (minDelay != null) ? Math.round(minDelay / 3600) : null;
-        var delayTxt = (delayHrs != null) ? delayHrs + 'h' : '48h';
-        var threshold = gov.gov_safe_threshold;
-        var thresholdTxt = (threshold != null) ? threshold + '-of-' + (Array.isArray(gov.gov_safe_owners) ? gov.gov_safe_owners.length : threshold) : '3-of-3';
-
-        function row(label, u, sv) {
-            return '<tr>' +
-                '<td class="font-medium">' + label + '</td>' +
-                '<td>' + u + '</td>' +
-                '<td>' + (sv != null ? sv : '') + '</td>' +
-            '</tr>';
-        }
-
-        // ---- Two authority layers, not one. ----
-        // The panel used to describe governance.model — "48h OZ TimelockController
-        // controlled by a 3-of-3 Safe" — which is true and is entirely about
-        // UPGRADES. Minting does not pass through that timelock. OPS_SAFE holds
-        // DEFAULT_ADMIN_ROLE on USDai (governance.ops_safe_holds_usdai_admin), and
-        // under OZ AccessControl DEFAULT_ADMIN administers every other role, so it
-        // can grant mint authority in a single transaction with no delay.
-        //
-        // That boolean was already published and already rendered here, as a plain
-        // grey row reading "holds DEFAULT_ADMIN_ROLE". Nothing was hidden; the
-        // consequence was never stated. Both layers now appear side by side with
-        // their delays, because a single "48h" figure next to a 3-of-3 Safe reads
-        // as though every privileged action waits 48 hours. One does not.
-        //
-        // Nothing here is derived from off-feed reads: the delay comes from
-        // min_delay_seconds, the veto point from gov_safe_roles, the mint capability
-        // from ops_safe_holds_usdai_admin. The specific mint role and the OFT
-        // adapter that also holds it are riskAnalyst on-chain findings measured on
-        // one chain, and are deliberately NOT hardcoded here.
-        var holdsAdmin = (slug === 'susdai')
-            ? gov.ops_safe_holds_susdai_admin
-            : gov.ops_safe_holds_usdai_admin;
-        var roles = gov.gov_safe_roles || {};
-        var noIndependentVeto = (roles.canceller === true && roles.proposer === true);
-
-        var layerRows =
-            '<tr>' +
-                '<td class="font-medium">Upgrades</td>' +
-                '<td>' + UsdaiRenderer._statusPill(delayTxt + ' delay', 'ok') + '</td>' +
-                '<td class="text-xs text-slate-600 dark:text-slate-300">' +
-                    thresholdTxt + ' Safe proposes and executes' +
-                    (noIndependentVeto
-                        ? ' \u00b7 <span class="text-amber-700 dark:text-amber-300">canceller is the same Safe \u2014 no independent veto</span>'
-                        : '') +
-                '</td>' +
-            '</tr>';
-        if (holdsAdmin === true) {
-            layerRows +=
-                '<tr>' +
-                    // On USDai the mint gate itself was identified on-chain, so the
-                    // row can name minting. On sUSDai the feed supports only the
-                    // general capability — DEFAULT_ADMIN grants roles with no delay —
-                    // and shares are deposit-driven, so naming it "Minting" there
-                    // would apply a USDai finding to a contract it was not measured on.
-                    '<td class="font-medium">' +
-                        (slug === 'susdai' ? 'Role grants' : 'Minting') + '</td>' +
-                    '<td>' + UsdaiRenderer._statusPill('NO DELAY', 'critical') + '</td>' +
-                    '<td class="text-xs text-slate-600 dark:text-slate-300">' +
-                        'Ops Safe holds <span class="font-mono">DEFAULT_ADMIN_ROLE</span>, which administers ' +
-                        'every other role \u2014 ' +
-                        (slug === 'susdai'
-                            ? 'any role can be granted in one transaction. '
-                            : 'mint authority can be granted in one transaction. ') +
-                        '<span class="text-amber-700 dark:text-amber-300">Does not pass through the timelock.</span>' +
-                    '</td>' +
-                '</tr>';
-        }
-        var layerTable =
-            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">Authority by action</div>' +
-            '<div class="data-table-scroll mb-4">' +
-                '<table class="data-table">' +
-                    '<thead><tr><th>Action</th><th>Delay</th><th>Who / how</th></tr></thead>' +
-                    '<tbody>' + layerRows + '</tbody>' +
-                '</table>' +
-            '</div>';
-
-        var rows = '';
-        rows += row('Proxy implementation', UsdaiRenderer._addrCell(uImpl), UsdaiRenderer._addrCell(sImpl));
-        rows += row('Proxy admin', UsdaiRenderer._addrCell(uAdmin), UsdaiRenderer._addrCell(sAdmin));
-        if (gov.timelock) {
-            rows += row('Upgrade authority',
-                UsdaiRenderer._statusPill(delayTxt + ' timelock', 'ok') + ' ' + UsdaiRenderer._addrCell(gov.timelock),
-                '<span class="text-xs text-slate-500">same timelock owns both proxy admins</span>');
-        }
-        if (gov.gov_safe) {
-            var delayOk = gov.min_delay_ok !== false;
-            rows += row('Governance multisig',
-                UsdaiRenderer._statusPill(thresholdTxt + ' Safe', delayOk ? 'ok' : 'warn') + ' ' + UsdaiRenderer._addrCell(gov.gov_safe),
-                '<span class="text-xs text-slate-500">proposer · executor · canceller on the timelock</span>');
-        }
-        if (gov.ops_safe) {
-            // "same signer set" was asserted here with nothing in the feed to
-            // support it: gov_safe_owners is published, ops_safe owners are not.
-            // It happens to be true per riskAnalyst's getOwners() reads, but the
-            // renderer cannot know that — state it only if the feed ever says so.
-            var sameSet = (gov.gov_ops_owner_sets_identical === true);
-            rows += row('Operational admin',
-                UsdaiRenderer._addrCell(gov.ops_safe),
-                '<span class="text-xs text-slate-500">holds DEFAULT_ADMIN_ROLE' +
-                    (sameSet ? ' \u00b7 identical owner set to the Gov Safe'
-                             : ' \u00b7 owner set not published in this feed') + '</span>');
-        }
-
-        // Pending-upgrade (CallScheduled) watch.
-        //
-        // SCOPE. This scan reads CallScheduled on the timelock, so it sees upgrades
-        // and nothing else. A mint does not pass through the timelock and will never
-        // appear here, and the published report points readers at this watch for
-        // advance warning. An unscoped watch is worse than no watch: "No pending
-        // upgrades" in green reads as "nothing is happening" when it only means
-        // "no upgrade is queued". Say what it does not cover, next to the result.
-        var cs = gov.call_scheduled || {};
-        var watchScope =
-            '<div class="text-xs text-slate-500 mt-2">' +
-                'Scope: scheduled <em>upgrades</em> only' +
-                ((holdsAdmin === true)
-                    ? ' \u2014 ' + (slug === 'susdai' ? 'a role grant' : 'a mint') +
-                      ' does not pass through the timelock and will not appear here.'
-                    : '.') +
-            '</div>';
-        var watch;
-        if (Array.isArray(cs.pending_ops) && cs.pending_ops.length > 0) {
-            var lines = cs.pending_ops.map(function(op) {
-                var eta = op.eta || op.executes_at || op.ready_at;
-                var etaTxt = '';
-                if (eta) {
-                    var ms = new Date(eta.endsWith && eta.endsWith('Z') ? eta : eta).getTime() - Date.now();
-                    etaTxt = ms > 0 ? ' — executes in ~' + Math.ceil(ms / 3600000) + 'h' : ' — executable now';
-                }
-                return '<li class="font-mono text-xs">' + (op.id || op.operation_id || 'op') + etaTxt + '</li>';
-            }).join('');
-            watch =
-                '<div class="risk-flag risk-warning mt-3">' +
-                    '<strong>⏳ Pending upgrade scheduled on the timelock.</strong> Visible on-chain now; cannot execute ' +
-                    'until the ' + delayTxt + ' delay elapses — that is the holder exit window.' +
-                    '<ul class="mt-1 ml-4 list-disc">' + lines + '</ul>' +
-                '</div>';
-        } else if (cs.scanned === true) {
-            watch =
-                '<div class="mt-3">' +
-                    UsdaiRenderer._statusPill('No pending upgrades', 'ok') +
-                    '<span class="text-xs text-slate-500 ml-2">timelock scanned' +
-                        (cs.scan_window_blocks ? ' over last ' + Number(cs.scan_window_blocks).toLocaleString() + ' blocks' : '') +
-                        ' — no CallScheduled events.</span>' +
-                '</div>';
-        } else {
-            watch =
-                '<div class="mt-3">' +
-                    UsdaiRenderer._statusPill('Pending-upgrade scan initializing', 'unknown') +
-                    '<span class="text-xs text-slate-500 ml-2">CallScheduled watch not yet active in this snapshot.</span>' +
-                '</div>';
-        }
-
-        // Banner scoped to UPGRADES. It previously read "Governance is a relative
-        // strength" and promised an exit window, which generalises a property of one
-        // authority layer to all of them. The timelock is still a genuine strength
-        // for what it covers — the claim is narrowed, not withdrawn — but a mint
-        // needs no delay, so "exit window" cannot be stated unqualified.
-        var banner =
-            '<div class="risk-flag mt-3" style="background:#ecfdf5;color:#065f46;border-left:4px solid #10b981;">' +
-                '<strong>Upgrade governance is a relative strength.</strong> Upgrades to both proxies pass through a ' +
-                delayTxt + ' OZ TimelockController controlled by a ' + thresholdTxt + ' Safe — there is no single ' +
-                'admin EOA. A malicious or buggy upgrade is visible on-chain for ~' + delayTxt + ' before it can land, ' +
-                'giving holders an exit window for <em>that</em> class of change. (The residual is that admin actions ' +
-                'are still possible at all: the reserve/loan contracts are upgradeable — the timelock bounds the ' +
-                'surprise, it does not remove the power.)' +
-                ((holdsAdmin === true)
-                    ? ' <strong>This does not extend to ' + (slug === 'susdai' ? 'role grants' : 'minting') +
-                      '</strong> \u2014 see Authority by action above; that path carries no delay and no exit window.'
-                    : '') +
-            '</div>';
-
-        var auditLine =
-            '<div class="text-sm text-slate-600 mt-3 pt-3 border-t border-slate-200">' +
-                'Audit: <strong>Cantina (Spearbit)</strong> reviewed USDai + sUSDai — 0 critical / 0 high / 1 medium (fixed) / 8 low. ' +
-                '<span class="text-xs text-slate-500">Live bug bounty; audit set shared across both tokens.</span>' +
-            '</div>';
-
-        return '<div class="panel">' +
-            '<div class="panel-title">Governance &amp; Trust</div>' +
-            layerTable +
-            '<div class="data-table-scroll">' +
-                '<table class="data-table">' +
-                    '<thead><tr><th>Component</th><th>USDai</th><th>sUSDai</th></tr></thead>' +
-                    '<tbody>' + rows + '</tbody>' +
-                '</table>' +
-            '</div>' +
-            watch +
-            watchScope +
-            banner +
-            auditLine +
-            (!fam ? '<div class="text-xs text-slate-400 italic mt-2">Live timelock / multisig details load from the family snapshot — currently unavailable; showing per-asset proxy facts only.</div>' : '') +
-        '</div>';
+        var g = (fam && fam.governance) || {}, esc = UsdaiRenderer._esc;
+        var delay = g.min_delay_seconds == null ? 'Not established' : Number(g.min_delay_seconds) / 3600 + 'h';
+        var owners = Array.isArray(g.gov_safe_owners) ? g.gov_safe_owners : [];
+        var threshold = g.gov_safe_threshold == null || !owners.length ? 'Quorum not established' : g.gov_safe_threshold + '-of-' + owners.length;
+        var admin = slug === 'susdai' ? g.ops_safe_holds_susdai_admin : g.ops_safe_holds_usdai_admin;
+        var cs = g.call_scheduled || {}, pending = Array.isArray(cs.pending_ops) ? cs.pending_ops : [];
+        var scope = fam && (fam.as_of || fam.timestamp);
+        var rows = '<tr><td>Proxy upgrades</td><td>' + esc(delay) + '</td><td>' + esc(threshold) + ' · ' + UsdaiRenderer._addrCell(g.gov_safe) + '</td></tr>';
+        rows += '<tr><td>Operational role grants</td><td>' + (admin === true ? 'NO DELAY — outside upgrade timelock' : 'Reach / delay not established') + '</td><td>' + UsdaiRenderer._addrCell(g.ops_safe) + '</td></tr>';
+        var pendingText = pending.length ? pending.length + ' scheduled operation(s) reported' : cs.scanned === true ?
+            'No scheduled events detected in the reported scan window; not a complete pending-state guarantee.' : 'Scheduled-operation scan unavailable.';
+        return '<div class="panel"><div class="panel-title">Arbitrum authority observations</div>' +
+            '<p class="text-sm">Upgrade delay does not establish time or liquidity to exit. Operational permissions are a separate path.</p>' +
+            '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Action</th><th>Delay / reach</th><th>Authority</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+            '<p class="text-xs text-slate-500 mt-2">Family observation: ' + esc(scope || 'unavailable') + '. This does not renew the separate code/audit review.</p>' +
+            '<p class="text-sm mt-2">' + esc(pendingText) + '</p>' +
+            pending.map(function(op) { return '<p class="text-sm text-amber-700">Scheduled target ' + UsdaiRenderer._addrCell(op.target) +
+                ' · earliest execution ' + esc(op.eta_iso || op.eta || 'not supplied') + '. Execution and purpose are not independently established here.</p>'; }).join('') +
+            (pending.length ? UsdaiRenderer._details('Reported scheduled operations', '<pre class="text-xs whitespace-pre-wrap break-all">' + esc(JSON.stringify(pending, null, 2)) + '</pre>') : '') +
+            '<p class="text-xs text-slate-500">Scan scope: timelock events only; direct role grants and minting are not covered.</p></div>';
     },
 
     _renderFamilyHtml: function(fam, currentSlug) {
@@ -1939,7 +1755,7 @@ var UsdaiRenderer = {
         var govCard =
             '<div>' +
                 '<div class="text-sm font-semibold text-slate-700 mb-1">Shared authority chain</div>' +
-                '<div class="text-xs text-slate-500 mb-2">' + (gov.model || '48h timelock + 3-of-3 Safe') + '</div>' +
+                '<div class="text-xs text-slate-500 mb-2">' + (gov.model || 'Authority model not published') + '</div>' +
                 '<table class="data-table"><tbody>' +
                     '<tr><td class="font-medium">Timelock</td><td>' + UsdaiRenderer._addrCell(gov.timelock) +
                         ' <span class="text-xs text-slate-500">getMinDelay ' + (delayHrs != null ? delayHrs + 'h' : '—') + '</span></td></tr>' +
@@ -1953,7 +1769,7 @@ var UsdaiRenderer = {
         // api.usd.ai aggregate echo with freshness chip.
         var raw = api.raw || {};
         var stale = api.stale === true;
-        var freshState = stale ? 'warn' : 'ok';
+        var freshState = stale ? 'warn' : api.updated_at ? 'ok' : 'unknown';
         var freshTxt = api.updated_at ? 'updated ' + CommonRenderer.formatDate(api.updated_at) : 'updatedAt —';
         function apiRow(label, v) {
             return '<div class="flex justify-between text-xs py-0.5">' +
@@ -1964,7 +1780,7 @@ var UsdaiRenderer = {
             '<div class="mt-4 pt-3 border-t border-slate-200">' +
                 '<div class="flex flex-wrap items-center gap-2 mb-2">' +
                     '<span class="text-sm font-semibold text-slate-700">api.usd.ai aggregate</span>' +
-                    UsdaiRenderer._statusPill(stale ? 'Stale (>6h)' : 'Fresh', freshState, '') +
+                    UsdaiRenderer._statusPill(stale ? 'Producer reports stale' : api.updated_at ? 'Timestamp published' : 'Source age unknown', freshState, '') +
                     '<span class="text-xs text-slate-400">' + freshTxt + '</span>' +
                 '</div>' +
                 '<div class="grid grid-cols-1 md:grid-cols-2 gap-x-6">' +
