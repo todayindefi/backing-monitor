@@ -388,7 +388,43 @@ def scoped_layers(layers, scope):
     return out
 
 
+def accepted_contract(slug, repo_root=None):
+    """Return an explicitly accepted, hash-pinned producer release without restamping.
+
+    A selection supersedes the legacy topology emitter for that slug only. Missing
+    or changed bytes fail closed rather than silently restoring a superseded walk.
+    """
+    from pathlib import Path
+    import hashlib
+    root = Path(repo_root or Path(__file__).resolve().parents[1])
+    config = root / 'config/axis5_release_selection.json'
+    if not config.exists():
+        return None
+    selected = json.loads(config.read_text()).get('releases', {}).get(slug)
+    if selected is None:
+        return None
+    path = (root / selected['path']).resolve()
+    if not path.is_relative_to(root.resolve()):
+        raise SystemExit('REFUSED: accepted contract source outside repository')
+    try:
+        raw = path.read_bytes()
+    except OSError as exc:
+        raise SystemExit('REFUSED: accepted contract release unavailable') from exc
+    if hashlib.sha256(raw).hexdigest() != selected['sha256']:
+        raise SystemExit('REFUSED: accepted contract release hash mismatch')
+    payload = json.loads(raw)
+    if (payload.get('schema_version') != 'contract/1' or
+            payload.get('asset', '').replace('-', '_') != slug or
+            payload.get('producer') != 'security_analyst' or
+            not payload.get('as_of') or not isinstance(payload.get('contract'), dict)):
+        raise SystemExit('REFUSED: accepted contract release identity/schema/clock')
+    return payload
+
+
 def emit(slug):
+    selected = accepted_contract(slug)
+    if selected is not None:
+        return selected
     # underscored slug -> dashed yaml basename, the convention both repos use
     fn = slug.replace('_', '-') + '.yaml'
     path = os.path.join(TOPOLOGY_DIR, fn)

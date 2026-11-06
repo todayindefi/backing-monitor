@@ -272,6 +272,7 @@ const CommonRenderer = {
         // first output is mostly false positives trains a reader to ignore it, which
         // is worse than the silence it replaced.
         'venues', 'pools', 'enumeration', 'exit_mark', 'primary_exit', 'depth',
+        'venue_census', 'inventory_source_selection', 'axis_binding_constraint', 'loss_protection_layers',
         'by_chain', 'exit_capacity', 'two_pct_depth_bracket', 'slippage_reference',
         'cost_conventions', 'quotes', 'distribution', 'token_registry',
         'token_resolution', 'methodology', 'regimes', 'downstream_route_legs',
@@ -715,7 +716,9 @@ const CommonRenderer = {
                         return typeof st === 'string' &&
                                self2.DEPTH_NON_DERIVABLE_STATUSES.indexOf(st) >= 0;
                     };
-                    var overlayClaims = !declaredVenueOnly &&
+                    var scalarRefused = (ovDepth.denomination_scope || {}).reduction_policy === 'refuse_cross_chain_scalar';
+                    var nativeLegOnly = (ovDepth.preflight || {}).status === 'usd_valuation_not_assessed';
+                    var overlayClaims = scalarRefused || nativeLegOnly || !declaredVenueOnly &&
                                        (pay.band_score != null ||
                                         typeof pay.total_2pct_depth === 'number' ||
                                         declaredNoCurve(pay.two_pct_depth_status) ||
@@ -1035,6 +1038,12 @@ const CommonRenderer = {
         if (typeof head.is_floor === 'boolean') block.total_2pct_depth_is_floor = head.is_floor;
         if (head.status) block.two_pct_depth_status = head.status;
         if (head.basis) block.two_pct_depth_basis = head.basis;
+        if (d.preflight && d.preflight.passed === false) {
+            block.total_2pct_depth = null;
+            block.total_2pct_depth_is_floor = null;
+            block.two_pct_depth_status = 'invalid_quote';
+            block.two_pct_depth_basis = 'Producer quote validation failed; no executable depth or cash cost is established.';
+        }
         // ⚠️ Absent on a feed that predates the field (PegTracker's embedded blocks,
         // and the multi-chain payloads DexTracker has not migrated yet). Defaults to
         // 200 so every existing asset keeps reading "2% depth" exactly as before.
@@ -1188,6 +1197,17 @@ const CommonRenderer = {
     },
 
     _adaptVenues(block) {
+        var selected = block.inventory_source_selection;
+        var census = block.venue_census;
+        if (selected && selected.current === 'venue_census' && census && Array.isArray(census.venues) && census.enumeration) {
+            block.historical_enumeration = block.enumeration;
+            block.venues = census.venues;
+            block.enumeration = census.enumeration;
+            block.venues_as_of = census.as_of;
+            block.total_tvl_usd = null;
+            block.total_tvl = null;
+            block.swap_tvl_usd = null;
+        }
         var vs = Array.isArray(block.venues) ? block.venues : null;
         if (!vs || !vs.length) return;
         if (Array.isArray(block.pools) && block.pools.length) return;   // producer's own wins
@@ -1349,6 +1369,7 @@ const CommonRenderer = {
     // reads. Same translate-don't-replace rule as above: the producer's array is
     // left untouched and the legacy shape is built beside it.
     _adaptLadder(d, block) {
+        if ((d.preflight || {}).status === 'usd_valuation_not_assessed') return;
         var rungs = Array.isArray(d.rungs) ? d.rungs : null;
         if (!rungs || !rungs.length) return;
         var em = block.exit_mark || {};
@@ -1375,7 +1396,9 @@ const CommonRenderer = {
         rungs.forEach(function(r) {
             if (!r || typeof r.size_usd !== 'number') return;
             var q = {};
-            if (r.status && r.status !== 'ok') {
+            if (d.preflight && d.preflight.passed === false) {
+                q.error = 'Quote rejected by producer validation; not an established cash exit';
+            } else if (r.status && r.status !== 'ok') {
                 // The table's failed-quote branch keys off `error` and says, in
                 // the cell, that a failed read is not a measurement of zero.
                 q.error = r.reason || String(r.status).replace(/_/g, ' ');
@@ -2157,6 +2180,43 @@ const CommonRenderer = {
             bits.push('<div class="ds-line"><span class="ds-key">Binding leg:</span> ' +
                 self._escapeAttr(String(bind.leg || '?').replace(/_/g, ' ')) + ' \u2014 ' +
                 self._escapeAttr(String(bind.basis)) + '</div>');
+        }
+        var nativeDepth = l.depth || {};
+        if ((nativeDepth.preflight || {}).status === 'usd_valuation_not_assessed') {
+            var observations = [nativeDepth.baseline_rung].concat(nativeDepth.rungs || []).filter(Boolean);
+            var q = nativeDepth.quote || {}, inUnit = (q.token_in || {}).symbol || 'input tokens';
+            var outUnit = (q.token_out || {}).symbol || 'output tokens';
+            function tokens(v) { return v == null ? 'Not established' : Number(v).toLocaleString('en-US', {maximumFractionDigits:6}); }
+            var nativeRows = observations.map(function(r) {
+                return '<tr><td>' + self._escapeAttr(tokens(r.amount_in_tokens)) + '</td><td>' +
+                    self._escapeAttr(tokens(r.amount_out_tokens)) + '</td><td>' +
+                    self._escapeAttr(r.status || 'unknown') + '</td></tr>';
+            }).join('');
+            bits.push('<details class="mt-3"><summary>Native-token quote observations — incomplete cash path</summary>' +
+                '<p class="text-xs">Rounded token quantities, not USD proceeds. Failed views are unclassified; they do not establish zero liquidity.</p>' +
+                '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Input ' + self._escapeAttr(inUnit) + '</th><th>Output ' + self._escapeAttr(outUnit) + '</th><th>View status</th></tr></thead><tbody>' + nativeRows + '</tbody></table></div>' +
+                '<p class="text-xs">Block ' + self._escapeAttr(q.quote_block_number || 'unknown') + '; observed ' + self._escapeAttr(q.observed_at || 'unknown') +
+                '. No USD output valuation, gas estimate, transaction execution or settlement established.</p></details>');
+        }
+        var chains = (l.depth || {}).per_chain;
+        if (chains && ds && ds.reduction_policy === 'refuse_cross_chain_scalar') {
+            var chainRows = Object.keys(chains).map(function(chain) {
+                var c = chains[chain] || {}, h = c.bracket_50bps || c;
+                var bracket = h.bracket || {};
+                var lower = bracket.last_clearing_size_usd;
+                var upper = bracket.first_crossing_size_usd;
+                var value = lower != null && upper != null ? '$' + Number(lower).toLocaleString('en-US', {maximumFractionDigits:2}) + ' – $' + Number(upper).toLocaleString('en-US', {maximumFractionDigits:2})
+                    : h.depth_usd != null && h.is_floor ? '≥' + self.formatCurrency(h.depth_usd) : 'Not established';
+                var threshold = h.threshold_bps == null ? (l.depth || {}).threshold_bps : h.threshold_bps;
+                return '<tr><td>' + self._escapeAttr(chain) + '</td><td>' +
+                    self._escapeAttr(threshold == null ? 'Unknown' : Math.abs(threshold) + ' bps') + '</td><td>' +
+                    self._escapeAttr(value) + '</td><td>' + self._escapeAttr(h.status || c.status || 'unknown') +
+                    (bracket.meets_precision_obligation === false ? ' · coarse bracket' : '') + '</td></tr>';
+            }).join('');
+            bits.push('<div class="text-sm font-semibold mt-3">Chain-local secondary exits</div>' +
+                '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Chain</th><th>Marginal impact limit</th><th>Tested floor / crossing range</th><th>Status</th></tr></thead><tbody>' + chainRows + '</tbody></table></div>' +
+                '<p class="text-xs text-slate-500">Separate chain-local observations; do not add them together. Thresholds may differ. Bridging, primary redemption and final cash settlement are excluded. Quote clock: ' +
+                self._escapeAttr(((l.depth || {}).quote || {}).quoted_as_of || 'not supplied') + '.</p>');
         }
         if (!bits.length) return '';
         return bits.join('');
@@ -4513,6 +4573,7 @@ const CommonRenderer = {
     // letting a reader net the two.
     _executionCostBps(liq) {
         if (!liq || typeof liq !== 'object') return null;
+        if (liq.depth && liq.depth.preflight && liq.depth.preflight.passed === false) return null;
         var q = (liq.exit_mark && liq.exit_mark.quotes) || null;
         if (!q || typeof q !== 'object') return null;
         var sizes = Object.keys(q).map(parseFloat).filter(isFinite).sort(function(a, b) { return a - b; });
@@ -5880,9 +5941,7 @@ const CommonRenderer = {
             '<div class="irr-total">$' + (pt.total_usd / 1e6).toFixed(1) + 'M</div>' +
             '<div class="irr-scope">\u26a0\ufe0f ' +
                 this._escapeAttr(pt.scope || 'Scope not declared by the producer.') +
-                ' <strong>This is not a coverage figure.</strong> Dividing it by reUSD\u2019s supply ' +
-                'or claim value compares a two-asset numerator with a one-asset denominator, so the ' +
-                'result is meaningless \u2014 and misleadingly low.' +
+                ' <strong>This is not a coverage figure.</strong> Protocol-wide TVL cannot be divided by one tranche’s supply or claim value to establish that tranche’s reserve coverage.' +
             '</div>' +
             (rows.length
                 ? '<div class="irr-tablewrap"><table class="irr-table">' +
@@ -7379,7 +7438,7 @@ const CommonRenderer = {
         var raw = b.usdc_raw_held, den = b.usdc_denominated;
         var hasUsdcSplit = (raw && raw.value != null) || (den && den.value != null);
         var stars = Array.isArray(b.stars) ? b.stars : [];
-        var hasUsdsEvidence = b.surplus_buffer_history || b.integrity ||
+        var hasUsdsEvidence = b.surplus_buffer_history || (b.integrity && b.integrity.usds_held != null) || b.nav_usds_per_share != null ||
             b.share_of_usds_supply_pct != null || Array.isArray(data.coverage_by_chain) ||
             Array.isArray((data.liquidity || {}).exit_legs);
         if (!hasUsdcSplit && !stars.length && !hasUsdsEvidence) { slot.innerHTML = altHtml; return; }
@@ -7539,7 +7598,7 @@ const CommonRenderer = {
         }
 
         var integrity = b.integrity;
-        if (integrity || b.share_of_usds_supply_pct != null) {
+        if ((integrity && integrity.usds_held != null) || b.nav_usds_per_share != null || b.share_of_usds_supply_pct != null) {
             html += '<div class="panel">' +
                 '<div class="panel-title">sUSDS vault integrity</div>' +
                 '<div class="grid grid-cols-1 md:grid-cols-3 gap-3">' +

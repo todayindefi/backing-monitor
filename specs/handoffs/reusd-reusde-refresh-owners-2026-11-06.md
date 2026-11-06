@@ -1,0 +1,17 @@
+# Re Protocol reUSD/reUSDe freshness repair — 2026-11-06
+
+User authorized checking/refreshing existing feeds and dashboards. Reuse normal producers; one-off only, no jobs, transactions, scoring or broader publication decision. Exact Ethereum identities: reUSD 0x5086bf358635b81d8c47c66d1c8b9e567db70c72; reUSDe 0xddc0f880ff6e4e22e4b74632fbb43ce4df6ccc5a. Keep existing staged registration unchanged.
+
+## PegTracker
+Backing outputs already current November 6 10:01 UTC and identical in BM. Do not recollect merely to restamp. Please repair source semantics in normal outputs: reUSD protocol_reserves_passthrough.scope still calls DefiLlama TVL 'issuer-reported reserves', and backing.integrity.note claims no source timestamp although passthrough.as_of is 08:54:47 UTC. reUSDe integrity also conflates DefiLlama TVL with issuer reserve composition. Distinguish adapter balances + Avalanche off-chain-assets oracle represented as USDC from independently verified cash. Keep tranche attribution/coverage/attachment null; preserve separate supply, NAV, TVL, retrieval clocks. If existing producer offers current on/off-chain split, export supported fields, otherwise explicit unavailable. No invented reserve ratio or first-loss cushion.
+
+## DexTracker
+Normal liquidity feeds November 5 23:49 UTC (daily) current enough; enumeration clocks Sep8/Sep3 are stale. Please refresh existing reUSD four-chain/reUSDe Ethereum venue inventory and existing ladder if necessary. reUSD depth.status=not_measured deliberately refuses cross-chain scalar (denomination_scope.reduction_policy=refuse_cross_chain_scalar), but BM currently falls back to old aggregate; BM repairing that. reUSDe preflight.passed=false (quote_economically_plausible) while status says not_size_responsive/same-rate. Raw output is sUSDe, not USD: scope explicitly excludes timestamped sUSDe/USD leg. Verify units and current route validity, don't present these as USD costs or same-price-at-all-sizes evidence. Current claimant entitlement, capacity and October claim settlement remain unknown; announcement is not actual settlement. Preserve all clocks/failed probes.
+
+## RiskAnalyst
+Please review existing public axis exports for stale factual passages (scores remain authored/unchanged): reusd_re_dependencies cites 93.87% sUSDe vs current protocol TVL composition48.07% (different measure/vintage; avoid unqualified current assertion). reusd_re_backing_overlay loss_protection_layers October12 $21.2m/$73.9m are historical issuer valuations, not live contractual protection; current first-loss capital remains null, historical attachment ratios withdrawn. Both issuer/dependency assessment clocks Aug/Sep remain distinct from DA Nov2 documentary check. Reuse updated canonical DA profile; return normal reviewed export or explicit no-update/gaps. RA owns any interpretation/assessment changes. October pause/resumption documentary evidence is not current runtime availability.
+
+## SecurityAnalyst
+Existing current-authority surface is dated Aug30/Sep6; oracle config Oct13 is separate incomplete evidence. Please bounded refresh exact existing Re authority/NAV-write/redemption controls from prior research, with independent pin, and explicit unresolved paths. No assumptions that documentary October reopening proves live settlement. Return supported axis input/handoff; no new broad audit, jobs or transactions.
+
+BM handles source-consuming rendering and mobile overflow; no owner should duplicate dashboard work. Return exact paths/hashes/source clocks. Do not edit other repositories.

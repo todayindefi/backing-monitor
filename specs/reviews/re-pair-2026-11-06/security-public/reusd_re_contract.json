@@ -1,0 +1,297 @@
+{
+  "schema_version": "contract/1",
+  "asset": "reusd_re",
+  "producer": "security_analyst",
+  "as_of": "2026-11-06T10:19:59Z",
+  "generated_at": "2026-11-06T14:42:39Z",
+  "contract": {
+    "headline": "Checked token, ICL and target administration: 48h. Immediate permissions: CCIP token-pool owner; InstantRedemption pause/unpause; NAV force update / protection operations. Unresolved: MINTER_ROLE invocation conditions.",
+    "headline_basis": "Derived from the named current layer paths; unresolved is distinct from immediate.",
+    "method": "hand-walk",
+    "observed_at": "2026-11-06T10:19:59Z",
+    "source_file": "security_analyst/audits/re-authority-refresh-2026-11-06/owner-summary.json",
+    "source_summary_sha256": "727f656dd34480c1666caf16c513612e3a0fd14170fab827b2ee0a1171b27dba",
+    "source_index_sha256": "f76c9a26f8b846e9965f53a270044c1b4fb8fa0d7c299eceb43f07bfbe0584ea",
+    "observation_block": 26355172,
+    "observation_block_hash": "0x70571daefc69a635a3f56bf88a60b6127a6be6a99099f3e7e61e88f7dfbd1330",
+    "layers": [
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "keys": [
+          "Token DEFAULT_ADMIN_ROLE",
+          "Token UPGRADER_ROLE"
+        ],
+        "topology": "timelocked",
+        "timelock": "48h",
+        "reach": "partial",
+        "observed_at": "2026-11-06T10:19:59Z",
+        "paths": [
+          {
+            "holder": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "via": "DEFAULT_ADMIN_ROLE / UPGRADER_ROLE",
+            "terminal": "timelock",
+            "timelock": "48h",
+            "terminal_address": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "reach": "partial",
+            "note": "Current indexed candidates verified. Complete arbitrary upgrade history not audited."
+          }
+        ],
+        "note": "Token upgrade administration only; not a universal delay on supply or redemption.",
+        "target": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72",
+        "impl_upgradeable": true,
+        "timelock_floor": "unresolved"
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "keys": [
+          "ICL DEFAULT_ADMIN_ROLE",
+          "ICL UPGRADER_ROLE"
+        ],
+        "topology": "timelocked",
+        "timelock": "48h",
+        "reach": "partial",
+        "observed_at": "2026-11-06T10:19:59Z",
+        "paths": [
+          {
+            "holder": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "via": "ICL administration",
+            "terminal": "timelock",
+            "timelock": "48h",
+            "terminal_address": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "reach": "partial",
+            "note": "Safe direct default-admin is false at the observation pin."
+          }
+        ],
+        "note": "The old immediate Safe ICL-administration description is superseded for these checked roles.",
+        "target": "0x4691c475be804fa85f91c2d6d0adf03114de3093",
+        "impl_upgradeable": true,
+        "timelock_floor": "unresolved"
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "keys": [
+          "MINTER_ROLE invocation conditions"
+        ],
+        "topology": "unknown",
+        "timelock": "unresolved",
+        "reach": "partial",
+        "observed_at": "2026-11-06T10:19:59Z",
+        "paths": [
+          {
+            "holder": "0x4691c475be804fa85f91c2d6d0adf03114de3093",
+            "via": "MINTER_ROLE",
+            "terminal": "contract",
+            "timelock": "unresolved",
+            "terminal_address": "0x4691c475be804fa85f91c2d6d0adf03114de3093",
+            "reach": "partial",
+            "note": "Authorized operating contract; mint invocation and caller conditions not fully traversed."
+          },
+          {
+            "holder": "0xa31deebb3680a3007120e74bcbdf4df36f042a40",
+            "via": "MINTER_ROLE",
+            "terminal": "contract",
+            "timelock": "unresolved",
+            "terminal_address": "0xa31deebb3680a3007120e74bcbdf4df36f042a40",
+            "reach": "partial",
+            "note": "Authorized operating contract; mint invocation and caller conditions not fully traversed."
+          },
+          {
+            "holder": "0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465",
+            "via": "MINTER_ROLE",
+            "terminal": "contract",
+            "timelock": "unresolved",
+            "terminal_address": "0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465",
+            "reach": "partial",
+            "note": "Authorized operating contract; mint invocation and caller conditions not fully traversed."
+          }
+        ],
+        "note": "Three current minter contracts. Do not equate contract membership with an unrestricted Safe mint path.",
+        "target": "0x5086bf358635b81d8c47c66d1c8b9e567db70c72"
+      },
+      {
+        "authority_layer": "bridge",
+        "chain": "ethereum",
+        "keys": [
+          "CCIP token-pool owner"
+        ],
+        "topology": "nofm-multisig",
+        "timelock": "none",
+        "reach": "partial",
+        "observed_at": "2026-11-06T10:19:59Z",
+        "paths": [
+          {
+            "holder": "0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465",
+            "via": "owner()",
+            "terminal": "safe",
+            "timelock": "none",
+            "terminal_address": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+            "reach": "partial",
+            "note": "Pool ownership/configuration path; remote mint conditions and all-chain roles remain unresolved."
+          }
+        ],
+        "note": "Pool owner is the nominal 3-of-5 Safe. This does not certify every remote bridge path.",
+        "target": "0xf00b3b06690bc7e2bc6a9ccae55d17b7cd818465",
+        "n": 3,
+        "m": 5
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "keys": [
+          "Redemption target administration"
+        ],
+        "topology": "timelocked",
+        "timelock": "48h",
+        "reach": "partial",
+        "observed_at": "2026-11-06T10:19:59Z",
+        "paths": [
+          {
+            "holder": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "via": "AccessManager role 0 / setAuthority",
+            "terminal": "timelock",
+            "timelock": "48h",
+            "terminal_address": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "reach": "partial",
+            "note": "Known timelock caller permitted; checked target-admin delay also 48h. Do not add delays without tracing scheduling."
+          }
+        ],
+        "note": "AccessManager role 0: timelock present, Safe absent. Operational function roles are separate.",
+        "target": "0xa31deebb3680a3007120e74bcbdf4df36f042a40",
+        "timelock_floor": "unresolved"
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "keys": [
+          "InstantRedemption pause/unpause"
+        ],
+        "topology": "nofm-multisig",
+        "timelock": "none",
+        "reach": "partial",
+        "observed_at": "2026-11-06T10:19:59Z",
+        "paths": [
+          {
+            "holder": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+            "via": "canCall(pause/unpause)",
+            "terminal": "safe",
+            "timelock": "none",
+            "terminal_address": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+            "reach": "partial",
+            "note": "Immediate permission verified. Underlying function conditions still apply."
+          }
+        ],
+        "note": "Separate from redemption execution: Safe cannot directly call redeemFor.",
+        "target": "0xa31deebb3680a3007120e74bcbdf4df36f042a40",
+        "n": 3,
+        "m": 5
+      },
+      {
+        "authority_layer": "oracle",
+        "chain": "ethereum",
+        "keys": [
+          "NAV force update / protection operations"
+        ],
+        "topology": "nofm-multisig",
+        "timelock": "none",
+        "reach": "partial",
+        "observed_at": "2026-11-06T10:19:59Z",
+        "paths": [
+          {
+            "holder": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+            "via": "AccessManager operational role",
+            "terminal": "safe",
+            "timelock": "none",
+            "terminal_address": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+            "reach": "partial",
+            "note": "Permission is immediate; oracle bands, velocity, interval and markdown guards still apply."
+          }
+        ],
+        "note": "Guarded senior NAV path; immediate permission is not an unrestricted NAV setter.",
+        "target": "0xb45ac37cc7ff7ec317e7d8c308781ece431639f6",
+        "n": 3,
+        "m": 5
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "keys": [
+          "NAV configuration / sink sync"
+        ],
+        "topology": "timelocked",
+        "timelock": "48h",
+        "reach": "partial",
+        "observed_at": "2026-11-06T10:19:59Z",
+        "paths": [
+          {
+            "holder": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "via": "AccessManager role 0",
+            "terminal": "timelock",
+            "timelock": "48h",
+            "terminal_address": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "reach": "partial",
+            "note": "Known timelock caller permitted; Safe is not permitted on checked config/sync selectors."
+          }
+        ],
+        "note": "Named administration path only; complete alternate-writer enumeration remains unresolved.",
+        "target": "0xb45ac37cc7ff7ec317e7d8c308781ece431639f6",
+        "timelock_floor": "unresolved"
+      }
+    ],
+    "unresolved": [
+      "Log-index rate limits blocked exhaustive current timelock, share-price-writer and legacy-consumer holder enumeration even after bounded slower retry; failed responses retained, never treated as zero members.",
+      "Known candidates are direct pinned checks; unspecified holders/alternate junior price writers remain unresolved.",
+      "AccessManager operational role holders beyond known Safe/timelock not enumerated; allowed role and canCall checks do not establish every caller or transaction success.",
+      "Ingestion report-provider/CRE workflow trust and complete multi-chain role/writer/CCIP configuration closure not in this refresh.",
+      "Explorer-runtime equality is not independent compiler reproduction or full audited-commit/deployment correspondence.",
+      "Junior window state does not independently reconcile each claimant or prove finalization/full payment; senior unpaused does not certify executable user redemption or cash capacity.",
+      "No tranche-attributed reserves, attachment point, first-loss coverage or economic loss waterfall inferred."
+    ],
+    "walk_notes": [
+      "Ethereum-only observations at block 26355172. Other chains and complete role-holder sets remain unresolved.",
+      "Nominal Safe threshold does not establish independent signers. An administration delay does not delay every operational selector.",
+      "Contract sources match explorer-verified runtimes; independently reproduced audited builds and complete audit correspondence remain unresolved.",
+      "Senior NAV configuration: normal/force bands 50/150 bps; cumulative 200 bps per 14 days; staleness 36h; force interval 4h; markdown delay/floor 24h. Protection mode off at this pin.",
+      "Oracle source-data time and legacy-consumer delivery time are different. Sink replay can refresh delivery time without new source data.",
+      "Instant-redemption contract is unpaused. KYC, payout, caller and cash conditions remain; this is not an executable exit guarantee."
+    ],
+    "review": null,
+    "authority_shared_with": [
+      {
+        "asset": "reusde-re",
+        "shares": [
+          {
+            "kind": "timelock",
+            "address": "0x69ddea332723cf5407151aaf68b9b076557fca93",
+            "roles": [
+              "Token upgrade administration",
+              "ICL administration"
+            ]
+          },
+          {
+            "kind": "safe",
+            "address": "0x8eec10616802ef639ca55c98ac856553fadefbad",
+            "n": 3,
+            "m": 5,
+            "roles": [
+              "CCIP token-pool owner",
+              "Known timelock proposer"
+            ]
+          },
+          {
+            "kind": "access-manager",
+            "address": "0x3f0da1c363e34802c6f12f9c27276dc0e6696fd8",
+            "target_admin_delays_seconds": {
+              "0xa31deebb3680a3007120e74bcbdf4df36f042a40": 172800,
+              "0xd2e077d945ec77b45fbe4622e01f4c79e4ba389a": 172800,
+              "0xb45ac37cc7ff7ec317e7d8c308781ece431639f6": 172800
+            },
+            "note": "Target admin delay differs from individual operational selector permission."
+          }
+        ]
+      }
+    ]
+  }
+}
