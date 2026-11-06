@@ -1,37 +1,17 @@
 {
  "schema_version": "liquidity/1",
  "asset_slug": "reusde_re",
- "as_of": "2026-11-05T23:49:20Z",
+ "as_of": "2026-11-06T10:24:12Z",
  "producer": "dextracker",
  "note": "Axis 3 (Liquidity & Exit), single producer. The axis is the worse of executable venue depth and primary redemption. Pool TVL is context only and is never substituted for executable depth.",
  "depth": {
-  "status": "not_size_responsive",
+  "status": "partial_leg_quote_incomplete",
   "depth_usd": null,
-  "depth_usd_semantics": "lower_bound_of_bracket: a size that cleared the threshold, never the crossing itself. Read `bracket` for the located range and `bracket.meets_precision_obligation` for whether it is within 1% of midpoint; a false there with a wide bracket means depth_usd may understate the crossing by the bracket's width.",
   "is_floor": null,
-  "threshold_bps": -200.0,
-  "size_response": "insufficient_rungs",
-  "marginal_cost_monotonic_within_tested_range": true,
-  "tested_through_input_usd": 100000000.0,
-  "baseline_rung": {
-   "size_usd": 100.0,
-   "slippage_bps": -2583.3884100727755,
-   "amount_out_tokens": 74.16611589927226
-  },
-  "rung_set": {
-   "grid": "decade",
-   "start_usd": 1000.0,
-   "cap": 10,
-   "published_rungs": 6,
-   "decade_rungs": 6,
-   "envelope_probes": 0,
-   "termination": "grid_exhausted",
-   "termination_note": "The grid was exhausted without crossing the threshold; the figure is a floor, not a located crossing.",
-   "spec": "riskAnalyst liquidity-ladder-spec.md \u00a77 (178e54a)"
-  },
-  "slippage_convention": "Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. The dated external mid sizes the input notional and is NOT the impact reference.",
-  "basis": "No depth figure is published: the venue returned the same rate at every tested size, so the largest clearing rung is evidence about the call rather than about the venue.",
   "bracket": null,
+  "threshold_bps": null,
+  "slippage_convention": "not measured in USD",
+  "basis": "Native reUSDe -> sUSDe observations only. No independently timestamped sUSDe/USD valuation or complete cash leg; USD cost/depth and claimant capacity remain unmeasured.",
   "quote": {
    "method": "eth_call Curve get_dy(int128,int128,uint256), falling through to get_dy(uint256,uint256,uint256)",
    "venue": "curve",
@@ -43,20 +23,219 @@
     "index": 0
    },
    "baseline_size_usd": 100.0,
-   "quoted_as_of": "2026-11-05T23:49:20Z",
+   "quoted_as_of": "2026-11-06T10:24:08Z",
    "pool": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
    "token_out": {
     "symbol": "sUSDe",
     "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
     "index": 1,
     "decimals": 18
-   }
+   },
+   "quote_block_number": 26355193,
+   "quote_block_hash": "0x85a7da724f8f8daf742b67376820f3c09cc8889f37ee1a41fbd6483426eae224",
+   "quote_expiry": null,
+   "validity_basis": "Pinned get_dy view; no enforceable minimum, transaction or settlement.",
+   "observed_at": "2026-11-06T10:24:12Z",
+   "minimum_out": null
   },
+  "pool_identity": {
+   "pool": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+   "block": 26355193,
+   "block_hash": "0x85a7da724f8f8daf742b67376820f3c09cc8889f37ee1a41fbd6483426eae224",
+   "checked_at": "2026-11-06T10:24:07Z",
+   "coins_raw": [
+    "0x000000000000000000000000ddc0f880ff6e4e22e4b74632fbb43ce4df6ccc5a",
+    "0x0000000000000000000000009d39a5de30e57443bff2a8307a4256c8797a3497"
+   ],
+   "coins": [
+    "0xddc0f880ff6e4e22e4b74632fbb43ce4df6ccc5a",
+    "0x9d39a5de30e57443bff2a8307a4256c8797a3497"
+   ],
+   "verified_pair": true,
+   "token_decimals": [
+    18,
+    18
+   ],
+   "block_timestamp": 1793960651
+  },
+  "rpc_view_calls": [
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0xc66106570000000000000000000000000000000000000000000000000000000000000000",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:07Z",
+    "received_at": "2026-11-06T10:24:08Z",
+    "raw_result": "0x000000000000000000000000ddc0f880ff6e4e22e4b74632fbb43ce4df6ccc5a",
+    "failure_basis": null
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0xc66106570000000000000000000000000000000000000000000000000000000000000001",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:08Z",
+    "received_at": "2026-11-06T10:24:08Z",
+    "raw_result": "0x0000000000000000000000009d39a5de30e57443bff2a8307a4256c8797a3497",
+    "failure_basis": null
+   },
+   {
+    "to": "0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a",
+    "data": "0x313ce567",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:08Z",
+    "received_at": "2026-11-06T10:24:08Z",
+    "raw_result": "0x0000000000000000000000000000000000000000000000000000000000000012",
+    "failure_basis": null
+   },
+   {
+    "to": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+    "data": "0x313ce567",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:08Z",
+    "received_at": "2026-11-06T10:24:08Z",
+    "raw_result": "0x0000000000000000000000000000000000000000000000000000000000000012",
+    "failure_basis": null
+   },
+   {
+    "to": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+    "data": "0x70a0823100000000000000000000000043b98eea5c689f0036918f590a4b55f22d853734",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:08Z",
+    "received_at": "2026-11-06T10:24:09Z",
+    "raw_result": "0x00000000000000000000000000000000000000000000000a6e91c93ca59f577b",
+    "failure_basis": null
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x5e0d443f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000003c34a92d3d63c3300",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:09Z",
+    "received_at": "2026-11-06T10:24:09Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x556d6e9f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000003c34a92d3d63c3300",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:09Z",
+    "received_at": "2026-11-06T10:24:09Z",
+    "raw_result": "0x00000000000000000000000000000000000000000000000404c07bf1b4bb092f",
+    "failure_basis": null
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x5e0d443f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000025a0e9bc465e59fe05",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:09Z",
+    "received_at": "2026-11-06T10:24:09Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x556d6e9f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000025a0e9bc465e59fe05",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:09Z",
+    "received_at": "2026-11-06T10:24:10Z",
+    "raw_result": "0x00000000000000000000000000000000000000000000000a1045af93bd506ceb",
+    "failure_basis": null
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x5e0d443f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000017849215abfaf83ec35",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:10Z",
+    "received_at": "2026-11-06T10:24:10Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x556d6e9f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000017849215abfaf83ec35",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:10Z",
+    "received_at": "2026-11-06T10:24:10Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x5e0d443f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000eb2db4d8b7cdb273a13",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:10Z",
+    "received_at": "2026-11-06T10:24:10Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x556d6e9f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000eb2db4d8b7cdb273a13",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:10Z",
+    "received_at": "2026-11-06T10:24:11Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x5e0d443f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000092fc910772e08f8844c6",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:11Z",
+    "received_at": "2026-11-06T10:24:11Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x556d6e9f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000010000000000000000000000000000000000000000000092fc910772e08f8844c6",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:11Z",
+    "received_at": "2026-11-06T10:24:11Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x5e0d443f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000005bdddaa4a7cc59b52afc1",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:11Z",
+    "received_at": "2026-11-06T10:24:11Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x556d6e9f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000005bdddaa4a7cc59b52afc1",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:11Z",
+    "received_at": "2026-11-06T10:24:12Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x5e0d443f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000396aa8a6e8dfb8113add91",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:12Z",
+    "received_at": "2026-11-06T10:24:12Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   },
+   {
+    "to": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "data": "0x556d6e9f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000396aa8a6e8dfb8113add91",
+    "block": "0x19225f9",
+    "request_started_at": "2026-11-06T10:24:12Z",
+    "received_at": "2026-11-06T10:24:12Z",
+    "raw_result": null,
+    "failure_basis": "No successful decoded RPC result; cause unclassified."
+   }
+  ],
   "anchor": {
-   "fair_value": 1.4399386016922253,
+   "fair_value": 1.4406636669402069,
    "fair_value_basis": "market",
    "fair_value_source": "peg_tracker:CoinGecko API external USD aggregate mid for re-protocol-reusde; off-chain market-data API, distinct from the off-chain issuer NAV API and not a contract read",
-   "fair_value_as_of": "2026-11-05T23:03:55Z",
+   "fair_value_as_of": "2026-11-06T10:00:52Z",
    "fair_value_choice": "market_price",
    "fair_value_choice_mode": "inherited",
    "market_price_cross_check": null,
@@ -64,112 +243,169 @@
    "self_referential_determination": "source_prefix_heuristic",
    "self_referential_basis": null
   },
+  "denomination_scope": {
+   "measured_leg": "Ethereum reUSDe -> sUSDe Curve leg only",
+   "input_reference": "Dated reUSDe USD mark sizes input only",
+   "output_unit": "sUSDe",
+   "output_decimals": 18,
+   "excluded_leg": "sUSDe -> USD; independent timestamped USD valuation",
+   "exit_cost_scope": "Native token-rate observations only; no USD bracket, NAV discount or all-in cash exit without an independent sUSDe/USD leg."
+  },
+  "preflight": {
+   "passed": null,
+   "status": "usd_valuation_not_assessed",
+   "blocking_failures": [],
+   "pool_identity_passed": true,
+   "basis": "No USD economic-plausibility assertion without an sUSDe USD output mark."
+  },
   "rungs": [
    {
     "size_usd": 1000.0,
+    "input_reference_notional_usd": 1000.0,
+    "amount_in_raw": "694124536453312151045",
+    "amount_in_tokens": "694.124536453312151045",
+    "request_started_at": "2026-11-06T10:24:09Z",
+    "received_at": "2026-11-06T10:24:10Z",
     "status": "ok",
-    "amount_in_tokens": 694.474055230406,
-    "amount_out_tokens": 185.6450550416302,
-    "slippage_bps": -8143.549449583698,
-    "route_venues": [],
-    "route_leg_count": 0,
-    "route_hops": [],
-    "quote_block_numbers": [],
-    "quote_as_of": null,
-    "quote_expiry": null,
-    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
-    "router_address": null,
-    "route_id": null,
+    "quote_block_number": 26355193,
+    "quote_summary": {
+     "amountOut": "185639977064166616299",
+     "route": [],
+     "venue": "curve",
+     "pool": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+     "get_dy_selector": "0x556d6e9f"
+    },
+    "slippage_bps": null,
+    "slippage_bps_debiased": null,
     "gas_usd": null,
-    "router_price_in": null,
-    "router_price_out": null,
-    "slippage_bps_debiased": -5560.161039510923,
-    "price_bias_bps": -2583.3884100727755,
-    "rung_kind": "decade"
+    "quote_expiry": null,
+    "failure_basis": null,
+    "amount_out_raw": "185639977064166616299",
+    "amount_out_tokens": "185.639977064166616299",
+    "output_unit": "sUSDe",
+    "output_tokens_per_input": "0.2674447700879581820238266331",
+    "own_token_rate_cost_bps": "7495.730280267939713471930417",
+    "own_token_rate_basis": "Positive average native output-rate cost versus smallest successful observation; no USD valuation"
    },
    {
     "size_usd": 10000.0,
+    "input_reference_notional_usd": 10000.0,
+    "amount_in_raw": "6941245364533121510453",
+    "amount_in_tokens": "6941.245364533121510453",
+    "request_started_at": "2026-11-06T10:24:10Z",
+    "received_at": "2026-11-06T10:24:10Z",
     "status": "quote_failed",
-    "rung_kind": "decade"
+    "quote_block_number": 26355193,
+    "quote_summary": null,
+    "slippage_bps": null,
+    "slippage_bps_debiased": null,
+    "gas_usd": null,
+    "quote_expiry": null,
+    "failure_basis": "Both supported get_dy selectors returned no positive result; cause unclassified, not zero liquidity."
    },
    {
     "size_usd": 100000.0,
+    "input_reference_notional_usd": 100000.0,
+    "amount_in_raw": "69412453645331215104531",
+    "amount_in_tokens": "69412.453645331215104531",
+    "request_started_at": "2026-11-06T10:24:10Z",
+    "received_at": "2026-11-06T10:24:11Z",
     "status": "quote_failed",
-    "rung_kind": "decade"
+    "quote_block_number": 26355193,
+    "quote_summary": null,
+    "slippage_bps": null,
+    "slippage_bps_debiased": null,
+    "gas_usd": null,
+    "quote_expiry": null,
+    "failure_basis": "Both supported get_dy selectors returned no positive result; cause unclassified, not zero liquidity."
    },
    {
     "size_usd": 1000000.0,
+    "input_reference_notional_usd": 1000000.0,
+    "amount_in_raw": "694124536453312151045318",
+    "amount_in_tokens": "694124.536453312151045318",
+    "request_started_at": "2026-11-06T10:24:11Z",
+    "received_at": "2026-11-06T10:24:11Z",
     "status": "quote_failed",
-    "rung_kind": "decade"
+    "quote_block_number": 26355193,
+    "quote_summary": null,
+    "slippage_bps": null,
+    "slippage_bps_debiased": null,
+    "gas_usd": null,
+    "quote_expiry": null,
+    "failure_basis": "Both supported get_dy selectors returned no positive result; cause unclassified, not zero liquidity."
    },
    {
     "size_usd": 10000000.0,
+    "input_reference_notional_usd": 10000000.0,
+    "amount_in_raw": "6941245364533121510453185",
+    "amount_in_tokens": "6941245.364533121510453185",
+    "request_started_at": "2026-11-06T10:24:11Z",
+    "received_at": "2026-11-06T10:24:12Z",
     "status": "quote_failed",
-    "rung_kind": "decade"
+    "quote_block_number": 26355193,
+    "quote_summary": null,
+    "slippage_bps": null,
+    "slippage_bps_debiased": null,
+    "gas_usd": null,
+    "quote_expiry": null,
+    "failure_basis": "Both supported get_dy selectors returned no positive result; cause unclassified, not zero liquidity."
    },
    {
     "size_usd": 100000000.0,
+    "input_reference_notional_usd": 100000000.0,
+    "amount_in_raw": "69412453645331215104531857",
+    "amount_in_tokens": "69412453.645331215104531857",
+    "request_started_at": "2026-11-06T10:24:12Z",
+    "received_at": "2026-11-06T10:24:12Z",
     "status": "quote_failed",
-    "rung_kind": "decade"
+    "quote_block_number": 26355193,
+    "quote_summary": null,
+    "slippage_bps": null,
+    "slippage_bps_debiased": null,
+    "gas_usd": null,
+    "quote_expiry": null,
+    "failure_basis": "Both supported get_dy selectors returned no positive result; cause unclassified, not zero liquidity."
    }
   ],
-  "preflight": {
-   "passed": false,
-   "blocking_failures": [
-    "quote_economically_plausible"
-   ],
-   "warnings": [],
-   "findings": [
-    {
-     "check": "failure_is_not_a_wall",
-     "passed": true,
-     "blocking": false,
-     "detail": "All failures are above the largest success.",
-     "evidence": {
-      "failed": [
-       10000.0,
-       100000.0,
-       1000000.0,
-       10000000.0,
-       100000000.0
-      ]
-     }
-    },
-    {
-     "check": "quote_economically_plausible",
-     "passed": false,
-     "blocking": true,
-     "detail": "Quote implies -8,144bps against the reference rate. Treat as `invalid_quote`, not as a deep rung -- a successful call is not a valid quote.",
-     "evidence": {
-      "loss_bps": -8143.549449583698,
-      "expected": 1000.0,
-      "received": 185.6450550416302
-     }
-    },
-    {
-     "check": "depth_against_supply",
-     "passed": true,
-     "blocking": false,
-     "detail": "Not applicable: no figure to test.",
-     "evidence": {}
-    }
-   ]
+  "size_response": "insufficient_rungs",
+  "primary_cash_depth_status": "not_measured_partial_leg",
+  "output_balance_observation": {
+   "token": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+   "raw": "192434811215204538235",
+   "block": 26355193,
+   "basis": "Token custody balance only, not claimant entitlement/cash capacity."
   },
-  "supply_check": {
-   "status": "passed",
-   "token": "0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a",
-   "total_supply_units": 20458905.671728726,
-   "total_supply_usd": 29459568.0251022,
-   "non_float_holders": {},
-   "float_units": 20458905.671728726,
-   "float_usd": 29459568.0251022,
-   "read_as_of": "2026-11-05T23:49:20Z"
+  "baseline_rung": {
+   "size_usd": 100.0,
+   "input_reference_notional_usd": 100.0,
+   "amount_in_raw": "69412453645331215104",
+   "amount_in_tokens": "69.412453645331215104",
+   "request_started_at": "2026-11-06T10:24:09Z",
+   "received_at": "2026-11-06T10:24:09Z",
+   "status": "ok",
+   "quote_block_number": 26355193,
+   "quote_summary": {
+    "amountOut": "74129386144567855407",
+    "route": [],
+    "venue": "curve",
+    "pool": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
+    "get_dy_selector": "0x556d6e9f"
+   },
+   "slippage_bps": null,
+   "slippage_bps_debiased": null,
+   "gas_usd": null,
+   "quote_expiry": null,
+   "failure_basis": null,
+   "amount_out_raw": "74129386144567855407",
+   "amount_out_tokens": "74.129386144567855407",
+   "output_unit": "sUSDe",
+   "output_tokens_per_input": "1.067955132710596929031119338",
+   "own_token_rate_cost_bps": "0",
+   "own_token_rate_basis": "Positive average native output-rate cost versus smallest successful observation; no USD valuation"
   },
-  "denomination_scope": {
-   "measured_leg": "Ethereum reUSDe -> sUSDe Curve leg only",
-   "excluded_leg": "sUSDe -> USD; independent timestamped USD valuation",
-   "exit_cost_scope": "The marginal bracket measures deterioration from the venue baseline. Raw token-unit baseline is not a USD discount or all-in cash exit."
-  }
+  "successful_rungs": 1,
+  "failed_rungs": 5
  },
  "primary_exit": {
   "venue": "Re Protocol quarterly WindowRedemption",
@@ -221,7 +457,8 @@
   "excluded_venue_count": 0,
   "unestablished_venue_count": 0,
   "live_venue_count_is_floor": false,
-  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it."
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it.",
+  "superseded_for_chain_coverage_by": "venue_census: configured scope searched by exact address. This block's by_chain search is historical from its own as_of and is retained as the record of that search."
  },
  "venues": [
   {
@@ -254,5 +491,307 @@
   "basis": "Measured marginal Curve depth is a partial exit leg. Primary windows are periodic; current claimant capacity and complete USD exit remain unmeasured."
  },
  "refresh_cadence": "daily",
- "payload_revised_at": "2026-11-05T23:49:20Z"
+ "payload_revised_at": "2026-11-06T10:27:51Z",
+ "venue_census": {
+  "producer": "dextracker:venue_inventory.py",
+  "as_of": "2026-11-06T10:23:07Z",
+  "refresh_cadence": "daily",
+  "scope_note": "Exact-token venue inventory on configured scope: eth. Not all deployments. Pool TVL, not depth: measured depth keeps its own clock.",
+  "venues_by_role": {
+   "dollar_exit": {
+    "pool_count": 2,
+    "tvl_usd": 187637.8953,
+    "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
+   },
+   "family_swap": {
+    "pool_count": 0,
+    "tvl_usd": 0,
+    "meaning": "Swaps the asset for its own sister token: NOT a way out."
+   },
+   "other_pair": {
+    "pool_count": 0,
+    "tvl_usd": 0,
+    "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
+   }
+  },
+  "chains": {
+   "eth": {
+    "status": "queried",
+    "token": "0xddc0f880ff6e4e22e4b74632fbb43ce4df6ccc5a",
+    "queried_at": "2026-11-06T10:23:10Z",
+    "finding": "venues_found",
+    "token_indexed": true,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 13,
+    "published_pool_count": 3,
+    "below_floor_count": 10,
+    "dollar_exit_pool_count": 2,
+    "implausible_tvl_count": 1,
+    "dollar_exit_tvl_usd": 187637.8953,
+    "local_dollar_exit": true
+   }
+  },
+  "enumeration": {
+   "as_of": "2026-11-06T10:23:07Z",
+   "source": "GeckoTerminal token-pools API, paginated, by exact chain-specific address",
+   "venue_count": 13,
+   "published_venue_count": 3,
+   "tvl_floor_usd": 1000.0,
+   "chains_queried": [
+    "eth"
+   ],
+   "chains_query_failed": [],
+   "chains_not_queried": [],
+   "chains_truncated": [],
+   "chains_without_local_dollar_exit": [],
+   "chains_none_found": [],
+   "finding_meanings": {
+    "venues_found": "Pools at or above the $1,000 TVL floor were found.",
+    "none_found": "Searched, and nothing at or above the floor was found: a market fact as far as the indexer reaches.",
+    "not_checked": "Not searched, for the stated reason: a gap in what this tool can reach, NOT a finding about the market.",
+    "unknown": "The search failed or the token could not be confirmed: NOT empty."
+   },
+   "chain_count_is_floor": true,
+   "chain_count_note": "FLOOR, not a census: chains are the asset's CoinGecko platforms. A deployment CoinGecko does not list is not queried here.",
+   "live_venue_count": 0,
+   "excluded_venue_count": 0,
+   "unestablished_venue_count": 3,
+   "live_venue_count_is_floor": true,
+   "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 3 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
+  },
+  "venues": [
+   {
+    "name": "reUSDe / sUSDe",
+    "chain": "eth",
+    "dex": "curve",
+    "kind": "swap",
+    "address": "0x43b98eea5c689f0036918f590a4b55f22d853734",
+    "counter_asset": {
+     "symbol": "sUSDe",
+     "address": "0x9d39a5de30e57443bff2a8307a4256c8797a3497",
+     "decimals": 18,
+     "price_usd": 1.25168132283392
+    },
+    "role": "family_swap",
+    "tvl_usd": 523394.6522,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": null,
+    "volume_24h_usd": 5389.4350500863,
+    "as_of": "2026-11-06T10:23:10Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x43b98eea5c689f0036918f590a4b55f22d853734",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "implausible",
+    "tvl_exclusion_basis": "Reported TVL $523,395 is over 20x the $370 the pool holds on-chain in its two named legs: an indexer error (typically a drained leg breaking its price maths), excluded from every total. The pool itself exists.",
+    "tvl_exclusion_code": "tvl_exceeds_onchain_custody",
+    "custody_check": {
+     "token_units_in_pool": 89.53883741700213,
+     "counter_units_in_pool": 192.43481121520455,
+     "two_leg_usd_onchain": 369.814654036889,
+     "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+    },
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   },
+   {
+    "name": "reUSDe / USDC 0.3%",
+    "chain": "eth",
+    "dex": "uniswap-v4-ethereum",
+    "kind": "swap",
+    "address": "0xffc7b3a8868a1790e18d4600bda62320990b8f5f0947d9bf7335ce5b14000d14",
+    "counter_asset": {
+     "symbol": "USDC",
+     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+     "decimals": 6,
+     "price_usd": 0.998766325940633
+    },
+    "role": "dollar_exit",
+    "tvl_usd": 183548.6858,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+    "volume_24h_usd": 76158.2418726608,
+    "as_of": "2026-11-06T10:23:10Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0xffc7b3a8868a1790e18d4600bda62320990b8f5f0947d9bf7335ce5b14000d14",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": "not_checked",
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   },
+   {
+    "name": "reUSDe / USDC 0.1%",
+    "chain": "eth",
+    "dex": "uniswap-v4-ethereum",
+    "kind": "swap",
+    "address": "0x8a080657834ded1131439032efa6a11b3cc843797aef9b3abba7e774c2c02418",
+    "counter_asset": {
+     "symbol": "USDC",
+     "address": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+     "decimals": 6,
+     "price_usd": 0.998476215535544
+    },
+    "role": "dollar_exit",
+    "tvl_usd": 4089.2095,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": "Uniswap v4 pool: indexer-derived reserves from the shared PoolManager, previously found fabricated on another chain. Unverified on-chain here.",
+    "volume_24h_usd": 4110.5503376432,
+    "as_of": "2026-11-06T10:23:10Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x8a080657834ded1131439032efa6a11b3cc843797aef9b3abba7e774c2c02418",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": "not_checked",
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   }
+  ],
+  "non_swap_listings": {
+   "status": "not_queried",
+   "listings": null,
+   "basis": "Ticker is shared with unrelated tokens; a symbol match would list strangers."
+  },
+  "venue_diagnostics": {
+   "reason_meanings": {
+    "below_tvl_floor": "Reported TVL under $1,000: dust. Left out of `venues` and every total.",
+    "duplicate_listing": "The same pool address returned twice by the indexer; kept once in `venues`.",
+    "tvl_exceeds_supply": "Kept in `venues`, but its TVL is out of every total: it exceeds the token's whole value on the chain.",
+    "tvl_exceeds_onchain_custody": "Kept in `venues`, but its TVL is out of every total: it is far above what the pool holds on-chain.",
+    "counter_token_value_implausible": "Kept in `venues`, but its TVL is out of every total: it rests on a price for a token with no real market value."
+   },
+   "rejected_count": 11,
+   "rejected_by_reason": {
+    "below_tvl_floor": 10,
+    "tvl_exceeds_onchain_custody": 1
+   },
+   "rejected": [
+    {
+     "chain": "eth",
+     "address": "0x43b98eea5c689f0036918f590a4b55f22d853734",
+     "name": "reUSDe / sUSDe",
+     "dex": "curve",
+     "role": "family_swap",
+     "tvl_usd": 523394.6522,
+     "volume_24h_usd": 5389.4350500863,
+     "reason": "tvl_exceeds_onchain_custody"
+    },
+    {
+     "chain": "eth",
+     "address": "0xe8595bf16ab02a9cc4b15a640e76af999343ce77e7498c973cb4cd7473d596d5",
+     "name": "reUSDe / USDC 98.4%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 421.2446,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x073ae4eb8aad32756eae3e33902e5b94ed22610a",
+     "name": "USDC / reUSDe 0.05%",
+     "dex": "supernova-cl",
+     "role": "dollar_exit",
+     "tvl_usd": 210.6558,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0xc817c10fa6bd2e19d4dfdd4df088c2de20d6fb9ede41ca612274ea6fe6b77864",
+     "name": "sUSDe / reUSDe 1%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "family_swap",
+     "tvl_usd": 175.8679,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x9d80be653fce8798e095dd5cb7a22a5d9acd0108926dfc58406f8b1864fab0ca",
+     "name": "USDC / reUSDe 90%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 159.0299,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x271297f418fecaaddc03bdd9f0a2ecacf87fa83d3966cea9eec62de17f4a1830",
+     "name": "reUSDe / USDT 0.3%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 7.2796,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x0226eec032750bfd57c5a68bb7376d15adfc7d285615be38132b1b82778f751d",
+     "name": "reUSDe / USDC 0.28%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 4.4301,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x2cbbfc9bd710c689cf3ec20b95fcf1dd1336b648",
+     "name": "sUSG / reUSDe",
+     "dex": "curve",
+     "role": "other_pair",
+     "tvl_usd": 1.9891577997,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x0bee2cd2567eea50dc38baabc43d80c9bdaeb9f6",
+     "name": "sUSDe / reUSDe",
+     "dex": "uniswap_v2",
+     "role": "family_swap",
+     "tvl_usd": 2.058315843e-12,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x321c4b7204364c7a36d630c1fc087348a89849221feb9006f0f2dbee023b17ae",
+     "name": "reUSDe / USDC 1%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 0.0,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x5fe96140ee66dc527afa9f0b52d354e9220e2cce45e5be2601de4785fc5b05bc",
+     "name": "reUSDe / USDC 0.9%",
+     "dex": "uniswap-v4-ethereum",
+     "role": "dollar_exit",
+     "tvl_usd": 0.0,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    }
+   ],
+   "published_zero_volume_count": 0,
+   "volume_policy": "24h volume is published as context and is never a reason to reject a pool: a quiet day is not a dead pool (backing-monitor's fleet venue rule 5).",
+   "dedup_basis": "One source (GeckoTerminal) keyed by pool address, so the same pool cannot enter twice. Liquidity wrappers that re-list a pool (Convex, Yearn, StakeDAO, Beefy, Aura) are kept out of `venues` and marked `lp_wrapper` in `non_swap_listings`."
+  }
+ },
+ "inventory_source_selection": {
+  "current": "venue_census",
+  "historical": "enumeration",
+  "basis": "Current census has its own clock; old search and quote clocks are not restamped."
+ }
 }
