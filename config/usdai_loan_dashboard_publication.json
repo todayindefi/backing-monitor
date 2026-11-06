@@ -1,0 +1,18 @@
+{
+  "schema_version": "public-loan-projection-policy/1",
+  "authorization": "User requested more loan/repayment data on USDai/sUSDai dashboards, 2026-11-06",
+  "output_file": "usdai_loan_evidence.json",
+  "source_origin": "https://api.usd.ai",
+  "allowed_source_paths": [
+    "/usdai/dashboard/loan-snapshot",
+    "/usdai/dashboard/proof-of-reserves?chainId=42161",
+    "/usdai/dashboard/future-yield-payments",
+    "/usdai/dashboard/principal-repaid-history",
+    "/usdai/dashboard/yield-repaid-history",
+    "/usdai/dashboard/default-rate",
+    "/usdai/loans/42161/{published_document_uuid}/schedule"
+  ],
+  "allowed_record_fields": ["record_id", "publisher_name", "reported_status", "remaining_principal", "remaining_interest", "reference_currency", "reported_apr_pct", "last_scheduled_due_at", "schedule_as_of"],
+  "excluded": ["borrower addresses", "precise locations", "private profiles", "private evidence packages", "native private-review comparisons", "Entropy addendum", "holder balances", "scores", "credit all-clear"],
+  "refresh": "Manual one-off producer; no recurring job installed"
+}

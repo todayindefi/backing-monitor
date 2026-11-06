@@ -76,6 +76,22 @@ for (const slug of ['usdai','susdai']) {
 }
 const pending=r._renderGovPanel({governance:{call_scheduled:{pending_ops:[{target:'0x1234',eta_iso:'2026-11-07T00:26:30Z'}]}}},{},'usdai');
 assert.match(pending,/earliest execution 2026-11-07T00:26:30Z/);
+const loans=JSON.parse(fs.readFileSync('data/usdai_loan_evidence.json','utf8'));
+const loanHtml=r._renderLoanEvidence(loans);
+assert.match(loanHtml,/Reported loan book — partial population/);
+assert.match(loanHtml,/176\.7M/);
+assert.match(loanHtml,/305\.5M/);
+assert.match(loanHtml,/128\.8M/);
+assert.match(loanHtml,/Zero reported history does not establish that no payments occurred/);
+assert.match(loanHtml,/scheduled, not paid/);
+assert.match(loanHtml,/\$0 reported/);
+assert.match(loanHtml,/one-off observation/);
+assert.match(loanHtml,/not a default or delinquency census/);
+assert.match(loanHtml,/2026-06-26/);
+assert.doesNotMatch(loanHtml,/undefined|NaN|\/home\/|borrower_address|Guaranteed receipts/);
+assert.equal(r._renderLoanEvidence({schema_version:'unknown'}),'');
+assert.equal(r._renderLoanEvidence({...loans,chain_id:1}),'');
+assert.match(r._renderLoanEvidence({...loans,loan_records:[{publisher_name:'<img src=x>'}]}),/&lt;img/);
 let chart;
 ctx.Chart=function(_,config){chart=config;return {destroy(){}};};
 r._drawPegChart({},[{x:1,y:0.999},{x:2,y:1.001}],'usdai');

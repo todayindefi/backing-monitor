@@ -344,6 +344,7 @@ var UsdaiRenderer = {
         if (slug === 'susdai') UsdaiRenderer._loadNavChart(slug);
         UsdaiRenderer._loadFamily(slug, data);
         UsdaiRenderer._loadChainLiquidity(slug);
+        if (slug === 'susdai') UsdaiRenderer._loadLoanEvidence();
         UsdaiRenderer._compactEvidence();
     },
 
@@ -399,6 +400,77 @@ var UsdaiRenderer = {
             '<tr><td>Funded DSRA and enforceable recovery coverage</td><td>Current loan-specific amounts not established here</td></tr>' +
             '</tbody></table></div><p class="text-xs text-slate-500 mt-2">Accounting snapshot: ' + UsdaiRenderer._esc(data.as_of || data.timestamp || 'unknown') +
             '. Missing credit/payment evidence is not a finding of missed payments or realized losses.</p></div>';
+    },
+
+    _loadLoanEvidence: function() {
+        var target = document.getElementById('panel-loan-evidence');
+        if (!target) return;
+        fetch('data/usdai_loan_evidence.json?nocache=' + Math.floor(Date.now() / 60000))
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(d) {
+                var html = UsdaiRenderer._renderLoanEvidence(d);
+                if (html) target.innerHTML = html;
+            }).catch(function() { /* Keep explicit unavailable-evidence fallback. */ });
+    },
+
+    _renderLoanEvidence: function(d) {
+        if (!d || d.schema_version !== 'usdai-public-loan-evidence/1' || d.chain_id !== 42161 || !d.population || !Array.isArray(d.loan_records)) return '';
+        var e = UsdaiRenderer._esc;
+        function money(v) {
+            return v == null || v === '' || !isFinite(Number(v)) ? 'Unknown' : CommonRenderer.formatCurrency(Number(v));
+        }
+        var p = d.population || {}, records = d.loan_records || [], next = d.next_30_days_schedule || {};
+        function metric(label, value, note) {
+            return '<div class="summary-card"><div class="card-label">' + label + '</div><div class="card-value text-lg">' +
+                e(value) + '</div><div class="text-xs text-slate-500">' + e(note) + '</div></div>';
+        }
+        function table(rows) {
+            return '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Published record</th><th>Remaining principal</th><th>Reported APR</th><th>Last scheduled payment</th><th>Schedule source date</th></tr></thead><tbody>' +
+                rows.map(function(x) {
+                    return '<tr><td>' + e(x.publisher_name) + '</td><td>' + money(x.remaining_principal) + '</td><td>' +
+                        e(x.reported_apr_pct == null ? 'Unknown' : Number(x.reported_apr_pct).toFixed(2) + '%') + '</td><td>' +
+                        e(x.last_scheduled_due_at || 'Unknown') + '</td><td>' + e(x.schedule_as_of || 'Unknown') + '</td></tr>';
+                }).join('') + '</tbody></table></div>';
+        }
+        var h = d.reported_payment_history || {}, principal = h.principal || {}, interest = h.yield || {};
+        var paymentRows = [30,60,90].map(function(days) {
+            var a = (principal.windows || {})[days], b = (interest.windows || {})[days];
+            function amount(x) { return !x || x.reported_amount == null ? 'Unknown' : money(x.reported_amount) + ' reported'; }
+            return '<tr><td>' + days + ' completed days</td><td>' + amount(a) + '</td><td>' + amount(b) + '</td><td>' +
+                e(a ? a.start_inclusive + ' → ' + a.end_exclusive + ' (exclusive)' : 'Unknown') + '</td></tr>';
+        }).join('');
+        var counter = d.liquidation_event_counter || {};
+        return '<div class="panel-title">Reported loan book — partial population</div>' +
+            '<p class="text-sm text-amber-700">Issuer reporting, not independent underwriting. The visible schedules do not reconcile to the full reported loan metric.</p>' +
+            '<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mt-3">' +
+            metric('API-active records', p.reported_active_count == null ? 'Unknown' : p.reported_active_count, 'Of ' + p.published_deal_count + ' published deals; ' + p.other_status_count + ' other-status records excluded') +
+            metric('Visible scheduled principal', p.visible_remaining_principal == null ? 'Unknown' : money(p.visible_remaining_principal), 'Partial schedule population; nominal reference units') +
+            metric('Larger aggregate loan metric', p.aggregate_reported_principal == null ? 'Unknown' : money(p.aggregate_reported_principal), 'Issuer reporting; scope not fully reconciled') +
+            metric('Top five visible records', p.largest_five_visible_pct == null ? 'Unknown' : Number(p.largest_five_visible_pct).toFixed(1) + '%', 'Of visible principal only; not global borrower concentration') + '</div>' +
+            '<p class="text-sm text-amber-700 mt-3">Scope difference: ' + (p.scope_difference == null ? 'unmeasured' : money(p.scope_difference)) +
+            ' — not a demonstrated loss or missing-assets finding.</p>' +
+            '<div class="text-sm font-semibold mt-4">Largest visible loan records</div>' + table(records.slice(0,5)) +
+            UsdaiRenderer._details('All ' + records.length + ' API-active loan records and original schedule dates', table(records)) +
+            '<div class="text-sm font-semibold mt-4">Next 30 days — scheduled, not paid</div>' +
+            '<p class="text-sm">' + (next.principal == null ? 'Unknown principal' : money(next.principal) + ' principal') + ' + ' +
+                (next.interest == null ? 'unknown interest' : money(next.interest) + ' interest') + ' across ' + e(next.rows == null ? 'unknown' : next.rows) + ' public schedule rows. This subset is not all protocol obligations or guaranteed receipts.</p>' +
+            '<p class="text-xs text-slate-500">Schedule calculation: ' + e(next.source_computed_at || 'unknown') + '. Nominal reference units, not a cash-exit valuation.</p>' +
+            '<div class="text-sm font-semibold mt-4">API-reported repayment events — incomplete evidence</div>' +
+            '<p class="text-sm text-amber-700">No loan-level due-to-receipt reconciliation. Zero reported history does not establish that no payments occurred.</p>' +
+            '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Window</th><th>Principal</th><th>Yield</th><th>Date bounds</th></tr></thead><tbody>' + paymentRows + '</tbody></table></div>' +
+            '<p class="text-xs text-slate-500 mt-2">Last positive reported day: principal ' + e(principal.last_positive_reported_day || 'not established') + '; yield ' +
+                e(interest.last_positive_reported_day || 'not established') + '. This is event-feed coverage, not a complete payment or arrears ledger.</p>' +
+            '<p class="text-xs text-slate-500">Event-feed computation: principal ' + e(principal.computed_at || 'unknown') + '; yield ' + e(interest.computed_at || 'unknown') + '.</p>' +
+            '<p class="text-sm mt-3">Receipt matching, arrears aging, current independent GPU valuations and funded DSRA remain unverified.</p>' +
+            '<p class="text-xs text-slate-500 mt-2">Dated issuer snapshot: ' + e(d.snapshot_computed_at || 'unknown') + '. This is a one-off observation, not a continuously refreshed credit monitor.</p>' +
+            UsdaiRenderer._details('Source dates, metric definitions and limits',
+                '<p class="text-sm">Scheduled payments retain ' + e(next.start || 'unknown') + ' → ' + e(next.end_exclusive || 'unknown') + ' bounds. Historical event computation: ' + e(principal.computed_at || 'unknown') +
+                '. Schedule source dates span ' + e((d.schedule_source_range || {}).oldest || 'unknown') + ' → ' + e((d.schedule_source_range || {}).newest || 'unknown') + '.</p>' +
+                '<p class="text-sm">Reported liquidation-event count: ' + e(counter.reported == null ? 'unknown' : counter.reported) + '/' + e(counter.population == null ? 'unknown' : counter.population) +
+                '. This is not a default or delinquency census. Legal related-group and offtaker concentration are not established by publisher record labels.</p>' +
+                '<p class="text-sm">' + e(d.denomination || '') + '. Reported APRs are not independently normalized effective returns.</p>' +
+                '<p><a class="text-blue-500 hover:underline" href="https://api.usd.ai/swagger" target="_blank" rel="noopener noreferrer">Issuer API definitions ↗</a> · ' +
+                '<a class="text-blue-500 hover:underline" href="data/usdai_loan_evidence.json" target="_blank" rel="noopener noreferrer">Public source snapshot ↗</a></p>');
     },
 
     _loadChainLiquidity: function(slug) {
