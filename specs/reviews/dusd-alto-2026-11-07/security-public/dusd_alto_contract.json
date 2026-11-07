@@ -1,0 +1,409 @@
+{
+  "schema_version": "contract/1",
+  "asset": "dusd_alto",
+  "producer": "security_analyst",
+  "as_of": "2026-11-07T02:39:35Z",
+  "generated_at": "2026-11-07T03:11:48.031079Z",
+  "contract": {
+    "headline": "Named governance and checked upgrade routes:24h, reducible to zero. Treasury operations:4-of-7. Emergency controller halt/freeze:any one of seven owner keys. Full supply and authority graph remains partial.",
+    "headline_basis": "Bounded current named routes; administration delay is distinct from immediate operating permissions.",
+    "method": "hand-walk",
+    "observed_at": "2026-11-07T02:39:35Z",
+    "source_file": "security_analyst/audits/dusd-alto-current-2026-11-07/owner-summary.json",
+    "source_summary_sha256": "5a326a5234b8115e175d00fddf9f51f10fcb0bee95625e760c54a349072ebb82",
+    "source_index_sha256": "d39bcc08a3d78472e72a2f3f30dd30cecaf2a289d859d5cc2b15fe5702bbf9ae",
+    "observation_block": 26360048,
+    "observation_block_hash": "0xca99e7c7ff4ae66f5288804c33f3517e25d6b2525b898e8dcc8c5ed6b5a553bb",
+    "layers": [
+      {
+        "authority_layer": "governance",
+        "chain": "ethereum",
+        "keys": [
+          "Timelock schedule/execute and role changes"
+        ],
+        "target": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+        "topology": "timelocked",
+        "timelock": "24h",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0",
+            "via": "4-of-7 governance Safe proposer/executor/canceller \u2192 timelock self-call",
+            "terminal": "safe",
+            "terminal_address": "0xc49bf619cc9a68f84a6c9ab88506f2627565a4d0",
+            "timelock": "24h",
+            "reach": "partial",
+            "safe": {
+              "n": 4,
+              "m": 7
+            }
+          }
+        ],
+        "note": "Current delay 86400 seconds. Self-call updateDelay has no positive enforced floor and can reduce delay to zero. Safe and timelock are DEFAULT_ADMIN members, but custom grantRole/revokeRole require timelock caller; membership alone does not bypass scheduling.",
+        "timelock_floor": "none"
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "keys": [
+          "DUSD minter/burner permissions and ceilings"
+        ],
+        "target": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+        "topology": "timelocked",
+        "timelock": "24h",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "via": "DUSD owner setters",
+            "terminal": "timelock",
+            "terminal_address": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "timelock": "24h",
+            "reach": "partial"
+          }
+        ],
+        "note": "Owner administration only. Full current minter/burner census and OFT message issuance were not refreshed; no universal issuance-delay claim.",
+        "timelock_floor": "none"
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "keys": [
+          "Checked direct mint/burn operating permission"
+        ],
+        "target": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+        "topology": "direct",
+        "timelock": "none",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0x6b3458c87cd38aefa6a5d059eb19f609420dd852",
+            "via": "credit-line operating contract",
+            "terminal": "contract",
+            "terminal_address": "0x6b3458c87cd38aefa6a5d059eb19f609420dd852",
+            "timelock": "none",
+            "reach": "partial"
+          }
+        ],
+        "note": "Current allowedMinter and allowedBurner true, direct mint capped per caller. Operating actions are not individually delayed by owner governance. Complete caller/supply graph remains partial."
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "keys": [
+          "Checked direct mint/burn operating permission"
+        ],
+        "target": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+        "topology": "direct",
+        "timelock": "none",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91",
+            "via": "frxusd-usm operating contract",
+            "terminal": "contract",
+            "terminal_address": "0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91",
+            "timelock": "none",
+            "reach": "partial"
+          }
+        ],
+        "note": "Current allowedMinter and allowedBurner true, direct mint capped per caller. Operating actions are not individually delayed by owner governance. Complete caller/supply graph remains partial."
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "keys": [
+          "UUPS upgrade administration"
+        ],
+        "target": "0x6b3458c87cd38aefa6a5d059eb19f609420dd852",
+        "topology": "timelocked",
+        "timelock": "24h",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "via": "Owner or default-admin upgrade gate",
+            "terminal": "timelock",
+            "terminal_address": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "timelock": "24h",
+            "reach": "partial"
+          }
+        ],
+        "note": "Current named administration route. Verified explorer source/runtime match is not independently reproduced audited-build correspondence. DUSD token is not included in this proxy group.",
+        "timelock_floor": "none"
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "keys": [
+          "UUPS upgrade administration"
+        ],
+        "target": "0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91",
+        "topology": "timelocked",
+        "timelock": "24h",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "via": "Owner or default-admin upgrade gate",
+            "terminal": "timelock",
+            "terminal_address": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "timelock": "24h",
+            "reach": "partial"
+          }
+        ],
+        "note": "Current named administration route. Verified explorer source/runtime match is not independently reproduced audited-build correspondence. DUSD token is not included in this proxy group.",
+        "timelock_floor": "none"
+      },
+      {
+        "authority_layer": "contract-upgrade",
+        "chain": "ethereum",
+        "keys": [
+          "UUPS upgrade administration"
+        ],
+        "target": "0x3c822f14a90955bf35278b42ba509feecad3a305",
+        "topology": "timelocked",
+        "timelock": "24h",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "via": "Owner or default-admin upgrade gate",
+            "terminal": "timelock",
+            "terminal_address": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "timelock": "24h",
+            "reach": "partial"
+          }
+        ],
+        "note": "Current named administration route. Verified explorer source/runtime match is not independently reproduced audited-build correspondence. DUSD token is not included in this proxy group.",
+        "timelock_floor": "none"
+      },
+      {
+        "authority_layer": "parameter",
+        "chain": "ethereum",
+        "keys": [
+          "frxUSD-USM config, liquidation/seize and rescue"
+        ],
+        "target": "0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91",
+        "topology": "timelocked",
+        "timelock": "24h",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "via": "Checked CONFIGURATOR / LIQUIDATOR / TOKEN_RESCUER / DEFAULT_ADMIN candidates",
+            "terminal": "timelock",
+            "terminal_address": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "timelock": "24h",
+            "reach": "partial"
+          }
+        ],
+        "note": "Seize transfers underlying to treasury and zeros exposure, fees and cap; outstanding DUSD requires separate burnAfterSeize. Frozen state is not a seizure guard. Indexed candidate checks do not prove exhaustive role enumeration.",
+        "timelock_floor": "none"
+      },
+      {
+        "authority_layer": "custody",
+        "chain": "ethereum",
+        "keys": [
+          "Credit-account borrow and solvent collateral removal"
+        ],
+        "target": "0x6b3458c87cd38aefa6a5d059eb19f609420dd852",
+        "topology": "direct",
+        "timelock": "none",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0xa1148a1b94262540994cf9aa431a13ad39764228",
+            "via": "Designated treasury credit account; base-authorized delegates where allowed",
+            "terminal": "safe",
+            "terminal_address": "0xa1148a1b94262540994cf9aa431a13ad39764228",
+            "timelock": "none",
+            "reach": "partial",
+            "safe": {
+              "n": 4,
+              "m": 7
+            }
+          }
+        ],
+        "note": "Single-account CREDIT_MINT revolving credit, not lender-funded deposits. Treasury Safe is 4-of-7; authorized delegates not exhaustively enumerated. Deposits and reward-recipient changes require exact account. Curve LP routes via linked library into Convex pool565/reward pool. Strategy-active does not measure current stake."
+      },
+      {
+        "authority_layer": "custody",
+        "chain": "ethereum",
+        "keys": [
+          "Credit-line foreclosure and emergency Convex exit"
+        ],
+        "target": "0x6b3458c87cd38aefa6a5d059eb19f609420dd852",
+        "topology": "timelocked",
+        "timelock": "24h",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "via": "Owner governance liquidation / paused emergency exit",
+            "terminal": "timelock",
+            "terminal_address": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "timelock": "24h",
+            "reach": "partial"
+          }
+        ],
+        "note": "Foreclosure above90% nominal LTV transfers collateral to owner and debt to bad-debt ledger. Public liquidation engine is disabled. Paused Convex exit leaves LP in market custody; no recovery-value or repayment assurance.",
+        "timelock_floor": "none"
+      },
+      {
+        "authority_layer": "asset-permission",
+        "chain": "ethereum",
+        "keys": [
+          "Permissioned frxUSD-USM swaps"
+        ],
+        "target": "0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91",
+        "topology": "direct",
+        "timelock": "none",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0xa1148a1b94262540994cf9aa431a13ad39764228",
+            "via": "Checked SWAPPER_ROLE in access mode1",
+            "terminal": "safe",
+            "terminal_address": "0xa1148a1b94262540994cf9aa431a13ad39764228",
+            "timelock": "none",
+            "reach": "partial",
+            "safe": {
+              "n": 4,
+              "m": 7
+            }
+          }
+        ],
+        "note": "canSwap true, frozen false, seized false at pin. Treasury 4-of-7 operating access does not establish ordinary-holder eligibility or executable cash redemption."
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "keys": [
+          "DUSD mint/burn pause; credit-line pause/freeze; frxUSD-USM freeze"
+        ],
+        "target": "0x3c822f14a90955bf35278b42ba509feecad3a305",
+        "topology": "direct",
+        "timelock": "none",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0x1c11d2d42929bd17ab7212b79c91862adfa8bbe4",
+            "via": "Any one current owner key via EmergencyController.isOwner(msg.sender)",
+            "terminal": "contract",
+            "terminal_address": "0x1c11d2d42929bd17ab7212b79c91862adfa8bbe4",
+            "timelock": "none",
+            "reach": "partial"
+          }
+        ],
+        "note": "Effective gate is 1-of-7 individual owner keys, not four Safe signatures. Current target permission/registry checks support these bounded halt paths. Controller has no unpause/seizure entry point. DUSD pause does not establish blanket ERC20/OFT transfer suspension."
+      },
+      {
+        "authority_layer": "pause",
+        "chain": "ethereum",
+        "keys": [
+          "Direct frxUSD-USM freeze/unfreeze"
+        ],
+        "target": "0x1bd08b43d1579881cfad0a35aeea5b547dbe4c91",
+        "topology": "direct",
+        "timelock": "none",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0x1c11d2d42929bd17ab7212b79c91862adfa8bbe4",
+            "via": "Pauser Safe SWAP_FREEZER_ROLE",
+            "terminal": "safe",
+            "terminal_address": "0x1c11d2d42929bd17ab7212b79c91862adfa8bbe4",
+            "timelock": "none",
+            "reach": "partial",
+            "safe": {
+              "n": 4,
+              "m": 7
+            }
+          }
+        ],
+        "note": "Separate direct Safe role requires4-of-7; do not conflate with one-owner controller freeze."
+      },
+      {
+        "authority_layer": "oracle",
+        "chain": "ethereum",
+        "keys": [
+          "LP oracle replacement and nominal solvency mark"
+        ],
+        "target": "0x6b3458c87cd38aefa6a5d059eb19f609420dd852",
+        "topology": "timelocked",
+        "timelock": "24h",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "via": "Market owner oracle setter",
+            "terminal": "timelock",
+            "terminal_address": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "timelock": "24h",
+            "reach": "partial"
+          }
+        ],
+        "note": "Current oracle0x6ed6f809abede70a2f13a828ec59effe2d197bb7 is pure fixed1LP=1DUSD at1e36 precision;80% max/90% foreclosure LTV are nominal, not Curve NAV/frxUSD-USD or recoverable external backing.",
+        "timelock_floor": "none"
+      },
+      {
+        "authority_layer": "oracle",
+        "chain": "ethereum",
+        "keys": [
+          "frxUSD-USM fixed price ratio setter"
+        ],
+        "target": "0x138098ae168ebe9bb792f1ed365f32e2dd94c590",
+        "topology": "timelocked",
+        "timelock": "24h",
+        "reach": "partial",
+        "observed_at": "2026-11-07T02:39:35Z",
+        "paths": [
+          {
+            "holder": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "via": "Known CONFIGURATOR and DEFAULT_ADMIN candidates",
+            "terminal": "timelock",
+            "terminal_address": "0xfae841679dc1a93d225ecc827e4bbf3e8d703f86",
+            "timelock": "24h",
+            "reach": "partial"
+          }
+        ],
+        "note": "Current ratio1e18 means1:1 but is mutable. Role-index requests throttled; explicit named timelock positive and named Safe negatives do not exclude other holders.",
+        "timelock_floor": "none"
+      }
+    ],
+    "unresolved": [
+      "Only exact Ethereum requested deployments refreshed. No full current minter/burner census or other-market/allchain coverage.",
+      "Indexed grants/current candidate checks are not independent exhaustive enumeration; price-strategy index throttled, explicit known candidates retained, never treated as zero holders.",
+      "Safe standard modules/guard read, not full singleton/fallback-handler/custom-custody/organizational independence audit.",
+      "Credit-account delegates and third-party Convex/Curve governance/emergency/upgrade graphs not fully traversed.",
+      "Stake quantity, collateral NAV, net encumbrance, LP own-DUSD exclusion, external backing and realizable cash remain Peg/BM measurements.",
+      "Fixed1:1 LP mark is not independent market collateral value; governance foreclosure/settlement ability does not establish recovery or depositor repayment.",
+      "Explorer source/runtime equality is not independent audited-build/remediation mapping. September audit review/Nov2 documentary context is dated; no current audit-count or halo assurance.",
+      "OFT crosschain peers/message issuance and complete global supply-cap graph not walked; direct mint/burn cap observations must not clear every crosschain path.",
+      "Permissioned USM enabled state and mutable1:1 frxUSD ratio do not establish ordinary-holder eligibility, cash or issuer repayment rights.",
+      "Kiki/Cantina audit-version findings relayed by AltoDA are not mapped to the current deployed audited commit. Current repayment fee mint precedes burn and can conditionally encounter its minter ceiling; no current blockage or financial headroom measured."
+    ],
+    "authority_shared_with": [],
+    "review": null,
+    "walk_notes": [
+      "Three checked Safes are4-of-7 with the same seven owners; standard module enumeration empty and guard slot zero. Signer independence and full fallback/singleton paths not audited.",
+      "LP credit is technically encumbered collateral routed through Convex, not treasury free cash. Stake quantities, LP look-through and own-DUSD exclusion are Peg measurements; no duplicate financial collection.",
+      "Source/read-state review only; no mutation simulations, transactions or broad new audit. Eight main/library source-runtime matches do not establish audited-build equivalence."
+    ]
+  }
+}

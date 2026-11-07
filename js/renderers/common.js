@@ -1369,6 +1369,7 @@ const CommonRenderer = {
     // reads. Same translate-don't-replace rule as above: the producer's array is
     // left untouched and the legacy shape is built beside it.
     _adaptLadder(d, block) {
+        if (d.status === 'quote_only_supply_bounded_floor' || d.two_pct_depth_status === 'quote_only_supply_bounded_floor' || (d.depth || {}).status === 'quote_only_supply_bounded_floor') return;
         if ((d.preflight || {}).status === 'usd_valuation_not_assessed') return;
         var rungs = Array.isArray(d.rungs) ? d.rungs : null;
         if (!rungs || !rungs.length) return;
@@ -3856,7 +3857,7 @@ const CommonRenderer = {
     // store carries it, and a status that has been retired upstream is exactly the kind
     // of string that comes back on a replay.
     DEPTH_NON_DERIVABLE_STATUSES: ['not_size_responsive', 'supply_capped',
-                                   'clears_entire_supply'],
+                                   'clears_entire_supply', 'quote_only_supply_bounded_floor'],
 
     // ⚠️ DEPTH IS NOT THE EXIT WHEN THE WORSE LEG IS UNMEASURED, AND THE TILE
     // SAID "Healthy 10/10" ON AN AXIS TWO PRODUCERS SCORE 4.5.
@@ -5283,6 +5284,7 @@ const CommonRenderer = {
         var over = this.assetDepthOverrideBps(data);
         var bps = this._headlineThresholdBps(liq, over);
         var fig = liq.total_2pct_depth;
+        if (liq.two_pct_depth_status === 'quote_only_supply_bounded_floor') return { bps: bps, shape: 'quote_sample', value: fig, published_basis: liq.two_pct_depth_basis || (liq.depth || {}).basis || 'Indicative quote sample; executable depth and public float not established.' };
         var rungs = this._ladderRungs(liq);
 
         // ⚠️ ONE SHAPE, TWO REASONS, AND BOTH MEAN "NOT A CROSSING". sUSDS/USDS
@@ -5565,6 +5567,7 @@ const CommonRenderer = {
     // scope already.
     _depthLabel(data) {
         var d = this.depthAtLimit(data);
+        if (d.shape === 'quote_sample') return 'quoted sample';
         if (d.shape === 'capacity') return 'exit capacity';
         var bps = d.bps;
         var pct = bps / 100;
@@ -5618,7 +5621,7 @@ const CommonRenderer = {
         // stops being a 2% depth. See the sub-line below: the prefix is REPLACED,
         // not extended, which is the rule the `exitAsValue` case already follows.
         var dSupplyCapped = dStatus === 'supply_capped';
-        var dFloor = !dUnresponsive &&
+        var dFloor = !dUnresponsive && dStatus !== 'quote_only_supply_bounded_floor' &&
                      (liq.total_2pct_depth_is_floor === true ||
                       dStatus === 'ladder_exhausted' || dStatus === 'quote_failed');
         var depthTxt = liqIsFree

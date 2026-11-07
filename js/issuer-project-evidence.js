@@ -3,24 +3,40 @@ var IssuerProjectEvidence = {
     cache: null,
     esc: function(x) { return CommonRenderer._escapeAttr(String(x == null ? '' : x)); },
     sources: function(xs) { var self=this;return (xs||[]).filter(function(x){return typeof x==='string' && /^https:\/\//.test(x);}).map(function(x,i){return '<a class="text-blue-600 underline" target="_blank" rel="noopener noreferrer" href="'+self.esc(x)+'">Source '+(i+1)+'</a>';}).join(' · '); },
+    observationDatesText: function(value) {
+        if(Array.isArray(value))return value.filter(function(x){return typeof x==='string';}).join(' · ');
+        if(!value||typeof value!=='object')return '';
+        var out=[];
+        ['reviewed_at','observed_at','retrieved_at','effective_date'].forEach(function(k){if(typeof value[k]==='string')out.push(k.replace(/_/g,' ')+': '+value[k]);});
+        (Array.isArray(value.source_documents)?value.source_documents:[]).forEach(function(d,i){
+            var dates=[];
+            if(typeof d.effective_date==='string')dates.push('effective '+d.effective_date);
+            if(typeof d.retrieved_at==='string')dates.push('retrieved '+d.retrieved_at);
+            if(dates.length)out.push('source '+(i+1)+': '+dates.join(', '));
+        });
+        return out.join(' · ');
+    },
     componentHtml: function(feed,asset) {
         var p=feed.component_profiles[asset],e=this.esc,self=this;
         if(!p||!Array.isArray(p.entities)||!Array.isArray(p.facts)||!p.coverage)return '<div class="panel mt-3" data-issuer-component="'+e(asset)+'">Selected component fields unavailable: incomplete source shape. No family/upstream substitution.</div>';
         if(p.status!=='available_selected_fields')return '<div class="panel mt-3" data-issuer-component="'+e(p.component_slug)+'"><div class="panel-title">Issuer facts · '+e(p.name)+'</div><p class="text-sm">Selected component evidence unavailable or changed; no project, family or underlying rights are substituted.</p></div>';
-        var labels={holder_rights:'Holder rights',redemption_limitations:'Redemption and enforcement limits',governing_law:'Governing law',legal_framework:'Legal framework',access_restriction:'Primary access restrictions',custody_enforcement_design:'Custody and enforcement design',financial_assurance_scope:'Financial assurance scope',march_attestation_scope:'Dated reserve-asset examination',governance_path:'Documented governance',dispute_mechanism:'Dispute mechanism',dividend_legal_clock:'Certificate and dividend legal clocks'};
+        var labels={financial_audit:'Independent financial assurance',reserve_attestation:'Reserve-asset assurance',smart_contract_audit:'Code-audit scope — not financial assurance',mint_fee_headroom_audit:'Audit finding: fee minting and ceiling headroom',credit_line_scope:'Documented credit-line scope',credit_line_audit_remediation:'Credit-line audit version and remediation',issuer_obligor_gap:'Issuer and repayment-obligor gap',incident_coverage:'Incident coverage limits',holder_rights:'Holder rights',redemption_limitations:'Redemption and enforcement limits',governing_law:'Governing law',legal_framework:'Legal framework',access_restriction:'Primary access restrictions',custody_enforcement_design:'Custody and enforcement design',financial_assurance_scope:'Financial assurance scope',march_attestation_scope:'Dated reserve-asset examination',governance_path:'Documented governance',dispute_mechanism:'Dispute mechanism',dividend_legal_clock:'Certificate and dividend legal clocks'};
         var states={verified:'Verified source',extracted:'Extracted · confirmation pending',searched_not_found:'Searched · not found',unknown:'Unknown'};
         function record(x,value){return '<div class="mt-2 text-sm">'+e(value==null?'Not established in the reviewed source scope.':value)+'<div class="text-xs text-slate-500">'+e(states[x.status]||'Unknown')+' · '+e(x.basis||'basis unavailable')+' · checked '+e(x.checked||'unknown')+' · source date '+e(x.source_date||'not supplied')+' · observation '+e(x.as_of||'not supplied')+' · '+self.sources(x.source_urls)+'</div></div>';}
         var h='<div class="panel mt-3" data-issuer-component="'+e(p.component_slug)+'" style="overflow-wrap:anywhere"><div class="panel-title">Issuer facts · '+e(p.name)+'</div><p class="text-xs text-slate-500">DeFiAnalyst selected component fields · handback checked '+e(p.handback_checked)+' · profile checked '+e(p.profile_checked||'not supplied')+'. RiskAnalyst owns the unchanged score and interpretation.</p><p class="text-xs text-slate-500 mt-2">This component’s issuer, rights and source clocks are separate from its underlying assets and other family products. Missing fields do not inherit upstream rights.</p>';
+        var compact=this.isCompact(asset);
+        if(compact)h+=this.compactSummary(p,{component:p.component_slug},p.facts,p.entities)+'<details class="mt-3" data-issuer-legal><summary class="text-sm font-semibold cursor-pointer">Selected legal, custody and assurance sources</summary>';
         var roles=p.entities.filter(function(x){return ['custodian','broker'].indexOf(x.role)===-1;}),custody=p.entities.filter(function(x){return ['custodian','broker'].indexOf(x.role)!==-1;});
         function entity(x){return record(x,(x.name||'Entity not established')+' · '+x.role+(x.jurisdiction?' · '+x.jurisdiction:''));}
         h+='<div class="font-semibold text-sm mt-3">Entities and distinct roles</div>'+(roles.length?roles.map(entity).join(''):'<p class="text-sm mt-2">No issuer identity supplied in this selected component return; no group operator or upstream issuer is substituted.</p>');
         if(custody.length)h+='<details class="mt-3"><summary class="text-sm cursor-pointer">Disclosed custody/broker roles · allocation unverified</summary>'+custody.map(entity).join('')+'</details>';
-        function fact(x){return '<div class="border-t border-slate-200 pt-2 mt-3"><div class="font-semibold text-sm">'+e(labels[x.key]||x.key.replace(/_/g,' '))+'</div>'+record(x,x.value)+(x.observation_dates?'<p class="text-xs text-slate-500">Observation dates: '+e(x.observation_dates.join(' · '))+'</p>':'')+'</div>';}
+        function fact(x){return '<div class="border-t border-slate-200 pt-2 mt-3"><div class="font-semibold text-sm">'+e(labels[x.key]||x.key.replace(/_/g,' '))+'</div>'+record(x,x.value)+(x.observation_dates?'<p class="text-xs text-slate-500">Observation dates: '+e(self.observationDatesText(x.observation_dates))+'</p>':'')+'</div>';}
         var core=['holder_rights','governing_law','access_restriction','financial_assurance_scope','march_attestation_scope','legal_framework','dividend_legal_clock'];
         h+=p.facts.length?p.facts.filter(function(x){return core.indexOf(x.key)!==-1;}).map(fact).join(''):'<p class="text-sm mt-3">Component legal facts were not exported in this bounded return. They remain unavailable; this is not a finding that rights are absent.</p>';
         var more=p.facts.filter(function(x){return core.indexOf(x.key)===-1;});
         if(more.length)h+='<details class="mt-3"><summary class="text-sm cursor-pointer">Additional documented rights and controls</summary>'+more.map(fact).join('')+'</details>';
         h+='<p class="text-xs text-slate-500 mt-3">Financial-statement audits, reserve-asset examinations and smart-contract audits have different scopes. Listed custodians do not prove current allocations. Documentary control design and legal effectiveness do not establish deployed authority, payment receipts or successful exits. Current receipt eligibility remains a separate measured surface.</p>';
+        if(compact)h+='</details>';
         h+='<details class="mt-3"><summary class="text-sm font-semibold cursor-pointer">Coverage and remaining gaps</summary>';
         Object.keys(p.coverage).forEach(function(k){var x=p.coverage[k];h+='<p class="text-xs text-slate-500 mt-2"><strong>'+e(k.replace(/_/g,' '))+':</strong> '+e(x.state==='not_exported'?'Not exported; unavailable in this selected component return':states[x.state]||x.state)+'. '+e(x.meaning)+'</p>';});
         p.limitations.forEach(function(x){h+='<p class="text-xs text-slate-500 mt-2">'+e(x)+'</p>';});
@@ -33,25 +49,26 @@ var IssuerProjectEvidence = {
     getFeed:function(){var self=this;if(!self.cache||Date.now()-(self.cacheAt||0)>60000){self.cacheAt=Date.now();self.cache=fetch('data/issuer_project_evidence.json?v='+Math.floor(Date.now()/60000)).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}return self.cache;},
     fillVisible:function(feed,asset){var self=this;document.querySelectorAll('[data-issuer-evidence-asset]').forEach(function(el){if(el.dataset.issuerEvidenceAsset===asset)el.innerHTML=el.getClientRects().length?self.html(feed,asset):'';});},
     installFamilySurfaces:function(){var self=this;['MSTRRenderer','STRCRenderer','STRCxRenderer','ApyxRenderer','SaturnRenderer'].forEach(function(name){var renderer=window[name];if(!renderer||!renderer.render)return;var old=renderer.render;renderer.render=function(data){var result=old.apply(this,arguments),asset=self.viewAsset(data);self.getFeed().then(function(feed){if(self.viewAsset(data)!==asset)return;if(!feed){if(['MSTRRenderer','STRCRenderer'].indexOf(name)!==-1){var failedHost=document.getElementById('asset-specific-panels');if(failedHost)failedHost.insertAdjacentHTML('afterbegin','<div class="panel" data-issuer-component="'+self.esc(asset)+'">Structured issuer evidence unavailable; no underlying or family rights substituted.</div>');}return;}if(!(feed.component_profiles&&Object.prototype.hasOwnProperty.call(feed.component_profiles,asset)))return;var targets=Array.from(document.querySelectorAll('[data-issuer-evidence-asset]')).filter(function(el){return el.dataset.issuerEvidenceAsset===asset&&el.getClientRects().length;});if(!targets.length){var host=document.getElementById('asset-specific-panels');if(host)host.insertAdjacentHTML('afterbegin','<div data-issuer-evidence-asset="'+self.esc(asset)+'"></div>');}self.fillVisible(feed,asset);});return result;};});},
-    compactAssets: ['usdai','susdai','yzusd','syzusd','usds','susds'],
+    compactAssets: ['usdai','susdai','yzusd','syzusd','usds','susds','dusd-alto'],
     isCompact: function(asset) { return this.compactAssets.indexOf(asset)!==-1; },
     compactSummary: function(p,m,facts,entities) {
         var e=this.esc,self=this;
-        var priority=['issuer','redemption_obligor','operator','platform_operator','interface_operator','supporting_foundation','developer'];
-        var named=entities.filter(function(x){return x.name&&priority.indexOf(x.role)!==-1;}).sort(function(a,b){return priority.indexOf(a.role)-priority.indexOf(b.role);}).slice(0,3);
+        var priority=['issuer','redemption_obligor','operator','platform_operator','interface_operator','software_provider_and_deployer','supporting_foundation','foundation','developer'];
+        function role(x){return String(x.role||'').replace(/-/g,'_');}
+        var named=entities.filter(function(x){return x.name&&priority.indexOf(role(x))!==-1;}).sort(function(a,b){return priority.indexOf(role(a))-priority.indexOf(role(b));}).slice(0,3);
         var h='<div data-issuer-summary="true" class="text-sm mt-3" style="overflow-wrap:anywhere"><div class="font-semibold">Who is responsible?</div>';
-        h+=named.length?named.map(function(x){return '<p>'+e(x.name)+' · '+e(x.role.replace(/_/g,' '))+'</p>';}).join(''):'<p>Responsible entity not established in the published evidence.</p>';
-        var unresolved=entities.some(function(x){return ['issuer','redemption_obligor'].indexOf(x.role)!==-1&&!x.name;});
-        if(unresolved||!entities.some(function(x){return x.role==='issuer'&&x.name;}))h+='<p class="text-xs text-slate-500 mt-1">Product issuer/repayment obligor not established; an operator or developer is not a substitute.</p>';
+        h+=named.length?named.map(function(x){return '<p>'+e(x.name)+' · '+e(String(x.role||'').replace(/[_-]/g,' '))+'</p>';}).join(''):'<p>Responsible entity not established in the published evidence.</p>';
+        var unresolved=entities.some(function(x){return ['issuer','redemption_obligor'].indexOf(role(x))!==-1&&!x.name;});
+        if(unresolved||!entities.some(function(x){return role(x)==='issuer'&&x.name;}))h+='<p class="text-xs text-slate-500 mt-1">Product issuer/repayment obligor not established; an operator or developer is not a substitute.</p>';
         function pick(keys){for(var i=0;i<keys.length;i++){var x=facts.find(function(f){return f.key===keys[i]&&f.value;});if(x)return x;}return null;}
         var rights=pick(['holder_rights','alpha_tranches']),access=pick(['access_restriction','primary_access']),limits=pick(['discretion_and_exit','redemption_limitations']);
         h+='<div class="font-semibold mt-3">What can holders claim?</div>';
         [rights,access,limits].filter(Boolean).forEach(function(x){h+='<p class="mt-1">'+e(x.value)+'</p>';});
         if(!rights)h+='<p>Product-specific holder rights are not established in this published scope.</p>';
         var gaps=[];
-        if(unresolved||!entities.some(function(x){return x.role==='issuer'&&x.name;}))gaps.push('Product issuer, repayment obligation and holder priority');
-        var labels={operator_registration_and_authorization:'Operator registration and authorization',fiat_payout_and_insolvency_priority:'Fiat payout and insolvency priority',current_shutdown_holder_rights:'Current shutdown recourse',legal_registration_and_authorization:'Registration, corporate continuity and authorization',reserve_custody_and_insolvency:'Reserve custody and insolvency protection',financial_audit:'Independent financial assurance',warranty_full_terms:'Enforceable warranty terms',first_loss_current_capacity:'Current funded protection'};
-        Object.keys(labels).forEach(function(k){if(facts.some(function(x){return x.key===k&&x.status==='searched_not_found';}))gaps.push(labels[k]);});
+        if(unresolved||!entities.some(function(x){return role(x)==='issuer'&&x.name;}))gaps.push('Product issuer, repayment obligation and holder priority');
+        var labels={operator_registration_and_authorization:'Operator registration and authorization',fiat_payout_and_insolvency_priority:'Fiat payout and insolvency priority',current_shutdown_holder_rights:'Current shutdown recourse',legal_registration_and_authorization:'Registration, corporate continuity and authorization',reserve_custody_and_insolvency:'Reserve custody and insolvency protection',financial_audit:'Independent financial assurance',reserve_attestation:'Independent reserve assurance',financial_assurance_scope:'Independent financial assurance',warranty_full_terms:'Enforceable warranty terms',first_loss_current_capacity:'Current funded protection'};
+        Object.keys(labels).forEach(function(k){if(facts.some(function(x){return x.key===k&&['searched_not_found','unknown'].indexOf(x.status)!==-1;}))gaps.push(labels[k]);});
         if(gaps.length){h+='<div class="font-semibold mt-3">Main unresolved risks</div><ul class="list-disc ml-5">'+gaps.slice(0,3).map(function(x){return '<li>'+e(x)+'</li>';}).join('')+'</ul>';}
         var events=(p.events||[]).filter(function(x){return !x.component||x.component===m.component;}).slice(0,2);
         if(events.length)h+='<div class="font-semibold mt-3">Recent material changes</div>'+events.map(function(x){return '<p class="mt-1">'+e(x.date)+' · '+e(x.label)+' · '+e(x.title)+'</p>';}).join('');

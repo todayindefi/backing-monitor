@@ -1,24 +1,6 @@
-// ============================================================================
-// DUSD (Alto) — bespoke panels
-//
-// ⚠️ THIS ASSET IS TWO MECHANISMS UNDER ONE TICKER AND EVERY SINGLE FIGURE
-// MISINFORMS. PegTracker publishes `backing.collateral_ratio: null` with a basis
-// saying so, riskAnalyst's overlay argues it at length, and the shared renderer
-// still drew a flat 100% "Collateral Ratio History" over 67 reads — the exact
-// misread both producers declared against. The 100.00% is a 1:1 warehouse with
-// NO surplus: the tranche is definitionally never over-collateralised, so
-// 100.00% is the worst sustainable reading rather than a good one, and 99.9%
-// would be insolvency. The ~194% belongs to the CDP markets' own borrowers and
-// is not claimable by DUSD holders. So this renderer plots the two tranches
-// SEPARATELY, labelled, and the blend appears only as a number marked
-// arithmetic-only.
-//
-// ⚠️ EVERY FIGURE HERE COMES FROM A SYNCED FILE, never from a report or a
-// message. Where riskAnalyst's canonical is the source (the 16 lifetime swaps,
-// the sole SWAPPER_ROLE), the producer already carries the sentence in
-// `dusd_alto_liquidity.json` `primary_exit.gated_basis` with their name on it,
-// and that string is rendered verbatim rather than paraphrased here.
-// ============================================================================
+// Alto DUSD: producer-owned issuance, encumbered LP collateral and cash-exit
+// perimeters remain separate. Null valuation is unknown, not zero collateral.
+// Historical evidence retains its source clocks; authored scores belong to RiskAnalyst.
 
 var DUSD_ALTO_POOL_SHARE_WATCH_PCT = 50;
 
@@ -37,11 +19,25 @@ var DusdAltoRenderer = {
         var backingSlot = document.getElementById('backing-extra-panels');
         var liquiditySlot = document.getElementById('liquidity-extra-panels');
         var pegSlot = document.getElementById('peg-extra-panels');
+        // Producer rows partition issued DUSD; they are liabilities, not USD reserves.
+        var issuanceTable = document.getElementById('breakdown-table');
+        if (issuanceTable && Array.isArray(backing.breakdown) && backing.breakdown.length && backing.breakdown.every(function(r) { return r.basis === 'minted DUSD partition'; })) {
+            issuanceTable.innerHTML = '<thead><tr><th>Mint module</th><th>Issued DUSD</th><th>Share of issuance</th></tr></thead><tbody>' + backing.breakdown.map(function(r) {
+                return '<tr><td>' + CommonRenderer._escapeAttr(r.label || r.name || '') + '</td><td class="text-right font-mono">' + DusdAltoRenderer._units(r.amount, 'DUSD') + '</td><td class="text-right">' + CommonRenderer.formatPercent(r.pct, 1) + '</td></tr>';
+            }).join('') + '</tbody>';
+            var issuancePanel = issuanceTable.closest('.panel');
+            var issuanceTitle = issuancePanel && issuancePanel.querySelector('.panel-title');
+            if (issuanceTitle) issuanceTitle.textContent = 'DUSD issuance by mint module';
+            var issuanceCaption = document.getElementById('breakdown-caption');
+            if (issuanceCaption) issuanceCaption.textContent = backing.breakdown_basis || 'Shares partition issued DUSD; they do not measure external backing value.';
+        }
+
 
         if (backingSlot) {
             backingSlot.innerHTML =
                 this._identityHtml(data, specific) +
                 this._trancheCoverageHtml(backing) +
+                this._creditLineHtml(backing) +
                 this._usmHtml(backing, specific, data) +
                 this._cdpHtml(backing) +
                 '<div id="dusd-minters"></div>';
@@ -69,71 +65,55 @@ var DusdAltoRenderer = {
         if (!addr) return '';
         return '<div class="risk-flag risk-info mb-4">' +
             '<span class="font-semibold">Resolve this asset by address, not by ticker.</span> ' +
-            'Four live Ethereum tokens answer to DUSD/dUSD; this page is ' +
+            'Same-symbol tokens are different assets; this page targets Ethereum DUSD ' +
             '<span class="font-mono text-xs">' + CommonRenderer._escapeAttr(addr) + '</span> ' +
             '<a href="https://etherscan.io/token/' + CommonRenderer._escapeAttr(addr) + '" target="_blank" ' +
             'class="text-blue-600 hover:underline text-xs">↗</a>' +
-            '<span class="text-xs text-slate-500"> — every figure on this page is read at that ' +
-            'address. Source: riskAnalyst canonical dusd-alto.md, address-disambiguation table.</span>' +
+            '<span class="text-xs text-slate-500"> — module, LP and oracle observations retain their own addresses and source clocks.</span>' +
         '</div>';
     },
 
     // ---- axis 2: the two tranches ----------------------------------------
+    _units: function(value, unit) {
+        return value == null || !isFinite(Number(value)) ? 'Not established' :
+            Number(value).toLocaleString('en-US', {maximumFractionDigits: 2}) + ' ' + unit;
+    },
+
+    _issuanceShare: function(backing, name) {
+        var row = (backing.breakdown || []).find(function(x) { return x.name === name; });
+        return row && typeof row.pct === 'number' ? row.pct.toFixed(1) + '% of issued DUSD' : 'Issuance share not supplied';
+    },
+
     _trancheCoverageHtml: function(backing) {
-        var usm = backing.usm || {}, cdp = backing.cdp || {};
-        if (usm.ratio == null && cdp.ratio == null) return '';
-        var pct = function(r) { return r == null ? '—' : CommonRenderer.formatPercent(r * 100, 2); };
-        var blended = backing.arithmetic_only_blended_ratio;
-
-        var cell = function(label, value, colorCls, lines) {
-            return '<div class="flex-1 min-w-[220px]">' +
-                '<div class="text-xs text-slate-400 font-medium uppercase">' + label + '</div>' +
-                '<div class="text-2xl font-bold font-mono ' + colorCls + '">' + value + '</div>' +
-                lines.map(function(l) {
-                    return '<div class="text-[11px] text-slate-500 mt-1" style="line-height:1.45;">' + l + '</div>';
-                }).join('') +
-            '</div>';
-        };
-
-        return '<div class="panel">' +
-            '<div class="panel-title">Coverage by tranche ' +
-                '<span class="text-xs font-normal text-slate-500">(no single ratio is derivable)</span></div>' +
-            '<p class="text-sm text-slate-500 mb-3">The producer publishes ' +
-                '<span class="font-mono text-xs">collateral_ratio: null</span> for this asset by ' +
-                'declaration, not by omission. The two tranches have OPPOSITE failure modes, so ' +
-                'they are shown separately and never averaged into a headline.</p>' +
-            '<div class="flex flex-wrap gap-6 mb-4">' +
-                cell('USM — frxUSD tranche', pct(usm.ratio), 'text-amber-600', [
-                    '⚠️ <span class="font-semibold">Zero buffer by construction</span> — 1:1 to the ' +
-                        'wei against frxUSD, so 100.00% is the WORST SUSTAINABLE reading, not a cushion. ' +
-                        'There is no surplus to absorb anything and 99.9% would mean insolvency.',
-                    (usm.reconciled_to_wei ? '✅ minted reconciles to the underlying balance to the wei' : ''),
-                    (usm.minted != null ? CommonRenderer.formatCurrency(usm.minted) + ' DUSD against ' +
-                        CommonRenderer.formatCurrency(usm.underlying_balance) + ' frxUSD' : '')
-                ].filter(Boolean)) +
-                cell('CDP tranche', pct(cdp.ratio), 'text-slate-700', [
-                    '⚠️ <span class="font-semibold">This cushion is not a DUSD-holder claim.</span> It ' +
-                        'backs those isolated markets’ own borrowers and is liquidatable to them.',
-                    (cdp.collateral_value_usd != null
-                        ? CommonRenderer.formatCurrency(cdp.collateral_value_usd) + ' collateral against ' +
-                          CommonRenderer.formatCurrency(cdp.total_debt) + ' debt' : ''),
-                    (cdp.ratio_basis ? '<span class="text-slate-400">' +
-                        CommonRenderer._escapeAttr(cdp.ratio_basis) + '</span>' : '')
-                ].filter(Boolean)) +
-                cell('Blend', blended != null ? CommonRenderer.formatPercent(blended * 100, 1) : '—',
-                     'text-slate-400', [
-                    '⚠️ <span class="font-semibold">Arithmetic only — do not read as coverage.</span> It ' +
-                        'averages a zero-buffer tranche carrying ~88% of supply with a tranche whose ' +
-                        'cushion belongs to someone else.'
-                ]) +
-            '</div>' +
+        var usm = backing.usm || {}, cdp = backing.cdp || {}, self = this;
+        var pct = function(v) { return v == null ? 'Not established' : CommonRenderer.formatPercent(v * 100, 2); };
+        return '<div class="panel"><div class="panel-title">Minting modules — separate accounting perimeters</div>' +
+            '<p class="text-sm">No combined reserve-coverage ratio is established. USM token matching, isolated market marks and LP credit-line claims answer different questions.</p>' +
+            '<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3"><div><div class="card-label">USM nominal token ratio</div><div class="text-2xl font-bold text-amber-700">' + pct(usm.ratio) + '</div>' +
+            '<p class="text-sm">' + self._issuanceShare(backing, 'USM issuance') + '. No excess-token buffer; frxUSD asset quality and holder access remain separate.</p></div>' +
+            '<div><div class="card-label">Non-USM collateral coverage</div><div class="text-2xl font-bold">' + pct(cdp.ratio) + '</div>' +
+            '<p class="text-sm">' + self._issuanceShare(backing, 'CDP issuance') + '. Includes isolated markets, the LP credit line and unreadable modules.</p></div></div>' +
+            '<p class="text-sm text-amber-700 mt-3">Known direct-custody oracle-mark subset: ' + self._units(cdp.known_subset_collateral_value_dusd, 'DUSD') +
+            '; debt without established external valuation: ' + self._units(cdp.unknown_valuation_debt, 'DUSD') + '. These do not establish a loss, a whole-book ratio or holder recovery.</p>' +
+            '<p class="text-xs text-slate-500 mt-2">USM + non-USM liability partition gap: ' + CommonRenderer._escapeAttr(String((backing.totals || {}).liability_partition_gap_raw == null ? 'unknown' : (backing.totals || {}).liability_partition_gap_raw)) + ' raw DUSD units.</p>' +
             '<div id="dusd-tranche-chart-slot" class="chart-container"><canvas id="dusd-tranche-chart"></canvas></div>' +
-            // ⚠️ THE BASIS IS NOT REPRINTED HERE. It already renders on the axis
-            // head as "Basis: …", and a screenshot of the finished page showed the
-            // same 1,400-character paragraph three times in one section — the axis
-            // head, the ratio-history panel and this one. A reader who sees an
-            // argument repeated stops reading it.
-        '</div>';
+            '<p class="text-xs text-slate-500">Historical CDP ratios are withheld while their custody/valuation completeness is unresolved; no loss trend is inferred. Stored history and the operator-held peg backfill are unchanged.</p></div>';
+    },
+
+    _creditLineHtml: function(backing) {
+        var self = this, esc = CommonRenderer._escapeAttr;
+        return ((backing.cdp || {}).markets || []).filter(function(m) { return m.module_type === 'AltoConvexCreditLineMarket'; }).map(function(m) {
+            var lt = m.lookthrough || {};
+            return '<div class="panel" id="dusd-lp-creditline"><div class="panel-title">LP credit line — staked collateral, separate from cash</div>' +
+                '<p class="text-sm">' + self._units(m.collateral_balance, 'LP tokens') + ' held through Convex against ' + self._units(m.debt, 'DUSD issued debt') + '.</p>' +
+                '<p class="text-sm mt-2">Position / staked custody reconciliation: ' + (m.custody_covers_position === true ? 'matched at the source observation' : 'not established') + '.</p>' +
+                '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3"><div><div class="card-label">External-token look-through</div><div class="text-lg font-semibold">' + self._units(lt.external_frxusd_units, 'frxUSD') + '</div></div>' +
+                '<div><div class="card-label">Own-token look-through</div><div class="text-lg font-semibold">' + self._units(lt.own_dusd_units, 'DUSD') + '</div></div></div>' +
+                '<p class="text-sm text-amber-700 mt-3">Own DUSD is circular and excluded from external backing. These are pro-rata pool-balance allocations, not executable proceeds; do not add them to the LP mark.</p>' +
+                '<details class="mt-3"><summary class="text-sm">Nominal mark, custody and valuation limits</summary><p class="text-sm mt-2">Fixed-oracle nominal LP mark: ' + self._units(m.nominal_lp_value_dusd, 'DUSD') + ', not independent USD NAV.</p>' +
+                '<p class="text-sm">' + esc(m.encumbrance || 'Encumbrance not established') + '. ' + esc(m.redeemability_status || 'Withdrawal availability unknown') + '.</p>' +
+                '<p class="text-xs text-slate-500">' + esc(lt.basis || 'Look-through basis unavailable') + '</p><p class="text-xs">Market ' + self._ethLink(m.market) + ' · reward pool ' + self._ethLink(m.convex_reward_pool) + '</p></details></div>';
+        }).join('');
     },
 
     // Two labelled series from the pool's own history. ⚠️ Plotted on separate
@@ -154,7 +134,7 @@ var DusdAltoRenderer = {
                     return e && e.timestamp && (e.usm_ratio != null || e.cdp_ratio != null);
                 });
                 if (pts.length < 2) { slot.remove(); return; }
-                DusdAltoRenderer._drawTrancheChart(pts);
+                DusdAltoRenderer._drawTrancheChart(pts.map(function(e) { return Object.assign({}, e, {cdp_ratio: e.cdp_valuation_status === 'complete_nominal_oracle_marks' ? e.cdp_ratio : null}); }));
             })
             .catch(function() { slot.remove(); });
     },
@@ -173,7 +153,7 @@ var DusdAltoRenderer = {
             data: { labels: labels, datasets: [
                 { label: 'USM tranche — 1:1, zero buffer', data: usm, borderColor: '#f59e0b',
                   fill: false, tension: 0, pointRadius: 0, borderWidth: 2 },
-                { label: 'CDP tranche — cushion is the borrowers’', data: cdp, borderColor: '#6366f1',
+                { label: 'Non-USM nominal marks — source-qualified points only', data: cdp, borderColor: '#6366f1',
                   fill: false, tension: 0.2, pointRadius: 0, borderWidth: 2, borderDash: [4, 3] }
             ]},
             options: {
@@ -207,14 +187,13 @@ var DusdAltoRenderer = {
 
         return '<div class="panel">' +
             '<div class="panel-title">Universal Stability Module ' +
-                '<span class="text-xs font-normal text-slate-500">(~88% of supply is minted here)</span></div>' +
+                '<span class="text-xs font-normal text-slate-500">(' + this._issuanceShare(backing, 'USM issuance') + ')</span></div>' +
             (permissioned
                 ? '<div class="risk-flag risk-warning mb-3">' +
                     '<span class="font-semibold">Not a holder redemption route.</span> The swap is ' +
-                    esc(u.access_mode) + ' — a holder cannot exit through this module at par. ' +
+                    esc(u.access_mode) + ' — general holder eligibility is not established. ' +
                     '<span class="text-xs text-slate-500">Access mode is the producer’s own field; ' +
-                    'the sole-SWAPPER_ROLE finding and the 16-lifetime-swap count are riskAnalyst’s, ' +
-                    'carried in the Liquidity axis’ primary-exit basis.</span>' +
+                    'this snapshot does not renew older role-enumeration or lifetime-swap claims.</span>' +
                   '</div>'
                 : '') +
             '<div class="overflow-x-auto"><table class="data-table"><tbody>' +
@@ -223,8 +202,8 @@ var DusdAltoRenderer = {
                 row('Underlying', esc(u.underlying || '—') + ' ' +
                     (u.underlying_address ? DusdAltoRenderer._ethLink(u.underlying_address) : '')) +
                 row('Minted / underlying held',
-                    CommonRenderer.formatCurrency(u.minted) + ' / ' +
-                    CommonRenderer.formatCurrency(u.underlying_balance) +
+                    DusdAltoRenderer._units(u.minted, 'DUSD') + ' / ' +
+                    DusdAltoRenderer._units(u.underlying_balance, u.underlying || 'underlying units') +
                     (u.reconciled_to_wei ? ' <span class="text-green-600 text-xs">reconciled to the wei</span>' : '')) +
                 row('Buffer', (u.buffer_pct != null ? CommonRenderer.formatPercent(u.buffer_pct, 2) : '—') +
                     ' <span class="text-xs text-amber-700">by construction</span>', 'text-amber-600 font-semibold') +
@@ -268,16 +247,15 @@ var DusdAltoRenderer = {
         }).map(function(m) {
             var debt = m.debt, coll = m.coll_value;
             var ratio = typeof m.ratio === 'number' ? m.ratio * 100 : null;
-            var cls = ratio == null ? '' : ratio < 110 ? 'text-red-600 font-semibold'
-                : ratio < 130 ? 'text-amber-600' : 'text-green-600';
+            var cls = ratio == null ? '' : 'text-slate-700';
             return '<tr>' +
                 '<td class="font-mono text-xs">' + CommonRenderer._escapeAttr(
                     m.collateral || '—') + '</td>' +
                 '<td class="text-xs">' + (m.market
                     ? DusdAltoRenderer._truncAddr(m.market) + ' ' +
                       DusdAltoRenderer._ethLink(m.market) : '—') + '</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(debt) + '</td>' +
-                '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(coll) + '</td>' +
+                '<td class="text-right font-mono">' + DusdAltoRenderer._units(debt, 'DUSD') + '</td>' +
+                '<td class="text-right font-mono">' + DusdAltoRenderer._units(coll, 'DUSD') + '</td>' +
                 '<td class="text-right font-mono ' + cls + '">' +
                     (ratio != null ? CommonRenderer.formatPercent(ratio, 1) : '—') + '</td>' +
                 '<td class="text-[11px] text-slate-400">' +
@@ -285,14 +263,14 @@ var DusdAltoRenderer = {
             '</tr>';
         }).join('');
         return '<div class="panel">' +
-            '<div class="panel-title">CDP markets ' +
-                '<span class="text-xs font-normal text-slate-500">(~12% of supply · isolated)</span></div>' +
+            '<div class="panel-title">Non-USM mint modules ' +
+                '<span class="text-xs font-normal text-slate-500">(' + this._issuanceShare(backing, 'CDP issuance') + ')</span></div>' +
             '<p class="text-sm text-slate-500 mb-3">Each market is isolated: its collateral answers to ' +
-                'its own borrowers, and a shortfall in one does not reach the others. ' +
+                'its own borrower or credit account; this table is not a DUSD-holder reserve-coverage calculation. ' +
                 '<span class="text-xs">Collateral is marked with each market’s own Alto oracle.</span></p>' +
             '<div class="overflow-x-auto"><table class="data-table"><thead><tr>' +
                 '<th>Collateral</th><th>Market</th><th class="text-right">DUSD debt</th>' +
-                '<th class="text-right">Collateral (USD)</th><th class="text-right">Ratio</th>' +
+                '<th class="text-right">Nominal oracle mark (DUSD)</th><th class="text-right">Mark / debt</th>' +
                 '<th>Mark</th>' +
             '</tr></thead><tbody>' + rows + '</tbody></table></div>' +
         '</div>';
@@ -304,8 +282,31 @@ var DusdAltoRenderer = {
     // enumerated non-swap holders, and the subtraction is shown rather than
     // asserted, because the two figures differ by three orders of magnitude and
     // that difference is the finding.
+    _currentExitScopeHtml: function(lq) {
+        var self = this, esc = CommonRenderer._escapeAttr, depth = lq.depth || {}, holdings = depth.holdings || {};
+        var residual = holdings.third_party_float || {}, downstream = lq.downstream_route_legs || {};
+        var rungs = Array.isArray(depth.rungs) ? depth.rungs : (lq.rungs || []);
+        function table(rows) {
+            return '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Input sizing (USD)</th><th>Indicative USDC output</th><th>Nominal return (bps)</th><th>Change vs $100 baseline (bps)</th><th>Quote clock</th></tr></thead><tbody>' + rows.map(function(r) {
+                function n(v) { return typeof v === 'number' && isFinite(v) ? v.toFixed(3) : 'Not established'; }
+                return '<tr><td>' + esc(n(r.size_usd)) + '</td><td>' + esc(n(r.amount_out_tokens)) + '</td><td>' + esc(n(r.slippage_bps)) + '</td><td>' + esc(n(r.slippage_bps_debiased)) + '</td><td class="text-xs">' + esc(r.quote_as_of || 'Unknown') + '</td></tr>';
+            }).join('') + '</tbody></table></div>';
+        }
+        var valid = rungs.filter(function(r) { return r.status === 'ok' && r.exceeds_recorded_total_supply === false; });
+        var above = rungs.filter(function(r) { return r.exceeds_recorded_total_supply === true; });
+        return '<div class="panel" id="dusd-current-exit-scope"><div class="panel-title">Cash exit — indicative quotes, unresolved holder capacity</div>' +
+            '<p class="text-sm">Saved quote clock: ' + esc((depth.quote || {}).quoted_as_of || lq.as_of || 'Unknown') + '. Quotes are not funded fills, public float or guaranteed execution. Gas estimates are not deducted from the output; expiry and settlement are not established.</p>' + table(valid) +
+            '<p class="text-xs mt-2">Signed nominal return compares output with input sizing. Baseline-relative change compares average execution rates with the source $100 sample; it is not interval marginal impact.</p>' +
+            '<div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4"><div><div class="card-label">Recorded supply outside pool</div>' + self._units(holdings.supply_outside_pool_units, 'DUSD') + '</div><div><div class="card-label">Named-contract direct-balance residual</div>' + self._units(residual.units, 'DUSD') + '</div></div>' +
+            '<p class="text-sm mt-2">Current economic public float and current treasury LP ownership: not established. Holder-list basis: ' + esc(residual.holder_list_as_of || 'Unknown') + '. These distribution figures are separate from the quoted sample size.</p>' +
+            '<p class="text-xs">' + esc(holdings.basis || '') + ' ' + esc(holdings.lp_withdrawal_caveat || '') + '</p>' +
+            '<p class="text-sm mt-3">DUSD → frxUSD sale and downstream cash conversion are separate. ' + esc(downstream.basis || '') + ' Current Frax conversion eligibility, cash and limit: not established. Permissioned Alto USM access is not a general-holder cash guarantee.</p>' +
+            (above.length ? '<details class="mt-3"><summary>Above-supply mathematical observations — not sellable capacity</summary>' + table(above) + '</details>' : '') + '</div>';
+    },
+
     _exitRealityHtml: function(data) {
         var lq = data.liquidity || {};
+        if (lq.two_pct_depth_status === 'quote_only_supply_bounded_floor' || (lq.depth || {}).status === 'quote_only_supply_bounded_floor') return this._currentExitScopeHtml(lq);
         var venues = Array.isArray(lq.venues) ? lq.venues : [];
         var live = venues.filter(function(v) { return v && v.kind === 'swap' && !/exclud|dead/i.test(String(v.status || '')); });
         var pool = live[0];

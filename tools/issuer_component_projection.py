@@ -19,7 +19,7 @@ def record(row, entity=False):
     return {**{k:row[k] for k in keys if k in row},'source_urls':urls}
 
 
-def add_components(feed, policy, source=SOURCE):
+def _add_component_source(feed, policy, source=SOURCE):
     approval = policy.get('reviewed_component_contract') or {}
     reserved = approval.get('reserved_assets') or {}
     # These placeholders also prevent previously published project rows from
@@ -80,3 +80,29 @@ def add_components(feed, policy, source=SOURCE):
             'scope':'Selected component fields only; parent profiles private; no rights inheritance'}
     except (OSError,ValueError,KeyError,TypeError):
         feed['component_source']['status']='withheld_source_missing_changed_or_invalid'
+
+
+def add_components(feed, policy, source=SOURCE):
+    """Independently validate exact approved component contracts.
+
+    A supplemental source may add disjoint components, never replace a previous
+    contract or make its private parent a fallback when bytes change.
+    """
+    _add_component_source(feed, policy, source)
+    feed['component_sources'] = [dict(feed['component_source'])]
+    for approval in policy.get('additional_reviewed_component_contracts', []):
+        reserved = approval.get('reserved_assets') or {}
+        if set(reserved) & set(feed['component_profiles']):
+            raise ValueError('Conflicting reviewed component source mapping')
+        partial = {}
+        selected_path = approval.get('source_path')
+        if not isinstance(selected_path, str) or not selected_path:
+            selected_path = '/nonexistent/unavailable-reviewed-component-contract'
+        _add_component_source(partial, {'reviewed_component_contract':approval}, pathlib.Path(selected_path))
+        if set(partial['reference_components']) & set(feed['reference_components']):
+            raise ValueError('Conflicting reviewed reference component mapping')
+        feed['component_profiles'].update(partial['component_profiles'])
+        feed['reference_components'].update(partial['reference_components'])
+        feed['component_sources'].append(dict(partial['component_source']))
+        for key in ['component_related_events','layer_context_records','pending_component_decisions']:
+            feed.setdefault(key, []).extend(partial.get(key, []))
