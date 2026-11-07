@@ -3,35 +3,35 @@
   "asset": "sUSDS",
   "asset_slug": "susds",
   "chain": "ethereum",
-  "timestamp": "2026-11-07T15:49:30Z",
+  "timestamp": "2026-11-07T16:49:30Z",
   "summary": {
-    "total_supply": 3533855066.27,
+    "total_supply": 3533872353.41,
     "supply_unit": "shares",
-    "total_assets_usds": 3942117950.44,
-    "nav": 1.115529040242,
+    "total_assets_usds": 3942154018.47,
+    "nav": 1.115533789628,
     "price": 1.12,
     "paused": null
   },
   "risk_flags": [],
   "vault_status": null,
   "backing": {
-    "collateral_ratio": 99.999977,
+    "collateral_ratio": 99.9998,
     "collateral_ratio_scale": "percent",
     "collateral_ratio_note": "Sub-0.001% residuals between these two independent reads reflect accrual/read timing precision, not a coverage gap.",
     "collateral_ratio_basis": "USDS balanceOf(sUSDS) / sUSDS totalAssets(). Two independent reads: the numerator is a token balance, the denominator is derived from the chi accumulator. 100% means the vault holds what its shares can claim.",
-    "total_backing": 3942117055.31,
-    "surplus_deficit": -895.13,
+    "total_backing": 3942146130.11,
+    "surplus_deficit": -7888.36,
     "breakdown": [
       {
         "label": "USDS held by vault",
-        "value": 3942117055.31,
+        "value": 3942146130.11,
         "pct": 100
       }
     ],
     "integrity": {
-      "total_assets_reported": 3942117950.44,
-      "usds_held": 3942117055.31,
-      "divergence_pct": -2.3e-05,
+      "total_assets_reported": 3942154018.47,
+      "usds_held": 3942146130.11,
+      "divergence_pct": -0.0002,
       "status": "ok",
       "direction": "held_below_reported",
       "note": "Signed (held - totalAssets) / totalAssets. A small NEGATIVE value is the expected state: interest accrues via chi continuously but is drawn from the vow periodically, so reported assets run slightly ahead of the balance."
@@ -40,17 +40,17 @@
     "backing_score_source": "risk-feed@2026-11-07T01:45:02Z",
     "backing_score_status": "ok",
     "backing_score_generated_at": "2026-11-07T01:45:02Z",
-    "backing_score_age_hours": 14.08,
-    "share_of_usds_supply_pct": 70.5471,
+    "backing_score_age_hours": 15.08,
+    "share_of_usds_supply_pct": 70.5466,
     "share_of_usds_supply_basis": "sUSDS totalAssets() / Ethereum USDS totalSupply()",
-    "nav_usds_per_share": 1.115529040242
+    "nav_usds_per_share": 1.115533789628
   },
   "dependencies": {
     "upstream": [
       {
         "name": "USDS",
         "metric": "70.5% of USDS supply",
-        "value": 3942117950.44,
+        "value": 3942154018.47,
         "source": "onchain",
         "link": "?asset=usds",
         "link_type": "internal",
@@ -62,14 +62,14 @@
     "downstream_note": "sUSDS is widely used as lending collateral (Spark, Morpho, Aave). Those positions are not enumerated here."
   },
   "liquidity": {
-    "as_of": "2026-11-07T13:31:09Z",
+    "as_of": "2026-11-07T16:31:29Z",
     "total_tvl": null,
     "total_2pct_depth": 1000000.0,
     "total_2pct_depth_is_floor": true,
     "two_pct_depth_status": "not_size_responsive",
     "two_pct_depth_size_responsive": false,
-    "two_pct_depth_unresponsive_note": "\u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 beyond the reference rung returned 0.00bps to within 0.1bp. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure.",
-    "two_pct_depth_basis": "\u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 beyond the reference rung returned 0.00bps to within 0.1bp. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure. A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
+    "two_pct_depth_unresponsive_note": "\u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 beyond the reference rung returned -2.80bps to within 0.1bp. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure.",
+    "two_pct_depth_basis": "\u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 beyond the reference rung returned -2.80bps to within 0.1bp. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure. A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
     "primary_threshold_bps": 200,
     "depth_50bps": {
       "threshold_bps": 50.0,
@@ -77,8 +77,8 @@
       "is_floor": true,
       "status": "not_size_responsive",
       "size_responsive": false,
-      "unresponsive_note": "\u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 beyond the reference rung returned 0.00bps to within 0.1bp. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure.",
-      "basis": "\u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 beyond the reference rung returned 0.00bps to within 0.1bp. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure. A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 50bps, so the crossing is somewhere above where we look. Publishing it as '0.5% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
+      "unresponsive_note": "\u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 beyond the reference rung returned -2.80bps to within 0.1bp. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure.",
+      "basis": "\u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 beyond the reference rung returned -2.80bps to within 0.1bp. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure. A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 50bps, so the crossing is somewhere above where we look. Publishing it as '0.5% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison."
     },
     "volume_24h": null,
     "measured_chain": "ethereum",
@@ -87,56 +87,58 @@
     "exit_mark": {
       "source": "kyberswap",
       "sell_into": "USDC",
-      "fair_value": 1.00445329786189,
+      "fair_value": 1.1152488841163792,
       "fair_value_basis": "market",
-      "quoted_at": "2026-11-07T13:31:09Z",
+      "quoted_at": "2026-11-07T16:31:29Z",
       "quotes": {
         "1000": {
-          "output_usd": 1110.57,
+          "output_usd": 1000.54,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 1.11057,
+          "fill_ratio": 1.00054,
           "slippage_bps": 0.0
         },
         "10000": {
-          "output_usd": 11105.72,
+          "output_usd": 10002.54,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 1.110572,
-          "slippage_bps": 0.0
+          "fill_ratio": 1.000254,
+          "slippage_bps": -2.8
         },
         "50000": {
-          "output_usd": 55528.62,
+          "output_usd": 50012.71,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 1.110572,
-          "slippage_bps": 0.0
+          "fill_ratio": 1.000254,
+          "slippage_bps": -2.8
         },
         "100000": {
-          "output_usd": 111057.24,
+          "output_usd": 100025.42,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 1.110572,
-          "slippage_bps": 0.0
+          "fill_ratio": 1.000254,
+          "slippage_bps": -2.8
         },
         "250000": {
-          "error": "http_530",
-          "attempts": 4,
-          "provider": "odos"
-        },
-        "500000": {
-          "output_usd": 555286.18,
-          "attempts": 2,
-          "provider": "kyberswap",
-          "fill_ratio": 1.110572,
-          "slippage_bps": 0.0
-        },
-        "1000000": {
-          "output_usd": 1110572.36,
+          "output_usd": 250063.55,
           "attempts": 1,
           "provider": "kyberswap",
-          "fill_ratio": 1.110572,
-          "slippage_bps": 0.0
+          "fill_ratio": 1.000254,
+          "slippage_bps": -2.8
+        },
+        "500000": {
+          "output_usd": 500127.09,
+          "attempts": 1,
+          "provider": "kyberswap",
+          "fill_ratio": 1.000254,
+          "slippage_bps": -2.8
+        },
+        "1000000": {
+          "output_usd": 1000254.19,
+          "attempts": 1,
+          "provider": "kyberswap",
+          "fill_ratio": 1.000254,
+          "slippage_bps": -2.8
         }
       },
       "slippage_bps_basis": "PRICE IMPACT against this venue's own smallest quoted rung, which EXCLUDES that rung's own spread \u2014 it is not the holder's all-in cost. The all-in figure is fill_ratio (output_usd / size). Impact is measured this way deliberately, so peg discount and source lag do not leak into it."
@@ -146,7 +148,7 @@
       "into": "USDS",
       "gated": false,
       "gated_basis": "measured:erc4626_redeem_simulated",
-      "as_of": "2026-11-07T15:49:30Z",
+      "as_of": "2026-11-07T16:49:30Z",
       "probe": {
         "control_address": "0x000000000000000000000000000000000000dEaD",
         "vault": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
@@ -155,7 +157,7 @@
         "asset": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
         "positive_control_ok": true,
         "asset_matches_expected": true,
-        "preview_redeem_1e18": 1.11552905607366,
+        "preview_redeem_1e18": 1.115533789628198,
         "control_balance": 14311327105968778,
         "control_max_redeem": 14311327105968778,
         "max_redeem_uncapped": true,
@@ -174,12 +176,12 @@
     "derived_score": null,
     "derived_score_status": "not_computed",
     "pools": [],
-    "note": "Primary exit is redemption: ERC-4626 redeem() into USDS, no cooldown or queue. The ladder below is the secondary DEX exit. \u26a0\ufe0f EXTENDING THIS LADDER WOULD NOT RAISE THE FLOOR: probing above the $1M top rung returns a CONSTANT 1078.15bps at $5M, $10M, $25M, $50M and $100M alike \u2014 identical to the hundredth of a basis point across a 20x range, which is a redemption rate being returned as a quote, not a fill. So the floor is where the venue stops answering, not where depth runs out, and the extra rungs would import a constant rather than locate a crossing. (USDS itself trips the size-responsiveness check outright \u2014 exactly 0.00bps to $50M \u2014 because it routes the Sky PSM, a fixed-rate swap bounded by pocket balance and not by slippage.) \u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 beyond the reference rung returned 0.00bps to within 0.1bp. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure. A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
+    "note": "Primary exit is redemption: ERC-4626 redeem() into USDS, no cooldown or queue. The ladder below is the secondary DEX exit. \u26a0\ufe0f EXTENDING THIS LADDER WOULD NOT RAISE THE FLOOR: probing above the $1M top rung returns a CONSTANT 1078.15bps at $5M, $10M, $25M, $50M and $100M alike \u2014 identical to the hundredth of a basis point across a 20x range, which is a redemption rate being returned as a quote, not a fill. So the floor is where the venue stops answering, not where depth runs out, and the extra rungs would import a constant rather than locate a crossing. (USDS itself trips the size-responsiveness check outright \u2014 exactly 0.00bps to $50M \u2014 because it routes the Sky PSM, a fixed-rate swap bounded by pocket balance and not by slippage.) \u26a0\ufe0f NOT SIZE-RESPONSIVE: every rung from $1,000 to $1,000,000 beyond the reference rung returned -2.80bps to within 0.1bp. The quote path is not responding to size, so this bounds nothing -- the same call would clear any number. Real capacity is set by the venue's fixed-rate pocket, which this ladder does not measure. A FLOOR, not a measurement. The deepest rung quoted ($1,000,000) still clears inside 200bps, so the crossing is somewhere above where we look. Publishing it as '2% depth' would read as a limit we found. SLIPPAGE CONVENTION: TOTAL over the fill (not marginal impact at the margin), measured against this venue's own smallest quoted rung. \u26a0\ufe0f That reference EXCLUDES the smallest rung's own spread, so the figure is price impact and NOT the holder's all-in cost \u2014 which is fill_ratio (output_usd / size). Both are real and they answer different questions. The same ladder classifies differently under total vs marginal and under impact vs all-in, so both halves are stated for cross-producer comparison.",
     "liquidity_score": 8.5,
     "liquidity_score_source": "risk-feed@2026-11-07T01:45:02Z",
     "liquidity_score_status": "ok",
     "liquidity_score_generated_at": "2026-11-07T01:45:02Z",
-    "liquidity_score_age_hours": 14.08,
+    "liquidity_score_age_hours": 15.08,
     "exit_legs": [
       {
         "leg": 1,
@@ -187,7 +189,7 @@
         "to": "USDS",
         "mechanism": "ERC-4626 redeem()",
         "status": "measured_open",
-        "as_of": "2026-11-07T15:49:30Z",
+        "as_of": "2026-11-07T16:49:30Z",
         "capacity": "uncapped_by_contract_probe"
       },
       {
@@ -196,8 +198,8 @@
         "to": "USDC",
         "mechanism": "LitePSM fixed-rate exit",
         "status": "inventory_bounded",
-        "capacity_usd": 2939233339.93,
-        "capacity_as_of": "2026-11-07T15:50:03Z",
+        "capacity_usd": 2937638727.33,
+        "capacity_as_of": "2026-11-07T16:50:00Z",
         "capacity_basis": "USDC balanceOf(LitePSM pocket)"
       }
     ]
@@ -205,19 +207,19 @@
   "asset_specific": {
     "type": "susds",
     "vault_state": {
-      "total_supply_shares": 3533855066.27295,
-      "total_assets_usds": 3942117950.435233,
-      "nav_usds_per_share": 1.115529040242,
+      "total_supply_shares": 3533872353.414737,
+      "total_assets_usds": 3942154018.46706,
+      "nav_usds_per_share": 1.115533789628,
       "asset": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
       "ssr_raw": 1000000001182641576793209935,
-      "chi_raw": 1115528786942399939253054370,
-      "rho": 1794066371
+      "chi_raw": 1115531557414358049013482007,
+      "rho": 1794068471
     },
     "yield": {
       "headline_apy_pct": 3.8,
       "headline_source": "onchain_ssr",
       "realized_apy_24h_pct": 3.7999,
-      "realized_apy_7d_pct": 3.8,
+      "realized_apy_7d_pct": 3.8001,
       "nav_history_ref": "susds_backing_history.json"
     },
     "peg": {
@@ -225,10 +227,10 @@
       "market_price_source": "coingecko:susds",
       "premium_discount_is_measured": true,
       "theoretical_price_assumes_usds_par": false,
-      "nav_usds_per_share": 1.115529040242,
+      "nav_usds_per_share": 1.115533789628,
       "usds_peg_price": 0.99978911,
-      "theoretical_price": 1.11529379,
-      "premium_discount_pct": 0.422,
+      "theoretical_price": 1.11529853,
+      "premium_discount_pct": 0.4215,
       "source": "coingecko:susds + onchain_nav"
     },
     "history_ref": "susds_backing_history.json",
@@ -272,8 +274,8 @@
   },
   "peg": {
     "market_price": 1.12,
-    "nav": 1.11529379,
-    "premium_discount_pct": 0.422,
+    "nav": 1.11529853,
+    "premium_discount_pct": 0.4215,
     "source": "coingecko:susds + onchain_nav",
     "history_ref": "susds_backing_history.json",
     "history_field": "market_price",
@@ -281,7 +283,7 @@
     "volatility_score_source": "risk-feed@2026-11-07T01:45:02Z",
     "volatility_score_status": "ok",
     "volatility_score_generated_at": "2026-11-07T01:45:02Z",
-    "volatility_score_age_hours": 14.08
+    "volatility_score_age_hours": 15.08
   },
   "issuer": {
     "report_url": "https://tidresearch.com/reports/susds",
@@ -291,7 +293,7 @@
     "issuer_score_source": "risk-feed@2026-11-07T01:45:02Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-11-07T01:45:02Z",
-    "issuer_score_age_hours": 14.08
+    "issuer_score_age_hours": 15.08
   },
   "coverage_by_chain": [
     {
@@ -304,7 +306,7 @@
         "NAV",
         "redeem_simulation"
       ],
-      "as_of": "2026-11-07T15:49:30Z"
+      "as_of": "2026-11-07T16:49:30Z"
     },
     {
       "chain": "base",
