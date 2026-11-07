@@ -3,12 +3,12 @@
  "asset_slug": "dusd_alto",
  "as_of": "2026-11-06T23:47:05Z",
  "producer": "dextracker",
- "note": "Axis 3 (Liquidity & Exit), single producer. Measured exit evidence only; no risk score. Alto Protocol's DUSD 0x63d74d22E689C715a04F2C13962b1f77F443d35b -- NOT Dialectic USD, dTRINITY dUSD or DeFi Dollar, which share the ticker. The 2% crossing lies above the asset's ENTIRE supply, so `depth.depth_usd` is clamped to total supply (status clears_entire_supply) and the crossing is retained in `depth.curve_crossing_above_supply`. How much is held outside the pool, and by whom, is in `depth.holdings` -- distribution, not depth.",
+ "note": "Alto DUSD exact-token saved router evidence. Above-supply probes are mathematical views, not sellable float/depth; current liquidity/float/cash eligibility are separately scoped. Historical September source records are preserved without restamping.",
  "depth": {
-  "status": "clears_entire_supply",
-  "depth_usd": 1802982.6027290623,
-  "depth_usd_semantics": "total_supply: the crossing lies ABOVE everything in existence, so every unit could be sold inside the threshold. Clamped to total supply; the crossing itself is in `curve_crossing_above_supply`.",
-  "is_floor": false,
+  "status": "quote_only_supply_bounded_floor",
+  "depth_usd": 1000000.0,
+  "depth_usd_semantics": "Largest observed clearing quote size below recorded total supply; NOT current public float or executable liquidation capacity.",
+  "is_floor": true,
   "threshold_bps": -200.0,
   "size_response": "size_responsive",
   "marginal_cost_monotonic_within_tested_range": true,
@@ -30,19 +30,10 @@
    "spec": "riskAnalyst liquidity-ladder-spec.md \u00a77 (178e54a)"
   },
   "slippage_convention": "Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. The dated external mid sizes the input notional and is NOT the impact reference.",
-  "basis": "The -200bps crossing sits at $2,775,391, ABOVE the asset's entire supply of $1,802,983: every unit in existence could be sold inside the threshold, so `depth_usd` is clamped to total supply. The crossing is retained in `curve_crossing_above_supply` as a property of the pool curve. How little reaches the market is a separate fact from depth: at most $276,057 sits outside curve DUSD/frxUSD pool 0x104d6a1b. Of that, ordinary holders have AT MOST about $252,961 (issuer holder list as of 2026-09-20, block 26,017,854); the rest sits with the issuer's own lending markets and fee accounts, which can be borrowed and sold.",
-  "bracket": {
-   "last_clearing_size_usd": 2775390.625,
-   "last_clearing_marginal_impact_bps": -186.64817864287195,
-   "first_crossing_size_usd": 2792968.75,
-   "first_crossing_marginal_impact_bps": -209.98611748609952,
-   "width_usd": 17578.125,
-   "monotonic_in_bracket": true,
-   "threshold_bps": -200.0,
-   "meets_precision_obligation": true
-  },
+  "basis": "Above-supply crossing remains mathematical context. Only an existing below-supply clearing sample is a quote-size floor; source clocks, funding, LP withdrawals and cash eligibility are separate.",
+  "bracket": null,
   "quote": {
-   "method": "KyberSwap GET /api/v1/routes exact-input DUSD -> USDC; the route is Curve DUSD/frxUSD then frxUSD -> USDC via the Frax custodian (1:1, inventory-bounded) and crvUSD/frxUSD -> crvUSD/USDC",
+   "method": "KyberSwap GET /api/v1/routes exact-input DUSD -> USDC; actual pool/token hops are retained at each quote clock. DUSD -> frxUSD and downstream cash conversion are separate; current Frax eligibility/cash/fees are not asserted.",
    "venue": "kyberswap_routed",
    "chain": "ethereum",
    "token_in": {
@@ -197,7 +188,9 @@
     "router_price_out": 0.9999068916730883,
     "slippage_bps_debiased": 0.04715999999849174,
     "price_bias_bps": 5.566000000001292,
-    "rung_kind": "decade"
+    "rung_kind": "decade",
+    "exceeds_recorded_total_supply": false,
+    "observation_scope": "indicative_quote_not_funded_fill_or_public_float"
    },
    {
     "size_usd": 10000.0,
@@ -255,7 +248,9 @@
     "router_price_out": 0.9999068916730882,
     "slippage_bps_debiased": -0.11046200000031092,
     "price_bias_bps": 5.566000000001292,
-    "rung_kind": "decade"
+    "rung_kind": "decade",
+    "exceeds_recorded_total_supply": false,
+    "observation_scope": "indicative_quote_not_funded_fill_or_public_float"
    },
    {
     "size_usd": 100000.0,
@@ -395,7 +390,9 @@
     "router_price_out": 0.9998217726786154,
     "slippage_bps_debiased": -8.165661000001379,
     "price_bias_bps": 5.566000000001292,
-    "rung_kind": "decade"
+    "rung_kind": "decade",
+    "exceeds_recorded_total_supply": false,
+    "observation_scope": "indicative_quote_not_funded_fill_or_public_float"
    },
    {
     "size_usd": 1000000.0,
@@ -517,7 +514,9 @@
     "router_price_out": 0.9997174797252188,
     "slippage_bps_debiased": -15.610505990001355,
     "price_bias_bps": 5.566000000001292,
-    "rung_kind": "decade"
+    "rung_kind": "decade",
+    "exceeds_recorded_total_supply": false,
+    "observation_scope": "indicative_quote_not_funded_fill_or_public_float"
    },
    {
     "size_usd": 10000000.0,
@@ -713,7 +712,9 @@
     "router_price_out": 0.9999068916730882,
     "slippage_bps_debiased": -7230.249977409002,
     "price_bias_bps": 5.566000000001292,
-    "rung_kind": "decade"
+    "rung_kind": "decade",
+    "exceeds_recorded_total_supply": true,
+    "observation_scope": "mathematical_view_above_supply_not_sellable_float"
    }
   ],
   "preflight": {
@@ -741,12 +742,14 @@
      "check": "depth_against_supply",
      "passed": true,
      "blocking": false,
-     "detail": "Depth is 100.0% of chain supply.",
+     "detail": "Published below-supply quote floor is an arithmetic observation, not sellable public float or cash capacity.",
      "evidence": {
-      "ratio": 1.0
+      "ratio": 0.5546365219976955,
+      "source_as_of": "2026-11-06T23:47:04Z"
      }
     }
-   ]
+   ],
+   "scope": "Saved quote plausibility and arithmetic comparison only; not current permissions, public float or executable cash."
   },
   "execution_envelope": {
    "status": "no_turnover_observed",
@@ -762,7 +765,8 @@
     "input_size_usd": 10000000.0,
     "output_value_usd": 2775316.022591
    },
-   "basis": "Peak is the maximum successful routed output among tested rungs, not a claim that the exact global maximum was located."
+   "basis": "Peak is the maximum successful routed output among tested rungs, not a claim that the exact global maximum was located.",
+   "observation_scope": "Saved mathematical curve samples, including above-supply inputs; not available float or cash capacity."
   },
   "bracket_refinement_guard": {
    "eligible": true,
@@ -779,11 +783,8 @@
    "basis": "Same-size routed output spread across samples immediately before and after refinement. The published bracket must not be narrower than this observed spread."
   },
   "refinement": {
-   "status": "refined",
-   "stopped_on": "precision_obligation_met",
-   "probe_count": 9,
-   "precision_target": "<=1% of bracket midpoint",
-   "validation_cooldown_seconds": 8.0
+   "status": "not_applicable_quote_floor",
+   "basis": "Any prior located crossing/refinement is above-supply mathematical context, not the current quote floor."
   },
   "asset_category": "stable",
   "primary_threshold_bps": -50.0,
@@ -791,28 +792,17 @@
   "bracket_50bps": {
    "threshold_bps": -50.0,
    "convention": "marginal",
-   "status": "clears_entire_supply",
+   "status": "quote_only_supply_bounded_floor",
    "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
    "refinement": {
-    "status": "salvaged_from_probes",
-    "stopped_on": "precision_obligation_met",
-    "probe_count": 9,
-    "wobble_above_crossing": []
+    "status": "not_applicable_quote_floor",
+    "basis": "Any prior located crossing/refinement is above-supply mathematical context, not the current quote floor."
    },
-   "bracket": {
-    "last_clearing_size_usd": 2248046.875,
-    "last_clearing_marginal_impact_bps": -49.58709749602109,
-    "first_crossing_size_usd": 2265625.0,
-    "first_crossing_marginal_impact_bps": -50.668121542621904,
-    "width_usd": 17578.125,
-    "monotonic_in_bracket": true,
-    "threshold_bps": -50.0,
-    "meets_precision_obligation": true
-   },
-   "depth_usd": 1802982.6027290623,
-   "is_floor": false,
-   "basis": "The 0.5% crossing also lies above total supply: every unit in existence clears inside 0.5%. Clamped to total supply; curve property in curve_crossing_above_supply.",
-   "note": "Primary figure for a STABLE asset per spec \u00a77.8; the 2% bracket above is retained for comparison across the corpus. Widths are independent: this one may be wider than the 2% bracket where it coincides with a router split boundary (\u00a77.7).",
+   "bracket": null,
+   "depth_usd": 1000000.0,
+   "is_floor": true,
+   "basis": "Above-supply crossing remains mathematical context. Only an existing below-supply clearing sample is a quote-size floor; source clocks, funding, LP withdrawals and cash eligibility are separate.",
+   "note": "Quote floor and mathematical curve crossing are distinct; no exact current capacity or public float measured.",
    "curve_crossing_above_supply": {
     "depth_usd": 2248046.875,
     "bracket": {
@@ -824,26 +814,53 @@
      "monotonic_in_bracket": true,
      "threshold_bps": -50.0,
      "meets_precision_obligation": true
+    },
+    "interpretation": "Mathematical view beyond recorded minted supply, not sellable float, a trade or available cash depth.",
+    "refinement": {
+     "status": "salvaged_from_probes",
+     "stopped_on": "precision_obligation_met",
+     "probe_count": 9,
+     "wobble_above_crossing": []
     }
-   }
+   },
+   "depth_usd_semantics": "Largest observed clearing quote size below recorded total supply; NOT current public float or executable liquidation capacity."
   },
   "depth_50bps": {
-   "shape": "bracket",
    "threshold_bps": -50.0,
-   "convention": "marginal_from_first_successful_rung",
-   "depth_usd": 2248046.875,
-   "bracket": {
-    "last_clearing_size_usd": 2248046.875,
-    "last_clearing_marginal_impact_bps": -49.58709749602109,
-    "first_crossing_size_usd": 2265625.0,
-    "first_crossing_marginal_impact_bps": -50.668121542621904,
-    "width_usd": 17578.125,
-    "monotonic_in_bracket": true,
-    "threshold_bps": -50.0,
-    "meets_precision_obligation": true
+   "convention": "marginal",
+   "status": "quote_only_supply_bounded_floor",
+   "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
+   "refinement": {
+    "status": "not_applicable_quote_floor",
+    "basis": "Any prior located crossing/refinement is above-supply mathematical context, not the current quote floor."
    },
-   "status": "bracketed",
-   "basis": "Re-quoting the refined ends did not straddle (-46.25977552071947 / -47.73686597921878 bps); the FIRST crossing was salvaged from the search's probes and both ends re-quoted: $2,248,046.88 - $2,265,625.00."
+   "bracket": null,
+   "depth_usd": 1000000.0,
+   "is_floor": true,
+   "basis": "Above-supply crossing remains mathematical context. Only an existing below-supply clearing sample is a quote-size floor; source clocks, funding, LP withdrawals and cash eligibility are separate.",
+   "note": "Quote floor and mathematical curve crossing are distinct; no exact current capacity or public float measured.",
+   "curve_crossing_above_supply": {
+    "depth_usd": 2248046.875,
+    "bracket": {
+     "last_clearing_size_usd": 2248046.875,
+     "last_clearing_marginal_impact_bps": -49.58709749602109,
+     "first_crossing_size_usd": 2265625.0,
+     "first_crossing_marginal_impact_bps": -50.668121542621904,
+     "width_usd": 17578.125,
+     "monotonic_in_bracket": true,
+     "threshold_bps": -50.0,
+     "meets_precision_obligation": true
+    },
+    "interpretation": "Mathematical view beyond recorded minted supply, not sellable float, a trade or available cash depth.",
+    "refinement": {
+     "status": "salvaged_from_probes",
+     "stopped_on": "precision_obligation_met",
+     "probe_count": 9,
+     "wobble_above_crossing": []
+    }
+   },
+   "depth_usd_semantics": "Largest observed clearing quote size below recorded total supply; NOT current public float or executable liquidation capacity.",
+   "shape": "floor"
   },
   "holdings": {
    "semantics": "Distribution, NOT a bound on depth: how much of the supply is held outside the quoted pool right now.",
@@ -864,17 +881,18 @@
      "AltoBorrowMarket 0x053b53ca": 2274.065502032377
     },
     "method": "residual",
-    "semantics": "Supply outside the pool minus the issuer's own lending markets and fee accounts: what ordinary holders have. A FLOOR-SIDE companion to depth_usd, which stays the upper bound. Lending-market DUSD can be borrowed and sold, so the sellable amount lies between the two. Residual over a named holder list: an unlisted protocol holder makes this OVERSTATE.",
+    "semantics": "Named-contract residual of direct DUSD balances, not independently established economic public float. Unlisted protocol accounts can overstate it; lending claims and LP look-through remain separate.",
     "is_upper_bound": true,
     "upper_bound_basis": "The issuer holder list is a snapshot, so any protocol-owned contract added since is counted here as an ordinary holder. The error can only push this figure UP: read it as 'at most'.",
     "holder_list_source": "riskAnalyst assets/dusd-alto.md, full Transfer-event reconstruction",
     "holder_list_as_of": "2026-09-20, block 26,017,854"
    },
-   "lp_withdrawal_caveat": "Newly minted supply in users' hands would sell at the depth shown. Supply freed by an LP withdrawing from the quoted pool would NOT: that raises float and shallows the pool at the same time.",
-   "basis": "How little reaches the market is a separate fact from depth: at most $276,057 sits outside curve DUSD/frxUSD pool 0x104d6a1b. Of that, ordinary holders have AT MOST about $252,961 (issuer holder list as of 2026-09-20, block 26,017,854); the rest sits with the issuer's own lending markets and fee accounts, which can be borrowed and sold."
+   "lp_withdrawal_caveat": "An LP withdrawal changes reserves and outside-pool balances together; the saved quote curve must not be applied as if pool state were unchanged.",
+   "basis": "Recorded outside-pool balances and named-contract residual keep their original supply-read clock. Neither whole-pool TVL, treasury LP ownership nor all economic public float is established by this subtraction.",
+   "current_economic_public_float_units": null
   },
   "supply_check": {
-   "status": "clamped_to_total_supply",
+   "status": "recorded_arithmetic_supply_reference",
    "token": "0x63d74d22E689C715a04F2C13962b1f77F443d35b",
    "total_supply_units": 1802982.6027290623,
    "total_supply_usd": 1802982.6027290623,
@@ -895,7 +913,7 @@
      "AltoBorrowMarket 0x053b53ca": 2274.065502032377
     },
     "method": "residual",
-    "semantics": "Supply outside the pool minus the issuer's own lending markets and fee accounts: what ordinary holders have. A FLOOR-SIDE companion to depth_usd, which stays the upper bound. Lending-market DUSD can be borrowed and sold, so the sellable amount lies between the two. Residual over a named holder list: an unlisted protocol holder makes this OVERSTATE.",
+    "semantics": "Named-contract residual of direct DUSD balances, not independently established economic public float. Unlisted protocol accounts can overstate it; lending claims and LP look-through remain separate.",
     "is_upper_bound": true,
     "upper_bound_basis": "The issuer holder list is a snapshot, so any protocol-owned contract added since is counted here as an ordinary holder. The error can only push this figure UP: read it as 'at most'.",
     "holder_list_source": "riskAnalyst assets/dusd-alto.md, full Transfer-event reconstruction",
@@ -926,704 +944,304 @@
     "threshold_bps": -200.0,
     "meets_precision_obligation": true
    },
-   "basis": "The -200bps crossing is BRACKETED between $2,775,390.62 and $2,792,968.75. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor."
+   "basis": "The -200bps crossing is BRACKETED between $2,775,390.62 and $2,792,968.75. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor.",
+   "interpretation": "Mathematical view beyond recorded minted supply, not sellable float, a trade or available cash depth.",
+   "refinement": {
+    "status": "refined",
+    "stopped_on": "precision_obligation_met",
+    "probe_count": 9,
+    "precision_target": "<=1% of bracket midpoint",
+    "validation_cooldown_seconds": 8.0
+   }
+  },
+  "supply_scope": {
+   "recorded_total_supply_units": "1802982.6027290623",
+   "source_as_of": "2026-11-06T23:47:04Z",
+   "basis": "Total minted supply is an arithmetic boundary, not public float or independently deliverable cash."
   }
  },
  "primary_exit": {
-  "venue": "Alto Universal Stability Module (frxUSD)",
-  "at_nav": true,
-  "gated": true,
-  "gated_basis": "riskAnalyst canonical dusd-alto.md \u00a7II: the USM's swap functions are permissioned to a single Safe (sole SWAPPER_ROLE holder, 16 lifetime swaps all by the treasury); the USDC module holds 0.01 USDC with getAvailableLiquidity()=0.",
-  "gate": "No holder redemption. Only the Alto treasury Safe can swap DUSD to frxUSD at par.",
-  "cadence": null,
-  "capacity_usd": 0,
-  "capacity_basis": "Zero HOLDER redemption capacity, not zero reserves. Not re-derived here; sourced from riskAnalyst's canonical.",
-  "note": "A holder's only exit is the secondary market measured in `depth`."
+  "venue": "Alto USM primary path",
+  "current_status": "not_revalidated_by_quote_producer",
+  "capacity_usd": null,
+  "gated": null,
+  "at_nav": null,
+  "basis": "Prior holder restrictions/capacity are historical owner research, not freshly measured primary eligibility.",
+  "historical_observation_ref": "historical_exit_context.primary_exit"
  },
  "enumeration": {
-  "source": "DexTracker sweep by TOKEN ADDRESS at Ethereum block 26,022,5xx (2026-09-21T01:15Z-01:25Z): DefiLlama yields (underlyingTokens), Curve API all 9 Ethereum registries, Uniswap V3 factory getPool x 13 counters x 4 fee tiers, Uniswap V2 + SushiSwap V2 factories, GeckoTerminal token pools (indexes v2/v3/v4/curve/balancer), Balancer v2/v3 API, Blockscout top-50 holder census, KyberSwap route discovery at $100-$10M",
-  "as_of": "2026-09-21T01:25:35Z",
-  "pinned_block": 26022595,
+  "as_of": "2026-11-07T02:40:31Z",
+  "source": "GeckoTerminal token-pools API, paginated, by exact chain-specific address",
   "venue_count": 4,
-  "live_venue_count": 1,
-  "chain_count": 1,
-  "chain_count_is_floor": true,
-  "chain_count_note": "Ethereum only. DefiLlama by-address lists nothing on another chain; no bridge deployment was enumerated.",
-  "queried_ok": {
-   "defillama_yields": true,
-   "curve_api": true,
-   "uniswap_v3_factory": true,
-   "v2_factories": true,
-   "geckoterminal_token_pools": true,
-   "balancer_api": true,
-   "blockscout_holders": true
-  },
-  "curve_registries_swept": {
-   "main": 49,
-   "crypto": 8,
-   "factory": 381,
-   "factory-crypto": 401,
-   "factory-crvusd": 29,
-   "factory-tricrypto": 125,
-   "factory-twocrypto": 404,
-   "factory-stable-ng": 1060,
-   "factory-eywa": 0
-  },
-  "not_swept_directly": [
-   "Uniswap V4 (no factory enumeration; covered only via GeckoTerminal's v4 index and KyberSwap route discovery, neither of which surfaced a v4 pool)",
-   "Ekubo (surfaced only as a crvUSD->USDC leg at $4M, never as a DUSD venue)",
-   "CoW/limit-order books"
+  "published_venue_count": 1,
+  "tvl_floor_usd": 1000.0,
+  "chains_queried": [
+   "eth"
   ],
-  "known_answer_check": {
-   "pool": "0x206239406abccF730493e4b133b30DF546f9ff43",
-   "surfaced_by": [
-    "uniswap_v3_factory",
-    "geckoterminal_token_pools",
-    "blockscout_holders"
-   ],
-   "result": "SURFACED and excluded: liquidity()=0, 28.68 DUSD / 1.99 USDC dust, stale slot0 ~1.0000. Dead, not missing."
+  "chains_query_failed": [],
+  "chains_not_queried": [],
+  "chains_truncated": [],
+  "chains_without_local_dollar_exit": [],
+  "chains_none_found": [],
+  "finding_meanings": {
+   "venues_found": "Pools at or above the $1,000 TVL floor were found.",
+   "none_found": "Searched, and nothing at or above the floor was found: a market fact as far as the indexer reaches.",
+   "not_checked": "Not searched, for the stated reason: a gap in what this tool can reach, NOT a finding about the market.",
+   "unknown": "The search failed or the token could not be confirmed: NOT empty."
   },
-  "ticker_collisions_seen": {
-   "defillama_rows_matching_ticker": 42,
-   "defillama_rows_matching_address": 4,
-   "wrong_asset_examples": [
-    "makina DUSD (USDC-backed, $1.97M)",
-    "Curve DUSD-SFRXUSD 0x07fFf... (dTRINITY)",
-    "Curve USDC-DUSD 0x1e33... (Dialectic, $21.9K)",
-    "Raydium DUSD-USDT (Solana)",
-    "DefiChain DUSD pairs"
-   ]
-  },
-  "completeness": "Four Ethereum pools hold Alto DUSD; one is live. Every DefiLlama row matching by address is the same Curve pool or a wrapper of it (Convex, StakeDAO, Yearn).",
-  "excluded_venue_count": 3,
-  "unestablished_venue_count": 0,
-  "live_venue_count_is_floor": false,
-  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it."
+  "chain_count_is_floor": true,
+  "chain_count_note": "FLOOR, not a census: chains are the asset's CoinGecko platforms. A deployment CoinGecko does not list is not queried here.",
+  "live_venue_count": 0,
+  "excluded_venue_count": 0,
+  "unestablished_venue_count": 1,
+  "live_venue_count_is_floor": true,
+  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 1 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
  },
  "venues": [
   {
-   "name": "DUSD/frxUSD",
-   "project": "curve",
-   "chain": "Ethereum",
+   "name": "frxUSD / DUSD",
+   "chain": "eth",
+   "dex": "curve",
    "kind": "swap",
-   "pool_type": "curve-stable-ng",
-   "pool_id": "0x104d6a1b97A6CEf88D905d7b865A378d90be932A",
-   "tvl_usd": 3301748.72,
-   "volume_24h_usd": 205.43,
-   "underlying_tokens": [
-    "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
-    "0x63d74d22E689C715a04F2C13962b1f77F443d35b"
-   ],
-   "balances": [
-    {
-     "symbol": "frxUSD",
-     "amount": 2502131.2876217645
-    },
-    {
-     "symbol": "DUSD",
-     "amount": 797919.8033587689
-    }
-   ],
-   "params": {
-    "A": 1000,
-    "fee": "0.01%",
-    "offpeg_fee_multiplier": 5
-   },
-   "counter_side": {
+   "address": "0x104d6a1b97a6cef88d905d7b865a378d90be932a",
+   "counter_asset": {
     "symbol": "frxUSD",
-    "amount": 2502131.2876217645
+    "address": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+    "decimals": 18,
+    "price_usd": 0.9611162694
    },
-   "depth_role": "The only live venue; hop 1 of every route. Its frxUSD side (2.502M) is the binding inventory for the whole DUSD->USDC exit.",
-   "is_live": true,
+   "role": "dollar_exit",
+   "tvl_usd": 4107426.5399,
+   "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+   "tvl_caveat": null,
+   "volume_24h_usd": 0.0,
+   "as_of": "2026-11-07T02:40:34Z",
+   "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x104d6a1b97a6cef88d905d7b865a378d90be932a",
+   "is_live": null,
+   "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
    "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Quoted live at Ethereum block 26,022,595: get_dy answers at every rung and the pool holds 2,502,131 frxUSD against 797,920 DUSD."
-  },
-  {
-   "name": "DUSD/frxUSD (dust twin)",
-   "project": "curve",
-   "chain": "Ethereum",
-   "kind": "swap",
-   "pool_type": "curve-stable-ng",
-   "pool_id": "0x35364a18efDe0169D214E7c72f4Ee0e4C522bA63",
-   "tvl_usd": 99.75,
-   "volume_24h_usd": 0.0,
-   "depth_role": "Excluded: $99.75 total, 44 DUSD.",
-   "is_live": false,
-   "exclusion_reason": "dust_below_threshold",
-   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
-   "liveness_basis": "Holds 44.01 DUSD and 55.65 frxUSD, $99.75 total, at block 26,022,595. Quotable but immaterial at any holder size."
-  },
-  {
-   "name": "DUSD/USDC 0.01%",
-   "project": "uniswap",
-   "chain": "Ethereum",
-   "kind": "swap",
-   "pool_type": "uniswap-v3",
-   "pool_id": "0x206239406abccF730493e4b133b30DF546f9ff43",
-   "tvl_usd": 30.77,
-   "volume_24h_usd": 0.0,
-   "depth_role": "Excluded: DEAD. liquidity()=0 since block 25,329,865 (2026-06-16, per riskAnalyst bisection); slot0 still reports ~1.0000 and must not be quoted.",
-   "is_live": false,
-   "exclusion_reason": "dead_zero_liquidity",
-   "exclusion_reason_note": "The pool exists and answers calls but holds no liquidity -- `liquidity()` is 0. \u26a0\ufe0f A dead Uniswap V3 pool's `slot0` still returns a plausible price, so this is the case that must never be quoted.",
-   "liveness_basis": "liquidity() == 0, read directly at block 26,022,595; zero since block 25,329,865 (2026-06-16) per riskAnalyst's bisection. Holds 28.68 DUSD / 1.99 USDC of dust and its slot0 still returns ~1.0000, which is why it must never be quoted."
-  },
-  {
-   "name": "DUSD/frxUSD 0.01%",
-   "project": "uniswap",
-   "chain": "Ethereum",
-   "kind": "swap",
-   "pool_type": "uniswap-v3",
-   "pool_id": "0x78b8f4abaeac80f5c8c932a0d42ba0f14b6820bc",
-   "tvl_usd": 3.83,
-   "volume_24h_usd": 0.0,
-   "depth_role": "Excluded: liquidity()=0, 2.55 DUSD dust. Not previously known to riskAnalyst.",
-   "is_live": false,
-   "exclusion_reason": "dead_zero_liquidity",
-   "exclusion_reason_note": "The pool exists and answers calls but holds no liquidity -- `liquidity()` is 0. \u26a0\ufe0f A dead Uniswap V3 pool's `slot0` still returns a plausible price, so this is the case that must never be quoted.",
-   "liveness_basis": "liquidity() == 0, read directly at block 26,022,595; holds 2.55 DUSD and 1.28 frxUSD."
+   "tvl_status": "reported",
+   "tvl_exclusion_basis": null,
+   "tvl_exclusion_code": null,
+   "custody_check": {
+    "token_units_in_pool": 1526925.1499035812,
+    "counter_units_in_pool": 2827322.671946868,
+    "two_leg_usd_onchain": 4185823.8228016295,
+    "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+   },
+   "counter_is_independent": true,
+   "counter_backing_note": null
   }
  ],
  "downstream_route_legs": {
-  "note": "Not DUSD venues; the frxUSD->USDC legs the router uses. Recorded because their inventory bounds hops 2-3.",
-  "frax_frxusd_custodian": {
-   "address": "0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c",
-   "implementation": "0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
-   "kind": "fixed_price_capacity",
-   "rate": "1:1 frxUSD->USDC, zero fee (previewRedeem 1000e18 -> 1000.000000)",
-   "usdc_pocket_at_pinned_block": 72836.027613,
-   "pocket_volatility_note": "59,195.58 USDC at block 26,022,553, 72,836.03 at 26,022,595 -- ten minutes apart. The pocket is user-minted USDC awaiting redemption and moves by tens of percent intra-hour."
-  },
-  "curve_crvusd_frxusd": {
-   "address": "0x13e12bb0e6a2f1a3d6901a59a9d585e89a6243e1",
-   "balances": {
-    "frxUSD": 6218433.8626298625,
-    "crvUSD": 8718986.207671762
+  "status": "saved_router_observations_only",
+  "quote_as_of": "2026-11-06T23:46:21Z",
+  "actual_route_hops": [
+   {
+    "exchange": "curve-stable-ng",
+    "pool": "0x104d6a1b97a6cef88d905d7b865a378d90be932a",
+    "token_in": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+    "token_out": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+    "swap_amount_raw": "1000000000000000000000",
+    "amount_out_raw": "1000605377101538502937",
+    "block_number": 26352912,
+    "source_quote_as_of": "2026-11-06T23:46:22Z"
+   },
+   {
+    "exchange": "uniswap-v4",
+    "pool": "0x9edf5d6cec09a3c4886993b7b341d1a0a82ac668a6dfbb097cbb19cf6652d9c4",
+    "token_in": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+    "token_out": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+    "swap_amount_raw": "1000605377101538502937",
+    "amount_out_raw": "1000561316402870210712",
+    "block_number": 26359131,
+    "source_quote_as_of": "2026-11-06T23:46:22Z"
+   },
+   {
+    "exchange": "lite-psm",
+    "pool": "0xa188eec8f81263234da3622a406892f3d630f98c",
+    "token_in": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "1000561316402870210712",
+    "amount_out_raw": "1000561316",
+    "block_number": 26359181,
+    "source_quote_as_of": "2026-11-06T23:46:22Z"
+   },
+   {
+    "exchange": "lite-psm",
+    "pool": "0xa188eec8f81263234da3622a406892f3d630f98c",
+    "token_in": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "10005455538061603978875",
+    "amount_out_raw": "10005455538",
+    "block_number": 26359184,
+    "source_quote_as_of": "2026-11-06T23:46:23Z"
+   },
+   {
+    "exchange": "aero-cl",
+    "pool": "0xaca0cce4ce934cbffb836c46c884758b7706d8fe",
+    "token_in": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+    "token_out": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+    "swap_amount_raw": "21346393486730887477595",
+    "amount_out_raw": "21343715692601172359015",
+    "block_number": 26359070,
+    "source_quote_as_of": "2026-11-06T23:46:24Z"
+   },
+   {
+    "exchange": "curve-stable-ng",
+    "pool": "0xd6937ea8d33b0c21348f36f7895fde3054ba4927",
+    "token_in": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+    "token_out": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "swap_amount_raw": "20983743002599996853540",
+    "amount_out_raw": "21002247277",
+    "block_number": 26358707,
+    "source_quote_as_of": "2026-11-06T23:46:24Z"
+   },
+   {
+    "exchange": "uniswap-v4",
+    "pool": "0x76dbd3b36d5f0a1fa1c38b75984a9ed57aa1a36a6dbab77b9503ef9349dbb617",
+    "token_in": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "12006084785636420867542",
+    "amount_out_raw": "12002883941",
+    "block_number": 26358880,
+    "source_quote_as_of": "2026-11-06T23:46:24Z"
+   },
+   {
+    "exchange": "curve-stable-ng",
+    "pool": "0x13e12bb0e6a2f1a3d6901a59a9d585e89a6243e1",
+    "token_in": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+    "token_out": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+    "swap_amount_raw": "16236721794604238900312",
+    "amount_out_raw": "16269084569879414346204",
+    "block_number": 26359131,
+    "source_quote_as_of": "2026-11-06T23:46:24Z"
+   },
+   {
+    "exchange": "uniswap-v4-fairflow",
+    "pool": "0x3b1bd35a555160a9b60c7524db56029c2025ab93b69d97d33ca3f1c23b6494ad",
+    "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "12298060047",
+    "amount_out_raw": "12224240335",
+    "block_number": 26359131,
+    "source_quote_as_of": "2026-11-06T23:46:24Z"
+   },
+   {
+    "exchange": "dodo-gsp",
+    "pool": "0x04571c32a4e1c5f39bc3a238cb95b215058c432c",
+    "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "4757193149",
+    "amount_out_raw": "4751782250",
+    "block_number": 26359170,
+    "source_quote_as_of": "2026-11-06T23:46:24Z"
+   },
+   {
+    "exchange": "curve-stable-ng",
+    "pool": "0x4f493b7de8aac7d55f71853688b1f7c8f0243c85",
+    "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "3946994081",
+    "amount_out_raw": "3942508130",
+    "block_number": 26359182,
+    "source_quote_as_of": "2026-11-06T23:46:24Z"
+   },
+   {
+    "exchange": "curve-stable-plain",
+    "pool": "0x4dece678ceceb27446b35c672dc7d61f30bad69e",
+    "token_in": "0xf939e0a03fb07f59a73314e73794be0e57ac1b4e",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "16269084569879414346204",
+    "amount_out_raw": "16230525202",
+    "block_number": 26359173,
+    "source_quote_as_of": "2026-11-06T23:46:24Z"
+   },
+   {
+    "exchange": "fluid-dex-t1",
+    "pool": "0x667701e51b4d1ca244f17c78f7ab8744b4c99f9b",
+    "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "261128282059",
+    "amount_out_raw": "260827624458",
+    "block_number": 26359184,
+    "source_quote_as_of": "2026-11-06T23:46:25Z"
+   },
+   {
+    "exchange": "metric-propamm/uniswap-v4-stable-stable",
+    "pool": "0xaef2ad7abb651945e6d24276715f25bded0ad41e",
+    "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "346895310504",
+    "amount_out_raw": "346497218904",
+    "block_number": 26204062,
+    "source_quote_as_of": "2026-11-06T23:46:25Z"
+   },
+   {
+    "exchange": "uniswap-v4-stable-stable",
+    "pool": "0x2b21c65d9a7dc6926ee330a1c6e5a8037fd81774f3dc066536f800128e39f634",
+    "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "109059592767",
+    "amount_out_raw": "108934507483",
+    "block_number": 26359180,
+    "source_quote_as_of": "2026-11-06T23:46:25Z"
+   },
+   {
+    "exchange": "aero-cl",
+    "pool": "0x2d90ebffc87bbe29e4d78e7627adfe9d0f3d7978",
+    "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "698190973",
+    "amount_out_raw": "697389410",
+    "block_number": 26359182,
+    "source_quote_as_of": "2026-11-06T23:46:25Z"
+   },
+   {
+    "exchange": "uniswap-v4",
+    "pool": "0x0fb0e40cec3bb23e13abc585958a93c796fbea56955e19a23727a716a0423239",
+    "token_in": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "swap_amount_raw": "2269003644",
+    "amount_out_raw": "2266408394",
+    "block_number": 26359153,
+    "source_quote_as_of": "2026-11-06T23:46:25Z"
+   },
+   {
+    "exchange": "curve-stable-ng",
+    "pool": "0x35364a18efde0169d214e7c72f4ee0e4c522ba63",
+    "token_in": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+    "token_out": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+    "swap_amount_raw": "63521392248924405755",
+    "amount_out_raw": "52028505037528646230",
+    "block_number": 26218832,
+    "source_quote_as_of": "2026-11-06T23:46:25Z"
    }
-  },
-  "curve_crvusd_usdc": {
-   "address": "0x4dece678ceceb27446b35c672dc7d61f30bad69e",
-   "balances": {
-    "crvUSD": 7530023.0405327175,
-    "USDC": 6666082.201519
-   }
-  },
-  "binding_inventory": "frxUSD in DUSD/frxUSD (2.50M) < crvUSD in crvUSD/frxUSD (8.72M) < USDC in crvUSD/USDC (6.67M): hop 1 binds."
+  ],
+  "current_frax_conversion_eligibility": null,
+  "current_frax_conversion_cash_usdc": null,
+  "current_frax_conversion_limit": null,
+  "basis": "Observed DUSD/frxUSD and downstream USDC routes are indicative estimates; no current free/permissionless Frax conversion or custodian cash inferred.",
+  "historical_observation_ref": "historical_exit_context.downstream_route_legs"
  },
  "regimes": {
-  "note": "Block-pinned on-chain replica of the router's route (Curve get_dy + custodian previewRedeem), deterministic, at the same block for every rung. Regime B scales the DUSD/frxUSD pool by (1 - treasury LP share) using the StableSwap invariant's degree-1 homogeneity, dy_s(x) = s*get_dy(x/s), verified to 0.0 bps against a local StableSwap-NG reimplementation at scaled balances.",
-  "pinned_block": 26022595,
-  "pinned_block_time_utc": "2026-09-21T01:25:35Z",
-  "rpc": "https://eth.drpc.org",
-  "router_vs_replica_bps": {
-   "100.0": 0.0,
-   "1000.0": 0.0,
-   "10000.0": 0.0,
-   "25000.0": 0.0,
-   "50000.0": 0.0,
-   "100000.0": -0.00014607753784368072,
-   "250000.0": -0.000430529443207206,
-   "500000.0": -8.493195036152201e-06,
-   "1000000.0": -0.0001317738573813898,
-   "2000000.0": -0.2643873259222662,
-   "4000000.0": 0.32732515375055726,
-   "10000000.0": 1.2103771087179638
-  },
-  "treasury_lp": {
-   "lp_total_supply": 3298835.219653069,
-   "safe_direct": 0.0,
-   "safe_convex_staked": 1514898.4114264795,
-   "safe_stakedao_vault": 306080.99999999994,
-   "safe_yearn_shares": 215246.0,
-   "yearn_pps": 1.0278612815464314,
-   "safe_yearn_lp": 221243.0294077432,
-   "treasury_lp_total": 2042222.4408342226,
-   "treasury_share": 0.6190737957044724,
-   "regime_b_scale": 0.3809262042955276,
-   "handoff_claimed_share": 0.62
-  },
-  "float": {
-   "regime_A_float_units": 23935.357630334795,
-   "regime_B_float_units": 517906.5989634141,
-   "treasury_dusd_inside_lp": 493971.2413330793,
-   "total_supply_units": 821855.1609891037
-  },
-  "supply_sized_exits": {
-   "A_23935": {
-    "dusd": 23935.357630334795,
-    "usdc": 23976.700183,
-    "total_bps": 17.272586147953906,
-    "marginal_bps": -0.630213852046424,
-    "frx_bps": 17.27258631464723
-   },
-   "A_821855": {
-    "dusd": 821855.1609891037,
-    "usdc": 822218.665305,
-    "total_bps": 4.422972965927308,
-    "marginal_bps": -13.479827034073022,
-    "frx_bps": 6.2222410666024075
-   },
-   "B_23935": {
-    "dusd": 23935.357630334795,
-    "usdc": 23974.410945,
-    "total_bps": 16.316160914893185,
-    "marginal_bps": -1.5866390851071444,
-    "frx_bps": 16.316161050191624
-   },
-   "B_517906": {
-    "dusd": 517906.5989634141,
-    "usdc": 517949.088318,
-    "total_bps": 0.8204057386218544,
-    "marginal_bps": -17.082394261378475,
-    "frx_bps": 2.1298339380759757
-   },
-   "B_821855": {
-    "dusd": 821855.1609891037,
-    "usdc": 820812.071584,
-    "total_bps": -12.691888481278779,
-    "marginal_bps": -30.594688481279107,
-    "frx_bps": -10.897897960695513
-   }
-  },
-  "A_pool_intact": {
-   "scale_applied_to_dusd_frxusd_pool": 1.0,
-   "pool_frxusd_inventory_units": 2502131.2876217645,
-   "baseline_bias_bps": 17.90280000000033,
-   "cost_monotonic": true,
-   "size_response": "size_responsive",
-   "rungs": [
-    {
-     "size_usd": 100.0,
-     "usdc_out": 100.179028,
-     "total_bps": 17.90280000000033,
-     "marginal_bps": 0.0,
-     "frxusd_only_out": 100.17902818177997,
-     "frxusd_only_bps": 17.902818177997215,
-     "dollar_minus_frxusd_bps": -1.817799688552668e-05,
-     "via_custodian_usdc": 100.179028
-    },
-    {
-     "size_usd": 1000.0,
-     "usdc_out": 1001.787836,
-     "total_bps": 17.87835999999876,
-     "marginal_bps": -0.024440000001568762,
-     "frxusd_only_out": 1001.7878363020958,
-     "frxusd_only_bps": 17.8783630209578,
-     "dollar_minus_frxusd_bps": -3.0209590384799867e-06,
-     "via_custodian_usdc": 1001.787836
-    },
-    {
-     "size_usd": 10000.0,
-     "usdc_out": 10017.636703,
-     "total_bps": 17.636702999999088,
-     "marginal_bps": -0.2660970000012419,
-     "frxusd_only_out": 10017.6367032055,
-     "frxusd_only_bps": 17.63670320550137,
-     "dollar_minus_frxusd_bps": -2.0550228185811648e-07,
-     "via_custodian_usdc": 10017.636703
-    },
-    {
-     "size_usd": 25000.0,
-     "usdc_out": 25043.113142,
-     "total_bps": 17.24525680000033,
-     "marginal_bps": -0.6575431999999992,
-     "frxusd_only_out": 25043.11314225505,
-     "frxusd_only_bps": 17.245256902020945,
-     "dollar_minus_frxusd_bps": -1.0202061417885488e-07,
-     "via_custodian_usdc": 25043.113142
-    },
-    {
-     "size_usd": 50000.0,
-     "usdc_out": 50083.112185,
-     "total_bps": 16.6224370000001,
-     "marginal_bps": -1.2803630000002286,
-     "frxusd_only_out": 50083.11218576149,
-     "frxusd_only_bps": 16.622437152298275,
-     "dollar_minus_frxusd_bps": -1.5229817407202972e-07,
-     "via_custodian_usdc": 50083.112185
-    },
-    {
-     "size_usd": 100000.0,
-     "usdc_out": 100152.290264,
-     "total_bps": 15.22902639999879,
-     "marginal_bps": -2.673773600001539,
-     "frxusd_only_out": 100154.76413186091,
-     "frxusd_only_bps": 15.47641318609072,
-     "dollar_minus_frxusd_bps": -0.24738678609192988,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 250000.0,
-     "usdc_out": 250296.470466,
-     "total_bps": 11.85881864000038,
-     "marginal_bps": -6.04398135999995,
-     "frxusd_only_out": 250316.4966715074,
-     "frxusd_only_bps": 12.659866860296187,
-     "dollar_minus_frxusd_bps": -0.801048220295808,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 500000.0,
-     "usdc_out": 500400.569707,
-     "total_bps": 8.011394139999517,
-     "marginal_bps": -9.891405860000813,
-     "frxusd_only_out": 500464.6059646725,
-     "frxusd_only_bps": 9.292119293451417,
-     "dollar_minus_frxusd_bps": -1.2807251534519004,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 1000000.0,
-     "usdc_out": 1000274.277511,
-     "total_bps": 2.7427751100006503,
-     "marginal_bps": -15.16002488999968,
-     "frxusd_only_out": 1000481.9088589306,
-     "frxusd_only_bps": 4.819088589305132,
-     "dollar_minus_frxusd_bps": -2.0763134793044813,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 2000000.0,
-     "usdc_out": 1998122.595922,
-     "total_bps": -9.387020390000389,
-     "marginal_bps": -27.28982039000072,
-     "frxusd_only_out": 1998857.8379915121,
-     "frxusd_only_bps": -5.7108100424396735,
-     "dollar_minus_frxusd_bps": -3.6762103475607155,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 4000000.0,
-     "usdc_out": 2500077.096489,
-     "total_bps": -3749.8072587775,
-     "marginal_bps": -3767.7100587775003,
-     "frxusd_only_out": 2501224.395193708,
-     "frxusd_only_bps": -3746.93901201573,
-     "dollar_minus_frxusd_bps": -2.868246761770024,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 10000000.0,
-     "usdc_out": 2500552.925366,
-     "total_bps": -7499.447074634,
-     "marginal_bps": -7517.349874634001,
-     "frxusd_only_out": 2501700.671360308,
-     "frxusd_only_bps": -7498.299328639692,
-     "dollar_minus_frxusd_bps": -1.1477459943080248,
-     "via_custodian_usdc": 72836.027613
-    }
-   ],
-   "rungs_without_custodian_bps": {
-    "100.0": 17.036200000000168,
-    "1000.0": 17.01045999999984,
-    "10000.0": 16.755362000000495,
-    "25000.0": 16.341531999999326,
-    "50000.0": 15.68144760000001,
-    "100000.0": 14.461042800000268,
-    "250000.0": 11.422293279998996,
-    "500000.0": 7.6858095800003134,
-    "1000000.0": 2.4703604699993775,
-    "2000000.0": -9.651159535000176,
-    "4000000.0": -3749.9816599875003,
-    "10000000.0": -7499.51685316
-   },
-   "crossing_total_convention": {
-    "status": "refined",
-    "bracket": [
-     2515625.0,
-     2531250.0
-    ],
-    "width_pct_of_mid": 0.6191950464396285,
-    "ends": [
-     {
-      "size_usd": 2515625.0,
-      "total_bps": -177.4677911334155,
-      "marginal_bps": -195.37059113341581,
-      "usdc_out": 2470980.758793,
-      "split": null
-     },
-     {
-      "size_usd": 2531250.0,
-      "total_bps": -216.3079578548155,
-      "marginal_bps": -234.21075785481582,
-      "usdc_out": 2476497.048168,
-      "split": {
-       "frxusd_out": 2477622.3290238394,
-       "via_custodian_usdc": 72836.027613,
-       "via_curve_frxusd_in": 2404786.3014108394,
-       "crvusd_mid": 2404562.0417192704,
-       "via_curve_usdc": 2403661.020555
-      }
-     }
-    ]
-   },
-   "crossing_marginal_convention": {
-    "status": "refined",
-    "bracket": [
-     2515625.0,
-     2531250.0
-    ],
-    "width_pct_of_mid": 0.6191950464396285,
-    "ends": [
-     {
-      "size_usd": 2515625.0,
-      "total_bps": -177.4677911334155,
-      "marginal_bps": -195.37059113341581,
-      "usdc_out": 2470980.758793,
-      "split": null
-     },
-     {
-      "size_usd": 2531250.0,
-      "total_bps": -216.3079578548155,
-      "marginal_bps": -234.21075785481582,
-      "usdc_out": 2476497.048168,
-      "split": {
-       "frxusd_out": 2477622.3290238394,
-       "via_custodian_usdc": 72836.027613,
-       "via_curve_frxusd_in": 2404786.3014108394,
-       "crvusd_mid": 2404562.0417192704,
-       "via_curve_usdc": 2403661.020555
-      }
-     }
-    ]
-   },
-   "observed_output_peak": {
-    "input_usd": 10000000.0,
-    "usdc_out": 2500552.925366
-   }
-  },
-  "B_treasury_withdrawn": {
-   "scale_applied_to_dusd_frxusd_pool": 0.3809262042955276,
-   "pool_frxusd_inventory_units": 953127.3740428397,
-   "baseline_bias_bps": 17.898300000001033,
-   "cost_monotonic": true,
-   "size_response": "size_responsive",
-   "rungs": [
-    {
-     "size_usd": 100.0,
-     "usdc_out": 100.178983,
-     "total_bps": 17.898300000001033,
-     "marginal_bps": 0.0,
-     "frxusd_only_out": 100.17898398477746,
-     "frxusd_only_bps": 17.89839847774699,
-     "dollar_minus_frxusd_bps": -9.847774595783676e-05,
-     "via_custodian_usdc": 100.178983
-    },
-    {
-     "size_usd": 1000.0,
-     "usdc_out": 1001.783433,
-     "total_bps": 17.834329999999454,
-     "marginal_bps": -0.0639700000015786,
-     "frxusd_only_out": 1001.783433809269,
-     "frxusd_only_bps": 17.834338092690416,
-     "dollar_minus_frxusd_bps": -8.092690961802873e-06,
-     "via_custodian_usdc": 1001.783433
-    },
-    {
-     "size_usd": 10000.0,
-     "usdc_out": 10017.213208,
-     "total_bps": 17.213207999999813,
-     "marginal_bps": -0.6850920000012195,
-     "frxusd_only_out": 10017.21320888489,
-     "frxusd_only_bps": 17.213208884889752,
-     "dollar_minus_frxusd_bps": -8.848899391011855e-07,
-     "via_custodian_usdc": 10017.213208
-    },
-    {
-     "size_usd": 25000.0,
-     "usdc_out": 25040.626547,
-     "total_bps": 16.250618800000005,
-     "marginal_bps": -1.6476812000010277,
-     "frxusd_only_out": 25040.626547841577,
-     "frxusd_only_bps": 16.25061913663073,
-     "dollar_minus_frxusd_bps": -3.366307232965937e-07,
-     "via_custodian_usdc": 25040.626547
-    },
-    {
-     "size_usd": 50000.0,
-     "usdc_out": 50074.097567,
-     "total_bps": 14.81951339999954,
-     "marginal_bps": -3.078786600001493,
-     "frxusd_only_out": 50074.09756714862,
-     "frxusd_only_bps": 14.819513429724651,
-     "dollar_minus_frxusd_bps": -2.972511126131394e-08,
-     "via_custodian_usdc": 50074.097567
-    },
-    {
-     "size_usd": 100000.0,
-     "usdc_out": 100122.111241,
-     "total_bps": 12.211124100001136,
-     "marginal_bps": -5.687175899999897,
-     "frxusd_only_out": 100124.58225514022,
-     "frxusd_only_bps": 12.458225514022647,
-     "dollar_minus_frxusd_bps": -0.2471014140215111,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 250000.0,
-     "usdc_out": 250172.06392,
-     "total_bps": 6.882556799998607,
-     "marginal_bps": -11.015743200002426,
-     "frxusd_only_out": 250192.07281910777,
-     "frxusd_only_bps": 7.6829127643107675,
-     "dollar_minus_frxusd_bps": -0.8003559643121605,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 500000.0,
-     "usdc_out": 500060.588373,
-     "total_bps": 1.211767459998736,
-     "marginal_bps": -16.686532540002297,
-     "frxusd_only_out": 500124.5522875692,
-     "frxusd_only_bps": 2.491045751384924,
-     "dollar_minus_frxusd_bps": -1.2792782913861878,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 1000000.0,
-     "usdc_out": 949137.067066,
-     "total_bps": -508.62932934000014,
-     "marginal_bps": -526.5276293400012,
-     "frxusd_only_out": 949326.5450577921,
-     "frxusd_only_bps": -506.7345494220787,
-     "dollar_minus_frxusd_bps": -1.8947799179214257,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 2000000.0,
-     "usdc_out": 952718.599467,
-     "total_bps": -5236.407002665,
-     "marginal_bps": -5254.305302665,
-     "frxusd_only_out": 952909.3227538003,
-     "frxusd_only_bps": -5235.453386230998,
-     "dollar_minus_frxusd_bps": -0.9536164340015603,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 4000000.0,
-     "usdc_out": 952772.028858,
-     "total_bps": -7618.069927855,
-     "marginal_bps": -7635.968227855001,
-     "frxusd_only_out": 952962.7707185318,
-     "frxusd_only_bps": -7617.59307320367,
-     "dollar_minus_frxusd_bps": -0.47685465132963145,
-     "via_custodian_usdc": 72836.027613
-    },
-    {
-     "size_usd": 10000000.0,
-     "usdc_out": 952718.331326,
-     "total_bps": -9047.281668674,
-     "marginal_bps": -9065.179968674001,
-     "frxusd_only_out": 952909.0545187569,
-     "frxusd_only_bps": -9047.090945481243,
-     "dollar_minus_frxusd_bps": -0.1907231927580142,
-     "via_custodian_usdc": 72836.027613
-    }
-   ],
-   "rungs_without_custodian_bps": {
-    "100.0": 17.031800000000263,
-    "1000.0": 16.96643999999914,
-    "10000.0": 16.331906000000007,
-    "25000.0": 15.346987600000084,
-    "50000.0": 13.87870680000125,
-    "100000.0": 11.44320549999911,
-    "250000.0": 6.446138280000735,
-    "500000.0": 0.8863289000005103,
-    "1000000.0": -508.89023209999993,
-    "2000000.0": -5236.537855729999,
-    "4000000.0": -7618.13535737,
-    "10000000.0": -9047.307839281
-   },
-   "crossing_total_convention": {
-    "status": "refined",
-    "bracket": [
-     960937.5,
-     968750.0
-    ],
-    "width_pct_of_mid": 0.8097165991902834,
-    "ends": [
-     {
-      "size_usd": 960937.5,
-      "total_bps": -191.73986256130092,
-      "marginal_bps": -209.63816256130195,
-      "usdc_out": 942512.497582,
-      "split": null
-     },
-     {
-      "size_usd": 968750.0,
-      "total_bps": -246.5456343741934,
-      "marginal_bps": -264.44393437419444,
-      "usdc_out": 944865.89167,
-      "split": {
-       "frxusd_out": 945053.8897853622,
-       "via_custodian_usdc": 72836.027613,
-       "via_curve_frxusd_in": 872217.8621723622,
-       "crvusd_mid": 872227.8148627669,
-       "via_curve_usdc": 872029.864057
-      }
-     }
-    ]
-   },
-   "crossing_marginal_convention": {
-    "status": "refined",
-    "bracket": [
-     953125.0,
-     960937.5
-    ],
-    "width_pct_of_mid": 0.8163265306122449,
-    "ends": [
-     {
-      "size_usd": 953125.0,
-      "total_bps": -145.96266192786865,
-      "marginal_bps": -163.86096192786968,
-      "usdc_out": 939212.933785,
-      "split": null
-     },
-     {
-      "size_usd": 960937.5,
-      "total_bps": -191.73986256130092,
-      "marginal_bps": -209.63816256130195,
-      "usdc_out": 942512.497582,
-      "split": {
-       "frxusd_out": 942699.6826673296,
-       "via_custodian_usdc": 72836.027613,
-       "via_curve_frxusd_in": 869863.6550543297,
-       "crvusd_mid": 869873.7229256858,
-       "via_curve_usdc": 869676.469969
-      }
-     }
-    ]
-   },
-   "observed_output_peak": {
-    "input_usd": 4000000.0,
-    "usdc_out": 952772.028858
-   }
-  }
+  "status": "historical_only",
+  "source_as_of": "2026-09-21T01:25:35Z",
+  "source_block": 26022595,
+  "reference": "historical_exit_context.regimes",
+  "basis": "September LP scaling and custodian pocket observations are not current ownership, current cash or a new simulation."
  },
  "excluded_liquidity": {
-  "lp_wrappers": [
-   "Convex (pid 565)",
-   "StakeDAO",
-   "Yearn"
-  ],
-  "lp_wrapper_reason": "Wrap the same Curve LP; DefiLlama lists them as separate $2.23M/$812K/$260K rows.",
-  "non_swap_entries": [
-   "AltoBorrowMarket 0x5d8fA5E1 (17,747 DUSD)",
-   "AltoBorrowMarket 0x053B53Ca (809 DUSD)",
-   "AltoTimelockController (3,425 DUSD)",
-   "Morpho UniversalRewardsDistributor (77 DUSD)",
-   "CoW settlement/burner (86 DUSD)"
-  ],
-  "non_swap_reason": "Holders of DUSD that are not venues; listed so the holder census reconciles."
+  "basis": "LP wrappers are claims on the same underlying pool and must not be added as independent cash or backing.",
+  "current_treasury_lookthrough": null,
+  "historical_reference": "historical_exit_context.excluded_liquidity"
  },
  "axis_binding_constraint": {
-  "leg": "circulation",
-  "basis": "Depth is not the constraint: the route clears 2% only above $3.37M, 2.5x the entire $1.32M supply, so every DUSD in existence sells inside 0.5%. What binds is circulation: at most $26.5K is outside the pool (see depth.holdings). Holders have no primary redemption. LP-withdrawal regime, as measured 2026-09-21: if the treasury withdrew its then-61.9% of LP, ~517,907 DUSD would reach the market and the crossing would fall to ~$961K -- distribution and depth move together in that case only.",
-  "risk_score": null
+  "leg": "float_lp_and_cash_eligibility_unresolved",
+  "basis": "Recorded quote samples, arithmetic total supply, outside-pool balances, public float, treasury LP and final cash eligibility are different measurements. No current holder funding or primary access verified."
  },
  "refresh_cadence": "daily",
- "payload_revised_at": "2026-11-06T23:47:05Z",
+ "payload_revised_at": "2026-11-07T02:44:08Z",
  "superseded_basis": [
   {
    "field": "note",
@@ -1641,5 +1259,957 @@
    },
    "why": "Renamed leg supply_cap -> circulation: supply outside the pool is no longer a depth cap. Numbers refreshed; the LP-withdrawal regime is kept with its 2026-09-21 date."
   }
- ]
+ ],
+ "venue_census": {
+  "producer": "dextracker:venue_inventory.py",
+  "as_of": "2026-11-07T02:40:31Z",
+  "refresh_cadence": "daily",
+  "scope_note": "Exact-token venue inventory on configured scope: eth. Not all deployments. Pool TVL, not depth: measured depth keeps its own clock.",
+  "venues_by_role": {
+   "dollar_exit": {
+    "pool_count": 1,
+    "tvl_usd": 4107426.5399,
+    "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
+   },
+   "family_swap": {
+    "pool_count": 0,
+    "tvl_usd": 0,
+    "meaning": "Swaps the asset for its own sister token: NOT a way out."
+   },
+   "other_pair": {
+    "pool_count": 0,
+    "tvl_usd": 0,
+    "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
+   }
+  },
+  "chains": {
+   "eth": {
+    "status": "queried",
+    "token": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+    "queried_at": "2026-11-07T02:40:34Z",
+    "finding": "venues_found",
+    "token_indexed": true,
+    "pool_list_truncated": false,
+    "truncation_note": null,
+    "pool_count": 4,
+    "published_pool_count": 1,
+    "below_floor_count": 3,
+    "dollar_exit_pool_count": 1,
+    "implausible_tvl_count": 0,
+    "dollar_exit_tvl_usd": 4107426.5399,
+    "local_dollar_exit": true
+   }
+  },
+  "enumeration": {
+   "as_of": "2026-11-07T02:40:31Z",
+   "source": "GeckoTerminal token-pools API, paginated, by exact chain-specific address",
+   "venue_count": 4,
+   "published_venue_count": 1,
+   "tvl_floor_usd": 1000.0,
+   "chains_queried": [
+    "eth"
+   ],
+   "chains_query_failed": [],
+   "chains_not_queried": [],
+   "chains_truncated": [],
+   "chains_without_local_dollar_exit": [],
+   "chains_none_found": [],
+   "finding_meanings": {
+    "venues_found": "Pools at or above the $1,000 TVL floor were found.",
+    "none_found": "Searched, and nothing at or above the floor was found: a market fact as far as the indexer reaches.",
+    "not_checked": "Not searched, for the stated reason: a gap in what this tool can reach, NOT a finding about the market.",
+    "unknown": "The search failed or the token could not be confirmed: NOT empty."
+   },
+   "chain_count_is_floor": true,
+   "chain_count_note": "FLOOR, not a census: chains are the asset's CoinGecko platforms. A deployment CoinGecko does not list is not queried here.",
+   "live_venue_count": 0,
+   "excluded_venue_count": 0,
+   "unestablished_venue_count": 1,
+   "live_venue_count_is_floor": true,
+   "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 1 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead."
+  },
+  "venues": [
+   {
+    "name": "frxUSD / DUSD",
+    "chain": "eth",
+    "dex": "curve",
+    "kind": "swap",
+    "address": "0x104d6a1b97a6cef88d905d7b865a378d90be932a",
+    "counter_asset": {
+     "symbol": "frxUSD",
+     "address": "0xcacd6fd266af91b8aed52accc382b4e165586e29",
+     "decimals": 18,
+     "price_usd": 0.9611162694
+    },
+    "role": "dollar_exit",
+    "tvl_usd": 4107426.5399,
+    "tvl_semantics": "whole-pool TVL as reported by GeckoTerminal; not executable depth",
+    "tvl_caveat": null,
+    "volume_24h_usd": 0.0,
+    "as_of": "2026-11-07T02:40:34Z",
+    "source_url": "https://api.geckoterminal.com/api/v2/networks/eth/pools/0x104d6a1b97a6cef88d905d7b865a378d90be932a",
+    "is_live": null,
+    "liveness_basis": "Not established: enumerated from a feed and never resolved on-chain by this producer. Unknown, NOT dead -- do not render as liquidity and do not render as absent.",
+    "exclusion_reason": null,
+    "tvl_status": "reported",
+    "tvl_exclusion_basis": null,
+    "tvl_exclusion_code": null,
+    "custody_check": {
+     "token_units_in_pool": 1526925.1499035812,
+     "counter_units_in_pool": 2827322.671946868,
+     "two_leg_usd_onchain": 4185823.8228016295,
+     "note": "Both named legs read by balanceOf at indexer prices; a third leg in a multi-coin pool is not counted, which only lowers this."
+    },
+    "counter_is_independent": true,
+    "counter_backing_note": null
+   }
+  ],
+  "non_swap_listings": {
+   "status": "not_queried",
+   "listings": null,
+   "basis": "Ticker is shared with unrelated tokens; a symbol match would list strangers."
+  },
+  "venue_diagnostics": {
+   "reason_meanings": {
+    "below_tvl_floor": "Reported TVL under $1,000: dust. Left out of `venues` and every total.",
+    "duplicate_listing": "The same pool address returned twice by the indexer; kept once in `venues`.",
+    "tvl_exceeds_supply": "Kept in `venues`, but its TVL is out of every total: it exceeds the token's whole value on the chain.",
+    "tvl_exceeds_onchain_custody": "Kept in `venues`, but its TVL is out of every total: it is far above what the pool holds on-chain.",
+    "counter_token_value_implausible": "Kept in `venues`, but its TVL is out of every total: it rests on a price for a token with no real market value."
+   },
+   "rejected_count": 3,
+   "rejected_by_reason": {
+    "below_tvl_floor": 3
+   },
+   "rejected": [
+    {
+     "chain": "eth",
+     "address": "0x35364a18efde0169d214e7c72f4ee0e4c522ba63",
+     "name": "frxUSD / DUSD",
+     "dex": "curve",
+     "role": "dollar_exit",
+     "tvl_usd": 98.5104056373,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x206239406abccf730493e4b133b30df546f9ff43",
+     "name": "DUSD / USDC 0.01%",
+     "dex": "uniswap_v3",
+     "role": "dollar_exit",
+     "tvl_usd": 30.7696757411,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    },
+    {
+     "chain": "eth",
+     "address": "0x78b8f4abaeac80f5c8c932a0d42ba0f14b6820bc",
+     "name": "DUSD / frxUSD 0.01%",
+     "dex": "uniswap_v3",
+     "role": "dollar_exit",
+     "tvl_usd": 3.8315609383,
+     "volume_24h_usd": 0.0,
+     "reason": "below_tvl_floor"
+    }
+   ],
+   "published_zero_volume_count": 1,
+   "volume_policy": "24h volume is published as context and is never a reason to reject a pool: a quiet day is not a dead pool (backing-monitor's fleet venue rule 5).",
+   "dedup_basis": "One source (GeckoTerminal) keyed by pool address, so the same pool cannot enter twice. Liquidity wrappers that re-list a pool (Convex, Yearn, StakeDAO, Beefy, Aura) are kept out of `venues` and marked `lp_wrapper` in `non_swap_listings`."
+  }
+ },
+ "inventory_source_selection": {
+  "current": "venue_census",
+  "historical": "historical_exit_context.enumeration",
+  "basis": "Current indexer census clock is distinct from preserved quote/supply clocks."
+ },
+ "historical_exit_context": {
+  "status": "historical_only_not_current",
+  "as_of": "2026-09-21T01:25:35Z",
+  "block": 26022595,
+  "primary_exit": {
+   "venue": "Alto Universal Stability Module (frxUSD)",
+   "at_nav": true,
+   "gated": true,
+   "gated_basis": "riskAnalyst canonical dusd-alto.md \u00a7II: the USM's swap functions are permissioned to a single Safe (sole SWAPPER_ROLE holder, 16 lifetime swaps all by the treasury); the USDC module holds 0.01 USDC with getAvailableLiquidity()=0.",
+   "gate": "No holder redemption. Only the Alto treasury Safe can swap DUSD to frxUSD at par.",
+   "cadence": null,
+   "capacity_usd": 0,
+   "capacity_basis": "Zero HOLDER redemption capacity, not zero reserves. Not re-derived here; sourced from riskAnalyst's canonical.",
+   "note": "A holder's only exit is the secondary market measured in `depth`."
+  },
+  "downstream_route_legs": {
+   "note": "Not DUSD venues; the frxUSD->USDC legs the router uses. Recorded because their inventory bounds hops 2-3.",
+   "frax_frxusd_custodian": {
+    "address": "0x4f95c5ba0c7c69fb2f9340e190ccee890b3bd87c",
+    "implementation": "0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
+    "kind": "fixed_price_capacity",
+    "rate": "1:1 frxUSD->USDC, zero fee (previewRedeem 1000e18 -> 1000.000000)",
+    "usdc_pocket_at_pinned_block": 72836.027613,
+    "pocket_volatility_note": "59,195.58 USDC at block 26,022,553, 72,836.03 at 26,022,595 -- ten minutes apart. The pocket is user-minted USDC awaiting redemption and moves by tens of percent intra-hour."
+   },
+   "curve_crvusd_frxusd": {
+    "address": "0x13e12bb0e6a2f1a3d6901a59a9d585e89a6243e1",
+    "balances": {
+     "frxUSD": 6218433.8626298625,
+     "crvUSD": 8718986.207671762
+    }
+   },
+   "curve_crvusd_usdc": {
+    "address": "0x4dece678ceceb27446b35c672dc7d61f30bad69e",
+    "balances": {
+     "crvUSD": 7530023.0405327175,
+     "USDC": 6666082.201519
+    }
+   },
+   "binding_inventory": "frxUSD in DUSD/frxUSD (2.50M) < crvUSD in crvUSD/frxUSD (8.72M) < USDC in crvUSD/USDC (6.67M): hop 1 binds."
+  },
+  "regimes": {
+   "note": "Block-pinned on-chain replica of the router's route (Curve get_dy + custodian previewRedeem), deterministic, at the same block for every rung. Regime B scales the DUSD/frxUSD pool by (1 - treasury LP share) using the StableSwap invariant's degree-1 homogeneity, dy_s(x) = s*get_dy(x/s), verified to 0.0 bps against a local StableSwap-NG reimplementation at scaled balances.",
+   "pinned_block": 26022595,
+   "pinned_block_time_utc": "2026-09-21T01:25:35Z",
+   "rpc": "https://eth.drpc.org",
+   "router_vs_replica_bps": {
+    "100.0": 0.0,
+    "1000.0": 0.0,
+    "10000.0": 0.0,
+    "25000.0": 0.0,
+    "50000.0": 0.0,
+    "100000.0": -0.00014607753784368072,
+    "250000.0": -0.000430529443207206,
+    "500000.0": -8.493195036152201e-06,
+    "1000000.0": -0.0001317738573813898,
+    "2000000.0": -0.2643873259222662,
+    "4000000.0": 0.32732515375055726,
+    "10000000.0": 1.2103771087179638
+   },
+   "treasury_lp": {
+    "lp_total_supply": 3298835.219653069,
+    "safe_direct": 0.0,
+    "safe_convex_staked": 1514898.4114264795,
+    "safe_stakedao_vault": 306080.99999999994,
+    "safe_yearn_shares": 215246.0,
+    "yearn_pps": 1.0278612815464314,
+    "safe_yearn_lp": 221243.0294077432,
+    "treasury_lp_total": 2042222.4408342226,
+    "treasury_share": 0.6190737957044724,
+    "regime_b_scale": 0.3809262042955276,
+    "handoff_claimed_share": 0.62
+   },
+   "float": {
+    "regime_A_float_units": 23935.357630334795,
+    "regime_B_float_units": 517906.5989634141,
+    "treasury_dusd_inside_lp": 493971.2413330793,
+    "total_supply_units": 821855.1609891037
+   },
+   "supply_sized_exits": {
+    "A_23935": {
+     "dusd": 23935.357630334795,
+     "usdc": 23976.700183,
+     "total_bps": 17.272586147953906,
+     "marginal_bps": -0.630213852046424,
+     "frx_bps": 17.27258631464723
+    },
+    "A_821855": {
+     "dusd": 821855.1609891037,
+     "usdc": 822218.665305,
+     "total_bps": 4.422972965927308,
+     "marginal_bps": -13.479827034073022,
+     "frx_bps": 6.2222410666024075
+    },
+    "B_23935": {
+     "dusd": 23935.357630334795,
+     "usdc": 23974.410945,
+     "total_bps": 16.316160914893185,
+     "marginal_bps": -1.5866390851071444,
+     "frx_bps": 16.316161050191624
+    },
+    "B_517906": {
+     "dusd": 517906.5989634141,
+     "usdc": 517949.088318,
+     "total_bps": 0.8204057386218544,
+     "marginal_bps": -17.082394261378475,
+     "frx_bps": 2.1298339380759757
+    },
+    "B_821855": {
+     "dusd": 821855.1609891037,
+     "usdc": 820812.071584,
+     "total_bps": -12.691888481278779,
+     "marginal_bps": -30.594688481279107,
+     "frx_bps": -10.897897960695513
+    }
+   },
+   "A_pool_intact": {
+    "scale_applied_to_dusd_frxusd_pool": 1.0,
+    "pool_frxusd_inventory_units": 2502131.2876217645,
+    "baseline_bias_bps": 17.90280000000033,
+    "cost_monotonic": true,
+    "size_response": "size_responsive",
+    "rungs": [
+     {
+      "size_usd": 100.0,
+      "usdc_out": 100.179028,
+      "total_bps": 17.90280000000033,
+      "marginal_bps": 0.0,
+      "frxusd_only_out": 100.17902818177997,
+      "frxusd_only_bps": 17.902818177997215,
+      "dollar_minus_frxusd_bps": -1.817799688552668e-05,
+      "via_custodian_usdc": 100.179028
+     },
+     {
+      "size_usd": 1000.0,
+      "usdc_out": 1001.787836,
+      "total_bps": 17.87835999999876,
+      "marginal_bps": -0.024440000001568762,
+      "frxusd_only_out": 1001.7878363020958,
+      "frxusd_only_bps": 17.8783630209578,
+      "dollar_minus_frxusd_bps": -3.0209590384799867e-06,
+      "via_custodian_usdc": 1001.787836
+     },
+     {
+      "size_usd": 10000.0,
+      "usdc_out": 10017.636703,
+      "total_bps": 17.636702999999088,
+      "marginal_bps": -0.2660970000012419,
+      "frxusd_only_out": 10017.6367032055,
+      "frxusd_only_bps": 17.63670320550137,
+      "dollar_minus_frxusd_bps": -2.0550228185811648e-07,
+      "via_custodian_usdc": 10017.636703
+     },
+     {
+      "size_usd": 25000.0,
+      "usdc_out": 25043.113142,
+      "total_bps": 17.24525680000033,
+      "marginal_bps": -0.6575431999999992,
+      "frxusd_only_out": 25043.11314225505,
+      "frxusd_only_bps": 17.245256902020945,
+      "dollar_minus_frxusd_bps": -1.0202061417885488e-07,
+      "via_custodian_usdc": 25043.113142
+     },
+     {
+      "size_usd": 50000.0,
+      "usdc_out": 50083.112185,
+      "total_bps": 16.6224370000001,
+      "marginal_bps": -1.2803630000002286,
+      "frxusd_only_out": 50083.11218576149,
+      "frxusd_only_bps": 16.622437152298275,
+      "dollar_minus_frxusd_bps": -1.5229817407202972e-07,
+      "via_custodian_usdc": 50083.112185
+     },
+     {
+      "size_usd": 100000.0,
+      "usdc_out": 100152.290264,
+      "total_bps": 15.22902639999879,
+      "marginal_bps": -2.673773600001539,
+      "frxusd_only_out": 100154.76413186091,
+      "frxusd_only_bps": 15.47641318609072,
+      "dollar_minus_frxusd_bps": -0.24738678609192988,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 250000.0,
+      "usdc_out": 250296.470466,
+      "total_bps": 11.85881864000038,
+      "marginal_bps": -6.04398135999995,
+      "frxusd_only_out": 250316.4966715074,
+      "frxusd_only_bps": 12.659866860296187,
+      "dollar_minus_frxusd_bps": -0.801048220295808,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 500000.0,
+      "usdc_out": 500400.569707,
+      "total_bps": 8.011394139999517,
+      "marginal_bps": -9.891405860000813,
+      "frxusd_only_out": 500464.6059646725,
+      "frxusd_only_bps": 9.292119293451417,
+      "dollar_minus_frxusd_bps": -1.2807251534519004,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 1000000.0,
+      "usdc_out": 1000274.277511,
+      "total_bps": 2.7427751100006503,
+      "marginal_bps": -15.16002488999968,
+      "frxusd_only_out": 1000481.9088589306,
+      "frxusd_only_bps": 4.819088589305132,
+      "dollar_minus_frxusd_bps": -2.0763134793044813,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 2000000.0,
+      "usdc_out": 1998122.595922,
+      "total_bps": -9.387020390000389,
+      "marginal_bps": -27.28982039000072,
+      "frxusd_only_out": 1998857.8379915121,
+      "frxusd_only_bps": -5.7108100424396735,
+      "dollar_minus_frxusd_bps": -3.6762103475607155,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 4000000.0,
+      "usdc_out": 2500077.096489,
+      "total_bps": -3749.8072587775,
+      "marginal_bps": -3767.7100587775003,
+      "frxusd_only_out": 2501224.395193708,
+      "frxusd_only_bps": -3746.93901201573,
+      "dollar_minus_frxusd_bps": -2.868246761770024,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 10000000.0,
+      "usdc_out": 2500552.925366,
+      "total_bps": -7499.447074634,
+      "marginal_bps": -7517.349874634001,
+      "frxusd_only_out": 2501700.671360308,
+      "frxusd_only_bps": -7498.299328639692,
+      "dollar_minus_frxusd_bps": -1.1477459943080248,
+      "via_custodian_usdc": 72836.027613
+     }
+    ],
+    "rungs_without_custodian_bps": {
+     "100.0": 17.036200000000168,
+     "1000.0": 17.01045999999984,
+     "10000.0": 16.755362000000495,
+     "25000.0": 16.341531999999326,
+     "50000.0": 15.68144760000001,
+     "100000.0": 14.461042800000268,
+     "250000.0": 11.422293279998996,
+     "500000.0": 7.6858095800003134,
+     "1000000.0": 2.4703604699993775,
+     "2000000.0": -9.651159535000176,
+     "4000000.0": -3749.9816599875003,
+     "10000000.0": -7499.51685316
+    },
+    "crossing_total_convention": {
+     "status": "refined",
+     "bracket": [
+      2515625.0,
+      2531250.0
+     ],
+     "width_pct_of_mid": 0.6191950464396285,
+     "ends": [
+      {
+       "size_usd": 2515625.0,
+       "total_bps": -177.4677911334155,
+       "marginal_bps": -195.37059113341581,
+       "usdc_out": 2470980.758793,
+       "split": null
+      },
+      {
+       "size_usd": 2531250.0,
+       "total_bps": -216.3079578548155,
+       "marginal_bps": -234.21075785481582,
+       "usdc_out": 2476497.048168,
+       "split": {
+        "frxusd_out": 2477622.3290238394,
+        "via_custodian_usdc": 72836.027613,
+        "via_curve_frxusd_in": 2404786.3014108394,
+        "crvusd_mid": 2404562.0417192704,
+        "via_curve_usdc": 2403661.020555
+       }
+      }
+     ]
+    },
+    "crossing_marginal_convention": {
+     "status": "refined",
+     "bracket": [
+      2515625.0,
+      2531250.0
+     ],
+     "width_pct_of_mid": 0.6191950464396285,
+     "ends": [
+      {
+       "size_usd": 2515625.0,
+       "total_bps": -177.4677911334155,
+       "marginal_bps": -195.37059113341581,
+       "usdc_out": 2470980.758793,
+       "split": null
+      },
+      {
+       "size_usd": 2531250.0,
+       "total_bps": -216.3079578548155,
+       "marginal_bps": -234.21075785481582,
+       "usdc_out": 2476497.048168,
+       "split": {
+        "frxusd_out": 2477622.3290238394,
+        "via_custodian_usdc": 72836.027613,
+        "via_curve_frxusd_in": 2404786.3014108394,
+        "crvusd_mid": 2404562.0417192704,
+        "via_curve_usdc": 2403661.020555
+       }
+      }
+     ]
+    },
+    "observed_output_peak": {
+     "input_usd": 10000000.0,
+     "usdc_out": 2500552.925366
+    }
+   },
+   "B_treasury_withdrawn": {
+    "scale_applied_to_dusd_frxusd_pool": 0.3809262042955276,
+    "pool_frxusd_inventory_units": 953127.3740428397,
+    "baseline_bias_bps": 17.898300000001033,
+    "cost_monotonic": true,
+    "size_response": "size_responsive",
+    "rungs": [
+     {
+      "size_usd": 100.0,
+      "usdc_out": 100.178983,
+      "total_bps": 17.898300000001033,
+      "marginal_bps": 0.0,
+      "frxusd_only_out": 100.17898398477746,
+      "frxusd_only_bps": 17.89839847774699,
+      "dollar_minus_frxusd_bps": -9.847774595783676e-05,
+      "via_custodian_usdc": 100.178983
+     },
+     {
+      "size_usd": 1000.0,
+      "usdc_out": 1001.783433,
+      "total_bps": 17.834329999999454,
+      "marginal_bps": -0.0639700000015786,
+      "frxusd_only_out": 1001.783433809269,
+      "frxusd_only_bps": 17.834338092690416,
+      "dollar_minus_frxusd_bps": -8.092690961802873e-06,
+      "via_custodian_usdc": 1001.783433
+     },
+     {
+      "size_usd": 10000.0,
+      "usdc_out": 10017.213208,
+      "total_bps": 17.213207999999813,
+      "marginal_bps": -0.6850920000012195,
+      "frxusd_only_out": 10017.21320888489,
+      "frxusd_only_bps": 17.213208884889752,
+      "dollar_minus_frxusd_bps": -8.848899391011855e-07,
+      "via_custodian_usdc": 10017.213208
+     },
+     {
+      "size_usd": 25000.0,
+      "usdc_out": 25040.626547,
+      "total_bps": 16.250618800000005,
+      "marginal_bps": -1.6476812000010277,
+      "frxusd_only_out": 25040.626547841577,
+      "frxusd_only_bps": 16.25061913663073,
+      "dollar_minus_frxusd_bps": -3.366307232965937e-07,
+      "via_custodian_usdc": 25040.626547
+     },
+     {
+      "size_usd": 50000.0,
+      "usdc_out": 50074.097567,
+      "total_bps": 14.81951339999954,
+      "marginal_bps": -3.078786600001493,
+      "frxusd_only_out": 50074.09756714862,
+      "frxusd_only_bps": 14.819513429724651,
+      "dollar_minus_frxusd_bps": -2.972511126131394e-08,
+      "via_custodian_usdc": 50074.097567
+     },
+     {
+      "size_usd": 100000.0,
+      "usdc_out": 100122.111241,
+      "total_bps": 12.211124100001136,
+      "marginal_bps": -5.687175899999897,
+      "frxusd_only_out": 100124.58225514022,
+      "frxusd_only_bps": 12.458225514022647,
+      "dollar_minus_frxusd_bps": -0.2471014140215111,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 250000.0,
+      "usdc_out": 250172.06392,
+      "total_bps": 6.882556799998607,
+      "marginal_bps": -11.015743200002426,
+      "frxusd_only_out": 250192.07281910777,
+      "frxusd_only_bps": 7.6829127643107675,
+      "dollar_minus_frxusd_bps": -0.8003559643121605,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 500000.0,
+      "usdc_out": 500060.588373,
+      "total_bps": 1.211767459998736,
+      "marginal_bps": -16.686532540002297,
+      "frxusd_only_out": 500124.5522875692,
+      "frxusd_only_bps": 2.491045751384924,
+      "dollar_minus_frxusd_bps": -1.2792782913861878,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 1000000.0,
+      "usdc_out": 949137.067066,
+      "total_bps": -508.62932934000014,
+      "marginal_bps": -526.5276293400012,
+      "frxusd_only_out": 949326.5450577921,
+      "frxusd_only_bps": -506.7345494220787,
+      "dollar_minus_frxusd_bps": -1.8947799179214257,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 2000000.0,
+      "usdc_out": 952718.599467,
+      "total_bps": -5236.407002665,
+      "marginal_bps": -5254.305302665,
+      "frxusd_only_out": 952909.3227538003,
+      "frxusd_only_bps": -5235.453386230998,
+      "dollar_minus_frxusd_bps": -0.9536164340015603,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 4000000.0,
+      "usdc_out": 952772.028858,
+      "total_bps": -7618.069927855,
+      "marginal_bps": -7635.968227855001,
+      "frxusd_only_out": 952962.7707185318,
+      "frxusd_only_bps": -7617.59307320367,
+      "dollar_minus_frxusd_bps": -0.47685465132963145,
+      "via_custodian_usdc": 72836.027613
+     },
+     {
+      "size_usd": 10000000.0,
+      "usdc_out": 952718.331326,
+      "total_bps": -9047.281668674,
+      "marginal_bps": -9065.179968674001,
+      "frxusd_only_out": 952909.0545187569,
+      "frxusd_only_bps": -9047.090945481243,
+      "dollar_minus_frxusd_bps": -0.1907231927580142,
+      "via_custodian_usdc": 72836.027613
+     }
+    ],
+    "rungs_without_custodian_bps": {
+     "100.0": 17.031800000000263,
+     "1000.0": 16.96643999999914,
+     "10000.0": 16.331906000000007,
+     "25000.0": 15.346987600000084,
+     "50000.0": 13.87870680000125,
+     "100000.0": 11.44320549999911,
+     "250000.0": 6.446138280000735,
+     "500000.0": 0.8863289000005103,
+     "1000000.0": -508.89023209999993,
+     "2000000.0": -5236.537855729999,
+     "4000000.0": -7618.13535737,
+     "10000000.0": -9047.307839281
+    },
+    "crossing_total_convention": {
+     "status": "refined",
+     "bracket": [
+      960937.5,
+      968750.0
+     ],
+     "width_pct_of_mid": 0.8097165991902834,
+     "ends": [
+      {
+       "size_usd": 960937.5,
+       "total_bps": -191.73986256130092,
+       "marginal_bps": -209.63816256130195,
+       "usdc_out": 942512.497582,
+       "split": null
+      },
+      {
+       "size_usd": 968750.0,
+       "total_bps": -246.5456343741934,
+       "marginal_bps": -264.44393437419444,
+       "usdc_out": 944865.89167,
+       "split": {
+        "frxusd_out": 945053.8897853622,
+        "via_custodian_usdc": 72836.027613,
+        "via_curve_frxusd_in": 872217.8621723622,
+        "crvusd_mid": 872227.8148627669,
+        "via_curve_usdc": 872029.864057
+       }
+      }
+     ]
+    },
+    "crossing_marginal_convention": {
+     "status": "refined",
+     "bracket": [
+      953125.0,
+      960937.5
+     ],
+     "width_pct_of_mid": 0.8163265306122449,
+     "ends": [
+      {
+       "size_usd": 953125.0,
+       "total_bps": -145.96266192786865,
+       "marginal_bps": -163.86096192786968,
+       "usdc_out": 939212.933785,
+       "split": null
+      },
+      {
+       "size_usd": 960937.5,
+       "total_bps": -191.73986256130092,
+       "marginal_bps": -209.63816256130195,
+       "usdc_out": 942512.497582,
+       "split": {
+        "frxusd_out": 942699.6826673296,
+        "via_custodian_usdc": 72836.027613,
+        "via_curve_frxusd_in": 869863.6550543297,
+        "crvusd_mid": 869873.7229256858,
+        "via_curve_usdc": 869676.469969
+       }
+      }
+     ]
+    },
+    "observed_output_peak": {
+     "input_usd": 4000000.0,
+     "usdc_out": 952772.028858
+    }
+   }
+  },
+  "enumeration": {
+   "source": "DexTracker sweep by TOKEN ADDRESS at Ethereum block 26,022,5xx (2026-09-21T01:15Z-01:25Z): DefiLlama yields (underlyingTokens), Curve API all 9 Ethereum registries, Uniswap V3 factory getPool x 13 counters x 4 fee tiers, Uniswap V2 + SushiSwap V2 factories, GeckoTerminal token pools (indexes v2/v3/v4/curve/balancer), Balancer v2/v3 API, Blockscout top-50 holder census, KyberSwap route discovery at $100-$10M",
+   "as_of": "2026-09-21T01:25:35Z",
+   "pinned_block": 26022595,
+   "venue_count": 4,
+   "live_venue_count": 1,
+   "chain_count": 1,
+   "chain_count_is_floor": true,
+   "chain_count_note": "Ethereum only. DefiLlama by-address lists nothing on another chain; no bridge deployment was enumerated.",
+   "queried_ok": {
+    "defillama_yields": true,
+    "curve_api": true,
+    "uniswap_v3_factory": true,
+    "v2_factories": true,
+    "geckoterminal_token_pools": true,
+    "balancer_api": true,
+    "blockscout_holders": true
+   },
+   "curve_registries_swept": {
+    "main": 49,
+    "crypto": 8,
+    "factory": 381,
+    "factory-crypto": 401,
+    "factory-crvusd": 29,
+    "factory-tricrypto": 125,
+    "factory-twocrypto": 404,
+    "factory-stable-ng": 1060,
+    "factory-eywa": 0
+   },
+   "not_swept_directly": [
+    "Uniswap V4 (no factory enumeration; covered only via GeckoTerminal's v4 index and KyberSwap route discovery, neither of which surfaced a v4 pool)",
+    "Ekubo (surfaced only as a crvUSD->USDC leg at $4M, never as a DUSD venue)",
+    "CoW/limit-order books"
+   ],
+   "known_answer_check": {
+    "pool": "0x206239406abccF730493e4b133b30DF546f9ff43",
+    "surfaced_by": [
+     "uniswap_v3_factory",
+     "geckoterminal_token_pools",
+     "blockscout_holders"
+    ],
+    "result": "SURFACED and excluded: liquidity()=0, 28.68 DUSD / 1.99 USDC dust, stale slot0 ~1.0000. Dead, not missing."
+   },
+   "ticker_collisions_seen": {
+    "defillama_rows_matching_ticker": 42,
+    "defillama_rows_matching_address": 4,
+    "wrong_asset_examples": [
+     "makina DUSD (USDC-backed, $1.97M)",
+     "Curve DUSD-SFRXUSD 0x07fFf... (dTRINITY)",
+     "Curve USDC-DUSD 0x1e33... (Dialectic, $21.9K)",
+     "Raydium DUSD-USDT (Solana)",
+     "DefiChain DUSD pairs"
+    ]
+   },
+   "completeness": "Four Ethereum pools hold Alto DUSD; one is live. Every DefiLlama row matching by address is the same Curve pool or a wrapper of it (Convex, StakeDAO, Yearn).",
+   "excluded_venue_count": 3,
+   "unestablished_venue_count": 0,
+   "live_venue_count_is_floor": false,
+   "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it.",
+   "superseded_for_chain_coverage_by": "venue_census: configured scope searched by exact address. This block's by_chain search is historical from its own as_of and is retained as the record of that search."
+  },
+  "venues": [
+   {
+    "name": "DUSD/frxUSD",
+    "project": "curve",
+    "chain": "Ethereum",
+    "kind": "swap",
+    "pool_type": "curve-stable-ng",
+    "pool_id": "0x104d6a1b97A6CEf88D905d7b865A378d90be932A",
+    "tvl_usd": 3301748.72,
+    "volume_24h_usd": 205.43,
+    "underlying_tokens": [
+     "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
+     "0x63d74d22E689C715a04F2C13962b1f77F443d35b"
+    ],
+    "balances": [
+     {
+      "symbol": "frxUSD",
+      "amount": 2502131.2876217645
+     },
+     {
+      "symbol": "DUSD",
+      "amount": 797919.8033587689
+     }
+    ],
+    "params": {
+     "A": 1000,
+     "fee": "0.01%",
+     "offpeg_fee_multiplier": 5
+    },
+    "counter_side": {
+     "symbol": "frxUSD",
+     "amount": 2502131.2876217645
+    },
+    "depth_role": "The only live venue; hop 1 of every route. Its frxUSD side (2.502M) is the binding inventory for the whole DUSD->USDC exit.",
+    "is_live": true,
+    "exclusion_reason": null,
+    "exclusion_reason_note": null,
+    "liveness_basis": "Quoted live at Ethereum block 26,022,595: get_dy answers at every rung and the pool holds 2,502,131 frxUSD against 797,920 DUSD."
+   },
+   {
+    "name": "DUSD/frxUSD (dust twin)",
+    "project": "curve",
+    "chain": "Ethereum",
+    "kind": "swap",
+    "pool_type": "curve-stable-ng",
+    "pool_id": "0x35364a18efDe0169D214E7c72f4Ee0e4C522bA63",
+    "tvl_usd": 99.75,
+    "volume_24h_usd": 0.0,
+    "depth_role": "Excluded: $99.75 total, 44 DUSD.",
+    "is_live": false,
+    "exclusion_reason": "dust_below_threshold",
+    "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+    "liveness_basis": "Holds 44.01 DUSD and 55.65 frxUSD, $99.75 total, at block 26,022,595. Quotable but immaterial at any holder size."
+   },
+   {
+    "name": "DUSD/USDC 0.01%",
+    "project": "uniswap",
+    "chain": "Ethereum",
+    "kind": "swap",
+    "pool_type": "uniswap-v3",
+    "pool_id": "0x206239406abccF730493e4b133b30DF546f9ff43",
+    "tvl_usd": 30.77,
+    "volume_24h_usd": 0.0,
+    "depth_role": "Excluded: DEAD. liquidity()=0 since block 25,329,865 (2026-06-16, per riskAnalyst bisection); slot0 still reports ~1.0000 and must not be quoted.",
+    "is_live": false,
+    "exclusion_reason": "dead_zero_liquidity",
+    "exclusion_reason_note": "The pool exists and answers calls but holds no liquidity -- `liquidity()` is 0. \u26a0\ufe0f A dead Uniswap V3 pool's `slot0` still returns a plausible price, so this is the case that must never be quoted.",
+    "liveness_basis": "liquidity() == 0, read directly at block 26,022,595; zero since block 25,329,865 (2026-06-16) per riskAnalyst's bisection. Holds 28.68 DUSD / 1.99 USDC of dust and its slot0 still returns ~1.0000, which is why it must never be quoted."
+   },
+   {
+    "name": "DUSD/frxUSD 0.01%",
+    "project": "uniswap",
+    "chain": "Ethereum",
+    "kind": "swap",
+    "pool_type": "uniswap-v3",
+    "pool_id": "0x78b8f4abaeac80f5c8c932a0d42ba0f14b6820bc",
+    "tvl_usd": 3.83,
+    "volume_24h_usd": 0.0,
+    "depth_role": "Excluded: liquidity()=0, 2.55 DUSD dust. Not previously known to riskAnalyst.",
+    "is_live": false,
+    "exclusion_reason": "dead_zero_liquidity",
+    "exclusion_reason_note": "The pool exists and answers calls but holds no liquidity -- `liquidity()` is 0. \u26a0\ufe0f A dead Uniswap V3 pool's `slot0` still returns a plausible price, so this is the case that must never be quoted.",
+    "liveness_basis": "liquidity() == 0, read directly at block 26,022,595; holds 2.55 DUSD and 1.28 frxUSD."
+   }
+  ],
+  "excluded_liquidity": {
+   "lp_wrappers": [
+    "Convex (pid 565)",
+    "StakeDAO",
+    "Yearn"
+   ],
+   "lp_wrapper_reason": "Wrap the same Curve LP; DefiLlama lists them as separate $2.23M/$812K/$260K rows.",
+   "non_swap_entries": [
+    "AltoBorrowMarket 0x5d8fA5E1 (17,747 DUSD)",
+    "AltoBorrowMarket 0x053B53Ca (809 DUSD)",
+    "AltoTimelockController (3,425 DUSD)",
+    "Morpho UniversalRewardsDistributor (77 DUSD)",
+    "CoW settlement/burner (86 DUSD)"
+   ],
+   "non_swap_reason": "Holders of DUSD that are not venues; listed so the holder census reconciles."
+  },
+  "axis_binding_constraint": {
+   "leg": "circulation",
+   "basis": "Depth is not the constraint: the route clears 2% only above $3.37M, 2.5x the entire $1.32M supply, so every DUSD in existence sells inside 0.5%. What binds is circulation: at most $26.5K is outside the pool (see depth.holdings). Holders have no primary redemption. LP-withdrawal regime, as measured 2026-09-21: if the treasury withdrew its then-61.9% of LP, ~517,907 DUSD would reach the market and the crossing would fall to ~$961K -- distribution and depth move together in that case only.",
+   "risk_score": null
+  },
+  "note": "Axis 3 (Liquidity & Exit), single producer. Measured exit evidence only; no risk score. Alto Protocol's DUSD 0x63d74d22E689C715a04F2C13962b1f77F443d35b -- NOT Dialectic USD, dTRINITY dUSD or DeFi Dollar, which share the ticker. The 2% crossing lies above the asset's ENTIRE supply, so `depth.depth_usd` is clamped to total supply (status clears_entire_supply) and the crossing is retained in `depth.curve_crossing_above_supply`. How much is held outside the pool, and by whom, is in `depth.holdings` -- distribution, not depth."
+ },
+ "treasury_lp_ownership": {
+  "status": "current_lookthrough_unavailable",
+  "current_treasury_lp_share": null,
+  "basis": "Historical direct/Convex/StakeDAO/Yearn ownership is not restamped. Current staked LP/creditline look-through remains financial-owner scope.",
+  "historical_reference": "historical_exit_context.regimes.treasury_lp"
+ },
+ "chains": {
+  "eth": {
+   "status": "queried",
+   "token": "0x63d74d22e689c715a04f2c13962b1f77f443d35b",
+   "queried_at": "2026-11-07T02:40:34Z",
+   "finding": "venues_found",
+   "token_indexed": true,
+   "pool_list_truncated": false,
+   "truncation_note": null,
+   "pool_count": 4,
+   "published_pool_count": 1,
+   "below_floor_count": 3,
+   "dollar_exit_pool_count": 1,
+   "implausible_tvl_count": 0,
+   "dollar_exit_tvl_usd": 4107426.5399,
+   "local_dollar_exit": true
+  }
+ },
+ "venues_by_role": {
+  "dollar_exit": {
+   "pool_count": 1,
+   "tvl_usd": 4107426.5399,
+   "meaning": "Swaps the asset for a fiat-backed dollar token: a way out."
+  },
+  "family_swap": {
+   "pool_count": 0,
+   "tvl_usd": 0,
+   "meaning": "Swaps the asset for its own sister token: NOT a way out."
+  },
+  "other_pair": {
+   "pool_count": 0,
+   "tvl_usd": 0,
+   "meaning": "Swaps the asset for a non-dollar token: an exit only via a second hop."
+  }
+ },
+ "venue_diagnostics": {
+  "reason_meanings": {
+   "below_tvl_floor": "Reported TVL under $1,000: dust. Left out of `venues` and every total.",
+   "duplicate_listing": "The same pool address returned twice by the indexer; kept once in `venues`.",
+   "tvl_exceeds_supply": "Kept in `venues`, but its TVL is out of every total: it exceeds the token's whole value on the chain.",
+   "tvl_exceeds_onchain_custody": "Kept in `venues`, but its TVL is out of every total: it is far above what the pool holds on-chain.",
+   "counter_token_value_implausible": "Kept in `venues`, but its TVL is out of every total: it rests on a price for a token with no real market value."
+  },
+  "rejected_count": 3,
+  "rejected_by_reason": {
+   "below_tvl_floor": 3
+  },
+  "rejected": [
+   {
+    "chain": "eth",
+    "address": "0x35364a18efde0169d214e7c72f4ee0e4c522ba63",
+    "name": "frxUSD / DUSD",
+    "dex": "curve",
+    "role": "dollar_exit",
+    "tvl_usd": 98.5104056373,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x206239406abccf730493e4b133b30df546f9ff43",
+    "name": "DUSD / USDC 0.01%",
+    "dex": "uniswap_v3",
+    "role": "dollar_exit",
+    "tvl_usd": 30.7696757411,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   },
+   {
+    "chain": "eth",
+    "address": "0x78b8f4abaeac80f5c8c932a0d42ba0f14b6820bc",
+    "name": "DUSD / frxUSD 0.01%",
+    "dex": "uniswap_v3",
+    "role": "dollar_exit",
+    "tvl_usd": 3.8315609383,
+    "volume_24h_usd": 0.0,
+    "reason": "below_tvl_floor"
+   }
+  ],
+  "published_zero_volume_count": 1,
+  "volume_policy": "24h volume is published as context and is never a reason to reject a pool: a quiet day is not a dead pool (backing-monitor's fleet venue rule 5).",
+  "dedup_basis": "One source (GeckoTerminal) keyed by pool address, so the same pool cannot enter twice. Liquidity wrappers that re-list a pool (Convex, Yearn, StakeDAO, Beefy, Aura) are kept out of `venues` and marked `lp_wrapper` in `non_swap_listings`."
+ }
 }
