@@ -39,7 +39,12 @@ var IssuerProjectEvidence = {
         if(compact)h+='</details>';
         h+='<details class="mt-3"><summary class="text-sm font-semibold cursor-pointer">Coverage and remaining gaps</summary>';
         Object.keys(p.coverage).forEach(function(k){var x=p.coverage[k];h+='<p class="text-xs text-slate-500 mt-2"><strong>'+e(k.replace(/_/g,' '))+':</strong> '+e(x.state==='not_exported'?'Not exported; unavailable in this selected component return':states[x.state]||x.state)+'. '+e(x.meaning)+'</p>';});
-        p.limitations.forEach(function(x){h+='<p class="text-xs text-slate-500 mt-2">'+e(x)+'</p>';});
+        // available_selected_fields is reached only after exact-hash publication policy approval.
+        // Retain the immutable source's scope, but do not display its superseded workflow state.
+        p.limitations.forEach(function(x){
+            if(x==='Selected public-primary candidate only; private profile remains private. No publication approval or policy change.')x='Selected public-primary documentary fields only; private profile remains private.';
+            h+='<p class="text-xs text-slate-500 mt-2">'+e(x)+'</p>';
+        });
         h+='<p class="text-xs text-slate-500 mt-2">Unknown is not a negative score. Full-verification and score-decision dates are not advanced by this source review.</p></details>';
         var events=(feed.component_related_events||[]).filter(function(x){return x.project===p.project_slug;});
         if(events.length)h+='<details class="mt-3"><summary class="text-sm font-semibold cursor-pointer">Dated project developments</summary>'+events.map(function(x){return '<p class="text-sm mt-2">Filing '+e(x.filing_date)+' · activity '+e(x.activity_start)+' to '+e(x.activity_end)+' · balances '+e(x.balance_as_of)+' · '+self.sources([x.url])+'. A filing is not a payment or implementation receipt.</p>';}).join('')+'</details>';
