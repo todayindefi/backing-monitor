@@ -15,3 +15,9 @@ The October29 certificate's stated November1 effectiveness/November3 first new r
 Pending PT-apxUSD/PT-apyUSD ownership choices are not activated. STRCon has no invented riskAnalyst slug. PT-srUSDat's selected fixed-block read advertises both srUSDat and sUSDat outputs; it is not measured output quantity or guaranteed USDat cash. These references remain separate from token-level rights and actual route execution. srUSDat/PT/STRCon have no newly created dashboard pages.
 
 Changes to source facts do not rescore assets or advance full-verification/score-decision dates. Unavailable legal fields and unresolved custody, enforcement, assurance, payment, PT-quantity and Monad-conversion gaps remain explicit.
+
+## fxUSD selected component — November8,2026
+
+The supplemental exact source contract SHA256 `498d51410f3535d4364ac788f88bdc747a2ad368c892e49c21c4fe7a25f3d555` adds only `fx-protocol/fxusd`:15 public documentary facts and two role records. DeFiAnalyst source-owner reuse review and RiskAnalyst interpretation review are separate from this BM publication selection. Existing components are unchanged; fxSAVE and the private canonical parent are excluded.
+
+The incorporated issuer/repayment obligor remains unestablished; AladdinDAO contributors are a disclosed developer role. March5 terms effectiveness, November8 documentary review, individual source retrieval clocks and the retained September22 issuer score-decision clock stay separate. Unknown retrieval dates remain unknown. Code audits and TVL do not establish financial assurance. The existing issuer/1 interpretation and issuer-project-evidence/1 shared component contracts remain unchanged.

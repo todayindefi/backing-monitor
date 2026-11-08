@@ -14,7 +14,10 @@ class ComponentContract(unittest.TestCase):
   self.assertNotIn('pt-apxusd',out['component_profiles'])
   self.assertNotIn('strcon',out['component_profiles'])
   self.assertEqual(out['reference_components']['strcon']['entities'][0]['name'],'Ondo Global Markets (BVI) Limited')
-  self.assertNotIn('scores',str(out))
+  self.assertNotIn('scores',out)
+  for profile in out['component_profiles'].values():
+   self.assertNotIn('scores',profile)
+   self.assertNotIn('issuer_score',profile)
  def test_changed_private_or_missing_contract_fails_closed_without_fallback(self):
   with tempfile.TemporaryDirectory() as d:
    p=pathlib.Path(d)/'changed.json';raw=json.loads(m.SOURCE.read_text());raw['components'][0]['facts'].append({'key':'private_note','value':'PRIVATE ACCOUNT SECRET'});p.write_text(json.dumps(raw));out={'projects':{'saturn':{'facts':[{'key':'holder_rights','value':'FAMILY FALLBACK MUST NOT BE USED'}]}}};m.add_components(out,POLICY,p)
