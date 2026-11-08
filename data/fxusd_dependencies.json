@@ -6,20 +6,20 @@
   "dependencies": {
     "upstream": [
       {
-        "name": "WBTC (BitGo) — 87.61% of all debt",
-        "metric": "1,092.00 WBTC raw collateral against 68,527,240 fxUSD debt; pool CR 128.35%",
-        "source": "PegTracker fxUSD producer, Ethereum block 26259353, 2026-10-24",
-        "note": "⚠️ THE FRAMING \"backed by wstETH and WBTC\" IMPLIES A BALANCE THAT DOES NOT EXIST. The WBTC leg carries nearly all the debt at the LOWER ratio, and it is the CUSTODIAL one — an off-chain counterparty sits under 90% of the book.",
+        "name": "WBTC custodial wrapper",
+        "metric": "Dominant share of exact enumerated fxUSD debt; use dated producer pool weights",
+        "source": "BM/Peg pinnedNovember8two-pool evidence",
+        "note": "Custodial wrapper/control risk transmits to the dominant collateral. Current legal custody chain is not independently verified here; no exclusive BitGo assertion.",
         "unresolved": [
           "WBTC"
         ],
-        "unresolved_note": "87.61% of fxUSD pool debt on October 24 and no separate WBTC report in this graph; the custodial leg dominates the book."
+        "unresolved_note": "Upstream current WBTC asset/authority/legal reserve assessment remains an explicit coverage gap."
       },
       {
-        "name": "wstETH (Lido) — 12.39% of debt",
-        "metric": "6,609.49 stETH-equivalent raw collateral against 9,692,707 fxUSD debt; pool CR 161.96%",
-        "source": "PegTracker fxUSD producer, Ethereum block 26259353, 2026-10-24",
-        "note": "Comfortably collateralised, but a small share of the book.",
+        "name": "wstETH / Lido",
+        "metric": "Smaller collateral debt share; use dated producer weights and stETH-equivalent pool units",
+        "source": "BM/Peg pinnedNovember8two-pool evidence",
+        "note": "Lido staking/oracle/liquidity dependencies remain; the smaller pool does not diversify away dominant WBTC exposure.",
         "slug": "wsteth"
       },
       {
@@ -32,9 +32,9 @@
       },
       {
         "name": "Curve USDC/fxUSD 0x5018BE882DccE5E3F2f3B0913AE2096B9b3fB61f",
-        "metric": "USDC side about 4.30m at the October 23 read; major direct dollar exit venue",
-        "source": "DexTracker fxUSD-to-USDC ladder, 2026-10-23T23:48:22Z",
-        "note": "⚠️ Doubles as a peg mechanism: isRedeemAllowed() reads this pool's EMA price, so the redemption gate and the exit venue are the SAME dependency.",
+        "metric": "Important direct secondary dollar route and source of redemption-gate EMA; current quote clocks separate",
+        "source": "PinnedPoolConfiguration/oracle binding plus datedDex routed ladder",
+        "note": "Gate-source and market-exit dependency overlap; routes can reuse liquidity through aggregators. VenueTVL is not cash depth.",
         "terminal": true,
         "kind": "venue"
       }
@@ -42,8 +42,8 @@
     "downstream": [
       {
         "name": "fxSAVE",
-        "metric": "ERC-4626 over fxSP; 90.12% of fxUSD supply sat inside the pool on October 24; fxSP redeems for fxUSD plus USDC",
-        "note": "⚠️ NOT an independent leg — shares fxUSD's ProxyAdmin and timelock exactly."
+        "metric": "Distinct wrapper over fxSP; mixed fxUSD/USDC basket and potential redemption demand",
+        "note": "Shared core controls are dated technical evidence. Do not count wrapper/internal fxUSD as independent backing or use old percentage as current."
       },
       {
         "name": "USG",
@@ -78,5 +78,10 @@
       "generated_by": "scripts/dependency_graph.py build",
       "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
     }
-  }
+  },
+  "evidence_reviewed_at": "2026-11-08T14:56:58.556095+00:00",
+  "assessment_version": "fxusd-targeted-2026-11-08-v1",
+  "selected_evidence_version": "sha256:39073b818512ee89c4d179b987208e73b420d732914afa6bd91562f09665c082",
+  "canonical_project": "fx-protocol",
+  "canonical_component": "fxusd"
 }
