@@ -1,0 +1,13 @@
+# Next bounded liquidity repair — existing seven legacy references
+
+User authorized continuation after the November 9 fleet/evidence/mobile repairs. Owner: existing DexTracker session. BM consumes normal outputs; RiskAnalyst retains assessment decisions. No score edits, transactions, wallet queries, recurring jobs or schedule changes.
+
+Implement the existing RiskAnalyst liquidity-ladder-spec §7.5 rule in these existing producers and perform one bounded read-only refresh: Ethereum USG, fxUSD, BOLD, sUSDe and DUSD-Alto; configured syzUSD chain legs; native Ethereum reUSDe→sUSDe. Preserve exact existing contract/config bindings. Reuse the accepted reUSD source/clock/stability patterns where compatible, without transplanting asset assumptions.
+
+Remove the $100 probe/reference. Fix each chain/route's reference to its lowest successful economically valid decade rung starting at $1,000. No consumer rebasing of old values; new raw outputs retain original per-draw source/receipt/block clocks and the dated sizing-mark clock. Invalid/failed first quotes do not become a reference. Keep base spread, baseline-relative impact and gas separate; do not imply zero adjusted impact is a free cash exit. Publish reference identity and precision/stopping/refusal evidence.
+
+Prioritize the five Ethereum monetary ladders, then syzUSD and the native-only reUSDe path. Use normal producer code, existing verifier and bounded quote/refinement budget; no fleet-wide sweep outside these assets. Quote instability, rate limits, missing source clocks and precision failure remain explicit; no forced fine crossing or structural market-nonmonotonicity claim from temporal variation. Preserve primary50bps vs secondary200bps and exact output units. Do not sum chain books.
+
+Alto remains quote-only with supply/float/access restrictions and no invented liquidation clearance. syzUSD receipt output csUSDC is not cash USDC; all failed/invalid chains may remain unmeasured. reUSDe remains native-token evidence with USD cost/depth null unless independently dated complete valuation/cash evidence already exists; this commission does not request a new cash route or composed farming unwind.
+
+Return frozen versioned normal outputs, manifests/raw lineage, before/after method and observation clocks, validation results, explicit remaining blockers and a scoped durable source commit. Do not overwrite/reforge old evidence. Existing observations may be reused only if their own raw clocks and applicable method allow; do not call a metadata rebasing a current measurement. BM will adopt exact accepted normal versions and verify served desktop/mobile. No new approvals or execution requests.

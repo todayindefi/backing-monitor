@@ -13,6 +13,16 @@ var BOLDRenderer = {
         }).sort(function(a, b) { return a.size_usd - b.size_usd; });
     },
     _thresholdEvidence: function(liq, thresholdBps) {
+        var d = (liq || {}).depth || {}, source = d['bracket_' + Math.abs(thresholdBps) + 'bps'];
+        if (!source && Math.abs(d.threshold_bps) === Math.abs(thresholdBps)) source = d;
+        if (source && typeof source === 'object') {
+            if (['bracketed','located','floor','ladder_exhausted','measured_floor'].indexOf(source.status) === -1) return {producer:true,source:source,lower:null,upper:null};
+            var br = source.bracket || {};
+            return { producer: true, source: source, precision: br.meets_precision_obligation,
+                lower: typeof br.last_clearing_size_usd === 'number' ? {size_usd: br.last_clearing_size_usd}
+                    : (source.is_floor === true && typeof source.depth_usd === 'number' ? {size_usd: source.depth_usd} : null),
+                upper: typeof br.first_crossing_size_usd === 'number' ? {size_usd: br.first_crossing_size_usd} : null };
+        }
         var rows = this._marketRungs(liq), lower = null, upper = null;
         rows.forEach(function(r) {
             if (r.slippage_bps_debiased >= -thresholdBps && (!lower || r.size_usd > lower.size_usd)) lower = r;
@@ -38,7 +48,7 @@ var BOLDRenderer = {
         if (head) {
             var rating = head.querySelector('.axis-rating');
             if (rating) {
-                rating.title = 'Liquidity rating with the headline expressed as executable depth inside 0.5% incremental impact.';
+                rating.title = 'Liquidity rating; the displayed quote-based floor does not establish executable capacity or settled cash.';
             }
             var axisSub = head.querySelector('.axis-sub');
             if (axisSub) axisSub.textContent = 'usable market exit & primary redemption';
@@ -145,14 +155,14 @@ var BOLDRenderer = {
         }).join('');
         var headline = evidence.lower ? '≥' + this._money(evidence.lower.size_usd) : 'unmeasured';
         var bracket = evidence.lower && evidence.upper
-            ? this._money(evidence.lower.size_usd) + '–' + this._money(evidence.upper.size_usd)
+            ? '$' + evidence.lower.size_usd.toLocaleString('en-US', {maximumFractionDigits:2}) + '–$' + evidence.upper.size_usd.toLocaleString('en-US', {maximumFractionDigits:2})
             : 'not located';
         var asOf = ((liq.depth || {}).quote || {}).quoted_as_of || liq.as_of || 'time not published';
         return this._panel('Usable market exit',
             '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">' +
             '<div class="summary-card"><div class="card-label">0.5% depth</div><div class="card-value">' + headline + '</div><div class="text-xs text-slate-500">measured floor</div></div>' +
-            '<div class="summary-card"><div class="card-label">Current bracket</div><div class="card-value">' + bracket + '</div><div class="text-xs text-slate-500">targeted solver not yet enabled</div></div>' +
-            '<div class="summary-card"><div class="card-label">Quoted at</div><div class="card-value text-base">' + this._e(asOf) + '</div><div class="text-xs text-slate-500">routed BOLD → USDC</div></div></div>' +
+            '<div class="summary-card"><div class="card-label">Current bracket</div><div class="card-value text-base" style="overflow-wrap:anywhere">' + bracket + '</div><div class="text-xs text-slate-500">' + (evidence.producer ? (evidence.precision === true ? 'producer precision requirement met' : evidence.precision === false ? 'producer precision requirement not met' : 'producer precision not established') : 'grid observations only; no refinement claim') + '</div></div>' +
+            '<div class="summary-card"><div class="card-label">Observation clock</div><div class="card-value text-base">' + this._e(asOf) + '</div><div class="text-xs text-slate-500">routed BOLD → USDC</div></div></div>' +
             ((typeof LiquidityEvidence !== 'undefined' && LiquidityEvidence.canonicalHtml({asset_slug: 'bold', liquidity: liq})) ||
             ('<div class="text-sm font-semibold text-slate-700 mb-2">Market depth ladder</div>' +
             '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Sell size</th><th class="text-right">Additional impact</th><th class="text-right">Net output</th><th class="text-right">Route</th></tr></thead><tbody>' + tableRows + '</tbody></table></div>')) +
@@ -167,7 +177,7 @@ var BOLDRenderer = {
             ((liq.depth || {}).basis
                 ? '<p class="text-xs text-slate-500 mt-2 leading-relaxed"><strong>Producer basis for the 2% figure</strong> (a different threshold from the 0.5% headline above): ' +
                   this._e(liq.depth.basis) + '</p>' : '') +
-            '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Stress and methodology</summary><div class="mt-2">The current broad ladder only proves that the 0.5% crossing lies between ' + bracket + '. The 2% result remains a severe-stress measure and is not used as the headline. Additional impact is measured relative to the smallest successful routed quote.</div></details>') +
+            '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Stress and methodology</summary><div class="mt-2">Read the producer’s 0.5% range and precision status above: ' + bracket + '. The 2% result remains a severe-stress measure and is not used as the headline. Additional impact is measured relative to the smallest successful routed quote.</div></details>') +
             this._panel('Protocol redemption — separate exit route',
                 '<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><div class="summary-card mb-3"><div class="card-label">Access</div><div class="card-value">permissionless</div><div class="text-xs text-slate-500">continuous protocol call · fee rises with size</div></div><p class="text-sm text-slate-500">BOLD is exchanged for a protocol-selected mix of WETH, wstETH and rETH. This is not the same settlement as a market sale to USDC.</p></div>' +
                 '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Redemption size</th><th class="text-right">Effective fee</th></tr></thead><tbody>' + redemptionRows + '</tbody></table></div></div>');
