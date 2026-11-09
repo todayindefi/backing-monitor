@@ -2158,8 +2158,9 @@ const CommonRenderer = {
                  self.AXIS_PROVENANCE.liquidity.producer) || '') || 'the axis owner';
             var handed = !!(self.AXIS_PROVENANCE && self.AXIS_PROVENANCE.liquidity &&
                             self.AXIS_PROVENANCE.liquidity.depth_handed_off);
+            var chainLocalOnly = typeof ReUSDChainLadder !== 'undefined' && ReUSDChainLadder.accepts(data) && l.depth.per_chain;
             bits.push('<div class="ds-line ds-warn">\u26a0\ufe0f ' +
-                (handed
+                (chainLocalOnly ? 'No combined cross-chain depth' : handed
                     ? 'The ' + self._escapeAttr(ownerLabel) + ' publishes no depth figure for this ' +
                       'asset, so the figure shown is the base feed\u2019s'
                     : 'Depth not published') +
@@ -2202,7 +2203,8 @@ const CommonRenderer = {
         var chains = (l.depth || {}).per_chain;
         if (chains && ds && ds.reduction_policy === 'refuse_cross_chain_scalar') {
             var chainRows = Object.keys(chains).map(function(chain) {
-                var c = chains[chain] || {}, h = c.bracket_50bps || c;
+                var c = chains[chain] || {}, h = (typeof ReUSDChainLadder !== 'undefined' && ReUSDChainLadder.accepts(data))
+                    ? ReUSDChainLadder.result(c, l.depth || {}) : (c.bracket_50bps || c);
                 var bracket = h.bracket || {};
                 var lower = bracket.last_clearing_size_usd;
                 var upper = bracket.first_crossing_size_usd;
@@ -2217,7 +2219,8 @@ const CommonRenderer = {
             bits.push('<div class="text-sm font-semibold mt-3">Chain-local secondary exits</div>' +
                 '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Chain</th><th>Marginal impact limit</th><th>Tested floor / crossing range</th><th>Status</th></tr></thead><tbody>' + chainRows + '</tbody></table></div>' +
                 '<p class="text-xs text-slate-500">Separate chain-local observations; do not add them together. Thresholds may differ. Bridging, primary redemption and final cash settlement are excluded. Quote clock: ' +
-                self._escapeAttr(((l.depth || {}).quote || {}).quoted_as_of || 'not supplied') + '.</p>');
+                self._escapeAttr(typeof ReUSDChainLadder !== 'undefined' && ReUSDChainLadder.accepts(data)
+                    ? ReUSDChainLadder.clockText(l.depth || {}) : (((l.depth || {}).quote || {}).quoted_as_of || 'not supplied')) + '.</p>');
         }
         if (!bits.length) return '';
         return bits.join('');
@@ -8820,7 +8823,8 @@ const CommonRenderer = {
         // the venue has no curve to ladder, and the capacity block says so and
         // gives the real ceiling. Saying both invites a reader to look for a
         // ladder that should not exist.
-        var ladderBlock = this.ladderBlockHtml(liq) ||
+        var ladderBlock = (typeof ReUSDChainLadder !== 'undefined' ? ReUSDChainLadder.html(data) : '') ||
+            this.ladderBlockHtml(liq) ||
             ((liq.exit_capacity && typeof liq.exit_capacity === 'object')
                 ? ''
                 : '<div class="text-sm text-slate-400">No exit-mark RFQ ladder in this snapshot.</div>');
