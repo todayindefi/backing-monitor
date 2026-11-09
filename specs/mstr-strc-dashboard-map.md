@@ -271,3 +271,12 @@ standing states — `atm_cadence_90d` zero rows now read *"flat, not unreported"
 
 ⚠️ **Sign-aware labels.** `btc_purchased_count` is a NET over the window and goes negative on a
 monetization week; it rendered as *"BTC purchased −1,793 BTC"* until 2026-09-14.
+
+
+## November 9, 2026 operational addendum
+
+Current producer fields, source clocks, accepted versions and consumer inventory are recorded in `specs/reviews/strategy-8k-2026-11-09/`. Weekly filing adoption also requires the normal producer's filing fields, an identity/period-matched RiskAnalyst review and display verification; event-feed arrival alone does not refresh the base payload.
+
+`tools/build_strategy_filing_context.py` selects the review for the normal payload's filing date and checks accession and balance date. Missing/mismatched current review fails visibly without applying an older interpretation. MSTR/STRC/STRCx share the base; apxUSD/apyUSD/Ethereum sUSDat retain separate base measurements and show upstream filing evidence only. USDat is excluded. Documentary exposure is not a current allocation or financial import.
+
+MSTR separately labels USD Reserve and general USD Cash, retains each liability base date, and treats unknown mNAV as unavailable financing classification. STRC's standing historical funding designation keeps its source date and is not current-week attribution. Repurchase disclosures alone cannot establish retirement, current outstanding or dependent service/runway estimates. Do not refresh those dates or nulls from an event headline.

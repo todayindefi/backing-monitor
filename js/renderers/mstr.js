@@ -401,25 +401,29 @@ var MSTRRenderer = {
             return (v / denom * 100).toFixed(1) + '%';
         }
 
+        var filing = (mv.digital_credit_framework || {}).filing_update || {};
+        var reserveKnown = bs.usd_reserve_usd != null;
         var rows = [
-            ['BTC holdings', bs.btc_holdings_usd, false],
-            ['Cash & equivalents', bs.cash_and_equivalents_usd, false],
-            ['Senior convertible debt', bs.senior_convertible_debt_usd, false],
-            ['Total preferred notional', bs.total_preferred_notional_usd, false],
-            ['Implied equity book value', bs.implied_equity_book_value_usd, true]
+            ['BTC holdings', bs.btc_holdings_usd, false, 'Quantity observation ' + (filing.balances_as_of || bs.as_of || 'not supplied') + '; spot mark has a separate clock'],
+            [reserveKnown ? 'USD Reserve' : 'Cash & equivalents', reserveKnown ? bs.usd_reserve_usd : bs.cash_and_equivalents_usd, false, reserveKnown ? bs.usd_reserve_as_of : bs.as_of],
+            ['Senior convertible debt', bs.senior_convertible_debt_usd, false, bs.senior_convertible_debt_as_of],
+            ['Total preferred notional', bs.total_preferred_notional_usd, false, bs.preferred_base_as_of],
+            ['Implied equity book value', bs.implied_equity_book_value_usd, true, 'Model; read component observation dates']
         ];
+        if (filing.status === 'available' && filing.usd_cash_usd != null) rows.splice(2, 0,
+            ['USD Cash (general)', filing.usd_cash_usd, false, filing.balances_as_of]);
 
         var rowHtml = rows.map(function (r) {
             var bg = r[2] ? 'bg-blue-50 dark:bg-blue-900/20 font-semibold' : '';
             return '<tr class="' + bg + '">' +
-                '<td class="font-medium">' + r[0] + '</td>' +
+                '<td class="font-medium">' + r[0] + '<div class="text-xs text-slate-500 font-normal">' + CommonRenderer._escapeAttr(r[3] || 'Observation date not supplied') + '</div></td>' +
                 '<td class="text-right font-mono">' + (r[1] != null ? MSTRRenderer._fmtMoneyShort(r[1]) : '—') + '</td>' +
                 '<td class="text-right font-mono text-slate-500">' + pctOfCap(r[1]) + '</td>' +
             '</tr>';
         }).join('');
 
         var asOf = bs.as_of || '—';
-        var src = bs.source || '—';
+        var src = bs.usd_reserve_source_accession ? '8-K ' + CommonRenderer._escapeAttr(bs.usd_reserve_source_accession) : CommonRenderer._escapeAttr(bs.source || '—');
 
         return '<div class="panel">' +
             '<div class="panel-title">Balance sheet snapshot</div>' +
@@ -430,7 +434,7 @@ var MSTRRenderer = {
                 '</table>' +
             '</div>' +
             '<div class="text-xs text-slate-500 mt-3 leading-relaxed">' +
-                'Balance sheet as of <span class="font-mono">' + asOf + '</span> (' + src + '). ' +
+                'Weekly balance observation <span class="font-mono">' + CommonRenderer._escapeAttr(asOf) + '</span> (' + src + '); liability bases retain their row dates. ' +
                 'Refresh on each new 10-Q + transaction 8-K. BTC valued at spot for this view; GAAP treats per FASB ASU 2023-08.' +
             '</div>' +
         '</div>';
@@ -667,16 +671,16 @@ var MSTRRenderer = {
             }
             var cashCaption =
                 '<div class="text-xs text-slate-600 dark:text-slate-300 mt-2">' +
-                    '<span class="font-semibold">Cash on hand:</span> ' +
-                    '<span class="font-mono">' + MSTRRenderer._fmtMoneyShort(cashRunway.cash_and_equivalents_usd) + '</span>' +
+                    '<span class="font-semibold">' + (cashRunway.usd_reserve_usd != null ? 'USD Reserve (model input):' : 'Cash (model input):') + '</span> ' +
+                    '<span class="font-mono">' + MSTRRenderer._fmtMoneyShort(cashRunway.usd_reserve_usd != null ? cashRunway.usd_reserve_usd : cashRunway.cash_and_equivalents_usd) + '</span>' +
                     ' as of <span class="font-mono">' + (cashAsOf || '—') + '</span>' +
                     staleDaysTxt +
-                    ' · source: <span class="italic">' + (cashRunway.cash_source || '—') + '</span>' +
+                    ' · source: <span class="italic">' + (cashRunway.usd_reserve_source_accession ? '8-K ' + CommonRenderer._escapeAttr(cashRunway.usd_reserve_source_accession) : CommonRenderer._escapeAttr(cashRunway.cash_source || '—')) + '</span>' +
                 '</div>';
             var cashCaveat =
                 '<div class="text-xs text-slate-500 italic mt-1 leading-relaxed">' +
-                    'Cash runway assumes ZERO new issuance inflow. In practice Strategy continuously refills cash via preferred + ATM activity. ' +
-                    'Treat as a stress-scenario watermark, not a forward forecast.' +
+                    'No-issuance stress model, not a forecast. The USD Reserve and general USD Cash are separately disclosed balances. ' +
+                    (monthsByTier.total_preferred_plus_interest == null ? 'Current dependent service and runway are unavailable; no months-to-sales conclusion is established.' : 'Financing access, settlement and future cash flows remain separate.') +
                 '</div>';
 
             cashSubPanel =
@@ -801,20 +805,22 @@ var MSTRRenderer = {
         var btcStack = assum.btc_stack;
         var btcStackUsd = (btcStack != null && btcPx) ? btcStack * btcPx : null;
         var mnavTxt = (mnav.value != null) ? mnav.value.toFixed(4) : '—';
-        var atmStatus = (mnav.value != null && mnav.value < 1.0) ? 'Offline (mNAV ' + mnavTxt + ' < 1.0)' : 'Live (mNAV ' + mnavTxt + ')';
-        var atmCls = (mnav.value != null && mnav.value < 1.0) ? 'text-orange-700' : 'text-green-700';
-        var cashAvailableUsd = cashRunway && cashRunway.cash_and_equivalents_usd;
+        var atmKnown = typeof mnav.value === 'number' && isFinite(mnav.value);
+        var atmStatus = !atmKnown ? 'Regime unavailable (mNAV unmeasured)' : (mnav.value < 1.0 ? 'Model regime constrained (mNAV ' + mnavTxt + ')' : 'Model regime open (mNAV ' + mnavTxt + ')');
+        var atmCls = !atmKnown ? 'text-slate-500' : (mnav.value < 1.0 ? 'text-orange-700' : 'text-green-700');
+        var reserveInputKnown = cashRunway && cashRunway.usd_reserve_usd != null;
+        var cashAvailableUsd = cashRunway && (reserveInputKnown ? cashRunway.usd_reserve_usd : cashRunway.cash_and_equivalents_usd);
         var treasuryTable =
-            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-6 mb-2">Treasury available</div>' +
+            '<div class="text-sm font-semibold text-slate-700 dark:text-slate-200 mt-6 mb-2">Model funding inputs</div>' +
             '<div class="data-table-scroll">' +
                 '<table class="data-table">' +
                     '<thead><tr><th>Source</th><th>Value</th><th>Note</th></tr></thead>' +
                     '<tbody>' +
-                        '<tr><td class="font-medium">Cash on balance sheet</td><td class="font-mono">' + MSTRRenderer._fmtMoneyShort(cashAvailableUsd) + '</td><td class="text-xs text-slate-500">First-line dividend service · BTC sales not triggered until depleted</td></tr>' +
-                        '<tr><td class="font-medium">BTC stack</td><td class="font-mono">' + MSTRRenderer._fmtMoneyShort(btcStackUsd) + '</td><td class="text-xs text-slate-500">Second-line (activated when cash exhausted) · ' + MSTRRenderer._fmtNum(btcStack) + ' BTC @ ' + MSTRRenderer._fmtMoney(btcPx, 0) + '</td></tr>' +
-                        '<tr><td class="font-medium">Software cash flow</td><td class="font-mono">≈ $0</td><td class="text-xs text-slate-500">Immaterial</td></tr>' +
-                        '<tr><td class="font-medium">ATM equity</td><td class="font-mono ' + atmCls + '">' + atmStatus + '</td><td class="text-xs text-slate-500">Accretive only at mNAV ≥ 1.0</td></tr>' +
-                        '<tr><td class="font-medium">Preferred re-issuance</td><td class="font-mono">Tappable</td><td class="text-xs text-slate-500">…but compounds the obligation</td></tr>' +
+                        '<tr><td class="font-medium">' + (reserveInputKnown ? 'USD Reserve (model input)' : 'Cash (model input)') + '</td><td class="font-mono">' + MSTRRenderer._fmtMoneyShort(cashAvailableUsd) + '</td><td class="text-xs text-slate-500">Model input, not general cash or verified cash availability; service and settlement remain separate</td></tr>' +
+                        '<tr><td class="font-medium">BTC stack</td><td class="font-mono">' + MSTRRenderer._fmtMoneyShort(btcStackUsd) + '</td><td class="text-xs text-slate-500">Model asset, not an executed cash source · ' + MSTRRenderer._fmtNum(btcStack) + ' BTC @ ' + MSTRRenderer._fmtMoney(btcPx, 0) + '</td></tr>' +
+                        '<tr><td class="font-medium">Software cash flow (standing model)</td><td class="font-mono">≈ $0</td><td class="text-xs text-slate-500">Not refreshed by this weekly filing</td></tr>' +
+                        '<tr><td class="font-medium">ATM equity</td><td class="font-mono ' + atmCls + '">' + atmStatus + '</td><td class="text-xs text-slate-500">Model convention: accretive only at mNAV ≥ 1.0; actual issuance has its own dated filing evidence</td></tr>' +
+                        '<tr><td class="font-medium">Preferred re-issuance</td><td class="font-mono">Current capacity not established</td><td class="text-xs text-slate-500">Authorization is not committed financing; issuance adds service obligations</td></tr>' +
                     '</tbody>' +
                 '</table>' +
             '</div>';

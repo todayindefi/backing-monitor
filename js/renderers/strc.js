@@ -363,13 +363,18 @@ function renderDigitalCreditFrameworkCard(dcf, lens) {
         var stampTxt = dcs.as_of ? dcs.as_of
             : (dcsDates.length === 1 ? dcsDates[0]
                 : dcsStampFields.map(function(f) { return f[0] + ' ' + f[1]; }).join(', '));
-        dcsStamp = ' <span class="text-slate-500">(as of <span class="font-mono">' + stampTxt + '</span>' +
+        dcsStamp = ' <span class="text-slate-500">(source stamps <span class="font-mono">' + stampTxt + '</span>' +
             (dcs.source_accession ? ', accession <span class="font-mono">' + dcs.source_accession + '</span>' : '') +
             '; filing-stamped, later filings may supersede)</span>';
     }
 
+    var fundingLabels = {usd_cash:'USD Cash', btc_sales:'BTC sales', mstr_atm:'MSTR ATM proceeds'};
+    var fundingDetail = dcs.funding ? ' · Historical funding designation: ' +
+        CommonRenderer._escapeAttr(fundingLabels[dcs.funding] || String(dcs.funding)) +
+        ' (as of ' + CommonRenderer._escapeAttr(dcs.funding_as_of || 'date not supplied') +
+        '); not this week’s funding attribution · ' : ' · Funding designation unavailable · ';
     var dcsDetail = '<span class="font-mono font-semibold">' + fmt(dcs.authorized_usd) + '</span> authorized · ' +
-        '<strong>' + (dcs.initial_priority || 'STRC') + ' = initial priority</strong> (if accretive) · BTC-funded · ' +
+        '<strong>' + (dcs.initial_priority || 'STRC') + ' = initial priority</strong> (if accretive)' + fundingDetail +
         // ⚠️ `executed_usd` CAN VANISH BETWEEN RUNS, AND `|| 0` TURNED THAT INTO A
         // WRONG NUMBER. The 2026-09-14 8-K parse dropped the field entirely (it was
         // $810M the run before), and this line rendered "executed $0" beside
