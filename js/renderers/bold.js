@@ -153,8 +153,9 @@ var BOLDRenderer = {
             '<div class="summary-card"><div class="card-label">0.5% depth</div><div class="card-value">' + headline + '</div><div class="text-xs text-slate-500">measured floor</div></div>' +
             '<div class="summary-card"><div class="card-label">Current bracket</div><div class="card-value">' + bracket + '</div><div class="text-xs text-slate-500">targeted solver not yet enabled</div></div>' +
             '<div class="summary-card"><div class="card-label">Quoted at</div><div class="card-value text-base">' + this._e(asOf) + '</div><div class="text-xs text-slate-500">routed BOLD → USDC</div></div></div>' +
-            '<div class="text-sm font-semibold text-slate-700 mb-2">Market depth ladder</div>' +
-            '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Sell size</th><th class="text-right">Additional impact</th><th class="text-right">Net output</th><th class="text-right">Route</th></tr></thead><tbody>' + tableRows + '</tbody></table></div>' +
+            ((typeof LiquidityEvidence !== 'undefined' && LiquidityEvidence.canonicalHtml({asset_slug: 'bold', liquidity: liq})) ||
+            ('<div class="text-sm font-semibold text-slate-700 mb-2">Market depth ladder</div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Sell size</th><th class="text-right">Additional impact</th><th class="text-right">Net output</th><th class="text-right">Route</th></tr></thead><tbody>' + tableRows + '</tbody></table></div>')) +
             // ⚠️ RESTORED FROM _exitPanel, WHICH THIS PANEL REPLACED. Both the
             // is_floor caveat and the producer's own depth.basis were fixed into
             // _exitPanel on 2026-09-17; _axis3Panel superseded it and did not carry

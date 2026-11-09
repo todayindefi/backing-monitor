@@ -2158,7 +2158,7 @@ const CommonRenderer = {
                  self.AXIS_PROVENANCE.liquidity.producer) || '') || 'the axis owner';
             var handed = !!(self.AXIS_PROVENANCE && self.AXIS_PROVENANCE.liquidity &&
                             self.AXIS_PROVENANCE.liquidity.depth_handed_off);
-            var chainLocalOnly = typeof ReUSDChainLadder !== 'undefined' && ReUSDChainLadder.accepts(data) && l.depth.per_chain;
+            var chainLocalOnly = !!l.depth.per_chain;
             bits.push('<div class="ds-line ds-warn">\u26a0\ufe0f ' +
                 (chainLocalOnly ? 'No combined cross-chain depth' : handed
                     ? 'The ' + self._escapeAttr(ownerLabel) + ' publishes no depth figure for this ' +
@@ -2204,7 +2204,8 @@ const CommonRenderer = {
         if (chains && ds && ds.reduction_policy === 'refuse_cross_chain_scalar') {
             var chainRows = Object.keys(chains).map(function(chain) {
                 var c = chains[chain] || {}, h = (typeof ReUSDChainLadder !== 'undefined' && ReUSDChainLadder.accepts(data))
-                    ? ReUSDChainLadder.result(c, l.depth || {}) : (c.bracket_50bps || c);
+                    ? ReUSDChainLadder.result(c, l.depth || {})
+                    : (typeof LiquidityEvidence !== 'undefined' ? LiquidityEvidence.primaryResult(c, l.depth || {}) : (c.bracket_50bps || c));
                 var bracket = h.bracket || {};
                 var lower = bracket.last_clearing_size_usd;
                 var upper = bracket.first_crossing_size_usd;
@@ -8824,10 +8825,12 @@ const CommonRenderer = {
         // gives the real ceiling. Saying both invites a reader to look for a
         // ladder that should not exist.
         var ladderBlock = (typeof ReUSDChainLadder !== 'undefined' ? ReUSDChainLadder.html(data) : '') ||
+            (typeof LiquidityEvidence !== 'undefined' ? LiquidityEvidence.canonicalHtml(data) : '') ||
             this.ladderBlockHtml(liq) ||
             ((liq.exit_capacity && typeof liq.exit_capacity === 'object')
                 ? ''
-                : '<div class="text-sm text-slate-400">No exit-mark RFQ ladder in this snapshot.</div>');
+                : (typeof LiquidityEvidence !== 'undefined' ? LiquidityEvidence.emptyHtml(liq) : '<div class="text-sm text-slate-400">No sized secondary-exit quotes in this snapshot.</div>'));
+        if (typeof LiquidityEvidence !== 'undefined') ladderBlock += LiquidityEvidence.legacyHtml(data);
 
         // Later dated assurance can supersede an older route caveat without
         // changing the producer's canonical quotes or cost conventions.
