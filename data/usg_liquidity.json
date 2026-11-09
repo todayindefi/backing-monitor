@@ -1,383 +1,2044 @@
 {
- "schema_version": "liquidity/1",
- "asset_slug": "usg",
- "as_of": "2026-11-08T23:51:14Z",
- "producer": "dextracker",
- "note": "Axis 3 (Liquidity & Exit), single producer. The axis is the worse of executable venue depth and primary redemption. Pool TVL and counter-side inventory are context only and are never substituted for executable depth.",
- "depth": {
-  "status": "bracketed",
-  "depth_usd": 609765.625,
-  "depth_usd_semantics": "lower_bound_of_bracket: a size that cleared the threshold, never the crossing itself. Read `bracket` for the located range and `bracket.meets_precision_obligation` for whether it is within 1% of midpoint; a false there with a wide bracket means depth_usd may understate the crossing by the bracket's width.",
-  "is_floor": true,
-  "threshold_bps": -200.0,
-  "size_response": "size_responsive",
-  "marginal_cost_monotonic_within_tested_range": true,
-  "tested_through_input_usd": 1000000.0,
-  "baseline_rung": {
-   "size_usd": 100.0,
-   "slippage_bps": -5.001956366129656,
-   "amount_out_tokens": 99.9499804363387
+  "schema_version": "liquidity/1",
+  "asset_slug": "usg",
+  "as_of": "2026-11-09T12:57:41Z",
+  "producer": "dextracker",
+  "note": "Axis 3 (Liquidity & Exit), single producer. The axis is the worse of executable venue depth and primary redemption. Pool TVL and counter-side inventory are context only and are never substituted for executable depth.",
+  "depth": {
+    "status": "bracketed",
+    "depth_usd": 725781.25,
+    "depth_usd_semantics": "lower_bound_of_bracket: a size that cleared the threshold, never the crossing itself. Read `bracket` for the located range and `bracket.meets_precision_obligation` for whether it is within 1% of midpoint; a false there with a wide bracket means depth_usd may understate the crossing by the bracket's width.",
+    "is_floor": true,
+    "threshold_bps": -200.0,
+    "size_response": "size_responsive",
+    "marginal_cost_monotonic_within_tested_range": true,
+    "tested_through_input_usd": 1000000.0,
+    "baseline_rung": {
+      "size_usd": 1000.0,
+      "status": "ok",
+      "amount_in_tokens": 1003.7530325888498,
+      "amount_out_tokens": 999.5810281551519,
+      "slippage_bps": -4.189718448480706,
+      "route_venues": [],
+      "route_leg_count": 0,
+      "route_hops": [],
+      "quote_block_numbers": [],
+      "quote_as_of": null,
+      "quote_expiry": null,
+      "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+      "router_address": null,
+      "route_id": null,
+      "gas_usd": null,
+      "router_price_in": null,
+      "router_price_out": null,
+      "slippage_bps_debiased": 0.0,
+      "price_bias_bps": -4.189718448480706,
+      "rung_kind": "decade"
+    },
+    "rung_set": {
+      "grid": "decade",
+      "start_usd": 1000.0,
+      "cap": 10,
+      "published_rungs": 4,
+      "decade_rungs": 4,
+      "envelope_probes": 0,
+      "termination": "crossed_threshold",
+      "termination_note": "Ascending the decade grid stopped at the first rung past the threshold. A SHORT LADDER IS THE ANSWER, NOT A GAP: continuing upward buys nothing once the crossing is bracketed.",
+      "spec": "riskAnalyst liquidity-ladder-spec.md \u00a77 (178e54a)"
+    },
+    "slippage_convention": "Signed average execution-rate return minus the lowest valid successful decade-rung return (>= $1,000); standing spread and gas separate; not an adjacent-rung derivative.",
+    "basis": "The -200bps crossing is BRACKETED between $725,781.25 and $732,812.50. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor.",
+    "bracket": {
+      "last_clearing_size_usd": 725781.25,
+      "last_clearing_marginal_impact_bps": -196.8476102138228,
+      "first_crossing_size_usd": 732812.5,
+      "first_crossing_marginal_impact_bps": -206.22123572480388,
+      "width_usd": 7031.25,
+      "monotonic_in_bracket": true,
+      "threshold_bps": -200.0,
+      "meets_precision_obligation": true
+    },
+    "quote": {
+      "method": "eth_call Curve get_dy across both PegKeeper pools; USG input split in proportion to live USG inventory, USDC and frxUSD outputs valued at $1",
+      "venue": "curve_aggregate",
+      "chain": "ethereum",
+      "token_in": {
+        "symbol": "USG",
+        "address": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "decimals": 18
+      },
+      "baseline_size_usd": 1000.0,
+      "quoted_as_of": "2026-11-09T12:57:11Z",
+      "aggregation": "USG input split between venues in proportion to live USG inventory; outputs valued at their declared price_usd. All legs or none: a partial sum would render as a shallower book.",
+      "legs": [
+        {
+          "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+          "symbol_out": "USDC",
+          "token_out": "0xA0b86991c6218b36c1d19d4a2e9eb0cE3606eB48",
+          "i": 1,
+          "j": 0,
+          "decimals_out": 6,
+          "price_usd": 1.0
+        },
+        {
+          "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+          "symbol_out": "frxUSD",
+          "token_out": "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
+          "i": 1,
+          "j": 0,
+          "decimals_out": 18,
+          "price_usd": 1.0
+        }
+      ],
+      "legs_verified_via": "coins(uint256) on each pool",
+      "reference_rule": "lowest valid successful decade rung >= $1,000; no separate micro probe"
+    },
+    "anchor": {
+      "fair_value": 0.996261,
+      "fair_value_basis": "market",
+      "fair_value_source": "peg_tracker:curve_pegkeeper_pools",
+      "fair_value_as_of": "2026-11-09T12:37:21Z",
+      "fair_value_choice": "market_price",
+      "fair_value_choice_mode": "inherited",
+      "market_price_cross_check": null,
+      "self_referential": false,
+      "self_referential_determination": "input_sizing_only_reviewed",
+      "self_referential_basis": "Marginal impact is debiased from the $100 aggregate executable baseline across both PegKeeper pools; the Curve composite mark only splits USD rung sizes into USG. A self-referential reading was overridden for this asset after review (it was upstream_declaration: Quoted from the same Curve PegKeeper pools measured by the liquidity axis. No external or routed cross-check is wired for USG today; a CoinGecko or aggregator-routed mark would dissolve this rather than relocate it. Until then the premium/discount is venue-internal and cannot evidence venue-wide mispricing.). The bps curve is unaffected; the published USD figure inherits this mark's error and is denominated by it."
+    },
+    "rungs": [
+      {
+        "size_usd": 1000.0,
+        "status": "ok",
+        "amount_in_tokens": 1003.7530325888498,
+        "amount_out_tokens": 999.5810281551519,
+        "slippage_bps": -4.189718448480706,
+        "route_venues": [],
+        "route_leg_count": 0,
+        "route_hops": [],
+        "quote_block_numbers": [],
+        "quote_as_of": null,
+        "quote_expiry": null,
+        "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+        "router_address": null,
+        "route_id": null,
+        "gas_usd": null,
+        "router_price_in": null,
+        "router_price_out": null,
+        "slippage_bps_debiased": 0.0,
+        "price_bias_bps": -4.189718448480706,
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 10000.0,
+        "status": "ok",
+        "amount_in_tokens": 10037.530325888498,
+        "amount_out_tokens": 9995.30036584496,
+        "slippage_bps": -4.699634155039822,
+        "route_venues": [],
+        "route_leg_count": 0,
+        "route_hops": [],
+        "quote_block_numbers": [],
+        "quote_as_of": null,
+        "quote_expiry": null,
+        "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+        "router_address": null,
+        "route_id": null,
+        "gas_usd": null,
+        "router_price_in": null,
+        "router_price_out": null,
+        "slippage_bps_debiased": -0.5099157065591164,
+        "price_bias_bps": -4.189718448480706,
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 100000.0,
+        "status": "ok",
+        "amount_in_tokens": 100375.30325888497,
+        "amount_out_tokens": 99896.18275014081,
+        "slippage_bps": -10.381724985918384,
+        "route_venues": [],
+        "route_leg_count": 0,
+        "route_hops": [],
+        "quote_block_numbers": [],
+        "quote_as_of": null,
+        "quote_expiry": null,
+        "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+        "router_address": null,
+        "route_id": null,
+        "gas_usd": null,
+        "router_price_in": null,
+        "router_price_out": null,
+        "slippage_bps_debiased": -6.192006537437678,
+        "price_bias_bps": -4.189718448480706,
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 1000000.0,
+        "status": "ok",
+        "amount_in_tokens": 1003753.0325888498,
+        "amount_out_tokens": 849941.1914741516,
+        "slippage_bps": -1500.5880852584842,
+        "route_venues": [],
+        "route_leg_count": 0,
+        "route_hops": [],
+        "quote_block_numbers": [],
+        "quote_as_of": null,
+        "quote_expiry": null,
+        "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+        "router_address": null,
+        "route_id": null,
+        "gas_usd": null,
+        "router_price_in": null,
+        "router_price_out": null,
+        "slippage_bps_debiased": -1496.3983668100034,
+        "price_bias_bps": -4.189718448480706,
+        "rung_kind": "decade"
+      }
+    ],
+    "preflight": {
+      "passed": true,
+      "blocking_failures": [],
+      "warnings": [],
+      "findings": [
+        {
+          "check": "failure_is_not_a_wall",
+          "passed": true,
+          "blocking": false,
+          "detail": "No failed rungs.",
+          "evidence": {}
+        },
+        {
+          "check": "quote_economically_plausible",
+          "passed": true,
+          "blocking": false,
+          "detail": "Quote is -4.2bps against the reference rate.",
+          "evidence": {
+            "loss_bps": -4.189718448480706
+          }
+        },
+        {
+          "check": "depth_against_supply",
+          "passed": true,
+          "blocking": false,
+          "detail": "Depth is 10.8% of chain supply.",
+          "evidence": {
+            "ratio": 0.10790172515995901
+          }
+        }
+      ]
+    },
+    "bracket_refinement_guard": {
+      "eligible": true,
+      "basis": "monotonic_successful_rungs_inside_bracket"
+    },
+    "quote_stability": {
+      "sample_size_usd": 550000.0,
+      "requested_samples": 4,
+      "successful_samples": 4,
+      "samples": [
+        {
+          "phase": "before_refinement",
+          "sample": 1,
+          "status": "ok",
+          "output_value_usd": 545562.882578156,
+          "failure_kind": null,
+          "http_status": null,
+          "raw_rung": {
+            "size_usd": 550000.0,
+            "status": "ok",
+            "amount_in_tokens": 552064.1679238674,
+            "amount_out_tokens": 545562.882578156,
+            "slippage_bps": -80.67486221534637,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": 0.0,
+            "price_bias_bps": -80.67486221534637
+          },
+          "received_at": "2026-11-09T12:57:12Z"
+        },
+        {
+          "phase": "before_refinement",
+          "sample": 2,
+          "status": "ok",
+          "output_value_usd": 545562.882578156,
+          "failure_kind": null,
+          "http_status": null,
+          "raw_rung": {
+            "size_usd": 550000.0,
+            "status": "ok",
+            "amount_in_tokens": 552064.1679238674,
+            "amount_out_tokens": 545562.882578156,
+            "slippage_bps": -80.67486221534637,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": 0.0,
+            "price_bias_bps": -80.67486221534637
+          },
+          "received_at": "2026-11-09T12:57:13Z"
+        },
+        {
+          "phase": "after_refinement",
+          "sample": 1,
+          "status": "ok",
+          "output_value_usd": 545562.882578156,
+          "failure_kind": null,
+          "http_status": null,
+          "raw_rung": {
+            "size_usd": 550000.0,
+            "status": "ok",
+            "amount_in_tokens": 552064.1679238674,
+            "amount_out_tokens": 545562.882578156,
+            "slippage_bps": -80.67486221534637,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": 0.0,
+            "price_bias_bps": -80.67486221534637
+          },
+          "received_at": "2026-11-09T12:57:25Z"
+        },
+        {
+          "phase": "after_refinement",
+          "sample": 2,
+          "status": "ok",
+          "output_value_usd": 545562.882578156,
+          "failure_kind": null,
+          "http_status": null,
+          "raw_rung": {
+            "size_usd": 550000.0,
+            "status": "ok",
+            "amount_in_tokens": 552064.1679238674,
+            "amount_out_tokens": 545562.882578156,
+            "slippage_bps": -80.67486221534637,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": 0.0,
+            "price_bias_bps": -80.67486221534637
+          },
+          "received_at": "2026-11-09T12:57:26Z"
+        }
+      ],
+      "output_spread_usd": 0.0,
+      "output_spread_bps": 0.0,
+      "precision_floor_usd": 0.0,
+      "basis": "Same-size routed output spread across samples immediately before and after refinement. The published bracket must not be narrower than this observed spread."
+    },
+    "refinement": {
+      "status": "refined",
+      "stopped_on": "precision_obligation_met",
+      "probe_count": 7,
+      "precision_target": "<=1% of bracket midpoint",
+      "probes": [
+        {
+          "size_usd": 550000.0,
+          "status": "ok",
+          "amount_in_tokens": 552064.1679238674,
+          "amount_out_tokens": 545562.882578156,
+          "slippage_bps": -76.48514376686566,
+          "route_venues": [],
+          "route_leg_count": 0,
+          "route_hops": [],
+          "quote_block_numbers": [],
+          "quote_as_of": null,
+          "quote_expiry": null,
+          "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+          "router_address": null,
+          "route_id": null,
+          "gas_usd": null,
+          "router_price_in": null,
+          "router_price_out": null,
+          "slippage_bps_debiased": -76.48514376686566,
+          "price_bias_bps": -4.189718448480706
+        },
+        {
+          "size_usd": 775000.0,
+          "status": "ok",
+          "amount_in_tokens": 777908.6002563585,
+          "amount_out_tokens": 753086.4930864131,
+          "slippage_bps": -278.5652094687696,
+          "route_venues": [],
+          "route_leg_count": 0,
+          "route_hops": [],
+          "quote_block_numbers": [],
+          "quote_as_of": null,
+          "quote_expiry": null,
+          "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+          "router_address": null,
+          "route_id": null,
+          "gas_usd": null,
+          "router_price_in": null,
+          "router_price_out": null,
+          "slippage_bps_debiased": -278.5652094687696,
+          "price_bias_bps": -4.189718448480706
+        },
+        {
+          "size_usd": 662500.0,
+          "status": "ok",
+          "amount_in_tokens": 664986.384090113,
+          "amount_out_tokens": 653309.9900205644,
+          "slippage_bps": -134.52741331658524,
+          "route_venues": [],
+          "route_leg_count": 0,
+          "route_hops": [],
+          "quote_block_numbers": [],
+          "quote_as_of": null,
+          "quote_expiry": null,
+          "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+          "router_address": null,
+          "route_id": null,
+          "gas_usd": null,
+          "router_price_in": null,
+          "router_price_out": null,
+          "slippage_bps_debiased": -134.52741331658524,
+          "price_bias_bps": -4.189718448480706
+        },
+        {
+          "size_usd": 718750.0,
+          "status": "ok",
+          "amount_in_tokens": 721447.4921732357,
+          "amount_out_tokens": 704930.7951243976,
+          "slippage_bps": -188.0774798207696,
+          "route_venues": [],
+          "route_leg_count": 0,
+          "route_hops": [],
+          "quote_block_numbers": [],
+          "quote_as_of": null,
+          "quote_expiry": null,
+          "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+          "router_address": null,
+          "route_id": null,
+          "gas_usd": null,
+          "router_price_in": null,
+          "router_price_out": null,
+          "slippage_bps_debiased": -188.0774798207696,
+          "price_bias_bps": -4.189718448480706
+        },
+        {
+          "size_usd": 746875.0,
+          "status": "ok",
+          "amount_in_tokens": 749678.0462147972,
+          "amount_out_tokens": 729607.8500471181,
+          "slippage_bps": -227.00224744784504,
+          "route_venues": [],
+          "route_leg_count": 0,
+          "route_hops": [],
+          "quote_block_numbers": [],
+          "quote_as_of": null,
+          "quote_expiry": null,
+          "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+          "router_address": null,
+          "route_id": null,
+          "gas_usd": null,
+          "router_price_in": null,
+          "router_price_out": null,
+          "slippage_bps_debiased": -227.00224744784504,
+          "price_bias_bps": -4.189718448480706
+        },
+        {
+          "size_usd": 732812.5,
+          "status": "ok",
+          "amount_in_tokens": 735562.7691940165,
+          "amount_out_tokens": 717393.322264489,
+          "slippage_bps": -206.22123572480388,
+          "route_venues": [],
+          "route_leg_count": 0,
+          "route_hops": [],
+          "quote_block_numbers": [],
+          "quote_as_of": null,
+          "quote_expiry": null,
+          "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+          "router_address": null,
+          "route_id": null,
+          "gas_usd": null,
+          "router_price_in": null,
+          "router_price_out": null,
+          "slippage_bps_debiased": -206.22123572480388,
+          "price_bias_bps": -4.189718448480706
+        },
+        {
+          "size_usd": 725781.25,
+          "status": "ok",
+          "amount_in_tokens": 728505.1306836262,
+          "amount_out_tokens": 711190.3376306812,
+          "slippage_bps": -196.8476102138228,
+          "route_venues": [],
+          "route_leg_count": 0,
+          "route_hops": [],
+          "quote_block_numbers": [],
+          "quote_as_of": null,
+          "quote_expiry": null,
+          "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+          "router_address": null,
+          "route_id": null,
+          "gas_usd": null,
+          "router_price_in": null,
+          "router_price_out": null,
+          "slippage_bps_debiased": -196.8476102138228,
+          "price_bias_bps": -4.189718448480706
+        }
+      ],
+      "validation": [
+        {
+          "size_usd": 725781.25,
+          "status": "ok",
+          "amount_in_tokens": 728505.1306836262,
+          "amount_out_tokens": 711190.3376306812,
+          "slippage_bps": -196.8476102138228,
+          "route_venues": [],
+          "route_leg_count": 0,
+          "route_hops": [],
+          "quote_block_numbers": [],
+          "quote_as_of": null,
+          "quote_expiry": null,
+          "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+          "router_address": null,
+          "route_id": null,
+          "gas_usd": null,
+          "router_price_in": null,
+          "router_price_out": null,
+          "slippage_bps_debiased": -196.8476102138228,
+          "price_bias_bps": -4.189718448480706
+        },
+        {
+          "size_usd": 732812.5,
+          "status": "ok",
+          "amount_in_tokens": 735562.7691940165,
+          "amount_out_tokens": 717393.322264489,
+          "slippage_bps": -206.22123572480388,
+          "route_venues": [],
+          "route_leg_count": 0,
+          "route_hops": [],
+          "quote_block_numbers": [],
+          "quote_as_of": null,
+          "quote_expiry": null,
+          "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+          "router_address": null,
+          "route_id": null,
+          "gas_usd": null,
+          "router_price_in": null,
+          "router_price_out": null,
+          "slippage_bps_debiased": -206.22123572480388,
+          "price_bias_bps": -4.189718448480706
+        }
+      ],
+      "validation_cooldown_seconds": 0.0
+    },
+    "probe_evidence": [
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "1003753032588849840128",
+        "request_started_at": "2026-11-09T12:57:07Z",
+        "received_at": "2026-11-09T12:57:08Z",
+        "summary": {
+          "amountOut": "999581028155151876096",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 493.1070147836161,
+              "amount_out_units": 491.062956
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 510.6460178052337,
+              "amount_out_units": 508.51807215515197
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "10037530325888496828416",
+        "request_started_at": "2026-11-09T12:57:08Z",
+        "received_at": "2026-11-09T12:57:09Z",
+        "summary": {
+          "amountOut": "9995300365844959199232",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 4931.07014783616,
+              "amount_out_units": 4910.37995
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 5106.460178052337,
+              "amount_out_units": 5084.920415844959
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "100375303258884976672768",
+        "request_started_at": "2026-11-09T12:57:09Z",
+        "received_at": "2026-11-09T12:57:10Z",
+        "summary": {
+          "amountOut": "99896182750140818259968",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 49310.7014783616,
+              "amount_out_units": 49075.991392
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 51064.60178052337,
+              "amount_out_units": 50820.1913581408
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "1003753032588849766727680",
+        "request_started_at": "2026-11-09T12:57:10Z",
+        "received_at": "2026-11-09T12:57:11Z",
+        "summary": {
+          "amountOut": "849941191474151583383552",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 493107.01478361606,
+              "amount_out_units": 418146.067167
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 510646.0178052337,
+              "amount_out_units": 431795.12430715153
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "552064167923867338145792",
+        "request_started_at": "2026-11-09T12:57:11Z",
+        "received_at": "2026-11-09T12:57:12Z",
+        "summary": {
+          "amountOut": "545562882578155948736512",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 271208.8581309888,
+              "amount_out_units": 268030.832717
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 280855.3097928785,
+              "amount_out_units": 277532.04986115603
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "552064167923867338145792",
+        "request_started_at": "2026-11-09T12:57:12Z",
+        "received_at": "2026-11-09T12:57:13Z",
+        "summary": {
+          "amountOut": "545562882578155948736512",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 271208.8581309888,
+              "amount_out_units": 268030.832717
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 280855.3097928785,
+              "amount_out_units": 277532.04986115603
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "552064167923867338145792",
+        "request_started_at": "2026-11-09T12:57:13Z",
+        "received_at": "2026-11-09T12:57:13Z",
+        "summary": {
+          "amountOut": "545562882578155948736512",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 271208.8581309888,
+              "amount_out_units": 268030.832717
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 280855.3097928785,
+              "amount_out_units": 277532.04986115603
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "777908600256358485327872",
+        "request_started_at": "2026-11-09T12:57:13Z",
+        "received_at": "2026-11-09T12:57:15Z",
+        "summary": {
+          "amountOut": "753086493086413089669120",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 382157.9364573024,
+              "amount_out_units": 370087.307516
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 395750.6637990561,
+              "amount_out_units": 382999.18557041313
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "664986384090112978845696",
+        "request_started_at": "2026-11-09T12:57:15Z",
+        "received_at": "2026-11-09T12:57:17Z",
+        "summary": {
+          "amountOut": "653309990020564413054976",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 326683.3972941456,
+              "amount_out_units": 320985.730248
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 338302.9867959673,
+              "amount_out_units": 332324.2597725644
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "721447492173235799195648",
+        "request_started_at": "2026-11-09T12:57:17Z",
+        "received_at": "2026-11-09T12:57:18Z",
+        "summary": {
+          "amountOut": "704930795124397592018944",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 354420.666875724,
+              "amount_out_units": 346372.90753
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 367026.8252975117,
+              "amount_out_units": 358557.8875943975
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "749678046214797209370624",
+        "request_started_at": "2026-11-09T12:57:18Z",
+        "received_at": "2026-11-09T12:57:19Z",
+        "summary": {
+          "amountOut": "729607850047118092795904",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 368289.30166651326,
+              "amount_out_units": 358519.221054
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 381388.7445482839,
+              "amount_out_units": 371088.628993118
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "735562769194016437174272",
+        "request_started_at": "2026-11-09T12:57:19Z",
+        "received_at": "2026-11-09T12:57:20Z",
+        "summary": {
+          "amountOut": "717393322264489046835200",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 361354.98427111865,
+              "amount_out_units": 352505.903021
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 374207.7849228978,
+              "amount_out_units": 364887.4192434891
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "728505130683626185293824",
+        "request_started_at": "2026-11-09T12:57:20Z",
+        "received_at": "2026-11-09T12:57:21Z",
+        "summary": {
+          "amountOut": "711190337630681253806080",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 357887.8255734214,
+              "amount_out_units": 349453.05431
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 370617.3051102048,
+              "amount_out_units": 361737.2833206812
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "728505130683626185293824",
+        "request_started_at": "2026-11-09T12:57:21Z",
+        "received_at": "2026-11-09T12:57:22Z",
+        "summary": {
+          "amountOut": "711190337630681253806080",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 357887.8255734214,
+              "amount_out_units": 349453.05431
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 370617.3051102048,
+              "amount_out_units": 361737.2833206812
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "735562769194016437174272",
+        "request_started_at": "2026-11-09T12:57:22Z",
+        "received_at": "2026-11-09T12:57:23Z",
+        "summary": {
+          "amountOut": "717393322264489046835200",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 361354.98427111865,
+              "amount_out_units": 352505.903021
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 374207.7849228978,
+              "amount_out_units": 364887.4192434891
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "552064167923867338145792",
+        "request_started_at": "2026-11-09T12:57:23Z",
+        "received_at": "2026-11-09T12:57:25Z",
+        "summary": {
+          "amountOut": "545562882578155948736512",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 271208.8581309888,
+              "amount_out_units": 268030.832717
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 280855.3097928785,
+              "amount_out_units": 277532.04986115603
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "552064167923867338145792",
+        "request_started_at": "2026-11-09T12:57:25Z",
+        "received_at": "2026-11-09T12:57:26Z",
+        "summary": {
+          "amountOut": "545562882578155948736512",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 271208.8581309888,
+              "amount_out_units": 268030.832717
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 280855.3097928785,
+              "amount_out_units": 277532.04986115603
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "552064167923867338145792",
+        "request_started_at": "2026-11-09T12:57:26Z",
+        "received_at": "2026-11-09T12:57:27Z",
+        "summary": {
+          "amountOut": "545562882578155948736512",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 271208.8581309888,
+              "amount_out_units": 268030.832717
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 280855.3097928785,
+              "amount_out_units": 277532.04986115603
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "552064167923867338145792",
+        "request_started_at": "2026-11-09T12:57:27Z",
+        "received_at": "2026-11-09T12:57:28Z",
+        "summary": {
+          "amountOut": "545562882578155948736512",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 271208.8581309888,
+              "amount_out_units": 268030.832717
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 280855.3097928785,
+              "amount_out_units": 277532.04986115603
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "552064167923867338145792",
+        "request_started_at": "2026-11-09T12:57:28Z",
+        "received_at": "2026-11-09T12:57:29Z",
+        "summary": {
+          "amountOut": "545562882578155948736512",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 271208.8581309888,
+              "amount_out_units": 268030.832717
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 280855.3097928785,
+              "amount_out_units": 277532.04986115603
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "552064167923867338145792",
+        "request_started_at": "2026-11-09T12:57:29Z",
+        "received_at": "2026-11-09T12:57:30Z",
+        "summary": {
+          "amountOut": "545562882578155948736512",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 271208.8581309888,
+              "amount_out_units": 268030.832717
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 280855.3097928785,
+              "amount_out_units": 277532.04986115603
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "326219735591376123854848",
+        "request_started_at": "2026-11-09T12:57:30Z",
+        "received_at": "2026-11-09T12:57:31Z",
+        "summary": {
+          "amountOut": "323961575699047868530688",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 160259.77980467517,
+              "amount_out_units": 159154.230787
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 165959.9557867009,
+              "amount_out_units": 164807.34491204788
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "439141951757621764554752",
+        "request_started_at": "2026-11-09T12:57:31Z",
+        "received_at": "2026-11-09T12:57:32Z",
+        "summary": {
+          "amountOut": "435293721220297959407616",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 215734.318967832,
+              "amount_out_units": 213851.383424
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 223407.63278978973,
+              "amount_out_units": 221442.337796298
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "495603059840744584904704",
+        "request_started_at": "2026-11-09T12:57:32Z",
+        "received_at": "2026-11-09T12:57:33Z",
+        "summary": {
+          "amountOut": "490615941347616984399872",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 243471.58854941043,
+              "amount_out_units": 241032.404107
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 252131.47129133414,
+              "amount_out_units": 249583.53724061692
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "467372505799183174729728",
+        "request_started_at": "2026-11-09T12:57:33Z",
+        "received_at": "2026-11-09T12:57:34Z",
+        "summary": {
+          "amountOut": "462992719895565143375872",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 229602.95375862124,
+              "amount_out_units": 227460.342052
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 237769.55204056195,
+              "amount_out_units": 235532.37784356513
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "453257228778402469642240",
+        "request_started_at": "2026-11-09T12:57:34Z",
+        "received_at": "2026-11-09T12:57:35Z",
+        "summary": {
+          "amountOut": "449151807081262922858496",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 222668.6363632266,
+              "amount_out_units": 220660.044909
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 230588.59241517584,
+              "amount_out_units": 228491.7621722629
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "460314867288792788631552",
+        "request_started_at": "2026-11-09T12:57:35Z",
+        "received_at": "2026-11-09T12:57:36Z",
+        "summary": {
+          "amountOut": "456074512172903422754816",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 226135.79506092388,
+              "amount_out_units": 224061.288573
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 234179.07222786886,
+              "amount_out_units": 232013.2235999034
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "456786048033597662691328",
+        "request_started_at": "2026-11-09T12:57:36Z",
+        "received_at": "2026-11-09T12:57:37Z",
+        "summary": {
+          "amountOut": "452613708541108401733632",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 224402.2157120753,
+              "amount_out_units": 222360.934075
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 232383.83232152238,
+              "amount_out_units": 230252.7744661084
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "456786048033597662691328",
+        "request_started_at": "2026-11-09T12:57:37Z",
+        "received_at": "2026-11-09T12:57:38Z",
+        "summary": {
+          "amountOut": "452613708541108401733632",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 224402.2157120753,
+              "amount_out_units": 222360.934075
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 232383.83232152238,
+              "amount_out_units": 230252.7744661084
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "460314867288792788631552",
+        "request_started_at": "2026-11-09T12:57:38Z",
+        "received_at": "2026-11-09T12:57:39Z",
+        "summary": {
+          "amountOut": "456074512172903422754816",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 226135.79506092388,
+              "amount_out_units": 224061.288573
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 234179.07222786886,
+              "amount_out_units": 232013.2235999034
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "552064167923867338145792",
+        "request_started_at": "2026-11-09T12:57:39Z",
+        "received_at": "2026-11-09T12:57:40Z",
+        "summary": {
+          "amountOut": "545562882578155948736512",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 271208.8581309888,
+              "amount_out_units": 268030.832717
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 280855.3097928785,
+              "amount_out_units": 277532.04986115603
+            }
+          ]
+        },
+        "failure": null
+      },
+      {
+        "chain": "ethereum",
+        "token_in": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+        "token_out": "aggregate-usd",
+        "amount_in_raw": "552064167923867338145792",
+        "request_started_at": "2026-11-09T12:57:40Z",
+        "received_at": "2026-11-09T12:57:41Z",
+        "summary": {
+          "amountOut": "545562882578155948736512",
+          "route": [],
+          "venue": "curve_aggregate",
+          "split": [
+            {
+              "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+              "symbol_out": "USDC",
+              "inventory_share": 0.49126328765534005,
+              "amount_in_units": 271208.8581309888,
+              "amount_out_units": 268030.832717
+            },
+            {
+              "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+              "symbol_out": "frxUSD",
+              "inventory_share": 0.5087367123446599,
+              "amount_in_units": 280855.3097928785,
+              "amount_out_units": 277532.04986115603
+            }
+          ]
+        },
+        "failure": null
+      }
+    ],
+    "asset_category": "stable",
+    "primary_threshold_bps": -50.0,
+    "primary_threshold_basis": "stable asset: 0.5% marginal is the headline (spec \u00a77.8); the 2% bracket is retained for cross-corpus comparison",
+    "bracket_50bps": {
+      "status": "bracketed",
+      "depth_usd": 455078.125,
+      "is_floor": true,
+      "convention": "marginal",
+      "bracket": {
+        "last_clearing_size_usd": 455078.125,
+        "first_crossing_size_usd": 458593.75,
+        "last_clearing_marginal_impact_bps": -49.96398227909427,
+        "first_crossing_marginal_impact_bps": -50.744258019724825,
+        "width_usd": 3515.625,
+        "threshold_bps": -50.0,
+        "monotonic_in_bracket": true,
+        "meets_precision_obligation": true
+      },
+      "last_clearing_bps": -49.96398227909427,
+      "first_crossing_bps": -50.744258019724825,
+      "basis": "Both interval endpoints re-quoted and straddle; depth is the lower bound, not exact capacity.",
+      "threshold_bps": -50.0,
+      "coarse_rung_monotonic": true,
+      "quote_stability": {
+        "size_usd": 550000.0,
+        "samples": [
+          {
+            "size_usd": 550000.0,
+            "status": "ok",
+            "amount_in_tokens": 552064.1679238674,
+            "amount_out_tokens": 545562.882578156,
+            "slippage_bps": -80.67486221534637,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -76.48514376686566,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "stability",
+            "collected_at": "2026-11-09T12:57:27Z"
+          },
+          {
+            "size_usd": 550000.0,
+            "status": "ok",
+            "amount_in_tokens": 552064.1679238674,
+            "amount_out_tokens": 545562.882578156,
+            "slippage_bps": -80.67486221534637,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -76.48514376686566,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "stability",
+            "collected_at": "2026-11-09T12:57:28Z"
+          },
+          {
+            "size_usd": 550000.0,
+            "status": "ok",
+            "amount_in_tokens": 552064.1679238674,
+            "amount_out_tokens": 545562.882578156,
+            "slippage_bps": -80.67486221534637,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -76.48514376686566,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "stability",
+            "collected_at": "2026-11-09T12:57:29Z"
+          }
+        ],
+        "spread_bps": 0.0,
+        "estimated_minimum_width_usd": 0.0,
+        "basis": "Twice same-size cost spread scaled by coarse endpoint slope; empirical resolution estimate, not global stability guarantee.",
+        "after_samples": [
+          {
+            "size_usd": 550000.0,
+            "status": "ok",
+            "amount_in_tokens": 552064.1679238674,
+            "amount_out_tokens": 545562.882578156,
+            "slippage_bps": -80.67486221534637,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -76.48514376686566,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "stability_after",
+            "collected_at": "2026-11-09T12:57:40Z"
+          },
+          {
+            "size_usd": 550000.0,
+            "status": "ok",
+            "amount_in_tokens": 552064.1679238674,
+            "amount_out_tokens": 545562.882578156,
+            "slippage_bps": -80.67486221534637,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -76.48514376686566,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "stability_after",
+            "collected_at": "2026-11-09T12:57:41Z"
+          }
+        ],
+        "before_after_spread_bps": 0.0
+      },
+      "refinement": {
+        "status": "refined",
+        "bracket": [
+          455078.125,
+          458593.75
+        ],
+        "probes": [
+          {
+            "size_usd": 550000.0,
+            "status": "ok",
+            "amount_in_tokens": 552064.1679238674,
+            "amount_out_tokens": 545562.882578156,
+            "slippage_bps": -76.48514376686566,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -76.48514376686566,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "refinement",
+            "collected_at": "2026-11-09T12:57:30Z"
+          },
+          {
+            "size_usd": 325000.0,
+            "status": "ok",
+            "amount_in_tokens": 326219.73559137614,
+            "amount_out_tokens": 323961.5756990479,
+            "slippage_bps": -27.761798503892486,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -27.761798503892486,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "refinement",
+            "collected_at": "2026-11-09T12:57:31Z"
+          },
+          {
+            "size_usd": 437500.0,
+            "status": "ok",
+            "amount_in_tokens": 439141.9517576218,
+            "amount_out_tokens": 435293.721220298,
+            "slippage_bps": -46.23951080185096,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -46.23951080185096,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "refinement",
+            "collected_at": "2026-11-09T12:57:32Z"
+          },
+          {
+            "size_usd": 493750.0,
+            "status": "ok",
+            "amount_in_tokens": 495603.0598407446,
+            "amount_out_tokens": 490615.94134761696,
+            "slippage_bps": -59.28488716940406,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -59.28488716940406,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "refinement",
+            "collected_at": "2026-11-09T12:57:33Z"
+          },
+          {
+            "size_usd": 465625.0,
+            "status": "ok",
+            "amount_in_tokens": 467372.50579918316,
+            "amount_out_tokens": 462992.7198955651,
+            "slippage_bps": -52.34247171387874,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -52.34247171387874,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "refinement",
+            "collected_at": "2026-11-09T12:57:34Z"
+          },
+          {
+            "size_usd": 451562.5,
+            "status": "ok",
+            "amount_in_tokens": 453257.2287784025,
+            "amount_out_tokens": 449151.80708126293,
+            "slippage_bps": -49.1958686792604,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -49.1958686792604,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "refinement",
+            "collected_at": "2026-11-09T12:57:35Z"
+          },
+          {
+            "size_usd": 458593.75,
+            "status": "ok",
+            "amount_in_tokens": 460314.8672887928,
+            "amount_out_tokens": 456074.5121729034,
+            "slippage_bps": -50.744258019724825,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -50.744258019724825,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "refinement",
+            "collected_at": "2026-11-09T12:57:36Z"
+          },
+          {
+            "size_usd": 455078.125,
+            "status": "ok",
+            "amount_in_tokens": 456786.04803359765,
+            "amount_out_tokens": 452613.7085411084,
+            "slippage_bps": -49.96398227909427,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -49.96398227909427,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "refinement",
+            "collected_at": "2026-11-09T12:57:37Z"
+          }
+        ],
+        "stopped_on": "precision_obligation_met",
+        "validation": [
+          {
+            "size_usd": 455078.125,
+            "status": "ok",
+            "amount_in_tokens": 456786.04803359765,
+            "amount_out_tokens": 452613.7085411084,
+            "slippage_bps": -54.15370072757497,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -49.96398227909427,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "validation",
+            "collected_at": "2026-11-09T12:57:38Z"
+          },
+          {
+            "size_usd": 458593.75,
+            "status": "ok",
+            "amount_in_tokens": 460314.8672887928,
+            "amount_out_tokens": 456074.5121729034,
+            "slippage_bps": -54.93397646820553,
+            "route_venues": [],
+            "route_leg_count": 0,
+            "route_hops": [],
+            "quote_block_numbers": [],
+            "quote_as_of": null,
+            "quote_expiry": null,
+            "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+            "router_address": null,
+            "route_id": null,
+            "gas_usd": null,
+            "router_price_in": null,
+            "router_price_out": null,
+            "slippage_bps_debiased": -50.744258019724825,
+            "price_bias_bps": -4.189718448480706,
+            "phase": "validation",
+            "collected_at": "2026-11-09T12:57:39Z"
+          }
+        ]
+      },
+      "reference_rule": "marginal_from_lowest_successful_decade_rung",
+      "note": "Primary figure for a STABLE asset per spec \u00a77.8; the 2% bracket above is retained for comparison across the corpus. Widths are independent: this one may be wider than the 2% bracket where it coincides with a router split boundary (\u00a77.7)."
+    },
+    "depth_50bps": {
+      "shape": "bracket",
+      "threshold_bps": -50.0,
+      "convention": "marginal_from_first_successful_rung",
+      "depth_usd": 455078.125,
+      "bracket": {
+        "last_clearing_size_usd": 455078.125,
+        "first_crossing_size_usd": 458593.75,
+        "last_clearing_marginal_impact_bps": -49.96398227909427,
+        "first_crossing_marginal_impact_bps": -50.744258019724825,
+        "width_usd": 3515.625,
+        "threshold_bps": -50.0,
+        "monotonic_in_bracket": true,
+        "meets_precision_obligation": true
+      },
+      "status": "bracketed",
+      "basis": "Both interval endpoints re-quoted and straddle; depth is the lower bound, not exact capacity."
+    },
+    "supply_check": {
+      "status": "passed",
+      "token": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
+      "total_supply_units": 6751561.475070515,
+      "total_supply_usd": 6726317.386715226,
+      "non_float_holders": {},
+      "float_units": 6751561.475070515,
+      "float_usd": 6726317.386715226,
+      "read_as_of": "2026-11-09T12:57:41Z"
+    },
+    "evidence_manifest": "data/exit_evidence/baseline-seven/20261109T125706007840Z/usg/manifest.json"
   },
-  "rung_set": {
-   "grid": "decade",
-   "start_usd": 1000.0,
-   "cap": 10,
-   "published_rungs": 4,
-   "decade_rungs": 4,
-   "envelope_probes": 0,
-   "termination": "crossed_threshold",
-   "termination_note": "Ascending the decade grid stopped at the first rung past the threshold. A SHORT LADDER IS THE ANSWER, NOT A GAP: continuing upward buys nothing once the crossing is bracketed.",
-   "spec": "riskAnalyst liquidity-ladder-spec.md \u00a77 (178e54a)"
+  "primary_exit": {
+    "venue": null,
+    "at_nav": false,
+    "gated": true,
+    "gated_basis": "measured_protocol_design: USG is borrower-minted CDP debt; repaying debt releases the borrower's collateral, but the protocol exposes no holder redemption converting USG to reserve assets for an address that did not borrow",
+    "gate": "No primary redemption for ordinary USG holders; only borrowers can repay their own debt positions",
+    "cadence": null,
+    "capacity_usd": 0,
+    "capacity_basis": "No holder redemption facility. This zero is primary-redemption capacity, not secondary-market depth.",
+    "note": "A holder's primary exit is absent by design. The measured Curve pools are the executable exit represented by depth."
   },
-  "slippage_convention": "Marginal execution-rate deterioration from the smallest successful $100 rung; signed cost, with -200bps as the crossing threshold. The dated external mid sizes the input notional and is NOT the impact reference.",
-  "basis": "The -200bps crossing is BRACKETED between $609,765.62 and $613,281.25. `depth_usd` is the LOWER bound (a size that cleared), not the crossing itself, and is flagged as a floor.",
-  "bracket": {
-   "last_clearing_size_usd": 609765.625,
-   "last_clearing_marginal_impact_bps": -199.60303563233862,
-   "first_crossing_size_usd": 613281.25,
-   "first_crossing_marginal_impact_bps": -204.51385680375967,
-   "width_usd": 3515.625,
-   "monotonic_in_bracket": true,
-   "threshold_bps": -200.0,
-   "meets_precision_obligation": true
+  "enumeration": {
+    "source": "DexTracker live Ethereum contract reads; addresses supplied as hints and verified through coins(uint256)",
+    "as_of": "2026-09-06T02:48:11Z",
+    "venue_count": 2,
+    "chain_count_is_floor": true,
+    "chain_count_note": "Two verified Ethereum PegKeeper venues; this is not asserted to be a complete global venue census.",
+    "live_venue_count": 2,
+    "excluded_venue_count": 0,
+    "unestablished_venue_count": 0,
+    "live_venue_count_is_floor": false,
+    "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it."
   },
-  "quote": {
-   "method": "eth_call Curve get_dy across both PegKeeper pools; USG input split in proportion to live USG inventory, USDC and frxUSD outputs valued at $1",
-   "venue": "curve_aggregate",
-   "chain": "ethereum",
-   "token_in": {
-    "symbol": "USG",
-    "address": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
-    "decimals": 18
-   },
-   "baseline_size_usd": 100.0,
-   "quoted_as_of": "2026-11-08T23:50:53Z",
-   "aggregation": "USG input split between venues in proportion to live USG inventory; outputs valued at their declared price_usd. All legs or none: a partial sum would render as a shallower book.",
-   "legs": [
+  "venues": [
     {
-     "pool": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
-     "symbol_out": "USDC",
-     "token_out": "0xA0b86991c6218b36c1d19d4a2e9eb0cE3606eB48",
-     "i": 1,
-     "j": 0,
-     "decimals_out": 6,
-     "price_usd": 1.0
+      "name": "Curve USG/USDC PegKeeper pool",
+      "project": "curve",
+      "chain": "Ethereum",
+      "kind": "swap",
+      "pool_type": "curve_stableswap_pegkeeper",
+      "pool_id": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
+      "tvl_usd": 1710564.9829262854,
+      "volume_24h_usd": null,
+      "underlying_tokens": [
+        "0xA0b86991c6218b36c1d19d4a2e9eb0cE3606eB48",
+        "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1"
+      ],
+      "balances": [
+        {
+          "symbol": "USDC",
+          "amount": 391365.862475
+        },
+        {
+          "symbol": "USG",
+          "amount": 1327534.710901033
+        }
+      ],
+      "usg_share_pct_by_value": 77.1206667749339,
+      "depth_role": "Included in the executable aggregate get_dy ladder; USDC inventory is the sell-side counter asset.",
+      "is_live": true,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Coin indices verified via coins(uint256) and quoted in the executable aggregate get_dy ladder at block 25,915,411."
     },
     {
-     "pool": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
-     "symbol_out": "frxUSD",
-     "token_out": "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
-     "i": 1,
-     "j": 0,
-     "decimals_out": 18,
-     "price_usd": 1.0
+      "name": "Curve USG/frxUSD PegKeeper pool",
+      "project": "curve",
+      "chain": "Ethereum",
+      "kind": "swap",
+      "pool_type": "curve_stableswap_pegkeeper",
+      "pool_id": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
+      "tvl_usd": 2086314.5841153408,
+      "volume_24h_usd": null,
+      "underlying_tokens": [
+        "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
+        "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1"
+      ],
+      "balances": [
+        {
+          "symbol": "frxUSD",
+          "amount": 504646.8365593875
+        },
+        {
+          "symbol": "USG",
+          "amount": 1591661.7919475925
+        }
+      ],
+      "usg_share_pct_by_value": 75.81156550399265,
+      "depth_role": "Included in the executable aggregate get_dy ladder; frxUSD inventory is the sell-side counter asset.",
+      "is_live": true,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Coin indices verified via coins(uint256) and quoted in the executable aggregate get_dy ladder at block 25,915,411."
     }
-   ],
-   "legs_verified_via": "coins(uint256) on each pool"
-  },
-  "anchor": {
-   "fair_value": 0.995284,
-   "fair_value_basis": "market",
-   "fair_value_source": "peg_tracker:curve_pegkeeper_pools",
-   "fair_value_as_of": "2026-11-08T23:37:15Z",
-   "fair_value_choice": "market_price",
-   "fair_value_choice_mode": "inherited",
-   "market_price_cross_check": null,
-   "self_referential": false,
-   "self_referential_determination": "input_sizing_only_reviewed",
-   "self_referential_basis": "Marginal impact is debiased from the $100 aggregate executable baseline across both PegKeeper pools; the Curve composite mark only splits USD rung sizes into USG. A self-referential reading was overridden for this asset after review (it was upstream_declaration: Quoted from the same Curve PegKeeper pools measured by the liquidity axis. No external or routed cross-check is wired for USG today; a CoinGecko or aggregator-routed mark would dissolve this rather than relocate it. Until then the premium/discount is venue-internal and cannot evidence venue-wide mispricing.). The bps curve is unaffected; the published USD figure inherits this mark's error and is denominated by it."
-  },
-  "rungs": [
-   {
-    "size_usd": 1000.0,
-    "status": "ok",
-    "amount_in_tokens": 1004.7383460399243,
-    "amount_out_tokens": 999.492930654882,
-    "slippage_bps": -5.070693451180164,
-    "route_venues": [],
-    "route_leg_count": 0,
-    "route_hops": [],
-    "quote_block_numbers": [],
-    "quote_as_of": null,
-    "quote_expiry": null,
-    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
-    "router_address": null,
-    "route_id": null,
-    "gas_usd": null,
-    "router_price_in": null,
-    "router_price_out": null,
-    "slippage_bps_debiased": -0.06873708505050757,
-    "price_bias_bps": -5.001956366129656,
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 10000.0,
-    "status": "ok",
-    "amount_in_tokens": 10047.383460399244,
-    "amount_out_tokens": 9994.233277187472,
-    "slippage_bps": -5.766722812527991,
-    "route_venues": [],
-    "route_leg_count": 0,
-    "route_hops": [],
-    "quote_block_numbers": [],
-    "quote_as_of": null,
-    "quote_expiry": null,
-    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
-    "router_address": null,
-    "route_id": null,
-    "gas_usd": null,
-    "router_price_in": null,
-    "router_price_out": null,
-    "slippage_bps_debiased": -0.764766446398335,
-    "price_bias_bps": -5.001956366129656,
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 100000.0,
-    "status": "ok",
-    "amount_in_tokens": 100473.83460399244,
-    "amount_out_tokens": 99863.15769456673,
-    "slippage_bps": -13.684230543327125,
-    "route_venues": [],
-    "route_leg_count": 0,
-    "route_hops": [],
-    "quote_block_numbers": [],
-    "quote_as_of": null,
-    "quote_expiry": null,
-    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
-    "router_address": null,
-    "route_id": null,
-    "gas_usd": null,
-    "router_price_in": null,
-    "router_price_out": null,
-    "slippage_bps_debiased": -8.682274177197469,
-    "price_bias_bps": -5.001956366129656,
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 1000000.0,
-    "status": "ok",
-    "amount_in_tokens": 1004738.3460399243,
-    "amount_out_tokens": 752348.2172738637,
-    "slippage_bps": -2476.517827261363,
-    "route_venues": [],
-    "route_leg_count": 0,
-    "route_hops": [],
-    "quote_block_numbers": [],
-    "quote_as_of": null,
-    "quote_expiry": null,
-    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
-    "router_address": null,
-    "route_id": null,
-    "gas_usd": null,
-    "router_price_in": null,
-    "router_price_out": null,
-    "slippage_bps_debiased": -2471.5158708952335,
-    "price_bias_bps": -5.001956366129656,
-    "rung_kind": "decade"
-   }
   ],
-  "preflight": {
-   "passed": true,
-   "blocking_failures": [],
-   "warnings": [],
-   "findings": [
-    {
-     "check": "failure_is_not_a_wall",
-     "passed": true,
-     "blocking": false,
-     "detail": "No failed rungs.",
-     "evidence": {}
-    },
-    {
-     "check": "quote_economically_plausible",
-     "passed": true,
-     "blocking": false,
-     "detail": "Quote is -5.1bps against the reference rate.",
-     "evidence": {
-      "loss_bps": -5.070693451180164
-     }
-    },
-    {
-     "check": "depth_against_supply",
-     "passed": true,
-     "blocking": false,
-     "detail": "Depth is 9.1% of chain supply.",
-     "evidence": {
-      "ratio": 0.09074269823309311
-     }
-    }
-   ]
+  "total_tvl_usd": 3796879.567041626,
+  "swap_tvl_usd": 3796879.567041626,
+  "axis_binding_constraint": {
+    "leg": "primary_exit_absent",
+    "basis": "Ordinary holders have no primary redemption. The $677,124 bracketed figure measures the secondary Curve exit only and does not create a holder claim on protocol collateral."
   },
-  "bracket_refinement_guard": {
-   "eligible": true,
-   "basis": "monotonic_successful_rungs_inside_bracket"
-  },
-  "quote_stability": {
-   "sample_size_usd": null,
-   "requested_samples": 0,
-   "successful_samples": 0,
-   "samples": [],
-   "output_spread_usd": null,
-   "output_spread_bps": null,
-   "precision_floor_usd": null,
-   "basis": "Same-size routed output spread across samples immediately before and after refinement. The published bracket must not be narrower than this observed spread."
-  },
-  "refinement": {
-   "status": "refined",
-   "stopped_on": "precision_obligation_met",
-   "probe_count": 8,
-   "precision_target": "<=1% of bracket midpoint",
-   "validation_cooldown_seconds": 0.0
-  },
-  "asset_category": "stable",
-  "primary_threshold_bps": -50.0,
-  "primary_threshold_basis": "stable asset: 0.5% marginal is the headline (spec \u00a77.8); the 2% bracket is retained for cross-corpus comparison",
-  "bracket_50bps": {
-   "threshold_bps": -50.0,
-   "convention": "marginal",
-   "status": "bracketed",
-   "grid": "shared decade rungs; search probes not published (spec \u00a77.8)",
-   "refinement": {
-    "status": "refined",
-    "stopped_on": "precision_obligation_met",
-    "probe_count": 8
-   },
-   "bracket": {
-    "last_clearing_size_usd": 360156.25,
-    "last_clearing_marginal_impact_bps": -49.855915539026576,
-    "first_crossing_size_usd": 363671.875,
-    "first_crossing_marginal_impact_bps": -50.756802986684505,
-    "width_usd": 3515.625,
-    "monotonic_in_bracket": true,
-    "threshold_bps": -50.0,
-    "meets_precision_obligation": true
-   },
-   "depth_usd": 360156.25,
-   "is_floor": true,
-   "basis": "The -50bps marginal crossing is BRACKETED between $360,156.25 and $363,671.88, both ends re-quoted. `depth_usd` is the lower bound.",
-   "note": "Primary figure for a STABLE asset per spec \u00a77.8; the 2% bracket above is retained for comparison across the corpus. Widths are independent: this one may be wider than the 2% bracket where it coincides with a router split boundary (\u00a77.7)."
-  },
-  "depth_50bps": {
-   "shape": "bracket",
-   "threshold_bps": -50.0,
-   "convention": "marginal_from_first_successful_rung",
-   "depth_usd": 360156.25,
-   "bracket": {
-    "last_clearing_size_usd": 360156.25,
-    "last_clearing_marginal_impact_bps": -49.855915539026576,
-    "first_crossing_size_usd": 363671.875,
-    "first_crossing_marginal_impact_bps": -50.756802986684505,
-    "width_usd": 3515.625,
-    "monotonic_in_bracket": true,
-    "threshold_bps": -50.0,
-    "meets_precision_obligation": true
-   },
-   "status": "bracketed",
-   "basis": "The -50bps marginal crossing is BRACKETED between $360,156.25 and $363,671.88, both ends re-quoted. `depth_usd` is the lower bound."
-  },
-  "supply_check": {
-   "status": "passed",
-   "token": "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1",
-   "total_supply_units": 6751561.475070515,
-   "total_supply_usd": 6719721.111154082,
-   "non_float_holders": {},
-   "float_units": 6751561.475070515,
-   "float_usd": 6719721.111154082,
-   "read_as_of": "2026-11-08T23:51:14Z"
-  }
- },
- "primary_exit": {
-  "venue": null,
-  "at_nav": false,
-  "gated": true,
-  "gated_basis": "measured_protocol_design: USG is borrower-minted CDP debt; repaying debt releases the borrower's collateral, but the protocol exposes no holder redemption converting USG to reserve assets for an address that did not borrow",
-  "gate": "No primary redemption for ordinary USG holders; only borrowers can repay their own debt positions",
-  "cadence": null,
-  "capacity_usd": 0,
-  "capacity_basis": "No holder redemption facility. This zero is primary-redemption capacity, not secondary-market depth.",
-  "note": "A holder's primary exit is absent by design. The measured Curve pools are the executable exit represented by depth."
- },
- "enumeration": {
-  "source": "DexTracker live Ethereum contract reads; addresses supplied as hints and verified through coins(uint256)",
-  "as_of": "2026-09-06T02:48:11Z",
-  "venue_count": 2,
-  "chain_count_is_floor": true,
-  "chain_count_note": "Two verified Ethereum PegKeeper venues; this is not asserted to be a complete global venue census.",
-  "live_venue_count": 2,
-  "excluded_venue_count": 0,
-  "unestablished_venue_count": 0,
-  "live_venue_count_is_floor": false,
-  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it."
- },
- "venues": [
-  {
-   "name": "Curve USG/USDC PegKeeper pool",
-   "project": "curve",
-   "chain": "Ethereum",
-   "kind": "swap",
-   "pool_type": "curve_stableswap_pegkeeper",
-   "pool_id": "0x97BA10115da528c113462EDE9C20D7adc806D93f",
-   "tvl_usd": 1710564.9829262854,
-   "volume_24h_usd": null,
-   "underlying_tokens": [
-    "0xA0b86991c6218b36c1d19d4a2e9eb0cE3606eB48",
-    "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1"
-   ],
-   "balances": [
-    {
-     "symbol": "USDC",
-     "amount": 391365.862475
-    },
-    {
-     "symbol": "USG",
-     "amount": 1327534.710901033
-    }
-   ],
-   "usg_share_pct_by_value": 77.1206667749339,
-   "depth_role": "Included in the executable aggregate get_dy ladder; USDC inventory is the sell-side counter asset.",
-   "is_live": true,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Coin indices verified via coins(uint256) and quoted in the executable aggregate get_dy ladder at block 25,915,411."
-  },
-  {
-   "name": "Curve USG/frxUSD PegKeeper pool",
-   "project": "curve",
-   "chain": "Ethereum",
-   "kind": "swap",
-   "pool_type": "curve_stableswap_pegkeeper",
-   "pool_id": "0xEfc056790bb19702b2164ec6Ea6bA3AE01d81195",
-   "tvl_usd": 2086314.5841153408,
-   "volume_24h_usd": null,
-   "underlying_tokens": [
-    "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
-    "0xB1c2Db5d6cA03FCe73dBd304d320bF76C55Ae1B1"
-   ],
-   "balances": [
-    {
-     "symbol": "frxUSD",
-     "amount": 504646.8365593875
-    },
-    {
-     "symbol": "USG",
-     "amount": 1591661.7919475925
-    }
-   ],
-   "usg_share_pct_by_value": 75.81156550399265,
-   "depth_role": "Included in the executable aggregate get_dy ladder; frxUSD inventory is the sell-side counter asset.",
-   "is_live": true,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Coin indices verified via coins(uint256) and quoted in the executable aggregate get_dy ladder at block 25,915,411."
-  }
- ],
- "total_tvl_usd": 3796879.567041626,
- "swap_tvl_usd": 3796879.567041626,
- "axis_binding_constraint": {
-  "leg": "primary_exit_absent",
-  "basis": "Ordinary holders have no primary redemption. The $677,124 bracketed figure measures the secondary Curve exit only and does not create a holder claim on protocol collateral."
- },
- "refresh_cadence": "daily",
- "payload_revised_at": "2026-11-08T23:51:14Z"
+  "refresh_cadence": "daily",
+  "payload_revised_at": "2026-11-09T12:57:41Z"
 }
