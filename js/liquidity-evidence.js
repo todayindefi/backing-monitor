@@ -13,12 +13,12 @@ var LiquidityEvidence = {
     },
     rowDetails: function(r, shared) {
         var e=this.esc, q=shared||{}, venues=r.route_venues, blocks=r.quote_block_numbers;
-        var clock=r.quote_as_of || r.quote_timestamp || r.quoted_at;
+        var clock=r.quote_as_of || r.quote_timestamp;
         var receipt=r.collected_at || r.received_at;
         var block=Array.isArray(blocks)&&blocks.length?blocks.join(', '):(r.quote_block_number == null ? r.block_number : r.quote_block_number);
         var slots=Array.isArray(r.quote_slot_numbers)&&r.quote_slot_numbers.length?r.quote_slot_numbers.join(', '):r.quote_context_slot;
         var venueText=Array.isArray(venues)?venues.map(function(x){return typeof x==='string'?x:(x.exchange||x.venue||'Unnamed venue');}).join(', '):(r.provider||r.source||q.venue||q.source);
-        return '<details class="re-ladder-provenance"><summary>Quote provenance and limits</summary><p>Quote generation: '+e(clock)+'. Local receipt: '+e(receipt)+'. Shared observation: '+e(q.quoted_as_of||q.quoted_at||q.measured_at)+'. Missing clocks remain unknown; payload publication is not a quote timestamp.</p><p>Reported venues: '+e(venueText)+'. EVM block metadata: '+e(block)+'. Solana context slot: '+e(slots)+'. These are source observations, not a synchronized execution simulation.</p><p>Gas estimate: '+(this.number(r.gas_usd)?'$'+this.amount(r.gas_usd):'Not supplied')+'. Expiry: '+e(r.quote_expiry||r.expiry)+'. '+e(r.quote_expiry_basis||r.expiry_basis||'No validity guarantee is established.')+'</p>'+(r.route_includes_gated_venue===true?'<p class="re-ladder-warning">Source flags a gated venue in this route; quote success does not establish holder access.</p>':'')+'</details>';
+        return '<details class="re-ladder-provenance"><summary>Quote provenance and limits</summary><p>Source quote timestamp: '+e(clock)+'. Reported quoted_at: '+e(r.quoted_at)+'. This field alone does not distinguish provider generation from collector completion. Local receipt: '+e(receipt)+'. Shared observation: '+e(q.quoted_as_of||q.quoted_at||q.measured_at)+'. Missing clocks remain unknown; payload publication is not a quote timestamp.</p><p>Reported venues: '+e(venueText)+'. EVM block metadata: '+e(block)+'. Solana context slot: '+e(slots)+'. These are source observations, not a synchronized execution simulation.</p><p>Gas estimate: '+(this.number(r.gas_usd)?'$'+this.amount(r.gas_usd):'Not supplied')+'. Expiry: '+e(r.quote_expiry||r.expiry)+'. '+e(r.quote_expiry_basis||r.expiry_basis||'No validity guarantee is established.')+'</p>'+(r.route_includes_gated_venue===true?'<p class="re-ladder-warning">Source flags a gated venue in this route; quote success does not establish holder access.</p>':'')+'</details>';
     },
     diagnosticsHtml: function(c, d) {
         var self=this,e=this.esc, results=[];
