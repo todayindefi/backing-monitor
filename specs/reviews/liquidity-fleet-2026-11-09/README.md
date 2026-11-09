@@ -26,7 +26,7 @@ For a swap ladder, display exact asset/chain/pair, notional versus input units, 
 
 For fixed-price, primary redemption or asynchronous wrapper exits, expose the actual capacity/gate/queue evidence and keep share transport/conversion, withdrawal request, settlement, bridge delivery and final cash sale separate. A quote or preview is not execution. A shorter ladder after a threshold crossing is not inherently incomplete.
 
-No authored scores, accounting marks, source quote bytes, recurring jobs, schedules, wallet reads or transactions are changed by this consumer repair. Existing unrelated working-tree changes are excluded. Local and served browser receipts are recorded alongside. OUSD's pre-existing mobile backing-table overflow was reproduced on the previous release; evidence-panel checks are separate from unrelated whole-page layout defects.
+No authored scores, accounting marks, source quote bytes, recurring jobs, schedules, wallet reads or transactions are changed by this consumer repair. Existing unrelated working-tree changes are excluded. Local and served browser receipts are recorded alongside. Pre-existing mobile whole-page overflow on OUSD, USG, syzUSD, Hastra PRIME and frxUSD was reproduced against the pre-fleet release (backing tables/navigation/other content); evidence-panel checks are separate from these layout defects. Exact selectors are recorded in preexisting-mobile-overflow.json.
 
 ## Owner inventory return
 

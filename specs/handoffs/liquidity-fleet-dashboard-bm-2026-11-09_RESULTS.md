@@ -1,0 +1,15 @@
+# Liquidity dashboard audit — BM return
+
+Live: https://todayindefi.github.io/backing-monitor/
+
+Commits 7c31e9f1e2 and aec357ae8b; Pages run 42575873914 succeeded. All six served hashes match. All 36 registered views checked at desktop 1440; 13 selected mobile views at 390, including each structured source and representative legacy/empty/capacity views. No JavaScript errors or new evidence-panel page overflow. Existing mobile whole-page overflow on OUSD, USG, syzUSD, Hastra PRIME and frxUSD is recorded and reproduced against the prior release; causes include backing tables/navigation outside the evidence panels. Full receipts/screenshots: specs/reviews/liquidity-fleet-2026-11-09/.
+
+Fixed three false empty states (syzUSD, reUSDe, Alto); seven additional structured sources now expose full canonical rows, units, failures, primary-threshold qualifications, legacy references and available threshold/stability diagnostics. Eighteen legacy quote-table views gain source-preserving expandable provenance and explicit metadata gaps. BOLD bespoke integration retains its primary-redemption/headline logic. ReUSD-specific source/UI is unchanged. Primary50bps cannot inherit secondary200bps.
+
+Accepted Dex syzUSD metadata-only normal SHA d80eafadf6f0fd1b78ae67f128d1ba7448c5c61713796e75034bf97fd6419442. Three returned manifest files checked; rungs, per-chain results, anchor and quote/address metadata unchanged. Payload observation Nov8 23:50:45 UTC; quote summary 23:50:29 UTC; metadata edit clock remains distinct. Durable helper/tests committed at Dex96d34a1 (not pushed per owner). No deployed identity, receipt backing or cash-conversion assurance added.
+
+Peg's existing-field inventory manifest0446100ee6fe3dc80ce05cf2a76119d69758d38ec90d6aa121632ee12681bf03 accepted after ten frozen files rehashed. USDai/sUSDai quoted_at is collector completion, not provider generation; new display preserves the distinction. USDat compact gas/failure omissions, separate srUSDat single-size composed observation, November4 Yuzu backing versus November9 tracker clocks, and all-in/impact description conflicts remain explicit. No cross-version stitching or historical clock reconstruction.
+
+Remaining source gaps: seven legacy$100 references, unavailable per-draw clocks/stability/refinement records, inventory-only chain coverage, incomplete native-token/cash paths, quote-only supply/holder bounds and missing sized sources. Fixed-price/primary-redemption/bespoke/equity views require applicability-specific evidence, not a fabricated impact crossing. Sources and per-view audit: README.md/audit-before.json alongside receipts. Source-owner request: specs/handoffs/liquidity-fleet-source-gaps-2026-11-09.md; Dex and Peg returns consumed, RiskAnalyst notified. No new broad quote run commissioned.
+
+Focused consumer source/null/units/threshold/escaping/gate/clock tests, Re ladder tests, Re metrics tests and Syrup regression tests pass. No full-suite claim. No authored scores, jobs, schedules, transactions, private holdings or other-repository files changed by BM. Unrelated working-tree edits excluded.
