@@ -1,792 +1,822 @@
 {
- "schema_version": "liquidity/1",
- "asset_slug": "syzusd",
- "as_of": "2026-11-08T23:50:45Z",
- "producer": "dextracker",
- "note": "Axis 3 (Liquidity & Exit), single producer. MEASURED 2026-09-22 per chain, no cross-chain scalar. syzUSD = Staked Yuzu USD; FOUR deployments at four different addresses, resolved on-chain; Sei's is unmeasurable (no router endpoint), not absent -- see enumeration.correction_2026_09_22. Measured exit evidence only; no risk score.",
- "depth": {
-  "status": "not_measured",
-  "depth_usd": null,
-  "is_floor": null,
-  "threshold_bps": -200.0,
-  "slippage_convention": "Per-chain marginal execution-rate deterioration from each chain's $100 baseline rung; signed cost. No cross-chain scalar is computed.",
-  "basis": "Fresh chain-local routed ladders were measured independently on Ethereum, Arbitrum, Base, and Avalanche. A single asset-level depth is deliberately withheld because balances cannot be assumed movable between chains at zero cost, delay, or bridge risk. PegTracker's cross-chain [10M, 20M] aggregate is not used.",
-  "denomination_scope": {
-   "measured_leg": "chain-local reUSD -> native USDC",
-   "excluded_leg": "cross-chain bridging and fiat conversion",
-   "reduction_policy": "refuse_cross_chain_scalar"
-  },
-  "anchor": {
-   "fair_value": 1.104967,
-   "fair_value_basis": "market",
-   "fair_value_source": "peg_tracker:geckoterminal_pool",
-   "fair_value_as_of": "2026-11-04T22:18:48.968231Z",
-   "fair_value_choice": "pool_mark",
-   "fair_value_choice_mode": "explicit",
-   "market_price_cross_check": {
-    "pool_mark": 1.104967,
-    "pool_venue": "geckoterminal syzUSD/wnAUSD (Monad)",
-    "pool_reserve_usd": 106572,
-    "pool_volume_24h_usd": 0.0,
-    "routed_mark": 1.058827,
-    "routed_venue": "KyberSwap routed \u2192 csUSDC (Monad)",
-    "spread_bps": -417.6,
-    "as_of": "2026-11-04T23:03:28Z",
-    "premium_discount_pct_pool": 1.059,
-    "premium_discount_pct_routed": -3.161,
-    "note": "\u26a0\ufe0f THE TWO MARKS DISAGREE BY 418bps AND BOTH ARE LIVE. The published mark is the SMALLER Monad pool ($106,572 reserve, $0.00 traded in 24h); routing reaches the 3.5x larger csUSDC pool. Against NAV that is 1.059% versus -3.161% \u2014 so the headline discount depends on which venue you call the market. Two pools 3.5x apart quoting one asset differently, unarbitraged, IS the liquidity finding; it is published rather than resolved by picking a side."
-   },
-   "self_referential": false,
-   "self_referential_determination": "source_prefix_heuristic",
-   "self_referential_basis": null
-  },
-  "quote": {
-   "method": "KyberSwap GET /api/v1/routes exact-input syzUSD -> the chain's deepest USD stable, measured independently on each chain; no cross-chain scalar",
-   "chains": [
-    "plasma",
-    "monad",
-    "ethereum"
-   ],
-   "quoted_as_of": "2026-11-08T23:50:29Z",
-   "baseline_size_usd": 100.0,
-   "addresses": {
-    "plasma": {
-     "token_in": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
-     "token_out": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
-     "symbol_out": "USDT0"
+  "schema_version": "liquidity/1",
+  "asset_slug": "syzusd",
+  "as_of": "2026-11-08T23:50:45Z",
+  "producer": "dextracker",
+  "note": "Axis 3 (Liquidity & Exit), single producer. MEASURED 2026-09-22 per chain, no cross-chain scalar. syzUSD = Staked Yuzu USD; FOUR deployments at four different addresses, resolved on-chain; Sei's is unmeasurable (no router endpoint), not absent -- see enumeration.correction_2026_09_22. Measured exit evidence only; no risk score.",
+  "depth": {
+    "status": "not_measured",
+    "depth_usd": null,
+    "is_floor": null,
+    "threshold_bps": -200.0,
+    "slippage_convention": "Per-chain marginal execution-rate deterioration from each chain's $100 baseline rung; signed cost. No cross-chain scalar is computed.",
+    "basis": "Chain-local routed probes were collected independently on plasma, monad, ethereum. Failed and invalid quotes remain explicit; no valid exit depth follows from a failed probe. No single asset-level depth is computed because cross-chain movement has unmeasured cost, delay and bridge risk.",
+    "denomination_scope": {
+      "measured_leg": "chain-local syzUSD -> USDT0 (plasma), csUSDC (monad), USDC (ethereum)",
+      "chain_legs": {
+        "plasma": {
+          "token_in": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
+          "symbol_in": "syzUSD",
+          "decimals_in": 18,
+          "token_out": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+          "symbol_out": "USDT0",
+          "decimals_out": 6,
+          "declared_output_price_usd": 1.0
+        },
+        "monad": {
+          "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+          "symbol_in": "syzUSD",
+          "decimals_in": 18,
+          "token_out": "0xe1bca19baa63894d374578320551633320436523",
+          "symbol_out": "csUSDC",
+          "decimals_out": 6,
+          "declared_output_price_usd": 1.0
+        },
+        "ethereum": {
+          "token_in": "0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
+          "symbol_in": "syzUSD",
+          "decimals_in": 18,
+          "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "symbol_out": "USDC",
+          "decimals_out": 6,
+          "declared_output_price_usd": 1.0
+        }
+      },
+      "output_valuation_basis": "Configured output-token price assumptions only; receipt-token redemption or onward cash conversion is not verified by these quotes.",
+      "excluded_leg": "cross-chain bridging, fiat conversion and any receipt-token redemption/onward cash leg",
+      "reduction_policy": "refuse_cross_chain_scalar"
     },
-    "monad": {
-     "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-     "token_out": "0xe1bca19baa63894d374578320551633320436523",
-     "symbol_out": "csUSDC"
+    "anchor": {
+      "fair_value": 1.104967,
+      "fair_value_basis": "market",
+      "fair_value_source": "peg_tracker:geckoterminal_pool",
+      "fair_value_as_of": "2026-11-04T22:18:48.968231Z",
+      "fair_value_choice": "pool_mark",
+      "fair_value_choice_mode": "explicit",
+      "market_price_cross_check": {
+        "pool_mark": 1.104967,
+        "pool_venue": "geckoterminal syzUSD/wnAUSD (Monad)",
+        "pool_reserve_usd": 106572,
+        "pool_volume_24h_usd": 0.0,
+        "routed_mark": 1.058827,
+        "routed_venue": "KyberSwap routed \u2192 csUSDC (Monad)",
+        "spread_bps": -417.6,
+        "as_of": "2026-11-04T23:03:28Z",
+        "premium_discount_pct_pool": 1.059,
+        "premium_discount_pct_routed": -3.161,
+        "note": "\u26a0\ufe0f THE TWO MARKS DISAGREE BY 418bps AND BOTH ARE LIVE. The published mark is the SMALLER Monad pool ($106,572 reserve, $0.00 traded in 24h); routing reaches the 3.5x larger csUSDC pool. Against NAV that is 1.059% versus -3.161% \u2014 so the headline discount depends on which venue you call the market. Two pools 3.5x apart quoting one asset differently, unarbitraged, IS the liquidity finding; it is published rather than resolved by picking a side."
+      },
+      "self_referential": false,
+      "self_referential_determination": "source_prefix_heuristic",
+      "self_referential_basis": null
     },
-    "ethereum": {
-     "token_in": "0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
-     "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-     "symbol_out": "USDC"
-    }
-   },
-   "retry_policy": {
-    "attempts_per_size": 4,
-    "backoff_schedule_seconds": [
-     2.0,
-     4.0,
-     8.0
-    ]
-   }
+    "quote": {
+      "method": "KyberSwap GET /api/v1/routes exact-input syzUSD -> the chain's deepest USD stable, measured independently on each chain; no cross-chain scalar",
+      "chains": [
+        "plasma",
+        "monad",
+        "ethereum"
+      ],
+      "quoted_as_of": "2026-11-08T23:50:29Z",
+      "baseline_size_usd": 100.0,
+      "addresses": {
+        "plasma": {
+          "token_in": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
+          "token_out": "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb",
+          "symbol_out": "USDT0"
+        },
+        "monad": {
+          "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+          "token_out": "0xe1bca19baa63894d374578320551633320436523",
+          "symbol_out": "csUSDC"
+        },
+        "ethereum": {
+          "token_in": "0x6dff69eb720986e98bb3e8b26cb9e02ec1a35d12",
+          "token_out": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+          "symbol_out": "USDC"
+        }
+      },
+      "retry_policy": {
+        "attempts_per_size": 4,
+        "backoff_schedule_seconds": [
+          2.0,
+          4.0,
+          8.0
+        ]
+      }
+    },
+    "per_chain": {
+      "plasma": {
+        "status": "quote_failed",
+        "depth_usd": null,
+        "is_floor": null,
+        "bracket": null,
+        "termination": "grid_exhausted",
+        "successful_rungs": 0,
+        "attempted_rungs": 5,
+        "baseline_rung": null
+      },
+      "monad": {
+        "status": "invalid_quote",
+        "depth_usd": null,
+        "is_floor": null,
+        "bracket": null,
+        "termination": "crossed_threshold",
+        "successful_rungs": 0,
+        "attempted_rungs": 2,
+        "baseline_rung": {
+          "size_usd": 100.0,
+          "slippage_bps": -9015.1482,
+          "amount_out_tokens": 9.848518
+        }
+      },
+      "ethereum": {
+        "status": "quote_failed",
+        "depth_usd": null,
+        "is_floor": null,
+        "bracket": null,
+        "termination": "grid_exhausted",
+        "successful_rungs": 0,
+        "attempted_rungs": 5,
+        "baseline_rung": null
+      }
+    },
+    "bracket": null,
+    "rungs": [
+      {
+        "size_usd": 1000.0,
+        "status": "quote_failed",
+        "failure_kind": "no_route_found",
+        "http_status": 400,
+        "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"7e8811a6-3f64-4309-a8b1-7ae27e855122\"}",
+        "is_finding_about_the_asset": true,
+        "chain": "plasma",
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 10000.0,
+        "status": "quote_failed",
+        "failure_kind": "no_route_found",
+        "http_status": 400,
+        "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"92ebed7b-f572-4cea-8f92-5b60bd42f664\"}",
+        "is_finding_about_the_asset": true,
+        "chain": "plasma",
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 100000.0,
+        "status": "quote_failed",
+        "failure_kind": "no_route_found",
+        "http_status": 400,
+        "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"be14fce9-cf1d-4ce2-ba22-4aeccd11ab9e\"}",
+        "is_finding_about_the_asset": true,
+        "chain": "plasma",
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 1000000.0,
+        "status": "quote_failed",
+        "failure_kind": "no_route_found",
+        "http_status": 400,
+        "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"0eb7d2d6-080f-4b88-bb45-f374ad422c9e\"}",
+        "is_finding_about_the_asset": true,
+        "chain": "plasma",
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 10000000.0,
+        "status": "quote_failed",
+        "failure_kind": "no_route_found",
+        "http_status": 400,
+        "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"3cdb1902-7bc5-4ed4-a432-e9b7e2299cf5\"}",
+        "is_finding_about_the_asset": true,
+        "chain": "plasma",
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 1000.0,
+        "status": "invalid_quote",
+        "amount_in_tokens": 905.0044028464198,
+        "amount_out_tokens": 43.949218,
+        "slippage_bps": -9560.50782,
+        "route_venues": [
+          "balancer-v3-stable",
+          "uniswap-v4"
+        ],
+        "route_leg_count": 2,
+        "route_hops": [
+          {
+            "exchange": "balancer-v3-stable",
+            "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
+            "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+            "token_out": "0xe1bca19baa63894d374578320551633320436523",
+            "swap_amount_raw": "3922309354035007086",
+            "amount_out_raw": "3633911",
+            "block_number": 120600153
+          },
+          {
+            "exchange": "uniswap-v4",
+            "pool": "0x35d5eefeedc6150c777dbbd51e0187863556ca2cd00bc41d1a873d5fdf2056ae",
+            "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+            "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+            "swap_amount_raw": "901082093492384772498",
+            "amount_out_raw": "41674711",
+            "block_number": 93091354
+          },
+          {
+            "exchange": "balancer-v3-stable",
+            "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
+            "token_in": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+            "token_out": "0xe1bca19baa63894d374578320551633320436523",
+            "swap_amount_raw": "41674711",
+            "amount_out_raw": "40315307",
+            "block_number": 120600153
+          }
+        ],
+        "quote_block_numbers": [
+          93091354,
+          120600153
+        ],
+        "quote_as_of": "2026-11-08T23:50:44Z",
+        "quote_expiry": null,
+        "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+        "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+        "route_id": "75795e53xH5L9pln",
+        "gas_usd": "0.0012980993268037436",
+        "router_price_in": 26.69898879576338,
+        "router_price_out": 1.0340251941893726,
+        "slippage_bps_debiased": -545.3596200000011,
+        "price_bias_bps": -9015.1482,
+        "chain": "monad",
+        "rung_kind": "decade",
+        "reason": "Successful router response returned less than 50% of input notional at the smallest rung; retained as evidence, not counted as executable depth."
+      },
+      {
+        "size_usd": 10000.0,
+        "status": "invalid_quote",
+        "amount_in_tokens": 9050.044028464199,
+        "amount_out_tokens": 112.811569,
+        "slippage_bps": -9887.188431,
+        "route_venues": [
+          "balancer-v3-stable",
+          "kuru-ob-v2",
+          "kyberswap-limit-order-v2",
+          "uniswap-v4"
+        ],
+        "route_leg_count": 6,
+        "route_hops": [
+          {
+            "exchange": "uniswap-v4",
+            "pool": "0x35d5eefeedc6150c777dbbd51e0187863556ca2cd00bc41d1a873d5fdf2056ae",
+            "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+            "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+            "swap_amount_raw": "3982019372524247606892",
+            "amount_out_raw": "75948135",
+            "block_number": 93091354
+          },
+          {
+            "exchange": "kyberswap-limit-order-v2",
+            "pool": "limit_order_pool_0xee8c0e9f1bffb4eb878d8f15f368a02a35481242_0x484be0540ad49f351eaa04eeb35df0f937d4e73f_0xcab2fa2eeab7065b45cbcf6e3936dde2506b4f6c",
+            "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+            "token_out": "0xee8c0e9f1bffb4eb878d8f15f368a02a35481242",
+            "swap_amount_raw": "1406334204007902596069",
+            "amount_out_raw": "7005630478784467",
+            "block_number": 0
+          },
+          {
+            "exchange": "balancer-v3-stable",
+            "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
+            "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+            "token_out": "0xe1bca19baa63894d374578320551633320436523",
+            "swap_amount_raw": "362001761138567964262",
+            "amount_out_raw": "3647796",
+            "block_number": 120600153
+          },
+          {
+            "exchange": "kyberswap-limit-order-v2",
+            "pool": "limit_order_pool_0x754704bc059f8c67012fed69bc8a327a5aafb603_0x484be0540ad49f351eaa04eeb35df0f937d4e73f_0xcab2fa2eeab7065b45cbcf6e3936dde2506b4f6c",
+            "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+            "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+            "swap_amount_raw": "3299688690793480939337",
+            "amount_out_raw": "21976360",
+            "block_number": 0
+          },
+          {
+            "exchange": "kuru-ob-v2",
+            "pool": "0x8121ee960066e4344a213f9ac7502395502aee7a",
+            "token_in": "0xee8c0e9f1bffb4eb878d8f15f368a02a35481242",
+            "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+            "swap_amount_raw": "7005630478784467",
+            "amount_out_raw": "14920205",
+            "block_number": 120600154
+          },
+          {
+            "exchange": "balancer-v3-stable",
+            "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
+            "token_in": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
+            "token_out": "0xe1bca19baa63894d374578320551633320436523",
+            "swap_amount_raw": "112844700",
+            "amount_out_raw": "109163773",
+            "block_number": 120600153
+          }
+        ],
+        "quote_block_numbers": [
+          0,
+          93091354,
+          120600153,
+          120600154
+        ],
+        "quote_as_of": "2026-11-08T23:50:45Z",
+        "quote_expiry": null,
+        "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
+        "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
+        "route_id": "2af1377e7xNHXIMI",
+        "gas_usd": "0.0031293212046603386",
+        "router_price_in": 26.697177913646836,
+        "router_price_out": 1.035520319607643,
+        "slippage_bps_debiased": -872.0402310000009,
+        "price_bias_bps": -9015.1482,
+        "chain": "monad",
+        "rung_kind": "decade",
+        "reason": "Successful router response returned less than 50% of input notional at the smallest rung; retained as evidence, not counted as executable depth."
+      },
+      {
+        "size_usd": 1000.0,
+        "status": "quote_failed",
+        "failure_kind": "no_route_found",
+        "http_status": 400,
+        "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"ae7db7e7-9a7f-4d91-9b12-f950759af5c2\"}",
+        "is_finding_about_the_asset": true,
+        "chain": "ethereum",
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 10000.0,
+        "status": "quote_failed",
+        "failure_kind": "no_route_found",
+        "http_status": 400,
+        "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"84d3ccf3-7b65-4a15-8ec0-45ccbca4bf6c\"}",
+        "is_finding_about_the_asset": true,
+        "chain": "ethereum",
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 100000.0,
+        "status": "quote_failed",
+        "failure_kind": "no_route_found",
+        "http_status": 400,
+        "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"c684c03b-5b33-4819-8e51-eaeade510302\"}",
+        "is_finding_about_the_asset": true,
+        "chain": "ethereum",
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 1000000.0,
+        "status": "quote_failed",
+        "failure_kind": "amount_exceeds_router_max",
+        "http_status": 400,
+        "failure_detail": "{\"code\":4009,\"message\":\"amountIn is greater than max allowed\",\"details\":null,\"requestId\":\"778f27cd-a2fc-49d2-8d99-1ba7f94dab74\"}",
+        "is_finding_about_the_asset": true,
+        "chain": "ethereum",
+        "rung_kind": "decade"
+      },
+      {
+        "size_usd": 10000000.0,
+        "status": "quote_failed",
+        "failure_kind": "amount_exceeds_router_max",
+        "http_status": 400,
+        "failure_detail": "{\"code\":4009,\"message\":\"amountIn is greater than max allowed\",\"details\":null,\"requestId\":\"19fc12f4-e8aa-4fba-9b02-7a30ef93023c\"}",
+        "is_finding_about_the_asset": true,
+        "chain": "ethereum",
+        "rung_kind": "decade"
+      }
+    ],
+    "asset_category": "stable",
+    "primary_threshold_bps": -50.0,
+    "primary_threshold_basis": "stable asset: each chain's 0.5% marginal crossing is its headline (spec \u00a77.8); the 2% bracket is retained per chain. No cross-chain scalar for either threshold.",
+    "depth_usd_semantics": "null by design: no cross-chain scalar. Each per_chain entry's depth_usd is that chain's bracket lower bound, never its crossing."
   },
-  "per_chain": {
-   "plasma": {
-    "status": "quote_failed",
-    "depth_usd": null,
-    "is_floor": null,
-    "bracket": null,
-    "termination": "grid_exhausted",
-    "successful_rungs": 0,
-    "attempted_rungs": 5,
-    "baseline_rung": null
-   },
-   "monad": {
-    "status": "invalid_quote",
-    "depth_usd": null,
-    "is_floor": null,
-    "bracket": null,
-    "termination": "crossed_threshold",
-    "successful_rungs": 0,
-    "attempted_rungs": 2,
-    "baseline_rung": {
-     "size_usd": 100.0,
-     "slippage_bps": -9015.1482,
-     "amount_out_tokens": 9.848518
-    }
-   },
-   "ethereum": {
-    "status": "quote_failed",
-    "depth_usd": null,
-    "is_floor": null,
-    "bracket": null,
-    "termination": "grid_exhausted",
-    "successful_rungs": 0,
-    "attempted_rungs": 5,
-    "baseline_rung": null
-   }
+  "primary_exit": {
+    "venue": "Yuzu vault (syzUSD -> yzUSD -> reserves)",
+    "gated": null,
+    "gated_basis": "unmeasured",
+    "note": "Not probed here. With Plasma's 55.6M having no secondary exit, the issuer's redemption path is the whole exit for 82% of supply and is the operative axis-3 question for riskAnalyst; DexTracker has not measured it."
   },
-  "bracket": null,
-  "rungs": [
-   {
-    "size_usd": 1000.0,
-    "status": "quote_failed",
-    "failure_kind": "no_route_found",
-    "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"7e8811a6-3f64-4309-a8b1-7ae27e855122\"}",
-    "is_finding_about_the_asset": true,
-    "chain": "plasma",
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 10000.0,
-    "status": "quote_failed",
-    "failure_kind": "no_route_found",
-    "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"92ebed7b-f572-4cea-8f92-5b60bd42f664\"}",
-    "is_finding_about_the_asset": true,
-    "chain": "plasma",
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 100000.0,
-    "status": "quote_failed",
-    "failure_kind": "no_route_found",
-    "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"be14fce9-cf1d-4ce2-ba22-4aeccd11ab9e\"}",
-    "is_finding_about_the_asset": true,
-    "chain": "plasma",
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 1000000.0,
-    "status": "quote_failed",
-    "failure_kind": "no_route_found",
-    "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"0eb7d2d6-080f-4b88-bb45-f374ad422c9e\"}",
-    "is_finding_about_the_asset": true,
-    "chain": "plasma",
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 10000000.0,
-    "status": "quote_failed",
-    "failure_kind": "no_route_found",
-    "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"3cdb1902-7bc5-4ed4-a432-e9b7e2299cf5\"}",
-    "is_finding_about_the_asset": true,
-    "chain": "plasma",
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 1000.0,
-    "status": "invalid_quote",
-    "amount_in_tokens": 905.0044028464198,
-    "amount_out_tokens": 43.949218,
-    "slippage_bps": -9560.50782,
-    "route_venues": [
-     "balancer-v3-stable",
-     "uniswap-v4"
+  "enumeration": {
+    "source": "defillama:yields.llama.fi/pools",
+    "as_of": "2026-08-30T04:02:42Z",
+    "by_chain": {
+      "Plasma": {
+        "swap_tvl_usd": 142450.0,
+        "lending_tvl_usd": 0.0,
+        "issuer_vault_tvl_usd": 36256053.0,
+        "unclassified_tvl_usd": 0.0,
+        "swap_venue_count": 2,
+        "local_swap_venue": true
+      },
+      "Monad": {
+        "swap_tvl_usd": 482957.0,
+        "lending_tvl_usd": 1470272.0,
+        "issuer_vault_tvl_usd": 11009837.0,
+        "unclassified_tvl_usd": 0.0,
+        "swap_venue_count": 2,
+        "local_swap_venue": true
+      },
+      "Sei": {
+        "swap_tvl_usd": 0.0,
+        "lending_tvl_usd": 0.0,
+        "issuer_vault_tvl_usd": 9909896.0,
+        "unclassified_tvl_usd": 0.0,
+        "swap_venue_count": 0,
+        "local_swap_venue": false
+      },
+      "Ethereum": {
+        "swap_tvl_usd": 0.0,
+        "lending_tvl_usd": 359772.0,
+        "issuer_vault_tvl_usd": 753441.0,
+        "unclassified_tvl_usd": 0.0,
+        "swap_venue_count": 0,
+        "local_swap_venue": false
+      }
+    },
+    "chain_count_is_floor": true,
+    "chain_count_note": "FLOOR, not a census. This is DefiLlama's view of the chain set; riskAnalyst read satellites on Pharos and Berachain that DefiLlama does not list. Absence here is not evidence of absence on chain. CORRECTED 2026-09-22 (twice): Sei IS a deployment at a different address than DefiLlama lists; see correction_2026_09_22.",
+    "total_tvl_usd": 60384678.0,
+    "swap_tvl_usd": 625407.0,
+    "unclassified_venues": [],
+    "chains_without_local_swap_venue": [
+      "Ethereum",
+      "Sei"
     ],
-    "route_leg_count": 2,
-    "route_hops": [
-     {
-      "exchange": "balancer-v3-stable",
-      "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
-      "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-      "token_out": "0xe1bca19baa63894d374578320551633320436523",
-      "swap_amount_raw": "3922309354035007086",
-      "amount_out_raw": "3633911",
-      "block_number": 120600153
-     },
-     {
-      "exchange": "uniswap-v4",
-      "pool": "0x35d5eefeedc6150c777dbbd51e0187863556ca2cd00bc41d1a873d5fdf2056ae",
-      "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-      "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
-      "swap_amount_raw": "901082093492384772498",
-      "amount_out_raw": "41674711",
-      "block_number": 93091354
-     },
-     {
-      "exchange": "balancer-v3-stable",
-      "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
-      "token_in": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
-      "token_out": "0xe1bca19baa63894d374578320551633320436523",
-      "swap_amount_raw": "41674711",
-      "amount_out_raw": "40315307",
-      "block_number": 120600153
-     }
-    ],
-    "quote_block_numbers": [
-     93091354,
-     120600153
-    ],
-    "quote_as_of": "2026-11-08T23:50:44Z",
-    "quote_expiry": null,
-    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
-    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
-    "route_id": "75795e53xH5L9pln",
-    "gas_usd": "0.0012980993268037436",
-    "router_price_in": 26.69898879576338,
-    "router_price_out": 1.0340251941893726,
-    "slippage_bps_debiased": -545.3596200000011,
-    "price_bias_bps": -9015.1482,
-    "chain": "monad",
-    "rung_kind": "decade",
-    "reason": "Successful router response returned less than 50% of input notional at the smallest rung; retained as evidence, not counted as executable depth."
-   },
-   {
-    "size_usd": 10000.0,
-    "status": "invalid_quote",
-    "amount_in_tokens": 9050.044028464199,
-    "amount_out_tokens": 112.811569,
-    "slippage_bps": -9887.188431,
-    "route_venues": [
-     "balancer-v3-stable",
-     "kuru-ob-v2",
-     "kyberswap-limit-order-v2",
-     "uniswap-v4"
-    ],
-    "route_leg_count": 6,
-    "route_hops": [
-     {
-      "exchange": "uniswap-v4",
-      "pool": "0x35d5eefeedc6150c777dbbd51e0187863556ca2cd00bc41d1a873d5fdf2056ae",
-      "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-      "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
-      "swap_amount_raw": "3982019372524247606892",
-      "amount_out_raw": "75948135",
-      "block_number": 93091354
-     },
-     {
-      "exchange": "kyberswap-limit-order-v2",
-      "pool": "limit_order_pool_0xee8c0e9f1bffb4eb878d8f15f368a02a35481242_0x484be0540ad49f351eaa04eeb35df0f937d4e73f_0xcab2fa2eeab7065b45cbcf6e3936dde2506b4f6c",
-      "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-      "token_out": "0xee8c0e9f1bffb4eb878d8f15f368a02a35481242",
-      "swap_amount_raw": "1406334204007902596069",
-      "amount_out_raw": "7005630478784467",
-      "block_number": 0
-     },
-     {
-      "exchange": "balancer-v3-stable",
-      "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
-      "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-      "token_out": "0xe1bca19baa63894d374578320551633320436523",
-      "swap_amount_raw": "362001761138567964262",
-      "amount_out_raw": "3647796",
-      "block_number": 120600153
-     },
-     {
-      "exchange": "kyberswap-limit-order-v2",
-      "pool": "limit_order_pool_0x754704bc059f8c67012fed69bc8a327a5aafb603_0x484be0540ad49f351eaa04eeb35df0f937d4e73f_0xcab2fa2eeab7065b45cbcf6e3936dde2506b4f6c",
-      "token_in": "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-      "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
-      "swap_amount_raw": "3299688690793480939337",
-      "amount_out_raw": "21976360",
-      "block_number": 0
-     },
-     {
-      "exchange": "kuru-ob-v2",
-      "pool": "0x8121ee960066e4344a213f9ac7502395502aee7a",
-      "token_in": "0xee8c0e9f1bffb4eb878d8f15f368a02a35481242",
-      "token_out": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
-      "swap_amount_raw": "7005630478784467",
-      "amount_out_raw": "14920205",
-      "block_number": 120600154
-     },
-     {
-      "exchange": "balancer-v3-stable",
-      "pool": "0x430589b4aeee87e21721d657865d942f92d80f2f",
-      "token_in": "0x754704bc059f8c67012fed69bc8a327a5aafb603",
-      "token_out": "0xe1bca19baa63894d374578320551633320436523",
-      "swap_amount_raw": "112844700",
-      "amount_out_raw": "109163773",
-      "block_number": 120600153
-     }
-    ],
-    "quote_block_numbers": [
-     0,
-     93091354,
-     120600153,
-     120600154
-    ],
-    "quote_as_of": "2026-11-08T23:50:45Z",
-    "quote_expiry": null,
-    "quote_expiry_basis": "KyberSwap's route response supplies a generation timestamp but no validity deadline. The route is indicative until transaction calldata is built; re-quote immediately before execution.",
-    "router_address": "0x6131B5fae19EA4f9D964eAc0408E4408b66337b5",
-    "route_id": "2af1377e7xNHXIMI",
-    "gas_usd": "0.0031293212046603386",
-    "router_price_in": 26.697177913646836,
-    "router_price_out": 1.035520319607643,
-    "slippage_bps_debiased": -872.0402310000009,
-    "price_bias_bps": -9015.1482,
-    "chain": "monad",
-    "rung_kind": "decade",
-    "reason": "Successful router response returned less than 50% of input notional at the smallest rung; retained as evidence, not counted as executable depth."
-   },
-   {
-    "size_usd": 1000.0,
-    "status": "quote_failed",
-    "failure_kind": "no_route_found",
-    "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"ae7db7e7-9a7f-4d91-9b12-f950759af5c2\"}",
-    "is_finding_about_the_asset": true,
-    "chain": "ethereum",
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 10000.0,
-    "status": "quote_failed",
-    "failure_kind": "no_route_found",
-    "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"84d3ccf3-7b65-4a15-8ec0-45ccbca4bf6c\"}",
-    "is_finding_about_the_asset": true,
-    "chain": "ethereum",
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 100000.0,
-    "status": "quote_failed",
-    "failure_kind": "no_route_found",
-    "http_status": 400,
-    "failure_detail": "{\"code\":4008,\"message\":\"route not found\",\"details\":null,\"requestId\":\"c684c03b-5b33-4819-8e51-eaeade510302\"}",
-    "is_finding_about_the_asset": true,
-    "chain": "ethereum",
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 1000000.0,
-    "status": "quote_failed",
-    "failure_kind": "amount_exceeds_router_max",
-    "http_status": 400,
-    "failure_detail": "{\"code\":4009,\"message\":\"amountIn is greater than max allowed\",\"details\":null,\"requestId\":\"778f27cd-a2fc-49d2-8d99-1ba7f94dab74\"}",
-    "is_finding_about_the_asset": true,
-    "chain": "ethereum",
-    "rung_kind": "decade"
-   },
-   {
-    "size_usd": 10000000.0,
-    "status": "quote_failed",
-    "failure_kind": "amount_exceeds_router_max",
-    "http_status": 400,
-    "failure_detail": "{\"code\":4009,\"message\":\"amountIn is greater than max allowed\",\"details\":null,\"requestId\":\"19fc12f4-e8aa-4fba-9b02-7a30ef93023c\"}",
-    "is_finding_about_the_asset": true,
-    "chain": "ethereum",
-    "rung_kind": "decade"
-   }
+    "duplicate_underlyings": {
+      "0x9dcb0d17edde04d27f387c89fecb78654c373858": [
+        "Monad",
+        "Sei"
+      ]
+    },
+    "live_venue_count": 2,
+    "excluded_venue_count": 1,
+    "unestablished_venue_count": 10,
+    "live_venue_count_is_floor": true,
+    "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 10 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead.",
+    "routed_measurement_as_of": "2026-11-08T23:50:45Z",
+    "by_chain_measurement": {
+      "plasma": {
+        "status": "quote_failed",
+        "depth_usd": null,
+        "is_floor": null,
+        "bracket": null,
+        "termination": "grid_exhausted",
+        "successful_rungs": 0,
+        "attempted_rungs": 5,
+        "baseline_rung": null
+      },
+      "monad": {
+        "status": "invalid_quote",
+        "depth_usd": null,
+        "is_floor": null,
+        "bracket": null,
+        "termination": "crossed_threshold",
+        "successful_rungs": 0,
+        "attempted_rungs": 2,
+        "baseline_rung": {
+          "size_usd": 100.0,
+          "slippage_bps": -9015.1482,
+          "amount_out_tokens": 9.848518
+        }
+      },
+      "ethereum": {
+        "status": "quote_failed",
+        "depth_usd": null,
+        "is_floor": null,
+        "bracket": null,
+        "termination": "grid_exhausted",
+        "successful_rungs": 0,
+        "attempted_rungs": 5,
+        "baseline_rung": null
+      }
+    },
+    "token_addresses_verified_2026_09_22": {
+      "plasma": {
+        "syzUSD": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
+        "supply": 55645937
+      },
+      "monad": {
+        "syzUSD": "0x484be0540aD49f351eaa04eeB35dF0f937D4E73f",
+        "supply": 11925968
+      },
+      "ethereum": {
+        "syzUSD": "0x6DFF69eb720986E98Bb3E8b26cb9E02Ec1a35D12",
+        "supply": 275635
+      },
+      "sei": {
+        "syzUSD": "0xB98b14d316d13f012d52f30A3d46641092AC6944",
+        "supply": 8442086,
+        "note": "VERIFIED from evm-rpc.sei-apis.com and sei-evm-rpc.publicnode.com 2026-09-22. DefiLlama's $9.9M row is still mis-keyed to 0x9dcB0D17... (yzUSD, supply 0) -- that finding stands; the conclusion drawn from it did not."
+      }
+    },
+    "chains_without_local_swap_venue_note": "Sei: 8.44M syzUSD, no pool in GeckoTerminal's sei-evm index, no KyberSwap endpoint -- holdings with nowhere to sell, unmeasurable by this producer. Ethereum: 276K, only a dust Uniswap v4 pool. Plasma has venues that exist but are unreachable/immaterial, stated per chain.",
+    "correction_2026_09_22": {
+      "superseded_claim": "'No syzUSD contract on Sei' (published 08:53Z).",
+      "why_wrong": "Resolving one candidate address and reading supply 0 established the absence of that KEY, not of the chain. Caught by riskAnalyst, whose canonical has carried 0xB98b14d3... since 2026-06-08 at 9.19M.",
+      "corrected": "Four deployments. Supply by chain: Plasma 55.65M (72.9%), Monad 11.93M (15.6%), Sei 8.44M (11.1%), Ethereum 0.28M (0.4%); total 76.29M. Sei has holdings and NO indexed venue and NO router endpoint: the exact chains-with-holdings-and-nowhere-to-sell fact, and unmeasured rather than absent."
+    },
+    "supply_by_chain_units": {
+      "plasma": 55645937,
+      "monad": 11925968,
+      "ethereum": 275635,
+      "sei": 8442086
+    },
+    "supply_total_units": 76289626
+  },
+  "venues": [
+    {
+      "pool_id": "6174b1d6-8212-4964-95bf-ca9c539864ba",
+      "project": "yuzu-money",
+      "chain": "Plasma",
+      "symbol": "SYZUSD",
+      "tvl_usd": 36256053,
+      "kind": "issuer_vault",
+      "underlying_tokens": [
+        "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
+      ],
+      "enrichment": {
+        "source": null,
+        "note": "not covered by a DexTracker pool resolution"
+      },
+      "is_live": null,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Not a swap venue (issuer_vault); liveness as an exit does not apply. Retained for the holdings picture."
+    },
+    {
+      "pool_id": "c51e151e-44ad-4f25-9911-102bd00811dc",
+      "project": "yuzu-money",
+      "chain": "Monad",
+      "symbol": "SYZUSD",
+      "tvl_usd": 11009837,
+      "kind": "issuer_vault",
+      "underlying_tokens": [
+        "0x9dcB0D17eDDE04D27F387c89fECb78654C373858"
+      ],
+      "enrichment": {
+        "source": null,
+        "note": "not covered by a DexTracker pool resolution"
+      },
+      "is_live": null,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Not a swap venue (issuer_vault); liveness as an exit does not apply. Retained for the holdings picture."
+    },
+    {
+      "pool_id": "20ccc2e5-0eca-4d9d-abd0-313908f51b31",
+      "project": "yuzu-money",
+      "chain": "Sei",
+      "symbol": "SYZUSD",
+      "tvl_usd": 9909896,
+      "kind": "issuer_vault",
+      "underlying_tokens": [
+        "0x9dcB0D17eDDE04D27F387c89fECb78654C373858"
+      ],
+      "enrichment": {
+        "source": null,
+        "note": "not covered by a DexTracker pool resolution"
+      },
+      "is_live": null,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Not a swap venue (issuer_vault); liveness as an exit does not apply. Retained for the holdings picture."
+    },
+    {
+      "pool_id": "148af5a0-747c-426d-91a4-5c5acf46f4e9",
+      "project": "curvance",
+      "chain": "Monad",
+      "symbol": "SYZUSD",
+      "tvl_usd": 1047064,
+      "kind": "lending",
+      "underlying_tokens": [
+        "0x484be0540aD49f351eaa04eeB35dF0f937D4E73f"
+      ],
+      "enrichment": {
+        "source": null,
+        "note": "not covered by a DexTracker pool resolution"
+      },
+      "is_live": null,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Not a swap venue (lending); liveness as an exit does not apply. Retained for the holdings picture."
+    },
+    {
+      "pool_id": "570ddae7-acae-4277-905b-278cd994b08d",
+      "project": "yuzu-money",
+      "chain": "Ethereum",
+      "symbol": "SYZUSD",
+      "tvl_usd": 753441,
+      "kind": "issuer_vault",
+      "underlying_tokens": [
+        "0x387167e5C088468906Bcd67C06746409a8E44abA"
+      ],
+      "enrichment": {
+        "source": null,
+        "note": "not covered by a DexTracker pool resolution"
+      },
+      "is_live": null,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Not a swap venue (issuer_vault); liveness as an exit does not apply. Retained for the holdings picture."
+    },
+    {
+      "pool_id": "8ee86f6f-318b-45c5-aad2-e003be777062",
+      "project": "morpho-blue",
+      "chain": "Monad",
+      "symbol": "SYZUSD",
+      "tvl_usd": 423208,
+      "kind": "lending",
+      "underlying_tokens": [
+        "0x484be0540aD49f351eaa04eeB35dF0f937D4E73f"
+      ],
+      "enrichment": {
+        "source": null,
+        "note": "not covered by a DexTracker pool resolution"
+      },
+      "is_live": null,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Not a swap venue (lending); liveness as an exit does not apply. Retained for the holdings picture."
+    },
+    {
+      "pool_id": "5bb0941e-6df0-4453-91dc-117093747229",
+      "project": "balancer-v3",
+      "chain": "Monad",
+      "symbol": "SYZUSD-CSUSDC",
+      "tvl_usd": 374804,
+      "kind": "swap",
+      "underlying_tokens": [
+        "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+        "0xe1bca19baa63894d374578320551633320436523"
+      ],
+      "enrichment": {
+        "source": null,
+        "note": "not covered by a DexTracker pool resolution"
+      },
+      "is_live": true,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Appeared in KyberSwap's returned route on Monad at one or more tested sizes. This pool is the executable exit; ~$205K csUSDC ceiling."
+    },
+    {
+      "pool_id": "ab1d4259-65c3-4a01-bd36-7e7df82b8c2e",
+      "project": "morpho-blue",
+      "chain": "Ethereum",
+      "symbol": "SYZUSD",
+      "tvl_usd": 359772,
+      "kind": "lending",
+      "underlying_tokens": [
+        "0x6DFF69eb720986E98Bb3E8b26cb9E02Ec1a35D12"
+      ],
+      "enrichment": {
+        "source": null,
+        "note": "not covered by a DexTracker pool resolution"
+      },
+      "is_live": null,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Not a swap venue (lending); liveness as an exit does not apply. Retained for the holdings picture."
+    },
+    {
+      "pool_id": "82b88360-3c2a-4845-a17e-fb5d73ce42af",
+      "project": "balancer-v3",
+      "chain": "Monad",
+      "symbol": "SYZUSD-WNAUSD",
+      "tvl_usd": 108153,
+      "kind": "swap",
+      "underlying_tokens": [
+        "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
+        "0x82c370ba90e38ef6acd8b1b078d34fd86fc6bac9"
+      ],
+      "enrichment": {
+        "source": null,
+        "note": "not covered by a DexTracker pool resolution"
+      },
+      "is_live": true,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Appeared in KyberSwap's returned route on Monad at one or more tested sizes. (wnAUSD probe at $1K routed through balancer-v3-stable.)"
+    },
+    {
+      "pool_id": "e2175e8e-13d8-5113-8fea-2965a79f892f",
+      "project": "pendle",
+      "chain": "Plasma",
+      "symbol": "SYZUSD",
+      "tvl_usd": 71225,
+      "kind": "swap",
+      "underlying_tokens": [
+        "0x5df425b024115ebd1721cc646e5dd0ae688846dd",
+        "0x193b2f36957f7e9e498758bbf182273bc145bb92"
+      ],
+      "enrichment": {
+        "source": null,
+        "note": "not covered by a DexTracker pool resolution"
+      },
+      "is_live": null,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Pendle PT/SY market: not a spot exit for syzUSD and not traversed by the router. Not quoted."
+    },
+    {
+      "pool_id": "103162b0-ffde-5b8e-8a0e-b9fd8f14261d",
+      "project": "pendle",
+      "chain": "Plasma",
+      "symbol": "SYZUSD",
+      "tvl_usd": 71225,
+      "kind": "swap",
+      "underlying_tokens": [
+        "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
+      ],
+      "enrichment": {
+        "source": null,
+        "note": "not covered by a DexTracker pool resolution"
+      },
+      "is_live": null,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "Pendle PT/SY market: not a spot exit for syzUSD and not traversed by the router. Not quoted."
+    },
+    {
+      "name": "syzUSD / 246USDT0 0.01% (Balancer v3)",
+      "project": "balancer-v3",
+      "chain": "Plasma",
+      "kind": "swap",
+      "pool_type": "balancer-v3",
+      "pool_id": "0xd931775d9a",
+      "tvl_usd": 14817.8,
+      "symbol": "SYZUSD-USDT0",
+      "underlying_tokens": [
+        "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
+        "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb"
+      ],
+      "depth_role": "The only spot pool on the chain holding 82% of supply; $14.8K reserve per GeckoTerminal and the router does not reach it.",
+      "is_live": null,
+      "exclusion_reason": null,
+      "exclusion_reason_note": null,
+      "liveness_basis": "GeckoTerminal-indexed; router never selected it (no_route_found at every size); not quoted directly."
+    },
+    {
+      "name": "syzUSD / USDC (Uniswap v4, three fee tiers)",
+      "project": "uniswap",
+      "chain": "Monad",
+      "kind": "swap",
+      "pool_type": "uniswap-v4",
+      "pool_id": "0x79700be210,0x00f1bf0d17,0x59e9310949",
+      "tvl_usd": 1302.6,
+      "symbol": "SYZUSD-USDC",
+      "depth_role": "Dust; the router touches them for rounding at every size.",
+      "is_live": false,
+      "exclusion_reason": "dust_below_threshold",
+      "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
+      "liveness_basis": "GeckoTerminal reserves $676/$394/$232."
+    }
   ],
-  "asset_category": "stable",
-  "primary_threshold_bps": -50.0,
-  "primary_threshold_basis": "stable asset: each chain's 0.5% marginal crossing is its headline (spec \u00a77.8); the 2% bracket is retained per chain. No cross-chain scalar for either threshold.",
-  "depth_usd_semantics": "null by design: no cross-chain scalar. Each per_chain entry's depth_usd is that chain's bracket lower bound, never its crossing."
- },
- "primary_exit": {
-  "venue": "Yuzu vault (syzUSD -> yzUSD -> reserves)",
-  "gated": null,
-  "gated_basis": "unmeasured",
-  "note": "Not probed here. With Plasma's 55.6M having no secondary exit, the issuer's redemption path is the whole exit for 82% of supply and is the operative axis-3 question for riskAnalyst; DexTracker has not measured it."
- },
- "enumeration": {
-  "source": "defillama:yields.llama.fi/pools",
-  "as_of": "2026-08-30T04:02:42Z",
-  "by_chain": {
-   "Plasma": {
-    "swap_tvl_usd": 142450.0,
-    "lending_tvl_usd": 0.0,
-    "issuer_vault_tvl_usd": 36256053.0,
-    "unclassified_tvl_usd": 0.0,
-    "swap_venue_count": 2,
-    "local_swap_venue": true
-   },
-   "Monad": {
-    "swap_tvl_usd": 482957.0,
-    "lending_tvl_usd": 1470272.0,
-    "issuer_vault_tvl_usd": 11009837.0,
-    "unclassified_tvl_usd": 0.0,
-    "swap_venue_count": 2,
-    "local_swap_venue": true
-   },
-   "Sei": {
-    "swap_tvl_usd": 0.0,
-    "lending_tvl_usd": 0.0,
-    "issuer_vault_tvl_usd": 9909896.0,
-    "unclassified_tvl_usd": 0.0,
-    "swap_venue_count": 0,
-    "local_swap_venue": false
-   },
-   "Ethereum": {
-    "swap_tvl_usd": 0.0,
-    "lending_tvl_usd": 359772.0,
-    "issuer_vault_tvl_usd": 753441.0,
-    "unclassified_tvl_usd": 0.0,
-    "swap_venue_count": 0,
-    "local_swap_venue": false
-   }
-  },
-  "chain_count_is_floor": true,
-  "chain_count_note": "FLOOR, not a census. This is DefiLlama's view of the chain set; riskAnalyst read satellites on Pharos and Berachain that DefiLlama does not list. Absence here is not evidence of absence on chain. CORRECTED 2026-09-22 (twice): Sei IS a deployment at a different address than DefiLlama lists; see correction_2026_09_22.",
   "total_tvl_usd": 60384678.0,
   "swap_tvl_usd": 625407.0,
-  "unclassified_venues": [],
-  "chains_without_local_swap_venue": [
-   "Ethereum",
-   "Sei"
-  ],
-  "duplicate_underlyings": {
-   "0x9dcb0d17edde04d27f387c89fecb78654c373858": [
-    "Monad",
-    "Sei"
-   ]
+  "payload_revised_at": "2026-11-09T05:51:11Z",
+  "axis_binding_constraint": {
+    "leg": "secondary_market_depth_per_chain",
+    "basis": "Monad is the only chain with an executable exit (~$205K csUSDC ceiling, 2% marginal crossing ~$202K) against 11.9M local supply; Plasma's 55.6M (73%) has no route; Sei's 8.44M (11%) has no venue or router endpoint; Ethereum's 276K has dust. ~84% of supply has no reachable secondary exit. No cross-chain scalar is published.",
+    "risk_score": null
   },
-  "live_venue_count": 2,
-  "excluded_venue_count": 1,
-  "unestablished_venue_count": 10,
-  "live_venue_count_is_floor": true,
-  "live_venue_count_basis": "Derived from venues[].is_live. The per-venue field is the single source; this integer is a convenience and cannot disagree with it. \u26a0\ufe0f 10 venue(s) carry no established verdict, so this is a FLOOR of confirmed-live venues, not a total. An unestablished venue is UNKNOWN, not dead.",
-  "routed_measurement_as_of": "2026-11-08T23:50:45Z",
-  "by_chain_measurement": {
-   "plasma": {
-    "status": "quote_failed",
-    "depth_usd": null,
-    "is_floor": null,
-    "bracket": null,
-    "termination": "grid_exhausted",
-    "successful_rungs": 0,
-    "attempted_rungs": 5,
-    "baseline_rung": null
-   },
-   "monad": {
-    "status": "invalid_quote",
-    "depth_usd": null,
-    "is_floor": null,
-    "bracket": null,
-    "termination": "crossed_threshold",
-    "successful_rungs": 0,
-    "attempted_rungs": 2,
-    "baseline_rung": {
-     "size_usd": 100.0,
-     "slippage_bps": -9015.1482,
-     "amount_out_tokens": 9.848518
-    }
-   },
-   "ethereum": {
-    "status": "quote_failed",
-    "depth_usd": null,
-    "is_floor": null,
-    "bracket": null,
-    "termination": "grid_exhausted",
-    "successful_rungs": 0,
-    "attempted_rungs": 5,
-    "baseline_rung": null
-   }
-  },
-  "token_addresses_verified_2026_09_22": {
-   "plasma": {
-    "syzUSD": "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
-    "supply": 55645937
-   },
-   "monad": {
-    "syzUSD": "0x484be0540aD49f351eaa04eeB35dF0f937D4E73f",
-    "supply": 11925968
-   },
-   "ethereum": {
-    "syzUSD": "0x6DFF69eb720986E98Bb3E8b26cb9E02Ec1a35D12",
-    "supply": 275635
-   },
-   "sei": {
-    "syzUSD": "0xB98b14d316d13f012d52f30A3d46641092AC6944",
-    "supply": 8442086,
-    "note": "VERIFIED from evm-rpc.sei-apis.com and sei-evm-rpc.publicnode.com 2026-09-22. DefiLlama's $9.9M row is still mis-keyed to 0x9dcB0D17... (yzUSD, supply 0) -- that finding stands; the conclusion drawn from it did not."
-   }
-  },
-  "chains_without_local_swap_venue_note": "Sei: 8.44M syzUSD, no pool in GeckoTerminal's sei-evm index, no KyberSwap endpoint -- holdings with nowhere to sell, unmeasurable by this producer. Ethereum: 276K, only a dust Uniswap v4 pool. Plasma has venues that exist but are unreachable/immaterial, stated per chain.",
-  "correction_2026_09_22": {
-   "superseded_claim": "'No syzUSD contract on Sei' (published 08:53Z).",
-   "why_wrong": "Resolving one candidate address and reading supply 0 established the absence of that KEY, not of the chain. Caught by riskAnalyst, whose canonical has carried 0xB98b14d3... since 2026-06-08 at 9.19M.",
-   "corrected": "Four deployments. Supply by chain: Plasma 55.65M (72.9%), Monad 11.93M (15.6%), Sei 8.44M (11.1%), Ethereum 0.28M (0.4%); total 76.29M. Sei has holdings and NO indexed venue and NO router endpoint: the exact chains-with-holdings-and-nowhere-to-sell fact, and unmeasured rather than absent."
-  },
-  "supply_by_chain_units": {
-   "plasma": 55645937,
-   "monad": 11925968,
-   "ethereum": 275635,
-   "sei": 8442086
-  },
-  "supply_total_units": 76289626
- },
- "venues": [
-  {
-   "pool_id": "6174b1d6-8212-4964-95bf-ca9c539864ba",
-   "project": "yuzu-money",
-   "chain": "Plasma",
-   "symbol": "SYZUSD",
-   "tvl_usd": 36256053,
-   "kind": "issuer_vault",
-   "underlying_tokens": [
-    "0x6695c0f8706c5ace3bdf8995073179cca47926dc"
-   ],
-   "enrichment": {
-    "source": null,
-    "note": "not covered by a DexTracker pool resolution"
-   },
-   "is_live": null,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Not a swap venue (issuer_vault); liveness as an exit does not apply. Retained for the holdings picture."
-  },
-  {
-   "pool_id": "c51e151e-44ad-4f25-9911-102bd00811dc",
-   "project": "yuzu-money",
-   "chain": "Monad",
-   "symbol": "SYZUSD",
-   "tvl_usd": 11009837,
-   "kind": "issuer_vault",
-   "underlying_tokens": [
-    "0x9dcB0D17eDDE04D27F387c89fECb78654C373858"
-   ],
-   "enrichment": {
-    "source": null,
-    "note": "not covered by a DexTracker pool resolution"
-   },
-   "is_live": null,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Not a swap venue (issuer_vault); liveness as an exit does not apply. Retained for the holdings picture."
-  },
-  {
-   "pool_id": "20ccc2e5-0eca-4d9d-abd0-313908f51b31",
-   "project": "yuzu-money",
-   "chain": "Sei",
-   "symbol": "SYZUSD",
-   "tvl_usd": 9909896,
-   "kind": "issuer_vault",
-   "underlying_tokens": [
-    "0x9dcB0D17eDDE04D27F387c89fECb78654C373858"
-   ],
-   "enrichment": {
-    "source": null,
-    "note": "not covered by a DexTracker pool resolution"
-   },
-   "is_live": null,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Not a swap venue (issuer_vault); liveness as an exit does not apply. Retained for the holdings picture."
-  },
-  {
-   "pool_id": "148af5a0-747c-426d-91a4-5c5acf46f4e9",
-   "project": "curvance",
-   "chain": "Monad",
-   "symbol": "SYZUSD",
-   "tvl_usd": 1047064,
-   "kind": "lending",
-   "underlying_tokens": [
-    "0x484be0540aD49f351eaa04eeB35dF0f937D4E73f"
-   ],
-   "enrichment": {
-    "source": null,
-    "note": "not covered by a DexTracker pool resolution"
-   },
-   "is_live": null,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Not a swap venue (lending); liveness as an exit does not apply. Retained for the holdings picture."
-  },
-  {
-   "pool_id": "570ddae7-acae-4277-905b-278cd994b08d",
-   "project": "yuzu-money",
-   "chain": "Ethereum",
-   "symbol": "SYZUSD",
-   "tvl_usd": 753441,
-   "kind": "issuer_vault",
-   "underlying_tokens": [
-    "0x387167e5C088468906Bcd67C06746409a8E44abA"
-   ],
-   "enrichment": {
-    "source": null,
-    "note": "not covered by a DexTracker pool resolution"
-   },
-   "is_live": null,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Not a swap venue (issuer_vault); liveness as an exit does not apply. Retained for the holdings picture."
-  },
-  {
-   "pool_id": "8ee86f6f-318b-45c5-aad2-e003be777062",
-   "project": "morpho-blue",
-   "chain": "Monad",
-   "symbol": "SYZUSD",
-   "tvl_usd": 423208,
-   "kind": "lending",
-   "underlying_tokens": [
-    "0x484be0540aD49f351eaa04eeB35dF0f937D4E73f"
-   ],
-   "enrichment": {
-    "source": null,
-    "note": "not covered by a DexTracker pool resolution"
-   },
-   "is_live": null,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Not a swap venue (lending); liveness as an exit does not apply. Retained for the holdings picture."
-  },
-  {
-   "pool_id": "5bb0941e-6df0-4453-91dc-117093747229",
-   "project": "balancer-v3",
-   "chain": "Monad",
-   "symbol": "SYZUSD-CSUSDC",
-   "tvl_usd": 374804,
-   "kind": "swap",
-   "underlying_tokens": [
-    "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-    "0xe1bca19baa63894d374578320551633320436523"
-   ],
-   "enrichment": {
-    "source": null,
-    "note": "not covered by a DexTracker pool resolution"
-   },
-   "is_live": true,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Appeared in KyberSwap's returned route on Monad at one or more tested sizes. This pool is the executable exit; ~$205K csUSDC ceiling."
-  },
-  {
-   "pool_id": "ab1d4259-65c3-4a01-bd36-7e7df82b8c2e",
-   "project": "morpho-blue",
-   "chain": "Ethereum",
-   "symbol": "SYZUSD",
-   "tvl_usd": 359772,
-   "kind": "lending",
-   "underlying_tokens": [
-    "0x6DFF69eb720986E98Bb3E8b26cb9E02Ec1a35D12"
-   ],
-   "enrichment": {
-    "source": null,
-    "note": "not covered by a DexTracker pool resolution"
-   },
-   "is_live": null,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Not a swap venue (lending); liveness as an exit does not apply. Retained for the holdings picture."
-  },
-  {
-   "pool_id": "82b88360-3c2a-4845-a17e-fb5d73ce42af",
-   "project": "balancer-v3",
-   "chain": "Monad",
-   "symbol": "SYZUSD-WNAUSD",
-   "tvl_usd": 108153,
-   "kind": "swap",
-   "underlying_tokens": [
-    "0x484be0540ad49f351eaa04eeb35df0f937d4e73f",
-    "0x82c370ba90e38ef6acd8b1b078d34fd86fc6bac9"
-   ],
-   "enrichment": {
-    "source": null,
-    "note": "not covered by a DexTracker pool resolution"
-   },
-   "is_live": true,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Appeared in KyberSwap's returned route on Monad at one or more tested sizes. (wnAUSD probe at $1K routed through balancer-v3-stable.)"
-  },
-  {
-   "pool_id": "e2175e8e-13d8-5113-8fea-2965a79f892f",
-   "project": "pendle",
-   "chain": "Plasma",
-   "symbol": "SYZUSD",
-   "tvl_usd": 71225,
-   "kind": "swap",
-   "underlying_tokens": [
-    "0x5df425b024115ebd1721cc646e5dd0ae688846dd",
-    "0x193b2f36957f7e9e498758bbf182273bc145bb92"
-   ],
-   "enrichment": {
-    "source": null,
-    "note": "not covered by a DexTracker pool resolution"
-   },
-   "is_live": null,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Pendle PT/SY market: not a spot exit for syzUSD and not traversed by the router. Not quoted."
-  },
-  {
-   "pool_id": "103162b0-ffde-5b8e-8a0e-b9fd8f14261d",
-   "project": "pendle",
-   "chain": "Plasma",
-   "symbol": "SYZUSD",
-   "tvl_usd": 71225,
-   "kind": "swap",
-   "underlying_tokens": [
-    "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6"
-   ],
-   "enrichment": {
-    "source": null,
-    "note": "not covered by a DexTracker pool resolution"
-   },
-   "is_live": null,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "Pendle PT/SY market: not a spot exit for syzUSD and not traversed by the router. Not quoted."
-  },
-  {
-   "name": "syzUSD / 246USDT0 0.01% (Balancer v3)",
-   "project": "balancer-v3",
-   "chain": "Plasma",
-   "kind": "swap",
-   "pool_type": "balancer-v3",
-   "pool_id": "0xd931775d9a",
-   "tvl_usd": 14817.8,
-   "symbol": "SYZUSD-USDT0",
-   "underlying_tokens": [
-    "0xc8a8df9b210243c55d31c73090f06787ad0a1bf6",
-    "0xb8ce59fc3717ada4c02eadf9682a9e934f625ebb"
-   ],
-   "depth_role": "The only spot pool on the chain holding 82% of supply; $14.8K reserve per GeckoTerminal and the router does not reach it.",
-   "is_live": null,
-   "exclusion_reason": null,
-   "exclusion_reason_note": null,
-   "liveness_basis": "GeckoTerminal-indexed; router never selected it (no_route_found at every size); not quoted directly."
-  },
-  {
-   "name": "syzUSD / USDC (Uniswap v4, three fee tiers)",
-   "project": "uniswap",
-   "chain": "Monad",
-   "kind": "swap",
-   "pool_type": "uniswap-v4",
-   "pool_id": "0x79700be210,0x00f1bf0d17,0x59e9310949",
-   "tvl_usd": 1302.6,
-   "symbol": "SYZUSD-USDC",
-   "depth_role": "Dust; the router touches them for rounding at every size.",
-   "is_live": false,
-   "exclusion_reason": "dust_below_threshold",
-   "exclusion_reason_note": "Live but immaterial: the pool holds too little to be exit liquidity at any size a holder would sell.",
-   "liveness_basis": "GeckoTerminal reserves $676/$394/$232."
+  "refresh_cadence": "daily",
+  "cross_checks": {
+    "note": "SUPERSEDED 2026-09-22 (later the same day): the daily multi-chain refresh now refines each chain's crossing itself and carries the 0.5% figure, so depth.per_chain.monad.bracket is the live, re-derived value. The hand-derived monad_refined_bracket below is retained as the first measurement of record; it read [$201,953 - $203,711] at ~08:50Z, the daily job read [$228,320 - $230,078] at ~10:00Z. Readings and anchor notes remain valid.",
+    "derived_at": "2026-09-22T08:53:56Z",
+    "monad_refined_bracket": {
+      "last_clearing_size_usd": 201953.125,
+      "last_clearing_marginal_impact_bps": -187.8828315450676,
+      "first_crossing_size_usd": 203710.9375,
+      "first_crossing_marginal_impact_bps": -207.65099070987557,
+      "width_usd": 1757.8125,
+      "monotonic_in_bracket": true,
+      "threshold_bps": -200.0,
+      "meets_precision_obligation": true,
+      "method": "bisection of the decade bracket [100K, 1M] with both ends re-quoted after a 3s cooldown; marginal convention, debiased from the $100 rung",
+      "probes": 9,
+      "note": "Hand-refined 2026-09-22. \u26a0\ufe0f The daily multi-chain refresh REBUILDS this depth block with the coarse decade bracket only; the durable copy lives in top-level `cross_checks.monad_refined_bracket`."
+    },
+    "monad_proceeds_ceiling_csusdc": {
+      "300K": 204619,
+      "500K": 204997,
+      "1M": 205119,
+      "2M": 205170,
+      "reading": "Proceeds plateau at ~205K csUSDC: the Monad Balancer pools' counter-side is exhausted by ~$210K of syzUSD. Beyond that the router adds limit-order dust."
+    },
+    "monad_total_convention_note": "Under the TOTAL convention against PegTracker's 1.084155 mark, Monad reads -248.64bps at $100 and crosses 2% at the FIRST rung: syzUSD trades ~2.5% below that mark on Monad at every size. That is a cross-chain basis (the mark is the Plasma NAV-per-share 1.0834; the Plasma venue is a $14.8K pool), not impact, and the marginal bracket above measures impact only.",
+    "plasma_reading": "55.6M of the 76.3M syzUSD supply (72.9%) is on Plasma and the router finds NO ROUTE to USDT0 at any size ($1K-$10M). The only DEX presence is two Pendle PT/SY pools ($71K, not a spot exit) and a $14.8K Balancer v3 syzUSD/USDT0 pool the router does not reach. This is a finding about the asset: the dominant deployment has no executable secondary exit.",
+    "ethereum_reading": "276K syzUSD on Ethereum. $1K returns 15.71 USDC through a dust Uniswap v4 pool (invalid_quote); above $10K the router refuses (amount_exceeds_router_max). No executable exit.",
+    "anchor_at_derivation": {
+      "fair_value": 1.084155,
+      "source": "peg_tracker:geckoterminal_pool (Plasma NAV-per-share 1.0834 per the backing summary)"
+    },
+    "sei_reading": "8.44M syzUSD (11.1%) on Sei at 0xB98b14d3...: no indexed pool, no router endpoint. Unmeasured by this producer; per riskAnalyst no local venue. Together with Plasma, ~84% of supply has no reachable secondary exit.",
+    "superseded_by": "depth.per_chain.monad.bracket and .bracket_50bps, re-derived daily"
   }
- ],
- "total_tvl_usd": 60384678.0,
- "swap_tvl_usd": 625407.0,
- "payload_revised_at": "2026-11-08T23:50:45Z",
- "axis_binding_constraint": {
-  "leg": "secondary_market_depth_per_chain",
-  "basis": "Monad is the only chain with an executable exit (~$205K csUSDC ceiling, 2% marginal crossing ~$202K) against 11.9M local supply; Plasma's 55.6M (73%) has no route; Sei's 8.44M (11%) has no venue or router endpoint; Ethereum's 276K has dust. ~84% of supply has no reachable secondary exit. No cross-chain scalar is published.",
-  "risk_score": null
- },
- "refresh_cadence": "daily",
- "cross_checks": {
-  "note": "SUPERSEDED 2026-09-22 (later the same day): the daily multi-chain refresh now refines each chain's crossing itself and carries the 0.5% figure, so depth.per_chain.monad.bracket is the live, re-derived value. The hand-derived monad_refined_bracket below is retained as the first measurement of record; it read [$201,953 - $203,711] at ~08:50Z, the daily job read [$228,320 - $230,078] at ~10:00Z. Readings and anchor notes remain valid.",
-  "derived_at": "2026-09-22T08:53:56Z",
-  "monad_refined_bracket": {
-   "last_clearing_size_usd": 201953.125,
-   "last_clearing_marginal_impact_bps": -187.8828315450676,
-   "first_crossing_size_usd": 203710.9375,
-   "first_crossing_marginal_impact_bps": -207.65099070987557,
-   "width_usd": 1757.8125,
-   "monotonic_in_bracket": true,
-   "threshold_bps": -200.0,
-   "meets_precision_obligation": true,
-   "method": "bisection of the decade bracket [100K, 1M] with both ends re-quoted after a 3s cooldown; marginal convention, debiased from the $100 rung",
-   "probes": 9,
-   "note": "Hand-refined 2026-09-22. \u26a0\ufe0f The daily multi-chain refresh REBUILDS this depth block with the coarse decade bracket only; the durable copy lives in top-level `cross_checks.monad_refined_bracket`."
-  },
-  "monad_proceeds_ceiling_csusdc": {
-   "300K": 204619,
-   "500K": 204997,
-   "1M": 205119,
-   "2M": 205170,
-   "reading": "Proceeds plateau at ~205K csUSDC: the Monad Balancer pools' counter-side is exhausted by ~$210K of syzUSD. Beyond that the router adds limit-order dust."
-  },
-  "monad_total_convention_note": "Under the TOTAL convention against PegTracker's 1.084155 mark, Monad reads -248.64bps at $100 and crosses 2% at the FIRST rung: syzUSD trades ~2.5% below that mark on Monad at every size. That is a cross-chain basis (the mark is the Plasma NAV-per-share 1.0834; the Plasma venue is a $14.8K pool), not impact, and the marginal bracket above measures impact only.",
-  "plasma_reading": "55.6M of the 76.3M syzUSD supply (72.9%) is on Plasma and the router finds NO ROUTE to USDT0 at any size ($1K-$10M). The only DEX presence is two Pendle PT/SY pools ($71K, not a spot exit) and a $14.8K Balancer v3 syzUSD/USDT0 pool the router does not reach. This is a finding about the asset: the dominant deployment has no executable secondary exit.",
-  "ethereum_reading": "276K syzUSD on Ethereum. $1K returns 15.71 USDC through a dust Uniswap v4 pool (invalid_quote); above $10K the router refuses (amount_exceeds_router_max). No executable exit.",
-  "anchor_at_derivation": {
-   "fair_value": 1.084155,
-   "source": "peg_tracker:geckoterminal_pool (Plasma NAV-per-share 1.0834 per the backing summary)"
-  },
-  "sei_reading": "8.44M syzUSD (11.1%) on Sei at 0xB98b14d3...: no indexed pool, no router endpoint. Unmeasured by this producer; per riskAnalyst no local venue. Together with Plasma, ~84% of supply has no reachable secondary exit.",
-  "superseded_by": "depth.per_chain.monad.bracket and .bracket_50bps, re-derived daily"
- }
 }
