@@ -207,7 +207,7 @@ var USGRenderer = {
                 ' = CDP debt + POL deployed. totalSupply() reads ' + CommonRenderer.formatCurrency(s.total_supply_raw) +
                 ' — inflated by pre-minted PegKeeper ceiling buffer (the crvUSD artifact), not circulating. ' +
                 (hasPolDeployed ? 'POL is protocol-owned USG minted into its own PegKeeper pools.' : 'No POL-minted USG is currently outstanding.') + '</p>' +
-                '<table class="data-table"><thead><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">%</th><th></th></tr></thead><tbody>';
+                '<div class="dashboard-table-scroll" tabindex="0" role="region" aria-label="USG evidence table"><table class="data-table"><thead><tr><th>Source</th><th class="text-right">Amount</th><th class="text-right">%</th><th></th></tr></thead><tbody>';
             rows.forEach(function(r) {
                 html += '<tr><td class="font-medium">' + r.label +
                         '<div class="text-xs text-slate-400 font-normal">' + r.sub + '</div></td>' +
@@ -215,7 +215,7 @@ var USGRenderer = {
                     '<td class="text-right font-mono">' + CommonRenderer.formatPercent(r.pct, 1) + '</td>' +
                     '<td><div class="pct-bar-container"><div class="pct-bar" style="width:' + r.pct + '%;background:' + r.color + '"></div></div></td></tr>';
             });
-            html += '</tbody></table>' +
+            html += '</tbody></table></div>' +
                 '<p class="text-xs text-slate-400 mt-2">sUSG is staked USG (a destination of already-minted supply), shown alongside the two minting sources per the analyzer’s breakdown.</p></div>';
         }
 
@@ -229,11 +229,11 @@ var USGRenderer = {
                 USGRenderer._backedShareCard(s) +
             '</div>';
         if (cb) {
-            html += '<table class="data-table"><thead><tr><th>Collateral component</th><th class="text-right">Value</th></tr></thead><tbody>' +
+            html += '<div class="dashboard-table-scroll" tabindex="0" role="region" aria-label="USG evidence table"><table class="data-table"><thead><tr><th>Collateral component</th><th class="text-right">Value</th></tr></thead><tbody>' +
                 '<tr><td>CDP-market collateral (external)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(cb.cdp_collateral) + '</td></tr>' +
                 '<tr><td>' + (hasPolDeployed ? 'POL pool stables' : 'PegKeeper pool stables') + ' (counter-side)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(cb.pol_pool_stables) + '</td></tr>' +
                 '<tr class="font-bold border-t-2 border-slate-200"><td>Total backing (inclusive)</td><td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(cb.total) + '</td></tr>' +
-                '</tbody></table>' +
+                '</tbody></table></div>' +
                 '<p class="text-xs text-slate-400 mt-2">' + ((s.collateral_ratio_alt || {}).note || '') + '</p>';
         }
         html += '</div>';
@@ -319,7 +319,7 @@ var USGRenderer = {
             html += '<div class="panel"><div class="panel-title">Collateral Cascade Risk</div>' +
                 '<p class="text-sm text-slate-500 mb-3">USG is a CDP stablecoin collateralized by Curve LPs that themselves contain <em>other</em> CDP / exotic stables — a productive-LP cascade. These are the non-USDC/frxUSD stable legs reached through that collateral; a depeg here feeds into the LP NAV before USG’s own oracle reacts.</p>' +
                 '<div class="summary-card mb-4" style="display:inline-block"><div class="card-label">Worst $1-peg deviation</div><div class="card-value ' + CommonRenderer.pegPctClass(CommonRenderer.pegStatusClass(worst)) + '">' + CommonRenderer.pegPctText(worst, 2) + '</div><div class="text-xs text-slate-400 mt-1">across par-target legs</div></div>' +
-                '<table class="data-table"><thead><tr><th>Token</th><th class="text-right">Price</th><th class="text-right">Deviation</th><th>Used in markets</th></tr></thead><tbody>';
+                '<div class="dashboard-table-scroll" tabindex="0" role="region" aria-label="USG evidence table"><table class="data-table"><thead><tr><th>Token</th><th class="text-right">Price</th><th class="text-right">Deviation</th><th>Used in markets</th></tr></thead><tbody>';
             pegged.forEach(function(e) {
                 var st = CommonRenderer.pegStatusClass(e.deviation_pct);
                 var emphasis = e.symbol === 'reUSD' ? ' <span class="tag" style="background:#fef2f2;color:#dc2626">cascade-sensitive</span>' : '';
@@ -334,7 +334,7 @@ var USGRenderer = {
                     '<td class="text-right font-mono text-slate-400" title="yield-bearing wrapper, not a $1 peg — price drifts up with accrued yield">n/a</td>' +
                     '<td class="text-xs text-slate-500">' + (e.in_markets || []).join(', ') + '</td></tr>';
             });
-            html += '</tbody></table>' +
+            html += '</tbody></table></div>' +
                 '<p class="text-xs text-slate-400 mt-2">sDOLA and scrvUSD are yield-bearing wrappers — their price sits above $1 by accrued yield, which is not a depeg. reUSD (Resupply) is the most cascade-sensitive leg: a recursive-CDP stablecoin reached via two markets.</p></div>';
         }
 
@@ -377,7 +377,7 @@ var USGRenderer = {
                     '<p class="text-xs text-slate-500 mb-2">Neither keeper holds debt, so defense capacity is $0 on both pools. ' +
                     'The stables below are LP capital in the same pools — what a USG seller can exit into, ' +
                     'not something the protocol can deploy.</p>') +
-                '<table class="data-table"><thead><tr><th>Pool</th>' +
+                '<div class="dashboard-table-scroll" tabindex="0" role="region" aria-label="USG evidence table"><table class="data-table"><thead><tr><th>Pool</th>' +
                     (anyDefense ? '<th class="text-right">Defense capacity</th>' : '') +
                     '<th class="text-right">' + stablesLabel + '</th><th class="text-right">USG</th><th class="text-right">USG %</th><th class="text-right">USG price</th></tr></thead><tbody>';
             var tStable = 0, tUsg = 0;
@@ -397,7 +397,7 @@ var USGRenderer = {
                 '<td class="text-right font-mono">' + CommonRenderer.formatCurrency(tStable) + '</td>' +
                 '<td class="text-right font-mono text-slate-400">' + CommonRenderer.formatCurrency(tUsg) + '</td>' +
                 '<td class="text-right font-mono">' + CommonRenderer.formatPercent(worstShare, 0) + ' worst</td><td></td></tr>' +
-                '</tbody></table></div>';
+                '</tbody></table></div></div>';
         }
 
         container.innerHTML = html;

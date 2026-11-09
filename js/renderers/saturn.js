@@ -354,7 +354,9 @@ var SaturnRenderer = {
 
         html += head(3, 'Liquidity & Exit', 'exit depth, venue spread and slippage');
         html += SaturnRenderer._axisRationaleSlot('liquidity',slug);
-        html += anc('panel-liquidity', SaturnRenderer._renderLiquidityPanel(specific, s, slug));
+        var liquidityEvidence = typeof LiquidityEvidence !== 'undefined' ? LiquidityEvidence.legacyHtml(data) : '';
+        html += anc('panel-liquidity', SaturnRenderer._renderLiquidityPanel(specific, s, slug) +
+            (liquidityEvidence ? '<div class="panel">' + liquidityEvidence + '</div>' : ''));
         html += '<div id="saturn-exit-review" aria-live="polite"></div>';
 
         html += head(4, 'Dependencies', 'what this depends on, and what depends on it',
@@ -2044,21 +2046,21 @@ var SaturnRenderer = {
 
         // Slippage tiers
         var qm = slip[quoteKey] || {};
-        var tiers = ['1000', '10000', '100000', '500000'];
-        var hasAnyQuotes = tiers.some(function(t) { return qm[t] && (qm[t].slippage_bps != null || qm[t].out != null); });
+        var tiers = Object.keys(qm).filter(function(t) { return /^\d+(?:\.\d+)?$/.test(t); }).sort(function(a,b) { return Number(a)-Number(b); });
+        var hasAnyQuotes = tiers.length > 0;
 
         var slipBlock = '';
         if (hasAnyQuotes) {
             var rows = tiers.map(function(t) {
                 var q = qm[t] || {};
-                var sizeTxt = Number(t) >= 1000 ?
-                    '$' + (Number(t) / 1000).toFixed(0) + 'K' :
-                    '$' + t;
-                var outTxt = (q.out != null) ? '$' + Number(q.out).toLocaleString('en-US', { maximumFractionDigits: 0 }) : '—';
-                var slipBps = q.slippage_bps;
+                var sizeTxt = CommonRenderer.formatCurrencyExact(Number(t));
+                if (q.error) return '<tr><td class="font-mono text-right">' + sizeTxt + '</td><td colspan="2" class="text-amber-700">Quote failed: ' + CommonRenderer._escapeAttr(String(q.error)) + ' — not a measurement of zero liquidity</td></tr>';
+                var output = q.output_usd == null ? q.out : q.output_usd;
+                var outTxt = (typeof output === 'number') ? CommonRenderer.formatCurrencyExact(output) : '—';
+                var slipBps = typeof q.slippage_bps === 'number' ? q.slippage_bps : null;
                 var slipState = (slipBps == null) ? 'unknown' :
-                                (slipBps < 25) ? 'ok' :
-                                (slipBps < 100) ? 'warn' : 'critical';
+                                (Math.abs(slipBps) < 25) ? 'ok' :
+                                (Math.abs(slipBps) < 100) ? 'warn' : 'critical';
                 var slipCls = slipState === 'ok' ? 'text-green-600' :
                               slipState === 'warn' ? 'text-amber-600' :
                               slipState === 'critical' ? 'text-red-600' : 'text-slate-500';
@@ -2073,10 +2075,11 @@ var SaturnRenderer = {
             slipBlock =
                 '<div class="mt-6">' +
                     '<div class="text-sm font-semibold text-slate-700 mb-2">Slippage tiers — ' + pairLabel + '</div>' +
-                    '<table class="data-table">' +
-                        '<thead><tr><th class="text-right">Size</th><th class="text-right">Output</th><th class="text-right">Slippage</th></tr></thead>' +
+                    '<div class="dashboard-table-scroll" tabindex="0" role="region" aria-label="Saturn quote observations"><table class="data-table" data-saturn-rungs>' +
+                        '<thead><tr><th class="text-right">Size</th><th class="text-right">Output (publisher USD mark)</th><th class="text-right">Published cost</th></tr></thead>' +
                         '<tbody>' + rows + '</tbody>' +
-                    '</table>' +
+                    '</table></div>' +
+                    '<p class="text-xs text-slate-500 mt-2">Read the producer’s cost convention and clock metadata below. Quoted output does not establish a settled cash exit.</p>' +
                 '</div>';
         }
 
