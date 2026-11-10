@@ -7,25 +7,30 @@
     "peg_mechanism_score": 7.0,
     "peg_mechanism_score_source": "riskAnalyst:authored",
     "peg_mechanism_score_generated_at": "2026-09-14T00:00:00Z",
-    "peg_mechanism_score_basis": "MEASURES THE PEG MECHANISM UNDER STRESS, NOT THE CURRENT PRICE BAND. BOLD has a permissionless redemption floor and a mint-at-par ceiling, with no discretionary peg-defense treasury. The observed low on the live deployment sat near the mechanically implied spot redemption floor, but redemptions were dormant in the assessed window, so the mechanism remains untested at scale. Coinspect BOLD-05 — a single oracle failure potentially halting redemptions across all branches — remained unverified as remediated. This basis does not override computed price measurements or bands. Identity: live BOLD is 0x6440f144b7e50D6a8439336510312d2F54beB01D; legacy `Bold` is a different contract."
+    "peg_mechanism_score_basis": "Held at 7.0. Collateral redemption with size-dependent fees supports the peg; it is not a guaranteed cash-dollar floor. Current aggregate mark and fee views retain separate clocks. No refreshed long-window peg or executed redemption assurance."
   },
   "backing": {
     "backing_score": 7.5,
     "backing_score_source": "riskAnalyst:authored",
     "backing_score_generated_at": "2026-09-14T00:00:00Z",
-    "backing_score_basis": "MEASURES BACKING QUALITY, CONCENTRATION AND VERIFIABILITY, NOT A LIVE COLLATERAL-RATIO BAND. Every live BOLD is attributable to debt in one of three ETH-beta branches, and supply reconciled to summed branch debt within 0.0030% on 2026-09-14. There are no off-chain reserves requiring attestation. The score is held below the top tier because WETH, wstETH and rETH are one correlated asset class, with Lido and Rocket Pool risks passing through. Current backing, collateral ratio, branch balances and Stability Pool coverage remain live measurements; this basis does not freeze them as timeless claims."
+    "backing_score_basis": "Held provisionally at 7.5. Inspectable, correlated ETH collateral and debt remain strengths. The sequential-latest 212.67% accounting-model ratio is not an exact liquidation CR; original source age and round validity are unknown. The largest branch has 31.54% Stability Pool/debt coverage. No current borrower liquidation distribution was assessed."
   },
   "liquidity": {
     "liquidity_score": 5.5,
     "liquidity_score_source": "riskAnalyst:authored",
     "liquidity_score_generated_at": "2026-09-14T00:00:00Z",
-    "liquidity_score_basis": "MEASURES EXECUTABLE EXIT BY SIZE, NOT AGGREGATE DEX TVL OR SHARE OF SUPPLY. The 2026-09-14 ladder found strong small and seven-figure execution, a located 2% crossing near $4.32M under the total convention, and a router ceiling near $4.9M that becomes non-monotonic above roughly $8M input. Permissionless redemption is always open and un-gateable but was more expensive than the AMM throughout the AMM-served range; at larger size it bounds entrapment rather than providing a cheap exit. The 5.5 is a rebase onto the ladder instrument, not a claim that liquidity improved: the like-for-like three-venue ceiling fell about 34% while supply grew 14.9%. The live ladder and bands remain the authoritative measurements."
+    "liquidity_score_basis": "Held at 5.5. November 9 quotes locate a 50-bps baseline-adjusted impact interval at $4,093,750\u2013$4,128,906.25. The 200-bps $1m\u2013$10m interval is unresolved/nonmonotonic. Adjusted impact excludes the $1,000 baseline standing cost of 15.05 bps. September used a $100 baseline, preventing a like-for-like trend. Primary fee views do not establish executed cash redemption."
   },
   "dependencies": {
     "underlying_score": 7.0,
     "underlying_score_source": "riskAnalyst:authored",
     "underlying_score_generated_at": "2026-09-14T00:00:00Z",
-    "underlying_score_basis": "MEASURES THE LENGTH, CONCENTRATION AND FAILURE MODES OF THE UPSTREAM CHAIN. The collateral set is permanently closed to WETH, wstETH and rETH; the set cannot silently acquire a new counterparty. The main dependencies are Chainlink push feeds, Lido for wstETH, Rocket Pool for rETH and ETH itself. Oracle addresses and staleness thresholds are constructor-fixed, but a failed feed permanently retires a branch rather than degrading to a fallback. The detailed dependency entries are published separately in bold_dependencies.json."
+    "underlying_score_basis": "Held at 7.0. ETH, LST and Chainlink concentration remains. wstETH liquidation uses stETH/USD times canonical rate; rETH uses ETH/USD times min(market, canonical). Invalid inputs can trigger irreversible shutdown and stored last-good or downward-bounded canonical fallback. External feed governance and voter majority cost remain unmeasured."
   },
-  "routing_note": "Axis 5's 8.5 score and code/audit basis are routed through the contract overlay, complementing the completed authority walk. Axis 6's 8.0 editorial score is deliberately omitted from this score-only envelope under the current editorial-axis routing rule; the issuer overlay publishes the conclusion and attributed facts without smuggling issuer prose through this envelope."
+  "routing_note": "Axis 5's 8.5 score and code/audit basis are routed through the contract overlay, complementing the completed authority walk. Axis 6's 8.0 editorial score is deliberately omitted from this score-only envelope under the current editorial-axis routing rule; the issuer overlay publishes the conclusion and attributed facts without smuggling issuer prose through this envelope.",
+  "assessment_version": "bold-targeted-six-axis-2026-11-11-v1",
+  "selected_evidence_version": "sha256:fcd0016ee3ef904d103f0bbcea036b7d1e8ffb524f672d25de2904a60d5601d9",
+  "assessment_reviewed": "2026-11-11",
+  "canonical_project": "liquity",
+  "canonical_component": "bold"
 }
