@@ -1,0 +1,87 @@
+{
+  "contract_version": 1,
+  "adoption": "BM opt-in setup accepted; evidence acceptance remains pending",
+  "checked_at": "2026-11-10T07:24:29.158104+00:00",
+  "working_directory": "/home/danger/backing-monitor",
+  "files": {
+    "contract": {
+      "path": "/home/danger/riskAnalyst/specs/shared-handoff-contract.md",
+      "sha256": "90acaa6240f9e9a8d7c02bb327fe1502634c0b84006540ce043d2f35f1ff2911"
+    },
+    "manifest": {
+      "path": "/home/danger/riskAnalyst/examples/handoffs/example-request.json",
+      "sha256": "cec181b9c1d98f02f7a725a052cf0f4fe6a1b96fd922b3474a1ba1a627b6d341"
+    },
+    "checker": {
+      "path": "/home/danger/riskAnalyst/scripts/check_task.py",
+      "sha256": "6ee5a38d8de3ca8fcadc4b5aa2819515ef9a596bc781f7236645e1a552ab65d4"
+    },
+    "schema": {
+      "path": "/home/danger/riskAnalyst/specs/contracts/shared-handoff-v1.schema.json",
+      "sha256": "c5ddb5828997ac374362ee8b37a04e26c022ffa552f3f95f9005db94ab2e32e4"
+    }
+  },
+  "command": [
+    "python3",
+    "/home/danger/riskAnalyst/scripts/check_task.py",
+    "/home/danger/riskAnalyst/examples/handoffs/example-request.json",
+    "--json"
+  ],
+  "expected_exit_code": 2,
+  "actual_exit_code": 2,
+  "checker_result": {
+    "manifest": "/home/danger/riskAnalyst/examples/handoffs/example-request.json",
+    "exit_code": 2,
+    "checks": [
+      {
+        "status": "PASS",
+        "check": "contract",
+        "detail": "Shared handoff v1 structure"
+      },
+      {
+        "status": "PASS",
+        "check": "authority",
+        "detail": "Scope consistent; authorization reference is not independently verified"
+      },
+      {
+        "status": "PASS",
+        "check": "evidence",
+        "detail": "Artifact hash and declared scope match (contents not identity-certified)"
+      },
+      {
+        "status": "PASS",
+        "check": "component_identity",
+        "detail": "JSON values match"
+      },
+      {
+        "status": "PASS",
+        "check": "chain_identity",
+        "detail": "JSON values match"
+      },
+      {
+        "status": "WAIT",
+        "check": "evidence_acceptance",
+        "detail": "Human review pending"
+      },
+      {
+        "status": "GAP",
+        "check": "delinquency",
+        "detail": "Loan delinquency unavailable; null is not zero; reopen: Producer supplies loan performance evidence"
+      },
+      {
+        "status": "WAIT",
+        "check": "workflow",
+        "detail": "Request is not a completed evidence handoff"
+      }
+    ]
+  },
+  "stderr": "",
+  "jsonschema_version": "4.21.1",
+  "checker_and_schema_reused_without_copy": true,
+  "pinned_files_unchanged_during_check": true,
+  "scope": "Synthetic example only; not financial evidence or a commissioned refresh",
+  "yuzu_evidence": "Still unresolved; no scope correction, refresh or acceptance performed",
+  "no_collectors_jobs_scores_reports_publication": true,
+  "BM_instruction": "specs/shared-handoff-contract.md",
+  "report_update_decision": "Required in participating refresh acceptance receipts; explicit required/no-change decision with rationale, not automatic publication"
+}
