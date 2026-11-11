@@ -164,6 +164,11 @@ for slug in $SLUGS; do
                 echo "$(date): SYNC_COLLISION ${slug}${suf}.json in both $found and $root — using $root" >&2
             fi
             case "${slug}${suf}" in
+                syrupusdc_backing|syrupusdt_backing)
+                    if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/copy_syrup_backing.py "$src" "data/${slug}${suf}.json"; then
+                        echo "$(date): ERROR Syrup qualified transport failed; retaining prior consumer snapshot" >&2
+                        continue
+                    fi ;;
                 usdai_issuer|susdai_issuer|usdai_axis_basis|susdai_axis_basis|usds_issuer|susds_issuer|usds_axis_basis|susds_axis_basis)
                     if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/copy_public_axis_overlay.py "$src" "data/${slug}${suf}.json"; then
                         echo "ERROR public overlay transport failed: $src" >&2

@@ -470,7 +470,10 @@ var SyrupUSDCRenderer = {
         data.summary.surplus_deficit = null;
         data.backing.surplus_deficit_basis = 'Accounting reconciliation only; no independent collateral surplus or recovery value is established.';
         data.summary.surplus_deficit_basis = data.backing.surplus_deficit_basis;
-        data.backing.coverage_display_label = 'Independent backing unverified';
+        var reportedNav = (specific.vault_state || {}).total_assets;
+        data.backing.coverage_display_label = typeof reportedNav === 'number' && isFinite(reportedNav)
+            ? 'Reported NAV ' + CommonRenderer.formatCurrency(reportedNav)
+            : 'Reported NAV unavailable';
         data.backing.collateral_ratio_basis = 'Pool NAV is reported accounting value, not independently verified collateral or recoverable cash. Missing collateral valuations and uncorroborated below-par readings remain unresolved. Pool cash, strategy claims and loan principal have separate accounting perimeters.';
         specific.card_overrides = specific.card_overrides || {};
         specific.card_overrides['Surplus / Deficit'] = { hidden: true };
@@ -650,12 +653,32 @@ var SyrupUSDCRenderer = {
         if (!specific || (specific.type !== 'syrupusdc' && specific.type !== 'syrupusdt')) return;
 
         this._suppressCommonPanels(data);
+        // The backing headline is authored, while NAV and cash are measured.
+        // Keep the compact band description consistent with its displayed chips.
+        var bandNote = document.querySelector('#summary-cards .axis-band-note');
+        if (bandNote && (data.backing || {}).backing_score_display === 'authored') {
+            var reportLink = bandNote.querySelector('a');
+            bandNote.textContent = 'Measured: market versus NAV and pool cash. Authored: Backing, Dependencies, Smart Contract & Admin and Issuer. Reported NAV is accounting value; independent collateral valuation remains incomplete. ';
+            if (reportLink) bandNote.appendChild(reportLink);
+        }
+        document.querySelectorAll('#summary-cards .summary-card').forEach(function(card) {
+            var label = card.querySelector('.card-label');
+            var value = card.querySelector('.card-value');
+            if (label && label.textContent.trim() === 'Liquidity & Exit' && value && value.nextElementSibling) {
+                value.innerHTML = SyrupUSDCRenderer._liquidityTileHtml(data);
+                value.nextElementSibling.textContent = 'Cash and DEX depth are separate exit paths; gates and quote limits apply.';
+                var cashBand = card.querySelector('.axis-rating');
+                if (cashBand && cashBand.textContent.indexOf('Cash band') !== 0) {
+                    cashBand.insertAdjacentText('afterbegin', 'Cash band · ');
+                }
+            }
+        });
         // Scope layout containment to this family; wide data tables scroll
         // inside their panels rather than widening the mobile document.
         if (!document.getElementById('syrup-layout-style')) {
             var style = document.createElement('style');
             style.id = 'syrup-layout-style';
-            style.textContent = 'body:has(#syrup-layout-marker) .axis-section,body:has(#syrup-layout-marker) .panel,body:has(#syrup-layout-marker) .grid>*,body:has(#syrup-layout-marker) .flex>*{min-width:0}body:has(#syrup-layout-marker) .axis-section{overflow-wrap:anywhere}body:has(#syrup-layout-marker) .table-container,body:has(#syrup-layout-marker) .overflow-x-auto{max-width:100%;overflow-x:auto}body:has(#syrup-layout-marker) .overflow-x-auto>.data-table{min-width:600px}@media(max-width:600px){#syrup-authored-review table.data-table{min-width:0!important}#syrup-authored-review table,#syrup-authored-review tbody,#syrup-authored-review tr,#syrup-authored-review td{display:block;min-width:0;width:100%}#syrup-authored-review thead{display:none}#syrup-authored-review tr{padding:12px 0;border-bottom:1px solid #cbd5e1}#syrup-authored-review td{padding:4px 0;border:0}#syrup-authored-review td:first-child{font-weight:600}#syrup-authored-review td:nth-child(2):before{content:"Authored /10: "}#syrup-authored-review{overflow-wrap:break-word}}body.dark:has(#syrup-layout-marker) .page-header a,body.dark:has(#syrup-layout-marker) #theme-toggle{color:#e2e8f0!important}body.dark:has(#syrup-layout-marker) #header-subtitle{color:#cbd5e1!important}';
+            style.textContent = 'body:has(#syrup-layout-marker) .axis-section,body:has(#syrup-layout-marker) .panel,body:has(#syrup-layout-marker) .grid>*,body:has(#syrup-layout-marker) .flex>*{min-width:0}body:has(#syrup-layout-marker) .axis-section{overflow-wrap:anywhere}body:has(#syrup-layout-marker) .table-container,body:has(#syrup-layout-marker) .overflow-x-auto{max-width:100%;overflow-x:auto}body:has(#syrup-layout-marker) .overflow-x-auto>.data-table{min-width:600px}@media(max-width:600px){#syrup-authored-review table.data-table{min-width:0!important}#syrup-authored-review table,#syrup-authored-review tbody,#syrup-authored-review tr,#syrup-authored-review td{display:block;min-width:0;width:100%}#syrup-authored-review thead{display:none}#syrup-authored-review tr{padding:12px 0;border-bottom:1px solid #cbd5e1}#syrup-authored-review td{padding:4px 0;border:0}#syrup-authored-review td:first-child{font-weight:600}#syrup-authored-review td:nth-child(2):before{content:"Authored /10: "}#syrup-authored-review{overflow-wrap:break-word}}body.dark:has(#syrup-layout-marker) .page-header a,body.dark:has(#syrup-layout-marker) #theme-toggle{color:#e2e8f0!important}body.dark:has(#syrup-layout-marker) #header-subtitle{color:#cbd5e1!important}body.dark:has(#syrup-layout-marker) #summary-cards .card-value>span.text-slate-500{color:#e2e8f0!important}';
             document.head.appendChild(style);
         }
 
@@ -689,6 +712,7 @@ var SyrupUSDCRenderer = {
         }
         if (contractSlot) {
             contractSlot.innerHTML =
+                '<div class="risk-flag risk-warning mb-3">Authority graph and audit observations retain their original dates. The authored assessment refresh does not renew the underlying graph, enumerate all role holders or certify a complete current authority review.</div>' +
                 this._renderTrustStack(specific) +
                 this._renderMultiChain(specific, data.asset_slug);
         }
@@ -1472,6 +1496,53 @@ var SyrupUSDCRenderer = {
         });
     },
 
+    _liquidityTileHtml: function(data) {
+        var liq = data.liquidity || {};
+        var esc = CommonRenderer._escapeAttr.bind(CommonRenderer);
+        var cash = typeof liq.free_liquidity_pct === 'number' && isFinite(liq.free_liquidity_pct)
+            ? liq.free_liquidity_pct.toFixed(1) + '% pool cash' : 'Pool cash unavailable';
+        var mark = liq.exit_mark || {};
+        var depth = mark.depth || {};
+        var pool = ((data.asset_specific || {}).vault_state || {}).pool;
+        var exact = pool && typeof mark.token_address === 'string' &&
+            mark.token_address.toLowerCase() === pool.toLowerCase() &&
+            String(mark.chain || '').toLowerCase() === 'ethereum';
+        var preferred = CommonRenderer.DEPTH_HEADLINE_BPS;
+        // Read a producer-published crossing/floor at the standard threshold.
+        // A source publishing only 2% must never silently become 0.5% depth.
+        var reading = exact ? CommonRenderer._publishedDepthAt(depth, preferred) : null;
+        if (!reading && exact && depth.primary_threshold_bps === 200 &&
+            typeof depth.total_2pct_depth === 'number' && isFinite(depth.total_2pct_depth)) {
+            var status = depth.two_pct_depth_status;
+            reading = { bps: 200, value: depth.total_2pct_depth,
+                shape: depth.two_pct_depth_size_responsive === false || status === 'not_size_responsive'
+                    ? 'capacity' : depth.total_2pct_depth_is_floor === true || status === 'ladder_exhausted'
+                        ? 'floor' : status === 'bracketed' ? 'unresolved_bracket' : 'measured' };
+        }
+        var html = '<div class="syrup-cash-metric">' + esc(cash) + '</div>';
+        var valid = reading && typeof reading.value === 'number' && isFinite(reading.value) && reading.value >= 0;
+        var unavailable = !valid || reading.shape === 'capacity' || reading.shape === 'unresolved_bracket' ||
+            depth.two_pct_depth_size_responsive === false || depth.two_pct_depth_status === 'not_size_responsive';
+        var value = 'Unmeasured';
+        var qualifier = 'No supported sized-depth result';
+        if (!unavailable) {
+            value = CommonRenderer.formatCurrency(reading.value);
+            qualifier = (reading.bps / 100) + '% price impact';
+            if (reading.shape === 'floor') { value = '≥' + value; qualifier += ' · tested floor'; }
+            else if (reading.shape === 'bracket' && Array.isArray(reading.bracket)) {
+                value += '–' + CommonRenderer.formatCurrency(reading.bracket[1]);
+                qualifier += ' · bracket';
+            } else if (reading.shape === 'below_probe') { value = '<' + value; qualifier += ' · below probe'; }
+            if (mark.status === 'partial' || Object.keys(mark.failed_rungs || {}).length) qualifier += ' · partial ladder';
+        }
+        html += '<div class="syrup-dex-metric mt-3" style="font-size:1rem;line-height:1.4">Ethereum DEX ' + esc(value) + '</div>' +
+            '<div class="syrup-depth-basis" style="font-size:.7rem;font-weight:400;line-height:1.4">' + esc(qualifier) + '</div>';
+        var clock = typeof mark.timestamp === 'string' && isFinite(Date.parse(mark.timestamp))
+            ? new Date(mark.timestamp).toISOString().replace('T', ' ').replace('.000Z', ' UTC') : 'time unavailable';
+        html += '<div class="syrup-depth-clock mt-1" style="font-size:.7rem;font-weight:400;line-height:1.4">Quote ' + esc(clock) + '</div>';
+        return html;
+    },
+
     _renderAuthoredReview: function(data) {
         var envelope = CommonRenderer.FAMILY_ENVELOPE || {};
         if (envelope.asset !== data.asset_slug || !envelope.assessment_version) return '';
@@ -1489,7 +1560,7 @@ var SyrupUSDCRenderer = {
         var pin = clocks.pool_accounting || {};
         var loan = clocks.loan_financial || {};
         var candidate = data.candidate_context || {};
-        var current = candidate.accounting_context || {};
+        var current = candidate.accounting_context || ((data.asset_specific || {}).vault_state || {}).accounting_context || {};
         var currentAt = current.timestamp ? new Date(current.timestamp * 1000).toISOString() : null;
         return '<div class="panel mb-4" id="syrup-authored-review"><div class="panel-header"><span class="panel-title">RiskAnalyst assessment · provisional</span></div>' +
             '<div class="text-sm mb-3">Ethereum pool only. Authored scores below remain separate from the live computed bands shown elsewhere. Remote representations were not reassessed.</div>' +
@@ -1504,8 +1575,8 @@ var SyrupUSDCRenderer = {
             '<div class="text-xs text-slate-500 mt-3">Assessment: ' + esc(envelope.assessment_version) +
             ' · evidence: ' + esc(envelope.selected_evidence_version || 'Unavailable') +
             '<br>Assessment accounting block: ' + esc(String(pin.block || 'Unavailable')) + ' · observed ' + esc(pin.at || 'Unavailable') +
-            (current.block ? '<br>Staged accounting block: ' + esc(String(current.block)) + ' · observed ' + esc(currentAt || 'Unavailable') + ' · offline build; loans and market sources were not refreshed' : '') +
-            '<br>Loan snapshot assembled: ' + esc(candidate.retained_loan_snapshot_timestamp || loan.producer_assembly || 'Unavailable') +
+            (current.block ? '<br>Pool accounting block: ' + esc(String(current.block)) + ' · observed ' + esc(currentAt || 'Unavailable') + ' · other source observation dates remain separate' : '') +
+            '<br>Assessment loan snapshot: ' + esc(candidate.retained_source_timestamp || candidate.retained_loan_snapshot_timestamp || loan.producer_assembly || 'Unavailable') +
             ' · underlying source clocks remain distinct; this is not a new full verification.</div></div>';
     },
 
@@ -2545,7 +2616,9 @@ var SyrupUSDCRenderer = {
     _collateralUncorroborated: function(loan, poolUL) {
         var c = loan && loan.collateral;
         if (!c) return false;
-        if (c.valuation_coverage_status) return c.valuation_coverage_status !== 'independently_verified';
+        // This helper qualifies below-par source readings, not all unverified collateral.
+        if (c.valuation_coverage_status) return c.current_level_pct != null &&
+            c.current_level_pct < 100 && c.valuation_coverage_status !== 'independently_verified';
         if (typeof c.read_corroborated === 'boolean') return c.read_corroborated === false;
         // ---- fallback: pre-2026-09-14 payloads with no stamped verdict ----
         if (c.current_level_pct == null) return false;

@@ -14,7 +14,7 @@ for (const slug of ['syrupusdc','syrupusdt']) {
  assert.match(d.backing.collateral_ratio_basis,/not independently verified/);
 }
 // A protocol-flag concurrence does not independently corroborate collateral.
-assert.equal(ctx.syrup._collateralUncorroborated({is_in_default:true,collateral:{valuation_coverage_status:'source_model_only',read_corroborated:null}},1),true);
+assert.equal(ctx.syrup._collateralUncorroborated({is_in_default:true,collateral:{current_level_pct:50,valuation_coverage_status:'source_model_only',read_corroborated:null}},1),true);
 assert.doesNotMatch(ctx.syrup._statusEmoji('healthy'),/🟢/);
 assert.match(ctx.syrup._statusEmoji('healthy'),/payment receipt.*unverified/);
 console.log('PASS Syrup accounting identities and protocol flags do not establish independent backing or servicing.');
