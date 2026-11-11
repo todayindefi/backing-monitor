@@ -149,7 +149,7 @@ var SyrupUSDCRenderer = {
 
     _statusEmoji: function(status) {
         var s = (status || '').toLowerCase();
-        if (s === 'healthy' || s === 'active') return '🟢';
+        if (s === 'healthy' || s === 'active') return '<span title="No reported impairment, call or default; payment receipt and collateral custody unverified">○</span>';
         if (s === 'impaired') return '🟡';
         if (s === 'called') return '🟠';
         if (s === 'default' || s === 'defaulted') return '🔴';
@@ -459,6 +459,23 @@ var SyrupUSDCRenderer = {
     preRender: function(data) {
         var specific = data.asset_specific || {};
         if (specific.type !== 'syrupusdc' && specific.type !== 'syrupusdt') return;
+        // Pool accounting identity is not independent collateral coverage.
+        // Keep raw accounting and pool-specific claims in vault_state, without
+        // turning a NAV identity or reader residual into a solvency claim.
+        data.backing = data.backing || {};
+        data.summary = data.summary || {};
+        data.backing.collateral_ratio = null;
+        data.summary.collateral_ratio = null;
+        data.backing.surplus_deficit = null;
+        data.summary.surplus_deficit = null;
+        data.backing.surplus_deficit_basis = 'Accounting reconciliation only; no independent collateral surplus or recovery value is established.';
+        data.summary.surplus_deficit_basis = data.backing.surplus_deficit_basis;
+        data.backing.coverage_display_label = 'Independent backing unverified';
+        data.backing.collateral_ratio_basis = 'Pool NAV is reported accounting value, not independently verified collateral or recoverable cash. Missing collateral valuations and uncorroborated below-par readings remain unresolved. Pool cash, strategy claims and loan principal have separate accounting perimeters.';
+        specific.card_overrides = specific.card_overrides || {};
+        specific.card_overrides['Surplus / Deficit'] = { hidden: true };
+        specific.card_overrides['Total Backing'] = { label: 'Reported pool NAV', subtext: 'Accounting assets; independent credit valuation incomplete' };
+        specific.card_overrides['Collateral Ratio'] = { label: 'Independent backing', value: 'Unverified', cls: '', subtext: 'Accounting equality does not establish collateral recovery' };
         var lb = specific.loan_book || {};
         var cs = lb.collateral_summary || {};
         var poolCR = cs.pool_collateral_ratio_pct;
@@ -500,7 +517,7 @@ var SyrupUSDCRenderer = {
         specific.card_overrides['Collateral Ratio'] = {
             label: 'Pool Collateral Ratio',
             value: CommonRenderer.formatPercent(poolCR, 2),
-            subtext: 'Weighted-avg init-level coverage across active loans',
+            subtext: 'Initial contractual levels, not current independently verified collateral',
             cls: cls,
             prefix_html: bannerHtml,
             extra_html: pillHtml
@@ -633,6 +650,14 @@ var SyrupUSDCRenderer = {
         if (!specific || (specific.type !== 'syrupusdc' && specific.type !== 'syrupusdt')) return;
 
         this._suppressCommonPanels(data);
+        // Scope layout containment to this family; wide data tables scroll
+        // inside their panels rather than widening the mobile document.
+        if (!document.getElementById('syrup-layout-style')) {
+            var style = document.createElement('style');
+            style.id = 'syrup-layout-style';
+            style.textContent = 'body:has(#syrup-layout-marker) .axis-section,body:has(#syrup-layout-marker) .panel,body:has(#syrup-layout-marker) .grid>*,body:has(#syrup-layout-marker) .flex>*{min-width:0}body:has(#syrup-layout-marker) .axis-section{overflow-wrap:anywhere}body:has(#syrup-layout-marker) .table-container,body:has(#syrup-layout-marker) .overflow-x-auto{max-width:100%;overflow-x:auto}body:has(#syrup-layout-marker) .overflow-x-auto>.data-table{min-width:600px}@media(max-width:600px){#syrup-authored-review table.data-table{min-width:0!important}#syrup-authored-review table,#syrup-authored-review tbody,#syrup-authored-review tr,#syrup-authored-review td{display:block;min-width:0;width:100%}#syrup-authored-review thead{display:none}#syrup-authored-review tr{padding:12px 0;border-bottom:1px solid #cbd5e1}#syrup-authored-review td{padding:4px 0;border:0}#syrup-authored-review td:first-child{font-weight:600}#syrup-authored-review td:nth-child(2):before{content:"Authored /10: "}#syrup-authored-review{overflow-wrap:break-word}}body.dark:has(#syrup-layout-marker) .page-header a,body.dark:has(#syrup-layout-marker) #theme-toggle{color:#e2e8f0!important}body.dark:has(#syrup-layout-marker) #header-subtitle{color:#cbd5e1!important}';
+            document.head.appendChild(style);
+        }
 
         var s = data.summary;
         // The legacy dump must stay empty. Populate only the canonical axis slots.
@@ -643,7 +668,9 @@ var SyrupUSDCRenderer = {
         var contractSlot = document.getElementById('contract-extra-panels');
 
         if (backingSlot) {
-            backingSlot.innerHTML =
+            backingSlot.innerHTML = '<span id="syrup-layout-marker" hidden></span>' +
+                this._renderAuthoredReview(data) +
+                '<div class="risk-flag risk-warning mb-3">Reported pool NAV is an accounting measure. Independent collateral valuation, custody allocation and actual loan servicing remain incomplete; no reported default does not prove payment or full backing.</div>' +
                 this._renderBacking(specific, s, data.asset_slug, data.backing) +
                 this._renderLoanBookHealth(specific) +
                 this._renderStrategySlots(specific, data.asset_slug) +
@@ -1445,6 +1472,43 @@ var SyrupUSDCRenderer = {
         });
     },
 
+    _renderAuthoredReview: function(data) {
+        var envelope = CommonRenderer.FAMILY_ENVELOPE || {};
+        if (envelope.asset !== data.asset_slug || !envelope.assessment_version) return '';
+        var esc = CommonRenderer._escapeAttr.bind(CommonRenderer);
+        var rows = [
+            ['Peg', envelope.peg, 'volatility_score'],
+            ['Backing', envelope.backing, 'backing_score'],
+            ['Liquidity', envelope.liquidity, 'liquidity_score'],
+            ['Dependencies', envelope.dependencies, 'underlying_score'],
+            ['Contract & admin', data.contract, 'structural_score'],
+            ['Issuer', envelope.issuer, 'issuer_score'],
+            ['Overall', envelope.overall, 'overall_score']
+        ];
+        var clocks = envelope.source_clocks || {};
+        var pin = clocks.pool_accounting || {};
+        var loan = clocks.loan_financial || {};
+        var candidate = data.candidate_context || {};
+        var current = candidate.accounting_context || {};
+        var currentAt = current.timestamp ? new Date(current.timestamp * 1000).toISOString() : null;
+        return '<div class="panel mb-4" id="syrup-authored-review"><div class="panel-header"><span class="panel-title">RiskAnalyst assessment · provisional</span></div>' +
+            '<div class="text-sm mb-3">Ethereum pool only. Authored scores below remain separate from the live computed bands shown elsewhere. Remote representations were not reassessed.</div>' +
+            '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Axis</th><th>Authored /10</th><th>Assessment basis</th></tr></thead><tbody>' +
+            rows.map(function(row) {
+                var block = row[1] || {};
+                var value = block[row[2]];
+                return '<tr><td>' + esc(row[0]) + '</td><td data-authored-field="' + row[2] + '">' +
+                    (typeof value === 'number' ? esc(String(value)) : 'Unavailable') + '</td><td><details><summary class="cursor-pointer">Basis</summary>' +
+                    esc(block[row[2] + '_basis'] || block.basis || 'See the axis-specific authored explanation; no new rationale inferred.') + '</details></td></tr>';
+            }).join('') + '</tbody></table></div>' +
+            '<div class="text-xs text-slate-500 mt-3">Assessment: ' + esc(envelope.assessment_version) +
+            ' · evidence: ' + esc(envelope.selected_evidence_version || 'Unavailable') +
+            '<br>Assessment accounting block: ' + esc(String(pin.block || 'Unavailable')) + ' · observed ' + esc(pin.at || 'Unavailable') +
+            (current.block ? '<br>Staged accounting block: ' + esc(String(current.block)) + ' · observed ' + esc(currentAt || 'Unavailable') + ' · offline build; loans and market sources were not refreshed' : '') +
+            '<br>Loan snapshot assembled: ' + esc(candidate.retained_loan_snapshot_timestamp || loan.producer_assembly || 'Unavailable') +
+            ' · underlying source clocks remain distinct; this is not a new full verification.</div></div>';
+    },
+
     // ----- §1 Backing -----------------------------------------------------
     _renderBacking: function(specific, s, slug, backing) {
         var v = specific.vault_state || {};
@@ -2040,7 +2104,7 @@ var SyrupUSDCRenderer = {
                 'pool CR (loans-only) <span class="font-mono">' + poolCRText + '</span>' +
             '</div>' +
             '<div class="text-sm text-slate-600 flex flex-wrap gap-x-4 gap-y-1">' +
-                statusPill('Healthy', healthy, 'text-green-600') +
+                statusPill('No reported adverse flag', healthy, 'text-slate-600') +
                 '<span class="text-slate-300">·</span>' +
                 statusPill('Impaired', imp, 'text-amber-600') +
                 '<span class="text-slate-300">·</span>' +
@@ -2481,6 +2545,7 @@ var SyrupUSDCRenderer = {
     _collateralUncorroborated: function(loan, poolUL) {
         var c = loan && loan.collateral;
         if (!c) return false;
+        if (c.valuation_coverage_status) return c.valuation_coverage_status !== 'independently_verified';
         if (typeof c.read_corroborated === 'boolean') return c.read_corroborated === false;
         // ---- fallback: pre-2026-09-14 payloads with no stamped verdict ----
         if (c.current_level_pct == null) return false;
