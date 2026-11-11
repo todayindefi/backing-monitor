@@ -3,30 +3,37 @@
   "asset": "USDe",
   "asset_slug": "usde",
   "chain": "ethereum",
-  "timestamp": "2026-11-11T02:48:07Z",
+  "timestamp": "2026-11-11T03:48:37Z",
   "summary": {
-    "total_supply": 4953426193.774666,
+    "total_supply": 4952483625.661166,
     "supply_unit": "USDe tokens",
-    "total_backing": null,
-    "coverage_ratio": null,
-    "coverage_ratio_with_reserve_fund": null,
-    "reserve_fund_usd": null,
+    "total_backing": 4949335350.42,
+    "coverage_ratio": 0.999174,
+    "coverage_ratio_with_reserve_fund": 1.011699,
+    "reserve_fund_usd": 62039756.99,
     "nav": 1.0,
     "price": null,
     "paused": null,
     "supply_source": {
       "status": "ok",
-      "as_of": "2026-11-11T02:48:03Z",
-      "block": 26388792,
-      "block_time": "2026-11-11T02:47:47+00:00",
+      "as_of": "2026-11-11T03:48:33Z",
+      "block": 26389093,
+      "block_time": "2026-11-11T03:48:11+00:00",
       "unit": "USDe tokens",
       "scope": "Ethereum totalSupply includes adapter locked; never add bridged supplies"
     },
-    "issuer_supply_usd": null,
+    "issuer_supply_usd": 4953426193.774671,
     "coverage_denominator": "issuer_supply_usd at issuer source timestamp",
     "supply_status": "ok"
   },
   "risk_flags": [
+    {
+      "id": "coverage_below_par",
+      "severity": "warning",
+      "message": "USDe coverage 99.92% \u2014 backing below par",
+      "value": 0.999174,
+      "scope": "usde_level"
+    },
     {
       "id": "coinbase_wallet_drift",
       "severity": "warning",
@@ -45,56 +52,65 @@
     },
     "redemption_liquidity": {
       "USDe": 0.0,
-      "USDC": 30799974.8118,
+      "USDC": 31087246.734,
       "USDT": 30201419.483234,
-      "total_usd": 61001394.3
+      "total_usd": 61288666.22
     },
     "backing_source": {
-      "fetch_status": "stale",
+      "fetch_status": "ok",
       "source": "ethena_issuer",
       "definition": "ethena_issuer_status_v1",
       "source_url": "https://app.ethena.fi/api/collateralization/status",
-      "source_timestamp": "2026-11-10T12:59:22.000000Z",
-      "retrieved_at": "2026-11-11T02:47:38.446003+00:00",
+      "source_timestamp": "2026-11-11T02:59:12.000000Z",
+      "retrieved_at": "2026-11-11T03:48:08.103637+00:00",
       "source_kind": "issuer_reported",
       "independent_custody_verification": false,
       "allocation_status": "unknown",
       "coverage_ratio_24h_status": "unavailable_source_break",
-      "source_age_hours": 13.805,
+      "source_age_hours": 0.816,
+      "total_backing_usd": 4949335350.42,
+      "reserve_fund_usd": 62039756.98819576,
+      "usde_supply": 4953426193.774671,
+      "arithmetic": {
+        "status": "ok",
+        "coverage_excluding_rf": 0.9991741386275601,
+        "coverage_including_rf": 1.0116987538254538,
+        "denominator": "issuer totalTokenSupplyInUsd at source_timestamp; not execution price"
+      },
       "separate_views": {
         "composition": {
           "url": "https://app.ethena.fi/api/collateral-breakdown",
-          "retrieved_at": "2026-11-11T02:47:38.685706+00:00",
+          "retrieved_at": "2026-11-11T03:48:08.356603+00:00",
           "status": "ok",
           "source_timestamp": null,
           "scope": "separate issuer view; not a same-snapshot balance-sheet allocation"
         },
         "positions": {
           "url": "https://app.ethena.fi/api/positions/current/backing-assets",
-          "retrieved_at": "2026-11-11T02:47:38.946432+00:00",
+          "retrieved_at": "2026-11-11T03:48:08.669570+00:00",
           "status": "ok",
-          "source_timestamp": 1794319232,
+          "source_timestamp": 1794366094,
           "scope": "separate issuer view; not a same-snapshot balance-sheet allocation"
         }
       },
       "cross_view_comparison": {
-        "status": "unavailable",
+        "status": "separate_views_unreconciled",
         "views": {
           "composition": {
             "url": "https://app.ethena.fi/api/collateral-breakdown",
-            "retrieved_at": "2026-11-11T02:47:38.685706+00:00",
+            "retrieved_at": "2026-11-11T03:48:08.356603+00:00",
             "source_timestamp": null,
             "status": "observed",
-            "total_usd": 4938429797,
-            "status_backing_minus_view_usd": null
+            "total_usd": 4938403048,
+            "status_backing_minus_view_usd": 10932302.420000076
           },
           "positions": {
             "url": "https://app.ethena.fi/api/positions/current/backing-assets",
-            "retrieved_at": "2026-11-11T02:47:38.946432+00:00",
-            "source_timestamp": 1794319232,
+            "retrieved_at": "2026-11-11T03:48:08.669570+00:00",
+            "source_timestamp": 1794366094,
             "status": "observed",
-            "total_usd": 4820287813,
-            "status_backing_minus_view_usd": null
+            "total_usd": 4782578346,
+            "status_backing_minus_view_usd": 166757004.42000008
           }
         },
         "note": "Separate issuer views with potentially different scopes and clocks; differences are not a proved surplus or shortfall. Even matching totals do not verify custody."
@@ -135,14 +151,14 @@
         "0xb127f6f301de26c72a4f4b65f2f15e12fae31e0b",
         "0xa13fee3e98808fe0ab4ae86509c6a068b3d24174"
       ],
-      "embedded_age_days": 44.1,
+      "embedded_age_days": 44.2,
       "latest_slug": "custodian-attestations-of-assets-backing-usde-october-2",
       "latest_url": "https://ethena.fi/blog/custodian-attestations-of-assets-backing-usde-october-2",
       "latest_lastmod": "2026-11-05T20:42:52.000Z",
       "discovery_status": "ok",
       "latest_published_age_days": 5.3,
       "latest_content_access": {},
-      "age_days": 44.1,
+      "age_days": 44.2,
       "age_basis": "embedded_snapshot",
       "drift_status": "newer_available"
     },
@@ -164,15 +180,15 @@
       "supply_by_chain": {
         "status": "ok",
         "cadence": "hourly",
-        "as_of": "2026-11-11T02:48:03Z",
+        "as_of": "2026-11-11T03:48:33Z",
         "ethereum": {
-          "block": 26388792,
-          "block_time": "2026-11-11T02:47:47+00:00",
+          "block": 26389093,
+          "block_time": "2026-11-11T03:48:11+00:00",
           "usde": "0x4c9EDD5852cd905f086C759E8383e09bff1E68B3",
           "oft_adapter": "0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34",
-          "total_supply": 4953426193.774666,
-          "adapter_locked": 2051856113.3190274,
-          "native_circulating": 2901570080.4556384
+          "total_supply": 4952483625.661166,
+          "adapter_locked": 2051994888.4938684,
+          "native_circulating": 2900488737.167298
         },
         "supply_scope": "ethereum.total_supply INCLUDES adapter_locked. Bridged chain supplies are a split of adapter_locked: never add them to ethereum.total_supply. Total USDe = ethereum.total_supply (or native_circulating + bridged).",
         "chains": [
@@ -182,7 +198,7 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 56,
-            "block": 132890924,
+            "block": 132898987,
             "rpc": "https://bsc-dataseed.binance.org",
             "supply": 78389314.48656699
           },
@@ -192,9 +208,9 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 43114,
-            "block": 99987600,
+            "block": 99991171,
             "rpc": "https://lb.drpc.live",
-            "supply": 105983900.96351299
+            "supply": 106174369.005595
           },
           {
             "eid": 30108,
@@ -210,7 +226,7 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 42161,
-            "block": 523161892,
+            "block": 523173659,
             "rpc": "https://arb1.arbitrum.io",
             "supply": 1813338.4545079998
           },
@@ -220,7 +236,7 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 10,
-            "block": 159383251,
+            "block": 159385065,
             "rpc": "https://lb.drpc.org",
             "supply": 18915.215584
           },
@@ -231,7 +247,7 @@
             "status": "ok",
             "mint": "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
             "supply": 285432159.0375539,
-            "slot": 467961102,
+            "slot": 467977987,
             "oft_store": "4x3oQtX4MhjTKGBeXDZbtTSLZ9cUWo5waN2UChAuthtS",
             "rpc": "https://api.mainnet-beta.solana.com"
           },
@@ -241,7 +257,7 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 5000,
-            "block": 103117484,
+            "block": 103119298,
             "rpc": "https://mantle-rpc.publicnode.com",
             "supply": 65656282.084426
           },
@@ -251,7 +267,7 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 8453,
-            "block": 55874531,
+            "block": 55892680,
             "rpc": "https://lb.drpc.live",
             "supply": 371968624.956441
           },
@@ -261,7 +277,7 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 252,
-            "block": 43777285,
+            "block": 43779100,
             "rpc": "https://rpc.frax.com",
             "supply": 10569.246757
           },
@@ -271,9 +287,9 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 196,
-            "block": 75596246,
+            "block": 75599876,
             "rpc": "https://xlayer.drpc.org",
-            "supply": 31789518.365155
+            "supply": 31789518.455155
           },
           {
             "eid": 30322,
@@ -281,7 +297,7 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 2818,
-            "block": 29619433,
+            "block": 29621629,
             "rpc": "https://rpc.morphl2.io",
             "supply": 78424.5766
           },
@@ -291,7 +307,7 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 57073,
-            "block": 60866875,
+            "block": 60870504,
             "rpc": "https://rpc-gel.inkonchain.com",
             "supply": 1072.276877
           },
@@ -309,9 +325,9 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 80094,
-            "block": 28675285,
+            "block": 28677100,
             "rpc": "https://berachain-rpc.publicnode.com",
-            "supply": 11388430.491548
+            "supply": 11336737.524307001
           },
           {
             "eid": 30367,
@@ -319,7 +335,7 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 999,
-            "block": 50943589,
+            "block": 50947278,
             "rpc": "https://lb.drpc.live",
             "supply": 6507103.153143
           },
@@ -329,7 +345,7 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 9745,
-            "block": 37421915,
+            "block": 37425544,
             "rpc": "https://plasma-mainnet.g.alchemy.com",
             "supply": 506971764.80728704
           },
@@ -339,7 +355,7 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 143,
-            "block": 121204619,
+            "block": 121216596,
             "rpc": "https://rpc.monad.xyz",
             "supply": 127090052.10174799
           },
@@ -349,14 +365,14 @@
             "peer": "0x5d3a1ff2b6bab83b63cd9ad0787074081a52ef34",
             "status": "ok",
             "chain_id": 4326,
-            "block": 31568281,
+            "block": 31571911,
             "rpc": "https://mainnet.megaeth.com",
             "supply": 60380.430504
           }
         ],
-        "bridged_measured": 1593159850.648212,
-        "bridged_unattributed": 458696262.67081547,
-        "bridged_unattributed_pct": 22.355186589026495,
+        "bridged_measured": 1593298625.8130531,
+        "bridged_unattributed": 458696262.6808152,
+        "bridged_unattributed_pct": 22.353674721748014,
         "unattributed_note": "adapter_locked minus measured bridged supply: sits on the unmeasured chains listed (status != ok) or in flight. Not assigned to any chain."
       },
       "mint_redeem": {
@@ -545,12 +561,12 @@
       "fee_switch": {
         "status": "insufficient_history",
         "cadence": "daily",
-        "as_of": "2026-11-11T02:48:07.734760+00:00",
-        "window_requested_start": "2026-10-28T02:48:07.734760+00:00",
-        "window_requested_end": "2026-11-11T02:48:07.734760+00:00",
+        "as_of": "2026-11-11T03:48:38.089635+00:00",
+        "window_requested_start": "2026-10-28T03:48:38.089635+00:00",
+        "window_requested_end": "2026-11-11T03:48:38.089635+00:00",
         "window_start": "2026-10-29T07:00:29+00:00",
-        "window_end": "2026-11-11T02:48:07+00:00",
-        "points": 311,
+        "window_end": "2026-11-11T03:48:37+00:00",
+        "points": 312,
         "usde_supply_14d_ma_usd": null,
         "milestone_met": null,
         "threshold_usd": 7500000000.0,
@@ -558,7 +574,7 @@
         "max_supported_gap_hours": 6,
         "note": "sample mean, not governance activation or independent custody assurance",
         "invalid_points": 0,
-        "source_age_hours": 0.0002041,
+        "source_age_hours": 0.00030267638888888885,
         "reason": "14-day coverage has gaps exceeding six hours"
       },
       "price_distribution": {
@@ -659,7 +675,7 @@
       },
       "daily_computed_at": "2026-11-10T19:05:02Z",
       "daily_status": "ok",
-      "daily_age_hours": 7.72,
+      "daily_age_hours": 8.73,
       "cadence_map": {
         "hourly": [
           "supply_by_chain"
@@ -684,7 +700,7 @@
     "peg_mechanism_score_source": "risk-feed@2026-11-11T01:45:04Z",
     "peg_mechanism_score_status": "ok",
     "peg_mechanism_score_generated_at": "2026-11-11T01:45:04Z",
-    "peg_mechanism_score_age_hours": 1.05
+    "peg_mechanism_score_age_hours": 2.06
   },
   "liquidity": {
     "as_of": "2026-11-11T01:30:36Z",
@@ -825,30 +841,30 @@
     "liquidity_score_source": "risk-feed@2026-11-11T01:45:04Z",
     "liquidity_score_status": "ok",
     "liquidity_score_generated_at": "2026-11-11T01:45:04Z",
-    "liquidity_score_age_hours": 1.05
+    "liquidity_score_age_hours": 2.06
   },
   "backing": {
-    "collateral_ratio": null,
+    "collateral_ratio": 101.1699,
     "collateral_ratio_scale": "percent",
     "collateral_ratio_basis": "Backing / supply INCLUDING the reserve fund (coverage_ratio_with_reserve_fund x 100). The conservative coverage excluding the reserve fund is in backing.secondary and sits lower; the two diverge precisely when the fund is absorbing something. \u26a0\ufe0f USDe is delta-neutral, not overcollateralised: par is the design target, so the generic [130,110,100,90] rates its intended state 'Watch'. Cutoffs are anchored on this analyzer's own COVERAGE_WARN (1.0) and COVERAGE_CRIT (0.98).",
-    "total_backing": null,
-    "surplus_deficit": null,
+    "total_backing": 4949335350.42,
+    "surplus_deficit": 57232708.8,
     "surplus_deficit_basis": "Implied by the rated ratio: total_backing - total_backing/(collateral_ratio/100), i.e. the surplus INCLUDING the reserve fund. \u26a0\ufe0f NOT total_backing - total_supply, which excludes the fund and is published as surplus_deficit_ex_reserve_fund.",
-    "surplus_deficit_ex_reserve_fund": null,
+    "surplus_deficit_ex_reserve_fund": -4090843.3546705246,
     "breakdown": [],
     "secondary": {
       "label": "Conservative coverage (excl. reserve fund)",
-      "coverage_ratio": null
+      "coverage_ratio": 99.9174
     },
     "backing_score": 6.5,
     "backing_score_source": "risk-feed@2026-11-11T01:45:04Z",
     "backing_score_status": "ok",
     "backing_score_generated_at": "2026-11-11T01:45:04Z",
-    "backing_score_age_hours": 1.05,
+    "backing_score_age_hours": 2.06,
     "source": "Ethena issuer-reported; independent offchain custody not verified",
     "supply_basis": "issuer supply at issuer timestamp; canonical supply summary has its own clock",
     "allocation_status": "unknown",
-    "source_timestamp": "2026-11-10T12:59:22.000000Z"
+    "source_timestamp": "2026-11-11T02:59:12.000000Z"
   },
   "dependencies": {
     "upstream": [
@@ -885,56 +901,65 @@
     "issuer_score_source": "risk-feed@2026-11-11T01:45:04Z",
     "issuer_score_status": "ok",
     "issuer_score_generated_at": "2026-11-11T01:45:04Z",
-    "issuer_score_age_hours": 1.05,
-    "attestation_age_days": 44.1
+    "issuer_score_age_hours": 2.06,
+    "attestation_age_days": 44.2
   },
   "source_metadata": {
     "backing": {
-      "fetch_status": "stale",
+      "fetch_status": "ok",
       "source": "ethena_issuer",
       "definition": "ethena_issuer_status_v1",
       "source_url": "https://app.ethena.fi/api/collateralization/status",
-      "source_timestamp": "2026-11-10T12:59:22.000000Z",
-      "retrieved_at": "2026-11-11T02:47:38.446003+00:00",
+      "source_timestamp": "2026-11-11T02:59:12.000000Z",
+      "retrieved_at": "2026-11-11T03:48:08.103637+00:00",
       "source_kind": "issuer_reported",
       "independent_custody_verification": false,
       "allocation_status": "unknown",
       "coverage_ratio_24h_status": "unavailable_source_break",
-      "source_age_hours": 13.805,
+      "source_age_hours": 0.816,
+      "total_backing_usd": 4949335350.42,
+      "reserve_fund_usd": 62039756.98819576,
+      "usde_supply": 4953426193.774671,
+      "arithmetic": {
+        "status": "ok",
+        "coverage_excluding_rf": 0.9991741386275601,
+        "coverage_including_rf": 1.0116987538254538,
+        "denominator": "issuer totalTokenSupplyInUsd at source_timestamp; not execution price"
+      },
       "separate_views": {
         "composition": {
           "url": "https://app.ethena.fi/api/collateral-breakdown",
-          "retrieved_at": "2026-11-11T02:47:38.685706+00:00",
+          "retrieved_at": "2026-11-11T03:48:08.356603+00:00",
           "status": "ok",
           "source_timestamp": null,
           "scope": "separate issuer view; not a same-snapshot balance-sheet allocation"
         },
         "positions": {
           "url": "https://app.ethena.fi/api/positions/current/backing-assets",
-          "retrieved_at": "2026-11-11T02:47:38.946432+00:00",
+          "retrieved_at": "2026-11-11T03:48:08.669570+00:00",
           "status": "ok",
-          "source_timestamp": 1794319232,
+          "source_timestamp": 1794366094,
           "scope": "separate issuer view; not a same-snapshot balance-sheet allocation"
         }
       },
       "cross_view_comparison": {
-        "status": "unavailable",
+        "status": "separate_views_unreconciled",
         "views": {
           "composition": {
             "url": "https://app.ethena.fi/api/collateral-breakdown",
-            "retrieved_at": "2026-11-11T02:47:38.685706+00:00",
+            "retrieved_at": "2026-11-11T03:48:08.356603+00:00",
             "source_timestamp": null,
             "status": "observed",
-            "total_usd": 4938429797,
-            "status_backing_minus_view_usd": null
+            "total_usd": 4938403048,
+            "status_backing_minus_view_usd": 10932302.420000076
           },
           "positions": {
             "url": "https://app.ethena.fi/api/positions/current/backing-assets",
-            "retrieved_at": "2026-11-11T02:47:38.946432+00:00",
-            "source_timestamp": 1794319232,
+            "retrieved_at": "2026-11-11T03:48:08.669570+00:00",
+            "source_timestamp": 1794366094,
             "status": "observed",
-            "total_usd": 4820287813,
-            "status_backing_minus_view_usd": null
+            "total_usd": 4782578346,
+            "status_backing_minus_view_usd": 166757004.42000008
           }
         },
         "note": "Separate issuer views with potentially different scopes and clocks; differences are not a proved surplus or shortfall. Even matching totals do not verify custody."
@@ -942,27 +967,27 @@
     },
     "canonical_supply": {
       "status": "ok",
-      "as_of": "2026-11-11T02:48:03Z",
-      "block": 26388792,
-      "block_time": "2026-11-11T02:47:47+00:00",
+      "as_of": "2026-11-11T03:48:33Z",
+      "block": 26389093,
+      "block_time": "2026-11-11T03:48:11+00:00",
       "unit": "USDe tokens",
       "scope": "Ethereum totalSupply includes adapter locked; never add bridged supplies"
     },
     "vault": {
       "status": "ok",
-      "as_of": "2026-11-11T02:47:43Z",
-      "block": 26388792,
-      "block_time": "2026-11-11T02:47:47Z"
+      "as_of": "2026-11-11T03:48:13Z",
+      "block": 26389093,
+      "block_time": "2026-11-11T03:48:11Z"
     },
     "prices": {
       "usde_price": {
         "status": "unavailable_executable_market_price",
-        "upstream_timestamp": "2026-11-11T02:17:42.546990Z",
+        "upstream_timestamp": "2026-11-11T03:17:34.075108Z",
         "note": "canonical source quotes remain in liquidity.exit_mark; no oracle/par substitution"
       },
       "susde_price": {
         "status": "unavailable_executable_market_price",
-        "upstream_timestamp": "2026-11-11T02:17:42.546990Z",
+        "upstream_timestamp": "2026-11-11T03:17:34.075108Z",
         "note": "canonical source quotes remain in liquidity.exit_mark; no oracle/par substitution"
       }
     }
