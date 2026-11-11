@@ -1,5 +1,7 @@
 # Syrup pair consumer review — November 11, 2026
 
+**Current status: published and verified.** See [production release](../syrup-production-2026-11-11/README.md). The staged holds and defects below are historical.
+
 Completed BM internal association of RiskAnalyst assessment `syrup-pair-six-axis-2026-11-11-v1`, committed in RiskAnalyst revision `8ef23dc91648d658a7344f69777b2684dee7ec6f`. Ethereum syrupUSDC is 6.0 provisional and syrupUSDT is 5.5 provisional. All 14 authored score fields agree across the committed assessment, reports and index. Historical remote-chain grades are unchanged and were not reassessed. Full-verification dates remain October 13.
 
 Evidence version: `sha256:54e6abc3d98e5a0db31757660213ad9bc2f1821a1b156955575ee5fd443b2d5b`. Common financial pin: Ethereum 26389831, November 11 at 06:16:59 UTC; other producer observation clocks remain separate.
