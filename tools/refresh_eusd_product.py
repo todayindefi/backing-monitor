@@ -115,7 +115,7 @@ def enrich(product,quotes,history):
         if depth['status']!=status or depth.get('floor_usdc_reference')!=cleared or depth.get('bracket')!=bracket:raise ValueError('Owner depth bracket mismatch')
     keys=['requested_at','received_at','amount_in_raw','status','output_usdc','nav_cost_bps_ex_gas','size_impact_bps','fees_breakdown','gas_usd_estimate']
     rows={k:{name:v.get(name)for name in keys}for k,v in quotes['quotes'].items()}
-    product['liquidity_exit']={'status':'measured_indicative_quotes','quotes':rows,'depths':quotes['depths'],'reference_usdc_per_eusd':quotes['nav_usdc_per_eusd'],'limitations':quotes['limitations'],'nav_reference_clock':reference_clock,'accounting_reference':reference,'reference_basis':('Protocol basket price midpoint times basketsNeeded/supply, converted using the independently dated USDC/USD oracle reference; not executable USD cash.' if usdc else 'Protocol basket price midpoint times basketsNeeded/supply; USD-to-USDC parity is a nominal assumption, not a measured USDC/USD peg.')}
+    product['liquidity_exit']={'status':'measured_indicative_quotes','quotes':rows,'depths':quotes['depths'],'reference_usdc_per_eusd':quotes['nav_usdc_per_eusd'],'limitations':quotes['limitations'],'quote_provider':'KyberSwap via accepted PegTracker adapter','venue_inventory':None,'nav_reference_clock':reference_clock,'accounting_reference':reference,'reference_basis':('Protocol basket price midpoint times basketsNeeded/supply, converted using the independently dated USDC/USD oracle reference; not executable USD cash.' if usdc else 'Protocol basket price midpoint times basketsNeeded/supply; USD-to-USDC parity is a nominal assumption, not a measured USDC/USD peg.')}
     for d in quotes['depths']:product['liquidity_exit']['depth_'+str(d['threshold_bps'])+'bps']=d
     first=rows.get('1000',{})
     if first.get('status')=='quoted' and first.get('output_usdc') is not None:
@@ -123,7 +123,7 @@ def enrich(product,quotes,history):
         record={'timestamp':first['received_at'],'price_usdc_per_eusd':str(price),'reference_usdc_per_eusd':quotes['nav_usdc_per_eusd'],'basis':'1000 USDC-reference indicative sell quote, not executable spot or independent USD price','accounting_clock':reference_clock}
         if not any(x['timestamp']==record['timestamp']for x in history):history.append(record)
         history=sorted(history,key=lambda x:x['timestamp'])[-2160:]
-        product['stability']={'market_price':str(price),'market_price_unit':'USDC/eUSD','market_price_basis':record['basis'],'market_price_clock':first['received_at'],'reference_usd':'1','reference_usdc_per_eusd':quotes['nav_usdc_per_eusd'],'reference_basis':product['liquidity_exit']['reference_basis'],'reference_clock':reference_clock,'usdc_usd_reference':usdc,'market_price_usd_reference':str(price*Decimal(usdc['rate']))if usdc and usdc.get('rate')is not None else None,'history':history,'history_coverage':'Measured retained observations only; no synthetic backfill. Full seven/thirty-day statistics require actual elapsed coverage.'}
+        product['stability']={'market_price':str(price),'premium_discount_to_accounting_reference_bps':str((price/nav-1)*10000),'market_price_unit':'USDC/eUSD','market_price_basis':record['basis'],'market_price_clock':first['received_at'],'reference_usd':'1','reference_usdc_per_eusd':quotes['nav_usdc_per_eusd'],'reference_basis':product['liquidity_exit']['reference_basis'],'reference_clock':reference_clock,'usdc_usd_reference':usdc,'market_price_usd_reference':str(price*Decimal(usdc['rate']))if usdc and usdc.get('rate')is not None else None,'history':history,'history_coverage':'Measured retained observations only; no synthetic backfill. Full seven/thirty-day statistics require actual elapsed coverage.'}
     else:product['stability']['history']=history
     return product,history
 
@@ -189,12 +189,22 @@ def failed_attempt(state,error):
         p=load(pointer);p['last_attempt']=attempt;atomic(pointer,p)
     return attempt
 
+def retain_backing_history(product,history):
+    record={'timestamp':product['source_clock']['block_timestamp'],'block_number':product['source_clock']['block_number'],'block_hash':product['source_clock']['block_hash'],'basket_unit_coverage_low_pct':product['accounting']['basket_unit_coverage_low_pct'],'supply_eusd':product['accounting']['supply_eusd']}
+    history=list(history)
+    if not any(r['block_hash']==record['block_hash']for r in history):history.append(record)
+    return sorted(history,key=lambda r:r['timestamp'])[-2160:]
+
+
 def persist(raw,quotes,state,config,quote_selection=None,rsr_quotes=None,lookthrough=None):
     state=Path(state);product=normalize(raw);issuer=selected_issuer(config)
     history=load(state/'peg-history.json') if (state/'peg-history.json').exists() else []
     product,history=enrich(product,quotes,history)
     product['liquidity_exit']['quote_selection']=quote_selection or ('selected_owner_observation'if quotes is not None else 'not_measured')
     product=enrich_rsr(product,rsr_quotes)
+    backing_history=retain_backing_history(product,load(state/'backing-history.json')if(state/'backing-history.json').exists()else[])
+    product['accounting']['history']=backing_history
+    product['accounting']['history_basis']='Retained actual Ethereum basket-unit coverage observations; not independent solvency or recovery. No synthetic backfill.'
     if lookthrough is not None:product['dependency_lookthrough']=lookthrough
     installed=(state/'schedule-installed.json').exists()
     product['runtime']={'owner':'BackingMonitor','dynamic_seconds':7200,'schedule_installed':installed,'scope':'Reserve Ethereum eUSD only; documentary/Security observations retain separate clocks','last_collection_completed_at':product['source_clock'].get('observed_at',product['source_clock']['block_timestamp']),'last_assembly_completed_at':now()}
@@ -203,6 +213,7 @@ def persist(raw,quotes,state,config,quote_selection=None,rsr_quotes=None,lookthr
     build(product,issuer['component_profiles']['eusd'],state/'shared',{'raw_source_sha256':raw_sha,'source_reader':config['reader'],'issuer_selected_sha256':config['selected_issuer']['sha256']})
     atomic(state/'current.json',{'schema_version':'reserve-eusd-pointer/1','snapshot':'snapshots/'+sha+'.json','sha256':sha,'source_clock':product['source_clock'],'status':'bounded_partial_evidence'})
     atomic(state/'peg-history.json',history)
+    atomic(state/'backing-history.json',backing_history)
     if quotes is not None:atomic(state/'last-good-quotes.json',quotes)
     if rsr_quotes is not None:atomic(state/'last-good-rsr-quotes.json',rsr_quotes)
     stage_generation(state,product,issuer,{'attempt_at':now(),'status':'ok_with_explicit_gaps','source_clock':product['source_clock'],'quote_observation_present':quotes is not None})

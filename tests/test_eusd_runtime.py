@@ -41,6 +41,11 @@ class Runtime(unittest.TestCase):
         with patch.object(runtime.importlib,'import_module',return_value=module),patch.object(runtime,'project_lookthrough',return_value={'projected':True}):
             _,public=runtime.acquire_lookthrough(config,None,raw)
         self.assertEqual(public,{'projected':True})
+    def test_backing_history_deduplicates_source_pin_not_assembly_time(self):
+        from eusd_product import normalize
+        p=normalize(fixture());p['source_clock']['block_hash']='0x123'
+        first=runtime.retain_backing_history(p,[]);again=runtime.retain_backing_history(p,first)
+        self.assertEqual(len(again),1);self.assertEqual(again[0]['timestamp'],p['source_clock']['block_timestamp'])
     def test_no_quote_never_creates_history_or_healthy_price(self):
         from eusd_product import normalize
         p,h=runtime.enrich(normalize(fixture()),None,[]);self.assertEqual(h,[]);self.assertIsNone(p['stability']['market_price']);self.assertIsNone(p['liquidity_exit']['depth_50bps'])
