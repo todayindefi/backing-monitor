@@ -208,6 +208,14 @@ def persist(raw,quotes,state,config,quote_selection=None,rsr_quotes=None,lookthr
     product['accounting']['history_basis']='Retained actual Ethereum basket-unit coverage observations; not independent solvency or recovery. No synthetic backfill.'
     if lookthrough is not None:product['dependency_lookthrough']=lookthrough
     product['contract_admin']=selected_security(config,ROOT,product)
+    security=product['contract_admin']
+    if any(c['id']=='morpho-getter-semantics'for c in security.get('controls',[])):
+        reviewed={r['token'].lower()for r in security['receipts']if r.get('critical_gates')is not None}
+        for row in product['basket']['holdings']:
+            u=row.get('underlying_lookthrough')
+            if u and row['token'].lower()in reviewed:
+                u['zero_getter_semantics']='Exact deployed receipt sources/runtime reviewed by Security: maxWithdraw/maxRedeem deliberately return zero; actual exit paths and capacity remain separate.'
+                u['getter_semantics_security_clock']=security['source_clock']
     installed=(state/'schedule-installed.json').exists()
     product['runtime']={'owner':'BackingMonitor','dynamic_seconds':7200,'schedule_installed':installed,'scope':'Reserve Ethereum eUSD only; documentary/Security observations retain separate clocks','last_collection_completed_at':product['source_clock'].get('observed_at',product['source_clock']['block_timestamp']),'last_assembly_completed_at':now()}
     raw_bytes=canonical(raw);raw_sha=hashlib.sha256(raw_bytes).hexdigest();atomic(state/'raw'/f'{raw_sha}.json',raw)
