@@ -12,7 +12,7 @@ def build(product,issuer,output,provenance):
     def add(axis,key,value,unit,basis,owner='BackingMonitor',status=None,source='native',source_clock=clock):
         axes[axis]['fields'][key]=field(value,unit,owner,[source],source_clock,basis,status)
     add('stability','nominal_reference_usd','1','USD/eUSD','Nominal dollar target; no guarantee of cash redemption.')
-    add('stability','market_price',None,'USD/eUSD','No accepted market quote.',owner='PegTracker',status='not_measured')
+    add('stability','market_price',None,'USD/eUSD','Independent USD spot is not established by an indicative USDC sale quote.',owner='PegTracker',status='not_measured')
     add('stability','history',None,'time series','No synthetic history or plugin-price substitution.',owner='PegTracker',status='not_measured')
     for key,unit in [('supply_eusd','eUSD'),('baskets_needed','basket units'),('basket_units_held_low','basket units'),('basket_units_held_high','basket units'),('basket_unit_residual_low','basket units'),('basket_unit_coverage_low_pct','percent'),('external_registered_plugin_mark_low_usd','protocol-marked USD'),('external_registered_plugin_mark_high_usd','protocol-marked USD')]:
         add('backing',key,a[key],unit,a['basis'],status='derived' if a[key]is not None else 'unknown')

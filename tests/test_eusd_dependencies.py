@@ -16,6 +16,15 @@ class Dependencies(unittest.TestCase):
         self.assertEqual([x['unassigned_residual_raw']for x in out['native_vaults']],['2']*3)
         self.assertTrue(all(x['ordinary_exit_capacity_for_eusd']is None for x in out['native_vaults']))
         self.assertNotIn('raw_reads',out);self.assertNotIn('source_sha256',out)
+    def test_eusd_share_only_derived_from_same_pin_claim(self):
+        raw,p=fixture();raw['source_clock']['block_hash']='0x123';p['source_clock']={'block_hash':'0x123'}
+        for h in p['basket']['holdings']:h['underlying_lookthrough']={'claim_raw':'2'}
+        out=project_lookthrough(raw,p)
+        for v in out['native_vaults']:
+            self.assertEqual(v['eusd_claim_share_pct'],'40.0')
+            self.assertEqual(v['markets'][0]['eusd_pro_rata_stored_book_assets_raw'],'0')
+        p['source_clock']['block_hash']='0x456';out=project_lookthrough(raw,p)
+        self.assertTrue(all(v['eusd_claim_share_pct']is None for v in out['native_vaults']))
     def test_inconsistent_shared_state_rejected(self):
         raw,p=fixture();raw['native_vaults'][1]['markets'][0]['stored_state'][2]=11
         with self.assertRaisesRegex(ValueError,'shared market state'):project_lookthrough(raw,p)
