@@ -31,6 +31,14 @@ class Accounting(unittest.TestCase):
     def test_failed_price_cannot_become_zero_external_backing(self):
         d=fixture();p=d['assets'][0]['read_prefix'];d['reads'][p+'.plugin_price']={'status':'unavailable','value':None}
         a=m.normalize(d)['accounting'];self.assertIsNone(a['external_registered_plugin_mark_low_usd']);self.assertEqual(len(a['unpriced_held_tokens']),1)
+    def test_named_active_draft_and_remainder_are_not_realizable_insurance(self):
+        d=fixture()
+        for key,value in {'stRSR.getStakeRSR':str(300*10**18),'stRSR.getDraftRSR':str(100*10**18),'rsr.decimals':'18'}.items():d['reads'][key]={'status':'ok','value':value}
+        r=m.normalize(d)['rsr'];self.assertEqual(r['active_staked_rsr_units'],'300');self.assertEqual(r['draft_rsr_units'],'100');self.assertEqual(r['contract_balance_minus_active_minus_draft_units'],'100');self.assertIsNone(r['realizable_first_loss_usd']);self.assertIsNone(r['remainder_interpretation'])
+    def test_zero_convenience_getter_does_not_become_zero_executable_capacity(self):
+        d=fixture();p=d['assets'][0]['read_prefix']
+        for key,value in {'.receipt_asset':'0x'+'44'*20,'.receipt_underlying_decimals':'6','.receipt_convert_held_to_assets':'100000000','.receipt_maxWithdraw':'0','.receipt_maxRedeem':'0'}.items():d['reads'][p+key]={'status':'ok','value':value}
+        r=m.normalize(d)['basket']['holdings'][0]['underlying_lookthrough'];self.assertEqual(r['claim_units'],'100');self.assertTrue(r['max_withdraw_getter_zero']);self.assertIsNone(r['executable_withdrawal_capacity']);self.assertIn('not a withdrawal-capacity measurement',r['zero_getter_semantics'])
     def test_wrong_identity_rejected(self):
         d=fixture();d['identity']['chain_id']=143
         with self.assertRaises(ValueError):m.normalize(d)

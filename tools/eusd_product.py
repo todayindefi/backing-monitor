@@ -66,6 +66,40 @@ def normalize(raw):
                 'plugin_last_save':get(p+'.plugin_lastSave'),'held_plugin_value_low_usd':text(value_low),
                 'held_plugin_value_high_usd':text(value_high),'excluded_from_external_asset_sum':own,
                 'underlying_lookthrough':None,'trade':get(p+'.trade')})
+        current=[x for x in holdings if x['current_basket_member']is True]
+        mids=[(Decimal(x['held_plugin_value_low_usd'])+Decimal(x['held_plugin_value_high_usd']))/2 for x in current if x['held_plugin_value_low_usd']is not None and x['held_plugin_value_high_usd']is not None]
+        total_mid=sum(mids,Decimal(0)) if len(mids)==len(current)and current else None
+        for row in holdings:
+            row['actual_receipt_plugin_mark_weight_pct']=None
+            if row['current_basket_member']is True and total_mid and row['held_plugin_value_low_usd']is not None and row['held_plugin_value_high_usd']is not None:
+                row['actual_receipt_plugin_mark_weight_pct']=text((Decimal(row['held_plugin_value_low_usd'])+Decimal(row['held_plugin_value_high_usd']))/2/total_mid*100)
+            prefix='asset.'+row['token'].lower();underlying=get(prefix+'.receipt_asset');comet=get(prefix+'.receipt_comet')
+            if not underlying and comet:underlying=get(prefix+'.receipt_comet_baseToken')
+            if underlying:
+                udec=number(prefix+'.receipt_underlying_decimals');claim=number(prefix+'.receipt_convert_held_to_assets')
+                if claim is None:claim=number(prefix+'.receipt_comet_claim')
+                maximum=number(prefix+'.receipt_maxWithdraw')
+                row['underlying_lookthrough']={'scope':'One observed receipt-to-underlying layer only; not a borrower/default census.',
+                    'kind':next((x.get('receipt_kind')for x in raw['assets']if x['token'].lower()==row['token'].lower()),None),
+                    'token':underlying,'symbol':get(prefix+'.receipt_underlying_symbol'),'decimals':None if udec is None else int(udec),
+                    'claim_raw':None if claim is None else str(int(claim)),
+                    'claim_units':text(claim/(Decimal(10)**int(udec)))if claim is not None and udec is not None else None,
+                    'max_redeem_receipt_raw':get(prefix+'.receipt_maxRedeem'),
+                    'max_withdraw_underlying_raw':get(prefix+'.receipt_maxWithdraw'),
+                    'max_withdraw_underlying_units':text(maximum/(Decimal(10)**int(udec)))if maximum is not None and udec is not None else None,
+                    'limits_caller':identity['components'].get('backingManager'),
+                    'max_withdraw_getter_zero':None if maximum is None else maximum==0,
+                    'underlying_market':comet,'shared_market_base_cash_raw':get(prefix+'.receipt_comet_base_cash'),
+                    'underlying_vault_total_assets_raw':get(prefix+'.receipt_totalAssets'),
+                    'source_clock':clock,
+                    'basis':'Accounting conversion and reported caller limits are distinct. Shared market cash is not reserved for eUSD. Underlying claim is already represented by the receipt and is not added to backing again.',
+                    'zero_getter_semantics':'Unknown for this deployment; upstream Morpho VaultV2 returns zero by design, so this getter alone is not a withdrawal-capacity measurement.' if maximum==0 else None,'executable_withdrawal_capacity':None,'executed_withdrawal_or_cash_sale':False}
+        active=number('stRSR.getStakeRSR')
+        if active is None:active=number('stRSR.stakeRSR')
+        draft=number('stRSR.getDraftRSR')
+        if draft is None:draft=number('stRSR.draftRSR')
+        rsr_balance=number('rsr.balance_staking_contract');rsr_dec=number('rsr.decimals')
+        rsr_remainder=rsr_balance-active-draft if all(v is not None for v in [rsr_balance,active,draft])else None
         held_baskets = get('basket.basketsHeldBy_backingManager')
         available = number('rtoken.redemptionAvailable')
         result = {'schema_version':'reserve-eusd-product/1','asset_slug':'eusd','identity':identity,'source_clock':clock,
@@ -91,10 +125,15 @@ def normalize(raw):
                 'basis':'Availability is a protocol stock at this block; basket-token redemption is not final USDC/USDT delivery.'},
             'rsr':{'staking_contract_balance_raw':get('rsr.balance_staking_contract'),
                 'staking_contract_balance_units':text(number('rsr.balance_staking_contract')/FIX) if number('rsr.balance_staking_contract') is not None else None,
-                'active_staked_rsr_raw':get('stRSR.stakeRSR'),'draft_rsr_raw':get('stRSR.draftRSR'),
+                'active_staked_rsr_raw':None if active is None else str(int(active)),'draft_rsr_raw':None if draft is None else str(int(draft)),
+                'active_staked_rsr_units':text(active/(Decimal(10)**int(rsr_dec)))if active is not None and rsr_dec is not None else None,
+                'draft_rsr_units':text(draft/(Decimal(10)**int(rsr_dec)))if draft is not None and rsr_dec is not None else None,
+                'contract_balance_minus_active_minus_draft_raw':None if rsr_remainder is None else str(int(rsr_remainder)),
+                'contract_balance_minus_active_minus_draft_units':text(rsr_remainder/(Decimal(10)**int(rsr_dec)))if rsr_remainder is not None and rsr_dec is not None else None,
+                'remainder_interpretation':None,
                 'staking_shares_raw':get('stRSR.totalSupply'),'exchange_rate_raw':get('stRSR.exchangeRate'),
                 'unstaking_delay_seconds':get('stRSR.unstakingDelay'),'realizable_first_loss_usd':None,
-                'basis':'Contract balance may include drafts/rewards; quantity or share exchange rate does not establish realizable loss-protection proceeds.'},
+                'basis':'Named active/draft getters, when observed, are separate from staking-contract balance and its residual. Neither quantity nor share exchange rate establishes realizable loss-protection proceeds.'},
             'stability':{'market_price':None,'reference_usd':'1','reference_basis':'Nominal dollar target, not guaranteed cash redemption.','history':None},
             'liquidity_exit':{'depth_10bps':None,'depth_25bps':None,'depth_50bps':None,'quotes':None,
                 'status':'unmeasured_live_quote_authorization_pending'},

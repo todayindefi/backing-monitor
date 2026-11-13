@@ -17,9 +17,11 @@ def revised(before,command):
     return kept+'17 */2 * * * '+command+' '+TAG+'\n'
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--state-dir',type=Path,required=True);p.add_argument('--install',action='store_true');a=p.parse_args();state=a.state_dir.resolve();validate_generation(state/'public-data')
+    p=argparse.ArgumentParser();p.add_argument('--state-dir',type=Path,required=True);p.add_argument('--install',action='store_true');p.add_argument('--enable-quotes',action='store_true');a=p.parse_args();state=a.state_dir.resolve();validate_generation(state/'public-data')
     script=ROOT/'tools/refresh_eusd_product.py';config=ROOT/'config/eusd_product.json'
-    command='/usr/bin/flock -n '+shlex.quote(str(state/'refresh.lock'))+' /usr/bin/timeout 1200 /usr/bin/python3 '+shlex.quote(str(script))+' --config '+shlex.quote(str(config))+' --state-dir '+shlex.quote(str(state))+' --skip-live-quotes --publish-staging >> '+shlex.quote(str(state/'refresh.log'))+' 2>&1'
+    if a.enable_quotes and not json.loads(config.read_text()).get('quote_collection_authorized'):raise ValueError('Quote cutover not authorized')
+    quote_flag='--collect-quotes'if a.enable_quotes else '--skip-live-quotes'
+    command='/usr/bin/flock -n '+shlex.quote(str(state/'refresh.lock'))+' /usr/bin/timeout 1200 /usr/bin/python3 '+shlex.quote(str(script))+' --config '+shlex.quote(str(config))+' --state-dir '+shlex.quote(str(state))+' '+quote_flag+' --publish-staging >> '+shlex.quote(str(state/'refresh.log'))+' 2>&1'
     old=subprocess.run(['crontab','-l'],capture_output=True,text=True)
     if old.returncode and 'no crontab'not in old.stderr.lower():raise RuntimeError('Cannot inspect existing crontab; no mutation performed')
     before=old.stdout;after=revised(before,command)
@@ -28,6 +30,6 @@ def main():
     subprocess.run(['crontab','-'],input=after,check=True,text=True,capture_output=True)
     observed=subprocess.run(['crontab','-l'],check=True,capture_output=True,text=True).stdout
     if observed!=after:raise RuntimeError('Installed schedule differs from reviewed crontab')
-    receipt={'installed_at':datetime.now(timezone.utc).isoformat(),'interval_seconds':7200,'cron':'17 */2 * * *','timezone':datetime.now().astimezone().tzname(),'tag':TAG,'command':command,'source_root':str(ROOT),'script_sha256':hashlib.sha256(script.read_bytes()).hexdigest(),'crontab_before_sha256':hashlib.sha256(before.encode()).hexdigest(),'crontab_after_sha256':hashlib.sha256(after.encode()).hexdigest(),'unrelated_jobs_preserved':True,'live_quotes_enabled':False,'scope':'Reserve Ethereum eUSD canonical backing and isolated staging-data branch only'}
+    receipt={'installed_at':datetime.now(timezone.utc).isoformat(),'interval_seconds':7200,'cron':'17 */2 * * *','timezone':datetime.now().astimezone().tzname(),'tag':TAG,'command':command,'source_root':str(ROOT),'script_sha256':hashlib.sha256(script.read_bytes()).hexdigest(),'crontab_before_sha256':hashlib.sha256(before.encode()).hexdigest(),'crontab_after_sha256':hashlib.sha256(after.encode()).hexdigest(),'unrelated_jobs_preserved':True,'live_quotes_enabled':a.enable_quotes,'scope':'Reserve Ethereum eUSD canonical backing and isolated staging-data branch only'}
     atomic(state/'schedule-installed.json',receipt);print(json.dumps(receipt))
 if __name__=='__main__':main()
