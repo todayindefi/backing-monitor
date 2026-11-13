@@ -10,6 +10,7 @@ from decimal import Decimal
 from pathlib import Path
 from eusd_product import normalize,canonical
 from eusd_dependencies import project_lookthrough
+from eusd_security import selected_security
 from prepare_eusd_preview import dashboard_data
 from build_eusd_shared_evidence import build
 from issuer_component_projection import _add_component_source
@@ -206,6 +207,7 @@ def persist(raw,quotes,state,config,quote_selection=None,rsr_quotes=None,lookthr
     product['accounting']['history']=backing_history
     product['accounting']['history_basis']='Retained actual Ethereum basket-unit coverage observations; not independent solvency or recovery. No synthetic backfill.'
     if lookthrough is not None:product['dependency_lookthrough']=lookthrough
+    product['contract_admin']=selected_security(config,ROOT,product)
     installed=(state/'schedule-installed.json').exists()
     product['runtime']={'owner':'BackingMonitor','dynamic_seconds':7200,'schedule_installed':installed,'scope':'Reserve Ethereum eUSD only; documentary/Security observations retain separate clocks','last_collection_completed_at':product['source_clock'].get('observed_at',product['source_clock']['block_timestamp']),'last_assembly_completed_at':now()}
     raw_bytes=canonical(raw);raw_sha=hashlib.sha256(raw_bytes).hexdigest();atomic(state/'raw'/f'{raw_sha}.json',raw)
