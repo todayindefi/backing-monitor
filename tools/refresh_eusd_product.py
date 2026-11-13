@@ -55,7 +55,8 @@ def acquire_lookthrough(config,web3,raw):
         checked(path,sha)
     sys.path.insert(0,str(root))
     result=importlib.import_module(c['entrypoint']).read_eusd_lookthrough(web3,raw,include_api=True,compare_adapter_shares=True)
-    for key in ('chain_id','block_number','block_hash'):
+    if result['source_clock']['chain_id']!=1:raise ValueError('Lookthrough chain mismatch')
+    for key in ('block_number','block_hash'):
         if result['source_clock'][key]!=raw['source_clock'][key]:raise ValueError('Lookthrough backing pin mismatch')
     return result,project_lookthrough(result,normalize(raw))
 

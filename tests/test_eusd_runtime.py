@@ -32,6 +32,15 @@ class Runtime(unittest.TestCase):
         _,again=runtime.enrich(product,q,h);self.assertEqual(len(again),1)
         q['depths'][0]['floor_usdc_reference']=2000000
         with self.assertRaisesRegex(ValueError,'bracket mismatch'):runtime.enrich(product,q,[])
+    def test_lookthrough_accepts_clock_without_redundant_chain_field(self):
+        raw=fixture();raw['source_clock'].pop('chain_id',None)
+        result={'source_clock':{**raw['source_clock'],'chain_id':1}}
+        config={'lookthrough_reader':{'module_root':'/tmp','source_sha256':{},'entrypoint':'owner_reader'}}
+        from types import SimpleNamespace
+        module=SimpleNamespace(read_eusd_lookthrough=lambda *a,**kw:result)
+        with patch.object(runtime.importlib,'import_module',return_value=module),patch.object(runtime,'project_lookthrough',return_value={'projected':True}):
+            _,public=runtime.acquire_lookthrough(config,None,raw)
+        self.assertEqual(public,{'projected':True})
     def test_no_quote_never_creates_history_or_healthy_price(self):
         from eusd_product import normalize
         p,h=runtime.enrich(normalize(fixture()),None,[]);self.assertEqual(h,[]);self.assertIsNone(p['stability']['market_price']);self.assertIsNone(p['liquidity_exit']['depth_50bps'])
