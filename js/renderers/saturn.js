@@ -278,11 +278,11 @@ var SaturnRenderer = {
             // backing.collateral_ratio is null. Rating a placeholder is the same
             // error as manufacturing one — see susdai, where the band showed
             // "BACKING 100.00% · Watch 3/5" on a vault with no collateral ratio.
-            if (s.collateral_ratio == null) {
+            if (s.collateral_ratio == null && s.accounting_status !== 'unavailable') {
                 s.collateral_ratio = 100;
                 s.collateral_ratio_synthetic = true;
             }
-            if (s.surplus_deficit == null) {
+            if (s.surplus_deficit == null && s.accounting_status !== 'unavailable') {
                 s.surplus_deficit = 0;
                 s.surplus_deficit_synthetic = true;
             }

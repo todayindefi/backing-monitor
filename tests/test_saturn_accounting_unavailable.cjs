@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const context={console,window:{}};vm.createContext(context);vm.runInContext(fs.readFileSync('js/renderers/common.js','utf8'),context);vm.runInContext(fs.readFileSync('js/renderers/saturn.js','utf8'),context);
+const data={asset_slug:'susdat',summary:{accounting_status:'unavailable',total_assets_usd:null,nav_per_share:null},backing:{collateral_ratio:null,surplus_deficit:null,total_backing:null,collateral_ratio_basis:'Unavailable accounting'},asset_specific:{type:'susdat'}};
+context.SaturnRenderer.preRender(data,null);
+assert(data.summary.collateral_ratio==null);assert(data.summary.surplus_deficit==null);
+const value=vm.runInContext('CommonRenderer',context)._backingValueHtml(data),label=vm.runInContext('CommonRenderer',context)._backingSubText(data);
+assert(!value.includes('100.00%'));assert(!label.includes('+$0'));
+const known={asset_slug:'susdat',summary:{accounting_status:'available',collateral_ratio:105,surplus_deficit:100},backing:{collateral_ratio:105,surplus_deficit:100},asset_specific:{type:'susdat'}};
+context.SaturnRenderer.preRender(known,null);assert.equal(known.summary.collateral_ratio,105);assert.equal(known.summary.surplus_deficit,100);
+console.log('Saturn missing accounting stays unavailable; measured values preserved.');
