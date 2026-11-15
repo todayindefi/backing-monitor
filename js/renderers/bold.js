@@ -70,8 +70,10 @@ var BOLDRenderer = {
         var pegSlot = document.getElementById('peg-extra-panels');
         if (pegSlot) pegSlot.innerHTML = this._redemptionPanel(s, exit, data.peg || {});
 
+        var backingHead=document.querySelector('#axis-backing-head .axis-sub');
+        if (backingHead && a.backing_observation) backingHead.textContent='accounting-model coverage · source qualification below';
         var backingSlot = document.getElementById('backing-extra-panels');
-        if (backingSlot) backingSlot.innerHTML = this._branchPanel(branches, t) + this._reconciliationPanel(s, t);
+        if (backingSlot) backingSlot.innerHTML = this._observationPanel(a.backing_observation) + this._branchPanel(branches, t) + this._reconciliationPanel(s, t);
 
         var liquiditySlot = document.getElementById('liquidity-extra-panels');
         this._applyAxis3Headline(liq);
@@ -79,8 +81,28 @@ var BOLDRenderer = {
         if (liquidityBody) liquidityBody.innerHTML = this._axis3Panel(liq, s);
         if (liquiditySlot) liquiditySlot.innerHTML = this._stabilityPanel(branches, t);
 
+        var contractSlot=document.getElementById('contract-extra-panels');
+        if (contractSlot && (data.contract || {}).bounded_observation) contractSlot.innerHTML=this._securityPanel(data.contract.bounded_observation);
+
         var dependencySlot = document.getElementById('dependencies-extra-panels');
         if (dependencySlot) dependencySlot.innerHTML = this._sBoldPanel(a.sbold || {});
+    },
+    _securityPanel: function(q) {
+        if (!q || q.schema_version !== 'bold-security-supplement/1') return this._panel('Bounded oracle and control check', '<p class="text-amber-700 text-sm">Selected current evidence is unavailable. The baseline walk has not been renewed.</p>');
+        var self=this, observed=q.observation || {}, baseline=q.baseline || {}, allocator=q.allocator || {};
+        var table=(q.branches || []).map(function(b){return '<tr><th>'+self._e(b.branch)+'</th><td>'+self._e((b.ordinary_liquidation_formula || {}).expression || 'Not provided')+'<p class="text-xs mt-2">Source at read: '+self._e((b.price_source || {}).name)+'; shutdown at read: '+self._e(b.shutdown_at_read)+'.</p></td><td>'+(b.oracles || []).map(function(o){return '<p>'+self._e(o.getter)+': '+self._e(o.age_at_read_seconds)+' s; requires age &lt; '+self._e(o.strict_max_age_seconds)+' s at this observation.</p>';}).join('')+'</td></tr>';}).join('');
+        var shutdownWarning=(q.branches || []).some(function(b){return (b.fallback || {}).branch_shutdown_irreversible_in_reviewed_source===true;}) ? '<p class="text-xs text-amber-700 mt-2">The reviewed source has irreversible branch shutdown. LST canonical-rate fallback can ratchet down; it is not a normal live alternate feed.</p>' : '';
+        var rules=(q.branches || []).map(function(b){return '<h4 class="font-semibold mt-3">'+self._e(b.branch)+'</h4><p>Redemption-specific rule: '+self._e((b.redemption_rule || {}).expression)+'. Do not substitute this for the liquidation formula.</p>'+Object.keys(b.fallback || {}).map(function(k){return '<p>'+self._e(k.replace(/_/g,' '))+': '+self._e(b.fallback[k] == null ? 'Not provided' : b.fallback[k])+'</p>';}).join('')+'<p>Stored last-good-price update age: '+self._e(b.last_good_price_age == null ? 'Unknown — not measured' : b.last_good_price_age)+'. Price-update execution was not established.</p>';}).join('');
+        return this._panel('Bounded oracle and control check', '<p class="text-sm">Observed '+self._e(observed.at)+' · Ethereum block '+self._e(observed.block)+'. Baseline full walk remains '+self._e(baseline.observed_at)+'.</p><p class="text-xs text-amber-700 mt-2">These are observations at that pin, not live freshness or availability. This check does not renew the full authority walk or certify the accounting-model collateral ratio as liquidation value.</p>'+shutdownWarning+'<p class="text-xs text-slate-500 mt-3">Scroll horizontally for the branch formulas and ages at read.</p><div class="overflow-x-auto" role="region" tabindex="0" aria-label="BOLD observed liquidation oracle formulas and source ages"><table class="data-table" style="min-width:680px"><thead><tr><th>Branch</th><th>Ordinary liquidation formula</th><th>Feed age at read / strict limit</th></tr></thead><tbody>'+table+'</tbody></table></div><details class="mt-3"><summary class="cursor-pointer text-sm">Fallback, redemption and allocator limits</summary><div class="text-xs text-slate-500 mt-3">'+rules+'<h4 class="font-semibold mt-3">Bounded allocator</h4><p>'+self._e(allocator.reach)+'. Cap: '+self._e(allocator.payout_cap_expression)+'. Epoch at read: '+self._e(allocator.epoch_at_read)+'. These observations do not establish voting concentration or an effective veto.</p></div></details><details class="mt-3"><summary class="cursor-pointer text-sm">Coverage gaps and separate model source clock</summary><ul class="text-xs text-slate-500 mt-3">'+(q.coverage_gaps || []).map(function(g){return '<li>'+self._e(g)+'</li>';}).join('')+'</ul><p class="text-xs text-slate-500 mt-3">'+self._e((q.peg_model_separation || {}).rule)+'</p></details>');
+    },
+    _observationPanel: function(q) {
+        if (!q || q.schema_version !== 'bold-backing-observation/1') return this._panel('Backing valuation scope', '<p class="text-sm text-amber-700">Source timing and liquidation-oracle equivalence are not provided. The collateral ratio does not establish realizable cash or a verified liquidation valuation.</p>');
+        var self=this, oracle=q.oracle || {}, denominators=q.denominators || {};
+        var warnings=Array.isArray(q.warnings) ? q.warnings : [];
+        var rows=[['Collection',q.pinning],['Reported block context',q.reported_block_number],['Block qualification',q.reported_block_basis],['ETH/USD source update',oracle.updated_at == null ? 'Unknown — not measured' : oracle.updated_at],['Source age',oracle.age_seconds == null ? 'Unknown — not measured' : oracle.age_seconds+' seconds'],['Round validity',oracle.round_validity],['Feed decimals',oracle.decimals == null ? 'Unknown' : oracle.decimals+' · '+String(oracle.decimals_basis || '').replace(/_/g,' ')],['Liquidation-oracle equivalence',oracle.liquidation_oracle_equivalence],['Aggregate Stability Pool denominator',denominators.aggregate_stability_pool_coverage],['Branch Stability Pool denominator',denominators.branch_stability_pool_coverage]];
+        var detail='<div class="overflow-x-auto"><table class="data-table"><tbody>'+rows.map(function(r){return '<tr><th>'+self._e(r[0])+'</th><td>'+self._e(r[1] == null ? 'Unknown — not measured' : String(r[1]).replace(/_/g,' '))+'</td></tr>';}).join('')+'</tbody></table></div>';
+        detail+='<ul class="text-xs text-slate-500 mt-3">'+Object.keys(q.collateral_rates || {}).map(function(k){return '<li>'+self._e(k)+': '+self._e(q.collateral_rates[k])+'</li>';}).join('')+'</ul>';
+        return this._panel('Backing valuation scope', '<p class="text-sm text-amber-700 mb-3">Accounting-model coverage is not a verified liquidation valuation or available cash. Original source age remains separate from the page refresh.</p>'+warnings.map(function(w){return '<p class="text-xs text-amber-700 mt-2">'+self._e(w)+'</p>';}).join('')+'<details class="mt-3"><summary class="cursor-pointer text-sm">Valuation inputs, source clocks and coverage denominators</summary>'+detail+'</details>');
     },
     _redemptionPanel: function(s, exit, peg) {
         var rows = Array.isArray(exit.fee_ladder) ? exit.fee_ladder : [];
@@ -179,7 +201,7 @@ var BOLDRenderer = {
                   this._e(liq.depth.basis) + '</p>' : '') +
             '<details class="text-sm text-slate-500 mt-3"><summary class="cursor-pointer font-medium">Stress and methodology</summary><div class="mt-2">Read the producer’s 0.5% range and precision status above: ' + bracket + '. The 2% result remains a severe-stress measure and is not used as the headline. Additional impact is measured relative to the smallest successful routed quote.</div></details>') +
             this._panel('Protocol redemption — separate exit route',
-                '<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><div class="summary-card mb-3"><div class="card-label">Access</div><div class="card-value">permissionless</div><div class="text-xs text-slate-500">continuous protocol call · fee rises with size</div></div><p class="text-sm text-slate-500">BOLD is exchanged for a protocol-selected mix of WETH, wstETH and rETH. This is not the same settlement as a market sale to USDC.</p></div>' +
+                '<div class="grid grid-cols-1 md:grid-cols-2 gap-4"><div><div class="summary-card mb-3"><div class="card-label">Access</div><div class="card-value">permissionless design</div><div class="text-xs text-slate-500">execution/access not simulated · fee varies with size</div></div><p class="text-sm text-slate-500">BOLD is exchanged for a protocol-selected mix of WETH, wstETH and rETH. This is not the same settlement as a market sale to USDC.</p></div>' +
                 '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Redemption size</th><th class="text-right">Effective fee</th></tr></thead><tbody>' + redemptionRows + '</tbody></table></div></div>');
     },
     _stabilityPanel: function(branches, t) {
@@ -194,6 +216,6 @@ var BOLDRenderer = {
     },
     _sBoldPanel: function(s) {
         if (!s.address) return this._panel('sBOLD downstream wrapper', '<p class="text-sm text-amber-700">sBOLD state is not published.</p>');
-        return this._panel('sBOLD downstream wrapper', '<div class="grid grid-cols-1 md:grid-cols-3 gap-3"><div class="summary-card"><div class="card-label">Share of BOLD supply</div><div class="card-value">' + this._pct(s.pct_of_supply,1) + '</div></div><div class="summary-card"><div class="card-label">Assets per share</div><div class="card-value">' + Number(s.assets_per_share).toFixed(4) + '</div></div><div class="summary-card"><div class="card-label">Admin state</div><div class="card-value ' + (s.paused ? 'text-red-700' : 'text-green-700') + '">' + (s.paused ? 'paused' : 'active') + '</div></div></div><p class="text-xs text-slate-400 mt-3">Wrapper owner ' + this._e(s.owner) + '. This mutable wrapper is downstream of immutable BOLD core; its authority is priced on Contract & Admin.</p>');
+        return this._panel('sBOLD downstream wrapper', '<div class="grid grid-cols-1 md:grid-cols-3 gap-3"><div class="summary-card"><div class="card-label">Share of BOLD supply</div><div class="card-value">' + this._pct(s.pct_of_supply,1) + '</div></div><div class="summary-card"><div class="card-label">Assets per share</div><div class="card-value">' + (Number.isFinite(s.assets_per_share) ? s.assets_per_share.toFixed(4) : 'not measured') + '</div></div><div class="summary-card"><div class="card-label">Admin state</div><div class="card-value ' + (s.paused === true ? 'text-red-700' : (s.paused === false ? 'text-green-700' : 'text-slate-500')) + '">' + (s.paused === true ? 'paused' : (s.paused === false ? 'not paused at read' : 'not measured')) + '</div></div></div><p class="text-xs text-slate-400 mt-3">Wrapper owner ' + this._e(s.owner == null ? 'not measured' : s.owner) + '. This mutable wrapper is downstream of BOLD. Its controls and grade are separate from BOLD core.</p>');
     }
 };

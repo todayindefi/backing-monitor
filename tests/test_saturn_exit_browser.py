@@ -2,7 +2,7 @@ from playwright.sync_api import sync_playwright
 import json,pathlib,os
 base=os.environ.get('SATURN_REVIEW_URL','http://127.0.0.1:8891/');out=pathlib.Path(os.environ.get('SATURN_REVIEW_QA','/tmp/saturn-review-qa'));out.mkdir(exist_ok=True);results=[]
 with sync_playwright() as p:
- b=p.chromium.launch(executable_path='/home/danger/.cache/puppeteer/chrome/linux-154.0.8037.57/chrome-linux64/chrome',headless=True,args=['--no-sandbox'])
+ b=p.chromium.launch(executable_path='/home/danger/security_analyst/.security-runtimes/chrome-157.0.8103.50/chrome-linux64/chrome',headless=True,args=['--no-sandbox'])
  for width in [1280,390]:
   for slug in ['usdat','susdat']:
    page=b.new_page(viewport={'width':width,'height':960});errors=[];page.on('pageerror',lambda e:errors.append(str(e)))

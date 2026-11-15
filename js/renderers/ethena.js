@@ -330,6 +330,28 @@ var EthenaRenderer = {
         return Number.isFinite(value) ? value.toLocaleString('en-US', {maximumFractionDigits: 2}) + ' ' + (symbol || 'USDe') : 'Unavailable';
     },
 
+    _issuerComparisonHtml: function(issuer) {
+        var comparison = issuer.cross_view_comparison || {}, views = comparison.views || {};
+        var html = '<div class="text-sm text-amber-700 mt-3"><strong>Backing reconciliation: ' +
+            CommonRenderer._escapeAttr(comparison.status || 'unavailable') + '</strong>.';
+        ['composition', 'positions'].forEach(function(name) {
+            var view = views[name] || {};
+            html += '<p>' + name + ': ' + (view.status === 'observed' && Number.isFinite(view.total_usd) ? EthenaRenderer._money(view.total_usd) : 'Unavailable') +
+                '; status backing minus this view: ' + (Number.isFinite(view.status_backing_minus_view_usd) ? EthenaRenderer._money(view.status_backing_minus_view_usd) : 'Unavailable') +
+                '. Source timestamp: ' + CommonRenderer._escapeAttr(typeof view.source_timestamp === 'number' && Number.isFinite(view.source_timestamp) && Number.isFinite(new Date(view.source_timestamp * 1000).getTime()) ? new Date(view.source_timestamp * 1000).toISOString() : (view.source_timestamp || 'not supplied')) +
+                '; retrieved: ' + CommonRenderer._escapeAttr(view.retrieved_at || 'unavailable') + '.</p>';
+        });
+        return html + '<p>Separately clocked issuer views remain unreconciled. A difference does not establish surplus or shortfall; matching amounts would not verify custody. Reported coverage is not independently verified reserve adequacy.</p></div>';
+    },
+
+    _governanceUpdatesHtml: function() {
+        return '<div class="panel text-sm" id="ethena-governance-updates"><div class="panel-title">Governance and product developments · reviewed October 31, 2026</div>' +
+            '<p><a href="https://gov.ethenafoundation.com/t/institutional-lending-framework/869" target="_blank" rel="noopener noreferrer">October 29 lending framework ↗</a>: criteria-based onboarding can proceed without an individual Committee vote, with advance documentation and Committee call-in. Segregated tri-party collateral, daily reporting and escalation on margin/default events are specified. This expands delegated counterparty decisions; the post does not prove any new loan was funded.</p>' +
+            '<p class="mt-2"><a href="https://gov.ethenafoundation.com/t/proposal-safo-as-usde-backing-asset/860" target="_blank" rel="noopener noreferrer">October 22 SAFO eligibility proposal ↗</a>: advisory support for up to $500M in 2026 and $1B in 2027, with CDS exit rules. Swap-counterparty risk, redemption gates and swing pricing remain relevant. Proposed capacity is not observed allocation.</p>' +
+            '<p class="mt-2"><a href="https://gov.ethenafoundation.com/t/ena-fee-switch-activation/830" target="_blank" rel="noopener noreferrer">Fee-switch governance record ↗</a>: the Foundation confirmed vote passage September 8. Passage does not prove live implementation or activation; the statistical milestone needs a complete current 14-day supply window.</p>' +
+            '<p class="mt-2"><a href="https://pay.ethena.fi/blog/earn-launch" target="_blank" rel="noopener noreferrer">October 28 Earn+ launch ↗</a>: an external Upshift/Steakhouse vault targeting approximately 11× leverage. Its advertised return is separate from native sUSDe NAV growth.</p></div>';
+    },
+
     _liveCoverageHtml: function(fam,slug) {
         var meta = fam.source_metadata || {}, issuer = meta.backing || {};
         if (issuer.source_kind === 'issuer_reported') {
@@ -353,7 +375,7 @@ var EthenaRenderer = {
                 '; includes adapter-locked tokens, remote supplies are not additive. Source retrieved: ' + CommonRenderer._escapeAttr(issuer.retrieved_at || 'unavailable') +
                 '. File generated: ' + CommonRenderer._escapeAttr(fam.timestamp || 'unavailable') +
                 '. Composition and positions retain separate clocks; no same-snapshot allocation is inferred.' +
-                (slug === 'susde' ? ' sUSDe vault accounting is not a second reserve fund or proof of dollar backing.' : '') + '</p></div>';
+                (slug === 'susde' ? ' sUSDe vault accounting is not a second reserve fund or proof of dollar backing.' : '') + '</p>' + EthenaRenderer._issuerComparisonHtml(issuer) + '</div>';
         }
 
         var s=fam.summary || {}, status=(fam.source_status || {}).llamarisk || 'unavailable';
@@ -382,6 +404,7 @@ var EthenaRenderer = {
         html += anc('panel-headline', EthenaRenderer._renderHeadlineCard(data, slug));
         html += '<div id="ethena-live-coverage-slot"></div>';
         html += EthenaRenderer._reviewSnapshotsHtml();
+        html += EthenaRenderer._governanceUpdatesHtml();
         // ⚠️ ethena clears axis-backing-head, so neither generic basis line can
         // reach usde/susde. sUSDe's basis — "sUSDe is a wrapper over USDe, so its
         // backing ratio is USDe's coverage including the reserve fund" — was
@@ -780,7 +803,7 @@ var EthenaRenderer = {
                 '. Requested window: ' + CommonRenderer._escapeAttr(fs.window_requested_start || 'unavailable') + ' → ' + CommonRenderer._escapeAttr(fs.window_requested_end || 'unavailable') +
                 '. Observed window: ' + CommonRenderer._escapeAttr(fs.window_start || 'unavailable') + ' → ' + CommonRenderer._escapeAttr(fs.window_end || 'unavailable') +
                 '; ' + (fs.points != null ? fs.points : 0) + ' samples. ' + CommonRenderer._escapeAttr(fs.reason || '') +
-                ' Statistical milestone evidence does not establish governance activation.</div>';
+                ' Statistical milestone evidence does not establish governance activation. Threshold source: ' + CommonRenderer._escapeAttr(fs.threshold_source || 'unavailable') + '</div>';
             if (chains.length) {
                 details += '<div class="text-xs text-slate-500 mt-3">Largest measured bridged supplies: ' +
                     chains.slice(0, 6).map(function(c) { return c.chain + ' ' + EthenaRenderer._tokenAmount(c.supply, 'USDe'); }).join(' · ') +

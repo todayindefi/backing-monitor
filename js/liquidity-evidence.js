@@ -68,7 +68,7 @@ var LiquidityEvidence = {
             if(aggregateUnit)out+='<p class="re-ladder-warning">The producer declares scalar output as '+e(aggregateUnit)+' across its quoted legs. This is marked aggregate value, not one redeemable cash token.</p>';
             var tin=q.token_in, tout=q.token_out;
             out+='<details class="re-ladder-method"><summary>Token identity and sizing anchor</summary><p>Input: '+e(address.token_in||(tin&&tin.address)||(typeof tin==="string"?tin:null))+'. Output: '+e(address.token_out||(tout&&tout.address)||(typeof tout==="string"?tout:null))+'.</p><p>Input sizing mark: '+e((d.anchor||{}).fair_value)+'. Mark observed: '+e((d.anchor||{}).fair_value_as_of)+'. Mark basis: '+e((d.anchor||{}).fair_value_basis)+'. A sizing mark is not independent NAV or a redeemable cash balance.</p></details>';
-            var result=per[name]?self.primaryResult(c,d):d, br=result.bracket||{};
+            var result=self.primaryResult(c,d), br=result.bracket||{};
             if(br.meets_precision_obligation===false)out+='<p class="re-ladder-warning">Crossing precision requirement not met. A lower clearing observation is not the maximum exit size.</p>';
             out+='<p class="re-ladder-small">Scroll the table horizontally on smaller screens to see output units, impact and quote provenance.</p><div class="re-ladder-scroll"><table class="re-ladder-table" data-evidence-rungs><thead><tr><th>Input reference notional</th><th>Quoted output / unit</th><th>Published impact</th><th>Status / provenance</th></tr></thead><tbody>'+rr.map(function(r){
                 var adjusted=self.number(r.slippage_bps_debiased),v=adjusted?r.slippage_bps_debiased:r.slippage_bps;

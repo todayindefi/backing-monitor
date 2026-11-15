@@ -5,7 +5,7 @@ def main():
  base=os.getenv('FRXUSD_EVIDENCE_URL','http://127.0.0.1:8894/');out=pathlib.Path(os.getenv('FRXUSD_EVIDENCE_QA','/tmp/bm-frxusd-evidence-qa'));out.mkdir(exist_ok=True)
  pointer=json.load(open('data/frxusd_backing_evidence.json'));snapshot=json.load(open(pointer['snapshot_path']));metrics=snapshot['third_party_verified']['metrics'];results=[]
  with sync_playwright() as p:
-  b=p.chromium.launch(executable_path='/home/danger/.cache/puppeteer/chrome/linux-154.0.8037.57/chrome-linux64/chrome',headless=True,args=['--no-sandbox'])
+  b=p.chromium.launch(executable_path='/home/danger/security_analyst/.security-runtimes/chrome-157.0.8103.50/chrome-linux64/chrome',headless=True,args=['--no-sandbox'])
   for width in [1280,390]:
    page=b.new_page(viewport={'width':width,'height':960});errors=[];page.on('pageerror',lambda e:errors.append(str(e)));page.goto(base+'?asset=frxusd&shared_evidence=20261103',wait_until='networkidle',timeout=60000);card=page.locator('#frxusd-shared-evidence');card.wait_for();text=card.inner_text();assert f"{metrics['coverage_par_pct']:.2f}%" in text and f"{metrics['coverage_market_pct']:.2f}%" in text;assert pointer['snapshot_id'] in card.text_content();assert 'not our audit' in text and 'already netted' in text and 'sfrxUSD' in text;assert not errors,errors
    page.evaluate("window.scrollTo(0,document.querySelector('#frxusd-shared-evidence').getBoundingClientRect().top+scrollY-100)");box=card.bounding_box();assert box['x']>=0 and box['x']+box['width']<=width+1;page.screenshot(path=str(out/f'frxusd-{width}.png'));results.append({'width':width,'text':text,'errors':errors,'card_fits':True});page.close()

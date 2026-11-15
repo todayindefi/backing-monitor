@@ -50,6 +50,8 @@ function dataUrl(path) {
 // can be keyed by slug (thusd) when the analyzer's type field is
 // too generic to use safely (e.g. "rwa-stable").
 var ASSET_RENDERERS = {
+    gho:       typeof GHORenderer       !== 'undefined' ? GHORenderer       : null,
+    'family-six-axis': typeof FamilyAxisRenderer !== 'undefined' ? FamilyAxisRenderer : null,
     ousd:      typeof OUSDRenderer      !== 'undefined' ? OUSDRenderer      : null,
     frax:      typeof FRAXRenderer      !== 'undefined' ? FRAXRenderer      : null,
     crvusd:    typeof CrvUSDRenderer    !== 'undefined' ? CrvUSDRenderer    : null,
@@ -317,6 +319,8 @@ async function renderIndex() {
 // Asset detail view
 // ========================================
 async function renderAsset(slug) {
+    var previousFamilyTabs = document.getElementById('family-view-tabs');
+    if (previousFamilyTabs) previousFamilyTabs.remove();
     document.getElementById('index-view').classList.add('hidden');
     document.getElementById('asset-view').classList.remove('hidden');
     document.getElementById('error-view').classList.add('hidden');
@@ -449,8 +453,11 @@ async function renderAsset(slug) {
             .then(function (r) { return r && r.ok ? r.json() : null; })
             .catch(function () { return null; });
 
+        var baseFetch = assetMeta && assetMeta.family_source
+            ? FamilyAxisRenderer.fetchView(dataUrl('data/' + assetMeta.family_source), slug, REFRESH_INTERVAL)
+            : fetch(dataUrl('data/' + sourceSlug + '_backing.json'));
         var fetched = await Promise.all([
-            fetch(dataUrl('data/' + sourceSlug + '_backing.json')),
+            baseFetch,
             fetch(dataUrl('data/' + sourceSlug + '_backing_history.json')).catch(function() { return null; })
         ].concat(overlayFetches).concat([familyFetch]));
         var dataResp = fetched[0], histResp = fetched[1];

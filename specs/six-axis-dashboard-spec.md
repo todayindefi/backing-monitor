@@ -17,21 +17,25 @@ cites an asset, that asset is the evidence.
 
 ---
 
+## Ownership update — user decision, November 4, 2026
+
+[Shared asset ownership](shared-asset-evidence-ownership.md) supersedes the old blanket PegTracker backing rule. BM owns the canonical backing product and shared six-axis assembly; specialist readers/price/exit/security/documentary owners remain attributable, and RiskAnalyst owns interpretation and authored grades. Migration is per asset with source cutover and acceptance. Existing readers, adapters and schedules continue until separately migrated; this policy does not authorize a global move. Mezo is a one-off report pilot, not a new dashboard or job. [Versioned contract](shared-asset-evidence-contract.md).
+
 # 1. The frame
 
 ```
 1 Peg / Stability     PegTracker        market vs its own reference (par OR NAV)
-2 Backing             PegTracker        reserves, coverage, first-loss position
-3 Liquidity & Exit    SPLIT BY PART*    ladder PegTracker · venues DexTracker · redemption OPEN
+2 Backing             BackingMonitor    canonical accounting; reusable specialist readers
+3 Liquidity & Exit    SPLIT BY FIELD*   specialist owners; BM coordinates per-asset route fields
 4 Dependencies        riskAnalyst       what fails INTO this asset from outside
 5 Smart Contract & Admin  security_analyst + riskAnalyst  how code can fail, and who can act ON it
-6 Issuer              riskAnalyst       editorial: who you are trusting
+6 Issuer              DeFiAnalyst facts + riskAnalyst judgment/grade
 ```
 
 \* ⚠️ **AXIS 3 IS OWNED BY PART, NOT WHOLE — see the ownership table in §Axis 3, which is the
 authority.** Owner decision 2026-10-01: the exit ladder and its crossing are PegTracker's (3h, 17
-assets); venue inventory and venue size are DexTracker's; **primary redemption is OPEN** because both
-publish it and they disagree on live data. This replaces, for the depth figure only, the 2026-08-30
+assets); venue inventory and venue size are DexTracker's; **legacy primary redemption ownership was OPEN** because both
+published it and disagreed on live data. Under the November 4 policy BM coordinates one owner per route field at per-asset cutover; existing jobs are not globally migrated. This replaces, for the depth figure only, the 2026-08-30
 decision that DexTracker owns axis 3 whole.
 
 ⚠️ **The sentence this footnote replaced licensed a live defect.** It read "PegTracker's embedded
@@ -50,7 +54,8 @@ a file; live sessions read a message. A message to a wrapped session is lost com
 
 ```
 PRODUCER          REACH VIA        EMITS INTO                         WHAT
-PegTracker        codex handoff    ~/PegTracker/data/                 base feed, peg history
+BackingMonitor    shared package   per-asset versioned contract        canonical backing + six-axis assembly
+PegTracker        codex handoff    ~/PegTracker/data/                 reusable reads, price/history; legacy feeds
 DexTracker        codex handoff    ~/DexTracker/data/liquidity/  ⚠️   {slug}_liquidity.json
 security_analyst  codex handoff    ~/security_analyst/topology/  ⚠️   YAML — NOT json
 riskAnalyst       LIVE session     ~/riskAnalyst/data/axes/           axis overlays
@@ -72,7 +77,8 @@ broke the assumption that a producer drops a file next to PegTracker's. `sync_an
 ```
 axis 1  PegTracker        peg.{nav,nav_source,nav_basis,market_price,market_price_source,
                           premium_discount_pct}, history_ref -> {slug}_peg_history.json
-axis 2  PegTracker        backing.{collateral_ratio + basis, supply + scope, breakdown}
+axis 2  BackingMonitor    canonical backing product; specialist readers remain reusable
+                          per-asset source cutover, units, perimeter, nulls and reconciliation
         riskAnalyst       backing-overlay/1 — what chain cannot show: first-loss attachment,
                           NAV write path, and an AUTHORED score gated per §6.3
 axis 3  ⚠️ OWNED BY PART — the table in §Axis 3 is the authority. Summary:
@@ -96,29 +102,11 @@ axis 6  riskAnalyst       issuer/1 — score, entity, regulator, summary, facts[
 
 ### Primary backing versus independent verification
 
-**Axis 2's primary backing producer is always PegTracker.** The canonical
-`{slug}_backing.json` measurement, its backing history, and any figure used to
-score Axis 2 belong there. Do not create an asset-specific backing producer in
-`backing-monitor` merely because this repository consumes the result.
+**BackingMonitor owns the canonical backing-data product**, including collection orchestration through reusable specialist readers, collateral/liability/circulation accounting, custody and encumbrance perimeter, reconciliation and normalized exports for all consumers. RiskAnalyst consumes the package, checks critical underlying evidence and owns grades; it does not run a parallel recurring backing collector.
 
-`backing-monitor` may own a separately named **consumer-side verification** feed
-only when all of the following are true:
+Migrate per asset with explicit acceptance. Existing PegTracker primary feeds, history and working BM verification adapters remain in place until their own cutover is verified. Mezo reuses completed pinned Peg/Dex/Security/DeFi evidence as a one-off pilot; it creates no schedule or dashboard registration. Missing denominators stay unknown, and a borrower subsystem ratio cannot fill a global coverage field. BM must not substitute a computed band for an authored grade or turn an unexplained residual into losses.
 
-- it independently re-reads or reconciles a primary backing claim rather than
-  replacing it;
-- it is built for this dashboard's validation or evidence display and is not a
-  reusable primary feed for other consumers;
-- its schema, filename and UI attribution say `verification`, never `backing`,
-  so it cannot silently win the Axis 2 producer slot;
-- it does not publish the Axis 2 score or fill a value PegTracker declined to
-  derive; and
-- the exception and its schedule are documented in an asset-specific spec.
-
-If the measurement is intended to become the canonical backing view or to serve
-multiple consumers, build it in PegTracker instead. `frxUSD`'s
-`frxusd_backing_verification.json` is the first explicit precedent for the
-consumer-side case: PegTracker remains the primary Axis 2 producer, while this
-repository independently reconciles selected reserve and liability claims.
+Independent verification remains separately named and scoped. The existing frxUSD primary/verification arrangement is a legacy working adapter, not authority to blanket-move it or reset source clocks. A shared evidence package may explicitly report missing owners/fields without claiming six newly complete investigations. [Ownership/cadence policy](shared-asset-evidence-ownership.md) and [version/field contract](shared-asset-evidence-contract.md) control the target model.
 
 ### What each producer will refuse, and why it is right
 
@@ -126,10 +114,8 @@ repository independently reconciles selected reserve and liability claims.
   a chain read with a positive control. Judgement is riskAnalyst's. When a finding needs to reach
   the page, ask for a structured FIELD (`timelock_floor`), not a paragraph: a field joins for every
   consumer, a paragraph renders for one.
-- ⚠️ **riskAnalyst will not score an axis the dashboard computes.** An authored number silently
-  overriding a measured band is a category error. The exception is a DECLARED impossibility (§6.3).
-- ⚠️ **They will also not score an axis that is unrated fleet-wide** (axis 4), because one asset
-  scoring it redefines what every other page's blank means.
+- ⚠️ **Authored RiskAnalyst grades must not silently override computed dashboard bands.** Reports may author all six axis judgments; keep each methodology, scope and label distinct. Legacy dashboard substitution remains gated by §6.3.
+- ⚠️ **Do not invent a fleet-wide computed band from one authored dependency grade.** RiskAnalyst owns causal dependency interpretation and report grades; an unmeasured dashboard band remains unmeasured.
 - **PegTracker will not derive a figure the issuer does not attribute** — e.g. a collateral ratio
   from combined multi-asset reserves. Do not ask twice; render the absence.
 
@@ -525,6 +511,47 @@ its TVL carry "enumerated <date> · N old", and the depth figure carries its own
 the venue stamp is more than 24h older. Silent where the two halves share a clock — 23 base blocks
 carry pools under the block's own `as_of`, and a second identical date would assert a split the
 asset does not have. Shipped `2e351bc0f`.
+
+### Adaptive 50 bps ladder — quote budget (owner decision 2026-10-30)
+
+Target **five quote requests**, allow a sixth when unresolved, and an exceptional
+seventh; **seven is the hard ceiling per asset refresh**. Every outbound quote
+request counts, including failures, retries and provider fallbacks. No hidden
+retry loop or second-provider search may evade the ceiling. Existing fixed-grid
+collectors remain legacy until explicitly migrated; this rule does not assert
+that fleet adoption has already happened.
+
+Use a small reference quote and a larger probe. USD defaults are $1k reference,
+$100k initial probe, ×10 expansion and a declared $50m notional safety ceiling.
+These are configurable starting/safety values, not universal market capacities.
+Other quote denominations require an explicit USD sizing conversion; do not
+apply USD amounts as token counts. Threshold is 50 bps of **size impact relative
+to the smallest successful reference**, preserving all-in output separately.
+
+A previous bracket may choose initial sizes only while no older than the
+producer's three-hour interval and for the same token, chain and exit leg.
+Requote every endpoint: remembered sizes are not current evidence. Expand until
+the samples straddle 50 bps, then refine using geometric midpoints. After five
+requests, stop if the largest clearing quote is within 5 bps below the target,
+or the bracket's upper/lower size ratio is at most 1.25. Otherwise use the sixth
+and, if still unresolved, seventh request. Stop earlier at a declared notional
+ceiling, unavailable route, quote failure or exhausted size resolution. Material
+non-monotonicity (>5 bps reversal across sizes) withholds a single crossing;
+do not force route-changing observations into a monotone curve.
+
+Publish the largest **tested** size at or below 50 bps, its actual impact, the
+first tested size above 50 bps and the bracket width. A near-target quote is not
+an exact 50 bps measurement. Never publish an interpolated executable quote.
+With no crossing, publish a floor and its stopping reason, not maximum depth.
+A failure is not a crossing; a failed reference leaves depth unmeasured. Fixed
+pricing or a proven capacity ceiling must be named as such; flat samples alone
+do not establish either mechanism. Retain per-rung errors, observation clocks,
+request count, policy version, sizing mark and source. Gas remains separately
+qualified. Primary redemption execution and holder eligibility stay separate.
+
+Initial implementation: standalone PegTracker candidate
+`adaptive_exit_ladder.py`, staged GHO adoption only. Fleet scheduling and
+DexTracker alignment are tracked in the dated adaptive-ladder handoff.
 
 ### Venue inventory presentation — one fleet rule
 

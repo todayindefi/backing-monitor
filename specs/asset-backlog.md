@@ -162,6 +162,190 @@ references  specs/reviews/ethena-discrepancy-2026-10-31/README.md
 Last reviewed 2026-10-31
 ```
 
+### gho — v2: independent backing reconciliation
+```
+affects     gho · Axis 2 Backing
+raised      2026-10-30 by the user
+status      OPEN — deferred to v2 / next GHO refresh; not in the active queue
+v1 decision User accepted the current standard dashboard as v1 on 2026-10-30.
+            Its TokenLogic source-qualified collateral ratio, history and
+            composition remain the accepted v1 basis. This is not a publication
+            instruction or acceptance of independently verified backing.
+what        Build our own reproducible backing reconciliation, beyond reproducing
+            TokenLogic's accounting. Keep the source-reported series separately
+            attributed and compare it with our independently derived results.
+scope       Reconcile origin facilitator issuance and non-circulating inventory;
+            borrower collateral and competing debts; minter, outside-supplier and
+            treasury claims; reserve deficits and accrued fees; remote reserves,
+            wrapper look-through and original bridge-funding/custody attribution.
+            Use pinned chain observations and explicit cross-chain clocks. Avoid
+            counting idle GHO or bridged representations as extra external backing.
+carry over  Prime/Horizon positive lending-book residuals remain unattributed;
+            original bridge-funding receipts were not replayed. The daily borrower
+            source is not an independently complete block-pinned borrower census.
+            These are v2 verification work, not reasons to reopen accepted v1.
+owner       PegTracker: canonical measurements and retained reconciliation history;
+            backing-monitor: consume and display the results under the six-axis spec;
+            riskAnalyst: interpretation and any justified score reassessment.
+            Scope recorded here; no new producer dispatch or schedule activated.
+closes when A repeatable producer reconciles assets, liabilities, netting and residuals
+            on stated scopes; derives defensible coverage or states precisely why
+            it cannot; retains history and failure states; and the dashboard shows
+            our results beside the separately labelled TokenLogic measure using
+            the standard history, breakdown and evidence layout. Validate arithmetic,
+            independent controls, clocks and rendered figures before v2 review.
+references  specs/gho-dashboard-plan.md
+            specs/gho-standard-dashboard-review-2026-10-30.md
+            specs/reviews/gho-dashboard-2026-10-30/backing-v2-source-reconciliation/
+            (historical folder name: this was source reconciliation during v1,
+            not completion of the newly requested independent v2 reconciliation)
+Last reviewed 2026-10-30
+```
+
+
+### avusd · savusd · avusdx — continue staged family refresh and historical coverage
+```
+affects     avusd, savusd, avusdx
+raised      2026-10-30; user requested continuation notes and asset backlog
+triage      NEXT MANUAL FAMILY REFRESH; parked by user for later, not an active background queue
+status      Staged six-axis family dashboard and revised senior report drafts exist. History and
+            full economic backing remain partial. Do not confuse a completed evidence/UI package
+            with completed reserve reconciliation, finalized ratings or activated monitoring.
+
+DECISIONS   ONE family dashboard with avUSD/savUSD/avUSDx tabs; standard SIX axes on every view.
+            One common backing/waterfall source book, asset-specific stability/exit/control views.
+            No duplicate independently maintained dashboards. avUSD assessed first, savUSD second;
+            avUSDx source coverage only for a later separate risk report, no senior rating copied.
+HOLDS       NO score application, publication, live topology promotion or recurring activation.
+            Preserve frozen versions; make new supplements for subsequent evidence or UI changes.
+
+RESUME      Read specs/six-axis-dashboard-spec.md, current RiskAnalyst axis/ladder specs, and
+            /home/danger/riskAnalyst/specs/avant-avusd-savusd-refresh-plan-2026-10-29.md.
+            User's later staged-work authorization supersedes the original planning-only scope,
+            but does not remove the score/publication/recurrence holds above.
+            Start from specs/reviews/avant-refresh-2026-10-29/v4-six-axis/README.md and its
+            SOURCE-OWNER-MAP.md, then v4.1-chart-display/README.md. Do not resume from July data
+            or the historical standalone v3 layout as if either were the current dashboard.
+
+DONE        v2: source-first partial wallet/backing, leverage/oracle/exit evidence and one-off
+            tracking configuration tested; no recurring restart.
+            v3: family balance-sheet bridge, documented vs enforced waterfall and154 normalized
+            scenario outputs frozen; current protection/attachment explicitly unknown.
+            v4: actual BM six-axis app with three tabs, Peg/Dex final snapshots, RA Dependencies,
+            six code-assurance requirements, verbatim Issuer summaries, staged security-owner
+            native topology candidates and revised avUSD/savUSD review-only report drafts.
+            RA accepted v4 as partial evidence/staged UI only; old4.0 proposals remain historical,
+            provisional and not re-endorsed. Canonical scores/reports/last_verified unchanged.
+            v4.1: chart field wiring fixed; avUSD chart renders exactly two original source-time
+            observations,15:06:47Z and15:10:24Z on Oct29 (217seconds). savUSD/avUSDx usable market
+            histories stay empty with reasons. Visible Axis2 unavailable-coverage/incomplete-
+            composition panels replace buried explanations. No financial backfill was done.
+            Browser validation:12asset/viewport/theme cases plus six chart/viewport cases;
+            nav/back/keyboard/cache/scenarios, mobile reports, exact issuer summary and code
+            requirements passed. Frozen package integrity verified after daemon recovery.
+
+NEXT 1      PRICE HISTORY — PegTracker owns canonical market/reference history; DexTracker assists
+            with exact-address pool discovery/OHLCV and trade/venue context. Investigate bounded
+            CoinGecko contract/coin history and GeckoTerminal/pool OHLCV backfill. We HAVE NOT
+            exhausted those sources; "not yet collected" must not be relabelled "unavailable".
+            First map exact chain/address/coin ID and identify aggregate vs local market scope.
+            Check provider access/retention, timestamps, duplicate/stale marks, trade volume and
+            no-trade candles. Preserve raw responses and gaps; no flat synthetic fills presented
+            as fresh trading. No paid upgrade or recurring activation assumed.
+            Plot the standard7d window with real point counts; retain longer source history if
+            available without silently widening the displayed window or inventing persistence.
+            CoinGecko docs: https://docs.coingecko.com/reference/contract-address-market-chart-range
+            Pool docs: https://docs.coingecko.com/reference/pool-ohlcv-contract-address
+
+NEXT 2      ASSET REFERENCES — selected Oct29 source had a fresh avUSD mark, savUSD's returned
+            CoinGecko print was Aug9 (rejected as stale), and no junior mark. These are selected-
+            feed gaps, NOT proof that the latter assets have no markets or liquidity.
+            savUSD: investigate alternative market history and separately reconstruct historical
+            ERC4626 conversion reference in avUSD/share where archive evidence permits. Never
+            compare a yield-bearing share to$1 or call conversion an independent USD NAV.
+            avUSDx: administered price/reference history and write-path clocks stay distinct from
+            traded USD price; no market or independent sizing anchor inferred from stale admin NAV.
+            Market-translated share sizing in quotes remains explicitly conditional.
+
+NEXT 3      BACKING HISTORY — PegTracker+FarmTracker, issuer evidence where needed. Seek archived
+            issuer NAV/debt reports and historical disclosed-wallet/strategy observations; track
+            migrations/new wallets, net debt, marks, per-wallet clocks and non-EVM/offchain gaps.
+            Existing histories have ZERO measured numeric coverage points. Full external assets
+            and economic senior liabilities are unreconciled, so no legitimate coverage curve or
+            complete external-composition pie exists. Do not manufacture a mixed-date NAV/supply
+            ratio. Separately labelled supply, savUSD conversion, issuer-reported NAV and tracked
+            wallet gross/debt/net histories can be useful without claiming full reserve coverage.
+            Gross leveraged collateral is not net equity; tracked subset totals are not full backing.
+
+NEXT 4      WATERFALL/CLAIMS — common senior avUSD/savUSD rank; wrapper underlying avUSD counted
+            once. Reconcile bridge locks, silo/queued claims, treasury/junior balances and RF own
+            claims, full V1/global/offchain obligations, beneficial-ownership eliminations and
+            attributable external junior assets. Old~15.55% junior-claims/savUSD-assets ratio is
+            NOT verified all-senior protection. RF own tokens reallocate losses, not new external
+            capital; planned governance backstop gets no current capital credit. Keep stale admin
+            price, queued redemptions, loss recognition and completion discretion explicit.
+            Current all-senior attachment/realizable junior remain null. Frozenv3 scenarios are
+            assumptions, not measured facts; do not silently rebase them to newer native reads.
+
+NEXT 5      EXITS/OTHER AXES — refresh dated native ladders and standing cost separately from
+            marginal50/200bps brackets; quote is not a fill. Peg owns canonical ladder/crossing,
+            Dex venues and fresh refinement, RA eligibility; execution probe is probe-owned.
+            Resolve one unmatched ERC4626 route reference, quote stability/precision, primary
+            fees/access/latency and remote exits. Historical1k-clear/10k-fail brackets are not
+            current executable capacity. RA Dependencies weights remain an older indexed subset,
+            not full-portfolio weights. Security gaps: MPC/signers/address binding, complete role
+            sets, bridge/remotes and junior proxy/role topology. Audited-commit/deployed equality,
+            bounty/formal/quantified test coverage remain unresolved; audits do not offset keys.
+
+TIDR        Receipt from existing owner session01a182d1-ce5f-79e0-a370-e4eb4ed49b03: directly
+            user-authorized staging completed at /home/danger/tidresearch/reviews/avant-staging-
+            2026-10-30/v4/ (authored senior candidates, review.html, source-consumption-contract,
+            validation, README and stage-manifest). Owner reports exact BMv4 report bytes and
+            RA8/BMv4 279/finalv4.1 18 hash verification. Review-only/productionfalse; no canonical,
+            rating/publication/topology/cron changes. July4 TIDR vs July10 RA baseline-date
+            discrepancy is recorded and must be reconciled BEFORE adoption. Finalv4.1 frozen
+            manifest is authoritative; nested initial display manifest/README hashes describe
+            historical intermediate state, not the final supplement. Receipt only, NOT a request
+            to resume parked producer/background work. Verify staged paths/receipt on next refresh.
+
+NEXT 6      HANDOFF/REVIEW — use durable requirements plus messages to EXISTING producer sessions;
+            do not directly edit other repos, rotate sessions or dispatch duplicate wrappers.
+            Check specs/handoffs/avant-chart-supplement-v4.1-2026-10-30-pegtracker.md (owner final
+            handback exists) and avant-chart-display-v4.1-receipt.md (BM delivery unconfirmed after
+            daemon restart). Reconcile final producer manifest with selected snapshot, acknowledge
+            handback and deliver display supplement to RA when messaging is available. Do not claim
+            delivery from an interrupted tool call. Return next evidence package to RA before any
+            separate final numeric review; publication/recurrence require later explicit approval.
+
+OWNER MAP   BM: integration/selection/source clocks/browser acceptance/versioned manifests.
+            PegTracker: market/reference/backing/history and canonical executable ladders.
+            FarmTracker: disclosed-wallet gross collateral/debt/net equity and coverage exclusions.
+            DexTracker: venue inventory/OHLCV support/route matching/fresh refinement.
+            RiskAnalyst: dependency/code/issuer judgments, eligibility, senior reports and rating review.
+            security_analyst: control topology/current authority and measured provenance/gaps.
+
+ARTIFACTS   Base path specs/reviews/avant-refresh-2026-10-29/.
+            v4-six-axis/manifest-v4.json SHA256
+            f45a015fbec0131bbf0a305ce72dcc5adacf4eb3429715ec32edeee8fc4434af (279files).
+            v4.1-chart-display/frozen-manifest.json SHA256
+            8418f23a6921a2940b4eb8dee5f4104f77f0d9752fbd9102a9dbbc6a5eaca21b (18files).
+            Revised senior drafts: v4-six-axis/sources/report_candidates/{avusd,savusd}.candidate.md.
+            v3/ retains bridge/formulas/scenarios; v2/ retains original partial wallet context.
+            Verify v4 via python3 specs/reviews/avant-refresh-2026-10-29/v4-six-axis/verify_v4.py;
+            v4.1 files are length/hash checked against frozen-manifest.json.
+            Current local preview http://127.0.0.1:8880/?asset=avusd;8879 aliases same files.
+            Temporary directory /tmp/avant-family-six-axis-preview; servers may need restoration
+            after restart. They only serve snapshots; page reloads do not collect new source data.
+            Local preview/browser success is NOT deployed-page or public-publication acceptance.
+
+closes when next manual refresh explicitly closes or restates each gap with current source evidence,
+            meaningful history is collected or its absence proved/scoped, standard chart elements
+            render or explain absence, and the new common package is returned for RA review. Final
+            ratings/publication/recurring activation remain separate gates, not backlog side effects.
+Last reviewed 2026-10-30
+```
+
+
 ### frxusd — independent backing verification remains partial
 ```
 affects     frxusd

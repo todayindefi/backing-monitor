@@ -61,6 +61,8 @@ def build(raw, output):
   adopt_lbtc(raw,asset,obs,sources,add)
   from ethereum_btc_security import adopt as adopt_security
   adopt_security(raw,asset,t['address'],axes,sources,add)
+  from ethereum_btc_tbtc_parameters import adopt as adopt_parameters
+  adopt_parameters(raw,asset,axes,sources,add)
   projects={'wbtc':('bit-global','wbtc'),'tbtc':('threshold-network','tbtc'),'lbtc':('lombard-finance','lombard-lbtc')}
   project,component=projects[asset]
   for source in sources.values():source.setdefault('owner','BackingMonitor');source.setdefault('status','bounded_observation')

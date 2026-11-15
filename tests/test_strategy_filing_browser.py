@@ -5,7 +5,7 @@ base=os.getenv('STRATEGY_QA_URL','http://127.0.0.1:8916/').rstrip('/')+'/'
 out=pathlib.Path(os.getenv('STRATEGY_QA_OUT','/tmp/bm-strategy-qa'));out.mkdir(parents=True,exist_ok=True)
 results=[]
 with sync_playwright() as p:
- browser=p.chromium.launch(executable_path='/home/danger/.cache/puppeteer/chrome/linux-154.0.8037.57/chrome-linux64/chrome',headless=True,args=['--no-sandbox'])
+ browser=p.chromium.launch(executable_path='/home/danger/security_analyst/.security-runtimes/chrome-157.0.8103.50/chrome-linux64/chrome',headless=True,args=['--no-sandbox'])
  try:
   for width in [1280,390]:
    for asset in ['mstr','strc','strcx','apxusd','apyusd','susdat','usdat']:

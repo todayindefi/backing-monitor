@@ -13,3 +13,7 @@ Local-only presentation/code candidates: shared concise issuer enablement for th
 Named gates: Metronome issuer/basis export missing; BMNR approved corporate-context transport/financial synchronization unresolved; OUSD/Cap/USDD issuer blocks exist in axis-basis but need existing-merger routing or normal standalone exports before production; USDD current token/reserve/authority version perimeter remains producer-owned. Existing dated measurements remain intact and are not certified by the documentary pass. Other legal/assurance/exit gaps remain as the handoff specifies.
 
 Ready-to-forward RiskAnalyst request: specs/handoffs/issuer-batch-export-gaps-riskanalyst-2026-11-04.md. No message sent. Await source/contract returns for blocked items and explicit public field/renderer/transport authorization; do not infer blanket authority from the batch feed. Production-file hash checks confirm unchanged during candidate work. Full rendered production acceptance will be required after separately authorized deployment.
+
+## Superseding normal-export return
+
+The RiskAnalyst return has now supplied normal Metronome/OUSD/Cap/USDD exports, and approved BMNR documentary-context-only holding. Updated acceptance: specs/handoffs/issuer-batch-normal-exports-results-bm-2026-11-04_ACCEPTANCE.md. All fourteen local render cases pass; prior missing-export and two msUSD render blockers above describe the earlier candidate, not current status. Publication remains unapproved and BMNR financial synchronization/USDD perimeter remain held.

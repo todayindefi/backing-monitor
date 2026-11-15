@@ -7,6 +7,7 @@ judgments are pinned; recurring measurements retain their independent source clo
 import argparse
 import copy
 import importlib.util
+import hashlib
 from datetime import datetime, timezone
 import json
 import math
@@ -22,6 +23,44 @@ EDITORIAL_REPO=Path('/home/danger/riskAnalyst')
 EDITORIAL_COMMIT='31bcc8159349f9203e3a6f4f038804868fbbb14d'
 ADDRESS='0x7743e50f534a7f9f1791dde7dcd89f7783eefc39'
 EDITORIAL=('axis_basis','backing_overlay','dependencies','contract_overlay','issuer','evidence_review')
+EDITORIAL_INPUTS=EDITORIAL+('assessment',)
+SOURCE_POLICY=REPO/'config/fxsave_preview_sources.json'
+LEGACY_PEG=PEG
+
+def source_selection(policy_path=SOURCE_POLICY):
+    if not policy_path.exists():
+        return PEG,DEX,None,{'mode':'retained_editorial_commit','commit':EDITORIAL_COMMIT}
+    policy=json.loads(policy_path.read_text())
+    if policy.get('asset_slug')!='fxsave' or policy.get('chain_id')!='eip155:1' or policy.get('address','').lower()!=ADDRESS:
+        raise ValueError('Preview source policy identity mismatch')
+    review=policy['editorial_review'];receipt=Path(review['path']).read_bytes()
+    if hashlib.sha256(receipt).hexdigest()!=review['sha256']:
+        raise ValueError('Editorial acceptance receipt hash mismatch')
+    reviewed=json.loads(receipt)
+    if reviewed.get('asset')!='fxsave' or not str(reviewed.get('status','')).startswith('accepted'):
+        raise ValueError('Editorial review is not an accepted exact-asset receipt')
+    docs={}
+    for suffix in EDITORIAL_INPUTS:
+        record=policy['editorial_files'][suffix];raw=Path(record['path']).read_bytes()
+        if hashlib.sha256(raw).hexdigest()!=record['sha256']:
+            raise ValueError('Editorial file hash mismatch: '+suffix)
+        docs[suffix]=json.loads(raw)
+        doc=docs[suffix]
+        if doc.get('asset')!='fxsave' or doc.get('assessment_version')!=policy['assessment_version'] or doc.get('evidence_version',doc.get('selected_evidence_version'))!=policy['evidence_version']:
+            raise ValueError('Mixed editorial asset or evidence/assessment version: '+suffix)
+    assessment=docs['assessment']
+    if assessment.get('schema_version')!='asset-assessment/1' or assessment.get('asset')!='fxsave' or assessment.get('chain')!='ethereum' or assessment.get('address','').lower()!=ADDRESS:
+        raise ValueError('Accepted assessment identity mismatch')
+    if assessment.get('assessment_version')!=policy['assessment_version'] or assessment.get('evidence_version')!=policy['evidence_version']:
+        raise ValueError('Accepted assessment version mismatch')
+    def public_fields(value):
+        if isinstance(value,dict):return {k:public_fields(v) for k,v in value.items() if k not in ('profile_sha256','canonical_profile_sha256','source_profile_sha256')}
+        if isinstance(value,list):return [public_fields(v) for v in value]
+        return value
+    docs=public_fields(docs)
+    return Path(policy['measurement_root']),Path(policy['exit_root']),docs,{'mode':'accepted_owner_exports','review_sha256':review['sha256'],'evidence_version':policy['evidence_version'],'assessment_version':policy['assessment_version']}
+
+
 
 def finite(value):
     return isinstance(value,(int,float)) and not isinstance(value,bool) and math.isfinite(value)
@@ -138,12 +177,28 @@ def compact_inventory(inventory):
         pools.append({'address':pool.get('address'),'name':pool.get('name'),'assets':assets,'tvl_usd':tvl if finite(tvl) else None,'coins':[{'address':c.get('address'),'symbol':c.get('symbol')} for c in pool.get('coins',[])],'is_broken':pool.get('isBroken')})
     return {'as_of':inventory.get('as_of'),'scope':inventory.get('scope'),'sources':inventory.get('sources',[]),'pools':pools}
 
-def price_history_for_preview(native, entries):
+def price_history_for_preview(native, entries, archive=None):
     asset=native.get('assets',{}).get('fxSAVE',{})
     metadata=asset.get('metadata',{})
     if metadata.get('chain')!='ethereum' or metadata.get('contract_address','').lower()!=ADDRESS or metadata.get('price_units')!='USD/share':
         raise ValueError('Native FXSave price history identity/units mismatch')
     by_time={row['timestamp']:row for row in entries}
+    for row in (archive or {}).get('rows',[]):
+        identity=row.get('identity',{})
+        if identity.get('address','').lower()!=ADDRESS or identity.get('underlying','').lower()!='0x65c9a641afceb9c0e6034e558a319488fa0fa3be' or row.get('price_units')!='USD/share':
+            raise ValueError('Archived history identity/units mismatch')
+        nav=int(row['nav_raw'])/1e18
+        if not finite(nav) or nav<=0 or not math.isclose(nav,row['theoretical_price'],rel_tol=1e-12):
+            raise ValueError('Archived NAV raw/display mismatch')
+        calls=[c for c in row.get('raw_calls',[]) if c.get('signature')=='nav()' and c.get('to','').lower()==ADDRESS and c.get('block')==row.get('block')]
+        if len(calls)!=1 or int(calls[0]['result_hex'],16)!=int(row['nav_raw']):
+            raise ValueError('Archived NAV is not bound to raw pinned call')
+        point={'timestamp':row['timestamp'],'block':row['block'],'block_hash':row.get('block_hash'),'nav_usd':nav}
+        if row['timestamp'] in by_time:
+            prior=by_time[row['timestamp']]
+            if prior['block']!=point['block'] or not math.isclose(prior['nav_usd'],nav,rel_tol=1e-12):
+                raise ValueError('Archive/current history contradiction')
+        else:by_time[row['timestamp']]=point
     points=[]
     for row in asset.get('history',[]):
         nav=row.get('theoretical_price')
@@ -158,42 +213,54 @@ def price_history_for_preview(native, entries):
             raise ValueError('New native market policy requires consumer review')
         points.append({'timestamp':row['timestamp'],'block':row['block'],'peg_theoretical_price':nav,'peg_market_price':None,'source':row.get('source'),'price_units':'USD/share'})
     if not points:raise ValueError('Empty native FXSave price history')
-    return {'source':'PegTracker pending native USD history','publication_status':metadata.get('publication_status'),'asset_slug':'fxsave','chain':'ethereum','contract_address':ADDRESS,'units':'USD/share','entries':points}
+    return {'source':'PegTracker native USD history','publication_status':metadata.get('publication_status'),'asset_slug':'fxsave','chain':'ethereum','contract_address':ADDRESS,'units':'USD/share','entries':points}
 
 def prepared_files(refresh_mode="manual_preview_snapshot"):
-    base=json.loads((PEG/'fxsave_backing.json').read_text())
+    peg,dex,editorial,selection=source_selection()
+    base=json.loads((peg/'fxsave_backing.json').read_text())
     detail=validate_base(base)
     outputs={'fxsave_contract.json':topology_for_preview()}
     for suffix in EDITORIAL:
         name=f'fxsave_{suffix}.json'
-        text=subprocess.run(['git','-C',str(EDITORIAL_REPO),'show',f'{EDITORIAL_COMMIT}:data/dashboard_pending/fxsave/{name}'],capture_output=True,text=True,check=True).stdout
-        doc=json.loads(text)
+        if editorial is None:
+            text=subprocess.run(['git','-C',str(EDITORIAL_REPO),'show',f'{EDITORIAL_COMMIT}:data/dashboard_pending/fxsave/{name}'],capture_output=True,text=True,check=True).stdout
+            doc=json.loads(text)
+        else:doc=copy.deepcopy(editorial[suffix])
         if suffix!='evidence_review' and doc.get('asset','').lower()!='fxsave': raise ValueError('Editorial identity mismatch')
         doc['consumer_scope']='isolated dashboard preview; source candidate status preserved'
         outputs[name]=doc
     axis=outputs['fxsave_axis_basis.json']
-    if axis['dependencies'].get('underlying_score') is not None: raise ValueError('Dependency score is deliberately unauthored')
-    detail['assessment']={'overall_score':axis['overall']['overall_score'],'status':'Under review · dated authored scores retained after evidence review','score_as_of':axis['score_as_of']}
-    detail['matched_exits']=compact_ladder(json.loads((DEX/'fxsave_liquidity.json').read_text()))
-    detail['venue_inventory']=compact_inventory(json.loads((DEX/'venue_inventory.json').read_text()))
-    detail['assessment']['review_disposition']=axis.get('review_disposition') or axis.get('review',{}).get('status')
-    detail['assessment']['recorded_scores']=axis.get('recorded_scores',{})
+    dependencies=outputs['fxsave_dependencies.json']['dependencies']
+    if dependencies.get('underlying_score') is not None and not dependencies.get('underlying_score_basis'):
+        raise ValueError('Authored dependency score requires its owner basis')
+    authored=editorial.get('assessment') if editorial else None
+    if authored:
+        detail['assessment']={'overall_score':authored['scores']['overall'],'status':'Provisional · review '+authored['assessment_reviewed']+'; authored scores retained','score_as_of':authored['last_verified'],'reviewed_at':authored['assessment_reviewed'],'assessment_version':authored['assessment_version'],'evidence_version':authored['evidence_version']}
+        outputs['fxsave_assessment.json']=copy.deepcopy(authored)
+    else:
+        detail['assessment']={'overall_score':axis['overall']['overall_score'],'status':'Under review · dated authored scores retained after evidence review','score_as_of':axis['score_as_of']}
+    detail['matched_exits']=compact_ladder(json.loads((dex/'fxsave_liquidity.json').read_text()))
+    detail['venue_inventory']=compact_inventory(json.loads((dex/'venue_inventory.json').read_text()))
+    detail['assessment']['review_disposition']=authored['status'] if authored else axis.get('review_disposition') or axis.get('review',{}).get('status')
+    detail['assessment']['recorded_scores']=authored['scores'] if authored else axis.get('recorded_scores',{})
     base['peg'].update(nav_source='fxSAVE.nav() · Ethereum contract getter',nav_basis='Contract NAV for an accruing fxSP vault share; not an independent market price',chart_window_days=7,chart_min_points=2,chart_strict_window=True)
     base['backing']['as_of']=detail['as_of']
-    detail['refresh_attempt']=json.loads((PEG/'fxsave_backing_last_attempt.json').read_text())
-    detail['exit_refresh_attempt']=json.loads((DEX/'fxsave_liquidity_last_attempt.json').read_text())
+    detail['refresh_attempt']=json.loads((peg/'fxsave_backing_last_attempt.json').read_text())
+    detail['exit_refresh_attempt']=json.loads((dex/'fxsave_liquidity_last_attempt.json').read_text())
     base['summary']['supply_unit']='shares'
     for key in ('dependencies','contract','issuer'): base.setdefault(key,{})
     base['liquidity']={'as_of':detail['matched_exits']['timestamp'],'total_2pct_depth':None,'two_pct_depth_status':'indicative_coarse_brackets','two_pct_depth_basis':'Matched quotes are indicative coarse brackets; reference conversion, gas and independent clocks are disclosed. No firm executable capacity is inferred.','derived_score_status':'not_computed'}
-    base['transport']={'assembled_at':datetime.now(timezone.utc).isoformat(),'refresh_mode':refresh_mode,'measurement_source':str(PEG),'exit_source':str(DEX),'editorial_commit':EDITORIAL_COMMIT,'scope':'preview','clock_policy':'All observations and quote clocks preserved; assembly time is not measurement freshness'}
+    base['transport']={'assembled_at':datetime.now(timezone.utc).isoformat(),'refresh_mode':refresh_mode,'measurement_source':str(peg),'exit_source':str(dex),'editorial_selection':selection,'scope':'preview','clock_policy':'All observations and quote clocks preserved; assembly time is not measurement freshness'}
     outputs['fxsave_backing.json']=base
-    history=json.loads((PEG/'fxsave_backing_history.json').read_text())
+    history=json.loads((peg/'fxsave_backing_history.json').read_text())
     entries=history if isinstance(history,list) else history['entries']
     for row in entries:
         if row.get('detail'):
             validate_base({'asset_slug':'fxsave','asset_specific':{'fxsave':row['detail']},'summary':{'collateral_ratio':None,'total_backing':None},'backing':{'collateral_ratio':None,'total_backing':None}})
-    outputs['fxsave_backing_history.json']={'asset_slug':'fxsave','entries':entries,'price_history':price_history_for_preview(json.loads((PEG/'peg_tracker_history.json').read_text()),entries)}
-    for source,name in [(PEG,'fxsave_backing_last_attempt.json'),(PEG,'fxsave_backing_evidence.json'),(PEG,'fxsave_september_regression.json'),(PEG,'fxsave_schedule_evidence.json'),(DEX,'fxsave_liquidity_last_attempt.json'),(DEX,'schedule_evidence.json')]:
+    archive_path=peg/'archive_nav_history.json'
+    archive=json.loads(archive_path.read_text()) if archive_path.exists() else None
+    outputs['fxsave_backing_history.json']={'asset_slug':'fxsave','entries':entries,'price_history':price_history_for_preview(json.loads((peg/'peg_tracker_history.json').read_text()),entries,archive)}
+    for source,name in [(peg,'fxsave_backing_last_attempt.json'),(peg,'fxsave_backing_evidence.json'),(LEGACY_PEG,'fxsave_september_regression.json'),(LEGACY_PEG,'fxsave_schedule_evidence.json'),(dex,'fxsave_liquidity_last_attempt.json'),(dex,'schedule_evidence.json')]:
         outputs['fxsave_exit_schedule_evidence.json' if name=='schedule_evidence.json' else name]=json.loads((source/name).read_text())
     assets=json.loads((REPO/'data/assets.json').read_text())
     assets=[a for a in assets if a['slug']!='fxsave']

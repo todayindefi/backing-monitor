@@ -53,6 +53,11 @@ class Evidence(unittest.TestCase):
   if 'security_live' in x['sources']:
    routes={r['operation']:r['current_gate_status'] for r in rows};self.assertEqual(routes['new-optimistic-mint'],'blocked');self.assertEqual(routes['pending-optimistic-finalization'],'blocked');self.assertEqual(routes['new-canonical-mint'],'conditional');self.assertEqual(routes['new-redemption'],'conditional');v=f['new_and_pending_mint_redemption_status']['value'];self.assertFalse(v['reopening_verified']);self.assertIsNone(v['operational_reopening_status']);self.assertIsNone(v['btc_delivery_status']);self.assertEqual(f['current_route_matrix']['clock']['block'],26342414)
   else:self.assertTrue(all(r['current_gate_status'] is None for r in rows))
+ def test_pinned_bridge_parameters_are_not_delivery(self):
+  f=self.package('tbtc')['axes']['liquidity_exit']['fields']
+  for key,minimum in [('deposit_bridge_parameters','0.01'),('redemption_bridge_parameters','0.009')]:
+   x=f[key];self.assertEqual(x['value']['treasury_fee_bps'],'20');self.assertEqual(x['value']['dust_threshold_btc'],minimum);self.assertFalse(x['value']['delivery_guarantee']);self.assertIsNone(x['value']['actual_miner_fee_btc']);self.assertEqual(x['clock']['block'],26342414)
+  self.assertEqual(f['redemption_bridge_parameters']['value']['timeout_days'],'13')
  def test_public_output_rejected(self):
   with self.assertRaises(ValueError):build('/nonexistent',ROOT/'data/btc-test')
 if __name__=='__main__':unittest.main()
