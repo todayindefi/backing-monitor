@@ -53,13 +53,76 @@ def validate(report):
     if 'independent_credit_nav' not in v or v['independent_credit_nav'] is not None:raise ValueError('independent credit NAV unknown-state declaration changed')
     return slug
 
-def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('source',type=Path);p.add_argument('destination',type=Path);a=p.parse_args()
+def public_body(report, previous):
+    """Retire the wrong source model and publish only the reviewed projection."""
+    validate(report)
+    specific = report['asset_specific']
+    source = specific.get('issuer_transparency')
+    adoption = specific.get('transparency_adoption')
+    if not isinstance(source, dict) or not isinstance(adoption, dict):
+        raise ValueError('corrected transparency source missing; legacy model cannot replace last-good')
+    for loan in (specific.get('loan_book') or {}).get('loans', []):
+        c = loan.get('collateral') or {}
+        credit = (loan.get('economic_classification') or {}).get('category') == 'credit' or c.get('category') == 'crypto'
+        if not credit:
+            continue
+        if c.get('usd_source') not in {'issuer_transparency_ssr', 'unknown_invalid_legacy_model'}:
+            raise ValueError('retired credit valuation model cannot be published')
+        if c.get('usd_source') == 'unknown_invalid_legacy_model' and any(c.get(k) is not None for k in ['usd', 'current_level_pct', 'buffer_pp']):
+            raise ValueError('missing source carries a stale valuation')
     try:
-        body=a.source.read_bytes();slug=validate(json.loads(body))
-        if a.destination.name!=slug+'_backing.json':raise ValueError('consumer destination identity mismatch')
+        from tools.project_maple_transparency import project
+    except ModuleNotFoundError:
+        from project_maple_transparency import project
+    projected = project(report, previous, report_base='https://tidresearch.com/reports')
+    body = (json.dumps(projected, indent=2, ensure_ascii=False, allow_nan=False) + '\n').encode()
+    for forbidden in [b'/home/', b'.private-reviews', b'"raw_source"', b'"private_wallet"', b'"account_address"', b'"private_holdings"']:
+        if forbidden in body:
+            raise ValueError('private path or raw dossier in public projection')
+    return body
+
+def public_family_body(report):
+    """Keep current family credit membership separate from retired pool totals."""
+    pools = report.get('pools') or []
+    if {p.get('slug') for p in pools} != set(POOLS) or len(pools) != len(POOLS):
+        raise ValueError('family pool identity set mismatch')
+    for pool in pools:
+        if str(pool.get('pool_address', '')).lower() != POOLS[pool['slug']]:
+            raise ValueError('family exact pool identity mismatch')
+        if 'pool_collateral_value_usd' not in pool or pool['pool_collateral_value_usd'] is not None:
+            raise ValueError('retired family aggregate cannot replace corrected last-good')
+    combined = report.get('combined') or {}
+    versions = combined.get('classification_versions') or {}
+    if set(versions) != set(POOLS) or any(v != 'issuer_transparency_ssr_v1+legacy_unmatched' for v in versions.values()):
+        raise ValueError('corrected family classification contract missing')
+    if 'independent_credit_nav' not in combined or combined['independent_credit_nav'] is not None:
+        raise ValueError('independent family NAV unknown declaration changed')
+    if combined.get('loans_only_coverage_complete') is not True and any(combined.get(k) is not None for k in ['loans_only_collateral_usd', 'collateral_ratio_loans_only_pct']):
+        raise ValueError('incomplete credit coverage carries a complete aggregate')
+    try:
+        from tools.project_maple_transparency import clean
+    except ModuleNotFoundError:
+        from project_maple_transparency import clean
+    body = (json.dumps(clean(report), indent=2, ensure_ascii=False, allow_nan=False) + '\n').encode()
+    for forbidden in [b'/home/', b'.private-reviews', b'"raw_source"', b'"private_wallet"', b'"account_address"', b'"private_holdings"']:
+        if forbidden in body:
+            raise ValueError('private family evidence in public projection')
+    return body
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--family',action='store_true');p.add_argument('source',type=Path);p.add_argument('destination',type=Path);a=p.parse_args()
+    try:
+        report=json.loads(a.source.read_bytes())
+        if a.family:
+            if a.destination.name!='syrup_family.json':raise ValueError('family destination identity mismatch')
+            body=public_family_body(report)
+        else:
+            slug=validate(report)
+            if a.destination.name!=slug+'_backing.json':raise ValueError('consumer destination identity mismatch')
+            previous=json.loads(a.destination.read_text()) if a.destination.exists() else {'asset_specific': {}}
+            body=public_body(report, previous)
         temp=a.destination.with_name(a.destination.name+'.'+str(os.getpid())+'.qualified.tmp');temp.write_bytes(body);temp.replace(a.destination)
-    except (OSError,ValueError,TypeError)as e:
+    except (OSError,ValueError,TypeError,KeyError)as e:
         print('Syrup transport rejected; prior consumer snapshot retained: '+str(e),file=sys.stderr);return 1
     return 0
 

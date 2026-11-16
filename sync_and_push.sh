@@ -311,7 +311,14 @@ fi
 # several assets, and the Strategy event log. These stay explicit because there
 # is no slug to derive them from.
 for f in apyx_family.json cap_family.json ethena_family.json ethena_measurements_daily.json frax_backing.json frax_backing_history.json saturn_family.json strategy_events.json syrup_family.json; do
-    [ -f "/home/danger/PegTracker/data/$f" ] && cp "/home/danger/PegTracker/data/$f" data/
+    [ -f "/home/danger/PegTracker/data/$f" ] || continue
+    if [ "$f" = "syrup_family.json" ]; then
+        if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/copy_syrup_backing.py --family "/home/danger/PegTracker/data/$f" "data/$f"; then
+            echo "$(date): ERROR Syrup family transport failed; retaining prior corrected snapshot" >&2
+        fi
+    else
+        cp "/home/danger/PegTracker/data/$f" data/
+    fi
 done
 
 # USDS/sUSDS are measured by PegTracker, but the dashboard owns several
