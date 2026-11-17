@@ -1813,7 +1813,7 @@ var STRCRenderer = {
         var detail = detailParts.join(' · ');
         if (!detail && e.context) {
             var ctx = e.context.length > 140 ? e.context.slice(0, 140) + '…' : e.context;
-            detail = '<span class="italic text-slate-500">' + ctx + '</span>';
+            detail = '<span class="italic text-slate-500" style="overflow-wrap:anywhere">' + ctx + '</span>';
         }
         var title = e.title || '(untitled filing)';
         var titleTxt = title.length > 110 ? title.slice(0, 110) + '…' : title;
