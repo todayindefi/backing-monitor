@@ -1,36 +1,36 @@
 {
  "schema_version": 1,
- "timestamp": "2026-11-18T03:53:16.936865Z",
+ "timestamp": "2026-11-18T04:53:21.939286Z",
  "asset": "fxUSD",
  "asset_slug": "fxusd",
  "chain": "ethereum",
  "contract_address": "0x085780639CC2cACd35E474e71f4d000e2405d8f6",
  "data_source": "on-chain snapshot (PoolManager + two live v2 pools + their oracles) with PegTracker point history",
- "block_number": 26439373,
- "block_hash": "9cf77c54bcf47e033955e97abd5faa349831309ebc1bd6a0eefacaca116c0c14",
- "block_timestamp": "2026-11-18T03:53:11+00:00",
+ "block_number": 26439672,
+ "block_hash": "0af740337fd0fa28ead16a6c042472c8ee895d29719b5b838f27e11785b1bd7e",
+ "block_timestamp": "2026-11-18T04:53:11+00:00",
  "producer": "fxusd_backing_analyzer.py (run_backing_analyzers.sh, hourly :35)",
  "peg": {
-  "market_price": 0.9998104580789293,
+  "market_price": 0.9997751430837795,
   "market_price_source": "CoinGecko id f-x-protocol-fxusd (aggregate); peg row for fxUSD in peg_tracker_latest_usd.json",
   "source": "CoinGecko aggregate USD price",
-  "as_of": "2026-11-18T03:15:23Z",
-  "market_price_as_of": "2026-11-18T03:15:23Z",
+  "as_of": "2026-11-18T04:15:07Z",
+  "market_price_as_of": "2026-11-18T04:15:07Z",
   "price_staleness_basis": "source_timestamp",
   "nav": 1.0,
   "nav_source": "fixed USD par",
   "nav_basis": "fxUSD is minted at $1 against pool collateral and redeemable for collateral at $1 through PoolManager.redeem() when isRedeemAllowed() \u2014 a designed state gate on the Curve EMA (< $0.998), not a holder's floor",
-  "premium_discount_pct": -0.018954192107067946,
+  "premium_discount_pct": -0.022485691622053938,
   "premium_discount_basis": "signed (market price - fixed $1 par) / fixed $1 par * 100",
   "history_ref": "fxusd_peg_history.json",
   "history_field": "peg_market_price",
   "history_coverage": "PegTracker hourly rows since the asset was configured; see the export's own span"
  },
  "backing": {
-  "as_of": "2026-11-18T03:53:16Z",
-  "collateral_ratio": 1.5305536286978223,
+  "as_of": "2026-11-18T04:53:21Z",
+  "collateral_ratio": 1.5315344602168917,
   "collateral_ratio_scale": "multiple",
-  "collateral_ratio_basis": "\u03a3(raw collateral x pool oracle anchor) / \u03a3(pool debt) across the two live v2 pools, read at block 26439373. Honest arithmetic, poor safety number: the collateral is pledged against LEVERAGED LONG positions, so fxUSD's worst day IS its collateral's worst day (reflexive), and the aggregate hides that 74.1% of debt sits on the custodial WBTC leg at the LOWER ratio. Read the per-pool split.",
+  "collateral_ratio_basis": "\u03a3(raw collateral x pool oracle anchor) / \u03a3(pool debt) across the two live v2 pools, read at block 26439672. Honest arithmetic, poor safety number: the collateral is pledged against LEVERAGED LONG positions, so fxUSD's worst day IS its collateral's worst day (reflexive), and the aggregate hides that 74.1% of debt sits on the custodial WBTC leg at the LOWER ratio. Read the per-pool split.",
   "reflexive": true,
   "reflexive_basis": "collateral is not idle: it backs xPOSITION leveraged longs on the same asset, so an ETH or BTC drawdown stresses the positions that back fxUSD at the same time",
   "pools": [
@@ -39,30 +39,30 @@
     "pool": "0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8",
     "collateral_token": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
     "collateral_symbol": "wstETH",
-    "raw_collateral": 4554.113389343759,
-    "raw_collateral_18dp_raw": "4554113389343758631727",
-    "debt_fxusd_raw": "5019507992717232431124711",
+    "raw_collateral": 4557.067977828858,
+    "raw_collateral_18dp_raw": "4557067977828857496611",
+    "debt_fxusd_raw": "5022739315461974674208696",
     "raw_unit": "stETH-equivalent",
     "raw_unit_basis": "getTotalRawCollaterals() is 18dp-normalised in the pool's RAW unit; for wstETH that is stETH-equivalent (raw / held wstETH \u2248 stEthPerToken), for WBTC it is WBTC. The pool's own oracle prices that same unit, so value = raw x anchor with no external rate applied.",
     "oracle": "0x0C5C61025f047cB7e3e85852dC8eAFd7b9a4Abfb",
     "oracle_price_18dp_raw": [
-     "1806461256276580734273",
-     "1802320456887634537837",
-     "1806461256276580734273"
+     "1801723558812370046824",
+     "1801239750151419095551",
+     "1801730114981942330323"
     ],
     "oracle_source_observed_at": null,
     "oracle_source_clock_basis": "getPrice returns marks without original feed update timestamps; block read is not underlying source time",
     "oracle_price_usd": {
-     "anchor": 1806.4612562765808,
-     "min": 1802.3204568876345,
-     "max": 1806.4612562765808
+     "anchor": 1801.7235588123701,
+     "min": 1801.2397501514192,
+     "max": 1801.7301149819423
     },
-    "collateral_value_usd": 8226829.394539924,
-    "debt_fxusd": 5019507.992717232,
-    "collateral_ratio": 1.638971270984362,
+    "collateral_value_usd": 8210576.7347637005,
+    "debt_fxusd": 5022739.315461975,
+    "collateral_ratio": 1.6346810413768247,
     "collateral_ratio_scale": "multiple",
     "collateral_held": {
-     "at_pool_manager": 3647.8431889498142,
+     "at_pool_manager": 3650.216685111168,
      "at_pool": 0.0,
      "token_decimals": 18,
      "note": "collateral is custodied by the PoolManager, not the pool; some may sit in the Aave strategy"
@@ -72,7 +72,7 @@
     "borrow_paused": false,
     "custody": "PoolManager (non-custodial LST)",
     "wsteth_steth_per_token": 1.2494595379376072,
-    "raw_over_held": 1.2484400105627493,
+    "raw_over_held": 1.248437660267303,
     "unit_check": "raw/held vs stEthPerToken agree"
    },
    {
@@ -87,20 +87,20 @@
     "raw_unit_basis": "getTotalRawCollaterals() is 18dp-normalised in the pool's RAW unit; for wstETH that is stETH-equivalent (raw / held wstETH \u2248 stEthPerToken), for WBTC it is WBTC. The pool's own oracle prices that same unit, so value = raw x anchor with no external rate applied.",
     "oracle": "0xb3c90e64EB6f456A5F5C17Aa99b6aecA6f4a6390",
     "oracle_price_18dp_raw": [
-     "64287974631734400000000",
-     "64287974631734400000000",
-     "64412533184679139987112"
+     "64408445610610063577900",
+     "64319263231206313109874",
+     "64479823986780175212100"
     ],
     "oracle_source_observed_at": null,
     "oracle_source_clock_basis": "getPrice returns marks without original feed update timestamps; block read is not underlying source time",
     "oracle_price_usd": {
-     "anchor": 64287.9746317344,
-     "min": 64287.9746317344,
-     "max": 64412.533184679145
+     "anchor": 64408.44561061006,
+     "min": 64319.26323120631,
+     "max": 64479.823986780175
     },
-    "collateral_value_usd": 21469252.75569344,
+    "collateral_value_usd": 21509484.57058609,
     "debt_fxusd": 14382675.36984711,
-    "collateral_ratio": 1.4927162161153376,
+    "collateral_ratio": 1.4955134575087567,
     "collateral_ratio_scale": "multiple",
     "collateral_held": {
      "at_pool_manager": 334.21205752,
@@ -115,27 +115,27 @@
    }
   ],
   "totals": {
-   "supply": 19402257.068788946,
-   "supply_raw": "19402257068788945841226829",
-   "debt_sum": 19402183.36256434,
-   "collateral_value_usd_sum": 29696082.150233366,
-   "debt_sum_raw": "19402183362564341244995629",
-   "reconciliation_gap_raw": "73706224604596231200",
+   "supply": 19405488.391533688,
+   "supply_raw": "19405488391533688084310812",
+   "debt_sum": 19405414.685309082,
+   "collateral_value_usd_sum": 29720061.30534979,
+   "debt_sum_raw": "19405414685309083488079614",
+   "reconciliation_gap_raw": "73706224604596231198",
    "reconciliation_gap_fxusd": 73.70622460459623,
    "reconciliation_gap_basis": "totalSupply minus summed debt of the two enumerated pools; residual is not attributed to a specific cause and is not assumed constant. A GROWING gap requires investigation, not automatic proof of an additional pool.",
    "reconciliation_status": "unexplained_residual",
    "reconciled_within_fxusd": 73.70622460459623
   },
-  "total_supply": 19402257.068788946,
+  "total_supply": 19405488.391533688,
   "total_supply_scope": "Ethereum fxUSD 0x085780639CC2cACd35E474e71f4d000e2405d8f6 totalSupply only; no other deployment is enumerated",
   "breakdown": [
    {
     "name": "wstETH long pool",
     "label": "wstETH pool debt",
-    "amount": 5019507.992717232,
-    "value": 5019507.992717232,
-    "pct": 25.870742640513527,
-    "collateral_ratio": 1.638971270984362,
+    "amount": 5022739.315461975,
+    "value": 5022739.315461975,
+    "pct": 25.88308634197178,
+    "collateral_ratio": 1.6346810413768247,
     "basis": "per-pool fxUSD debt partition"
    },
    {
@@ -143,8 +143,8 @@
     "label": "WBTC pool debt",
     "amount": 14382675.36984711,
     "value": 14382675.36984711,
-    "pct": 74.1288774746909,
-    "collateral_ratio": 1.4927162161153376,
+    "pct": 74.11653383648951,
+    "collateral_ratio": 1.4955134575087567,
     "basis": "per-pool fxUSD debt partition"
    }
   ],
@@ -152,9 +152,9 @@
   "stability_pool": {
    "fxsp": "0x65C9A641afCEB9C0E6034e558A319488FA0FA3be",
    "fxusd_locked": 12242346.065821731,
-   "pct_of_supply": 63.09753562391016,
-   "float_fxusd": 7159911.002967214,
-   "float_pct_of_supply": 36.902464376089846,
+   "pct_of_supply": 63.087028879741446,
+   "float_fxusd": 7163142.325711956,
+   "float_pct_of_supply": 36.912971120258554,
    "basis": "fxUSD.balanceOf(fxSP) / totalSupply. The Stability Pool is both the peg defence and the dominant holder; the tradeable float is what remains"
   }
  },
@@ -166,7 +166,7 @@
    "wstETH_pool": "0x6Ecfa38FeE8a5277B91eFdA204c235814F0122E8",
    "WBTC_pool": "0xAB709e26Fa6B0A30c119D8c55B887DeD24952473"
   },
-  "snapshot_basis": "Backing quantities read at Ethereum block 26439373; peg point observed separately at 2026-11-18T03:15:23Z.",
+  "snapshot_basis": "Backing quantities read at Ethereum block 26439672; peg point observed separately at 2026-11-18T04:15:07Z.",
   "version_note": "f(x) v2: wstETH + WBTC long pools under one PoolManager. Published f(x) material describing stETH-only backing is v1 and does not describe this deployment."
  }
 }
