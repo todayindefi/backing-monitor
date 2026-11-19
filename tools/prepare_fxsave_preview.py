@@ -16,8 +16,9 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
-from preview_assessment import public_editorial
+from preview_assessment import public_editorial, resolve_source
 from dashboard_publication import publish, failed
+from public_dashboard_projection import public_projection
 
 REPO=Path(__file__).resolve().parents[1]
 PEG=Path('/home/danger/PegTracker/data/dashboard_pending/fxsave')
@@ -38,7 +39,7 @@ def source_selection(policy_path=SOURCE_POLICY):
         raise ValueError('Preview source policy identity mismatch')
     if policy.get('editorial_mode') == 'accepted_public_report':
         docs = public_editorial(policy)
-        return Path(policy['measurement_root']), Path(policy['exit_root']), docs, {
+        return resolve_source(policy['measurement_root']), resolve_source(policy['exit_root']), docs, {
             'mode':'accepted_public_report', 'report_sha256':policy['accepted_report']['sha256'],
             'assessment_version':policy['assessment_version'], 'evidence_version':policy['evidence_version']}
     review=policy['editorial_review'];receipt=Path(review['path']).read_bytes()
@@ -280,7 +281,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--from-sync',action='store_true');args=parser.parse_args()
     target=REPO/'previews/fxsave/data'; target.mkdir(parents=True,exist_ok=True)
     try:
-        outputs=prepared_files('hourly_sync_preview' if args.from_sync else 'manual_preview_snapshot') # Validate the complete group first.
+        outputs=public_projection(prepared_files('hourly_sync_preview' if args.from_sync else 'manual_preview_snapshot')) # Validate the complete group first.
     except Exception:
         failed(REPO,'fxsave')
         (target/'preview_status.json').write_text(json.dumps({'status':'failed','attempted_at':datetime.now(timezone.utc).isoformat(),'message':'Accepted source validation failed or a producer input is unavailable. Prior successful snapshot retained; its original observation times still apply.'},indent=2)+'\n')

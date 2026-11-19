@@ -5,14 +5,25 @@ Never fall back to an earlier report on missing/mismatched source.
 """
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 import yaml
 
 SCORE_KEYS=('volatility','backing','liquidity','underlying','structural','issuer','overall')
 
+SOURCE_REPOS={'pegtracker':'PegTracker','dextracker':'DexTracker','riskanalyst':'riskAnalyst','security-analyst':'security_analyst','defianalyst':'DeFiAnalyst','backing-monitor':'backing-monitor'}
+
+def resolve_source(value):
+    owner,sep,relative=str(value).partition(':')
+    if sep and owner in SOURCE_REPOS:
+        rel=Path(relative)
+        if rel.is_absolute() or '..' in rel.parts:raise ValueError('Invalid logical producer source ID')
+        return Path(os.environ.get('BM_SOURCE_ROOT',str(Path.home())))/SOURCE_REPOS[owner]/rel
+    return Path(value)
+
 def pinned(record):
-    raw=Path(record['path']).read_bytes()
+    raw=resolve_source(record['path']).read_bytes()
     if hashlib.sha256(raw).hexdigest()!=record['sha256']:
         raise ValueError('Accepted source hash mismatch: '+str(record['path']))
     return raw

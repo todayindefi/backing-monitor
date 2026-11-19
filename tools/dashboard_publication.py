@@ -9,6 +9,7 @@ import os
 import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
+from public_dashboard_projection import public_projection
 
 SUFFIXES={
     'fxsave':('backing','backing_history','backing_last_attempt','backing_evidence','liquidity_last_attempt','axis_basis','backing_overlay','dependencies','contract','contract_overlay','issuer','assessment','evidence_review'),
@@ -41,7 +42,7 @@ def publish(root,policy,outputs,mode):
     group={}
     for suffix in SUFFIXES[slug]:
         name=f'{slug}_{suffix}.json'
-        group[name]=copy.deepcopy(outputs[name])
+        group[name]=public_projection(copy.deepcopy(outputs[name]))
         d=group[name]
         if isinstance(d,dict) and 'consumer_scope' in d:
             d['consumer_scope']='Approved public exact Ethereum dashboard; original source clocks retained'

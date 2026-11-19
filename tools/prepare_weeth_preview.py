@@ -13,6 +13,7 @@ from pathlib import Path
 from datetime import datetime,timezone
 from preview_assessment import public_editorial
 from dashboard_publication import publish, failed
+from public_dashboard_projection import public_projection
 REPO=Path(__file__).resolve().parents[1]
 ADDRESS='0xcd5fe23c85820f7b72d0926fc9b05b43e359b7ee'
 
@@ -60,7 +61,7 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--publish',action='store_true',help='Manual copy to an already approved production registration; creates no job');args=parser.parse_args()
     target=REPO/'previews/weeth';(target/'data').mkdir(parents=True,exist_ok=True)
     try:
-        policy=json.loads((REPO/'config/weeth_preview_sources.json').read_text());outputs=prepare(policy)
+        policy=json.loads((REPO/'config/weeth_preview_sources.json').read_text());outputs=public_projection(prepare(policy))
     except Exception:
         if args.publish:failed(REPO,'weeth')
         (target/'data/preview_status.json').write_text(json.dumps({'status':'failed','attempted_at':datetime.now(timezone.utc).isoformat(),'message':'Accepted source validation failed or input unavailable. Prior snapshot retained; source clocks unchanged.'},indent=2)+'\n');raise
