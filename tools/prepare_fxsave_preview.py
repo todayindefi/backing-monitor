@@ -19,6 +19,7 @@ import tempfile
 from preview_assessment import public_editorial, resolve_source
 from dashboard_publication import publish, failed
 from public_dashboard_projection import public_projection
+from reviewed_control_projection import reviewed_control_projection
 
 REPO=Path(__file__).resolve().parents[1]
 PEG=Path('/home/danger/PegTracker/data/dashboard_pending/fxsave')
@@ -238,6 +239,9 @@ def prepared_files(refresh_mode="manual_preview_snapshot"):
         if suffix!='evidence_review' and doc.get('asset','').lower()!='fxsave': raise ValueError('Editorial identity mismatch')
         doc['consumer_scope']='isolated dashboard preview; source candidate status preserved'
         outputs[name]=doc
+    accepted_review=outputs['fxsave_contract_overlay.json']['contract'].get('accepted_control_review')
+    if accepted_review:
+        outputs['fxsave_contract.json']=reviewed_control_projection(outputs['fxsave_contract.json'],accepted_review,'fxsave')
     axis=outputs['fxsave_axis_basis.json']
     dependencies=outputs['fxsave_dependencies.json']['dependencies']
     if dependencies.get('underlying_score') is not None and not dependencies.get('underlying_score_basis'):

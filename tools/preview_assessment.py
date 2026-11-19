@@ -72,6 +72,14 @@ def public_editorial(policy):
       'assessment':{'schema_version':'asset-assessment/1','asset':slug,'chain':'ethereum','address':policy['address'],'assessment_version':version,'evidence_version':evidence,'assessment_reviewed':date,'last_verified':str(front.get('last_verified',date)),'scores':scores,'status':'assessed','source_clocks':'Financial, exit, authority and documentary clocks remain in their own fields and report sections; score date does not refresh measurements.'},
       'evidence_review':{'schema_version':'evidence-review/1','asset':slug,'status':'accepted_public_report_adapter','assessment_version':version,'evidence_version':evidence,'source_sha256':policy['accepted_report']['sha256'],'source_scope':identity},
     }
+    if policy.get('issuer_short_name'):
+        docs['issuer']['issuer']['short_name']=policy['issuer_short_name']
+    review=policy.get('control_review') or {}
+    if review.get('schema_version')=='accepted-control-review/1':
+        if review.get('source_sha256')!=policy['accepted_report']['sha256']:
+            raise ValueError('Control review is not bound to the accepted report')
+        docs['contract_overlay']['contract']['accepted_control_review']=review
+        docs['contract_overlay']['contract']['audit_scope_note']=review['audit_scope_note']
     # Keep the full report reasoning in specifically-labelled disclosures, while
     # the dependency list remains a compact causal map. These are report nouns,
     # not new quantified exposure/grade claims.
