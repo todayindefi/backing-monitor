@@ -299,7 +299,7 @@ var FxSaveRenderer = {
             this.details('Why no independent collateral ratio is derivable',this.note((block || {}).collateral_ratio_basis || 'No independent dollar collateral ratio is established for this vault.'))+
             this.note('Collateral-ratio/coverage history and reserve-allocation pie: not applicable. This vault holds a pool claim, not an independently partitioned dollar reserve.')+
             (Number.isFinite(pass.terminal_collateral_ratio_pct) ? this.details('Underlying fxUSD lookthrough · separately dated',this.metrics([['Underlying fxUSD system ratio',pass.terminal_collateral_ratio_pct,'%',2]])+this.note(pass.terminal_ratio_note || 'Underlying ratio timestamp unavailable.')+this.note('This is not FXSave’s own collateral ratio.')+this.note(JSON.stringify(pass))) : '')+
-            '<p class="fxsave-note"><a href="?asset=fxusd">Open fxUSD collateral dashboard →</a></p>');
+            '<p class="fxsave-note"><a href="https://tidresearch.com/reports/fxusd/">Read the fxUSD collateral report →</a></p>');
     },
     custodyHistory: function(history) {
         var self=this, rows=this.historyRows(history), mismatches=rows.filter(function(row){return ((row.detail || {}).accounting || {}).status==='mismatch';});
@@ -349,6 +349,7 @@ var FxSaveRenderer = {
             historical);
     },
     render: function(data,history) {
+        var companion=document.getElementById('header-companion-link');if(companion && !companion.getAttribute('href'))companion.style.display='none';
         var d=(data.asset_specific || {}).fxsave;if(!this.validDetail(d))return;
         var self=this;history=history || {entries:[]};document.body.classList.add('fxsave-dashboard');
         function slot(id,html){var el=document.getElementById(id);if(el)el.innerHTML=html;}

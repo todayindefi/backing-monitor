@@ -277,7 +277,7 @@ def prepared_files(refresh_mode="manual_preview_snapshot"):
         outputs['fxsave_exit_schedule_evidence.json' if name=='schedule_evidence.json' else name]=json.loads((source/name).read_text())
     assets=json.loads((REPO/'data/assets.json').read_text())
     assets=[a for a in assets if a['slug']!='fxsave']
-    assets.append({'slug':'fxsave','published':False,'name':'fxSAVE (f(x) Protocol)','chain':'Ethereum','contract_address':ADDRESS,'description':'Vault share over fxSP. Redemption pays a variable fxUSD plus USDC basket; original source clocks and confidence limits retained.','report_status':'published','report_url':'https://tidresearch.com/reports/fxsave/','related_dashboard':{'slug':'fxusd','label':'fxUSD underlying risk →'}})
+    assets.append({'slug':'fxsave','published':False,'name':'fxSAVE (f(x) Protocol)','chain':'Ethereum','contract_address':ADDRESS,'description':'Vault share over fxSP. Redemption pays a variable fxUSD plus USDC basket; original source clocks and confidence limits retained.','report_status':'published','report_url':'https://tidresearch.com/reports/fxsave/'})
     outputs['assets.json']=assets
     return outputs
 
