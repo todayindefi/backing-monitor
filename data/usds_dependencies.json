@@ -1,44 +1,76 @@
 {
-  "schema_version": "dependencies/1",
   "producer": "riskanalyst",
   "asset": "usds",
-  "as_of": "2026-10-12T00:51:12Z",
+  "as_of": "2026-11-19T05:48:59Z",
+  "generated_at": "2026-11-19T06:38:44Z",
+  "assessment_version": "usds-ethereum-six-axis-2026-11-19-v2",
+  "evidence_version": "bm-usds-financial-funded-claims-2026-11-19-v1",
+  "evidence_manifest_sha256": "cc784133148ca062052973c592f523f1ea3db7a08e962a3ab1b715951cb09a62",
+  "scope": "Exact Ethereum USDS dependency assessment; underlying cross-chain claims do not grade remote USDS representations.",
+  "source_clocks": {
+    "root": "2026-11-19T05:48:59Z",
+    "funded_from": "2026-11-19T06:20:06.212591Z",
+    "funded_to": "2026-11-19T06:20:10.849779Z",
+    "authority": "2026-11-19T06:06:35Z"
+  },
+  "schema_version": "dependencies/1",
   "dependencies": {
     "upstream": [
       {
-        "name": "Spark — 31.51% of Sky vat debt",
-        "terminal": true,
+        "name": "USDC \u2014 shared LitePSM pocket and external issuer",
+        "slug": "usdc",
+        "edge_kind": "backing",
+        "note": "The $2.559B pocket is shared DAI/USDS inventory, not bank cash. Other lending positions are distinct claims."
+      },
+      {
+        "name": "Spark funded lending/credit claims",
         "kind": "protocol",
-        "note": "Spark and Grove together are 46.18% of current Sky vat debt. Spark remains 61.47% onchain crypto lending in the separate BlockAnalitica-backed mix."
-      },
-      {
-        "name": "Grove — 14.67% of Sky vat debt",
-        "terminal": true,
-        "kind": "protocol"
-      },
-      {
-        "name": "T-bills — 4.22% of current look-through backing",
-        "terminal": true,
-        "kind": "rwa-reserve"
-      },
-      {
-        "name": "Crypto lending book — 36.14% of current look-through backing, on-chain plus OTC",
+        "protocol_slug": "spark",
+        "edge_kind": "backing",
         "unresolved": [
-          "Sky crypto lending collateral set"
+          "Exact material Spark lending-vault, borrower and terminal-claim coverage"
         ],
-        "unresolved_note": "Onchain plus OTC crypto lending is 36.14% of current look-through backing against 4.22% Treasury bills, and the collateral set is not enumerated here."
+        "note": "Allocator debt is $3.805B, about 36.06% of Vat debt. There are 27 reported claim groups; receipt names do not verify all borrowers or collective recovery."
       },
       {
-        "name": "⚠️ USDS minted against USDS is NOT external collateral",
-        "terminal": true,
-        "kind": "authority",
-        "note": "⚠️ This report already flags the double-count: some vat debt was minted against positions that USDS itself created, and counting that as external collateral COUNTS USDS TWICE. A lookthrough that sums vat debt without this correction overstates backing. Flagged in the report, not resolved."
+        "name": "Grove funded lending, credit and tokenized funds",
+        "kind": "protocol",
+        "protocol_slug": "grove",
+        "edge_kind": "backing",
+        "unresolved": [
+          "Exact Base Grove lending vault credit book",
+          "Galaxy warehouse vehicle and security claim",
+          "JAAA/STAC chain, share-class and holder-rights coverage"
+        ],
+        "note": "Allocator debt is $1.490B, about 14.12% of Vat debt. Eleven reported claim groups include credit, lending and tokenized funds. Configured routes and limits are not funded assets."
+      },
+      {
+        "name": "Obex \u2192 exact Ethereum syrupUSDC",
+        "slug": "syrupusdc",
+        "edge_kind": "backing",
+        "note": "The publisher attributes $408.303M to the exact syrupUSDC receipt, all of its selected Obex allocation. This is not a complete Maple borrower census or the grade of the whole USDS book."
+      },
+      {
+        "name": "Core crypto CDPs and additional allocator claims",
+        "edge_kind": "backing",
+        "unresolved": [
+          "Core crypto collateral and borrower look-through",
+          "ALLOCATOR-GROVE-A: $129.894M, entity and terminal claims",
+          "ALLOCATOR-PRYSM-A: $25.000M, entity and terminal claims"
+        ],
+        "note": "Additional funded ilks sit outside the three named cards. Their entity and terminal claims remain unresolved; a similar label does not establish the same claim."
       }
     ],
-    "upstream_resolution_rule": "⚠️ One resolution per entry: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL = nothing is missing. UNRESOLVED = a report is owed. Never merged. Bar set 2026-10-01: terminal requires the report to POSITIVELY STATE the backing; a peg_mechanism label is not evidence.",
-    "edge_kind_rule": "`backing` = my SOLVENCY depends on it. `venue` = my EXIT PRICE does.",
-    "coverage_note": "Refreshed 2026-10-12 from the live backing feed. Downstream edges are generated; upstream quality remains incomplete where the crypto-lending collateral set lacks reports.",
-    "collateral_as_of": "2026-10-12T00:51:12Z",
+    "coverage_note": "Current reported funded-claim map with unknown independently verified terminal, legal and recoverable-asset coverage. The $59.841M of identified recursive collateral attribution is distinct from direct Spark sUSDS worth $591.190M; no global net-reserve reconciliation is claimed.",
+    "collateral_as_of": "2026-11-19T06:20:10.849779Z",
+    "weights_not_additive": true,
+    "source_amount_basis": "Vat debt, combined circulating supply and publisher-backed attribution have different denominators. Do not sum receipt and collateral leaves or count DAI/USDS twice.",
+    "source_clocks": {
+      "root": "2026-11-19T05:48:59Z",
+      "funded_from": "2026-11-19T06:20:06.212591Z",
+      "funded_to": "2026-11-19T06:20:10.849779Z",
+      "authority": "2026-11-19T06:06:35Z"
+    },
     "downstream_tracked": [
       "susds",
       "usdm",
@@ -51,11 +83,11 @@
         "usdp-parallel"
       ],
       "asserted_only": [],
-      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "asserted_only_note": "None \u2014 every asserted edge is reproducible from an upstream array.",
       "rejected_as_inverted": [],
       "rejected_as_inverted_note": "None.",
       "generated_by": "scripts/dependency_graph.py build",
-      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+      "do_not_hand_edit": "\u26a0\ufe0f downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream \u2014 one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
     }
   }
 }
