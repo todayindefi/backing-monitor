@@ -62,6 +62,7 @@ var ASSET_RENDERERS = {
     frxusd:    typeof FrxUSDRenderer    !== 'undefined' ? FrxUSDRenderer    : null,
     sfrxusd:   typeof SfrxUSDRenderer   !== 'undefined' ? SfrxUSDRenderer   : null,
     fxusd:     typeof FxUSDRenderer !== 'undefined' ? FxUSDRenderer : null,
+    weeth:     typeof WeethRenderer !== 'undefined' ? WeethRenderer : null,
     fxsave:    typeof FxSaveRenderer !== 'undefined' ? FxSaveRenderer : null,
     scrvusd:   typeof ScrvUSDRenderer   !== 'undefined' ? ScrvUSDRenderer   : null,
     'msusd-metronome': typeof MsUSDMetronomeRenderer !== 'undefined' ? MsUSDMetronomeRenderer : null,
@@ -483,6 +484,9 @@ async function renderAsset(slug) {
         }
         var data = await dataResp.json();
         data.dashboard_published = isPublished(assetMeta);
+        if (assetMeta.source_status_ref && typeof renderAssetSourceStatus === 'function' && !location.pathname.includes('/previews/')) {
+            renderAssetSourceStatus('data/' + assetMeta.source_status_ref);
+        }
         // Tag the URL slug so findAssetRenderer can route to the sibling
         // view's renderer instead of falling through to the source asset's.
         data.view_slug = slug;

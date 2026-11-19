@@ -1,0 +1,32 @@
+{
+  "producer": "riskAnalyst",
+  "asset": "fxsave",
+  "as_of": "2026-11-17",
+  "assessment_version": "fxsave-six-axis-2026-11-17-v2",
+  "evidence_version": "BM:closure-batch1-selected-inputs-v3;Security:lending-batch1-security-2026-11-17-v1;DA:batch-1-v1",
+  "assessment_reviewed": "2026-11-17",
+  "schema_version": "axis-basis/1",
+  "selected_evidence_version": "BM:closure-batch1-selected-inputs-v3;Security:lending-batch1-security-2026-11-17-v1;DA:batch-1-v1",
+  "peg": {
+    "volatility_score": 5.0,
+    "volatility_score_source": "riskAnalyst:authored",
+    "volatility_score_status": "assessed",
+    "volatility_score_generated_at": "2026-11-17",
+    "volatility_score_basis": "fxSAVE's reference is an accruing share NAV, not a fixed $1 peg. At **November17 04:47:11 UTC, Ethereum block26432468**, protocol NAV was **$1.1308200669 per share**, using a conversion rate of **1.11924209816777 fxSP** and fxSP NAV **$1.0103444722**. Their product reconciles; these are protocol marks rather than independently executable cash prices.\n\nThe separate **04:17 UTC** route study used block26432319 for basket sizing and independently timed router/oracle references. Its smallest direct-sale quote was close to NAV, while larger sales were materially worse. That is measured size-dependent exit behavior, not evidence of a uniform share depeg. No synchronized independent same-block basket valuation or complete time series was established. A stable mark can coexist with losses, constrained exits or gross-NAV liquidation pricing."
+  },
+  "liquidity": {
+    "liquidity_score": 3.5,
+    "liquidity_score_source": "riskAnalyst:authored",
+    "liquidity_score_status": "assessed",
+    "liquidity_score_generated_at": "2026-11-17",
+    "liquidity_score_basis": "A real holder can redeem its own fxSAVE shares into fxSP; an executor acting for another owner needs the proper share allowance. The wrapper itself calls its owned staking proxy, satisfying the proxy's owner check. Public fxSP instant redemption then burns the caller's available, unreserved fxSP and pays **fxUSD plus USDC**, currently less **1% on both components, once**. The separate queued route uses a **one-hour cooldown** and a subsequent claim; queue records, settings and actual asset availability matter.\n\nAt the accounting pin, indicative instant output per share was **0.2642364434 fxUSD plus 0.855540 USDC**. Source-level transfer logic can depend on configured underlying strategies when direct inventory is insufficient. Function returns and contract-context simulations therefore do not establish actual receiver balance changes, current strategy capacity or final USDC settlement. fxSAVE redemption alone yields fxSP, not USDC; a cash-only outcome also needs a successful fxUSD sale. The composed permissionless route is established in source, while sized funded execution remains unmeasured.\n\nThe **04:17 UTC** indicative ladder below retains its own block26432319 and quote clocks. USD sizes use protocol NAV, not synchronized firm dollars. Output units are USDC and all full-path gas is excluded.\n\n| Protocol-NAV input | Direct fxSAVE sale | Instant basket plus fxUSD-sale arithmetic |\n|---|---:|---:|\n| $1,000 | 999.13 USDC | 990.22 USDC |\n| $10,000 | 9,981.70 USDC | 9,902.12 USDC |\n| $100,000 | 99,324.08 USDC | 99,018.88 USDC |\n| $1m | 716,503.22 USDC | 990,174.66 USDC |\n| $10m | Not measured after direct-route termination | 9,899,792.77 USDC |\n\nThe direct million-dollar discount is not the only possible recovery route. Conversely, basket arithmetic is not demonstrated executable capacity. The standing 1% fee is already reflected in the instant legs and must not be deducted again or applied to direct-sale quotes. Coarse rungs do not locate an exact threshold crossing. Vendor HTTP429 diagnostics are availability limits, not zero liquidity; unmeasured routes remain unknown. Quotes are indicative and independently cached, not reserved proceeds or completed liquidations.\n\nAt 04:47, Morpho custody held **21.5271m fxSAVE, about49.96% of supply**, above the selected 30% review trigger. This is token custody concentration, not a count of independent beneficial owners, outstanding withdrawal requests or proven bad debt. Correlated borrower liquidations can pressure the same underlying exits."
+  },
+  "overall": {
+    "overall_score": 4.5,
+    "overall_score_source": "riskAnalyst:authored",
+    "overall_score_status": "assessed",
+    "overall_score_generated_at": "2026-11-17",
+    "overall_score_basis": "Exact Ethereum six-axis authored overall; higher means safer. No grade inherited by other deployments."
+  },
+  "consumer_scope": "Approved public exact Ethereum dashboard; original source clocks retained"
+}

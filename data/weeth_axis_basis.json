@@ -1,0 +1,31 @@
+{
+  "producer": "riskAnalyst",
+  "asset": "weeth",
+  "as_of": "2026-11-17",
+  "assessment_version": "weeth-six-axis-2026-11-17-v1",
+  "evidence_version": "BM:bm-phase1-staking-selected-six-axis-v1;DA:staking-operating-delta-v2;TokenAnalyst:staking-token-rights-v1;Security:staking-assets-security-v1",
+  "assessment_reviewed": "2026-11-17",
+  "schema_version": "axis-basis/1",
+  "selected_evidence_version": "BM:bm-phase1-staking-selected-six-axis-v1;DA:staking-operating-delta-v2;TokenAnalyst:staking-token-rights-v1;Security:staking-assets-security-v1",
+  "peg": {
+    "volatility_score": 7.5,
+    "volatility_score_source": "riskAnalyst:authored",
+    "volatility_score_status": "assessed",
+    "volatility_score_generated_at": "2026-11-17",
+    "volatility_score_basis": "The reference is **eETH per weETH and the economic ETH value of that staking claim**, not USD 1. Ethereum-dollar investment moves are unscored. At Ethereum block **26,434,080, November 17 around 10:10 UTC**, the accounting rate was **1.108341313177078471 eETH/weETH**. It is not a guaranteed ETH sale price. A separately updated oracle ratio retained its **04:46:23 UTC** source time; fetching it later does not make its original report newer.\n\nThe maintained oracle/index series has **168 usable observations over seven days and 719 over thirty**, ending November 17 09:26 UTC. Median discounts to its reference were approximately **0.0365% / 0.0249%**, respectively. The source uses Chainlink/Pyth-derived observations, not a continuous trade tape; underlying market update clocks and per-observation code versions were not preserved. Repeated marks and roughly one-to-two-hour maximum sampling gaps limit stress inference. This supports ordinary reference tracking, not guaranteed convergence during slashing, withdrawal or market stress."
+  },
+  "liquidity": {
+    "liquidity_score": 6.5,
+    "liquidity_score_source": "riskAnalyst:authored",
+    "liquidity_score_status": "assessed",
+    "liquidity_score_generated_at": "2026-11-17",
+    "liquidity_score_basis": "There are three materially different paths: **unwrap to eETH**, **instant redemption through a configured output-token bucket**, and **queued NFT withdrawal followed by finalization and claim**. Unwrap is not ETH cash. Instant redemption depends on the chosen ETH/stETH output, its buffer/watermark, rate limits, fees and pause/blacklist state. The selected packet does not establish current complete ordinary-holder instant capacity or a fixed queue SLA.\n\nIndicative Ethereum quotes requested **November 17 10:11:01–04 UTC** returned:\n\n| Input size, accounting-NAV USD equivalent | weETH input | Gross WETH output | Cost versus accounting ETH, before gas |\n|---|---:|---:|---:|\n| 10,000 | 5.022497 | 5.563169 | 6.24 bps |\n| 100,000 | 50.224973 | 55.629712 | 6.59 bps |\n| 500,000 | 251.124863 | 278.118402 | 7.68 bps |\n\nSizing used **ETH/USD 1,796.4154**, with its own 10:08:35 UTC oracle timestamp, and eETH=ETH accounting parity. Inputs/outputs are native 18-decimal units. Routes included Curve and, at larger sizes, other venues. Provider gas estimates were roughly **$0.14/$0.20/$0.55**; complete approval, execution and primary costs are not independently verified. These are quotes, not funded settlement or a maximum depth. There was no fresh USD 1,000 anchor; the first tested size was USD 10,000. Carried pool blocks have separate/partly unknown original clocks.\n\nQueued requests are documented as fee-free but still need finalization and a later ETH claim. Source-bound current contracts impose per-request minimum **0.001 ETH** and maximum **1,000 ETH**, subject to applicable checks; they do not establish total capacity. Finalized NFT ETH is segregated from the pool's native balance. A separately measured priority route is **whitelisted**, with a one-hour minimum delay; it is not a public one-hour cash guarantee. Claim invalidation and privileged handling of invalidated requests remain material. [Integration guide](https://etherfi.gitbook.io/etherfi/developers/contracts-and-integrations/integration-guide.md)."
+  },
+  "overall": {
+    "overall_score": 6.5,
+    "overall_score_source": "riskAnalyst:authored",
+    "overall_score_status": "assessed",
+    "overall_score_generated_at": "2026-11-17",
+    "overall_score_basis": "Exact Ethereum six-axis authored overall; higher means safer. No grade inherited by other deployments."
+  }
+}

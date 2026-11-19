@@ -27,11 +27,12 @@ if ! PYTHONPYCACHEPREFIX=/tmp/backing-monitor-pycache python3 msusd_metronome_ba
 fi
 
 # Keep the isolated FXSave review snapshot aligned with its producers. This
-# writes only previews/fxsave/, never the serving registry or production data/.
+# emits the explicitly approved production group and its review preview.
+# weETH remains a manual snapshot; this existing job must never collect it.
 # Invalid input retains the prior snapshot; the renderer shows original clocks.
 if [ -f tools/prepare_fxsave_preview.py ]; then
     if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/prepare_fxsave_preview.py --from-sync >/tmp/fxsave-preview-sync.log 2>&1; then
-        echo "$(date): ERROR FXSave preview refresh failed; prior snapshot retained (see /tmp/fxsave-preview-sync.log)" >&2
+        echo "$(date): ERROR FXSave preview refresh failed; last-good production/preview snapshots retained (see /tmp/fxsave-preview-sync.log)" >&2
     fi
 fi
 
@@ -134,6 +135,8 @@ PYEOF
 }
 
 for slug in $SLUGS; do
+    # Approved grouped adapters own these files; generic copies would undo scope/grades.
+    case "$slug" in fxsave|weeth) continue ;; esac
     # Owner approved sfrxUSD production on 2026-10-16. Its producers still use
     # isolated candidate directories. Consume only this asset's reviewed file
     # set; never add a whole pending directory to fleet SOURCE_ROOTS. Editorial
@@ -298,6 +301,8 @@ if [ -f tools/emit_axis5.py ]; then
     # bigger decision than a sync should make silently. Named loudly instead, so
     # it is a decision someone takes rather than a file nobody notices.
     for slug in $SLUGS; do
+    # Approved grouped adapters own these files; generic copies would undo scope/grades.
+    case "$slug" in fxsave|weeth) continue ;; esac
         python3 tools/emit_axis5.py "$slug" --out data/ 2>&1 || {
             echo "$(date): axis5 emit skipped for $slug (source walk unavailable)" >&2
             if [ -f "data/${slug}_contract.json" ]; then

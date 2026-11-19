@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Validate FXSave deliveries and prepare an isolated preview using the real app.
 
-No writes to data/, producer repositories, the serving registry or cron. Editorial
+Production writes require an explicit approved policy and registered identity. No writes
+to producer repositories, registry or cron. Editorial
 judgments are pinned; recurring measurements retain their independent source clocks.
 """
 import argparse
@@ -15,6 +16,8 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+from preview_assessment import public_editorial
+from dashboard_publication import publish, failed
 
 REPO=Path(__file__).resolve().parents[1]
 PEG=Path('/home/danger/PegTracker/data/dashboard_pending/fxsave')
@@ -29,10 +32,15 @@ LEGACY_PEG=PEG
 
 def source_selection(policy_path=SOURCE_POLICY):
     if not policy_path.exists():
-        return PEG,DEX,None,{'mode':'retained_editorial_commit','commit':EDITORIAL_COMMIT}
+        raise ValueError('Accepted preview source policy unavailable; no legacy fallback')
     policy=json.loads(policy_path.read_text())
     if policy.get('asset_slug')!='fxsave' or policy.get('chain_id')!='eip155:1' or policy.get('address','').lower()!=ADDRESS:
         raise ValueError('Preview source policy identity mismatch')
+    if policy.get('editorial_mode') == 'accepted_public_report':
+        docs = public_editorial(policy)
+        return Path(policy['measurement_root']), Path(policy['exit_root']), docs, {
+            'mode':'accepted_public_report', 'report_sha256':policy['accepted_report']['sha256'],
+            'assessment_version':policy['assessment_version'], 'evidence_version':policy['evidence_version']}
     review=policy['editorial_review'];receipt=Path(review['path']).read_bytes()
     if hashlib.sha256(receipt).hexdigest()!=review['sha256']:
         raise ValueError('Editorial acceptance receipt hash mismatch')
@@ -235,7 +243,7 @@ def prepared_files(refresh_mode="manual_preview_snapshot"):
         raise ValueError('Authored dependency score requires its owner basis')
     authored=editorial.get('assessment') if editorial else None
     if authored:
-        detail['assessment']={'overall_score':authored['scores']['overall'],'status':'Provisional · review '+authored['assessment_reviewed']+'; authored scores retained','score_as_of':authored['last_verified'],'reviewed_at':authored['assessment_reviewed'],'assessment_version':authored['assessment_version'],'evidence_version':authored['evidence_version']}
+        detail['assessment']={'overall_score':authored['scores']['overall'],'status':('Assessed · ' if authored['status']=='assessed' else 'Provisional · review ')+authored['assessment_reviewed']+'; original source clocks retained','score_as_of':authored['last_verified'],'reviewed_at':authored['assessment_reviewed'],'assessment_version':authored['assessment_version'],'evidence_version':authored['evidence_version']}
         outputs['fxsave_assessment.json']=copy.deepcopy(authored)
     else:
         detail['assessment']={'overall_score':axis['overall']['overall_score'],'status':'Under review · dated authored scores retained after evidence review','score_as_of':axis['score_as_of']}
@@ -264,25 +272,38 @@ def prepared_files(refresh_mode="manual_preview_snapshot"):
         outputs['fxsave_exit_schedule_evidence.json' if name=='schedule_evidence.json' else name]=json.loads((source/name).read_text())
     assets=json.loads((REPO/'data/assets.json').read_text())
     assets=[a for a in assets if a['slug']!='fxsave']
-    assets.append({'slug':'fxsave','published':False,'name':'fxSAVE (f(x) Protocol)','chain':'Ethereum','contract_address':ADDRESS,'description':'Vault share over fxSP. Redemption pays fxUSD plus USDC; shared governance with fxUSD. Dated scores remain under review.','report_status':'staged','report_url':'https://staging.tidresearch.com/reports/fxsave/','related_dashboard':{'slug':'fxusd','label':'fxUSD underlying risk →'}})
+    assets.append({'slug':'fxsave','published':False,'name':'fxSAVE (f(x) Protocol)','chain':'Ethereum','contract_address':ADDRESS,'description':'Vault share over fxSP. Redemption pays a variable fxUSD plus USDC basket; original source clocks and confidence limits retained.','report_status':'published','report_url':'https://tidresearch.com/reports/fxsave/','related_dashboard':{'slug':'fxusd','label':'fxUSD underlying risk →'}})
     outputs['assets.json']=assets
     return outputs
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--from-sync',action='store_true');args=parser.parse_args()
-    outputs=prepared_files('hourly_sync_preview' if args.from_sync else 'manual_preview_snapshot') # Validate the complete group first.
     target=REPO/'previews/fxsave/data'; target.mkdir(parents=True,exist_ok=True)
+    try:
+        outputs=prepared_files('hourly_sync_preview' if args.from_sync else 'manual_preview_snapshot') # Validate the complete group first.
+    except Exception:
+        failed(REPO,'fxsave')
+        (target/'preview_status.json').write_text(json.dumps({'status':'failed','attempted_at':datetime.now(timezone.utc).isoformat(),'message':'Accepted source validation failed or a producer input is unavailable. Prior successful snapshot retained; its original observation times still apply.'},indent=2)+'\n')
+        raise
     for name,doc in outputs.items():
         text=json.dumps(doc,indent=2,ensure_ascii=False,allow_nan=False)+'\n'
         dest=target/name
         if dest.exists() and dest.read_text()==text: continue
         with tempfile.NamedTemporaryFile(mode='w',dir=target,prefix='.fxsave-',delete=False) as f: f.write(text); temp=f.name
         os.replace(temp,dest)
+    policy=json.loads(SOURCE_POLICY.read_text())
+    if policy.get('production_approved') is True:
+        try:
+            publish(REPO,policy,outputs,'hourly_sync' if args.from_sync else 'manual_existing_fxsave_reader')
+        except Exception:
+            failed(REPO,'fxsave')
+            raise
     # Keep the preview on the exact shared application DOM and assets.
     html=(REPO/'index.html').read_text().replace('<head>','<head>\n    <base href="../../">\n    <script src="previews/fxsave/native-loader.js"></script>',1)
     html=html.replace('<title>Risk Dashboard</title>','<title>FXSave · Dashboard review</title>')
     (REPO/'previews/fxsave/native.html').write_text(html)
     (REPO/'previews/fxsave/index.html').write_text(html)
-    print(f'Validated {len(outputs)} FXSave preview files; no serving registry/data/ changes')
+    (target/'preview_status.json').write_text(json.dumps({'status':'success','attempted_at':datetime.now(timezone.utc).isoformat(),'assessment_version':outputs['fxsave_assessment.json']['assessment_version']},indent=2)+'\n')
+    print(f'Validated {len(outputs)} FXSave files; approved production group emitted when configured; registry unchanged')
 
 if __name__=='__main__': main()

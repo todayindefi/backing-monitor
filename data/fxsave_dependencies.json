@@ -1,0 +1,53 @@
+{
+  "producer": "riskAnalyst",
+  "asset": "fxsave",
+  "as_of": "2026-11-17",
+  "assessment_version": "fxsave-six-axis-2026-11-17-v2",
+  "evidence_version": "BM:closure-batch1-selected-inputs-v3;Security:lending-batch1-security-2026-11-17-v1;DA:batch-1-v1",
+  "assessment_reviewed": "2026-11-17",
+  "schema_version": "dependencies/1",
+  "dependencies": {
+    "underlying_score": 4.5,
+    "underlying_score_source": "riskAnalyst:authored",
+    "underlying_score_status": "assessed",
+    "underlying_score_generated_at": "2026-11-17",
+    "underlying_score_basis": "The direct chain is **fxSAVE → custody/staking/gauge → fxSP → variable fxUSD/USDC exposures and f(x) collateral/position management**. Wrapper compounding, rewards, keepers, oracles, underlying strategies and payout swaps add operational dependencies. USDC transfer/issuer controls and fxUSD's collateral, keeper and peg mechanisms remain relevant after nominal basket redemption. The pool's common protocol and collateral dependencies limit diversification between its token legs.\n\nThis axis assesses the dependency chain; it does not imply a newly audited reserve or an independent score for every fxSP accounting layer. fxSP is analyzed here as the directly held loss-bearing pool claim. Pendle PT/SY and lending-vault layers are separately assessed instruments; their grades and exit paths are not inherited backward into direct fxSAVE.\n\nThe canonical profile records the operator's February2025 keeper/RPC disruption and an April2025 access-control vulnerability disclosure with a reported fix. Those dated accounts establish operational and code-risk examples, not independently verified current redundancy, actual loss amounts or a complete clean incident history. No fresh adverse event was established by this bounded documentary refresh.",
+    "upstream": [
+      {
+        "name": "fxSP stability-pool claim",
+        "metric": "Exact Ethereum dependency; weight not independently quantified",
+        "source": "https://tidresearch.com/reports/fxsave/",
+        "unresolved": [
+          "Complete independently verified recovery and concentration mapping"
+        ]
+      },
+      {
+        "name": "fxUSD collateral and peg mechanics",
+        "metric": "Exact Ethereum dependency; weight not independently quantified",
+        "source": "https://tidresearch.com/reports/fxsave/",
+        "unresolved": [
+          "Complete independently verified recovery and concentration mapping"
+        ]
+      },
+      {
+        "name": "USDC issuer / transfer controls",
+        "metric": "Exact Ethereum dependency; weight not independently quantified",
+        "source": "https://tidresearch.com/reports/fxsave/",
+        "unresolved": [
+          "Complete independently verified recovery and concentration mapping"
+        ]
+      },
+      {
+        "name": "Custody / gauge / strategy and payout swaps",
+        "metric": "Exact Ethereum dependency; weight not independently quantified",
+        "source": "https://tidresearch.com/reports/fxsave/",
+        "unresolved": [
+          "Complete independently verified recovery and concentration mapping"
+        ]
+      }
+    ],
+    "coverage_note": "Exact Ethereum dependency scope. Terminal recovery weights and complete downstream usage are not independently quantified. Full accepted reasoning is preserved in the scoring disclosure.",
+    "downstream_note": "Downstream usage is not enumerated in this scoped dashboard; absence is not zero."
+  },
+  "consumer_scope": "Approved public exact Ethereum dashboard; original source clocks retained"
+}
