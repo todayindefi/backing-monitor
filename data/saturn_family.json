@@ -1,58 +1,50 @@
 {
   "schema_version": 1,
-  "as_of": "2026-11-22T09:43:49Z",
-  "timestamp": "2026-11-22T09:43:49Z",
+  "as_of": "2026-11-22T10:43:39Z",
+  "timestamp": "2026-11-22T10:43:39Z",
   "issuer": "Saturn Labs",
   "risk_flags": [
     {
       "severity": "warning",
-      "message": "srUSDat coverage ratio low: 110.84% (< 115%, approaching Strata floor 107.5%)"
-    },
-    {
-      "severity": "warning",
-      "message": "srUSDat junior buffer eroded: 9.78% of collateral (< 15%, baseline ~24%)"
-    },
-    {
-      "severity": "warning",
-      "message": "srUSDat junior TVL down 49.1% over ~7d ($913,457 \u2192 $464,604) \u2014 first-loss buffer shrinking"
+      "message": "srUSDat junior TVL down 49.2% over ~7d ($913,457 \u2192 $463,776) \u2014 first-loss buffer shrinking"
     }
   ],
   "tranche_coverage": {
-    "as_of": "2026-11-22T09:43:49Z",
-    "susdat_nav": 0.995115,
-    "senior_tvl_usd": 4285952.74,
-    "junior_tvl_usd": 464603.76,
-    "collateral_usd": 4750553.39,
-    "coverage_ratio": 1.108401,
-    "coverage_pct": 110.8401,
-    "junior_buffer_pct": 9.78,
-    "srusdat_nav": 1.044028,
+    "as_of": "2026-11-22T10:43:39Z",
+    "susdat_nav": null,
+    "senior_tvl_usd": 4279721.0,
+    "junior_tvl_usd": 463776.0,
+    "collateral_usd": null,
+    "coverage_ratio": null,
+    "coverage_pct": null,
+    "junior_buffer_pct": null,
+    "srusdat_nav": null,
     "strata_min_coverage_pct": 107.5,
-    "junior_tvl_drop_pct_7d": 49.14,
+    "junior_tvl_drop_pct_7d": 49.23,
     "senior": {
       "token": "srUSDat",
       "address": "0xfaa9a0e1db9e22ae3a20b2b58a68dc24d053d066",
       "decimals": 18,
-      "tvl_usd": 4285952.74,
-      "nav": 1.044028,
+      "tvl_usd": 4279721.0,
+      "nav": null,
       "asset_is_usdat": true,
-      "source": "onchain"
+      "source": "defillama_fallback"
     },
     "junior": {
       "token": "jrUSDat",
       "address": "0x011e55d2b28306458e37ca7e997c879bb25a455d",
       "decimals": 18,
-      "tvl_usd": 464603.76,
-      "nav": 0.291882,
+      "tvl_usd": 463776.0,
+      "nav": null,
       "asset_is_usdat": true,
-      "source": "onchain"
+      "source": "defillama_fallback"
     },
     "collateral": {
       "vault": "0xce7B00D1004d9ED22E702A6a7F5bBdcE7297B090",
       "token": "sUSDat",
       "susdat_units": 4773873.760858,
-      "susdat_nav": 0.995115,
-      "value_usd": 4750553.39
+      "susdat_nav": null,
+      "value_usd": null
     },
     "thresholds": {
       "coverage_warn_pct": 115.0,
@@ -66,14 +58,9 @@
       "jrusdat_tvl_usd": 463776.0,
       "srusdat_pool": "d0f93146-6936-4fac-841e-68178b5a59b2",
       "jrusdat_pool": "1f42963b-ff24-4563-acb7-0fd35e6ec45b",
-      "as_of": "2026-11-22T09:43:49Z"
+      "as_of": "2026-11-22T10:43:39Z"
     },
     "history": [
-      {
-        "ts": "2026-11-13T09:44:05Z",
-        "junior_tvl_usd": 909415.96,
-        "srusdat_nav": 1.042022
-      },
       {
         "ts": "2026-11-13T10:44:20Z",
         "junior_tvl_usd": 909372.88,
@@ -1103,6 +1090,11 @@
         "ts": "2026-11-22T09:43:49Z",
         "junior_tvl_usd": 464603.76,
         "srusdat_nav": 1.044028
+      },
+      {
+        "ts": "2026-11-22T10:43:39Z",
+        "junior_tvl_usd": 463776.0,
+        "srusdat_nav": null
       }
     ],
     "comment": "Senior=srUSDat, junior=jrUSDat (both ERC-4626 asset()=USDat). collateral_usd read independently from Strata vault sUSDat \u00d7 sUSDat NAV. coverage_ratio=collateral/senior; junior_buffer_pct=junior/collateral."
@@ -1152,24 +1144,24 @@
     "note": "All 3 control paths over USDat and sUSDat resolve to one authority (0xfD5782E3BFF366601da3973aE30C583dE4F08A67, timelock). These are NOT independent gates: the two layers of the stack share a single point of control, so they must not be counted as separate failures."
   },
   "totals": {
-    "usdat_supply_usd": 91173073.28,
-    "susdat_total_assets_usd": 33316645.62,
-    "combined_aum_usd": 124306596.55,
+    "usdat_supply_usd": 91170906.54,
+    "susdat_total_assets_usd": null,
+    "combined_aum_usd": null,
     "comment": "combined_aum excludes USDat held by sUSDat to avoid double-count: usdat_supply + susdat_total_assets - usdat_in_susdat"
   },
   "tokens": [
     {
       "slug": "usdat",
       "name": "USDat",
-      "supply_usd": 91173073.28,
+      "supply_usd": 91170906.54,
       "backing_ratio": 1.0
     },
     {
       "slug": "susdat",
       "name": "sUSDat",
-      "total_assets_usd": 33316645.62,
-      "nav_per_share": 0.995115,
-      "buffer_ratio": 0.005496
+      "total_assets_usd": null,
+      "nav_per_share": null,
+      "buffer_ratio": null
     }
   ],
   "accountable": {
@@ -1188,7 +1180,7 @@
         "status": "unreachable (gaierror)"
       }
     ],
-    "last_probe_ts": "2026-11-22T09:43:49Z"
+    "last_probe_ts": "2026-11-22T10:43:39Z"
   },
   "cross_reconciliation": {
     "usdat_in_susdat_vs_susdat_buffer": {
