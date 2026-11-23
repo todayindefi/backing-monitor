@@ -5,7 +5,7 @@
   "chain": "ethereum",
   "token_address": "0xcf62F905562626CfcDD2261162a51fd02Fc9c5b6",
   "fraxtal_token_address": "0xfc00000000000000000000000000000000000008",
-  "timestamp": "2026-11-23T04:57:01Z",
+  "timestamp": "2026-11-23T06:04:55Z",
   "producer": "sfrxusd_backing_analyzer.py (run_backing_analyzers.sh, hourly :35)",
   "staging": {
     "status": "pending_review",
@@ -35,6 +35,21 @@
     "primary_exit_max_shares": 702605.5451148428
   },
   "risk_flags": [
+    {
+      "key": "api_refresh_failed",
+      "severity": "warning",
+      "message": "api refresh failed at 2026-11-23T06:01:09Z: RuntimeError: balance sheet: ConnectionError: HTTPSConnectionPool(host='api.frax.finance', port=443): Max retries exceeded with url: /v2/sfrxusd/balance-sheet/latest (Caused by NewConnectionError(\"HTTPSConnection(host='api.frax.finance', port=443): Failed to establish a new connection: [Errno 101] Network is unreachable\")). Serving the last good copy."
+    },
+    {
+      "key": "market_refresh_failed",
+      "severity": "warning",
+      "message": "market refresh failed at 2026-11-23T06:01:09Z: ConnectionError: HTTPSConnectionPool(host='api.coingecko.com', port=443): Max retries exceeded with url: /api/v3/simple/price?ids=staked-frax-usd&vs_currencies=usd&include_last_updated_at=true&precision=full (Caused by NameResolutionError(\"HTTPSConnection(host='api.coingecko.com', port=443): Failed to resolve 'api.coingecko.com' ([Errno -2] Name or service not known)\")). Serving the last good copy."
+    },
+    {
+      "key": "probe_refresh_failed",
+      "severity": "warning",
+      "message": "probe refresh failed at 2026-11-23T06:01:09Z: TypeError: 'NoneType' object is not subscriptable. Serving the last good copy."
+    },
     {
       "key": "issuer_surplus_thin",
       "severity": "info",
@@ -1498,7 +1513,7 @@
           "last_updated_at": "2026-11-23T04:55:42Z",
           "requested_at": "2026-11-23T04:55:32Z",
           "scope": "CoinGecko aggregate across its tracked sfrxUSD venues (all chains it lists), not one pool",
-          "age_s": 79.708555,
+          "age_s": 4153.795149,
           "max_age_s": 7200,
           "status": "ok",
           "units": "USD per sfrxUSD share"
@@ -1754,39 +1769,39 @@
   },
   "status": {
     "api": {
-      "last_attempt_at": "2026-11-23T04:55:30Z",
-      "last_attempt_ok": true,
-      "last_attempt_error": null,
+      "last_attempt_at": "2026-11-23T06:01:09Z",
+      "last_attempt_ok": false,
+      "last_attempt_error": "RuntimeError: balance sheet: ConnectionError: HTTPSConnectionPool(host='api.frax.finance', port=443): Max retries exceeded with url: /v2/sfrxusd/balance-sheet/latest (Caused by NewConnectionError(\"HTTPSConnection(host='api.frax.finance', port=443): Failed to establish a new connection: [Errno 101] Network is unreachable\"))",
       "last_success_at": "2026-11-23T04:55:30Z",
-      "served_is_carried_forward": false
+      "served_is_carried_forward": true
     },
     "strategy": {
-      "last_attempt_at": "2026-11-23T04:55:30Z",
+      "last_attempt_at": "2026-11-23T06:01:09Z",
       "last_attempt_ok": true,
       "last_attempt_error": null,
-      "last_success_at": "2026-11-23T04:55:30Z",
+      "last_success_at": "2026-11-23T06:01:09Z",
       "served_is_carried_forward": false
     },
     "pricing": {
-      "last_attempt_at": "2026-11-23T04:55:30Z",
+      "last_attempt_at": "2026-11-23T06:01:09Z",
       "last_attempt_ok": true,
       "last_attempt_error": null,
-      "last_success_at": "2026-11-23T04:55:30Z",
+      "last_success_at": "2026-11-23T06:01:09Z",
       "served_is_carried_forward": false
     },
     "market": {
-      "last_attempt_at": "2026-11-23T04:55:30Z",
-      "last_attempt_ok": true,
-      "last_attempt_error": null,
+      "last_attempt_at": "2026-11-23T06:01:09Z",
+      "last_attempt_ok": false,
+      "last_attempt_error": "ConnectionError: HTTPSConnectionPool(host='api.coingecko.com', port=443): Max retries exceeded with url: /api/v3/simple/price?ids=staked-frax-usd&vs_currencies=usd&include_last_updated_at=true&precision=full (Caused by NameResolutionError(\"HTTPSConnection(host='api.coingecko.com', port=443): Failed to resolve 'api.coingecko.com' ([Errno -2] Name or service not known)\"))",
       "last_success_at": "2026-11-23T04:55:30Z",
-      "served_is_carried_forward": false
+      "served_is_carried_forward": true
     },
     "probe": {
-      "last_attempt_at": "2026-11-23T04:55:30Z",
-      "last_attempt_ok": true,
-      "last_attempt_error": null,
+      "last_attempt_at": "2026-11-23T06:01:09Z",
+      "last_attempt_ok": false,
+      "last_attempt_error": "TypeError: 'NoneType' object is not subscriptable",
       "last_success_at": "2026-11-23T04:55:30Z",
-      "served_is_carried_forward": false
+      "served_is_carried_forward": true
     }
   },
   "risk_score": null,
