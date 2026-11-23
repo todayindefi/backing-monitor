@@ -8,12 +8,13 @@ import argparse
 import json
 import os
 import time
+from urllib.parse import urlsplit
 from datetime import datetime, timezone
 from pathlib import Path
 import requests
 
 ROOT = Path(__file__).resolve().parents[1]
-RPCS = ('https://ethereum.publicnode.com', 'https://eth.llamarpc.com')
+RPCS = ('https://ethereum.publicnode.com', 'https://eth.drpc.org')
 POOLS = {
     'syrupusdc': '0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b',
     'syrupusdt': '0x356B8d89c1e1239Cbbb9dE4815c39A1474d5BA7D',
@@ -30,6 +31,8 @@ def utc(ts=None):
 class RPC:
     def __init__(self, url):
         self.url = url
+        host = (urlsplit(url).hostname or '').lower()
+        self.log_chunk_size = 10 if host.endswith('alchemy.com') else 100 if 'drpc.' in host else 1000
         self.session = requests.Session()
 
     def rpc(self, method, params):
@@ -45,6 +48,18 @@ class RPC:
         if not isinstance(raw, str) or len(raw) < 66 or (len(raw) - 2) % 64:
             raise ValueError('Malformed contract response')
         return [int(raw[i:i+64], 16) for i in range(2, len(raw), 64)]
+
+
+def rpc_urls():
+    """Explicit deployment override, without loading any sibling credentials."""
+    configured = os.environ.get('ETHEREUM_RPC_URL')
+    return tuple(dict.fromkeys(([configured] if configured else []) + list(RPCS)))
+
+
+def public_rpc_source(url):
+    """Export origin provenance, never a URL key, query or userinfo."""
+    parsed = urlsplit(url)
+    return f'{parsed.scheme}://{parsed.hostname}' if parsed.scheme in ('http', 'https') and parsed.hostname else 'configured-provider'
 
 
 def metrics(cash, queued, shares, supply):
@@ -77,7 +92,7 @@ def observe(client, slug):
     result = {
         'schema_version': 1, 'status': 'ok', 'asset_slug': slug,
         'observed_at': utc(), 'block_timestamp': at, 'block_number': int(block, 16),
-        'source': 'Ethereum contract reads', 'rpc': client.url,
+        'source': 'Ethereum contract reads', 'rpc': public_rpc_source(client.url),
         'pool': pool, 'withdrawal_manager': wm, 'underlying_token': token,
         'underlying_symbol': 'USDC' if slug == 'syrupusdc' else 'USDT',
         'pool_cash': balance, 'queued_shares': shares / 10**decimals,
@@ -91,12 +106,19 @@ def observe(client, slug):
     deadline = time.monotonic() + 18
     end = int(block, 16)
     floor = max(0, end - 7200)
+    chunk_size = max(1, min(1000, getattr(client, 'log_chunk_size', 1000)))
+    scans = 0
+    scanned_from = None
+    result['processing_requested_scan_from_block'] = floor
     try:
         while end >= floor:
-            if time.monotonic() > deadline:
-                raise TimeoutError('Event scan budget')
-            start = max(floor, end - 999)
+            if time.monotonic() > deadline or scans >= 8:
+                result['processing_status'] = 'scan_budget_exhausted'
+                break
+            start = max(floor, end - chunk_size + 1)
+            scans += 1
             logs = client.rpc('eth_getLogs', [{'address': wm, 'fromBlock': hex(start), 'toBlock': hex(end), 'topics': [PROCESSED]}])
+            scanned_from = start
             if logs:
                 latest = max(logs, key=lambda l: (int(l['blockNumber'], 16), int(l['logIndex'], 16)))
                 h = client.rpc('eth_getBlockByNumber', [latest['blockNumber'], False])
@@ -105,9 +127,12 @@ def observe(client, slug):
             end = start - 1
         else:
             result['processing_status'] = 'not_found_in_scan_window'
-        result['processing_scan_from_block'] = floor
     except (requests.RequestException, ValueError, KeyError, TypeError, TimeoutError):
         result['processing_status'] = 'unavailable'
+    result['processing_scan_calls'] = scans
+    result['processing_scan_chunk_size'] = chunk_size
+    if scanned_from is not None:
+        result['processing_scan_from_block'] = scanned_from
     return result
 
 
@@ -124,7 +149,7 @@ def main():
     failed = False
     for slug in POOLS:
         observation = None
-        for url in RPCS:
+        for url in rpc_urls():
             try:
                 observation = observe(RPC(url), slug)
                 break

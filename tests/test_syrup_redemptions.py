@@ -1,5 +1,6 @@
 import importlib.util
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location('redemptions', Path(__file__).resolve().parents[1] / 'tools/refresh_syrup_redemptions.py')
@@ -38,5 +39,41 @@ class TestRedemptions(unittest.TestCase):
         self.assertIsNone(m.metrics(12, 0, 0, 100)['cash_coverage_pct'])
         self.assertEqual(m.metrics(12, 0, 0, 100)['additional_funding_needed'], 0)
         self.assertEqual(m.metrics(12, 10, 10, 100)['cash_coverage_pct'], 120)
+
+    def test_secret_endpoint_is_not_exported(self):
+        reader = Reader()
+        reader.url = 'https://user:password@eth-mainnet.g.alchemy.com/v2/private-key?token=secret'
+        result = m.observe(reader, 'syrupusdc')
+        self.assertEqual(result['rpc'], 'https://eth-mainnet.g.alchemy.com')
+        self.assertNotIn('private-key', str(result))
+        self.assertNotIn('password', str(result))
+
+    def test_range_caps_and_bounded_partial_scan(self):
+        class SmallRangeReader(Reader):
+            log_chunk_size = 10
+            def rpc(self, method, params):
+                if method == 'eth_blockNumber': return hex(10000)
+                if method == 'eth_getLogs':
+                    size = int(params[0]['toBlock'], 16) - int(params[0]['fromBlock'], 16) + 1
+                    self.asserted_sizes.append(size)
+                    return []
+                return super().rpc(method, params)
+        reader = SmallRangeReader()
+        reader.asserted_sizes = []
+        result = m.observe(reader, 'syrupusdc')
+        self.assertEqual(reader.asserted_sizes, [10] * 8)
+        self.assertEqual(result['processing_status'], 'scan_budget_exhausted')
+        self.assertEqual(result['processing_scan_calls'], 8)
+        self.assertGreater(result['processing_scan_from_block'], result['processing_requested_scan_from_block'])
+        self.assertEqual(result['status'], 'ok')
+        self.assertIsNone(result['last_processed_at'])
+
+    def test_provider_configuration_and_log_caps(self):
+        self.assertEqual(m.RPC('https://eth.drpc.org').log_chunk_size, 100)
+        self.assertEqual(m.RPC('https://eth-mainnet.g.alchemy.com/v2/secret').log_chunk_size, 10)
+        self.assertEqual(m.RPC('https://ethereum.publicnode.com').log_chunk_size, 1000)
+        with patch.dict(m.os.environ, {'ETHEREUM_RPC_URL': 'https://example.invalid/key'}):
+            self.assertEqual(m.rpc_urls()[0], 'https://example.invalid/key')
+        self.assertNotIn('https://eth.llamarpc.com', m.RPCS)
 
 if __name__ == '__main__': unittest.main()

@@ -1,0 +1,144 @@
+{
+  "version": "ethereum-rpc-diagnostic-bm-2026-11-23-v1",
+  "observed_from": "2026-11-23T10:24:58.871557+00:00",
+  "observed_through_approx_local": "2026-11-23T10:27:27.838522+00:00",
+  "RPC_attempts_total": 31,
+  "RPC_cap": 64,
+  "rejected_incomplete_URL_probe_count": 1,
+  "valid_endpoint_count": 7,
+  "providers": [
+    {
+      "provider": "publicnode-main",
+      "host": "ethereum-rpc.publicnode.com",
+      "configured_authentication": false,
+      "historical_usdc_totalAssets_matches_prior_packet": null,
+      "historical_usdt_totalAssets_matches_prior_packet": null,
+      "validated_log_range_blocks": null,
+      "reported_free_log_range_limit": null,
+      "terminal_status": "historical_state_http_or_transport_failure",
+      "http_errors": [
+        403
+      ]
+    },
+    {
+      "provider": "publicnode-alias",
+      "host": "ethereum.publicnode.com",
+      "configured_authentication": false,
+      "historical_usdc_totalAssets_matches_prior_packet": null,
+      "historical_usdt_totalAssets_matches_prior_packet": null,
+      "validated_log_range_blocks": null,
+      "reported_free_log_range_limit": null,
+      "terminal_status": "historical_state_http_or_transport_failure",
+      "http_errors": [
+        403
+      ]
+    },
+    {
+      "provider": "llama-legacy",
+      "host": "eth.llamarpc.com",
+      "configured_authentication": false,
+      "historical_usdc_totalAssets_matches_prior_packet": null,
+      "historical_usdt_totalAssets_matches_prior_packet": null,
+      "validated_log_range_blocks": null,
+      "reported_free_log_range_limit": null,
+      "terminal_status": "chain_connectivity_or_identity_unavailable",
+      "http_errors": [
+        525
+      ]
+    },
+    {
+      "provider": "drpc-public",
+      "host": "eth.drpc.org",
+      "configured_authentication": false,
+      "historical_usdc_totalAssets_matches_prior_packet": true,
+      "historical_usdt_totalAssets_matches_prior_packet": true,
+      "validated_log_range_blocks": 10,
+      "reported_free_log_range_limit": 100,
+      "terminal_status": "log_http_or_transport_failure",
+      "http_errors": [
+        400
+      ]
+    },
+    {
+      "provider": "one-rpc-public",
+      "host": "1rpc.io",
+      "configured_authentication": false,
+      "historical_usdc_totalAssets_matches_prior_packet": null,
+      "historical_usdt_totalAssets_matches_prior_packet": null,
+      "validated_log_range_blocks": null,
+      "reported_free_log_range_limit": null,
+      "terminal_status": "historical_header_http_or_transport_failure",
+      "http_errors": [
+        410
+      ]
+    },
+    {
+      "provider": "alchemy-configured",
+      "host": "eth-mainnet.g.alchemy.com",
+      "configured_authentication": true,
+      "historical_usdc_totalAssets_matches_prior_packet": true,
+      "historical_usdt_totalAssets_matches_prior_packet": true,
+      "validated_log_range_blocks": 10,
+      "reported_free_log_range_limit": 10,
+      "terminal_status": "log_http_or_transport_failure",
+      "http_errors": [
+        400
+      ]
+    },
+    {
+      "provider": "drpc-configured-resolved",
+      "host": "lb.drpc.live",
+      "configured_authentication": true,
+      "historical_usdc_totalAssets_matches_prior_packet": true,
+      "historical_usdt_totalAssets_matches_prior_packet": true,
+      "validated_log_range_blocks": 10,
+      "reported_free_log_range_limit": 100,
+      "terminal_status": "log_http_or_transport_failure",
+      "http_errors": [
+        400
+      ]
+    }
+  ],
+  "historical_blocks": [
+    26476102,
+    26476110
+  ],
+  "independent_working_state_provider_operators": [
+    "Alchemy",
+    "dRPC"
+  ],
+  "header_agreement": true,
+  "complete_financial_replication": false,
+  "closed_report_packets_changed": false,
+  "credentials": "Existing configured keys held only in memory; no keys, keyed URLs, credentials or raw responses released. No signup required for tested historical calls.",
+  "local_BM_fix": {
+    "files": [
+      "tools/refresh_syrup_redemptions.py",
+      "tests/test_syrup_redemptions.py"
+    ],
+    "public_fallback": "https://eth.drpc.org",
+    "legacy_Llama_fallback_removed": true,
+    "explicit_environment_override": "ETHEREUM_RPC_URL, no sibling .env loading",
+    "public_endpoint_metadata": "origin only; no key path/query/userinfo",
+    "conservative_chunks": {
+      "Alchemy": 10,
+      "dRPC": 100,
+      "other": 1000
+    },
+    "scan_budget": "8requests/18seconds, partial scope explicit",
+    "tests": "5Python tests + existingJS redemption consumer tests pass",
+    "collector_invoked": false,
+    "schedule_changed": false,
+    "production_deploy_performed": false
+  },
+  "limits": [
+    "PublicNode403 explicitly requires a personal token for archive state; aliases are one operator.",
+    "LlamaRPC525 is origin TLS failure; tested1RPC endpoint410 discontinued.",
+    "Working10block logs do not imply wide-range scans; tested1000block requests hit10/100block free limits.",
+    "25839block backfill not run; would require259dRPC chunks or2584Alchemy chunks at observed free limits. No provider uptime guarantee."
+  ],
+  "official_sources": [
+    "https://developers.cloudflare.com/support/troubleshooting/http-status-codes/cloudflare-5xx-errors/error-525/",
+    "https://support.alchemy.com/articles/1883074130-why-do-i-see-a-free-tier-error-when-calling-eth-getlogs-with-a-large-block-range"
+  ]
+}
