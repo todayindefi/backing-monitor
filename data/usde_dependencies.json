@@ -2,24 +2,24 @@
   "schema_version": "dependencies/1",
   "producer": "riskanalyst",
   "asset": "usde",
-  "as_of": "2026-10-11T00:00:00Z",
+  "as_of": "2026-11-23T00:00:00Z",
   "dependencies": {
     "upstream": [
       {
-        "name": "USDC — liquid stablecoin reserves at published addresses",
+        "name": "USDC \u2014 liquid stablecoin reserves at published addresses",
         "slug": "usdc",
         "edge_kind": "backing",
         "materiality": "material"
       },
       {
-        "name": "USDtb — the path to BlackRock BUIDL",
+        "name": "USDtb \u2014 the path to BlackRock BUIDL",
         "slug": "usdtb",
         "edge_kind": "backing",
         "materiality": "material",
         "note": "Tokenized RWAs are held primarily as BUIDL via the USDtb path, so USDtb is the recorded hop."
       },
       {
-        "name": "JAAA — approved AAA-CLO reserve asset",
+        "name": "JAAA \u2014 approved AAA-CLO reserve asset",
         "slug": "jaaa",
         "edge_kind": "backing",
         "materiality": "minor",
@@ -30,31 +30,31 @@
         "unresolved": [
           "BUIDL"
         ],
-        "unresolved_note": "⚠️ Securitize ERC-20, wallet-readable, and NO REPORT — reached through USDtb and a material share of the RWA leg."
+        "unresolved_note": "\u26a0\ufe0f Securitize ERC-20, wallet-readable, and NO REPORT \u2014 reached through USDtb and a material share of the RWA leg."
       },
       {
-        "name": "Institutional overcollateralized lending — Anchorage, Maple Institutional, Coinbase AM",
+        "name": "Institutional lending \u2014 borrower credit and collateral enforcement",
         "terminal": true,
         "kind": "real-world",
-        "note": "⚠️ Off-chain bilateral loans against borrower BTC/ETH collateral in triparty custody. Attested monthly (Harris & Trotter), not verifiable on-chain. This report flags the book as NEW and NOT OPERATIONALLY SEASONED THROUGH STRESS. maple.md exists as a protocol report; Anchorage and Coinbase AM have none."
+        "note": "October21 statements distinguish Anchorage loan principal from custody and FalconX principal from pledged security; subletters are not additional independent reserves. The November17 public lending feed reports anonymous and named groups, not a complete identified loan/legal book. Provider roles and loans are not assumed independent; collateral control, default status and recoverable proceeds remain unknown."
       },
       {
-        "name": "Basis trade — BTC/ETH perpetual shorts",
+        "name": "Basis trade \u2014 BTC/ETH perpetual shorts",
         "terminal": true,
         "kind": "real-world",
-        "note": "The approximately 11% share is a Q1 2026 measurement, not a current allocation. The 2026-10-10 producer feed reports 20.61% as CEX delta-hedge collateral, but collateral location is not equivalent to derivatives notional or backing share. Current residual derivatives exposure is pending the newest attestation and hedge reconciliation. OES custody balances are readable; the CEX short legs are off-chain."
+        "note": "Crypto/noncrypto hedging and CEX/OES settlement introduce venue, PnL and execution dependencies. Older Q1 and October custody-location percentages are historical and are not current derivatives notional or backing weights. Current hedge matching and complete composition remain unverified."
       },
       {
         "name": "Chaos Labs Edge Proof of Reserves",
         "terminal": true,
         "kind": "oracle",
-        "note": "Ingests off-chain custodian and CEX data and publishes to Ethena's transparency page. The verifiability of ~89% of backing rests on it."
+        "note": "External transparency tooling depends on off-chain provider/issuer inputs. Neither a historical backing percentage nor display availability establishes independent current custody, title or complete reserve assurance."
       }
     ],
-    "upstream_resolution_rule": "⚠️ EVERY upstream entry carries exactly one resolution: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL means nothing is missing; UNRESOLVED means a report is owed. Never merged.",
+    "upstream_resolution_rule": "\u26a0\ufe0f EVERY upstream entry carries exactly one resolution: `slug` / `slugs` / `terminal`+`kind` / `unresolved`. TERMINAL means nothing is missing; UNRESOLVED means a report is owed. Never merged.",
     "edge_kind_rule": "`backing` = my SOLVENCY depends on it. `venue` = my EXIT PRICE does.",
-    "coverage_note": "The September 27 attestation establishes custody totals, while the refreshed October 11 feed splits backing into 79.55% liquid/unallocated and 20.45% CEX delta-hedge collateral. Exact current loan, RWA, cash and derivatives-notional weights remain unresolved. Live tracking covers all 13 disclosed reserve accounts after restoring Reserve 2's Aave Horizon RLUSD and Aave V4 positions and pricing the second Solana wallet's JAAA and STAC shares from status-gated hourly NAV sources. Seven accounts lack reconstructed September 27 balances, so the historical snapshot comparison remains scope-limited. Downstream relationships are generated separately and do not affect this score.",
-    "collateral_as_of": "2026-09-27",
+    "coverage_note": "October21 documentary snapshot, published November6 and reviewed November23, discloses 12 EVM and two Solana addresses. Roster disclosure does not establish present tracking, ownership or asset weights; the accepted offline replay deliberately omits wallet collection and marks all14 accounts untracked. Current composition, hedge notional, beneficial-owner overlap and recoverable collateral remain unverified. The November17 lending feed has its own scope/clock; no current total-backing weights are inferred. Generated downstream relationships do not determine the grade.",
+    "collateral_as_of": "2026-10-21",
     "downstream_tracked": [
       "aavethena-loop-mainnet",
       "avusd",
@@ -73,11 +73,13 @@
         "usdp-parallel"
       ],
       "asserted_only": [],
-      "asserted_only_note": "None — every asserted edge is reproducible from an upstream array.",
+      "asserted_only_note": "None \u2014 every asserted edge is reproducible from an upstream array.",
       "rejected_as_inverted": [],
       "rejected_as_inverted_note": "None.",
       "generated_by": "scripts/dependency_graph.py build",
-      "do_not_hand_edit": "⚠️ downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream — one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
+      "do_not_hand_edit": "\u26a0\ufe0f downstream_tracked is GENERATED. Hand-maintaining both directions is how fxsave came to list fxUSD as BOTH its upstream and its downstream \u2014 one edge recorded twice, in opposite directions. Add the edge to the UPSTREAM array of the dependent asset and re-run build."
     }
-  }
+  },
+  "evidence_version": "ethena-october-bm-consumer-2026-11-23-v1",
+  "assessment_version": "usde-six-axis-2026-11-17-v1"
 }
