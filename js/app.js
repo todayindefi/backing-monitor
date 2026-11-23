@@ -22,6 +22,14 @@ var REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
 // Two fields meaning one thing is how they drift apart.
 function isPublished(a) { return !!a && a.published === true; }
 
+// Dedicated vault pages are same-site, exact-slug routes only.
+function vaultDashboardPath(asset) {
+    if (!isPublished(asset) || asset.dashboard_kind !== 'vault' || !/^[a-z0-9-]+$/.test(asset.slug || '')) return null;
+    var expected = 'vaults/' + asset.slug + '/';
+    return asset.dashboard_path === expected ? expected : null;
+}
+
+
 // Cache-bust JSON fetches to defeat Fastly's bare-URL stickiness on GH Pages.
 // Bumps once per hour so per-page-load fetches still hit the CDN edge most
 // of the time (data syncs at xx:45 hourly), but a stale-by-hour upper bound
@@ -297,6 +305,17 @@ async function renderIndex() {
             var flagBadge = flagCount > 0 ?
                 '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">' + flagCount + ' flag' + (flagCount > 1 ? 's' : '') + '</span>' : '';
 
+            var vaultPath = vaultDashboardPath(a);
+            if (vaultPath) {
+                var vm = d && d.metrics;
+                var nav = vm && typeof vm.share_nav_usd === 'string' && vm.share_nav_usd.trim() !== '' ? Number(vm.share_nav_usd) : NaN;
+                var marked = vm && typeof vm.marked_assets_usd === 'string' && vm.marked_assets_usd.trim() !== '' ? Number(vm.marked_assets_usd) : NaN;
+                return '<a href="' + vaultPath + '" class="asset-card block"><div class="font-bold text-slate-800 mb-2">' + CommonRenderer._escapeAttr(a.name) + '</div>' +
+                    '<div class="text-xs text-slate-500 mb-3">' + CommonRenderer._escapeAttr(a.chain) + ' · Vault · 8h refresh</div>' +
+                    '<div class="grid grid-cols-2 gap-3"><div><div class="text-xs text-slate-400 font-medium uppercase">Share NAV</div><div class="text-lg font-bold text-slate-700">' + (Number.isFinite(nav) ? '$' + nav.toFixed(6) : 'Unavailable') + '</div></div>' +
+                    '<div><div class="text-xs text-slate-400 font-medium uppercase">Marked assets</div><div class="text-lg font-bold text-slate-700">' + (Number.isFinite(marked) ? CommonRenderer.formatCurrency(marked) : 'Unavailable') + '</div></div></div>' +
+                    '<div class="text-xs text-slate-400 mt-3">' + (d && d.observation ? CommonRenderer.formatDate(d.observation.at) : 'Source unavailable') + '</div></a>';
+            }
             return '<a href="?asset=' + a.slug + '" class="asset-card block">' +
                 '<div class="flex items-start justify-between mb-2">' +
                     '<div class="font-bold text-slate-800">' + a.name + '</div>' +
@@ -360,6 +379,8 @@ async function renderAsset(slug) {
                 CommonRenderer.KNOWN_ASSET_SLUGS = assets.map(function(a) { return a.slug; });
             }
         }
+        var dedicatedVaultPath = vaultDashboardPath(assetMeta);
+        if (dedicatedVaultPath) { window.location.replace(dedicatedVaultPath + window.location.hash); return; }
         var sourceSlug = (assetMeta && assetMeta.data_source) ? assetMeta.data_source : slug;
 
         // ⚠️ AXIS OVERLAYS FOLLOW THE VIEW; THE BASE FEED FOLLOWS THE DATA SOURCE.

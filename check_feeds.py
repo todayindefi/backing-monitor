@@ -66,6 +66,27 @@ for slug in sorted(slugs):
             fails.append(f'{slug}: data/{src}_backing.json missing or unparseable')
         continue
 
+    # Dedicated vault pages consume a typed financial projection, not asset-axis
+    # overlays. Validate that declared interface instead of reporting false gaps.
+    meta = sources_meta.get(slug) or {}
+    if meta.get('dashboard_kind') == 'vault':
+        if meta.get('dashboard_path') != 'vaults/' + slug + '/':
+            fails.append(f'{slug}: invalid dedicated vault route')
+        if d.get('schema_version') != 'vault-monitor/1' or d.get('preview') is not False:
+            fails.append(f'{slug}: maintained vault feed unavailable or still a preview')
+        for block in ['metrics','backing','liquidity','dependencies','controls','issuer','observation','changes']:
+            if not isinstance(d.get(block), dict):
+                fails.append(f'{slug}: missing vault {block} block')
+        obs = d.get('observation') or {}
+        if obs.get('mode') != 'scheduled' or obs.get('refresh_interval_seconds') != meta.get('refresh_interval_seconds'):
+            fails.append(f'{slug}: vault refresh policy mismatch')
+        history = (d.get('changes') or {}).get('history')
+        if not isinstance(history, list) or len(history) != (d.get('changes') or {}).get('history_count'):
+            fails.append(f'{slug}: vault NAV history coverage mismatch')
+        if not os.path.isfile(os.path.join(DATA, meta.get('source_status_ref') or '')):
+            fails.append(f'{slug}: vault source-status file missing')
+        continue
+
     present = [k for k in AXES if isinstance(d.get(k), dict)]
 
     # 1. Partial axis emission — the band gates on `peg` alone, so a feed with

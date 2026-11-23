@@ -1,0 +1,204 @@
+{
+  "schema_version": "vault-monitor/1",
+  "preview": true,
+  "asset": {
+    "symbol": "fxSP",
+    "name": "Synthetic fxSP layout fixture",
+    "chain": "Ethereum",
+    "address": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+    "description": "A variable fxUSD / USDC basket. The USDC leg is invested through Aave V3."
+  },
+  "valuation": {
+    "mode": "nav_only",
+    "basis": "Native basket NAV",
+    "payout": "Variable fxUSD / USDC basket",
+    "share_market_coverage": "not_monitored",
+    "note": "Share value follows the marked pool basket. Redemption terms and underlying cash access determine the exit."
+  },
+  "observation": {
+    "at": "2026-11-24T00:00:00Z",
+    "block": 1,
+    "mode": "one_off",
+    "refresh_note": "One-off evidence snapshot. Automatic monitoring is not configured.",
+    "max_age_hours": 6
+  },
+  "metrics": {
+    "share_nav_usd": "1",
+    "marked_assets_usd": "100",
+    "share_supply": "100",
+    "observed_return_pct": null,
+    "return_note": "Total return has not been measured.",
+    "cooldown_seconds": 3600,
+    "instant_fee_pct": "1"
+  },
+  "backing": {
+    "accounting_status": "Reconciled at snapshot",
+    "recovery_status": "Independent recovery unverified",
+    "positions": [
+      {
+        "symbol": "fxUSD",
+        "location": "Held directly by fxSP",
+        "kind": "token",
+        "quantity": "40",
+        "marked_usd": "40",
+        "share_pct": "40",
+        "tone": "blue"
+      },
+      {
+        "symbol": "USDC",
+        "location": "Aave V3 \u00b7 aUSDC claim",
+        "kind": "lending_claim",
+        "quantity": "60",
+        "marked_usd": "60",
+        "share_pct": "60",
+        "tone": "teal"
+      },
+      {
+        "symbol": "USDC",
+        "location": "Held directly by fxSP",
+        "kind": "cash",
+        "quantity": "0",
+        "marked_usd": "0",
+        "share_pct": "0",
+        "tone": "muted"
+      }
+    ],
+    "mix_basis": "Share of oracle-marked value",
+    "note": "Allocation percentages are shares of oracle-marked value, not token units or available cash. A lending receipt is a claim, not cash held by the vault.",
+    "details": [
+      "Pool share supply, token balances and the native NAV formula reconcile exactly at this block.",
+      "Current Aave claim minus stored USDC accounting: 49.775512 USDC. NAV uses the current claim; this is not a measured payment or realized return.",
+      "Aggregate reservations and unencumbered cash are unknown. Reserved shares remain included in supply until burned; do not subtract them again as extra debt."
+    ]
+  },
+  "liquidity": {
+    "mode": "redemption",
+    "status": "Full cash route not verified",
+    "input_fxsp": "1",
+    "outputs": [
+      {
+        "symbol": "fxUSD",
+        "queued": ".4",
+        "instant": ".396"
+      },
+      {
+        "symbol": "USDC",
+        "queued": ".6",
+        "instant": ".594"
+      }
+    ],
+    "queued_note": "Request first; the measured cooldown is shown above. Unlocking does not guarantee funded delivery.",
+    "instant_note": "Uses unreserved shares and deducts the measured instant fee from each basket leg. Gas and the final swap are extra.",
+    "strategy_claim_usdc": "60",
+    "direct_usdc": "0",
+    "shared_lender_usdc": null,
+    "sized_cash_depth_usd": null,
+    "unencumbered_cash_usd": null,
+    "remaining": [
+      "Caller eligibility, aggregate reservations and receiver delivery remain unverified.",
+      "The strategy must release USDC from Aave when vault cash is insufficient.",
+      "The basket includes fxUSD. Selling it to final USDC is a separate route; no complete sized cash exit was tested."
+    ]
+  },
+  "changes": {
+    "mode": "baseline",
+    "title": "Baseline captured; continuous alerts are not running.",
+    "note": "Future comparable snapshots can show allocation moves, withdrawal constraints and reward changes here.",
+    "history": [
+      {
+        "at": "2026-11-22T00:00:00Z",
+        "value": "1"
+      },
+      {
+        "at": "2026-11-22T01:00:00Z",
+        "value": "1.01"
+      },
+      {
+        "at": "2026-11-24T00:00:00Z",
+        "value": ".99"
+      },
+      {
+        "at": "2026-11-24T01:00:00Z",
+        "value": "1"
+      }
+    ],
+    "history_count": 4,
+    "history_displayed_count": 4,
+    "history_gap_seconds": 10800,
+    "history_gap_basis": "Normal history is approximately hourly. Break lines after gaps greater than three hours or an invalid observation.",
+    "history_note": "Native share NAV observations across the dates shown. Latest point is the one-off supplement. NAV change is not a total-return series.",
+    "watchlist": [
+      "Basket allocation and lending exposure",
+      "Withdrawal access and queue funding",
+      "NAV divergence and source freshness"
+    ]
+  },
+  "strategy": {
+    "title": "Stability pool + lending",
+    "description": "Exposure combines f(x) protocol risk and aUSDC lending risk.",
+    "facts": [
+      {
+        "label": "fxUSD leg",
+        "value": "f(x) collateral and rebalancing",
+        "detail": "Linked to leveraged collateral pools and fxUSD peg mechanics."
+      },
+      {
+        "label": "USDC leg",
+        "value": "Aave V3 credit exposure",
+        "detail": "aUSDC is the strategy claim. Shared reserve cash is not dedicated exit capacity."
+      },
+      {
+        "label": "What matters",
+        "value": "Basket mix, marks and release",
+        "detail": "Watch collateral repricing and the ability to withdraw lending claims."
+      }
+    ]
+  },
+  "dependencies": {
+    "summary": "Two economic legs, with different risks.",
+    "items": [
+      {
+        "name": "fxUSD",
+        "detail": "f(x) collateral, oracle and rebalance mechanics."
+      },
+      {
+        "name": "USDC \u2192 Aave V3",
+        "detail": "Stablecoin issuer exposure plus lending and withdrawal risk."
+      }
+    ],
+    "note": "Lending claims and vault custody add no independent reserve."
+  },
+  "controls": {
+    "headline": "72h upgrade route; immediate powers remain",
+    "at": "2026-11-17T05:23:11Z",
+    "block": 26432647,
+    "note": "Dated selected-path review. Parallel admin and emergency powers remain; there is no universal 72-hour exit window.",
+    "source_match_at": "2026-11-23T16:11:47+00:00",
+    "source_status": "matched",
+    "source_note": "Pool and strategy source/runtime association checked at the snapshot. This is not an audit or full authority review."
+  },
+  "issuer": {
+    "headline": "f(x) Protocol",
+    "operator_label": "Protocol context",
+    "note": "Exact legal obligor and holder recourse are not established by this accounting snapshot.",
+    "dependency_note": "The fxUSD and USDC legs have separate underlying claim and issuer dependencies."
+  },
+  "sources": {
+    "at": "2026-11-23T16:11:47+00:00",
+    "block": 1,
+    "clock_note": "Synthetic fixture: no native observation.",
+    "price_note": "Oracle read time is not the underlying feed update time. No independent executable fxSP market price is attached.",
+    "links": [
+      {
+        "label": "Pool contract",
+        "url": "https://etherscan.io/address/0x65c9a641afceb9c0e6034e558a319488fa0fa3be#code"
+      },
+      {
+        "label": "Strategy contract",
+        "url": "https://etherscan.io/address/0xd023aac0e2d46c93d4c6e8e2a449bf2d4687804f#code"
+      }
+    ]
+  },
+  "notice": "Synthetic offline test fixture; not financial evidence.",
+  "test_fixture": true
+}

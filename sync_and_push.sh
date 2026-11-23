@@ -153,6 +153,8 @@ for slug in $SLUGS; do
         fi
         continue
     fi
+    # fxSP has a typed consumer adapter; generic copies must not overwrite it.
+    [ "$slug" = "fxsp" ] && continue
     for suf in $SUFFIXES; do
         found=""
         for root in $SOURCE_ROOTS; do
@@ -310,6 +312,14 @@ if [ -f tools/emit_axis5.py ]; then
             fi
         }
     done
+fi
+
+# fxSP is produced by PegTracker on an eight-hour gate. This only transports
+# and validates its files; no RPC or extra recurring job is installed here.
+if [ -f tools/sync_fxsp_vault.py ] && python3 -c 'import json,sys;sys.exit(not any(a.get("slug")=="fxsp" and a.get("published") is True and a.get("dashboard_kind")=="vault" for a in json.load(open("data/assets.json"))))'; then
+    if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/sync_fxsp_vault.py --from-sync >/tmp/fxsp-consumer-sync.log 2>&1; then
+        echo "$(date): ERROR fxSP consumer intake failed; original last-good observation retained (see /tmp/fxsp-consumer-sync.log)" >&2
+    fi
 fi
 
 # Files whose names are not <registered-slug><suffix> — family rollups shared by
