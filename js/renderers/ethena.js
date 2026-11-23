@@ -441,6 +441,7 @@ var EthenaRenderer = {
         // Same shape as backingBasisPanelHtml above: the shared panel already
         // matches this stream's idiom, so it drops in rather than being rebuilt.
         // withScoreChip because there is no axis head here to carry the score.
+        html += '<div id="ethena-dependency-clock-note"></div>';
         html += CommonRenderer.dependenciesPanelHtml(data, { withScoreChip: true });
         // ⚠️ AXIS 6 WENT THE SAME WAY AS AXES 1 AND 4 — hidden with nothing put
         // back. The summary band carried "Issuer 7.0/10" and the facts behind it
@@ -1624,9 +1625,96 @@ var EthenaRenderer = {
         return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
     },
 
+    _normalizedAttestationHtml: function(a) {
+        var n = a.normalization;
+        var e = CommonRenderer._escapeAttr;
+        if (!n || n.schema_version !== 'ethena-monthly-normalization/1' ||
+            n.snapshot_at !== a.snapshot_at || !Array.isArray(n.rows) || !n.rows.length) {
+            return '<div class="panel"><div class="panel-title">Monthly documentary evidence — unavailable</div>' +
+                '<p>Selected normalization is invalid or has a different snapshot. Current custody assurance remains unverified.</p></div>';
+        }
+        function number(value) {
+            return (typeof value === 'number' || (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value))) &&
+                Number.isFinite(Number(value)) ? Number(value) : null;
+        }
+        function money(value) {
+            var v = number(value);
+            return v === null ? 'Unavailable' : v.toLocaleString('en-US', {
+                style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2
+            });
+        }
+        function link(label, url) {
+            return typeof url === 'string' && /^https:\/\//.test(url)
+                ? '<a href="' + e(url) + '" target="_blank" rel="noopener noreferrer">' + e(label) + ' ↗</a>'
+                : e(label);
+        }
+        var kinds = {custody:'Custody statement', loan_principal:'Loan principal',
+            onchain_issuer_bucket:'Issuer onchain bucket', issuer_contract_bucket:'Issuer contract bucket',
+            exchange_margin:'Exchange margin'};
+        var rows = n.rows.map(function(r) {
+            return '<tr><td>' + link(r.label, r.source_url) +
+                '<div class="text-xs text-slate-500 dark:text-slate-300">' + e(kinds[r.kind] || r.kind) + '</div></td>' +
+                '<td class="text-right font-mono" style="white-space:nowrap;font-size:12px">' +
+                (r.unit === 'USD' ? money(r.amount) : 'Unavailable') + '</td></tr>';
+        }).join('');
+        var notes = n.rows.filter(function(r) { return r.caveat; }).map(function(r) {
+            return '<li><strong>' + e(r.label) + ':</strong> ' + e(r.caveat) +
+                (r.document_issued_at ? ' Document issued ' + e(r.document_issued_at) + '.' : '') + '</li>';
+        }).join('');
+        var security = (n.excluded_security || []).map(function(s) {
+            var row = n.rows.find(function(r) { return r.id === s.secures; });
+            var children = (s.custodian_subcomponents || []).map(function(c) {
+                return e(c.label) + ' ' + money(c.amount);
+            }).join(' + ');
+            return '<li>' + e(row ? row.label : s.secures) + ': ' + money(s.amount) +
+                ' pledged security, excluded from additive backing.' +
+                (children ? ' Custody subletters: ' + children + ' = ' + money(s.subcomponents_sum) + '.' : '') + '</li>';
+        }).join('');
+        var c = n.ceffu_scope || {}, rec = n.reconciliation || {}, h = n.issuer_headline || {}, roster = n.roster || {};
+        var exchange = number(c.exchange_account_usdt_equivalent);
+        return '<div id="ethena-attestation-panel-inner" class="panel">' +
+            '<div class="panel-title">Monthly custody, lending and margin</div>' +
+            '<p class="text-sm">Historical snapshot <strong>' + e(n.snapshot_at) + '</strong>; published ' +
+            e(n.published_at || 'unavailable') + '. Provider statements and issuer buckets are not current custody assurance.</p>' +
+            '<div class="overflow-x-auto" style="overflow-x:auto"><table class="data-table" style="table-layout:auto"><thead><tr><th>Component / scope</th>' +
+            '<th class="text-right" style="white-space:nowrap">Reported USD</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+            '<p class="text-sm mt-3">Document components plus rounded issuer buckets: <strong>' +
+            money(rec.document_components_plus_issuer_buckets_usd) + '</strong>; issuer-rounded backing ' +
+            money(rec.issuer_total_usd_rounded) + '. Difference (issuer minus components): <strong>' +
+            money(rec.issuer_total_minus_components_usd) + '</strong>, unreconciled. This is not proof of missing funds or a difference explained entirely by rounding.</p>' +
+            '<p class="text-sm">Issuer-stated historical coverage including Reserve Fund: ' +
+            (number(h.coverage_including_reserve_pct) === null ? 'Unavailable' : e(h.coverage_including_reserve_pct) + '%') +
+            '; independent authenticity, current ownership, encumbrance and liability coverage remain unverified.</p>' +
+            '<details class="mt-3"><summary>Loan security, account scopes and source limitations</summary>' +
+            '<ul class="text-sm mt-2">' + security + '</ul>' +
+            '<p class="text-sm">Ceffu custody ' + money(c.custody_usd) + '; issuer summary ' +
+            money(c.issuer_summary_usd_rounded) + '; exchange screenshots ' +
+            (exchange === null ? 'Unavailable' : exchange.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' USDT-equivalent') +
+            '. These are different scopes/currencies, not additive reserves or an assumed USD/USDT conversion.</p>' +
+            '<p class="text-sm">Rounded issuer lines leave ' + money(rec.issuer_total_minus_lines_usd) +
+            ' before the separate margin letter, and ' + money(rec.issuer_total_minus_lines_and_margin_usd) +
+            ' after including it. Neither arithmetic view proves full reconciliation.</p>' +
+            '<p class="text-sm">Historical disclosure: ' + e(roster.evm_count == null ? 'unknown' : roster.evm_count) +
+            ' EVM + ' + e(Array.isArray(roster.solana) ? roster.solana.length : 'unknown') +
+            ' Solana accounts. Disclosure is not independent current tracking, custody or ownership verification.</p>' +
+            '<ul class="text-sm mt-2">' + notes + '</ul></details>' +
+            '<p class="text-xs text-slate-500 dark:text-slate-300 mt-3">Source retrieved ' + e(n.retrieved_at || 'unavailable') +
+            '; normalization ' + e(n.version || 'unavailable') + '. Observation clocks are not renewed by this page. ' +
+            link('Issuer article', n.source_url) + '</p></div>';
+    },
+
     _fillAttestation: function(fam) {
         var a = fam.attestation_snapshot;
         if (!a) { EthenaRenderer._set('ethena-attestation-panel', ''); return; }
+        if (a.normalization) {
+            EthenaRenderer._set('ethena-attestation-panel', EthenaRenderer._normalizedAttestationHtml(a));
+            EthenaRenderer._set('ethena-dependency-clock-note',
+                '<div class="panel text-sm"><strong>Earlier authored dependency rationale</strong>' +
+                '<p>The rationale below retains its original evidence scope. Its allocation and tracking claims do not certify the ' +
+                CommonRenderer._escapeAttr(a.snapshot_at) +
+                ' roster or current composition. See the separately dated documentary evidence above; scores have not changed.</p></div>');
+            return;
+        }
         var embeddedAge = a.embedded_age_days != null ? a.embedded_age_days : a.age_days;
         var latestAge = a.latest_published_age_days;
         var stale = (embeddedAge != null && embeddedAge > ETHENA_THRESHOLDS.attestation_stale_days);
@@ -1676,10 +1764,8 @@ var EthenaRenderer = {
             if (a.mintredeem_at_snapshot != null) parts.push('mint/redeem ' + EthenaRenderer._money(a.mintredeem_at_snapshot));
             var marginSum = sumOf(margins);
             if (marginSum) parts.push('margin ' + EthenaRenderer._money(marginSum));
-            // ⚠️ The gap is REPORTED, not hidden and not explained away. These are
-            // the post's own rounded lines, so a residual of a few million is
-            // rounding — but an arithmetic claim that silently absorbs its own
-            // remainder is the kind that stays wrong after the figures move.
+            // Rounded source inputs can contribute to a residual, but cannot
+            // establish its cause. Keep even small differences unreconciled.
             var recon = custSum + (a.coinbase_total_at_snapshot || 0) + (a.mintredeem_at_snapshot || 0) + marginSum;
             var gap = a.total_backing_at_snapshot - recon;
             var gapPct = Math.abs(gap) / a.total_backing_at_snapshot * 100;
@@ -1689,8 +1775,8 @@ var EthenaRenderer = {
                 (gapPct >= 0.5
                     ? ' \u2014 <span class="text-amber-700">' + EthenaRenderer._money(Math.abs(gap)) +
                       ' unreconciled (' + gapPct.toFixed(1) + '%)</span>.'
-                    : ' (the post publishes rounded lines; the ' + EthenaRenderer._money(Math.abs(gap)) +
-                      ' difference is that rounding).') +
+                    : ' (difference ' + EthenaRenderer._money(Math.abs(gap)) +
+                      '; rounded inputs may contribute, but the residual is not independently reconciled).') +
                 '</div>';
         }
 
