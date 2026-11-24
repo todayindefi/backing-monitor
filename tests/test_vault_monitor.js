@@ -28,3 +28,5 @@ const zero=structuredClone(live);zero.source_status.status='ok';zero.metrics.sha
 console.log('PASS maintained cadence, stale/failed last-good labels and true zero accounting alert.');
 
 assert.equal(v.chartSeries([{at:'2026-11-01T00:00:00Z',value:'1'},{at:'2026-11-01T01:00:00Z',value:'0'}]).flat().length,2,'known zero NAV is a chart observation, not missing data');
+
+const routes=v.render(live);assert(routes.includes('Normal withdrawal</strong>'));assert(routes.includes('Instant withdrawal</strong>'));assert(routes.includes('No early-exit fee'));assert(routes.includes('Request → wait '));assert(routes.includes('If gauge-staked'));console.log('PASS both routes visible with separate wait/fee and cash-conversion caveats.');
