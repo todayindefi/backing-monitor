@@ -12,6 +12,22 @@ var ReUSDChainLadder = {
         if(!chosen)chosen={status:c.status==='bracketed'?'not_measured':c.status,basis:'The primary-threshold crossing was not established on this chain.'};
         return Object.assign({},chosen,{threshold_bps:primary});
     },
+    summary: function(data) {
+        var liquidity = data.liquidity || {}, depth = liquidity.depth || {};
+        var ethereum = (depth.per_chain || {}).ethereum;
+        var primary = ethereum && this.result(ethereum, depth);
+        var bracket = primary && primary.bracket;
+        if (!bracket || !this.finite(bracket.last_clearing_size_usd) ||
+            !this.finite(bracket.first_crossing_size_usd)) {
+            return {value: 'See exit evidence', note: 'Ethereum chain-local crossing unavailable in the summary'};
+        }
+        return {
+            value: CommonRenderer.formatCurrency(bracket.last_clearing_size_usd) + ' – ' +
+                CommonRenderer.formatCurrency(bracket.first_crossing_size_usd),
+            note: 'Ethereum · ' + Math.abs(primary.threshold_bps) + ' bps impact · ' +
+                (bracket.meets_precision_obligation === true ? 'quote bracket' : 'coarse quote bracket')
+        };
+    },
     clockText: function(d) {
         var q=d.quote||{},s=q.solana_appendix;
         var text='Initial collection: '+(q.quoted_as_of||'not supplied')+(q.collection_finished_at?' to '+q.collection_finished_at:'');
@@ -29,6 +45,13 @@ var ReUSDChainLadder = {
         var h='<section class="panel re-chain-ladder" id="reusd-chain-ladder"><div class="re-ladder-title"><h3 class="panel-title">Routed quote ladder</h3><span class="re-ladder-badge">'+(unresolved?'Bounded / incomplete results':'Measured configured chains')+'</span></div>';
         h+='<p class="re-ladder-note">Separate chain-local exits. Primary impact limit: '+(this.finite(primary)?e(Math.abs(Number(primary)))+' bps':'not supplied')+'. No combined cross-chain depth is inferred.</p>';
         h+='<p class="re-ladder-note">'+e((d.denomination_scope||{}).measured_leg||'Read each chain’s quoted token pair below.')+' · bridging, primary redemption and final cash settlement excluded.</p>';
+        var ethereum = chains.ethereum;
+        if (ethereum && ethereum.status === 'ladder_exhausted' &&
+            this.finite(ethereum.depth_usd) && this.finite(d.threshold_bps)) {
+            h += '<p class="re-ladder-note">Ethereum at ' + e(Math.abs(d.threshold_bps)) +
+                ' bps: $' + e(this.amount(ethereum.depth_usd)) +
+                ' cleared at the last tested rung. The ladder ended before a crossing was observed.</p>';
+        }
         h+=names.map(function(name,index){
             var c=chains[name]||{},r=self.result(c,d),rows=rungs.filter(function(x){return self.chain(x.chain)===self.chain(name);}).slice().sort(function(a,b){return Number(a.size_usd)-Number(b.size_usd);});
             var ref=c.baseline_rung||{},refSize=ref.size_usd,br=r.bracket||{},valid=rows.filter(function(x){return x.status==='ok';}).length;

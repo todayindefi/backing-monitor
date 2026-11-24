@@ -5696,6 +5696,12 @@ const CommonRenderer = {
             liqSub = '<span class="text-amber-700">quote returns the same answer at every size</span>';
         }
 
+        if (typeof ReUSDChainLadder !== 'undefined' && ReUSDChainLadder.accepts(data)) {
+            var reusdQuote = ReUSDChainLadder.summary(data);
+            depthTxt = this._escapeAttr(reusdQuote.value);
+            liqSub = this._escapeAttr(reusdQuote.note) + exitScope;
+        }
+
         var cards = [
             {
                 label: 'Peg',

@@ -24,7 +24,11 @@ const assert = require('node:assert/strict');
                 assert.match(text, /Coverage (unverified|not established)/);
                 if (slug === 'reusd-re') {
                     assert.match(text, /Chain-local secondary exits/);
-                    assert.doesNotMatch(await page.locator('#summary-cards').innerText(), /\$10.0M – \$20.0M/);
+                    const summary = await page.locator('#summary-cards').innerText();
+                    assert.match(summary, /\$1\.0M – \$10\.0M/);
+                    assert.match(summary, /Ethereum · 50 bps impact · coarse quote bracket/);
+                    assert.doesNotMatch(summary, /\$10\.0M – \$20\.0M/);
+                    assert.match(text, /Ethereum at 200 bps: \$10,000,000 cleared at the last tested rung/);
                 }
                 for (const axis of ['liquidity', 'backing', 'contract']) {
                     await page.locator('#section-' + axis).evaluate(e =>
