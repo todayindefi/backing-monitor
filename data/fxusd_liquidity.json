@@ -3,7 +3,7 @@
   "asset_slug": "fxusd",
   "as_of": "2026-11-23T23:47:43Z",
   "producer": "dextracker",
-  "note": "Axis 3 (Liquidity & Exit), single producer. Measured exit evidence only; no risk score. f(x) Protocol's fxUSD 0x085780639CC2cACd35E474e71f4d000e2405d8f6 -- NOT fxSAVE (0x7743e50F..., an ERC-4626 share at ~1.12). Protocol redemption is measured as REFUSED (riskAnalyst 2026-09-22), so this DEX ladder is the ONLY exit for fxUSD and for fxSAVE, which redeems into it.",
+  "note": "Exact Ethereum fxUSD secondary-market quote evidence only; no risk score. Current primary redemption state/capacity are not measured by this liquidity export. September22 refusal is historical, not renewed by the quote as_of. Other products and composed cash routes retain their own terms and clocks.",
   "depth": {
     "status": "bracketed",
     "depth_usd": 1000000.0,
@@ -26827,7 +26827,7 @@
       "basis": "Refined endpoints failed revalidation or resolution is below observed quote stability; coarse bracket retained."
     },
     "holdings": {
-      "semantics": "Distribution, NOT a bound on depth: how much of the supply is held outside the quoted pool right now.",
+      "semantics": "Arithmetic supply residual outside specified pool custody; not independently verified transferable public float or an exit-capacity bound.",
       "supply_outside_pool_usd": 15360502.18572315,
       "supply_outside_pool_units": 15360502.18572315,
       "supply_outside_pool_is_upper_bound": true,
@@ -26837,8 +26837,10 @@
       "third_party_float": {
         "status": "not_configured"
       },
-      "lp_withdrawal_caveat": "Newly minted supply in users' hands would sell at the depth shown. Supply freed by an LP withdrawing from the quoted pool would NOT: that raises float and shallows the pool at the same time.",
-      "basis": "How little reaches the market is a separate fact from depth: at most $15,360,502 sits outside curve USDC/fxUSD pool 0x5018BE88."
+      "lp_withdrawal_caveat": "LP withdrawals may release tokens while reducing cash reserves. Residual balances and the sampled quote book are not simultaneously guaranteed execution.",
+      "basis": "Retained supply-minus-listed-pool-balance arithmetic at its own source clocks. No holder eligibility, public float or simultaneous cash-exit availability inferred.",
+      "economic_public_float_units": null,
+      "economic_public_float_usd": null
     },
     "supply_check": {
       "status": "passed",
@@ -26857,14 +26859,24 @@
   "primary_exit": {
     "venue": "f(x) PoolManager redeem()",
     "contract": "0x250893CA4Ba5d05626C785e8da758026928FCD24",
-    "at_nav": true,
-    "gated": true,
-    "gated_basis": "riskAnalyst measured 2026-09-22: redeem(address,uint256,uint256) reverts ErrorRedeemNotAllowed() from a holder of 77.1M fxUSD on both the wstETH and WBTC pools, against a clean negative control. NOT re-derived here.",
-    "gate": "Redemption disabled at the protocol level for holders.",
+    "status": "current_not_measured_by_liquidity_producer",
+    "observed_at": null,
+    "observation_block": null,
+    "at_nav": null,
+    "gated": null,
+    "is_redeem_allowed": null,
+    "paused": null,
+    "gate": "Current redemption price-state gate not measured by this export.",
+    "gate_semantics": "A price-state redemption condition is distinct from pause and does not establish permanent disablement or future availability.",
+    "gated_basis": "Current state unknown here; the September22 refusal is retained separately with its original evidence date.",
     "cadence": null,
-    "capacity_usd": 0,
-    "capacity_basis": "Zero holder redemption capacity while ErrorRedeemNotAllowed holds. This is primary-redemption capacity, not secondary-market depth.",
-    "note": "With the protocol exit refused, the secondary ladder in `depth` is the whole exit. A normal payload scores the worse of two operands; here there is one."
+    "capacity_usd": null,
+    "capacity_basis": "Current claimant/cash capacity is unmeasured. Neither historical refusal nor market quotes establish current zero or positive primary capacity.",
+    "last_observed_date": "2026-09-22",
+    "last_observed_at": null,
+    "historical_evidence_pointer": "/historical_primary_exit",
+    "current_state_owner": "Qualified exact-product redemption/accounting producer; no implicit ingestion from quote payload clocks.",
+    "note": "Secondary-market depth is one independently dated leg; no whole-exit, eligibility, complete cash execution or settlement conclusion."
   },
   "enumeration": {
     "source": "DexTracker sweep by TOKEN ADDRESS at Ethereum blocks 26,031,534-26,031,636 (2026-09-22T07:27Z-07:48Z): DefiLlama yields (underlyingTokens), Curve API all 9 Ethereum registries, Uniswap V3 factory getPool x 13 counters x 4 fee tiers (one timed-out call retried and answered), Uniswap V2 + SushiSwap V2 factories, GeckoTerminal token pools (indexes v2/v3/v4/curve/fluid), Balancer v2/v3 API, Blockscout top-50 holder census, KyberSwap route discovery $100-$20M",
@@ -28426,26 +28438,28 @@
     "inventory_reading": "Router proceeds plateau at ~$4.65M USDC: $4.17M is the primary pool's USDC side; the remainder is what the secondary stable pools can absorb on their fxUSD side (msUSD 449K, alUSD 134K, GHO 79K, frxUSD 66K, eUSD 21K) before onward USDC legs that are themselves deep (crvUSD/USDC 5.7M, custodian 255K). The plateau sits inside enumerated inventory; it is not a routing artefact. Past it the router sells fxUSD for ETH."
   },
   "excluded_liquidity": {
-    "lp_wrappers": [
-      "Convex",
-      "Beefy",
-      "f(x) gauges (fx-protocol rows on DefiLlama)"
-    ],
-    "lp_wrapper_reason": "Wrap the same Curve LP; DefiLlama lists them as separate rows.",
+    "status": "role_context_only_current_distribution_unmeasured",
     "non_swap_entries": [
-      "f(x) Stability Pool 0x65C9A641... (77.3M fxUSD, 90.6% of supply)",
-      "cbBTC OFT adapter",
-      "f(x) TransparentUpgradeableProxy"
+      {
+        "name": "fxSP Stability Pool",
+        "address": "0x65c9a641afceb9c0e6034e558a319488fa0fa3be",
+        "current_fxusd_balance": null,
+        "current_supply_share_pct": null,
+        "observed_at": null
+      }
     ],
-    "non_swap_reason": "Holders that are not venues. The Stability Pool is deliberately NOT counted as non-float for the supply cap: fxSAVE redeems from it on demand, so it is float that has not moved yet."
+    "non_swap_reason": "A Stability Pool claim is not a swap venue. Current balances, redeemable cash, eligibility and economic public float are not measured by this quote producer.",
+    "lp_wrapper_context": "Historical wrapper/adapter listings retained under historical_primary_exit. No refreshed venue or holder census.",
+    "economic_public_float_units": null,
+    "historical_evidence_pointer": "/historical_primary_exit/legacy_excluded_liquidity"
   },
   "axis_binding_constraint": {
-    "leg": "secondary_market_depth",
-    "basis": "Protocol redemption is refused, so the located secondary crossing is the axis, with nothing beneath it. Depth to 2% is ~$4.27M against a $20.1M redeemable stress size (Morpho's 27% of fxSAVE).",
-    "risk_score": null
+    "leg": "not_determined",
+    "risk_score": null,
+    "basis": "Measured secondary depth does not determine the complete exit constraint while current primary redemption and composed cash availability are unmeasured."
   },
   "refresh_cadence": "daily",
-  "payload_revised_at": "2026-11-23T23:47:43Z",
+  "payload_revised_at": "2026-11-24T00:55:17Z",
   "rescore_trigger": {
     "evaluated_at": "2026-11-23T23:47:42Z",
     "checks": [
@@ -28467,5 +28481,52 @@
       }
     ],
     "tripped": true
+  },
+  "historical_primary_exit": {
+    "status": "historical_only",
+    "observation_date": "2026-09-22",
+    "observed_at": null,
+    "observation_block": null,
+    "clock_precision": "date_only",
+    "clock_basis": "Legacy source explicitly dates the refusal September22; no exact gate time/block is established here. Quote clocks do not renew it.",
+    "evidence": {
+      "venue": "f(x) PoolManager redeem()",
+      "contract": "0x250893CA4Ba5d05626C785e8da758026928FCD24",
+      "at_nav": true,
+      "gated": true,
+      "gated_basis": "riskAnalyst measured 2026-09-22: redeem(address,uint256,uint256) reverts ErrorRedeemNotAllowed() from a holder of 77.1M fxUSD on both the wstETH and WBTC pools, against a clean negative control. NOT re-derived here.",
+      "gate": "Redemption disabled at the protocol level for holders.",
+      "cadence": null,
+      "capacity_usd": 0,
+      "capacity_basis": "Zero holder redemption capacity while ErrorRedeemNotAllowed holds. This is primary-redemption capacity, not secondary-market depth.",
+      "note": "With the protocol exit refused, the secondary ladder in `depth` is the whole exit. A normal payload scores the worse of two operands; here there is one."
+    },
+    "legacy_note": "Axis 3 (Liquidity & Exit), single producer. Measured exit evidence only; no risk score. f(x) Protocol's fxUSD 0x085780639CC2cACd35E474e71f4d000e2405d8f6 -- NOT fxSAVE (0x7743e50F..., an ERC-4626 share at ~1.12). Protocol redemption is measured as REFUSED (riskAnalyst 2026-09-22), so this DEX ladder is the ONLY exit for fxUSD and for fxSAVE, which redeems into it.",
+    "legacy_axis_binding_constraint": {
+      "leg": "secondary_market_depth",
+      "basis": "Protocol redemption is refused, so the located secondary crossing is the axis, with nothing beneath it. Depth to 2% is ~$4.27M against a $20.1M redeemable stress size (Morpho's 27% of fxSAVE).",
+      "risk_score": null
+    },
+    "legacy_excluded_liquidity": {
+      "lp_wrappers": [
+        "Convex",
+        "Beefy",
+        "f(x) gauges (fx-protocol rows on DefiLlama)"
+      ],
+      "lp_wrapper_reason": "Wrap the same Curve LP; DefiLlama lists them as separate rows.",
+      "non_swap_entries": [
+        "f(x) Stability Pool 0x65C9A641... (77.3M fxUSD, 90.6% of supply)",
+        "cbBTC OFT adapter",
+        "f(x) TransparentUpgradeableProxy"
+      ],
+      "non_swap_reason": "Holders that are not venues. The Stability Pool is deliberately NOT counted as non-float for the supply cap: fxSAVE redeems from it on demand, so it is float that has not moved yet."
+    },
+    "legacy_holdings_interpretation": {
+      "semantics": "Distribution, NOT a bound on depth: how much of the supply is held outside the quoted pool right now.",
+      "basis": "How little reaches the market is a separate fact from depth: at most $15,360,502 sits outside curve USDC/fxUSD pool 0x5018BE88.",
+      "lp_withdrawal_caveat": "Newly minted supply in users' hands would sell at the depth shown. Supply freed by an LP withdrawing from the quoted pool would NOT: that raises float and shallows the pool at the same time."
+    },
+    "distribution_observed_at": null,
+    "distribution_clock_basis": "Legacy holder amounts lack a dedicated observation clock here; retained as undated historical context, not renewed."
   }
 }
