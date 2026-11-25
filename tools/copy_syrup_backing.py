@@ -75,6 +75,21 @@ def public_body(report, previous):
     except ModuleNotFoundError:
         from project_maple_transparency import project
     projected = project(report, previous, report_base='https://tidresearch.com/reports')
+    specific = projected['asset_specific']
+    specific.pop('vaulttracker_native_accounting', None)
+    if report['asset_slug'] == 'syrupusdc':
+        try:
+            try:
+                from tools.select_syrupusdc_native import selected_accounting
+            except ModuleNotFoundError:
+                from select_syrupusdc_native import selected_accounting
+            native = selected_accounting(report)
+            if native is not None:
+                specific['vaulttracker_native_accounting'] = native
+                print('syrupUSDC native accounting selected from VaultTracker', file=sys.stderr)
+        except (ImportError, OSError, ValueError, TypeError, KeyError, ArithmeticError) as error:
+            print('syrupUSDC VaultTracker selection rejected; using qualified legacy projection: '
+                  + type(error).__name__, file=sys.stderr)
     body = (json.dumps(projected, indent=2, ensure_ascii=False, allow_nan=False) + '\n').encode()
     for forbidden in [b'/home/', b'.private-reviews', b'"raw_source"', b'"private_wallet"', b'"account_address"', b'"private_holdings"']:
         if forbidden in body:
