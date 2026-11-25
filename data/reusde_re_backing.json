@@ -4,14 +4,14 @@
   "asset_slug": "reusde-re",
   "chain": "Ethereum",
   "token_address": "0xdDC0f880ff6e4e22E4B74632fBb43Ce4DF6cCC5a",
-  "timestamp": "2026-11-24T23:57:46Z",
+  "timestamp": "2026-11-25T00:59:08Z",
   "summary": {
     "total_supply": 20477940.69707515,
     "total_supply_scope": "Ethereum token totalSupply",
     "nav_claim_value": 29692280.23,
     "total_backing": null,
     "collateral_ratio": null,
-    "premium_discount_pct": -0.5804,
+    "premium_discount_pct": -0.5833,
     "two_pct_depth": null,
     "two_pct_depth_is_floor": false
   },
@@ -31,25 +31,20 @@
     {
       "severity": "warning",
       "message": "The Curve secondary venue is a cross-currency twocrypto pool against sUSDe; dollar interpretation inherits sUSDe's USD price."
-    },
-    {
-      "severity": "warning",
-      "code": "secondary_pool_unavailable",
-      "message": "Secondary pool data unavailable; TVL and volume are unknown. Independent NAV, supply and market measurements retain their own clocks."
     }
   ],
   "peg": {
-    "as_of": "2026-11-24T23:58:05Z",
+    "as_of": "2026-11-25T00:59:23Z",
     "nav": 1.4499641671575656,
     "nav_source": "Re Protocol off-chain issuer API https://api.re.xyz/apy/get-apy data.reUSDe.currentNAV",
     "nav_basis": "Off-chain issuer-published NAV. reUSDe exposes no usable on-chain nav(), getNAV(), totalAssets(), pricePerShare(), convertToAssets(), or exchangeRate() accessor; this is weaker than an issuer-set value that can at least be read on-chain.",
-    "nav_as_of": "2026-11-24T22:58:41.603Z",
-    "nav_retrieved_at": "2026-11-24T23:57:45Z",
-    "market_price": 1.4415485235862007,
+    "nav_as_of": "2026-11-24T23:36:55.201Z",
+    "nav_retrieved_at": "2026-11-25T00:59:06Z",
+    "market_price": 1.441505929918539,
     "market_price_source": "CoinGecko API external USD aggregate mid for re-protocol-reusde; off-chain market-data API, distinct from the off-chain issuer NAV API and not a contract read",
-    "market_price_as_of": "2026-11-24T23:58:05Z",
-    "market_price_retrieved_at": "2026-11-24T23:57:46Z",
-    "premium_discount_pct": -0.5804,
+    "market_price_as_of": "2026-11-25T00:59:23Z",
+    "market_price_retrieved_at": "2026-11-25T00:59:07Z",
+    "premium_discount_pct": -0.5833,
     "premium_discount_basis": "signed (CoinGecko external market mid - off-chain issuer API NAV) / NAV * 100; no smoothing or clamping",
     "source": "coingecko_external_mid + re_protocol_offchain_issuer_api",
     "history_ref": "reusde_re_peg_history.json",
@@ -57,8 +52,8 @@
     "history_basis_note": "Historical market prices are compared with issuer API theoretical NAV observations. No quarter-boundary NAV behavior is inferred or asserted."
   },
   "liquidity": {
-    "as_of": null,
-    "total_tvl": null,
+    "as_of": "2026-11-25T00:59:08Z",
+    "total_tvl": 360.64,
     "total_tvl_basis": "GeckoTerminal reserve_in_usd for the listed Curve twocrypto secondary venue; pool TVL is not executable depth and its USD conversion inherits sUSDe's USD price",
     "total_2pct_depth": null,
     "total_2pct_depth_is_floor": false,
@@ -67,11 +62,11 @@
     "two_pct_depth_size_responsive": null,
     "two_pct_depth_unresponsive_note": "No USD exit quote ladder is published because the venue directly prices reUSDe in sUSDe, not dollars.",
     "two_pct_depth_basis": "Not measured; cross-currency pool TVL is not treated as dollar depth.",
-    "volume_24h": null,
+    "volume_24h": 0.0,
     "volume_24h_scope": "GeckoTerminal Curve REUSDE/sUSDe pool",
-    "external_mid": 1.4415485235862007,
+    "external_mid": 1.441505929918539,
     "external_mid_source": "CoinGecko API external aggregate mid for re-protocol-reusde",
-    "external_mid_as_of": "2026-11-24T23:58:05Z",
+    "external_mid_as_of": "2026-11-25T00:59:23Z",
     "primary_exit": {
       "venue": "Re Protocol quarterly WindowRedemption",
       "contract": "0xD2e077d945Ec77B45Fbe4622E01F4C79e4bA389A",
@@ -115,19 +110,22 @@
     "pools": [
       {
         "name": "Curve REUSDE/sUSDe",
+        "pool_type": "curve_twocrypto_cross_currency",
         "address": "0x43b98EEA5C689F0036918f590a4B55f22D853734",
-        "status": "unavailable",
-        "tvl_usd": null,
-        "volume_24h_usd": null,
-        "last_attempt_at": "2026-11-24T23:57:46Z",
-        "error": "HTTPError"
+        "tvl_usd": 360.64,
+        "volume_24h_usd": 0.0,
+        "price_denominator": "sUSDe",
+        "usd_basis": "GeckoTerminal USD conversion; the pool directly prices reUSDe in sUSDe, so its dollar mark and TVL inherit sUSDe's own USD price",
+        "balance_ratio_basis": "Not published: in Curve twocrypto the token split expresses the exchange rate and is not a stableswap imbalance measure.",
+        "status": "ok",
+        "retrieved_at": "2026-11-25T00:59:08Z"
       }
     ],
     "note": "No balance_ratio is published. For this Curve twocrypto cross-currency pair, token split is an exchange-rate expression rather than a stableswap imbalance finding.",
-    "pool_data_status": "unavailable"
+    "pool_data_status": "ok"
   },
   "backing": {
-    "as_of": "2026-11-24T23:57:59Z",
+    "as_of": "2026-11-25T00:59:23Z",
     "as_of_basis": "Ethereum block time for supply; DefiLlama Re TVL carries its own daily observation timestamp",
     "collateral_ratio": null,
     "collateral_ratio_basis": "No tranche-specific collateral ratio is established. The reserve dashboard combines reUSD and reUSDe and does not expose an attributable reUSDe denominator.",
@@ -136,39 +134,39 @@
     "nav_claim_value": 29692280.23,
     "nav_claim_value_basis": "Ethereum reUSDe totalSupply() multiplied by the off-chain issuer API NAV; this is issuer-marked claim value, not backing.",
     "ethereum_supply": 20477940.69707515,
-    "ethereum_supply_source": "reUSDe totalSupply() at Ethereum block 26488458",
+    "ethereum_supply_source": "reUSDe totalSupply() at Ethereum block 26488765",
     "protocol_reserves_passthrough": {
       "scope": "DefiLlama adapter-computed combined Re protocol TVL; not attributable to reUSDe alone",
       "source": "https://api.llama.fi/protocol/re",
       "source_quantity": "DefiLlama Re totalLiquidityUSD (TVL), not Re's former issuer reserve table",
-      "as_of": "2026-11-24T23:06:35Z",
+      "as_of": "2026-11-25T00:41:35Z",
       "basis": "Configured tokens in Re custody, redemption, and ICL addresses across four chains, plus Re's Avalanche off-chain-assets oracle recorded by the adapter as USDC.",
-      "retrieved_at": "2026-11-24T23:57:46Z",
-      "total_usd": 444255665.0,
+      "retrieved_at": "2026-11-25T00:59:08Z",
+      "total_usd": 444115453.0,
       "breakdown": [
         {
           "name": "USDC",
-          "value_usd": 249892252.36,
-          "pct": 56.25
+          "value_usd": 249889750.03,
+          "pct": 56.27
         },
         {
           "name": "SUSDE",
-          "value_usd": 194188142.76,
-          "pct": 43.71
+          "value_usd": 194050384.0,
+          "pct": 43.69
         },
         {
           "name": "USDE",
-          "value_usd": 154204.5,
+          "value_usd": 154256.4,
           "pct": 0.03
         },
         {
           "name": "USDT",
-          "value_usd": 20355.01,
+          "value_usd": 20356.03,
           "pct": 0.0
         },
         {
           "name": "WETH",
-          "value_usd": 495.08,
+          "value_usd": 491.37,
           "pct": 0.0
         },
         {
@@ -178,12 +176,12 @@
         },
         {
           "name": "ETH",
-          "value_usd": 20.22,
+          "value_usd": 20.05,
           "pct": 0.0
         },
         {
           "name": "AVAX",
-          "value_usd": 4.47,
+          "value_usd": 4.43,
           "pct": 0.0
         }
       ],
@@ -212,21 +210,14 @@
     },
     "issuer_reported_metrics": {
       "status": "ok",
-      "last_attempt_at": "2026-11-24T23:57:46.959721+00:00",
+      "last_attempt_at": "2026-11-25T00:59:08.307957+00:00",
       "current": {
         "schema_version": "re_issuer_metrics/1",
         "source": "https://app.re.xyz/metrics",
-        "retrieved_at": "2026-11-24T23:57:47.116012+00:00",
-        "source_sha256": "d75ef83fe064d6efd8971b8b869ff3eeb35e77fbd76e7c88c6f78b73938c8df7",
+        "retrieved_at": "2026-11-25T00:59:08.866520+00:00",
+        "source_sha256": "8182dbf4fcc8e60dccd24d8adb228a9459f301062cf8b929dc2fe779dd87c224",
         "scope": "issuer-reported combined Re program, multiple chains/products; attribution is issuer-assigned, not independent tranche backing",
         "daily_capital_history": [
-          {
-            "reporting_date": "2026-08-26T00:00:00.000Z",
-            "onchain_capital": "146597974.262983",
-            "offchain_capital": "179436378.99502167",
-            "premium_receivables": "318925958.48",
-            "total_tvl": "644960311.7380047"
-          },
           {
             "reporting_date": "2026-08-27T00:00:00.000Z",
             "onchain_capital": "157997195.872091",
@@ -856,14 +847,21 @@
             "offchain_capital": "249675021.77085713",
             "premium_receivables": "318925958.48",
             "total_tvl": "764645094.8216891"
+          },
+          {
+            "reporting_date": "2026-11-25T00:00:00.000Z",
+            "onchain_capital": "195937201.651885",
+            "offchain_capital": "249675021.77085713",
+            "premium_receivables": "318925958.48",
+            "total_tvl": "764538181.9027421"
           }
         ],
         "latest_daily_capital": {
-          "reporting_date": "2026-11-24T00:00:00.000Z",
-          "onchain_capital": "196044114.570832",
+          "reporting_date": "2026-11-25T00:00:00.000Z",
+          "onchain_capital": "195937201.651885",
           "offchain_capital": "249675021.77085713",
           "premium_receivables": "318925958.48",
-          "total_tvl": "764645094.8216891"
+          "total_tvl": "764538181.9027421"
         },
         "cards": [
           {
@@ -873,10 +871,6 @@
             "product": "protocol",
             "unit": "usd",
             "points": [
-              {
-                "reporting_date": "2026-08-26T00:00:00.000Z",
-                "value": "253490883.65859073"
-              },
               {
                 "reporting_date": "2026-08-27T00:00:00.000Z",
                 "value": "264227130.3278919"
@@ -1235,7 +1229,11 @@
               },
               {
                 "reporting_date": "2026-11-24T00:00:00.000Z",
-                "value": "371253970.49216664"
+                "value": "371146767.43878835"
+              },
+              {
+                "reporting_date": "2026-11-25T00:00:00.000Z",
+                "value": "371220477.679876"
               }
             ]
           },
@@ -1246,10 +1244,6 @@
             "product": "reUSD",
             "unit": "usd",
             "points": [
-              {
-                "reporting_date": "2026-08-26T00:00:00.000Z",
-                "value": "233645779.49211285"
-              },
               {
                 "reporting_date": "2026-08-27T00:00:00.000Z",
                 "value": "244366834.83289438"
@@ -1608,7 +1602,11 @@
               },
               {
                 "reporting_date": "2026-11-24T00:00:00.000Z",
-                "value": "341552069.8013038"
+                "value": "341444866.7479255"
+              },
+              {
+                "reporting_date": "2026-11-25T00:00:00.000Z",
+                "value": "341508954.85990757"
               }
             ]
           },
@@ -1619,10 +1617,6 @@
             "product": "reUSDe",
             "unit": "usd",
             "points": [
-              {
-                "reporting_date": "2026-08-26T00:00:00.000Z",
-                "value": "19845104.1664779"
-              },
               {
                 "reporting_date": "2026-08-27T00:00:00.000Z",
                 "value": "19860295.494997516"
@@ -1982,6 +1976,10 @@
               {
                 "reporting_date": "2026-11-24T00:00:00.000Z",
                 "value": "29701900.69086286"
+              },
+              {
+                "reporting_date": "2026-11-25T00:00:00.000Z",
+                "value": "29711522.819968462"
               }
             ]
           },
@@ -1992,10 +1990,6 @@
             "product": "reUSD",
             "unit": "price",
             "points": [
-              {
-                "reporting_date": "2026-08-26T00:00:00.000Z",
-                "value": "1.0971797380100967"
-              },
               {
                 "reporting_date": "2026-08-27T00:00:00.000Z",
                 "value": "1.0973699954288485"
@@ -2355,6 +2349,10 @@
               {
                 "reporting_date": "2026-11-24T00:00:00.000Z",
                 "value": "1.115778124662485"
+              },
+              {
+                "reporting_date": "2026-11-25T00:00:00.000Z",
+                "value": "1.11598755265618"
               }
             ]
           },
@@ -2365,10 +2363,6 @@
             "product": "reUSDe",
             "unit": "price",
             "points": [
-              {
-                "reporting_date": "2026-08-26T00:00:00.000Z",
-                "value": "1.4083333789121044"
-              },
               {
                 "reporting_date": "2026-08-27T00:00:00.000Z",
                 "value": "1.4088065718572633"
@@ -2728,6 +2722,10 @@
               {
                 "reporting_date": "2026-11-24T00:00:00.000Z",
                 "value": "1.4504338927337197"
+              },
+              {
+                "reporting_date": "2026-11-25T00:00:00.000Z",
+                "value": "1.4509037704806114"
               }
             ]
           },
@@ -2738,10 +2736,6 @@
             "product": "reUSD",
             "unit": "pct",
             "points": [
-              {
-                "reporting_date": "2026-08-26T00:00:00.000Z",
-                "value": "0.06418766906867338"
-              },
               {
                 "reporting_date": "2026-08-27T00:00:00.000Z",
                 "value": "0.06405674557429462"
@@ -3101,6 +3095,10 @@
               {
                 "reporting_date": "2026-11-24T00:00:00.000Z",
                 "value": "0.07173127564428872"
+              },
+              {
+                "reporting_date": "2026-11-25T00:00:00.000Z",
+                "value": "0.07155840168797592"
               }
             ]
           },
@@ -3111,10 +3109,6 @@
             "product": "reUSDe",
             "unit": "pct",
             "points": [
-              {
-                "reporting_date": "2026-08-26T00:00:00.000Z",
-                "value": "0.12265215326892275"
-              },
               {
                 "reporting_date": "2026-08-27T00:00:00.000Z",
                 "value": "0.1226736632278337"
@@ -3474,6 +3468,10 @@
               {
                 "reporting_date": "2026-11-24T00:00:00.000Z",
                 "value": "0.12543063137633367"
+              },
+              {
+                "reporting_date": "2026-11-25T00:00:00.000Z",
+                "value": "0.1254456995874256"
               }
             ]
           },
@@ -3484,10 +3482,6 @@
             "product": "protocol",
             "unit": "usd",
             "points": [
-              {
-                "reporting_date": "2026-08-26T00:00:00.000Z",
-                "value": "146597974.262983"
-              },
               {
                 "reporting_date": "2026-08-27T00:00:00.000Z",
                 "value": "157997195.872091"
@@ -3847,6 +3841,10 @@
               {
                 "reporting_date": "2026-11-24T00:00:00.000Z",
                 "value": "196044114.570832"
+              },
+              {
+                "reporting_date": "2026-11-25T00:00:00.000Z",
+                "value": "195937201.651885"
               }
             ]
           },
@@ -3857,10 +3855,6 @@
             "product": "protocol",
             "unit": "usd",
             "points": [
-              {
-                "reporting_date": "2026-08-26T00:00:00.000Z",
-                "value": "179436378.99502167"
-              },
               {
                 "reporting_date": "2026-08-27T00:00:00.000Z",
                 "value": "179440511.85314366"
@@ -4220,6 +4214,10 @@
               {
                 "reporting_date": "2026-11-24T00:00:00.000Z",
                 "value": "249675021.77085713"
+              },
+              {
+                "reporting_date": "2026-11-25T00:00:00.000Z",
+                "value": "249675021.77085713"
               }
             ]
           },
@@ -4230,10 +4228,6 @@
             "product": "protocol",
             "unit": "usd",
             "points": [
-              {
-                "reporting_date": "2026-08-26T00:00:00.000Z",
-                "value": "318925958.48"
-              },
               {
                 "reporting_date": "2026-08-27T00:00:00.000Z",
                 "value": "318925958.48"
@@ -4593,6 +4587,10 @@
               {
                 "reporting_date": "2026-11-24T00:00:00.000Z",
                 "value": "318925958.48"
+              },
+              {
+                "reporting_date": "2026-11-25T00:00:00.000Z",
+                "value": "318925958.48"
               }
             ]
           },
@@ -4603,10 +4601,6 @@
             "product": "protocol",
             "unit": "usd",
             "points": [
-              {
-                "reporting_date": "2026-08-27T00:00:00.000Z",
-                "value": "8858247.043703811"
-              },
               {
                 "reporting_date": "2026-08-28T00:00:00.000Z",
                 "value": "8906744.178788636"
@@ -4961,7 +4955,11 @@
               },
               {
                 "reporting_date": "2026-11-24T00:00:00.000Z",
-                "value": "15055704.580435585"
+                "value": "15055683.512458127"
+              },
+              {
+                "reporting_date": "2026-11-25T00:00:00.000Z",
+                "value": "15132847.94461666"
               }
             ]
           }
@@ -4970,7 +4968,7 @@
           {
             "chain_id": 1,
             "chain_name": "Ethereum",
-            "source_as_of": "2026-11-24T23:57:08.496Z",
+            "source_as_of": "2026-11-25T00:55:20.402Z",
             "rows": [
               {
                 "tokenAddress": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
@@ -5068,7 +5066,7 @@
                 "byAsset": {
                   "reusd": {
                     "tokenBalance": "1821738164266140611",
-                    "custodialValueWei": "2035801494226933441",
+                    "custodialValueWei": "2035810161689940604",
                     "contractValueWei": "0"
                   },
                   "reusde": {
@@ -5078,8 +5076,8 @@
                   }
                 },
                 "tokenBalance": "1821738164266140611",
-                "valueWei": "2035801494226933441",
-                "custodialValueWei": "2035801494226933441",
+                "valueWei": "2035810161689940604",
+                "custodialValueWei": "2035810161689940604",
                 "contractValueWei": "0"
               },
               {
@@ -5090,7 +5088,7 @@
                 "byAsset": {
                   "reusd": {
                     "tokenBalance": "1353440228141697308010579",
-                    "custodialValueWei": "1461264208301810865213754",
+                    "custodialValueWei": "1461265389059610940832670",
                     "contractValueWei": "0"
                   },
                   "reusde": {
@@ -5100,8 +5098,8 @@
                   }
                 },
                 "tokenBalance": "1353440228141697308010579",
-                "valueWei": "1461264208301810865213754",
-                "custodialValueWei": "1461264208301810865213754",
+                "valueWei": "1461265389059610940832670",
+                "custodialValueWei": "1461265389059610940832670",
                 "contractValueWei": "0"
               }
             ],
@@ -5110,14 +5108,14 @@
           {
             "chain_id": 8453,
             "chain_name": "Base",
-            "source_as_of": "2026-11-24T23:57:08.342Z",
+            "source_as_of": "2026-11-25T00:55:20.230Z",
             "rows": [],
             "rows_status": "source_reported_empty"
           },
           {
             "chain_id": 42161,
             "chain_name": "Arbitrum",
-            "source_as_of": "2026-11-24T23:57:08.302Z",
+            "source_as_of": "2026-11-25T00:55:20.232Z",
             "rows": [
               {
                 "tokenAddress": "0x211Cc4DD073734dA055fbF44a2b4667d5E5fE5d2",
@@ -5150,7 +5148,7 @@
                   "reusd": {
                     "tokenBalance": "250000000",
                     "custodialValueWei": "0",
-                    "contractValueWei": "249962375000000000000"
+                    "contractValueWei": "249965000000000000000"
                   },
                   "reusde": {
                     "tokenBalance": "0",
@@ -5159,9 +5157,9 @@
                   }
                 },
                 "tokenBalance": "250000000",
-                "valueWei": "249962375000000000000",
+                "valueWei": "249965000000000000000",
                 "custodialValueWei": "0",
-                "contractValueWei": "249962375000000000000"
+                "contractValueWei": "249965000000000000000"
               }
             ],
             "rows_status": "issuer_reported"
@@ -5169,7 +5167,7 @@
           {
             "chain_id": 43114,
             "chain_name": "Avalanche",
-            "source_as_of": "2026-11-24T23:57:08.539Z",
+            "source_as_of": "2026-11-25T00:55:20.526Z",
             "rows": [
               {
                 "tokenAddress": "0x9702230A8Ea53601f5cD2dc00fDBc13d4dF4A8c7",
@@ -5220,10 +5218,10 @@
                   "label": "reUSDe Redemption Custodian"
                 }
               ],
-              "totalReserveValueWei": "116788192694221306763815410",
+              "totalReserveValueWei": "116778570383175190459027972",
               "valueWeiByAsset": {
-                "reusd": "116782697826418325961655432",
-                "reusde": "5494867802980802159978"
+                "reusd": "116773075486034009938165085",
+                "reusde": "5494897141180520862887"
               }
             },
             {
@@ -5253,8 +5251,8 @@
               "tokenSymbol": "sUSDe",
               "tokenAddress": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
               "tokenDecimals": 18,
-              "tokenBalance": "92683702097272173365206961",
-              "valueWei": "116721365749612004244785569"
+              "tokenBalance": "92675570586398516857385640",
+              "valueWei": "116711125318626792850020071"
             },
             {
               "chainId": 1,
@@ -5297,7 +5295,7 @@
     }
   },
   "dependencies": {
-    "as_of": "2026-11-24T23:57:46Z",
+    "as_of": "2026-11-25T00:59:08Z",
     "upstream": [
       {
         "name": "Re Protocol off-chain NAV API",
@@ -5308,7 +5306,7 @@
       },
       {
         "name": "Ethena sUSDe",
-        "metric": "43.71% of DefiLlama-computed combined Re TVL and the secondary-pool denominator",
+        "metric": "43.69% of DefiLlama-computed combined Re TVL and the secondary-pool denominator",
         "source": "DefiLlama Re TVL + Curve pool",
         "note": "The TVL percentage is combined reUSD + reUSDe; the secondary USD mark also inherits sUSDe's price."
       },
