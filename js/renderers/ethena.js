@@ -223,6 +223,24 @@ var EthenaRenderer = {
         data.peg = data.peg || {};
         data.peg.chart_window_days = 7;
         data.peg.chart_min_points = 2;
+        if (history && history.asset_slug === specific.type &&
+            history.source === 'peg_tracker_history.json' && Array.isArray(history.entries)) {
+            data.peg.history_ref = specific.type + '_peg_history.json';
+            data.peg.history_field = 'peg_premium_discount_pct';
+            var latest = history.entries[history.entries.length - 1];
+            var sampledAt = latest && Date.parse(latest.timestamp);
+            if (data.peg.market_price == null && Number.isFinite(sampledAt) &&
+                sampledAt <= Date.now() && Number.isFinite(latest.peg_market_price) &&
+                latest.peg_market_price > 0 && Number.isFinite(latest.peg_theoretical_price) &&
+                latest.peg_theoretical_price > 0 && Number.isFinite(latest.peg_premium_discount_pct)) {
+                data.peg.market_price = latest.peg_market_price;
+                data.peg.market_price_as_of = latest.timestamp;
+                data.peg.premium_discount_pct = latest.peg_premium_discount_pct;
+                data.peg.sample_nav = latest.peg_theoretical_price;
+                data.peg.source = 'PegTracker market reference · sample ' + latest.timestamp + ' · indicative';
+            }
+        }
+
 
         if (!s.collateral_ratio_alt) {
             s.collateral_ratio_alt = { label: '_ethenaAlt', value: 0, is_currency: false };
@@ -593,7 +611,8 @@ var EthenaRenderer = {
             var covWithRf = (s.coverage_ratio_with_reserve_fund != null) ? s.coverage_ratio_with_reserve_fund * 100 : null;
             var covBase = (s.coverage_ratio != null) ? s.coverage_ratio * 100 : null;
             var covCls = covWithRf==null ? 'text-slate-500' : (covWithRf >= ETHENA_THRESHOLDS.coverage_floor ? 'text-green-600' : 'text-red-600');
-            var pegPct = (specific.peg && specific.peg.premium_discount_pct != null) ? specific.peg.premium_discount_pct : null;
+            var peg = data.peg || {};
+            var pegPct = peg.premium_discount_pct;
             var pegState = EthenaRenderer._pegState(pegPct);
 
             titleRow = '<div class="text-xl font-bold text-slate-800">USDe</div>' +
@@ -606,7 +625,7 @@ var EthenaRenderer = {
                         '<div class="text-lg font-bold ' + covCls + '">' + (covWithRf==null ? 'Unavailable' : CommonRenderer.formatPercent(covWithRf, 2)) + '</div>' +
                         '<div class="text-xs text-slate-500 mt-0.5">' + (covBase==null ? 'Unavailable' : CommonRenderer.formatPercent(covBase, 2)) + ' without RF</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Peg</div>' +
-                        '<div class="text-lg font-bold ' + CommonRenderer.pegPctClass(pegState) + '">$' + (s.price != null ? s.price.toFixed(4) : '-') + '</div>' +
+                        '<div class="text-lg font-bold ' + CommonRenderer.pegPctClass(pegState) + '">$' + (peg.market_price != null ? peg.market_price.toFixed(5) : '—') + '</div>' +
                         '<div class="text-xs ' + CommonRenderer.pegPctClass(pegState) + ' mt-0.5">' + CommonRenderer.pegPctText(pegPct) + ' · ' + CommonRenderer.pegStatusLabel(pegState) + '</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
                         '<div class="text-lg">' + EthenaRenderer._statusPill(pausedLabel, pausedState) + '</div></div>' +
@@ -618,9 +637,9 @@ var EthenaRenderer = {
             var vs = specific.vault_state || {};
             var nav = (vs.nav_usde_per_share != null) ? vs.nav_usde_per_share : s.nav;
             var assets = (vs.total_assets_usde != null) ? vs.total_assets_usde : s.total_assets_usde;
-            var mkt = (specific.peg && specific.peg.market_price != null) ? specific.peg.market_price : s.price;
-            var navP = (specific.peg && specific.peg.nav_usde_per_share != null) ? specific.peg.nav_usde_per_share : nav;
-            var disc = (mkt != null && navP) ? ((mkt - navP) / navP * 100) : null;
+            var peg = data.peg || {};
+            var mkt = peg.market_price;
+            var disc = peg.premium_discount_pct;
             var discState = EthenaRenderer._pegState(disc);
 
             titleRow = '<div class="text-xl font-bold text-slate-800">sUSDe</div>' +
@@ -635,7 +654,7 @@ var EthenaRenderer = {
                         '<span class="text-xs text-slate-400 font-normal ml-1">USDe</span></div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Market price</div>' +
                         '<div class="text-lg font-bold ' + CommonRenderer.pegPctClass(discState) + '">$' + (mkt != null ? mkt.toFixed(4) : '-') + '</div>' +
-                        '<div class="text-xs ' + CommonRenderer.pegPctClass(discState) + ' mt-0.5">' + CommonRenderer.pegPctText(disc) + ' vs NAV</div></div>' +
+                        '<div class="text-xs ' + CommonRenderer.pegPctClass(discState) + ' mt-0.5">' + CommonRenderer.pegPctText(disc) + ' vs sampled NAV</div></div>' +
                     '<div><div class="text-xs text-slate-400 font-medium uppercase">Status</div>' +
                         '<div class="text-lg">' + EthenaRenderer._statusPill(pausedLabel, pausedState) + '</div></div>' +
                 '</div>';
@@ -880,7 +899,7 @@ var EthenaRenderer = {
                     (peg.source ? '<div class="text-[11px] text-slate-400 mt-0.5">' +
                         CommonRenderer._escapeAttr(peg.source) + '</div>' : '') + '</div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">' + navLabel + '</div>' +
-                    '<div class="text-lg font-bold font-mono">' + fmtP(peg.nav) + '</div></div>' +
+                    '<div class="text-lg font-bold font-mono">' + fmtP(peg.sample_nav ?? peg.nav) + '</div></div>' +
                 '<div><div class="text-xs text-slate-400 font-medium uppercase">Premium / discount</div>' +
                     '<div class="text-lg font-bold font-mono ' + pctCls + '">' +
                         CommonRenderer.pegPctText(pct, 3) + '</div></div>' +

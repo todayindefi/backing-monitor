@@ -587,7 +587,9 @@ async function renderAsset(slug) {
         // ⚠️ A declared ref beats a derived name. Deriving a filename that the
         // producer also declares is the same class as deriving a value they
         // publish — the convention silently disagrees and nothing says so.
-        var pegRef = data.peg && data.peg.history_ref;
+        // Ethena's backing files and PegTracker market series have separate clocks.
+        var pegRef = ['usde', 'susde'].includes(sourceSlug)
+            ? sourceSlug + '_peg_history.json' : data.peg && data.peg.history_ref;
         if (pegRef && pegRef !== sourceSlug + '_backing_history.json') {
             // A backing history can contain a spot peg field without containing
             // the declared peg series. Its presence must not suppress this fetch.
