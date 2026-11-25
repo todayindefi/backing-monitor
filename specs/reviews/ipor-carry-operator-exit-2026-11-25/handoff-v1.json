@@ -1,0 +1,73 @@
+{
+  "contract_version": 1,
+  "task_id": "ipor-carry-operator-exit-bm-return-v1",
+  "summary": "Exact Ethereum IPOR carry operator and withdrawal check",
+  "owner": "backing-monitor",
+  "recipient": "riskAnalyst",
+  "state": "evidence_ready",
+  "authority": {
+    "max_stage": "assessment",
+    "reference": "User approved BM and SecurityAnalyst read-only evidence requests"
+  },
+  "scope": [
+    {
+      "project": "ipor",
+      "component": "ipor-reth-liquity-carry",
+      "chain_id": "eip155:1",
+      "identifiers": [
+        "0xb9e806e8f2d94c015ffefa90cd24ecce18f1663c"
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "summary",
+      "path": "/home/danger/backing-monitor/specs/reviews/ipor-carry-operator-exit-2026-11-25/RESULTS.md",
+      "sha256": "c004a134eed87196ad31314ab04131d2157ae7eafccbe69e6e7086c05bc6aad2",
+      "scope": {
+        "project": "ipor",
+        "component": "ipor-reth-liquity-carry",
+        "chain_id": "eip155:1",
+        "identifiers": [
+          "0xb9e806e8f2d94c015ffefa90cd24ecce18f1663c"
+        ]
+      },
+      "version": "v1",
+      "source_refs": [
+        "https://api.ipor.io/v2/fusion/vaults",
+        "https://etherscan.io/block/26492625",
+        "https://eth.blockscout.com/api/v2/smart-contracts/0xae4362a98cd22f711f9b9f3edb9bb1379a573c"
+      ],
+      "observed_at": "2026-11-25T13:54:35+00:00",
+      "retrieved_at": "2026-11-25T13:54:46.103246+00:00",
+      "clock_note": "Observation is Ethereum block time and retrieval is the final pinned receipt call. Earlier native retrieval and publisher response clocks lead local time as detailed in the summary."
+    }
+  ],
+  "checks": [
+    {
+      "id": "evidence_acceptance",
+      "kind": "review",
+      "required": true,
+      "status": "accepted",
+      "reviewer": "backing-monitor",
+      "artifact": "summary",
+      "note": "Exact registry identity and raw reservation, preview and simulated recipient balance arithmetic verified. Recipient assessment remains pending."
+    }
+  ],
+  "gaps": [
+    {
+      "id": "larger_and_requested_exit",
+      "description": "Larger standard exits, request-level entitlements and operator-assisted unwind remain unverified; no live settlement.",
+      "blocking": false,
+      "reopen_when": "Exact eligible route and separately authorized evidence."
+    },
+    {
+      "id": "native_operator",
+      "description": "Publisher flag only; native operator gas and authority corroboration are SecurityAnalyst scope.",
+      "blocking": false,
+      "reopen_when": "SecurityAnalyst returns finite operator evidence."
+    }
+  ],
+  "evidence_version": "v1",
+  "assessment_version": null
+}
