@@ -61,7 +61,9 @@ var GHORenderer = {
                 '<p>Overall ' + this._n(a.overall_score, 1) + '/10 · Contract &amp; Admin ' +
                 this._n(data.contract.structural_score, 1).replace(/^(\d+)$/, '$1.0') + '/10</p>' +
                 '<p class="text-sm">Authority observed ' + this._e(a.authority_observed_at) +
-                ' · assurance reviewed ' + this._e(a.assurance_review_date) + ' · Ethereum only.</p>'));
+                ' · assurance reviewed ' + this._e(a.assurance_review_date) + ' · Ethereum only.</p>' +
+                (a.signer_delta ? '<details><summary>November 25 Council signer observation</summary><p class="text-sm break-words">' +
+                    this._e(a.signer_delta) + '</p><a href="https://etherscan.io/block/26489415">Signer block</a></details>' : '')));
         }
         var measured = (data.asset_specific || {}).gho_backing;
         if (measured && measured.schema_version === 'gho-backing-detail/1') this._backing(measured);
