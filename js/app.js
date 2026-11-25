@@ -505,7 +505,7 @@ async function renderAsset(slug) {
         }
         var data = await dataResp.json();
         data.dashboard_published = isPublished(assetMeta);
-        if (assetMeta.source_status_ref && typeof renderAssetSourceStatus === 'function' && !location.pathname.includes('/previews/')) {
+        if (assetMeta && assetMeta.source_status_ref && typeof renderAssetSourceStatus === 'function' && !location.pathname.includes('/previews/')) {
             renderAssetSourceStatus('data/' + assetMeta.source_status_ref);
         }
         // Tag the URL slug so findAssetRenderer can route to the sibling
