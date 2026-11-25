@@ -136,7 +136,7 @@ PYEOF
 
 for slug in $SLUGS; do
     # Approved grouped adapters own these files; generic copies would undo scope/grades.
-    case "$slug" in fxsave|weeth) continue ;; esac
+    case "$slug" in fxsave|weeth|gho) continue ;; esac
     # Owner approved sfrxUSD production on 2026-10-16. Its producers still use
     # isolated candidate directories. Consume only this asset's reviewed file
     # set; never add a whole pending directory to fleet SOURCE_ROOTS. Editorial
@@ -304,7 +304,7 @@ if [ -f tools/emit_axis5.py ]; then
     # it is a decision someone takes rather than a file nobody notices.
     for slug in $SLUGS; do
     # Approved grouped adapters own these files; generic copies would undo scope/grades.
-    case "$slug" in fxsave|weeth) continue ;; esac
+    case "$slug" in fxsave|weeth|gho) continue ;; esac
         python3 tools/emit_axis5.py "$slug" --out data/ 2>&1 || {
             echo "$(date): axis5 emit skipped for $slug (source walk unavailable)" >&2
             if [ -f "data/${slug}_contract.json" ]; then
