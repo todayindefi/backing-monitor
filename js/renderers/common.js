@@ -262,7 +262,7 @@ const CommonRenderer = {
         // into its scope, path table, unresolved disclosures and verification
         // trail; listing them prevents the generic unread-block sentinel from
         // contradicting the rendered panel directly beneath it.
-        'publication_scope', 'layers', 'authority_summary', 'unresolved',
+        'publication_scope', 'layers', 'authority_summary', 'unresolved', 'scoped_assurance',
         'review', 'walk_notes', 'verification',
         'float_split', 'measurement_clocks',
         // ⚠️ THE LIQUIDITY AXIS'S OWN BLOCKS, added when the marker was extended to
@@ -6425,6 +6425,11 @@ const CommonRenderer = {
     },
 
     _contractValueHtml(data) {
+        var scoped = (data.contract || {}).scoped_assurance;
+        if (scoped && scoped.authority_headline) {
+            return '<span class="text-amber-700 dark:text-amber-300">' +
+                this._escapeAttr(scoped.authority_headline) + '</span>';
+        }
         var a = data.contract && data.contract.authority_summary;
         if (a && a.schema === 'actionable-path/1') {
             var cls = a.state === 'active-core-undelayed' ? 'text-red-600' :
@@ -10048,7 +10053,18 @@ const CommonRenderer = {
     _renderContractSection(data) {
         var body = document.getElementById('axis-contract-body');
         if (!body) return;
-        var html = this._contractPanelsHtml(data);
+        var scoped = (data.contract || {}).scoped_assurance;
+        var esc = this._escapeAttr.bind(this);
+        var html = scoped
+            ? '<div class="panel"><div class="panel-title">Ethereum deployed assurance</div>' +
+              '<p class="tw-sub">Block ' + esc(scoped.block) + ' · ' + esc(scoped.observed_at) + '</p>' +
+              '<ul class="tw-code-list">' + scoped.findings.map(function (finding) {
+                  return '<li>' + esc(finding) + '</li>';
+              }).join('') + '</ul><p class="tw-sub">' + scoped.sources.map(function (source) {
+                  return '<a class="underline" href="' + esc(source.url) + '">' + esc(source.label) + '</a>';
+              }).join(' · ') + '</p></div>'
+            : '';
+        html += this._contractPanelsHtml(data);
         body.innerHTML = html ||
             '<div class="panel"><div class="panel-title">Not assessed</div>' +
             '<div class="text-sm text-slate-500" style="line-height:1.5;">' +
@@ -10683,7 +10699,7 @@ const CommonRenderer = {
             // still one hover (and one click, in the trail) away.
             '<div class="tw-headline"' +
                 (c.headline_basis ? ' title="' + esc(c.headline_basis) + '"' : '') + '>' +
-                esc(c.headline) + '</div>' +
+                esc(c.scoped_assurance ? 'Earlier authority walk · see Ethereum update above' : c.headline) + '</div>' +
             '<div class="tw-sub">Walked ' + esc(c.observed_at || '?') +
                 // ⚠️ `source_file` DROPPED FROM THE READER'S TOOLTIP. Its value is a
                 // path into a PRODUCER'S REPO — "security_analyst/topology/assets/

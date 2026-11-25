@@ -339,6 +339,7 @@ async function renderIndex() {
 // Asset detail view
 // ========================================
 async function renderAsset(slug) {
+    document.body.classList.toggle('sky-savings-dashboard', slug === 'usds' || slug === 'susds');
     var refreshNote = document.getElementById('dashboard-refresh-note');
     if (refreshNote) refreshNote.textContent = slug === 'gho'
         ? 'GHO data is a dated snapshot updated manually. The dashboard checks for new files every 5 minutes.'
@@ -464,6 +465,14 @@ async function renderAsset(slug) {
                         .catch(function() { return null; }));
             });
         });
+
+        if (axisSlug === 'usds' || axisSlug === 'susds') {
+            var assuranceFile = 'data/' + axisSlug + '_ethereum_assurance.json';
+            overlayFetches.push(fetch(dataUrl(assuranceFile))
+                .then(function (r) { return r.ok ? r.json() : null; })
+                .then(function (j) { return j ? {axis: 'contract', file: assuranceFile, json: j} : null; })
+                .catch(function () { return null; }));
+        }
 
         // ⚠️ THE FAMILY ENVELOPE IS FETCHED FROM THE **SOURCE**, AND THAT IS NOT A
         // RELAPSE INTO SOURCE-KEYED AXIS RESOLUTION. Axis SCORES are judgements about
