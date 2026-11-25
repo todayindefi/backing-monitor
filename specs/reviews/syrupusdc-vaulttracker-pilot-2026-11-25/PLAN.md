@@ -1,0 +1,21 @@
+# Existing syrupUSDC dashboard · native accounting shadow pilot
+
+Exact Ethereum `eip155:1:0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b`, underlying Ethereum USDC `0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48`, both six decimals. The existing dashboard URL, credit book, repayment and redemption observations, peg/depth sources, issuer, controls and grades are outside this source replacement.
+
+Frozen baseline: BM normal backing and history copied under the local review directory, accounting block 26,490,766 at 2026-11-25 07:40:59 UTC. Baseline backing SHA-256 `b48aa447a7b04a62b3b01eb5709ae7256c161adeb21951bafa155af46d1d4a07`. History SHA-256 `5bfe893688436fdc08d627902d805170d099df3735305d6fc0d6ee17a8f2e0b8`.
+
+The shadow checker opens a generation through VaultTracker's public client, then verifies the exact identity, units, same block/hash, raw total assets, legacy supply display precision, and the distinction between the old rounded book ratio and one-share conversion. A different pin is not parity. Old inputs and clocks stay intact. Legacy raw supply is absent from the served feed, so its comparison is at the available display precision; a stricter check should use a frozen raw producer read where released.
+
+The first shadow generation matched `656966282298731` USDC base units at the frozen block. It reused the existing BM/Peg observation and had null exact supply and native conversion. It establishes transport parity for the single field. VaultTracker was asked for one bounded native capture at this same pin. Neither that capture nor the import clock establishes a cadence or an independently verified return history.
+
+Before switch: qualify a maintained exact source and rollback; preserve the existing history window and its clocks rather than replacing it with one point; run a complete same-pin projection and desktop/mobile against the existing route. Keep accounting aliases internally consistent. In particular, an updated total-assets field cannot quietly redate the old cash, strategy-book reconciliation or peg sample. If the vault producer and credit producer are pinned separately, display the two accounting perimeters with their own dates and suppress any cross-pin ratio. Preserve the existing loan and queue readers. Switch this deployment and these fields only, then repeat normal-publish and failure recovery checks before considering syrupUSDT.
+
+The bounded VaultTracker native attempt reached Ethereum chain ID and the requested block header, then failed with an HTTP error on the first contract call. Three calls were spent. No retry was run and the shadow's two null fields remain. BM asked PegTracker whether an already captured exact raw read is reusable. The first-stage switch remains gated.
+
+PegTracker confirmed that its maintained exports at block 26,490,766 retain rounded share supply and exact underlying accounting balances, but do not retain raw share supply or a one-share conversion. Its older public fixtures use different pins. Reuse at the frozen pin is therefore exhausted. Exact native parity needs a successful authorized same-pin read or a new cohort with both producers pinned together. The production reader remains on PegTracker.
+
+## Same-block parity passed
+
+VaultTracker generation `b2b4945120761f1760fe83d252075716d70f315284bd4ce8412d3df4357b7ed3` supersedes the partial shadow. At the frozen pin the exact native capture returned `656966282298731` USDC base units, `549833180752130` share base units, and `1194846` USDC base units for one share. Assets matched exactly, supply matched the existing display precision, and the rounded book ratio of 1.194847 and native conversion of 1.194846 differed by the expected floor rounding. The scratch projection preserved all legacy payload fields and copied all 723 history rows byte for byte. The generation has one native state and zero native share-history samples.
+
+Next gate: VaultTracker supplies a maintained shadow export with a freshness policy and a second successful pinned observation. BM preserves the existing chart history and labels its provenance at the boundary to new native observations. BM then rehearses a failed update and byte-for-byte rollback, and checks desktop/mobile on the existing route. The approved cutover is for these native syrupUSDC fields only, with a normal-publish served check before syrupUSDT.
