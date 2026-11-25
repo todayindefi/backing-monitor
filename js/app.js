@@ -339,6 +339,10 @@ async function renderIndex() {
 // Asset detail view
 // ========================================
 async function renderAsset(slug) {
+    var refreshNote = document.getElementById('dashboard-refresh-note');
+    if (refreshNote) refreshNote.textContent = slug === 'gho'
+        ? 'GHO data is a dated snapshot updated manually. The dashboard checks for new files every 5 minutes.'
+        : 'Data refreshes every hour. Dashboard auto-refreshes every 5 minutes.';
     var previousFamilyTabs = document.getElementById('family-view-tabs');
     if (previousFamilyTabs) previousFamilyTabs.remove();
     document.getElementById('index-view').classList.add('hidden');
