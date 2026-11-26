@@ -38,7 +38,7 @@ var ScrvUSDRenderer = {
         var valid=peg.status==='ok' && Number.isFinite(peg.market_price) && Number.isFinite(peg.nav) && peg.nav>0;
         return this.panel('Market price versus dollar NAV',valid ? this.metrics([
             ['Market price',peg.market_price,'USD / share',9],
-            ['Contemporaneous dollar NAV',peg.nav,'USD / share',9],
+            ['Dated dollar NAV',peg.nav,'USD / share',9],
             ['Premium / discount',(peg.market_price/peg.nav-1)*100,'%',4]
         ])+this.note('Market quote: '+peg.market_price_as_of+' · '+peg.market_price_source)+
             this.note('Vault NAV: '+peg.nav_as_of+' · block '+peg.nav_block)+
@@ -143,7 +143,7 @@ var ScrvUSDRenderer = {
         var top=passed.length ? Math.max.apply(null,passed.map(function(r){return r.target_crvusd;})) : null;
         return this.panel('Redeem — scrvUSD → crvUSD → USDC',
             this.note(top==null ? 'Primary redemption has no successful measured size.' : 'Read-only primary redemption passed through '+this.n(top)+' crvUSD-equivalent; no whole-vault exit was established.',top==null)+
-            this.note('Primary simulation: '+(p.as_of || 'not measured')+'. Underlying routes: '+(q.as_of || 'not measured')+'.')+
+            this.note('Primary simulation: '+(p.as_of || 'not measured')+(p.block ? ' · block '+p.block : '')+'. Underlying routes: '+(q.as_of || 'not measured')+'.')+
             this.table(['Target underlying','Input shares','crvUSD redeemed','USDC quoted','All-in cost vs dollar NAV','Result'],quotes)+
             this.note('USDC is counted at $1; quotes exclude gas and are not submitted trades. Positive cost means less than dollar NAV; negative cost means more. Size impact and a depth crossing are not measured.')+
             this.details('Primary simulations and quote evidence',this.table(['Target','Input shares','Redemption output','Simulation'],primary)+
@@ -203,7 +203,12 @@ var ScrvUSDRenderer = {
         slot('axis-liquidity-body',this.panel('Exit measurement scope',this.note(matched ? 'Swap and redeem ladders use identical share inputs valued at the dated dollar NAV. Route costs and additional size impact are shown separately. Authored liquidity scores are dated assessments, not measured exit capacity.' : 'Primary redemption and crvUSD cash-out quotes are sampled below. Secondary-market depth, pool TVL and trading volume are not measured for this wrapper. Authored liquidity scores are dated assessments, not measured exit capacity.')));
         slot('liquidity-extra-panels',matched || (this.swap(d)+this.exit(d)));
         slot('contract-extra-panels',this.controls(d));
-        slot('dependencies-extra-panels',this.panel('Underlying collateral reference',this.note('crvUSD owns the collateral and upstream credit model. No duplicate parent asset graph or dollar reserve is maintained here.')+'<p class="text-sm mt-2"><a href="?asset=crvusd">Open crvUSD’s six-axis dashboard →</a></p>'));
+        var parent = d.parent || {};
+        slot('dependencies-extra-panels', this.panel('Underlying collateral reference',
+            this.note('crvUSD is the vault asset and carries the collateral and upstream credit exposure.') +
+            this.note('Selected crvUSD backing export: ' + (parent.backing_as_of || 'time unavailable') +
+                ' · scrvUSD custody pin: ' + (d.as_of || 'time unavailable') + '.') +
+            '<p class="text-sm mt-2"><a href="?asset=crvusd">Open crvUSD’s six-axis dashboard →</a></p>'));
         var legacy=document.getElementById('asset-specific-panels');if(legacy)legacy.innerHTML='';
         var cap=document.getElementById('breakdown-caption');
         var table=document.getElementById('breakdown-table');

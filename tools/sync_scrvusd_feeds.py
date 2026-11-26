@@ -45,7 +45,7 @@ def validated_inputs():
             d['source_publication_status']=d['publication_status'];d['publication_status']='published'
         d['publication_authorization']={'approved_on':'2026-10-17',
             'basis':'User approved the six-axis scrvUSD implementation scope and requested proceeding',
-            'source':str(PRODUCER/name) if name in {f'scrvusd_{s}.json' for s in MEASUREMENTS} else f'riskAnalyst@{EDITORIAL_COMMIT}:data/axes_pending/{name}',
+            'source':f"PegTracker:scrvusd/{name}" if name in {f'scrvusd_{s}.json' for s in MEASUREMENTS} else f'riskAnalyst@{EDITORIAL_COMMIT}:data/axes_pending/{name}',
             'editorial_commit':EDITORIAL_COMMIT if name not in {f'scrvusd_{s}.json' for s in MEASUREMENTS} else None}
         outputs[name]=json.dumps(d,indent=2,ensure_ascii=False,allow_nan=False)+'\n'
     return outputs
