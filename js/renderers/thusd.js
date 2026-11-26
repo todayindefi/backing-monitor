@@ -149,6 +149,13 @@ var ThusdRenderer = {
         // default panel is hidden in render() either way, so blank it out
         // here to keep common.js from NPE-ing on the missing tags.
         data.backing_breakdown = [];
+        if (data.backing) {
+            data.backing = Object.assign({}, data.backing, {
+                collateral_ratio_basis: 'The overall reserve ratio is unmeasured. Selected wallet coverage divides observed eligible wallet assets by Ethereum thUSD supply.',
+                collateral_ratio_note: 'Subtracting selected wallet assets from supply gives an arithmetic residual. Coverage outside those wallets and net realizable proceeds remain unmeasured.',
+                off_chain_backing_note: null
+            });
+        }
         data.risk_flags = (data.risk_flags || []).map(function (flag) {
             var match = /^On-chain coverage ([0-9.]+%) below ([0-9.]+%) floor/.exec(flag.message || '');
             if (!match) return flag;
@@ -918,7 +925,16 @@ var ThusdRenderer = {
     // ============================================================
     _renderUpstreamLegs: function(data) {
         var dep = (data && data.dependencies) || {};
-        var up = Array.isArray(dep.upstream) ? dep.upstream : [];
+        var up = Array.isArray(dep.upstream) ? dep.upstream.filter(function (leg) {
+            return leg.source !== 'derived_residual';
+        }).map(function (leg) {
+            if (leg.name !== 'thBILL') return leg;
+            return Object.assign({}, leg, {
+                metric: 'Observed in the selected wallets',
+                circular: false,
+                note: 'Wallet marks leave net realizable proceeds and any current cross-holdings unmeasured.'
+            });
+        }) : [];
         if (!up.length) return '';
 
         var rows = up.map(function(u) {
