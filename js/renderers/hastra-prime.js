@@ -522,6 +522,12 @@ var HastraPrimeRenderer = {
         html += anc('hp-panel-peg', HastraPrimeRenderer._renderPeg(data, spec));
 
         html += HastraPrimeRenderer._axisHead(2, 'Backing', 'headline · reconciliation · reserves · supply');
+        html += '<div class="panel" id="hp-accounting-scope">' +
+            '<div class="panel-title">Backing measurement scope</div>' +
+            '<p class="text-sm text-slate-600">The wYLDS ratio compares Provenance YLDS balances and receipt claims with tracked Solana and Ethereum wYLDS supply. ' +
+            'Receipt labels and book amounts leave underlying loan quality, recoverable proceeds and funded withdrawals unmeasured.</p>' +
+            '<p class="text-sm text-slate-600 mt-2">PRIME vault balances or reported assets are reconciled separately against wYLDS-denominated share obligations. ' +
+            'The upstream Figure Certificate Company (FCC) reserve has its own filings and accounting perimeter.</p></div>';
         html += CommonRenderer.backingBasisPanelHtml(data);
         html += anc('hp-panel-headline',   HastraPrimeRenderer._renderHeadline(data, spec, s));
         html += '<div id="hp-cr-chart-slot"></div>';
@@ -2334,8 +2340,8 @@ var HastraPrimeRenderer = {
             '<div class="flex items-start justify-between gap-4 mb-3">' +
                 '<div>' +
                     '<div class="panel-title" style="margin:0">HELOC Warehouse — credit proxy</div>' +
-                    '<div class="text-xs text-slate-500 mt-1">PRIME’s yield comes from financing Figure-originated HELOCs ' +
-                        'pre-securitization, not from Treasuries. This is the credit leg.</div>' +
+                    '<div class="text-xs text-slate-500 mt-1">PRIME’s documented strategy includes financing Figure-originated home equity before securitization. ' +
+                        'This proxy covers the home-equity credit leg. The separate wYLDS reserve reconstruction also includes Automobile-labeled receipt claims.</div>' +
                 '</div>' +
                 '<div class="text-right whitespace-nowrap">' +
                     HastraPrimeRenderer._pill('originator-attested — not independently verified', 'warn') +

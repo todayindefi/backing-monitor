@@ -1629,7 +1629,8 @@ var STRCRenderer = {
             var totalMonths = monthsByTier.total_preferred_plus_interest;
             var strcOnlyMonths = monthsByTier.strc_only;
             var monthsCls = STRCRenderer._cashRunwayClass(totalMonths);
-            var cashTxt = STRCRenderer._fmtMoneyShort(cashRunway.cash_and_equivalents_usd);
+            var reserveKnown = cashRunway.usd_reserve_usd != null;
+            var cashTxt = STRCRenderer._fmtMoneyShort(reserveKnown ? cashRunway.usd_reserve_usd : cashRunway.cash_and_equivalents_usd);
             var asOf = cashRunway.cash_as_of || '—';
 
             var saleStart = seq && seq.btc_sale_start_date_approx;
@@ -1657,7 +1658,7 @@ var STRCRenderer = {
                 '<div class="text-sm text-slate-700 dark:text-slate-200 mb-2">' +
                     '<span class="font-bold ' + monthsCls + '">' + (totalMonths != null ? '~' + totalMonths.toFixed(1) + ' months' : '—') + '</span> ' +
                     'until BTC sales operationally required. ' +
-                    'Cash <span class="font-mono">' + cashTxt + '</span> as of <span class="font-mono">' + asOf + '</span>.' +
+                    (reserveKnown ? 'Designated USD Reserve (model input) ' : 'Cash (model input) ') + '<span class="font-mono">' + cashTxt + '</span> as of <span class="font-mono">' + asOf + '</span>.' +
                 '</div>';
             function cashRunwayCard(label, sub, months, monthly) {
                 var cls = STRCRenderer._cashRunwayClass(months);

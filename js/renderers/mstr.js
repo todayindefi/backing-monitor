@@ -405,13 +405,13 @@ var MSTRRenderer = {
         var reserveKnown = bs.usd_reserve_usd != null;
         var rows = [
             ['BTC holdings', bs.btc_holdings_usd, false, 'Quantity observation ' + (filing.balances_as_of || bs.as_of || 'not supplied') + '; spot mark has a separate clock'],
-            [reserveKnown ? 'USD Reserve' : 'Cash & equivalents', reserveKnown ? bs.usd_reserve_usd : bs.cash_and_equivalents_usd, false, reserveKnown ? bs.usd_reserve_as_of : bs.as_of],
+            [reserveKnown ? 'Designated USD Reserve' : 'Cash & equivalents', reserveKnown ? bs.usd_reserve_usd : bs.cash_and_equivalents_usd, false, reserveKnown ? bs.usd_reserve_as_of : bs.as_of],
             ['Senior convertible debt', bs.senior_convertible_debt_usd, false, bs.senior_convertible_debt_as_of],
             ['Total preferred notional', bs.total_preferred_notional_usd, false, bs.preferred_base_as_of],
             ['Implied equity book value', bs.implied_equity_book_value_usd, true, 'Model; read component observation dates']
         ];
         if (filing.status === 'available' && filing.usd_cash_usd != null) rows.splice(2, 0,
-            ['USD Cash (general)', filing.usd_cash_usd, false, filing.balances_as_of]);
+            ['General USD Cash', filing.usd_cash_usd, false, filing.balances_as_of]);
 
         var rowHtml = rows.map(function (r) {
             var bg = r[2] ? 'bg-blue-50 dark:bg-blue-900/20 font-semibold' : '';
