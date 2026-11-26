@@ -11,12 +11,20 @@ var WeethRenderer = {
         document.body.classList.add('fxsave-dashboard');
         var companion=document.getElementById('header-companion-link');if(companion && !companion.getAttribute('href'))companion.style.display='none';
         function slot(id,html){var el=document.getElementById(id);if(el)el.innerHTML=html;}
+        var freshness=(data.transport || {}).field_status || {};
+        var ageStatus=function(lane, asOf) {
+            if (freshness[lane] === 'last_good') return ' · stale, retained last-good';
+            if (freshness[lane] === 'unavailable' || !asOf) return ' · unavailable';
+            var age=Date.now()-Date.parse(asOf);
+            return Number.isFinite(age) && age>86400000 ? ' · aged over 24h' : '';
+        };
         var sourceTime=((b.deployments || [])[0] || {}).measured_at;
         slot('axis-peg-body',panel('ETH-denominated price and reference',f.metrics([
             ['Market oracle',p.market_price,'ETH / weETH',8],['Contract conversion',p.nav,'eETH / weETH',8],['Reported deviation',p.premium_discount_pct,'%',5]])+
             note('Contract rate is an eETH claim; comparing it with the ETH oracle assumes eETH tracks ETH. Neither is a cash guarantee.')+
             details('Price sources and independent clocks',note(p.nav_source || 'Rate source unavailable')+note('Rate: '+p.nav_as_of)+note(p.market_price_source || 'Market source unavailable')+note('Oracle updated: '+p.market_price_as_of)+note(p.nav_basis || '')))+
-            panel('Price history · trailing 7 days', '<div class="fxsave-price-chart-wrap"><canvas id="weeth-price-chart" aria-label="ETH-unit weETH market price and eETH reference"></canvas></div>'+note('Original producer clocks retained. ETH units, not dollar prices; gaps are not interpolated.')));
+            panel('Price history · trailing 7 days', '<div class="fxsave-price-chart-wrap"><canvas id="weeth-price-chart" aria-label="ETH-unit weETH market price and eETH reference"></canvas></div>'+note((freshness.history === 'last_good' ? 'Last-good chart history retained. New per-point oracle or quote clocks were unavailable. ' : '')+
+                'Original producer clocks retained. ETH units, not dollar prices; gaps are not interpolated.')));
         slot('backing-extra-panels',panel('Share claim accounting · Ethereum',f.metrics([
             ['Share supply',b.total_supply,'weETH shares',2],['Represented claim',b.total_assets,'eETH claim units',2],['eETH pool token supply',b.eeth_total_supply,'eETH',2],['Wrapped share of eETH units',b.wrapped_share_pct,'%',3]])+
             note('Observed '+sourceTime+'. '+(b.basis || ''))+
@@ -31,7 +39,7 @@ var WeethRenderer = {
             note('Quotes: '+q.measured_at+' · '+q.venue+'. '+q.cost_convention+'. '+(q.failure_note || 'No failed rung reported in this observation.'))+
             details('Quoted ETH ladder · output, standing cost and incremental impact',f.table(['Input notional ETH','Input weETH','Output WETH','Signed cost vs NAV · bps','Marginal impact · bps'],rows)+note('Negative signed cost means less output than the NAV reference. Route quotes are indicative, not reserved proceeds. Full-path gas and complete primary settlement are not verified.')))+
             panel('Primary exit · separate settlement legs',note('weETH unwrap → eETH withdrawal request → pool / validator funding → claim ETH.')+
-                note('Current queue timing, eligible caller/receiver settlement, funded withdrawal capacity and final cash proceeds are unmeasured in this preview. No instant redemption promise.')+
+                note('Current queue timing, eligible caller/receiver settlement, funded withdrawal capacity and final cash proceeds are unmeasured in this snapshot. No instant redemption promise.')+
                 details('Accepted redemption and dependency reasoning',note((data.liquidity || {}).liquidity_score_basis || '')))+
             panel('Venue inventory · Ethereum only',f.metrics([['Discovered pools',enumEth.pool_count,'pools',0],['Published pools',enumEth.published_pool_count,'pools',0],['ETH-exit TVL',enumEth.eth_exit_tvl_usd,'USD inventory mark',0]])+
                 note('Enumerated '+(enumEth.queried_at || venues.as_of || 'time unknown')+'. '+(venues.note || ''))+
@@ -50,7 +58,10 @@ var WeethRenderer = {
         var chartPanel=document.getElementById('chart-panel');if(chartPanel)chartPanel.style.display='none';
         slot('risk-flags',note('Material coverage gaps: current validator/AVS residual exposure, independent recovery coverage, complete authority membership and funded cash settlement remain unverified.'));
         slot('axis-notes-lifted',panel('Snapshot source status',note('Exact Ethereum token only. Manual snapshot; refreshing the page does not copy newer producer files.')+
-            note('Accounting '+sourceTime+'; oracle '+p.market_price_as_of+'; quotes '+q.measured_at+'.')+
+            note('Accounting '+(sourceTime || 'unknown')+ageStatus('accounting',sourceTime)+
+                '; oracle '+(p.market_price_as_of || 'unknown')+ageStatus('oracle',p.market_price_as_of)+
+                '; quotes '+(q.measured_at || 'unknown')+ageStatus('quotes',q.measured_at)+
+                '; venues '+(enumEth.queried_at || venues.as_of || 'unknown')+ageStatus('venues',enumEth.queried_at || venues.as_of)+'.')+
             note('Independent cash/backing coverage and complete controls are not established. Remote supplies, liquidity and grades are excluded.')+
             details('Accepted version and source clocks',note((data.transport || {}).assessment_version || 'Assessment version unavailable')+note((data.transport || {}).evidence_version || 'Evidence version unavailable'))));
         var cards=document.querySelectorAll('#summary-cards .summary-card'),specs=[
