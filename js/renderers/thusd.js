@@ -21,7 +21,7 @@ var THUSD_RESERVE_COLORS = {
     'thBILL @ NAV':     '#3b82f6',
     'USDT @ reserve':   '#10b981',
     'USDC @ reserve':   '#06b6d4',
-    'Off-chain (implied)': '#94a3b8'
+    'Unmeasured balance': '#94a3b8'
 };
 
 var ThusdRenderer = {
@@ -149,6 +149,12 @@ var ThusdRenderer = {
         // default panel is hidden in render() either way, so blank it out
         // here to keep common.js from NPE-ing on the missing tags.
         data.backing_breakdown = [];
+        data.risk_flags = (data.risk_flags || []).map(function (flag) {
+            var match = /^On-chain coverage ([0-9.]+%) below ([0-9.]+%) floor/.exec(flag.message || '');
+            if (!match) return flag;
+            return Object.assign({}, flag, {message: 'Selected wallet coverage ' + match[1] +
+                ' is below the ' + match[2] + ' visibility floor. Coverage outside these selected assets is unmeasured by BM.'});
+        });
     },
 
     // ============================================================
@@ -209,6 +215,7 @@ var ThusdRenderer = {
         html += head(2, 'Backing', ThusdRenderer._backingHeadSub(data, s));
         html += ThusdRenderer._anchor('thusd-basis', CommonRenderer.backingBasisPanelHtml(data));
         html += anc('thusd-reserves',     ThusdRenderer._renderReserveComposition(spec, s));
+        html += '<div id="thusd-verifier-snapshot" aria-live="polite"></div>';
         html += anc('thusd-coverage',     ThusdRenderer._renderCoverageHistoryPanel());
         html += anc('thusd-flow',         ThusdRenderer._renderFlowPanel(spec));
 
@@ -233,6 +240,7 @@ var ThusdRenderer = {
 
         ThusdRenderer._setupAnchorNav();
         ThusdRenderer._renderReservesDonut(spec, s);
+        ThusdRenderer._loadVerifierSnapshot();
         ThusdRenderer._loadCoverageHistoryChart(s);
         ThusdRenderer._loadYieldTrajectoryChart(spec, s);
         ThusdRenderer._loadCriticalEventsFromFile();
@@ -379,10 +387,10 @@ var ThusdRenderer = {
                     '</div>' +
                 '</div>' +
                 // Coverage cell
-                '<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3" title="On-chain reserves ÷ thUSD supply. Off-chain backing inferred separately.">' +
-                    '<div class="text-xs text-slate-500 uppercase font-medium">On-chain coverage</div>' +
+                '<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3" title="Selected reserve Safe assets ÷ thUSD supply.">' +
+                    '<div class="text-xs text-slate-500 uppercase font-medium">Selected wallet coverage</div>' +
                     '<div class="text-lg font-bold ' + covCls + '">' + (covPct != null ? covPct.toFixed(2) + '%' : '—') + '</div>' +
-                    '<div class="text-xs text-slate-500 mt-1">' + CommonRenderer.formatCurrency(s.on_chain_reserves_usd) + ' on-chain ÷ ' + CommonRenderer.formatCurrency(s.thusd_supply_usd) + '</div>' +
+                    '<div class="text-xs text-slate-500 mt-1">' + CommonRenderer.formatCurrency(s.on_chain_reserves_usd) + ' selected ÷ ' + CommonRenderer.formatCurrency(s.thusd_supply_usd) + '</div>' +
                 '</div>' +
                 // NAV / APY cell
                 '<div class="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">' +
@@ -446,14 +454,12 @@ var ThusdRenderer = {
         var thbillUsd = (oc.thbill_at_reserve || 0) * (oc.thbill_nav_per_share || 1);
         var usdt = oc.usdt_at_reserve || 0;
         var usdc = oc.usdc_at_reserve || 0;
-        var offchain = s.off_chain_backing_implied_usd || 0;
-        var total = thbillUsd + usdt + usdc + offchain;
+        var total = thbillUsd + usdt + usdc;
 
         var rows = [
             ['thBILL @ NAV', thbillUsd, oc.thbill_at_reserve, 'shares ×$' + (oc.thbill_nav_per_share != null ? oc.thbill_nav_per_share.toFixed(6) : '—') + ' NAV'],
             ['USDT @ reserve', usdt, null, 'reserve Safe holdings'],
-            ['USDC @ reserve', usdc, null, 'reserve Safe holdings'],
-            ['Off-chain (implied)', offchain, null, 'inferred from coverage gap; NOT direct PoR — covers gold-carry, first-loss, other off-chain']
+            ['USDC @ reserve', usdc, null, 'reserve Safe holdings']
         ];
 
         var resRows = rows.map(function(r) {
@@ -463,7 +469,7 @@ var ThusdRenderer = {
             var note = r[3];
             var pct = total > 0 ? (usd / total * 100) : 0;
             var color = THUSD_RESERVE_COLORS[label] || '#94a3b8';
-            var labelCls = (label === 'Off-chain (implied)') ? 'text-slate-500' : 'text-slate-800';
+            var labelCls = 'text-slate-800';
             return '<tr>' +
                 '<td class="font-medium ' + labelCls + '">' +
                     '<span class="inline-block w-2.5 h-2.5 rounded-sm mr-2 align-middle" style="background:' + color + '"></span>' +
@@ -475,7 +481,7 @@ var ThusdRenderer = {
             '</tr>';
         }).join('');
         resRows += '<tr class="font-bold border-t-2 border-slate-200">' +
-            '<td>Total</td>' +
+            '<td>Selected assets total</td>' +
             '<td class="text-right font-mono">' + CommonRenderer.formatCurrencyExact(total) + '</td>' +
             '<td class="text-right">100.00%</td>' +
             '<td></td>' +
@@ -484,10 +490,10 @@ var ThusdRenderer = {
         var reserveSafe = oc.thusd_reserve_safe;
 
         return '<div class="panel">' +
-            '<div class="panel-title">Backing — Reserve Composition</div>' +
+            '<div class="panel-title">Backing — Selected wallet assets</div>' +
             '<div class="text-xs text-slate-500 mb-4">' +
                 'Reserve Safe: ' + ThusdRenderer._addrLink(reserveSafe, 'ethereum') + '. ' +
-                'On-chain leg is direct reads against this Safe; off-chain leg is implied from the coverage gap.' +
+                'BM measures the three assets below. The difference to supply is an arithmetic residual. Other on-chain and off-chain positions can sit outside these reads.' +
             '</div>' +
             '<div class="grid grid-cols-1 lg:grid-cols-5 gap-6">' +
                 '<div class="lg:col-span-2" style="height:260px">' +
@@ -506,10 +512,57 @@ var ThusdRenderer = {
                 '</div>' +
             '</div>' +
             '<div class="text-xs text-slate-500 mt-4">' +
-                'thBILL drives most on-chain backing — its risk is downstream of thUSD\'s. ' +
+                'thBILL accounts for most of these selected assets — its risk is downstream of thUSD\'s. ' +
                 '<a href="https://tidresearch.com/reports/thbill" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">thBILL report ↗</a>' +
             '</div>' +
         '</div>';
+    },
+
+    _verifierSnapshotHtml: function (snapshot) {
+        var esc = CommonRenderer._escapeAttr.bind(CommonRenderer);
+        var heading = '<div class="panel"><div class="panel-title">DefiLlama reserve verification</div>';
+        var usdFormatter = new Intl.NumberFormat('en-US', {style: 'currency', currency: 'USD'});
+        function usd(value) {
+            return (typeof value === 'string' && /^\d+\.\d{2}$/.test(value))
+                ? usdFormatter.format(Number(value)) : 'Unmeasured';
+        }
+        if (!snapshot || snapshot.schema_version !== 'thusd-verifier-snapshot/1' ||
+                snapshot.chain_id !== 1 || snapshot.token !== '0xa3fe5c7596024e6811e14f029937d5bd8ae485b3' ||
+                !Number.isFinite(Date.parse(snapshot.observed_at)) || !Array.isArray(snapshot.rows)) {
+            return heading + '<p class="text-sm text-slate-500">Dated verifier snapshot unavailable. BM selected wallet coverage remains separate.</p></div>';
+        }
+        var rows = snapshot.rows.map(function (row) {
+            var children = Array.isArray(row.children) ? row.children : [];
+            return '<tr><td class="font-medium">' + esc(row.label) + '</td><td class="text-right font-mono">' + usd(row.usd) +
+                '</td><td class="text-xs">' + esc(row.date) + '</td><td class="text-xs">' + esc(row.basis) +
+                (children.length ? '<details class="mt-2"><summary>Included in this position</summary><ul class="pl-4 list-disc">' +
+                    children.map(function (child) { return '<li>' + esc(child.label) + ' · ' + usd(child.usd) + '</li>'; }).join('') +
+                    '</ul></details>' : '') + '</td></tr>';
+        }).join('');
+        return heading + '<p class="text-xs text-slate-500 mb-2">Dated public record · ' +
+            esc(snapshot.observed_at.replace('T', ' ').replace('Z', ' UTC')) +
+            ' · no automated refresh · <a class="underline" href="https://defillama.com/verified/theo-thusd">Verification record</a></p>' +
+            '<p class="text-sm mb-2"><strong>' + esc(snapshot.coverage_pct) + '%</strong> reported coverage · ' +
+            usd(snapshot.reserves_usd) + ' reserves / ' + usd(snapshot.outstanding_usd) +
+            ' outstanding · ' + esc(snapshot.positions) + ' positions across ' + esc(snapshot.accounts) + ' accounts</p>' +
+            '<p class="text-sm mb-3">The verifier covers a broader perimeter than BM’s selected wallet assets. Tokenized metals can sit in the same Safe. ' +
+            'Child rows are already included in their parent marks. The published aggregate can differ from rounded position sums.</p>' +
+            '<div class="dashboard-table-scroll"><table class="data-table"><thead><tr><th>Position</th><th>USD mark</th><th>Source date</th>' +
+            '<th>Valuation and look-through</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+            '<p class="text-sm mt-3">Verified-perimeter coverage is a marked comparison. Net realizable reserves and eligible withdrawal proceeds are unmeasured. ' +
+            'Independent ownership and allocation, encumbrances, net derivative liabilities and cash access remain unresolved.</p></div>';
+    },
+
+    _loadVerifierSnapshot: function () {
+        var target = document.getElementById('thusd-verifier-snapshot');
+        if (!target) return;
+        target.innerHTML = ThusdRenderer._verifierSnapshotHtml(null);
+        fetch('data/thusd_verifier_snapshot.json')
+            .then(function (response) { return response.ok ? response.json() : null; })
+            .then(function (snapshot) {
+                if (target.isConnected) target.innerHTML = ThusdRenderer._verifierSnapshotHtml(snapshot);
+            })
+            .catch(function () {});
     },
 
     _renderReservesDonut: function(spec, s) {
@@ -517,11 +570,8 @@ var ThusdRenderer = {
         if (!ctx || typeof Chart === 'undefined') return;
         var oc = spec.on_chain_coverage || {};
         var thbillUsd = (oc.thbill_at_reserve || 0) * (oc.thbill_nav_per_share || 1);
-        var offchain = s.off_chain_backing_implied_usd || 0;
-        // Clamp the off-chain wedge to ≥0 — when on-chain > supply (over-coll),
-        // the implied off-chain is negative, which doesn't render as a slice.
-        var values = [thbillUsd, oc.usdt_at_reserve || 0, oc.usdc_at_reserve || 0, Math.max(0, offchain)];
-        var labels = ['thBILL @ NAV', 'USDT @ reserve', 'USDC @ reserve', 'Off-chain (implied)'];
+        var values = [thbillUsd, oc.usdt_at_reserve || 0, oc.usdc_at_reserve || 0];
+        var labels = ['thBILL @ NAV', 'USDT @ reserve', 'USDC @ reserve'];
         var colors = labels.map(function(l) { return THUSD_RESERVE_COLORS[l]; });
 
         if (window._thusdReservesDonut) window._thusdReservesDonut.destroy();
@@ -553,9 +603,9 @@ var ThusdRenderer = {
     // ============================================================
     _renderCoverageHistoryPanel: function() {
         return '<div class="panel">' +
-            '<div class="panel-title">On-chain Coverage History</div>' +
+            '<div class="panel-title">Selected Wallet Coverage History</div>' +
             '<div class="text-xs text-slate-500 mb-3" id="thusd-coverage-note">' +
-                'Coverage = on-chain reserves ÷ thUSD supply. The 2026-05-13 step-down is gold-carry deployment, not a reserve loss.' +
+                'Coverage = selected wallet assets ÷ thUSD supply. Changes in this series can reflect assets moving outside the selected perimeter.' +
             '</div>' +
             '<div style="position:relative;height:260px">' +
                 '<canvas id="thusd-coverage-chart"></canvas>' +
@@ -598,7 +648,7 @@ var ThusdRenderer = {
         }
 
         var annotations = {
-            line100: { type: 'line', yMin: 100, yMax: 100, borderColor: '#94a3b8', borderWidth: 1, borderDash: [4, 4], label: { content: 'Full on-chain coverage', display: true, position: 'end', font: { size: 9 }, color: '#475569' } },
+            line100: { type: 'line', yMin: 100, yMax: 100, borderColor: '#94a3b8', borderWidth: 1, borderDash: [4, 4], label: { content: '100% of supply', display: true, position: 'end', font: { size: 9 }, color: '#475569' } },
             line70:  { type: 'line', yMin: 70,  yMax: 70,  borderColor: '#dc2626', borderWidth: 1, borderDash: [4, 4], label: { content: 'Validator floor (70%)', display: true, position: 'end', font: { size: 9 }, color: '#dc2626' } }
         };
         if (stepIso) {
@@ -620,7 +670,7 @@ var ThusdRenderer = {
             data: {
                 labels: labels,
                 datasets: [{
-                    label: 'On-chain coverage',
+                    label: 'Selected wallet coverage',
                     data: data,
                     borderColor: '#3b82f6',
                     backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -840,14 +890,14 @@ var ThusdRenderer = {
                 'Per-chain thUSD supply vs the Ethereum-side lockbox. ' +
                 'Conservation failure (Δ &gt; 1e-6) means the OFT bridge has accounted for more or less than it should.' +
             '</div>' +
-            '<table class="data-table">' +
+            '<div class="dashboard-table-scroll"><table class="data-table">' +
                 '<thead><tr>' +
                     '<th>Chain</th>' +
                     '<th class="text-right">Supply</th>' +
                     '<th>Notes</th>' +
                 '</tr></thead>' +
                 '<tbody>' + trs + '</tbody>' +
-            '</table>' +
+            '</table></div>' +
         '</div>';
     },
 
@@ -896,10 +946,10 @@ var ThusdRenderer = {
             '<div class="text-xs text-slate-500 mb-3">' +
                 'What thUSD\'s reserve depends on, as published by the analyzer.' +
             '</div>' +
-            '<table class="data-table">' +
+            '<div class="dashboard-table-scroll"><table class="data-table">' +
                 '<thead><tr><th>Leg</th><th>Basis / note</th></tr></thead>' +
                 '<tbody>' + rows + '</tbody>' +
-            '</table>' + blockNote +
+            '</table></div>' + blockNote +
         '</div>';
     },
 
@@ -966,7 +1016,7 @@ var ThusdRenderer = {
         // analyzer reads the new TL.
         return '<div class="panel">' +
             '<div class="panel-title">Admin Chain — Post-migration Topology</div>' +
-            '<table class="data-table">' +
+            '<div class="dashboard-table-scroll"><table class="data-table">' +
                 '<thead><tr>' +
                     '<th>Contract</th>' +
                     '<th>Address</th>' +
@@ -974,7 +1024,7 @@ var ThusdRenderer = {
                     '<th>Notes</th>' +
                 '</tr></thead>' +
                 '<tbody>' + trs + '</tbody>' +
-            '</table>' +
+            '</table></div>' +
 
             '<div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">' +
                 '<div class="border border-slate-200 dark:border-slate-700 rounded-lg p-3">' +
@@ -1044,7 +1094,7 @@ var ThusdRenderer = {
 
         return '<div class="panel">' +
             '<div class="panel-title">Mint / Burn Flow' + capBadge + '</div>' +
-            '<table class="data-table">' +
+            '<div class="dashboard-table-scroll"><table class="data-table">' +
                 '<thead><tr>' +
                     '<th>Window</th>' +
                     '<th class="text-right">Mints</th>' +
@@ -1056,7 +1106,7 @@ var ThusdRenderer = {
                     row('Last 24h', h24) +
                     row('Last 7d',  h168) +
                 '</tbody>' +
-            '</table>' +
+            '</table></div>' +
             '<div class="mt-4">' +
                 '<div class="text-sm font-semibold text-slate-700 mb-2">Recent mint/burn events <span class="text-xs font-normal text-slate-500">(top 10)</span></div>' +
                 '<div class="data-table-scroll">' +
@@ -1157,7 +1207,7 @@ var ThusdRenderer = {
     // recon_residual_pct. It is multiplied here, not rendered raw.
     _backingHeadSub: function(data, s) {
         var cov = s && s.on_chain_coverage_pct;
-        var txt = (cov != null) ? 'on-chain coverage ' + (cov * 100).toFixed(2) + '%' : 'reserve composition';
+        var txt = (cov != null) ? 'selected wallet coverage ' + (cov * 100).toFixed(2) + '%' : 'reserve composition';
         var crit = (data && Array.isArray(data.risk_flags))
             ? data.risk_flags.filter(function(f) { return f.severity === 'critical'; }).length : 0;
         if (crit) {
@@ -1288,8 +1338,8 @@ var ThusdRenderer = {
             '<ul class="text-xs text-slate-500 space-y-1.5 list-disc pl-4">' +
                 '<li>Data refreshed hourly; sync delay typically &lt;90s.</li>' +
                 '<li>Theo\'s own disclosures: <a href="https://app.theo.xyz/transparency" target="_blank" rel="noopener noreferrer" class="text-blue-500 hover:underline">app.theo.xyz/transparency ↗</a></li>' +
-                '<li>On-chain coverage = (thBILL @ NAV + USDT + USDC at reserve Safe <span class="font-mono">' + ThusdRenderer._truncAddr(reserveSafe) + '</span>) ÷ thUSD supply.</li>' +
-                '<li>Off-chain leg is implied from the coverage gap — <em>not</em> direct proof-of-reserves.</li>' +
+                '<li>Selected wallet coverage = (thBILL @ NAV + USDT + USDC at reserve Safe <span class="font-mono">' + ThusdRenderer._truncAddr(reserveSafe) + '</span>) ÷ thUSD supply.</li>' +
+                '<li>Supply minus selected wallet assets is an arithmetic residual. The location, backing and cash availability of assets beyond the selected perimeter require separate evidence.</li>' +
                 '<li>Active timelock (48h) verified on-chain 2026-05-19; the analyzer is still reading the legacy 18h timelock and will catch up in a follow-up.</li>' +
             '</ul>' +
         '</div>';
