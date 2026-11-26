@@ -16,7 +16,8 @@ var WeethRenderer = {
             if (freshness[lane] === 'last_good') return ' · stale, retained last-good';
             if (freshness[lane] === 'unavailable' || !asOf) return ' · unavailable';
             var age=Date.now()-Date.parse(asOf);
-            return Number.isFinite(age) && age>86400000 ? ' · aged over 24h' : '';
+            if (Number.isFinite(age) && age>86400000) return ' · aged over 24h';
+            return lane === 'oracle' ? ' · dated oracle, live freshness unverified' : '';
         };
         var sourceTime=((b.deployments || [])[0] || {}).measured_at;
         slot('axis-peg-body',panel('ETH-denominated price and reference',f.metrics([
