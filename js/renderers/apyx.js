@@ -261,20 +261,22 @@ var ApyxRenderer = {
 
     _renderRatioBasis: function(ba, slug) {
         var reserves = ba.total_reserves_usd, supply = ba.total_supply_usd;
-        var pol = ba.pol_usd, inventory = ba.inventory_usd;
-        var valid = [reserves, supply, pol, inventory].every(function(v) { return typeof v === 'number' && Number.isFinite(v); });
-        if (!valid || supply <= 0 || supply - pol - inventory <= 0) {
+        var inventory = ba.inventory_usd, pol = ba.pol_usd;
+        var valid = [reserves, supply, inventory, pol].every(function(v) { return typeof v === 'number' && Number.isFinite(v); });
+        if (!valid || supply <= 0 || supply - inventory - pol <= 0) {
             return '<div class="risk-flag risk-warning">Ratio reconciliation unavailable: reserve, supply or netting operands are missing or invalid.</div>';
         }
         var gross = reserves / supply * 100;
-        var netted = (reserves - pol - inventory) / (supply - pol - inventory) * 100;
-        var residual = typeof ba.collateralization_pct === 'number' ? ba.collateralization_pct - netted : null;
+        var netted = (reserves - inventory) / (supply - inventory) * 100;
+        var publishedBasis = (reserves - inventory - pol) / (supply - inventory - pol) * 100;
+        var residual = typeof ba.collateralization_pct === 'number' ? ba.collateralization_pct - publishedBasis : null;
         return '<div class="risk-flag risk-info mt-3" id="apyx-ratio-basis">' +
-            '<strong>Collateralization basis:</strong> Accountable nets POL and inventory from both sides: ' +
-            '(reserves − POL − inventory) / (supply − POL − inventory) = <strong>' + netted.toFixed(5) + '%</strong>. ' +
-            'Gross reserves / gross supply = <strong>' + gross.toFixed(5) + '%</strong>. ' +
-            'Netted denominator: ' + CommonRenderer.formatCurrencyExact(supply - pol - inventory) + '. ' +
-            'Netting moves coverage away from 100% in either direction; these are different scopes. ' +
+            '<strong>Collateralization basis:</strong> Inventory is removed from both sides: ' +
+            '(reserves − inventory) / (supply − inventory) = <strong>' + netted.toFixed(4) + '%</strong>. ' +
+            'Gross reserves / gross supply = <strong>' + gross.toFixed(4) + '%</strong>. ' +
+            'Netted denominator: ' + CommonRenderer.formatCurrencyExact(supply - inventory) + '. ' +
+            'Removing protocol-owned liquidity as well reproduces the published ratio: <strong>' + publishedBasis.toFixed(4) +
+            '%</strong>. Reserve marks do not establish available cash. ' +
             (residual == null ? 'Attested ratio unavailable.' : 'Attested minus reconstructed ratio: ' + residual.toFixed(5) + ' percentage points' + (Math.abs(residual) > 0.01 ? ' — source disagreement unresolved.' : '.')) +
             (slug === 'apyusd' ? ' The wrapper’s 100% share-accounting ratio is definitional, not independent solvency evidence; reserve coverage inherits apxUSD.' : '') +
             '</div>';
@@ -459,6 +461,30 @@ var ApyxRenderer = {
             pUnlock = anc('panel-unlock', ApyxRenderer._renderUnlockQueue(specific));
         }
         var pLiquidity = anc('panel-liquidity', ApyxRenderer._renderLiquidity(specific, s, slug));
+        var rung = ((((data.liquidity || {}).exit_mark || {}).quotes || {})['100000']) || {};
+        var sizing = rung.sizing_reference || {};
+        var amountIn = Number(rung.amount_in_raw) / Math.pow(10, rung.input_decimals);
+        var amountOut = Number(rung.amount_out_raw) / Math.pow(10, rung.output_decimals);
+        if (sizing.basis === 'market' && sizing.input_reference_currency === 'USD' &&
+            sizing.nominal_size_usd === 100000 && Number.isFinite(sizing.input_reference_value) &&
+            Number.isFinite(amountIn) && amountIn > 0 && Number.isFinite(amountOut) &&
+            String(rung.token_out).toLowerCase() === '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48' &&
+            Number.isFinite(Date.parse(rung.received_at))) {
+            pLiquidity += '<div class="panel"><div class="panel-title">Ethereum secondary quote basis</div>' +
+                '<p>At ' + new Date(rung.received_at).toISOString() + ', $100,000 sized at a market reference of $' +
+                sizing.input_reference_value.toFixed(6) + ' returned ' +
+                amountOut.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) +
+                ' USDC, or ' + (amountOut / amountIn).toFixed(4) +
+                ' USDC per input token before gas. Indicative quote. Primary settlement remains separately qualified.</p></div>';
+        }
+        var datedReview = '<div class="panel" id="apyx-dated-review"><div class="panel-title">November 26 reviewed snapshot</div>' +
+            (slug === 'apyusd' ?
+                '<p>06:46 UTC export. Standard vault: 88.727m shares, 129.940m apxUSD and 1.464489 apxUSD per share. The standard request-to-claim cooldown was 20 days.</p>' +
+                '<p>Separate flexible receipt, Ethereum block 26,497,662: 15.862m apxUSD held against matching face liabilities, 15.733m net at the reported fee, and 194 of 213 receipts time-eligible. The 06:45:23 UTC block clock follows the 06:45:02.188925 UTC recorded observation by 20.811 seconds. Clock reconciliation, claim execution and issuer cash settlement remain open.</p>' +
+                '<p>04:31 UTC indicative market-sized quote: $100,000 at $1.403184 returned 99,424.90 USDC, or about 1.3951 USDC per share before gas.</p>' :
+                '<p>06:44:42 UTC Accountable marks in the 06:46 UTC export. Gross reserves / supply: $256.574m / $258.572m = 99.2272%. Inventory only removed: $192.694m / $194.692m = 98.9737%. Inventory and protocol-owned liquidity removed: $122.134m / $124.132m = 98.3903%. These marks leave available cash unverified.</p>' +
+                '<p>04:31 UTC indicative market-sized quote: $100,000 at $0.973738 returned 99,593.85 USDC, or about 0.9698 USDC per token before gas. Primary redemption funding remains unverified.</p>') +
+            '<p class="text-xs text-slate-500">This dated review has its own evidence clocks. Rolling dashboard feeds retain their separately displayed observations.</p></div>';
         var pBridge    = anc('panel-bridge',    ApyxRenderer._renderMultiChainBridge(specific, slug));
         var pTrust     = anc('panel-trust',     ApyxRenderer._renderTrustStack(specific));
 
@@ -471,9 +497,21 @@ var ApyxRenderer = {
                 var el = document.getElementById(id);
                 if (el) el.innerHTML = markup;
             };
-            setSlot('backing-extra-panels',      pHeadline + pAttestation + pStress + pYield);
+            setSlot('backing-extra-panels',      datedReview + pHeadline + pAttestation + pStress + pYield);
             setSlot('liquidity-extra-panels',    pLiquidity + pBridge + pUnlock);
-            setSlot('issuer-extra-panels',       pTrust);
+            var share = slug === 'apyusd';
+            setSlot('issuer-extra-panels', pTrust +
+                '<div class="panel"><div class="panel-title">November 26 issuer evidence review</div>' +
+                '<p>Wolf &amp; Company’s November 10 examination covers specified Preference Foundation asset assertions dated October 28 and 31. ' +
+                (share ? 'Receipt liabilities, legal priority and executable proceeds remain unverified by the examination. Standard cooldown claims and flexible receipts have separate terms.' :
+                    'The examination covers preferred securities, STRCx and derivatives. STRCx uses the underlying STRC closing price. Token liabilities, derivative recourse, holder priority and executable cash remain unverified by the examination.') +
+                '</p><p><a href="https://docs.apyx.fi/collateral-and-custody/third-party-attestation">Apyx assurance</a></p></div>');
+            var controlSlot = document.getElementById('contract-extra-panels');
+            if (controlSlot) controlSlot.insertAdjacentHTML('beforeend',
+                '<div class="panel"><div class="panel-title">November 26 documentary control review</div><p>' +
+                (share ? 'Zellic’s historical scope includes ApyUSD and UnlockToken. Quantstamp and Halborn reviews are separately scoped. Exact audit and fix correspondence for the flexible receipt remains unverified.' :
+                    'Zellic’s historical scope includes ApxUSD, MinterV0 and selected freeze and role components. Apyx lists Certora and Halborn reviews. Exact installed fix ancestry remains unverified.') +
+                ' Build-matched tests and proof receipts and current bounty scope remain unverified. November 2 authority observations retain their own dates.</p></div>');
             setSlot('dependencies-extra-panels', familyPlaceholder + pWatch);
             container.innerHTML = '';  // bottom dump unused in 5-axis mode
         } else {
@@ -1154,14 +1192,14 @@ var ApyxRenderer = {
 
         var legTwo = 'those shares are already scaled by Backed\'s rebasing ' +
             '<span class="font-mono not-italic">multiplier()</span>' +
-            (mult != null ? ' — currently ' + b(num(mult, 5)) + ' — ' : ' — ') +
+            (mult != null ? ' — observed multiplier ' + b(num(mult, 5)) + ' — ' : ' — ') +
             'which is an issuer-set input, not a deterministic accrual, and Backed attests ' +
             'reserves at the xStocks-family level rather than per token, so STRCx\'s own 1:1 ' +
             'backing is not independently checkable at a moment in time';
 
         var legThree = 'the per-token price used is ' + b('$' + num(impliedPx, 4)) +
             (vintage ? ', derived from ' + vintage : '') +
-            ', while the live multiplier-adjusted market mark is ' + b('$' + num(livePx, 2)) +
+            ', while the snapshot’s multiplier-adjusted market mark is ' + b('$' + num(livePx, 2)) +
             (premiumPct != null
                 ? ' — the applied price is ' + b(premiumPct.toFixed(1) + '% higher') +
                   ', worth about ' + b(CommonRenderer.formatCurrency(premiumUsd)) + ' of the figure above'
@@ -1170,7 +1208,7 @@ var ApyxRenderer = {
         var driftClause = (delta != null)
             ? ' The Safe\'s balance has grown ' + b('~' + delta.toFixed(0) + '%') +
               ' since that attestation, so the anchor prices a materially different ' +
-              'position than the one held today.'
+              'position than the one in the selected snapshot.'
             : '';
 
         return '<div class="text-xs text-slate-500 italic leading-relaxed mt-3 pt-3 ' +
@@ -2547,7 +2585,13 @@ var ApyxRenderer = {
     _renderActiveReceipt: function(specific) {
         var r = specific.active_receipt || {}, state = ApyxRenderer._activeReceiptState(r);
         var esc = function(v) { return String(v).replace(/[&<>"']/g, function(c) { return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); };
-        var html = '<div class="risk-flag risk-warning break-words" id="apyx-unlock-scope"><strong>Active receipt coverage: ' + state + '</strong>';
+        var observed = Date.parse(r.observed_at), sourceTime = Date.parse(r.source_timestamp);
+        var inverted = Number.isFinite(observed) && Number.isFinite(sourceTime) && sourceTime > observed;
+        var html = '<div class="risk-flag risk-warning break-words" id="apyx-unlock-scope"><strong>Flexible receipt coverage: ' +
+            (inverted ? 'clock discrepancy' : state) + '</strong>';
+        if (r.observed_at) html += '<div>Recorded observation: ' + esc(r.observed_at) + '</div>';
+        if (inverted) html += '<div>Source block time follows the recorded observation by ' +
+            ((sourceTime - observed) / 1000).toFixed(1) + ' seconds. Treat this as a dated snapshot pending clock reconciliation.</div>';
         if (r.source_timestamp) html += '<div>Original source: ' + esc(r.source_timestamp) + ' · Ethereum block ' + esc(r.source_block) + '</div>';
         if (state === 'complete') {
             html += '<div>IDs reconciled: ' + r.ids_examined + '/' + r.counter + '; live: ' + r.counts.live + '; time-eligible: ' + r.counts.time_eligible + '. Time eligibility does not establish authorization, claim success or cash eligibility.</div>';
@@ -2636,7 +2680,7 @@ var ApyxRenderer = {
                 '<span class="font-mono">unlockingDelay()</span> getter on each snapshot. ' +
                 'The cooldown was 30 days at deploy; Apyx admin reduced it to 20 days on 2026-04-15 ' +
                 'via <span class="font-mono">setUnlockingDelay()</span>. The setting is admin-mutable ' +
-                'subject to a 72-hour AccessManager delay, so future changes surface with a 3-day window. ' +
+                'The documented 72-hour AccessManager delay reflects the dated authority review. ' +
                 '<strong>Drain rate</strong> is a 7-day rolling sum of UnlockToken Withdraw events; ' +
                 '<strong>implied wait</strong> = queue depth ÷ drain rate. When implied wait exceeds ' +
                 'the nominal cooldown, this describes the legacy queue inventory. The derived quotient ' +
@@ -2644,7 +2688,8 @@ var ApyxRenderer = {
             '</div>';
 
         return '<div class="panel">' +
-            '<div class="panel-title">Unlock paths — current receipt and legacy monitor</div>' +
+            '<div class="panel-title">Standard and flexible unlock paths</div>' +
+            '<p>Standard request and claim follows the separately measured cooldown below. The flexible receipt has its own fees and timing. Both paths deliver apxUSD before any separate cash exit.</p>' +
             ApyxRenderer._renderActiveReceipt(specific) +
             '<details class="mt-3"><summary>Legacy UnlockToken observations — not the current receipt queue</summary>' +
             '<div class="grid grid-cols-2 md:grid-cols-5 gap-3">' +

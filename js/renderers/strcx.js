@@ -139,6 +139,19 @@ var STRCxRenderer = {
         STRCxRenderer._renderPegVsNav(wrapper);
         STRCxRenderer._renderBacking(wrapper);
 
+        var issuer = document.getElementById('issuer-extra-panels');
+        if (issuer) issuer.insertAdjacentHTML('beforeend',
+            '<div class="panel"><div class="panel-title">Wrapper issuer and recourse</div>' +
+            '<p>Backed Assets (JE) Limited issues STRCx. Strategy issues the referenced STRC preferred share. ' +
+            'Backed’s May 8, 2026 base prospectus describes collateral-limited recourse without a residual issuer claim or parent guarantee. ' +
+            'Exact STRCx Final Terms and native issuance binding remain unverified. The September 24 product disclosure lists ISIN CH1500008482 and an issuance or redemption fee up to 0.50%. Product-level holdings, encumbrances and funded redemption capacity remain unverified.</p>' +
+            '<p><a href="https://assets.backed.fi/legal-documentation">Backed legal documents</a> · <a href="https://assets.backed.fi/products/strategy-pp-variable-xstock">STRCx product</a></p></div>');
+        var controls = document.getElementById('contract-extra-panels');
+        if (controls) controls.insertAdjacentHTML('beforeend',
+            '<div class="panel"><div class="panel-title">November 26 documentary control review</div>' +
+            '<p>Backed describes EVM rebasing and Solana scaled balances and publishes infrastructure audits. Exact installed audit and fix mapping, bounty scope, and deployed-build tests or proofs remain unverified. ' +
+            'The dated Apyx custody Safe is separate from Backed mint, rebase, pause and upgrade powers. Ethereum issuer controls and Solana authority remain open.</p></div>');
+
         var link = document.getElementById('header-companion-link');
         if (link) {
             link.setAttribute('href', '?asset=strc');
@@ -506,7 +519,7 @@ var STRCxRenderer = {
                 'ⓘ <strong>Basis:</strong> CoinGecko\'s cross-chain supply aggregate and its price ' +
                 'are <strong>both pre-scaled</strong>, so this valuation pairs like with like. ' +
                 'One <em>scaled</em> STRCx (what <span class="font-mono">balanceOf</span> returns) is ' +
-                'one STRC share, currently ' +
+                'one STRC share, marked in the selected snapshot at ' +
                 (wrapper.underlying_strc_price_usd != null
                     ? '<span class="font-mono">$' + wrapper.underlying_strc_price_usd.toFixed(2) + '</span>'
                     : 'the STRC mark') +
