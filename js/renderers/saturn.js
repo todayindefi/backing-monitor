@@ -357,6 +357,7 @@ var SaturnRenderer = {
         var liquidityEvidence = typeof LiquidityEvidence !== 'undefined' ? LiquidityEvidence.legacyHtml(data) : '';
         html += anc('panel-liquidity', SaturnRenderer._renderLiquidityPanel(specific, s, slug) +
             (liquidityEvidence ? '<div class="panel">' + liquidityEvidence + '</div>' : ''));
+        if (slug === 'susdat') html += '<div id="saturn-withdrawal-queue" aria-live="polite"></div>';
         html += '<div id="saturn-exit-review" aria-live="polite"></div>';
 
         html += head(4, 'Dependencies', 'what this depends on, and what depends on it',
@@ -2587,13 +2588,69 @@ var SaturnRenderer = {
         return html;
     },
 
+    _withdrawalQueueHtml: function(queue) {
+        var esc = SaturnRenderer._escHtml;
+        var heading = '<div class="panel"><div class="panel-title">sUSDat withdrawal queue</div>';
+        var unavailable = '<p class="text-sm text-slate-500">Dated Ethereum queue evidence unavailable. Queue custody, pending demand and claim coverage are unknown.</p>';
+        if (!queue || queue.chain_id !== 1 ||
+                queue.vault !== '0xd166337499e176bbc38a1fbd113ab144e5bd2df7' ||
+                !Number.isSafeInteger(queue.block) || queue.block <= 0 ||
+                !Number.isFinite(Date.parse(queue.observed_at)) || !queue.observed_at.endsWith('Z') ||
+                !Number.isSafeInteger(queue.observed_ids) || !Number.isSafeInteger(queue.total_ids) ||
+                queue.observed_ids <= 0 || queue.observed_ids >= queue.total_ids) {
+            return heading + unavailable + '</div>';
+        }
+        function amount(value, unit) {
+            if (typeof value !== 'string' || !/^\d+(\.\d+)?$/.test(value)) return 'Unmeasured';
+            var parts = value.split('.');
+            return esc(Number(parts[0]).toLocaleString('en-US') + (parts.length === 2 ? '.' + parts[1] : '') + ' ' + unit);
+        }
+        function entries(count) {
+            return Number.isSafeInteger(count) && count >= 0 && count <= queue.observed_ids
+                ? ' · ' + esc(count) + ' observed entries' : '';
+        }
+        var conversion = amount(queue.conversion_usdat_per_share, 'USDat per share');
+        var pending = amount(queue.pending_shares, 'shares');
+        var pendingAssets = amount(queue.pending_approx_usdat, 'USDat');
+        if (pending !== 'Unmeasured' && pendingAssets !== 'Unmeasured' && conversion !== 'Unmeasured') {
+            pending += ' (about ' + pendingAssets + ' at the pinned book conversion, before fees)';
+        }
+        var rows = [
+            ['Vault idle', amount(queue.vault_idle_usdat, 'USDat')],
+            ['Separate queue custody', amount(queue.queue_custody_usdat, 'USDat')],
+            ['Observed processed claims owed' + entries(queue.processed_count), amount(queue.processed_usdat, 'USDat')],
+            ['Observed pending requests · lower bound' + entries(queue.pending_count), pending]
+        ];
+        return heading +
+            '<p class="text-xs text-slate-500 mb-2">Ethereum · ' + esc(queue.observed_at.replace('T', ' ').replace('Z', ' UTC')) +
+            ' · <a class="underline" href="https://etherscan.io/block/' + esc(queue.block) + '">block ' + esc(queue.block) + '</a>' +
+            ' · dated snapshot, separate from the live on-chain reserve ratio</p>' +
+            '<p class="text-sm mb-2">Partial census: ' + esc(queue.observed_ids.toLocaleString('en-US')) + ' of ' +
+            esc(queue.total_ids.toLocaleString('en-US')) + ' request IDs read. Accounting conversion: ' + conversion + '.</p>' +
+            '<dl class="text-sm">' + rows.map(function(row) {
+                return '<div class="mb-2"><dt class="font-semibold">' + row[0] + '</dt><dd>' + row[1] + '</dd></div>';
+            }).join('') + '</dl><p class="text-sm">Pending shares are subject to processing. Queue custody is separate from vault idle. ' +
+            'The partial census leaves complete claims, cash allocation, replenishment and individual eligibility unverified. ' +
+            'Queue custody and any apparent remainder do not establish funds available for new requests.</p></div>';
+    },
+
     _loadExitReview: function() {
         var target = document.getElementById('saturn-exit-review');
         if (!target) return;
+        var queueTarget = document.getElementById('saturn-withdrawal-queue');
+        function renderQueue(review) {
+            if (queueTarget && queueTarget.isConnected) {
+                queueTarget.innerHTML = SaturnRenderer._withdrawalQueueHtml(review && review.susdat_withdrawal_queue);
+            }
+        }
         target.innerHTML = SaturnRenderer._exitReviewHtml(null);
+        renderQueue(null);
         fetch('data/saturn_exit_review.json?review=' + Math.floor(Date.now() / 60000))
             .then(function(r) { return r.ok ? r.json() : null; })
-            .then(function(review) { if (target.isConnected) target.innerHTML = SaturnRenderer._exitReviewHtml(review); })
+            .then(function(review) {
+                if (target.isConnected) target.innerHTML = SaturnRenderer._exitReviewHtml(review);
+                renderQueue(review);
+            })
             .catch(function() { if (target.isConnected) target.innerHTML = SaturnRenderer._exitReviewHtml(null); });
     },
 
