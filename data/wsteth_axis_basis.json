@@ -2,32 +2,54 @@
   "schema_version": "axis-basis/1",
   "producer": "riskanalyst",
   "asset": "wsteth",
-  "as_of": "2026-10-10T00:00:00Z",
+  "as_of": "2026-11-17",
   "identity_note": "Canonical Ethereum wstETH is the immutable, non-proxy wrapper at 0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0. This assessment is address-bound and covers that contract.",
   "backing": {
-    "backing_score": 9.0,
+    "backing_score": 8.5,
     "backing_score_source": "riskAnalyst:authored",
-    "backing_score_generated_at": "2026-10-10T00:00:00Z",
-    "backing_score_basis": "Canonical wstETH is an immutable wrapper whose sole reserve is stETH. At Ethereum block 26,155,944, three same-block reads measured 4,579,032.9408 stETH held against a represented claim of 4,579,032.9397 stETH, or 100.0000000245% coverage. This wrapper reconciliation is separate from the underlying protocol composition: at block 26,155,953 Lido reported 9,685,990.1572 ETH pooled, of which 9,676,652.7052 ETH was beacon balance, 2,464.3990 ETH buffered, 343.4984 ETH in the withdrawal vault and 3.9689 ETH in the execution-layer rewards vault. Those components total 9,679,464.5716 ETH; the 6,525.5856 ETH residual remains uninterpreted and is not labelled a deficit or surplus. totalSupply equalling getTotalPooledEther is a rebasing accounting identity, not a second coverage test. Verifiability is excellent because both layers are directly readable without an attestation or custodian; the score is held at 9.0 because the ultimate reserve is staked ETH, exposed to slashing and realised through a variable withdrawal queue rather than held liquid at all times.",
-    "wrapper_coverage_pct": 100.00000002453562,
-    "wrapper_coverage_block": 26155944,
-    "underlying_pooled_eth": 9685990.157220248,
-    "underlying_composition_subtotal_eth": 9679464.57159262,
-    "underlying_uninterpreted_residual_eth": 6525.585627627756,
-    "underlying_composition_block": 26155953,
-    "primary_exit_interpretation": "Any holder can call unwrap to receive stETH and can submit that stETH to Lido's withdrawal queue; neither step has an issuer whitelist or investor-eligibility gate. A negative-control unwrap call reached the balance check rather than an access check. Permissionless eligibility is not uninterrupted availability: a live 3-of-6 CircuitBreaker Committee can pause new requests and finalization immediately for the configured 21-day safety period. The committee cannot seize balances or change code, and already-finalized claims remain claimable.",
-    "primary_exit_status": "permissionless eligibility; variable duration; bounded 21-day circuit-breaker gate"
+    "backing_score_generated_at": "2026-11-17",
+    "backing_score_basis": "Exact Ethereum wrapper balance reconciled at block 26434080 with approximately 0.001127 stETH residual. Separately, named underlying components left about 4,554.06 ETH outside the reconciled subtotal. The wrapper check supports the share claim while underlying accounting perimeter and realization remain qualified.",
+    "wrapper_coverage_block": 26434080,
+    "underlying_pooled_eth": 9754642.41767,
+    "underlying_composition_subtotal_eth": 9750088.362188,
+    "underlying_uninterpreted_residual_eth": 4554.055482,
+    "underlying_composition_block": 26434080,
+    "primary_exit_interpretation": "Unwrap delivers stETH. ETH withdrawal depends on queue finalization and a separate claim; current holder timing and settlement remain unverified.",
+    "primary_exit_status": "conditional"
   },
   "liquidity": {
-    "liquidity_score": 9.0,
+    "liquidity_score": 8.0,
     "liquidity_score_source": "riskAnalyst:authored",
-    "liquidity_score_generated_at": "2026-10-09T00:00:00Z",
-    "liquidity_score_basis": "Canonical holders have two exits. They can unwrap permissionlessly to stETH and enter Lido's withdrawal queue, typically 1–5 days, with no holder whitelist; or sell through the deepest liquid-staking-token market in DeFi. The queue can be paused immediately for up to 21 days by a 3-of-6 CircuitBreaker Committee, so permissionless eligibility is not uninterrupted availability. The measured Ethereum WETH-exit venue set held at least $116.8M on 2026-10-03, a floor because the venue source truncated after ten pages. The 9.0 score holds because the primary gate is bounded and non-selective while substantial secondary liquidity remains available."
+    "liquidity_score_generated_at": "2026-11-17",
+    "liquidity_score_basis": "November 17 indicative quotes through $500,000 with separate sizing and execution limits, including an ether.fi-dependent route. The native withdrawal queue had about 43,745 stETH unfinalized, separate from finalized reserves. No guaranteed current depth or primary exit time."
   },
   "dependencies": {
     "underlying_score": 6.0,
     "underlying_score_source": "riskAnalyst:authored",
-    "underlying_score_generated_at": "2026-10-10T00:00:00Z",
-    "underlying_score_basis": "Canonical wstETH has a short dependency chain: wstETH → stETH → staked ETH and Lido's operator set. The immediate stETH dependency now carries the same 6.0 score, so the wrapper is anchored rather than inferred across a missing leg. The measured Curated Module is diversified across 39 operators (top operator 3.72%, HHI 345), but every holder still depends on one Lido protocol claim and cannot substitute the issuer while holding the asset. The 6.0 score therefore prices the single protocol concentration while recognising that operators can be replaced beneath it. Governance keys, delays and vetoes are excluded here and assessed under Contract & Admin."
+    "underlying_score_generated_at": "2026-11-17",
+    "underlying_score_basis": "wstETH depends on stETH share accounting, validators, oracle reports, governance and withdrawal finalization. Full operator infrastructure independence and concentration remain unresolved."
+  },
+  "assessment_version": "wsteth-six-axis-2026-11-17-v1",
+  "peg": {
+    "volatility_score": 8.5,
+    "volatility_score_source": "riskAnalyst:authored",
+    "volatility_score_generated_at": "2026-11-17",
+    "volatility_score_basis": "ETH-relative tracking against the staking share reference. November 17 history shows a narrow sampled oracle/index basis; executable stress bids and continuous trade verification remain unestablished."
+  },
+  "overall": {
+    "overall_score": 7.5,
+    "overall_score_source": "riskAnalyst:authored",
+    "overall_score_generated_at": "2026-11-17",
+    "overall_score_basis": "Native wrapper accounting and indicative market depth support the assessment. Queue settlement, upstream staking risk and mutable governance constrain the authored judgment.",
+    "axis_mean": 7.583333333333333,
+    "axis_set": [
+      "volatility_score",
+      "backing_score",
+      "liquidity_score",
+      "underlying_score",
+      "structural_score",
+      "issuer_score"
+    ],
+    "above_mean": false
   }
 }

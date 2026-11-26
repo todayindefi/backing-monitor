@@ -1,6 +1,26 @@
 /** Canonical Ethereum wstETH dashboard additions. Bridged deployments are phase two. */
 var WstETHRenderer = {
     preRender: function (data) {
+        var c = data.contract || {};
+        if (c.observation_block === 26434079 && this.isCanonical(data)) {
+            c.scoped_assurance = {
+                block: c.observation_block,
+                observed_at: '2026-11-17T10:10:35Z',
+                authority_headline: 'Immutable wrapper · mutable Lido dependencies',
+                findings: [
+                    c.wrapper_basis,
+                    c.structural_score_basis,
+                    (c.withdrawal_queue_circuit_breaker || {}).reach_bound,
+                    c.ordinary_governance_reach,
+                    c.conditional_emergency_execution_basis
+                ].filter(Boolean),
+                sources: [
+                    {label: 'Ethereum observation block', url: 'https://etherscan.io/block/26434079'},
+                    {label: 'Lido withdrawal queue', url: 'https://docs.lido.fi/contracts/withdrawal-queue-erc721/'},
+                    {label: 'Lido Dual Governance', url: 'https://docs.lido.fi/guides/dg-guide/'}
+                ]
+            };
+        }
         // This feed is sampled daily. Eight points are enough to show the
         // requested seven-day view; do not widen it to the fleet's 30-day
         // sparse-series fallback while the axis title says 7d.
@@ -14,9 +34,7 @@ var WstETHRenderer = {
             backing.collateral_ratio_scale = 'percent';
             backing.collateral_ratio_basis = backing.coverage_formula || backing.evidence_basis;
         }
-        // Axis 2 is a RiskAnalyst judgment informed by the directly measured
-        // wrapper ratio. Do not round-trip the 9.0 authored score through the
-        // fleet's generic collateral-ratio bands and display it as 6/10.
+        // Keep the authored backing score separate from the wrapper ratio.
         if (typeof backing.backing_score === 'number') {
             backing.backing_score_display = 'authored';
         }
@@ -119,9 +137,38 @@ var WstETHRenderer = {
     },
 
     render: function (data) {
-        document.getElementById('asset-specific-panels').innerHTML = '';
+        document.getElementById('asset-specific-panels').innerHTML = this.assessmentHtml(data);
         this.renderBacking(data);
         this.renderIdentity(data);
+    },
+
+    isCanonical: function (data) {
+        return data.asset_slug === 'wsteth' &&
+            String((data.identity || {}).contract || '').toLowerCase() === '0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0';
+    },
+
+    assessmentHtml: function (data) {
+        var basis = CommonRenderer.FAMILY_ENVELOPE || {};
+        if (!this.isCanonical(data) || basis.asset !== 'wsteth' || !basis.assessment_version) return '';
+        var scores = [
+            ['Stability', (data.peg || {}).volatility_score],
+            ['Backing', (data.backing || {}).backing_score],
+            ['Liquidity & Exit', (data.liquidity || {}).liquidity_score],
+            ['Dependencies', (data.dependencies || {}).underlying_score],
+            ['Contract & Admin', (data.contract || {}).structural_score],
+            ['Issuer', (data.issuer || {}).issuer_score],
+            ['Overall', (basis.overall || {}).overall_score]
+        ];
+        if (scores.some(function (row) { return typeof row[1] !== 'number'; })) return '';
+        var esc = this.esc;
+        return '<div class="panel" id="wsteth-authored-assessment">' +
+            '<div class="panel-title">Ethereum authored assessment</div>' +
+            '<p class="text-xs text-slate-500 mb-3">' + esc(basis.as_of) + ' · ' +
+            esc(basis.assessment_version) + ' · Live gauges show separately dated measurements.</p>' +
+            '<dl class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">' + scores.map(function (row) {
+                return '<div><dt class="text-slate-500">' + esc(row[0]) + '</dt><dd class="font-semibold">' +
+                    esc(row[1].toFixed(1)) + '/10</dd></div>';
+            }).join('') + '</dl></div>';
     },
 
     renderBacking: function (data) {
@@ -152,7 +199,7 @@ var WstETHRenderer = {
               '<p class="text-sm text-slate-600">Canonical Ethereum wstETH at <span class="font-mono text-xs">' +
                 this.esc((data.identity || {}).contract || '') + '</span>: an immutable wrapper whose economic ' +
                 'risk passes through to stETH and Lido. Bridged representations, including Monad CCIP wstETH, ' +
-                'are deliberately outside this first release.</p>' +
+                'are outside this assessment.</p>' +
               (c.structural_score_basis ? '<details class="mt-3"><summary class="text-xs font-semibold text-slate-600 cursor-pointer">Contract-score basis</summary><p class="text-xs text-slate-500 mt-2">' + this.esc(c.structural_score_basis) + '</p></details>' : '') +
             '</div>';
     },
