@@ -262,7 +262,7 @@ const CommonRenderer = {
         // into its scope, path table, unresolved disclosures and verification
         // trail; listing them prevents the generic unread-block sentinel from
         // contradicting the rendered panel directly beneath it.
-        'publication_scope', 'layers', 'authority_summary', 'unresolved', 'scoped_assurance',
+        'publication_scope', 'layers', 'authority_summary', 'unresolved', 'scoped_assurance', 'assurance_checks',
         'review', 'walk_notes', 'verification',
         'float_split', 'measurement_clocks',
         // ⚠️ THE LIQUIDITY AXIS'S OWN BLOCKS, added when the marker was extended to
@@ -10050,6 +10050,27 @@ const CommonRenderer = {
     // It renders even with no score, because the content is the point and an
     // unrated axis with a stated reason beats a rated one built on the wrong
     // measurement. See the head comment in renderAxisSections.
+    _contractAssuranceChecksHtml(evidence) {
+        if (!evidence || !Array.isArray(evidence.rows)) return '';
+        var esc = this._escapeAttr.bind(this);
+        var labels = {tests: 'Tests', bounty: 'Bug bounty', specs: 'Specifications', audits: 'Audit coverage'};
+        var rows = Object.keys(labels).map(function(kind) {
+            var row = evidence.rows.find(function(entry) { return entry && entry.kind === kind; });
+            if (!row) return '';
+            var link = typeof row.source === 'string' && row.source.startsWith('https://')
+                ? ' <a class="underline" href="' + esc(row.source) + '">Source</a>' : '';
+            return '<div class="rounded border border-slate-200 dark:border-slate-700 p-3">' +
+                '<dt class="font-semibold">' + labels[kind] + '</dt><dd class="text-sm">' +
+                '<span class="font-medium">' + esc(row.status || 'Unverified') + '</span>' +
+                (row.summary ? '<p class="mt-1">' + esc(row.summary) + link + '</p>' : link) +
+                '</dd></div>';
+        }).join('');
+        return rows ? '<section class="panel"><h3 class="panel-title">Code assurance</h3>' +
+            '<p class="tw-sub">' + esc(evidence.scope || 'Scope unavailable') + ' · Reviewed ' +
+            esc(evidence.reviewed || 'date unavailable') + '</p>' +
+            '<dl class="grid grid-cols-1 md:grid-cols-2 gap-2">' + rows + '</dl></section>' : '';
+    },
+
     _renderContractSection(data) {
         var body = document.getElementById('axis-contract-body');
         if (!body) return;
@@ -10064,6 +10085,7 @@ const CommonRenderer = {
                   return '<a class="underline" href="' + esc(source.url) + '">' + esc(source.label) + '</a>';
               }).join(' · ') + '</p></div>'
             : '';
+        html += this._contractAssuranceChecksHtml((data.contract || {}).assurance_checks);
         html += this._contractPanelsHtml(data);
         body.innerHTML = html ||
             '<div class="panel"><div class="panel-title">Not assessed</div>' +

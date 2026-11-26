@@ -45,7 +45,7 @@ var CrvUSDRenderer = {
             var supplyDefinitions = '';
             if (rawSupply != null || lensSupply != null) {
                 supplyDefinitions = ' Other supply definitions:' +
-                    (rawSupply != null ? ' <code>totalSupply()</code> returns <strong>' + formatSupplyDefinition(rawSupply) + '</strong> (mint authorization capacity, including undeployed ceiling buffers)' : '') +
+                    (rawSupply != null ? ' <code>totalSupply()</code> returns <strong>' + formatSupplyDefinition(rawSupply) + '</strong> (ERC-20 supply including already minted but undeployed inventory)' : '') +
                     (rawSupply != null && lensSupply != null ? ';' : '') +
                     (lensSupply != null ? ' <code>StablecoinLens.circulating_supply</code> returns <strong>' + formatSupplyDefinition(lensSupply) + '</strong> (Controllers + PegKeepers only — excludes YieldBasis and operator mints)' : '') +
                     '.';
@@ -139,16 +139,31 @@ var CrvUSDRenderer = {
                 '</tbody></table></div>';
         }
 
+        var ladder = ((data.liquidity || {}).exit_mark || {}).quotes || {};
+        var quoteRows = Object.values(ladder).filter(function(row) {
+            return row && typeof row.requested_at === 'string' && typeof row.received_at === 'string';
+        });
+        if (quoteRows.length) {
+            var requested = quoteRows.map(function(row) { return row.requested_at; }).sort()[0];
+            var receipts = quoteRows.map(function(row) { return row.received_at; }).sort();
+            html += '<div class="panel"><div class="panel-title">Exit quote clocks</div>' +
+                '<p class="text-sm">Sized Ethereum crvUSD → USDC quote window (request to last receipt): ' +
+                CommonRenderer._escapeAttr(requested) + ' – ' +
+                CommonRenderer._escapeAttr(receipts[receipts.length - 1]) +
+                '. These are local quote clocks, separate from peg and backing observations. ' +
+                'The quote sizing mark has no independent observation clock. Quotes do not establish settlement.</p></div>';
+        }
+
         // ====== 3. Peg Defense ======
         var pd = specific.peg_defense;
         if (pd) {
             var pkCls = pd.pk_burn_capacity > 0 ? (pd.pk_burn_capacity / s.total_supply > 0.05 ? 'positive' : 'warning') : 'negative';
 
-            // PK-debt -> burn-capacity narrative (relocated from former PK Pool Liquidity panel).
-            var pkDebt = s.total_pegkeeper_debt || 0;
-            var pkDesc = pkDebt > 0 ?
-                'PK debt: ' + CommonRenderer.formatCurrency(pkDebt) + '. PegKeepers can actively withdraw and burn crvUSD from these pools to push price up (protocol-controlled defense).' :
-                'PK debt: $0 (no protocol-controlled burn capacity). PK withdraw-and-burn capacity is zero. Pool liquidity, market arbitrage and other protocol channels remain distinct. Pool stablecoin reserves (' + CommonRenderer.formatCurrency(s.pk_stables) + '). PegKeeper active defense (withdraw + burn) is unavailable until PK debt > $0.';
+            var pkDebt = s.total_pegkeeper_debt;
+            var pkDesc = 'Reported PegKeeper debt: ' + (pkDebt == null
+                ? 'unavailable' : CommonRenderer.formatCurrency(pkDebt)) +
+                '. The producer does not provide a separate native pin for these debt rows. ' +
+                'Missing API debt values can default to zero. Executable provision and withdrawal capacity are unverified.';
 
             // Aggregate crvUSD fraction across PK pools (relocated imbalance callout).
             var pkPools = specific.pk_pool_liquidity;
@@ -161,15 +176,15 @@ var CrvUSDRenderer = {
                 });
                 var totalPct = (stableTotal + crvTotal) > 0 ? (crvTotal / (stableTotal + crvTotal) * 100) : 0;
                 if (totalPct > 70) {
-                    aggCallout = '<p class="text-sm text-amber-600 mt-3">PK pools are ' + totalPct.toFixed(0) + '% crvUSD (balanced = 50%). Indicates persistent selling pressure — consistent with crvUSD trading slightly below peg. Stablecoin reserves (' + CommonRenderer.formatCurrency(stableTotal) + ') absorb further depeg pressure.</p>';
+                    aggCallout = '<p class="text-sm text-amber-600 mt-3">PK pools are ' + totalPct.toFixed(0) + '% crvUSD (balanced = 50%). Pool balances are a dated inventory snapshot. They do not determine executable peg defense or the timing of peg observations.</p>';
                 }
             }
 
             html += '<div class="panel">' +
                 '<div class="panel-title">Peg Defense</div>' +
                 '<div class="grid grid-cols-1 md:grid-cols-2 gap-4">' +
-                    '<div class="summary-card"><div class="card-label">PK Burn Capacity</div><div class="card-value ' + pkCls + '">' + CommonRenderer.formatCurrency(pd.pk_burn_capacity) + '</div><div class="text-xs text-slate-400 mt-1">Protocol-controlled supply removal</div></div>' +
-                    '<div class="summary-card"><div class="card-label">Peg Defense Liquidity</div><div class="card-value">' + CommonRenderer.formatCurrency(pd.pk_pool_stables) + '</div><div class="text-xs text-slate-400 mt-1">LP-owned stables in PK pools, not guaranteed</div></div>' +
+                    '<div class="summary-card"><div class="card-label">PK Debt Proxy</div><div class="card-value ' + pkCls + '">' + CommonRenderer.formatCurrency(pd.pk_burn_capacity) + '</div><div class="text-xs text-slate-400 mt-1">Reported debt · not executable capacity</div></div>' +
+                    '<div class="summary-card"><div class="card-label">PK Pool Stablecoin Inventory</div><div class="card-value">' + (pd.pk_pool_stables == null ? 'Unavailable' : Number(pd.pk_pool_stables).toLocaleString('en-US', {maximumFractionDigits: 0})) + '</div><div class="text-xs text-slate-400 mt-1">LP-owned token units · separate from capacity</div></div>' +
                 '</div>' +
                 '<p class="text-sm text-slate-500 mt-3">' + pkDesc + '</p>' +
                 aggCallout +
