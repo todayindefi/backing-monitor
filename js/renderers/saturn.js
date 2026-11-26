@@ -352,7 +352,8 @@ var SaturnRenderer = {
             html += anc('panel-nav',       SaturnRenderer._renderSusdatNavTrajectory(specific, s));
         }
 
-        html += head(3, 'Liquidity & Exit', 'exit depth, venue spread and slippage');
+        html += head(3, 'Liquidity & Exit', 'exit depth, venue spread and slippage',
+            slug === 'usdat' ? CommonRenderer.authoredScoreChipHtml(data.liquidity, ['liquidity_score'], 'Authored') : '');
         html += SaturnRenderer._axisRationaleSlot('liquidity',slug);
         var liquidityEvidence = typeof LiquidityEvidence !== 'undefined' ? LiquidityEvidence.legacyHtml(data) : '';
         html += anc('panel-liquidity', SaturnRenderer._renderLiquidityPanel(specific, s, slug) +
