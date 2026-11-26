@@ -226,12 +226,20 @@ var SfrxUSDRenderer = {
                     return [self.e(r.chain), self.e(r.role), self.e(r.threshold + ' of ' + r.owners), self.e(r.execution_delay)];
                 })) + this.note((c.authority_research || {}).signer_independence) +
                 this.note('Research observation: ' + ((c.authority_research || {}).observed_at || 'unknown')))) +
-            this.panel('Audit and bounty scope', this.note((c.audit || {}).firm + ' · ' + ((c.audit || {}).date || 'date unavailable')) +
-                this.note((c.audit || {}).scope) + this.note((c.audit || {}).limits, true) + this.note((c.bounty || {}).note, true)));
-        // Label issuer provenance without duplicating the shared issuer assessment.
-        put('issuer-extra-panels', this.panel('Issuer assessment status',
-            (data.dashboard_published ? '' : this.note((data.issuer || {}).authored_vs_band_note)) +
-            this.note('Editorial evidence dated ' + ((data.issuer || {}).issuer_score_generated_at || 'not supplied'))));
+            this.panel('Audit and bounty scope',
+                this.note('November 26 documentary review. ChainSecurity’s 2025 review names the Fraxtal redeemer and pricing oracle. Saved deployed-source files differ from the named audit fix revision. Ethereum uses the later SfrxUSD3 lineage.') +
+                this.note('Frax publishes a bounty with privileged-key and governance exclusions. Exact component eligibility, installed-build tests or proofs, and full cross-chain recovery remain unverified.', true) +
+                this.note('Authority evidence retains its October 15–16 observation dates.') +
+                '<p class="text-xs"><a href="https://docs.frax.com/protocol/security/audit">Frax audits</a> · ' +
+                '<a href="https://docs.frax.com/protocol/security/bugbounty">Frax bounty</a></p>'));
+        put('issuer-extra-panels', this.panel('Issuer and redemption rights',
+            this.note('Frax Inc carries delegated frxUSD compliance, reserve and custodian functions under Frax governance. A granted licence and separate par guarantee remain unverified.') +
+            this.note('sfrxUSD holders convert strategy shares into frxUSD. A subsequent reserve or cash exit depends on eligible, available redemption assets and route completion. Direct reserve beneficiary status and insolvency priority remain unverified.') +
+            '<p class="text-xs"><a href="https://docs.frax.com/protocol/assets/frxusd/frxusd">Frax documentation</a> · ' +
+            '<a href="https://gov.frax.finance/t/fip-432-transfer-of-compliance-collateral-management-of-frxusd-to-frax-inc/3748">FIP432, July 7, 2025</a></p>') +
+            this.panel('Issuer assessment status',
+                (data.dashboard_published ? '' : this.note((data.issuer || {}).authored_vs_band_note)) +
+                this.note('Editorial assessment dated ' + ((data.issuer || {}).issuer_score_generated_at || 'not supplied'))));
         var breakdown = document.getElementById('breakdown-table');
         if (breakdown && breakdown.parentElement && !breakdown.parentElement.classList.contains('overflow-x-auto')) {
             var scroll = document.createElement('div');
