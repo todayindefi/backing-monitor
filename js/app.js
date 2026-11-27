@@ -53,6 +53,7 @@ function dataUrl(path) {
     var revision = /^data\/(?:ethena_family|(?:usde|susde)_(?:backing|issuer|contract_overlay))\.json$/.test(path)
         ? '20261127-ethena' : (/^data\/bold_(?:backing|liquidity|issuer|contract_overlay|ethereum_native_check)\.json$/.test(path)
             ? '20261127-bold' : DATA_CACHE_REV);
+    if (/^data\/frxusd_(?:issuer|contract_overlay|backing_verification|backing)\.json$/.test(path)) revision = '20261127-frxusd';
     return path + sep + 'v=' + hour + '&r=' + revision;
 }
 

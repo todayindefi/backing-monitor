@@ -55,7 +55,7 @@ var FrxUSDRenderer = {
                 '</div>' +
                 '<p class="text-xs text-slate-500 mt-4">' + this.esc(issuer.scope_basis || '') + '</p>' +
                 '<p class="text-xs text-slate-500 mt-2">' + this.esc(((issuer.source || {}).caveat) || '') + '</p>' +
-                '</div>' + this.verificationHtml((data.backing || {}).verification);
+                '</div>' + this.verificationHtml((data.backing || {}).verification, issuer);
         }
 
         var depSlot = document.getElementById('dependencies-extra-panels');
@@ -109,7 +109,7 @@ var FrxUSDRenderer = {
             '<div class="card-value text-xl">' + value + '</div><div class="text-xs text-slate-500">' +
             this.esc(note) + '</div></div>';
     },
-    verificationHtml: function (v) {
+    verificationHtml: function (v, issuer) {
         if (!v || !v.coverage) return '';
         var c = v.coverage;
         var rows = (v.reserve_balances || []).map(function (r) {
@@ -123,14 +123,22 @@ var FrxUSDRenderer = {
         }).join('');
         var obs = v.observation || {};
         var gap = c.unverified_or_unmeasured_gap_usd;
+        var issuerEffective = (issuer.source || {}).effective_at;
+        var matchesDisplayedIssuer = issuerEffective &&
+            c.issuer_reported_assets_usd === issuer.total_assets_usd &&
+            c.issuer_reported_liabilities_usd === issuer.total_liabilities_usd;
+        var denominatorNote = matchesDisplayedIssuer
+            ? 'Issuer balance sheet effective ' + issuerEffective
+            : 'Verifier denominator from a separate issuer snapshot; exact clock unavailable here';
         var alerts = (v.alerts || []).map(function (a) { return a.type.replace(/_/g, ' '); }).join(' · ');
         return '<div class="panel"><div class="panel-title">Independent backing verification</div>' +
             '<div class="grid grid-cols-1 md:grid-cols-3 gap-4">' +
               this.metric('Onchain-observed assets', this.money(c.onchain_verifiable_assets_usd), (typeof c.onchain_share_of_issuer_assets_pct === 'number' ? c.onchain_share_of_issuer_assets_pct.toFixed(2) + '% of issuer-reported assets' : 'Ethereum token balances')) +
-              this.metric('vs issuer liabilities', typeof c.onchain_assets_vs_issuer_liabilities_pct === 'number' ? c.onchain_assets_vs_issuer_liabilities_pct.toFixed(2) + '%' : 'withheld', 'Hybrid lower-bound comparison') +
-              this.metric('Unverified / unmeasured gap', this.money(gap), 'Principally Erebor cash') +
+              this.metric('vs issuer liabilities', typeof c.onchain_assets_vs_issuer_liabilities_pct === 'number' ? c.onchain_assets_vs_issuer_liabilities_pct.toFixed(4) + '%' : 'withheld', 'Cross-clock comparison') +
+              this.metric('Issuer assets less observed marks', this.money(gap), 'Difference across evidence cuts') +
             '</div>' +
-            '<p class="text-xs text-slate-500 mt-3">Independent global coverage is <strong>withheld</strong>: remote OFT liabilities remain unmeasured. Onchain assets divided by issuer liabilities is shown only as a lower-bound comparison, not an independently reconstructed coverage ratio.</p>' +
+            '<p class="text-xs text-slate-500 mt-3">Independent global coverage is <strong>withheld</strong>: remote OFT liabilities remain unmeasured. The comparison divides modeled on-chain asset marks by issuer-reported liabilities measured on a separate clock.</p>' +
+            '<p class="text-xs text-slate-500 mt-2">' + this.esc(denominatorNote) + '.</p>' +
             '<div class="overflow-x-auto mt-4"><table class="data-table"><thead><tr><th>Reserve address</th><th>Status</th><th class="text-right">Quantity</th><th class="text-right">Independent value</th><th class="text-right">vs issuer value</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
             '<p class="text-xs text-slate-500 mt-3">Ethereum block ' + this.esc(obs.block_number) + ' · ' + this.esc(obs.block_timestamp || '') + '. BitGo WTGXX is balance-observed but beneficial ownership remains custody-dependent. Erebor is explicitly offchain_unverified.</p>' +
             (alerts ? '<p class="text-xs text-amber-700 mt-2">Alerts: ' + this.esc(alerts) + '</p>' : '') +
