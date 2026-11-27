@@ -122,6 +122,9 @@ var FrxUSDRenderer = {
                 '<td class="text-right font-mono">' + value + '</td><td class="text-right font-mono">' + diff + '</td></tr>';
         }).join('');
         var obs = v.observation || {};
+        var fraxtal = ((v.liabilities || {}).rows || []).find(function(row) {
+            return row.chain === 'fraxtal' && row.status === 'ok';
+        });
         var gap = c.unverified_or_unmeasured_gap_usd;
         var issuerEffective = (issuer.source || {}).effective_at;
         var matchesDisplayedIssuer = issuerEffective &&
@@ -141,6 +144,9 @@ var FrxUSDRenderer = {
             '<p class="text-xs text-slate-500 mt-2">' + this.esc(denominatorNote) + '.</p>' +
             '<div class="overflow-x-auto mt-4"><table class="data-table"><thead><tr><th>Reserve address</th><th>Status</th><th class="text-right">Quantity</th><th class="text-right">Independent value</th><th class="text-right">vs issuer value</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
             '<p class="text-xs text-slate-500 mt-3">Ethereum block ' + this.esc(obs.block_number) + ' · ' + this.esc(obs.block_timestamp || '') + '. BitGo WTGXX is balance-observed but beneficial ownership remains custody-dependent. Erebor is explicitly offchain_unverified.</p>' +
+            (fraxtal ? '<p class="text-xs text-slate-500 mt-2">Fraxtal supply observation · block ' +
+                this.esc(fraxtal.block_number) + ' · ' + this.esc(fraxtal.block_timestamp || 'time unavailable') +
+                '. The verifier deducts the known Ethereum bridge lockbox before adding Fraxtal supply.</p>' : '') +
             (alerts ? '<p class="text-xs text-amber-700 mt-2">Alerts: ' + this.esc(alerts) + '</p>' : '') +
             '</div>';
     },

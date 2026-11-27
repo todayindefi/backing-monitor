@@ -7354,7 +7354,11 @@ const CommonRenderer = {
             if (!head || (!basis && !cChange)) return;
             var el = document.createElement('div');
             el.className = 'axis-basis-note';
-            el.innerHTML = self._scoreBasisHtml('Why this contract score', basis, cChange);
+            var label = data.view_slug === 'frxusd' && cblk.scoped_assurance &&
+                String(cblk.structural_score_generated_at || '').startsWith('2026-10-12')
+                ? 'October 12 score rationale · historical authority, see November 27 update below'
+                : 'Why this contract score';
+            el.innerHTML = self._scoreBasisHtml(label, basis, cChange);
             head.appendChild(el);
         })(this);
         this._renderContractSection(data);
