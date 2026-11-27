@@ -572,7 +572,7 @@ var SaturnRenderer = {
         if (slug === 'usdat') {
             headerLeft =
                 '<div class="text-xl font-bold text-slate-800">USDat</div>' +
-                '<div class="text-xs text-slate-500 mt-1">Saturn Labs · Synthetic stablecoin, $M + USDC backed (on-chain verifiable)</div>';
+                '<div class="text-xs text-slate-500 mt-1">Saturn Labs · Ethereum reserve accounting in PYUSDx</div>';
 
             var ratioState = SaturnRenderer._backingRatioState(s.backing_ratio);
             var ratioCls = ratioState === 'ok' ? 'text-green-600' :
