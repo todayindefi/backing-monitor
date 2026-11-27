@@ -7093,7 +7093,7 @@ const CommonRenderer = {
             if (!head || (!basis && !change)) return;
             var el = document.createElement('div');
             el.className = 'axis-basis-note';
-            el.innerHTML = self._scoreBasisHtml('Why this backing score', basis, change) +
+            el.innerHTML = self._scoreBasisHtml(data.view_slug === 'bold' ? 'Why this backing score · November 10 evidence, November 11 assessment' : 'Why this backing score', basis, change) +
                 self._authoredNotesHtml('backing');
             head.appendChild(el);
         })(this);

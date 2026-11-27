@@ -106,7 +106,12 @@ var BOLDRenderer = {
             if (backingSlot) backingSlot.insertAdjacentHTML('afterbegin', this._panel('Same-block Ethereum reconciliation',
                 '<p class="text-sm">' + observation + '. Issued ' + format(check.supply) + ' BOLD · debt ' +
                 format(check.debt) + ' BOLD · unexplained residual ' + format(check.residual) +
-                ' BOLD. The normal sequential model below has its own clock.</p>' +
+                ' BOLD. ETH/USD model feed updated ' + this._e(check.model_oracle_updated_at || 'time unavailable') +
+                ' at the independent pin.</p>' +
+                '<p class="text-sm">Sequential producer snapshot · ' + this._e(data.timestamp || 'time unavailable') +
+                ' · unexplained residual ' + (Number.isFinite((data.summary || {}).reconciliation_gap_bold)
+                    ? data.summary.reconciliation_gap_bold.toLocaleString('en-US', {minimumFractionDigits:3, maximumFractionDigits:3}) + ' BOLD'
+                    : 'unavailable') + '. Its own model feed clock is unavailable.</p>' +
                 '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Branch</th><th>Native collateral</th>' +
                 '<th>Debt (BOLD)</th><th>Stability Pool (BOLD)</th></tr></thead><tbody>' + rows + '</tbody></table></div>'));
             var exit = Object.assign({}, data.liquidity && data.liquidity.primary_exit, {fee_ladder: check.fee_ladder});
