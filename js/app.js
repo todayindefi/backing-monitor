@@ -50,7 +50,9 @@ var DATA_CACHE_REV = '20261018a';
 function dataUrl(path) {
     var hour = Math.floor((Date.now() - SYNC_OFFSET_MIN * 60000) / 3600000);
     var sep = path.indexOf('?') >= 0 ? '&' : '?';
-    return path + sep + 'v=' + hour + '&r=' + DATA_CACHE_REV;
+    var revision = /^data\/(?:ethena_family|(?:usde|susde)_(?:backing|issuer|contract_overlay))\.json$/.test(path)
+        ? '20261127-ethena' : DATA_CACHE_REV;
+    return path + sep + 'v=' + hour + '&r=' + revision;
 }
 
 // Asset-specific renderers registry. Keys are matched against
