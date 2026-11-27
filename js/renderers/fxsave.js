@@ -362,8 +362,16 @@ var FxSaveRenderer = {
         var select=document.getElementById('fxsave-rung');if(select){var update=function(){slot('fxsave-rung-result',self.rungResult(d,Number(select.value)));};select.addEventListener('change',update);select.value=String(Math.min(2,d.matched_exits.rows.length-1));update();}
         slot('axis-dependencies-body',this.dependencies(data.dependencies));slot('dependencies-extra-panels',this.concentration(d));
         // The accepted review leads; the older walk is explicitly historical.
-        slot('axis-contract-body',this.controlReview(data.contract));
-        slot('contract-extra-panels',this.governance(data.contract));
+        var contract=data.contract || {};
+        var scoped=CommonRenderer._scopedAuthorityHtml(contract.scoped_assurance);
+        var assurance=CommonRenderer._contractAssuranceChecksHtml(contract.assurance_checks);
+        var priorControl=scoped
+            ? this.details('Earlier control review and historical topology',this.controlReview(contract))
+            : this.controlReview(contract);
+        slot('axis-contract-body',scoped+assurance+priorControl);
+        slot('contract-extra-panels',scoped
+            ? this.details('Earlier contract score rationale',this.governance(contract))
+            : this.governance(contract));
         var controlHead=document.getElementById('axis-contract-head'),review=(data.contract || {}).accepted_control_review;
         if(controlHead && review) {
             // The retained historical record is not an input to this dated headline.
@@ -379,7 +387,7 @@ var FxSaveRenderer = {
         function brief(profile){var t=(profile.thresholds || {})[50];return !t || t.status==='unverified' ? 'Not measured' : (t.is_floor ? '≥'+shortMoney(t.lower)+' floor' : (t.upper==null ? '≥'+shortMoney(t.lower)+' floor' : shortMoney(t.lower)+'–'+shortMoney(t.upper)+' bracket'));}
         var directDepth=this.depthProfile(d.matched_exits || {},'direct'),basketDepth=this.depthProfile(d.matched_exits || {},'fxusd_market');
         var acceptedControls=(data.contract || {}).accepted_control_review || {};
-        var specs=[['NAV / stability',self.n(d.nav_usd,6),'USD contract NAV / share',data.peg,null],['Backing',(d.accounting || {}).status==='reconciled' ? 'Reconciled' : 'Review custody','fxSP accounting; no independent dollar CR',data.backing,'backing_score'],['Liquidity · 50 bps impact',brief(directDepth),'Direct; basket '+brief(basketDepth)+' · indicative',data.liquidity,'liquidity_score'],['Dependencies','fxSP → basket','fxUSD + USDC · embedded fxSP coverage',data.dependencies,'underlying_score'],['Contract & admin',acceptedControls.short_headline || 'Review unavailable','Parallel powers and gaps below',data.contract,'structural_score'],['Issuer',(data.issuer || {}).short_name || 'Issuer assessment','Entity and recourse below',data.issuer,'issuer_score']];
+        var specs=[['NAV / stability',self.n(d.nav_usd,6),'USD contract NAV / share',data.peg,null],['Backing',(d.accounting || {}).status==='reconciled' ? 'Reconciled' : 'Review custody','fxSP accounting; no independent dollar CR',data.backing,'backing_score'],['Liquidity · 50 bps impact',brief(directDepth),'Direct; basket '+brief(basketDepth)+' · indicative',data.liquidity,'liquidity_score'],['Dependencies','fxSP → basket','fxUSD + USDC · embedded fxSP coverage',data.dependencies,'underlying_score'],['Contract & admin',scoped ? '72h upgrades · parallel powers' : (acceptedControls.short_headline || 'Review unavailable'),'Parallel powers and gaps below',data.contract,'structural_score'],['Issuer',(data.issuer || {}).short_name || 'Issuer assessment','Entity and recourse below',data.issuer,'issuer_score']];
         specs.forEach(function(spec,i){var card=cards[i];if(!card)return;var value=i===0 ? (data.peg || {}).volatility_score : (spec[4] && spec[3] ? spec[3][spec[4]] : null);var chip=Number.isFinite(value) ? ((d.assessment || {}).review_disposition==='assessed' ? 'Authored ' : 'Historical authored ')+self.n(value,1)+'/10' : 'Unscored · not authored';card.innerHTML='<div class="card-label">'+self.e(spec[0])+'</div><div class="card-value">'+self.e(spec[1])+'</div><div class="text-xs text-slate-400 mt-1">'+self.e(spec[2])+'</div><div class="mt-2"><span class="axis-rating r-warn">'+self.e(chip)+'</span></div>';});
         var note=document.querySelector('.axis-band-note');if(note)note.textContent='Current measurements and dated authored judgments are separate. NAV alone does not establish market stability; '+(Number.isFinite((data.dependencies || {}).underlying_score) ? 'the dependency judgment retains its own evidence scope and date.' : 'Dependencies remains unscored because no judgment was authored.');
         document.querySelectorAll('#axis-peg-head .axis-rating').forEach(function(chip){if(/^(Current|7d band)/.test(chip.textContent)){chip.textContent=priced ? 'Indicative quote · no measured score' : 'Not rated · market mark unavailable';chip.className='axis-rating r-warn';chip.title='A size-specific indicative quote is not a continuous market history or numerical risk assessment.';}});

@@ -55,6 +55,7 @@ function dataUrl(path) {
             ? '20261127-bold-clocks' : DATA_CACHE_REV);
     if (/^data\/frxusd_(?:issuer|contract_overlay|backing_verification|backing)\.json$/.test(path)) revision = '20261127-frxusd';
     if (/^data\/(?:fxsave|fxsp|weeth|syrupusdc|syrupusdt|gho)_/.test(path)) revision = '20261127-vault-repair';
+    if (/^data\/fxsave_(?:issuer|contract_overlay)\.json$/.test(path)) revision = '20261127-fxsave-axes';
     return path + sep + 'v=' + hour + '&r=' + revision;
 }
 
