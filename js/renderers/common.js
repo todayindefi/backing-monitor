@@ -10077,7 +10077,7 @@ const CommonRenderer = {
         var scoped = (data.contract || {}).scoped_assurance;
         var esc = this._escapeAttr.bind(this);
         var html = scoped
-            ? '<div class="panel"><div class="panel-title">Ethereum deployed assurance</div>' +
+            ? '<div class="panel"><div class="panel-title">'+esc(scoped.scope_label || 'Ethereum deployed assurance')+'</div>' +
               '<p class="tw-sub">Block ' + esc(scoped.block) + ' · ' + esc(scoped.observed_at) + '</p>' +
               '<ul class="tw-code-list">' + scoped.findings.map(function (finding) {
                   return '<li>' + esc(finding) + '</li>';

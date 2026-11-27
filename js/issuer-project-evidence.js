@@ -52,7 +52,7 @@ var IssuerProjectEvidence = {
     },
     viewAsset:function(data){return typeof location!=='undefined'?(new URLSearchParams(location.search).get('asset')||data.asset_slug||''):(data.asset_slug||'');},
     getFeed:function(){var self=this;if(!self.cache||Date.now()-(self.cacheAt||0)>60000){self.cacheAt=Date.now();self.cache=fetch('data/issuer_project_evidence.json?v='+Math.floor(Date.now()/60000)).then(function(r){return r.ok?r.json():null;}).catch(function(){return null;});}return self.cache;},
-    fillVisible:function(feed,asset){var self=this;document.querySelectorAll('[data-issuer-evidence-asset]').forEach(function(el){if(el.dataset.issuerEvidenceAsset===asset)el.innerHTML=el.getClientRects().length?self.html(feed,asset):'';});},
+    fillVisible:function(feed,asset){var self=this;document.querySelectorAll('[data-issuer-evidence-asset]').forEach(function(el){if(el.dataset.issuerEvidenceAsset===asset)el.innerHTML=(el.getClientRects().length||el.closest('[data-issuer-archive]'))?self.html(feed,asset):'';});},
     installFamilySurfaces:function(){var self=this;['MSTRRenderer','STRCRenderer','STRCxRenderer','ApyxRenderer','SaturnRenderer'].forEach(function(name){var renderer=window[name];if(!renderer||!renderer.render)return;var old=renderer.render;renderer.render=function(data){var result=old.apply(this,arguments),asset=self.viewAsset(data);self.getFeed().then(function(feed){if(self.viewAsset(data)!==asset)return;if(!feed){if(['MSTRRenderer','STRCRenderer'].indexOf(name)!==-1){var failedHost=document.getElementById('asset-specific-panels');if(failedHost)failedHost.insertAdjacentHTML('afterbegin','<div class="panel" data-issuer-component="'+self.esc(asset)+'">Structured issuer evidence unavailable; no underlying or family rights substituted.</div>');}return;}if(!(feed.component_profiles&&Object.prototype.hasOwnProperty.call(feed.component_profiles,asset)))return;var targets=Array.from(document.querySelectorAll('[data-issuer-evidence-asset]')).filter(function(el){return el.dataset.issuerEvidenceAsset===asset&&el.getClientRects().length;});if(!targets.length){var host=document.getElementById('asset-specific-panels');if(host)host.insertAdjacentHTML('afterbegin','<div data-issuer-evidence-asset="'+self.esc(asset)+'"></div>');}self.fillVisible(feed,asset);});return result;};});},
     compactAssets: ['usdai','susdai','yzusd','syzusd','usds','susds','dusd-alto','fxusd','crvusd'],
     isCompact: function(asset) { return this.compactAssets.indexOf(asset)!==-1; },
@@ -114,16 +114,23 @@ var IssuerProjectEvidence = {
             var asset=self.viewAsset(data);
             self.getFeed().then(function(feed){if(self.viewAsset(data)===asset)self.fillVisible(feed,asset);});
             var authoredData = data;
-            if (asset === 'crvusd') {
+            var arbReview = (asset === 'usdai' || asset === 'susdai') &&
+                data.issuer && data.issuer.issuer_evidence_reviewed && data.issuer.summary;
+            if (arbReview) {
+                authoredData = Object.assign({}, data, {issuer: Object.assign({}, data.issuer, {summary: null})});
+            } else if (asset === 'crvusd') {
                 var issuer = Object.assign({}, data.issuer, {summary: null, facts: []});
                 authoredData = Object.assign({}, data, {issuer: issuer});
             }
             var authored=original.call(this,authoredData);
             if(self.isCompact(asset)){
                 var issuer=data.issuer||{},info=typeof this._issuerAxisInfo==='function'?this._issuerAxisInfo(issuer):{},score=Number.isFinite(info.score)?Number(info.score).toFixed(1)+'/10':'unavailable';
-                authored='<div class="panel" data-issuer-rating><div class="panel-title">Issuer · '+self.esc(score)+(/^provisional(?:_|$)/.test(String(issuer.issuer_score_status||''))?' · provisional':'')+'</div><p class="text-xs text-slate-500">RiskAnalyst assessment · score date '+self.esc(issuer.issuer_score_generated_at||'not supplied')+(issuer.issuer_evidence_reviewed?' · documentary review '+self.esc(issuer.issuer_evidence_reviewed):'')+'</p><details class="mt-2"><summary class="text-sm cursor-pointer">Assessment rationale and report</summary>'+authored+'</details></div>';
+                authored='<div class="panel" data-issuer-rating><div class="panel-title">Issuer · '+self.esc(score)+(/^provisional(?:_|$)/.test(String(issuer.issuer_score_status||''))?' · provisional':'')+'</div><p class="text-xs text-slate-500">RiskAnalyst assessment · score date '+self.esc(issuer.issuer_score_generated_at||'not supplied')+(issuer.issuer_evidence_reviewed?' · documentary review '+self.esc(issuer.issuer_evidence_reviewed):'')+'</p>'+
+                    (arbReview ? '<p class="text-sm mt-2"><strong>Arbitrum</strong> · '+self.esc(issuer.summary)+'</p>' : '')+
+                    '<details class="mt-2"><summary class="text-sm cursor-pointer">Assessment rationale and report</summary>'+authored+'</details></div>';
             }
-            return authored+'<div data-issuer-evidence-asset="'+self.esc(asset)+'"><p class="text-xs text-slate-500">Loading structured issuer evidence…</p></div>';
+            var projectEvidence='<div data-issuer-evidence-asset="'+self.esc(asset)+'"><p class="text-xs text-slate-500">Loading structured issuer evidence…</p></div>';
+            return authored+(arbReview ? '<details class="panel mt-2" data-issuer-archive><summary class="text-sm cursor-pointer">Earlier project evidence and source documents</summary>'+projectEvidence+'</details>' : projectEvidence);
         };
     }
 };
