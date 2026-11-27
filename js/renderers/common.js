@@ -10721,7 +10721,7 @@ const CommonRenderer = {
             // still one hover (and one click, in the trail) away.
             '<div class="tw-headline"' +
                 (c.headline_basis ? ' title="' + esc(c.headline_basis) + '"' : '') + '>' +
-                esc(c.scoped_assurance ? 'Earlier authority walk · see Ethereum update above' : c.headline) + '</div>' +
+                esc(c.scoped_assurance ? 'Earlier authority walk · see targeted authority above' : c.headline) + '</div>' +
             '<div class="tw-sub">Walked ' + esc(c.observed_at || '?') +
                 // ⚠️ `source_file` DROPPED FROM THE READER'S TOOLTIP. Its value is a
                 // path into a PRODUCER'S REPO — "security_analyst/topology/assets/
