@@ -379,10 +379,14 @@ var UsdaiRenderer = {
             return '<tr><td>' + label + '</td><td>' + UsdaiRenderer._esc(time || 'Unknown') + '</td></tr>';
         }
         var rows = row('Backing snapshot (Arbitrum)', stamp);
-        ['dependencies', 'contract', 'issuer'].forEach(function(axis) {
-            var block = data[axis] || {}, provenance = p[axis] || {};
-            rows += row(axis + ' review / overlay', block.as_of || provenance.overlay_as_of);
-        });
+        var contract = data.contract || {}, issuer = data.issuer || {}, dependencies = data.dependencies || {};
+        var targeted = contract.scoped_assurance || {}, assurance = contract.assurance_checks || {};
+        rows += row('Dependencies review', dependencies.as_of || (p.dependencies || {}).overlay_as_of);
+        if (targeted.observed_at) rows += row('Arbitrum targeted authority read', targeted.observed_at);
+        if (assurance.reviewed) rows += row('Code assurance review', assurance.reviewed);
+        rows += row('Historical authority walk', contract.as_of || (p.contract || {}).overlay_as_of);
+        if (issuer.issuer_evidence_reviewed) rows += row('Arbitrum issuer documentary review', issuer.issuer_evidence_reviewed);
+        rows += row('Historical issuer overlay envelope', issuer.as_of || (p.issuer || {}).overlay_as_of);
         return '<div class="panel"><div class="panel-title">Measurement and review dates</div>' +
             '<p class="text-sm">A current backing snapshot does not renew older credit, authority or issuer reviews.</p>' +
             '<div class="data-table-scroll"><table class="data-table"><thead><tr><th>Evidence</th><th>Original clock</th></tr></thead><tbody>' + rows + '</tbody></table></div></div>';
