@@ -27,7 +27,7 @@ def main():
     assets = json.loads((REPO / 'data/assets.json').read_text())
     if not any(a['slug'] == 'sfrxusd' and a.get('published') is True for a in assets):
         raise SystemExit('sfrxUSD is not approved in the published registry; no feeds copied')
-    inputs = {name: (source.read_text(), str(source)) for name, source in MEASUREMENTS.items()}
+    inputs = {name: (source.read_text(), f"{source.parts[3]}:sfrxusd/{name}") for name, source in MEASUREMENTS.items()}
     for suffix in EDITORIAL:
         name = f'sfrxusd_{suffix}.json'
         source = f'data/axes_pending/{name}'

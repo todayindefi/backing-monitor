@@ -1,5 +1,5 @@
 #!/bin/bash
-cd /home/danger/backing-monitor
+cd -- "$(dirname -- "${BASH_SOURCE[0]}")" || exit 1
 
 # Guard: GitHub Pages deploys ONLY from `main`. If the working tree is ever left
 # on another branch (e.g. a feature branch after its PR is merged), the hourly
@@ -14,10 +14,39 @@ if [ "$BRANCH" != "main" ]; then
     exit 1
 fi
 
+# The publisher runs only in its dedicated checkout and holds the shared FX
+# consumer lock from preflight through publication.
+MODE=${BM_SYNC_MODE:-publish}
+case "$MODE" in publish|preview) ;; *) exit 2 ;; esac
+if [ "${BM_PUBLISHER_CHECKOUT:-}" != "$(pwd -P)" ]; then
+    echo "ERROR isolated publisher checkout not configured" >&2
+    exit 1
+fi
+exec 9>/tmp/bm-fx-consumer.lock
+flock -x 9 || exit 1
+if ! git diff --cached --quiet; then
+    echo "ERROR existing staged changes; backing publisher paused before collection" >&2
+    exit 1
+fi
+
+if [ "$MODE" = publish ]; then
+    git fetch origin main || exit 1
+    if ! git diff --quiet -- data/; then
+        echo "ERROR isolated data checkout has unpublished changes; inspect before collection" >&2
+        exit 1
+    fi
+    git merge --ff-only origin/main || exit 1
+    if [ "$(git rev-parse HEAD)" != "$(git rev-parse origin/main)" ]; then
+        echo "ERROR isolated history differs from publication parent" >&2
+        exit 1
+    fi
+fi
+
 # Metronome msUSD is produced in this repository because its four-chain RPC
 # snapshot, last-good preservation, history and dashboard are one atomic
 # monitor. A failed attempt is loud but must not prevent the sync from serving
 # the prior successful snapshot.
+if [ "$MODE" = publish ]; then
 if ! PYTHONPYCACHEPREFIX=/tmp/backing-monitor-pycache python3 frxusd_backing_verifier.py >/tmp/frxusd-backing-verifier.log; then
     echo "$(date): ERROR frxUSD independent backing verifier failed; see /tmp/frxusd-backing-verifier.log" >&2
 fi
@@ -30,10 +59,19 @@ fi
 # emits the explicitly approved production group and its review preview.
 # weETH remains a manual snapshot; this existing job must never collect it.
 # Invalid input retains the prior snapshot; the renderer shows original clocks.
-if [ -f tools/prepare_fxsave_preview.py ]; then
+# If VaultTracker owns FX, never reopen the legacy producer path.
+if [ -f .private-reviews/vaulttracker-fx-route/selector.json ]; then
+    if [ -f tools/route_vaulttracker_fx.py ]; then
+        PYTHONDONTWRITEBYTECODE=1 python3 tools/route_vaulttracker_fx.py tick --sync-lock-held ||           echo "ERROR FX intake rejected; retaining last good" >&2
+    else
+        echo "WARNING VaultTracker FX reader not installed; retaining last-good FX" >&2
+    fi
+elif [ -f tools/prepare_fxsave_preview.py ]; then
     if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/prepare_fxsave_preview.py --from-sync >/tmp/fxsave-preview-sync.log 2>&1; then
         echo "$(date): ERROR FXSave preview refresh failed; last-good production/preview snapshots retained (see /tmp/fxsave-preview-sync.log)" >&2
     fi
+fi
+
 fi
 
 # Sync backing data from PegTracker
@@ -268,6 +306,25 @@ for pair in $BLOCK_ALIASES; do
     fi
 done
 
+# Files whose names are not <registered-slug><suffix> — family rollups shared by
+# several assets, and the Strategy event log. These stay explicit because there
+# is no slug to derive them from.
+for f in apyx_family.json cap_family.json ethena_family.json ethena_measurements_daily.json frax_backing.json frax_backing_history.json saturn_family.json strategy_events.json syrup_family.json; do
+    [ -f "/home/danger/PegTracker/data/$f" ] || continue
+    if [ "$f" = "syrup_family.json" ]; then
+        if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/copy_syrup_backing.py --family "/home/danger/PegTracker/data/$f" "data/$f"; then
+            echo "$(date): ERROR Syrup family transport failed; retaining prior corrected snapshot" >&2
+        fi
+    else
+        cp "/home/danger/PegTracker/data/$f" data/
+    fi
+done
+
+if [ "$MODE" = preview ]; then
+    echo "Publisher preview complete (producer file intake only; no collection, commit or push)."
+    exit 0
+fi
+
 # ⚠️ AXIS 5 IS GENERATED, NOT COPIED. security_analyst's README invariant 1 is
 # "no stored copies of derivable state — read fresh, cache nothing", written
 # after a hand-maintained position table overstated exposure ~11x for eleven days
@@ -316,25 +373,11 @@ fi
 
 # fxSP is produced by PegTracker on an eight-hour gate. This only transports
 # and validates its files; no RPC or extra recurring job is installed here.
-if [ -f tools/sync_fxsp_vault.py ] && python3 -c 'import json,sys;sys.exit(not any(a.get("slug")=="fxsp" and a.get("published") is True and a.get("dashboard_kind")=="vault" for a in json.load(open("data/assets.json"))))'; then
+if [ "$MODE" = publish ] && [ ! -f .private-reviews/vaulttracker-fx-route/selector.json ] && [ -f tools/sync_fxsp_vault.py ] && python3 -c 'import json,sys;sys.exit(not any(a.get("slug")=="fxsp" and a.get("published") is True and a.get("dashboard_kind")=="vault" for a in json.load(open("data/assets.json"))))'; then
     if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/sync_fxsp_vault.py --from-sync >/tmp/fxsp-consumer-sync.log 2>&1; then
         echo "$(date): ERROR fxSP consumer intake failed; original last-good observation retained (see /tmp/fxsp-consumer-sync.log)" >&2
     fi
 fi
-
-# Files whose names are not <registered-slug><suffix> — family rollups shared by
-# several assets, and the Strategy event log. These stay explicit because there
-# is no slug to derive them from.
-for f in apyx_family.json cap_family.json ethena_family.json ethena_measurements_daily.json frax_backing.json frax_backing_history.json saturn_family.json strategy_events.json syrup_family.json; do
-    [ -f "/home/danger/PegTracker/data/$f" ] || continue
-    if [ "$f" = "syrup_family.json" ]; then
-        if ! PYTHONDONTWRITEBYTECODE=1 python3 tools/copy_syrup_backing.py --family "/home/danger/PegTracker/data/$f" "data/$f"; then
-            echo "$(date): ERROR Syrup family transport failed; retaining prior corrected snapshot" >&2
-        fi
-    else
-        cp "/home/danger/PegTracker/data/$f" data/
-    fi
-done
 
 # USDS/sUSDS are measured by PegTracker, but the dashboard owns several
 # cross-file semantics: retained pre/post executive observations, distinct
@@ -360,21 +403,6 @@ if [ -f tools/refresh_syrup_redemptions.py ]; then
     if ! PYTHONPYCACHEPREFIX=/tmp/backing-monitor-pycache timeout 150 python3 tools/refresh_syrup_redemptions.py; then
         echo "$(date): WARNING Syrup redemption refresh incomplete; inspect observation status" >&2
     fi
-fi
-
-# Integrate any remote changes first (e.g. dashboard claude's commits) so our
-# data-only push fast-forwards. Without this, a non-fast-forward push is
-# rejected, the cron silently strands data commits, and dashboards go stale.
-# --autostash is REQUIRED: by this point the cp's above have left data/ dirty,
-# and plain `git rebase` refuses on a dirty tree ("cannot rebase: You have
-# unstaged changes") whenever origin has actually moved — which stranded ~28h
-# of data updates on 2026-06-08. --autostash stashes the dirty data, replays,
-# and pops it back.
-git fetch origin main 2>&1
-if ! git rebase --autostash origin/main 2>&1; then
-    echo "$(date): ERROR rebase onto origin/main failed (conflict) — aborting, manual fix needed" >&2
-    git rebase --abort 2>/dev/null
-    exit 1
 fi
 
 # Frontend changes are easy to leave unpublished: local JS/index.html edits can
