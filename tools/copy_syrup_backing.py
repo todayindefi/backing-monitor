@@ -77,7 +77,7 @@ def public_body(report, previous):
     projected = project(report, previous, report_base='https://tidresearch.com/reports')
     specific = projected['asset_specific']
     specific.pop('vaulttracker_native_accounting', None)
-    if report['asset_slug'] == 'syrupusdc':
+    if report['asset_slug'] in POOLS:
         try:
             try:
                 from tools.select_syrupusdc_native import selected_accounting
@@ -86,9 +86,9 @@ def public_body(report, previous):
             native = selected_accounting(report)
             if native is not None:
                 specific['vaulttracker_native_accounting'] = native
-                print('syrupUSDC native accounting selected from VaultTracker', file=sys.stderr)
+                print(report['asset_slug'] + ' native accounting selected from VaultTracker', file=sys.stderr)
         except (ImportError, OSError, ValueError, TypeError, KeyError, ArithmeticError) as error:
-            print('syrupUSDC VaultTracker selection rejected; using qualified legacy projection: '
+            print(report['asset_slug'] + ' VaultTracker selection rejected; using qualified legacy projection: '
                   + type(error).__name__, file=sys.stderr)
     body = (json.dumps(projected, indent=2, ensure_ascii=False, allow_nan=False) + '\n').encode()
     for forbidden in [b'/home/', b'.private-reviews', b'"raw_source"', b'"private_wallet"', b'"account_address"', b'"private_holdings"']:

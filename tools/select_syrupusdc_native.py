@@ -1,16 +1,23 @@
 """Select exact VaultTracker accounting alongside the specialist Syrup book."""
 from datetime import datetime, timezone
+import json
+import os
+from pathlib import Path
+import sys
 from decimal import Decimal
 import re
 
 try:
-    from tools.check_syrupusdc_vaulttracker import VAULT_ID, compare, require
+    from tools.check_syrupusdc_vaulttracker import compare, require
 except ModuleNotFoundError:
-    from check_syrupusdc_vaulttracker import VAULT_ID, compare, require
+    from check_syrupusdc_vaulttracker import compare, require
 
 
 FIELD = 'vaulttracker_native_accounting'
-DENOMINATION = 'USDC per syrupUSDC share (native convertToAssets)'
+DENOMINATIONS = {
+    'syrupusdc': 'USDC per syrupUSDC share (native convertToAssets)',
+    'syrupusdt': 'USDT/share',
+}
 
 
 def select_native(report, manifest):
@@ -28,6 +35,8 @@ def select_native(report, manifest):
     require(source['owner'] == 'VaultTracker' and
             type(source['freshness_policy_seconds']) is int and
             source['freshness_policy_seconds'] > 0, 'Native owner or freshness policy unqualified')
+    if report['asset_slug'] == 'syrupusdt':
+        require(source['freshness_policy_seconds'] == 3600, 'Unexpected syrupUSDT freshness policy')
     current = datetime.fromisoformat(source['block_time'])
     require(0 <= (now - current).total_seconds() <= source['freshness_policy_seconds'],
             'Native block outside freshness policy')
@@ -36,8 +45,8 @@ def select_native(report, manifest):
             'Conflicting hashes at the same Ethereum height')
 
     history = []
-    for sample in client.get_history(VAULT_ID)['share_samples']:
-        if sample['denomination'] != DENOMINATION:
+    for sample in client.get_history(result['vault_id'])['share_samples']:
+        if sample['denomination'] != DENOMINATIONS[report['asset_slug']]:
             continue
         observed = datetime.fromisoformat(sample['observed_at'])
         value = Decimal(sample['value_decimal']) * 10**6
@@ -66,24 +75,21 @@ def select_native(report, manifest):
 
 def selected_accounting(report):
     """Resolve the persistent local route used by the normal BM sync."""
-    import json
-    import os
-    from pathlib import Path
-    import sys
-
-    default = Path(__file__).resolve().parents[1] / '.private-reviews/syrupusdc-native-route/selector.json'
-    selector = Path(os.environ.get('BM_SYRUPUSDC_SELECTOR_FILE', default))
+    slug = report['asset_slug']
+    require(slug in DENOMINATIONS, 'Unsupported Syrup native selector')
+    default = Path(__file__).resolve().parents[1] / f'.private-reviews/{slug}-native-route/selector.json'
+    selector = Path(os.environ.get(f'BM_{slug.upper()}_SELECTOR_FILE', default))
     try:
         mode = json.loads(selector.read_text())['source']
     except FileNotFoundError:
-        manifest = os.environ.get('BM_SYRUPUSDC_VAULTTRACKER_MANIFEST')
+        manifest = os.environ.get(f'BM_{slug.upper()}_VAULTTRACKER_MANIFEST')
         return select_native(report, manifest) if manifest else None
     if mode == 'legacy':
         return None
-    require(mode == 'vaulttracker', 'Unsupported syrupUSDC selector source')
+    require(mode == 'vaulttracker', 'Unsupported Syrup selector source')
     vaulttracker = Path('/home/danger/VaultTracker')
     sys.path.insert(0, str(vaulttracker / 'src'))
     try:
-        return select_native(report, vaulttracker / 'data/runtime/syrupusdc-native/feed/current.json')
+        return select_native(report, vaulttracker / f'data/runtime/{slug}-native/feed/current.json')
     finally:
         sys.path.pop(0)

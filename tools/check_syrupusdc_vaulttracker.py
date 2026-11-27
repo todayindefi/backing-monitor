@@ -12,6 +12,11 @@ from pathlib import Path
 POOL = '0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b'
 USDC = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48'
 VAULT_ID = f'eip155:1:{POOL}'
+SYRUP_DEPLOYMENTS = {
+    'syrupusdc': (POOL, USDC),
+    'syrupusdt': ('0x356b8d89c1e1239cbbb9de4815c39a1474d5ba7d',
+                 '0xdac17f958d2ee523a2206206994597c13d831ec7'),
+}
 
 
 def require(condition, message):
@@ -24,21 +29,24 @@ def read(path):
 
 
 def compare(client, backing, now):
-    require(backing['asset_slug'] == 'syrupusdc', 'Expected syrupUSDC baseline')
+    slug = backing['asset_slug']
+    require(slug in SYRUP_DEPLOYMENTS, 'Expected exact Ethereum Syrup baseline')
+    pool, asset = SYRUP_DEPLOYMENTS[slug]
+    vault_id = f'eip155:1:{pool}'
     legacy = backing['asset_specific']['vault_state']
-    require(legacy['pool'].lower() == POOL and legacy['asset_token'].lower() == USDC
+    require(legacy['pool'].lower() == pool and legacy['asset_token'].lower() == asset
             and legacy['share_token_decimals'] == 6, 'Baseline identity or units mismatch')
     pin = legacy['accounting_context']
     require(pin['pinning'] == 'all_accounting_calls_pinned', 'Baseline pin not established')
-    result = client.get_vault(VAULT_ID, now, allow_stale=True)
+    result = client.get_vault(vault_id, now, allow_stale=True)
     if result['record'] is None:
         return {'status': 'blocked', 'reason': 'Exact VaultTracker record unavailable',
-                'vault_id': VAULT_ID, 'generation': client.generation_id,
+                'vault_id': vault_id, 'generation': client.generation_id,
                 'baseline_block': pin['block']}
     record = result['record']
     require(record['subject']['decimals'] == 6, 'VaultTracker share decimals mismatch')
-    usdc_refs = {a['id'] for a in record['asset_registry']
-                 if a.get('address', '').lower() == USDC and a.get('chain_id') == 1 and a.get('decimals') == 6}
+    underlying_refs = {a['id'] for a in record['asset_registry']
+                 if a.get('address', '').lower() == asset and a.get('chain_id') == 1 and a.get('decimals') == 6}
     envelopes = {k: record['accounting'][k] for k in
                  ('share_supply', 'reported_total_assets', 'native_nav_per_share')}
     sources = {s['id']: s for s in record['source_inputs']}
@@ -51,7 +59,7 @@ def compare(client, backing, now):
             continue
         require(field['decimals'] == 6 and re.fullmatch(r'\d+', field.get('raw') or ''),
                 f'Exact raw field unavailable: {key}')
-        require(field.get('asset_ref') in ({'share'} if key == 'share_supply' else usdc_refs),
+        require(field.get('asset_ref') in ({'share'} if key == 'share_supply' else underlying_refs),
                 f'Asset identity mismatch: {key}')
         require(len(field['source_refs']) == 1, f'Native source required: {key}')
         used.update(field['source_refs'])
@@ -66,7 +74,7 @@ def compare(client, backing, now):
     same_pin = (pin['block'] == source['block_number'] and
                 pin['hash'].lower().removeprefix('0x') == source['block_hash'].lower().removeprefix('0x'))
     receipt = {'status': 'different_pins' if not same_pin else 'same_pin_review',
-               'vault_id': VAULT_ID, 'generation': client.generation_id,
+               'vault_id': vault_id, 'generation': client.generation_id,
                'baseline_pin': pin, 'candidate_source': source,
                'candidate_status': result['status'], 'candidate_raw': {k: str(v) for k,v in amounts.items()}}
     if missing:

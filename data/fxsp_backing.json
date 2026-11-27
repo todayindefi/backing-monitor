@@ -16,19 +16,19 @@
     "note": "Share value follows the marked pool basket. Redemption terms and underlying cash access determine the exit."
   },
   "observation": {
-    "at": "2026-11-25T23:37:59Z",
-    "block": 26495532,
+    "at": "2026-11-26T23:37:59Z",
+    "block": 26502707,
     "mode": "scheduled",
     "refresh_note": "Financial observations refresh every eight hours through the canonical producer.",
     "max_age_hours": 10,
     "refresh_interval_seconds": 28800,
     "producer": "VaultTracker",
-    "source_retrieved_at": "2026-11-25T23:47:02.120807+00:00"
+    "source_retrieved_at": "2026-11-26T23:47:04.223334+00:00"
   },
   "metrics": {
-    "share_nav_usd": "1.010986631827219767",
-    "marked_assets_usd": "37184642.659328080076182314910988594171618",
-    "share_supply": "36780548.316570650512805136",
+    "share_nav_usd": "1.010980809400489597",
+    "marked_assets_usd": "35616343.366766165360552611118899805395001587",
+    "share_supply": "35229494.996929381944748914",
     "observed_return_pct": null,
     "return_note": "Total return has not been measured.",
     "cooldown_seconds": 3600,
@@ -42,27 +42,27 @@
         "symbol": "fxUSD",
         "location": "Held directly by fxSP",
         "kind": "token",
-        "quantity": "9903693.877368341660157",
-        "marked_usd": "9902546.380497158448182314910988594171618",
-        "share_pct": "26.63074235033161324964779717012343785825570007549550743569303914978089",
+        "quantity": "14190817.343582671643049927",
+        "marked_usd": "14187701.284315469650792611118899805395001587",
+        "share_pct": "39.83480599963583910653852613796709456619369456760159139256132016397731",
         "tone": "blue"
       },
       {
         "symbol": "USDC",
         "location": "Aave V3 \u00b7 aUSDC claim",
         "kind": "lending_claim",
-        "quantity": "25387790.811489",
-        "marked_usd": "25384652.8805446999596",
-        "share_pct": "68.26649677155562627289327032851592647442084625883225502549318993997226",
+        "quantity": "21431427.310744",
+        "marked_usd": "21428642.08245069570976",
+        "share_pct": "60.16519400036416089346147386203290543380630543239840860743867983602269",
         "tone": "teal"
       },
       {
         "symbol": "USDC",
         "location": "Held directly by fxSP",
         "kind": "cash",
-        "quantity": "1897677.951281",
-        "marked_usd": "1897443.3982862216684",
-        "share_pct": "5.102760878112760477458932501360635667323453665672237538813770910246848",
+        "quantity": "0",
+        "marked_usd": "0",
+        "share_pct": "0",
         "tone": "muted"
       }
     ],
@@ -70,7 +70,7 @@
     "note": "Allocation percentages are shares of oracle-marked value, not token units or available cash. A lending receipt is a claim, not cash held by the vault.",
     "details": [
       "Pool share supply, token balances and the native NAV formula reconcile exactly at this block.",
-      "Current Aave claim minus stored USDC accounting: 166.27957 USDC. NAV uses the current claim; this is not a measured payment or realized return.",
+      "Current Aave claim minus stored USDC accounting: 45.656954 USDC. NAV uses the current claim; this is not a measured payment or realized return.",
       "Aggregate reservations and unencumbered cash are unknown. Reserved shares remain included in supply until burned; do not subtract them again as extra debt."
     ]
   },
@@ -81,19 +81,19 @@
     "outputs": [
       {
         "symbol": "fxUSD",
-        "queued": "0.269264443589234222",
-        "instant": "0.26657179915334188"
+        "queued": "0.40281069441442602",
+        "instant": "0.39878258747028176"
       },
       {
         "symbol": "USDC",
-        "queued": "0.741845",
-        "instant": "0.734427"
+        "queued": "0.608337",
+        "instant": "0.602254"
       }
     ],
     "queued_note": "Request first; the measured cooldown is shown above. Unlocking does not guarantee funded delivery.",
     "instant_note": "Uses unreserved shares and deducts the measured instant fee from each basket leg. Gas and the final swap are extra.",
-    "strategy_claim_usdc": "25387790.811489",
-    "direct_usdc": "1897677.951281",
+    "strategy_claim_usdc": "21431427.310744",
+    "direct_usdc": "0",
     "shared_lender_usdc": null,
     "sized_cash_depth_usd": null,
     "unencumbered_cash_usd": null,
@@ -3507,10 +3507,14 @@
       {
         "at": "2026-11-25T23:37:59Z",
         "value": "1.010986631827219767"
+      },
+      {
+        "at": "2026-11-26T23:37:59Z",
+        "value": "1.010980809400489597"
       }
     ],
-    "history_count": 850,
-    "history_displayed_count": 850,
+    "history_count": 851,
+    "history_displayed_count": 851,
     "history_gap_seconds": 86400,
     "history_gap_basis": "Normal history is approximately hourly. Break lines after gaps greater than three hours or an invalid observation.",
     "history_note": "Available native eight-hour observations through this financial snapshot. NAV change is not total return.",
@@ -3519,8 +3523,8 @@
       "Withdrawal access and queue funding",
       "NAV divergence and source freshness"
     ],
-    "nav_change_pct": "0.000142335504557279882835348031991449211159973149827552118048463211500",
-    "previous_observed_at": "2026-11-25T15:37:59Z"
+    "nav_change_pct": "-0.0005759153036125474509206385730861216740268506655236459212107372447200",
+    "previous_observed_at": "2026-11-25T23:37:59Z"
   },
   "strategy": {
     "title": "Stability pool + lending",
@@ -3548,7 +3552,6 @@
     "items": [
       {
         "name": "fxUSD",
-        "slug": "fxusd",
         "detail": "f(x) collateral, oracle and rebalance mechanics."
       },
       {
@@ -3563,7 +3566,7 @@
     "at": "2026-11-17T05:23:11Z",
     "block": 26432647,
     "note": "Dated selected-path review. Parallel admin and emergency powers remain; there is no universal 72-hour exit window.",
-    "source_match_at": "2026-11-25T23:37:59Z",
+    "source_match_at": "2026-11-26T23:37:59Z",
     "source_status": "matched",
     "source_note": "Configured strategy interface/runtime association only. This does not renew pool authority, audit or upstream controller coverage."
   },
@@ -3574,8 +3577,8 @@
     "dependency_note": "The fxUSD and USDC legs have separate underlying claim and issuer dependencies."
   },
   "sources": {
-    "at": "2026-11-25T23:37:59Z",
-    "block": 26495532,
+    "at": "2026-11-26T23:37:59Z",
+    "block": 26502707,
     "clock_note": "PegTracker native block, observation and upstream price clocks are retained separately. A build/due check never renews the financial observation.",
     "price_note": "Oracle read time is not the underlying feed update time. Share secondary-market coverage is not monitored; underlying cash access and redemption remain separate.",
     "links": [
@@ -3595,16 +3598,16 @@
     "asset": "fxsp",
     "producer": "VaultTracker",
     "status": "ok",
-    "source_observed_at": "2026-11-25T23:37:59Z",
-    "source_block": 26495532,
-    "source_block_hash": "0xdb43375eb3420a780f20ceeb5ddc0094d2a0539f0024bb8424b1eb5d617912cb",
-    "source_retrieved_at": "2026-11-25T23:47:02.120807+00:00",
-    "latest_attempt_at": "2026-11-25T23:47:01.903631+00:00",
-    "latest_attempt_completed_at": "2026-11-25T23:47:04.544384+00:00",
+    "source_observed_at": "2026-11-26T23:37:59Z",
+    "source_block": 26502707,
+    "source_block_hash": "0x0b429a108dd487a2c4713f5bc5e3aba9dbc6cbcd462452f115cb3d1b561a75bf",
+    "source_retrieved_at": "2026-11-26T23:47:04.223334+00:00",
+    "latest_attempt_at": "2026-11-26T23:47:04.084820+00:00",
+    "latest_attempt_completed_at": "2026-11-26T23:47:06.877258+00:00",
     "refresh_interval_seconds": 28800,
     "next_due_at": null,
     "error_type": null
   },
-  "timestamp": "2026-11-25T23:37:59Z",
+  "timestamp": "2026-11-26T23:37:59Z",
   "asset_slug": "fxsp"
 }

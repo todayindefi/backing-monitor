@@ -659,19 +659,20 @@ var SyrupUSDCRenderer = {
 
     _renderVaultTrackerShadow: function(data) {
         var snapshot = data.asset_specific.vaulttracker_native_accounting;
-        if (data.asset_slug !== 'syrupusdc' || !snapshot || !['shadow', 'selected'].includes(snapshot.mode)) return '';
+        if (!['syrupusdc', 'syrupusdt'].includes(data.asset_slug) || !snapshot || !['shadow', 'selected'].includes(snapshot.mode)) return '';
+        var underlying = data.asset_slug === 'syrupusdt' ? 'USDT' : 'USDC';
         var fmt = new Intl.NumberFormat('en-US', { minimumFractionDigits: 6, maximumFractionDigits: 6 });
         var units = raw => fmt.format(Number(raw) / 1e6);
         var esc = value => CommonRenderer._escapeAttr(String(value));
         var title = snapshot.mode === 'selected' ? 'Current native accounting · VaultTracker' : 'VaultTracker accounting shadow';
         return '<div class="panel" id="syrup-vaulttracker-shadow"><div class="panel-title">' + title + '</div>' +
             '<p>Ethereum block ' + esc(snapshot.block) + ' · ' + esc(snapshot.block_time) + '</p>' +
-            '<p>' + units(snapshot.raw.reported_total_assets) + ' USDC total assets · ' +
+            '<p>' + units(snapshot.raw.reported_total_assets) + ' ' + underlying + ' total assets · ' +
             units(snapshot.raw.share_supply) + ' shares · ' + units(snapshot.raw.native_nav_per_share) +
-            ' USDC per share from convertToAssets.</p>' +
+            ' ' + underlying + ' per share from convertToAssets.</p>' +
             '<p>Native conversion observations · separate from the existing book NAV history</p><ul>' +
             snapshot.native_samples.map(sample => '<li>' + esc(sample.block_time) + ' · ' +
-                units(sample.conversion_raw) + ' USDC per share</li>').join('') +
+                units(sample.conversion_raw) + ' ' + underlying + ' per share</li>').join('') +
             '</ul><p>Existing credit, cash, queue and market observations retain their own source clocks.</p></div>';
     },
 
