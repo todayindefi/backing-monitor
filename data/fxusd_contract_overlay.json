@@ -24,6 +24,50 @@
       "OPEN THREAD: A public audit matching the later Ethereum PoolManager, both pools, fxSP and PoolConfiguration rework has not been established. These contracts differ materially from the OpenZeppelin f(x) v2 audited commit 56a47eab. This is an audit-coverage gap, not a finding that a defect exists.",
       "OZ H-02 \"price manipulation via one low-TVL spot source\" ACKNOWLEDGED, NOT RESOLVED. M-06 marked resolved (PR #20, 2025-05-30) while both live oracles were deployed 2025-03-17, are non-upgradeable and carry the pre-fix formula. \"Resolved\" describes a repo, not a deployment.",
       "Bug bounty PRESENT — self-hosted at docs.aladdin.club/security-bounty, Critical to $500,000, no Immunefi. No stated exclusions, so the privileged-role surface is neither in nor out by its text."
-    ]
+    ],
+    "scoped_assurance": {
+      "scope_label": "Ethereum fxusd targeted authority",
+      "block": 26504607,
+      "observed_at": "2026-11-27T05:59:35Z",
+      "findings": [
+        "Proxy upgrades use a 72-hour timelock. Immediate manager pause and oracle-pointer controls remain."
+      ],
+      "sources": [
+        {
+          "label": "Ethereum authority pin",
+          "url": "https://etherscan.io/block/26504607"
+        }
+      ]
+    },
+    "assurance_checks": {
+      "reviewed": "2026-11-27",
+      "scope": "Ethereum fxusd",
+      "rows": [
+        {
+          "kind": "audits",
+          "status": "Partial deployed correspondence",
+          "summary": "The deployed token file matches the February patch. PoolManager and long-pool differences limit older audit coverage.",
+          "source": "https://www.openzeppelin.com/news/fx-v2-audit"
+        },
+        {
+          "kind": "tests",
+          "status": "Exact-build execution unverified",
+          "summary": "Published Hardhat, Foundry and simulation suites exist. Passing deployed-build results remain unverified.",
+          "source": "https://github.com/AladdinDAO/fx-protocol-contracts"
+        },
+        {
+          "kind": "specs",
+          "status": "Design documented",
+          "summary": "The mechanism is documented. Deployment-bound formal proof remains unverified.",
+          "source": "https://docs.fx.aladdin.club/"
+        },
+        {
+          "kind": "bounty",
+          "status": "Product group scope",
+          "summary": "Aladdin lists supported production contracts up to $500,000 for qualifying critical findings. Exact deployment eligibility remains unverified.",
+          "source": "https://docs.aladdin.club/security-bounty"
+        }
+      ]
+    }
   }
 }
