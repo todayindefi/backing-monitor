@@ -5696,6 +5696,11 @@ const CommonRenderer = {
             liqSub = '<span class="text-amber-700">quote returns the same answer at every size</span>';
         }
 
+        if (data.asset_slug === 'susde') {
+            depthTxt = 'Unavailable';
+            liqSub = 'Current cash depth unverified · historical USDe quote ladder below';
+        }
+
         if (typeof ReUSDChainLadder !== 'undefined' && ReUSDChainLadder.accepts(data)) {
             var reusdQuote = ReUSDChainLadder.summary(data);
             depthTxt = this._escapeAttr(reusdQuote.value);
@@ -10357,9 +10362,17 @@ const CommonRenderer = {
     // One collapsed <details> per note — the summary line carries the producer's
     // own framing ("Read the sign before the size"), which is the half a reader
     // needs even unopened.
-    _authoredNotesHtml(axis) {
+    _authoredNotesHtml(axis, handledFields) {
         var e = this.AXIS_AUTHORED_NOTES[axis];
         if (!e) return '';
+        if (handledFields && handledFields.length) {
+            var unread = function(key) { return !handledFields.includes(key); };
+            e = {
+                notes: e.notes,
+                unread: e.unread.filter(unread),
+                unreadBlocks: e.unreadBlocks.filter(unread)
+            };
+        }
         var self = this, out = '';
         (e.notes || []).forEach(function(n) {
             out += self._scoreBasisHtml(self._authoredNoteLabel(n.key), n.text);
@@ -10895,7 +10908,7 @@ const CommonRenderer = {
         // ⚠️ IN THE PANEL, NOT ON THE HEAD. The axis-5 basis renders on the head,
         // which ethena hides — so anything appended there is lost on exactly the
         // pages this material matters for. Notes travel with the panel instead.
-        var out = head + this._authoredNotesHtml('contract') + this._topologyWalkHtml(data);
+        var out = head + this._authoredNotesHtml('contract', opts.handledFields) + this._topologyWalkHtml(data);
 
         // 2. Governance — gated on the NORMALISED shape only. apxusd and
         // syrupusdc publish governance under entirely different keys and are

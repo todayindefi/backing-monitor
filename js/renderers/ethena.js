@@ -434,8 +434,14 @@ var EthenaRenderer = {
         // it — floor semantics, the kyberswap ladder, the one-chain scope, and the
         // producer's "primary exit: 7-day cooldown to USDe at NAV" — rendered into
         // a display:none node.
-        html += anc('panel-liquidity',
-            CommonRenderer.liquidityPanelHtml(data, { withHeadContext: true, withScoreChip: true }) + EthenaRenderer._liquiditySelectionHtml(data));
+        var liquidity = CommonRenderer.liquidityPanelHtml(data, { withHeadContext: true, withScoreChip: true }) +
+            EthenaRenderer._liquiditySelectionHtml(data);
+        if (slug === 'susde') {
+            liquidity = '<div class="panel"><div class="panel-title">Liquidity &amp; Exit</div>' +
+                '<p class="text-sm">Current cash depth is unavailable. The earlier sUSDe → USDe quote bracket remains historical and unverified for current cash capacity.</p>' +
+                '<details class="panel"><summary>Historical quote ladder and authored liquidity basis</summary>' + liquidity + '</details></div>';
+        }
+        html += anc('panel-liquidity', liquidity);
         html += CommonRenderer.backingBasisPanelHtml(data);
         // Async-filled placeholders (all from ethena_family.json):
         html += '<div id="ethena-custody-panel"></div>';
@@ -482,10 +488,19 @@ var EthenaRenderer = {
         // would land on the wrong node or nowhere. An explicit wrapper cannot
         // drift with the content's shape.
         var contract = data.contract || {};
-        html += '<div id="panel-contract">' +
+        var assurance = CommonRenderer._contractAssuranceChecksHtml(contract.assurance_checks);
+        var handledFields = [];
+        if (slug === 'usde' && contract.headline && contract.scoped_assurance) {
+            handledFields.push('headline');
+            if (CommonRenderer._sharedAuthorityHtml(contract)) handledFields.push('authority_shared_with');
+        }
+        if (slug === 'susde' && assurance && contract.assurance_checks.scope === 'Ethereum susde') {
+            handledFields.push('assurance');
+        }
+        html += '<div id="panel-contract">'  +
             CommonRenderer._scopedAuthorityHtml(contract.scoped_assurance) +
-            CommonRenderer._contractAssuranceChecksHtml(contract.assurance_checks) +
-            (CommonRenderer._contractPanelsHtml(data, { withHeadContext: true }) ||
+            assurance +
+            (CommonRenderer._contractPanelsHtml(data, { withHeadContext: true, handledFields: handledFields }) ||
             '<div class="panel"><div class="panel-title">Smart Contract &amp; Admin — not assessed</div>' +
             '<div class="text-sm text-slate-500" style="line-height:1.5;">' +
             'No admin-control facts are published for this asset. \u26a0\ufe0f Not assessed — this is ' +
