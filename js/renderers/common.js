@@ -10071,12 +10071,9 @@ const CommonRenderer = {
             '<dl class="grid grid-cols-1 md:grid-cols-2 gap-2">' + rows + '</dl></section>' : '';
     },
 
-    _renderContractSection(data) {
-        var body = document.getElementById('axis-contract-body');
-        if (!body) return;
-        var scoped = (data.contract || {}).scoped_assurance;
+    _scopedAuthorityHtml(scoped) {
         var esc = this._escapeAttr.bind(this);
-        var html = scoped
+        return scoped
             ? '<div class="panel"><div class="panel-title">'+esc(scoped.scope_label || 'Ethereum deployed assurance')+'</div>' +
               '<p class="tw-sub">Block ' + esc(scoped.block) + ' · ' + esc(scoped.observed_at) + '</p>' +
               '<ul class="tw-code-list">' + scoped.findings.map(function (finding) {
@@ -10085,7 +10082,14 @@ const CommonRenderer = {
                   return '<a class="underline" href="' + esc(source.url) + '">' + esc(source.label) + '</a>';
               }).join(' · ') + '</p></div>'
             : '';
-        html += this._contractAssuranceChecksHtml((data.contract || {}).assurance_checks);
+    },
+
+    _renderContractSection(data) {
+        var body = document.getElementById('axis-contract-body');
+        if (!body) return;
+        var contract = data.contract || {};
+        var html = this._scopedAuthorityHtml(contract.scoped_assurance);
+        html += this._contractAssuranceChecksHtml(contract.assurance_checks);
         html += this._contractPanelsHtml(data);
         body.innerHTML = html ||
             '<div class="panel"><div class="panel-title">Not assessed</div>' +

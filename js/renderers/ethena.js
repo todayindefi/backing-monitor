@@ -481,7 +481,10 @@ var EthenaRenderer = {
         // and with head context the block now opens with a <details> — so the id
         // would land on the wrong node or nowhere. An explicit wrapper cannot
         // drift with the content's shape.
+        var contract = data.contract || {};
         html += '<div id="panel-contract">' +
+            CommonRenderer._scopedAuthorityHtml(contract.scoped_assurance) +
+            CommonRenderer._contractAssuranceChecksHtml(contract.assurance_checks) +
             (CommonRenderer._contractPanelsHtml(data, { withHeadContext: true }) ||
             '<div class="panel"><div class="panel-title">Smart Contract &amp; Admin — not assessed</div>' +
             '<div class="text-sm text-slate-500" style="line-height:1.5;">' +
@@ -703,6 +706,7 @@ var EthenaRenderer = {
         var cdSec = vault.cooldown_seconds, maxSec = vault.max_cooldown_seconds;
         function dur(sec) {
             if (sec == null) return null;
+            if (sec === 0) return '0 seconds';
             if (sec % 86400 === 0) { var d = sec / 86400; return d + (d === 1 ? ' day' : ' days'); }
             if (sec % 3600 === 0) { var h = sec / 3600; return h + (h === 1 ? ' hour' : ' hours'); }
             return sec + ' s';
@@ -719,7 +723,7 @@ var EthenaRenderer = {
         var siloCard = '';
         if (vault.silo_usde != null) {
             siloCard =
-                '<div class="summary-card"><div class="card-label">In cooldown</div>' +
+                '<div class="summary-card"><div class="card-label">Cooldown silo balance</div>' +
                     '<div class="card-value">' + EthenaRenderer._tokenAmount(vault.silo_usde, 'USDe') + '</div>' +
                     '<div class="text-xs text-slate-400 mt-1">USDe held in the cooldown silo' +
                     (assets ? ' · ' + (vault.silo_usde / assets * 100).toFixed(2) + '% of vault assets' : '') +
@@ -749,9 +753,12 @@ var EthenaRenderer = {
         // is kept ONLY for the case where the vault block is absent, and even then
         // it no longer asserts what the feed does or does not expose.
         var exitNote;
-        if (liq.primary_redemption_note) {
+        if (cdSec === 0) {
+            exitNote = 'The Ethereum cooldown was zero at this block. Holder restrictions and existing cooldown claims still apply where relevant. ' +
+                'The first leg yields USDe. A subsequent USDe sale or eligible issuer redemption determines final cash; neither leg has a funded settlement check here.';
+        } else if (liq.primary_redemption_note) {
             exitNote = CommonRenderer._escapeAttr(liq.primary_redemption_note) +
-                ' NAV rises as staking yield accrues; the cooldown is the primary exit, the secondary market the instant one.';
+                ' A subsequent USDe sale or issuer redemption determines final cash.';
         } else if (cdSec != null) {
             exitNote = 'NAV rises as staking yield accrues; sUSDe\u2192USDe unstaking waits ' + dur(cdSec) +
                 ' in the silo above.';
