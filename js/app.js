@@ -51,7 +51,8 @@ function dataUrl(path) {
     var hour = Math.floor((Date.now() - SYNC_OFFSET_MIN * 60000) / 3600000);
     var sep = path.indexOf('?') >= 0 ? '&' : '?';
     var revision = /^data\/(?:ethena_family|(?:usde|susde)_(?:backing|issuer|contract_overlay))\.json$/.test(path)
-        ? '20261127-ethena' : DATA_CACHE_REV;
+        ? '20261127-ethena' : (/^data\/bold_(?:backing|liquidity|issuer|contract_overlay|ethereum_native_check)\.json$/.test(path)
+            ? '20261127-bold' : DATA_CACHE_REV);
     return path + sep + 'v=' + hour + '&r=' + revision;
 }
 

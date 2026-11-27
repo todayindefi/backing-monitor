@@ -41,7 +41,7 @@ var BOLDRenderer = {
             var value = card.querySelector('.card-value');
             var sub = value && value.nextElementSibling;
             if (value) value.textContent = evidence.lower ? '≥' + this._money(evidence.lower.size_usd) : 'unmeasured';
-            if (sub) sub.textContent = '0.5% depth floor' +
+            if (sub) sub.textContent = '0.5% quote lower bound' +
                 (evidence.upper ? ' · crossing below ' + this._money(evidence.upper.size_usd) : '');
         }
         var head = document.getElementById('axis-liquidity-head');
@@ -51,7 +51,7 @@ var BOLDRenderer = {
                 rating.title = 'Liquidity rating; the displayed quote-based floor does not establish executable capacity or settled cash.';
             }
             var axisSub = head.querySelector('.axis-sub');
-            if (axisSub) axisSub.textContent = 'usable market exit & primary redemption';
+            if (axisSub) axisSub.textContent = 'secondary quotes and primary redemption';
             Array.prototype.slice.call(head.querySelectorAll('.depth-scope, .axis-basis-note')).forEach(function(el) {
                 el.remove();
             });
@@ -86,6 +86,38 @@ var BOLDRenderer = {
 
         var dependencySlot = document.getElementById('dependencies-extra-panels');
         if (dependencySlot) dependencySlot.innerHTML = this._sBoldPanel(a.sbold || {});
+        this._loadNativeCheck(data, backingSlot, pegSlot, liquidityBody);
+    },
+    _loadNativeCheck: async function(data, backingSlot, pegSlot, liquidityBody) {
+        try {
+            var response = await fetch(dataUrl('data/bold_ethereum_native_check.json'));
+            if (!response.ok) throw new Error('Native check unavailable');
+            var check = await response.json();
+            if (check.chain_id !== 1 || check.token !== '0x6440f144b7e50d6a8439336510312d2f54beb01d' ||
+                !Array.isArray(check.branches) || !Array.isArray(check.fee_ladder)) {
+                throw new Error('Unexpected native check scope');
+            }
+            var format = function(value) { return value.toLocaleString('en-US', {maximumFractionDigits: 3}); };
+            var rows = check.branches.map(function(branch) {
+                return '<tr><td>' + BOLDRenderer._e(branch.symbol) + '</td><td>' + format(branch.collateral) +
+                    '</td><td>' + format(branch.debt) + '</td><td>' + format(branch.stability_pool) + '</td></tr>';
+            }).join('');
+            var observation = this._e(check.observed_at) + ' · Ethereum block ' + this._e(check.block);
+            if (backingSlot) backingSlot.insertAdjacentHTML('afterbegin', this._panel('Same-block Ethereum reconciliation',
+                '<p class="text-sm">' + observation + '. Issued ' + format(check.supply) + ' BOLD · debt ' +
+                format(check.debt) + ' BOLD · unexplained residual ' + format(check.residual) +
+                ' BOLD. The normal sequential model below has its own clock.</p>' +
+                '<div class="overflow-x-auto"><table class="data-table"><thead><tr><th>Branch</th><th>Native collateral</th>' +
+                '<th>Debt (BOLD)</th><th>Stability Pool (BOLD)</th></tr></thead><tbody>' + rows + '</tbody></table></div>'));
+            var exit = Object.assign({}, data.liquidity && data.liquidity.primary_exit, {fee_ladder: check.fee_ladder});
+            if (pegSlot) pegSlot.innerHTML = this._redemptionPanel(data.summary || {}, exit, data.peg || {}) +
+                '<p class="text-xs">Sized fee readings · ' + observation + '.</p>';
+            if (liquidityBody) liquidityBody.innerHTML = this._axis3Panel(Object.assign({}, data.liquidity, {primary_exit: exit}), data.summary || {}) +
+                '<p class="text-xs">Sized fee readings · ' + observation + '. Collateral delivery and conversion to cash remain unverified.</p>';
+        } catch (error) {
+            if (backingSlot) backingSlot.insertAdjacentHTML('afterbegin',
+                '<p class="text-sm text-slate-500">Same-block Ethereum reconciliation unavailable. The sequential producer model remains below.</p>');
+        }
     },
     _securityPanel: function(q) {
         if (!q || q.schema_version !== 'bold-security-supplement/1') return this._panel('Bounded oracle and control check', '<p class="text-amber-700 text-sm">Selected current evidence is unavailable. The baseline walk has not been renewed.</p>');
@@ -112,7 +144,7 @@ var BOLDRenderer = {
         var floorGapText = floorGapBps == null ? 'not measured' :
             Math.abs(floorGapBps).toFixed(1) + ' bps ' + (floorGapBps >= 0 ? 'above' : 'below');
         var table = rows.length ? '<table class="data-table"><thead><tr><th>Redemption size</th><th class="text-right">Effective fee</th></tr></thead><tbody>' +
-            rows.map(function(r) { return '<tr><td>' + BOLDRenderer._money(r.size_usd) + '</td><td class="text-right font-mono">' + BOLDRenderer._pct(r.effective_redemption_fee_pct, 2) + '</td></tr>'; }).join('') +
+            rows.map(function(r) { return '<tr><td>' + r.size_usd.toLocaleString('en-US') + ' BOLD' + '</td><td class="text-right font-mono">' + BOLDRenderer._pct(r.effective_redemption_fee_pct, 4) + '</td></tr>'; }).join('') +
             '</tbody></table>' : '<p class="text-sm text-amber-700">No size-dependent redemption ladder is published.</p>';
         return this._panel('Redemption mechanics — spot is not size execution',
             '<div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">' +
@@ -172,17 +204,17 @@ var BOLDRenderer = {
                 '<td class="text-right">' + (venues == null ? '—' : venues + (venues === 1 ? ' venue' : ' venues')) + '</td></tr>';
         }).join('');
         var redemptionRows = fees.map(function(f) {
-            return '<tr><td class="font-semibold">' + BOLDRenderer._money(f.size_usd) + '</td>' +
-                '<td class="text-right font-mono">' + BOLDRenderer._pct(f.effective_redemption_fee_pct, 2) + '</td></tr>';
+            return '<tr><td class="font-semibold">' + f.size_usd.toLocaleString('en-US') + ' BOLD' + '</td>' +
+                '<td class="text-right font-mono">' + BOLDRenderer._pct(f.effective_redemption_fee_pct, 4) + '</td></tr>';
         }).join('');
         var headline = evidence.lower ? '≥' + this._money(evidence.lower.size_usd) : 'unmeasured';
         var bracket = evidence.lower && evidence.upper
             ? '$' + evidence.lower.size_usd.toLocaleString('en-US', {maximumFractionDigits:2}) + '–$' + evidence.upper.size_usd.toLocaleString('en-US', {maximumFractionDigits:2})
             : 'not located';
         var asOf = ((liq.depth || {}).quote || {}).quoted_as_of || liq.as_of || 'time not published';
-        return this._panel('Usable market exit',
+        return this._panel('Secondary BOLD → USDC quotes',
             '<div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">' +
-            '<div class="summary-card"><div class="card-label">0.5% depth</div><div class="card-value">' + headline + '</div><div class="text-xs text-slate-500">measured floor</div></div>' +
+            '<div class="summary-card"><div class="card-label">0.5% depth</div><div class="card-value">' + headline + '</div><div class="text-xs text-slate-500">quote lower bound</div></div>' +
             '<div class="summary-card"><div class="card-label">Current bracket</div><div class="card-value text-base" style="overflow-wrap:anywhere">' + bracket + '</div><div class="text-xs text-slate-500">' + (evidence.producer ? (evidence.precision === true ? 'producer precision requirement met' : evidence.precision === false ? 'producer precision requirement not met' : 'producer precision not established') : 'grid observations only; no refinement claim') + '</div></div>' +
             '<div class="summary-card"><div class="card-label">Observation clock</div><div class="card-value text-base">' + this._e(asOf) + '</div><div class="text-xs text-slate-500">routed BOLD → USDC</div></div></div>' +
             ((typeof LiquidityEvidence !== 'undefined' && LiquidityEvidence.canonicalHtml({asset_slug: 'bold', liquidity: liq})) ||
