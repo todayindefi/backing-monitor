@@ -50,15 +50,18 @@ var ScrvUSDRenderer = {
     nav: function(d) {
         var parent=d.parent || {}, y=d.yield_data || {}, r=d.rewards || {}, self=this;
         var dist=(d.events || {}).last_distribution;
+        var native = d.vaulttracker_native;
+        var nativeSource = native ? this.note('VaultTracker native NAV · block ' + native.block +
+            ' · ' + native.as_of + '. Dollar NAV and market comparison retain the PegTracker basis.') : '';
         return this.panel('Share NAV and rewards',this.note((d.refresh_attempt || {}).status==='failed' ? 'Latest refresh failed. Showing last successful observations with their original times.' : '',true)+this.metrics([
-            ['Redeemable NAV',d.nav_crvusd,'crvUSD / share',9],
+            ['Native share NAV',native ? native.nav_crvusd : d.nav_crvusd,'crvUSD / share',9],
             ['Dollar NAV reference',d.nav_usd,'USD / share',9],
             ['crvUSD dollar mark',parent.price_usd,'USD / crvUSD',7],
             ['Projected APY',y.status==='ok' ? y.projected_apy_pct : null,'%',3],
             ['Rewards awaiting distribution',r.pending_crvusd,'crvUSD'],
             ['Requested fee weight',r.requested_weight_bps == null ? null : r.requested_weight_bps/100,'%',2],
             ['Receiver allocation cap',r.receiver_cap_bps == null ? null : r.receiver_cap_bps/100,'%',2]
-        ])+this.note('Share NAV is denominated in crvUSD. Dollar value inherits crvUSD’s market price; scrvUSD is not pegged to $1.')+
+        ])+nativeSource+this.note('Share NAV is denominated in crvUSD. Dollar value inherits crvUSD’s market price; scrvUSD is not pegged to $1.')+
           this.note('Last established reward distribution: '+(dist ? dist.at+' · '+self.n(dist.amount_crvusd)+' crvUSD' : 'not established within the scanned window')+'.')+
           this.details('Reward settings and independent source clocks',
             this.note('Vault block '+d.block+' · '+d.as_of)+
@@ -73,12 +76,17 @@ var ScrvUSDRenderer = {
             this.note('Accrued NAV return is separate from projected APY. Forward history must span at least one day before an observed return is displayed.')));
     },
     accounting: function(d) {
-        var a=d.accounting || {};
-        return this.panel('Vault health — crvUSD units',this.note('Custody and accounting observed at '+d.as_of+' · block '+d.block)+this.note(a.status==='reconciled' ? 'Custody and accounting reconcile in crvUSD units.' : 'Custody/accounting requires review.',a.status!=='reconciled')+
+        var native = d.vaulttracker_native;
+        var reading = native || d;
+        var a = reading.accounting || {};
+        var sourceNote = native ? this.note('VaultTracker · ' + (native.selection_status === 'last_good'
+            ? 'Last good; latest attempt did not qualify.' : 'Selected native accounting.') +
+            ' Default withdrawal queue: ' + native.default_queue.length + ' entries.') : '';
+        return this.panel('Vault health — crvUSD units',sourceNote+this.note('Custody and accounting observed at '+reading.as_of+' · block '+reading.block)+this.note(a.status==='reconciled' ? 'Custody and accounting reconcile in crvUSD units.' : 'Custody/accounting requires review.',a.status!=='reconciled')+
             this.metrics([
                 ['Actual crvUSD custody',a.custody_crvusd,'crvUSD'],['Idle accounting',a.idle_crvusd,'crvUSD'],
                 ['Strategy debt (accounting claim)',a.strategy_debt_crvusd,'crvUSD'],['Total assets',a.total_assets_crvusd,'crvUSD'],
-                ['Effective share supply',d.effective_supply_shares,'scrvUSD shares'],
+                ['Effective share supply',reading.effective_supply_shares,'scrvUSD shares'],
                 ['Custody minus idle',a.custody_minus_idle_crvusd,'crvUSD',8],
                 ['Assets minus idle and debt',a.accounting_difference_crvusd,'crvUSD',8]
             ])+this.note('Full custody reconciliation does not establish dollar solvency. Ultimate collateral and peg risk remain with crvUSD.',true)+
@@ -231,7 +239,7 @@ var ScrvUSDRenderer = {
         }
         var priced=(data.peg || {}).status==='ok' && Number.isFinite(data.peg.market_price) && data.peg.nav>0;
         tile(0,'NAV / price',this.n(priced ? data.peg.market_price : d.nav_usd,6),priced ? 'USD market / share · compared with dollar NAV' : 'USD NAV / share · market comparison unavailable');
-        tile(1,'Backing',(d.accounting || {}).status==='reconciled' ? 'Reconciled' : 'Review accounting','crvUSD custody vs idle; dollar solvency inherited');
+        tile(1,'Backing',((d.vaulttracker_native || d).accounting || {}).status==='reconciled' ? 'Reconciled' : 'Review accounting','crvUSD custody vs idle; dollar solvency inherited');
         var passed=(((d.exits || {}).primary || {}).rungs || []).filter(function(r){return r.status==='ok';});
         tile(2,'Liquidity & exit',passed.length ? this.n(Math.max.apply(null,passed.map(function(r){return r.target_crvusd;})),0)+' crvUSD' : 'Not measured','largest primary simulation · depth crossing unmeasured');
         if(matched)tile(2,'Liquidity & exit','Two routes','matched swap and redeem ladders · see observation times');

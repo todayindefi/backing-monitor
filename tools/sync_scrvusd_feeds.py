@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """Publish only reviewed scrvUSD producer files, retaining every source clock.
 
-The canonical analyzer owns measurements in PegTracker; this is transport only.
+PegTracker owns the companion market, history and exit evidence.
 The authority evidence remains explicitly partial; no generator YAML is copied.
 """
+import argparse
+from datetime import datetime, timezone
 import json
 import os
 from pathlib import Path
 import subprocess
 import tempfile
+import sys
+
 
 REPO=Path(__file__).resolve().parents[1]
 EDITORIAL_REPO=Path('/home/danger/riskAnalyst')
@@ -16,6 +20,33 @@ EDITORIAL_COMMIT='8b3d9da7221d0f190feda4f78b4c2c6975c7b9d7'
 PRODUCER=Path('/home/danger/PegTracker/data/dashboard_pending/scrvusd')
 EDITORIAL=('axis_basis','dependencies','contract_overlay','issuer')
 MEASUREMENTS=('backing','backing_history','backing_last_attempt')
+VT_ROOT=Path('/home/danger/VaultTracker')
+NATIVE_RUNTIME=VT_ROOT/'data/runtime/scrvusd-native'
+
+
+def resolve_native(backing, destination):
+    selector=REPO/'.private-reviews/scrvusd-native-route/selector.json'
+    if not selector.is_file():
+        return backing
+    source=json.loads(selector.read_bytes()).get('source')
+    if source not in ('legacy','vaulttracker'):
+        raise ValueError('Invalid scrvUSD native selector')
+    legacy=json.loads(backing)
+    prior=None
+    if destination.is_file():
+        prior=json.loads(destination.read_bytes())['asset_specific']['scrvusd'].get('vaulttracker_native')
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from select_scrvusd_native import project
+    sys.path.insert(0, str(VT_ROOT/'src'))
+    try:
+        attempt=json.loads((NATIVE_RUNTIME/'tick-status.json').read_bytes()) if source=='vaulttracker' else {}
+    except (OSError, ValueError):
+        attempt={}
+    selected=project(legacy,NATIVE_RUNTIME/'feed/current.json',attempt,
+                     datetime.now(timezone.utc).isoformat(),prior,
+                     mode='legacy' if source=='legacy' else 'shadow')
+    return json.dumps(selected,indent=2,ensure_ascii=False,allow_nan=False)+'\n'
+
 
 
 def validated_inputs():
@@ -45,17 +76,21 @@ def validated_inputs():
             d['source_publication_status']=d['publication_status'];d['publication_status']='published'
         d['publication_authorization']={'approved_on':'2026-10-17',
             'basis':'User approved the six-axis scrvUSD implementation scope and requested proceeding',
-            'source':f"PegTracker:scrvusd/{name}" if name in {f'scrvusd_{s}.json' for s in MEASUREMENTS} else f'riskAnalyst@{EDITORIAL_COMMIT}:data/axes_pending/{name}',
+            'source':f'PegTracker:scrvusd/{name}' if name in {f'scrvusd_{s}.json' for s in MEASUREMENTS} else f'riskAnalyst@{EDITORIAL_COMMIT}:data/axes_pending/{name}',
             'editorial_commit':EDITORIAL_COMMIT if name not in {f'scrvusd_{s}.json' for s in MEASUREMENTS} else None}
         outputs[name]=json.dumps(d,indent=2,ensure_ascii=False,allow_nan=False)+'\n'
     return outputs
 
 
-def main():
+def main(backing_only=False):
     assets=json.loads((REPO/'data/assets.json').read_text())
     if not any(a['slug']=='scrvusd' and a.get('published') is True for a in assets):
         raise SystemExit('scrvUSD is not approved in the published registry; no serving files copied')
     outputs=validated_inputs() # validate the complete group before touching serving files
+    name='scrvusd_backing.json'
+    outputs[name]=resolve_native(outputs[name], REPO/'data'/name)
+    if backing_only:
+        outputs={name:outputs[name]}
     for name,text in outputs.items():
         dest=REPO/'data'/name
         if dest.exists() and dest.read_text()==text:continue
@@ -65,4 +100,7 @@ def main():
     print(f'scrvUSD: synced {len(outputs)} reviewed files; editorial commit {EDITORIAL_COMMIT}')
 
 
-if __name__=='__main__':main()
+if __name__=='__main__':
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--backing-only',action='store_true')
+    main(parser.parse_args().backing_only)
