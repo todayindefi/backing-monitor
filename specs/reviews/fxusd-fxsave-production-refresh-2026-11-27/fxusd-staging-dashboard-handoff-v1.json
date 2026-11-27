@@ -1,0 +1,108 @@
+{
+  "contract_version": 1,
+  "task_id": "09c75675-2c81-4ee9-92fe-fe89e2475905",
+  "owner": "backing-monitor",
+  "recipient": "riskAnalyst",
+  "summary": "Existing exact Ethereum fxUSD staging dashboard backing parity",
+  "state": "staged",
+  "authority": {
+    "max_stage": "staging",
+    "reference": "User approved the existing Ethereum fxUSD staging dashboard refresh, with no production promotion or new jobs."
+  },
+  "scope": [
+    {
+      "project": "fx-protocol",
+      "component": "fxusd",
+      "chain_id": "eip155:1",
+      "identifiers": [
+        "0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+      ]
+    }
+  ],
+  "evidence_version": "fxusd-production-refresh-2026-11-27-v1",
+  "assessment_version": "fxusd-production-refresh-2026-11-27-v1",
+  "artifacts": [
+    {
+      "id": "receipt",
+      "path": "fxusd-staging-dashboard-receipt-v1.json",
+      "sha256": "b4fae624e3a0059d90c78e26d7cf008a0aac3c08fa71d667c7aaa91226bb91db",
+      "version": "fxusd-production-refresh-2026-11-27-v1",
+      "scope": {
+        "project": "fx-protocol",
+        "component": "fxusd",
+        "chain_id": "eip155:1",
+        "identifiers": [
+          "0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+        ]
+      },
+      "source_refs": [
+        "https://staging.tidresearch.com/dashboards/?asset=fxusd",
+        "https://etherscan.io/block/26504573"
+      ],
+      "observed_at": "2026-11-27T05:52:47+00:00",
+      "retrieved_at": null,
+      "clock_note": "Native backing observation. Quote and gate have separate source clocks."
+    }
+  ],
+  "checks": [
+    {
+      "id": "evidence_acceptance",
+      "kind": "review",
+      "required": true,
+      "status": "accepted",
+      "reviewer": "backing-monitor",
+      "artifact": "receipt",
+      "note": "Exact selected backing and separate quote bytes match all three serving origins."
+    },
+    {
+      "id": "assessment_acceptance",
+      "kind": "review",
+      "required": true,
+      "status": "accepted",
+      "reviewer": "backing-monitor",
+      "artifact": "receipt",
+      "note": "Cleared RiskAnalyst assessment version and artifact hash verified. No grade edit."
+    },
+    {
+      "id": "staging_acceptance",
+      "kind": "review",
+      "required": true,
+      "status": "accepted",
+      "reviewer": "backing-monitor",
+      "artifact": "receipt",
+      "note": "Existing unlisted registration and four normal staging desktop/mobile theme cases verified."
+    },
+    {
+      "id": "selected_backing",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/selected_backing_hash_matches",
+      "expected": true
+    },
+    {
+      "id": "no_production_registration",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/production_published",
+      "expected": false
+    },
+    {
+      "id": "backing_pin",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/backing_pin",
+      "expected": 26504573
+    }
+  ],
+  "gaps": [
+    {
+      "id": "funded_exit",
+      "description": "Primary funded eligibility and secondary settlement remain unverified.",
+      "blocking": false,
+      "reopen_when": "Qualified funded settlement evidence"
+    }
+  ]
+}

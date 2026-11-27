@@ -1,0 +1,123 @@
+{
+  "contract_version": 1,
+  "task_id": "fxusd-ethereum-financial-2026-11-27-v1",
+  "summary": "Checked public Ethereum fxusd financial handback",
+  "owner": "backing-monitor",
+  "recipient": "riskAnalyst",
+  "state": "evidence_ready",
+  "authority": {
+    "max_stage": "assessment",
+    "reference": "User requested the existing November 27 financial handbacks be wrapped for the refresh queue. No new collection or publication."
+  },
+  "scope": [
+    {
+      "project": "fx-protocol",
+      "component": "fxusd",
+      "chain_id": "eip155:1",
+      "identifiers": [
+        "0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+      ]
+    }
+  ],
+  "evidence_version": "fxusd-ethereum-financial-2026-11-27-v1",
+  "assessment_version": null,
+  "artifacts": [
+    {
+      "id": "summary",
+      "path": "fxusd-public-handback-v1.md",
+      "sha256": "9f1809f9c75e5add535140d6a246481a6b34c10e8ee985f230731f3ec010b593",
+      "scope": {
+        "project": "fx-protocol",
+        "component": "fxusd",
+        "chain_id": "eip155:1",
+        "identifiers": [
+          "0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+        ]
+      },
+      "version": "fxusd-ethereum-financial-2026-11-27-v1",
+      "source_refs": [
+        "https://etherscan.io/block/26504573",
+        "https://etherscan.io/block/26504608"
+      ],
+      "observed_at": "2026-11-27T05:52:47Z",
+      "retrieved_at": null,
+      "clock_note": "Backing observation shown here. Gate, quote, browser, and other source clocks retain their separate values in the existing handback."
+    },
+    {
+      "id": "receipt",
+      "path": "fxusd-checked-receipt-v1.json",
+      "sha256": "a707256e2957cb53458c0e0c152ca45ddc25fbb4fb8b7b3cf821663060882bfb",
+      "scope": {
+        "project": "fx-protocol",
+        "component": "fxusd",
+        "chain_id": "eip155:1",
+        "identifiers": [
+          "0x085780639cc2cacd35e474e71f4d000e2405d8f6"
+        ]
+      },
+      "version": "fxusd-ethereum-financial-2026-11-27-v1",
+      "source_refs": [
+        "https://etherscan.io/block/26504573",
+        "https://etherscan.io/block/26504608"
+      ],
+      "observed_at": "2026-11-27T05:52:47Z",
+      "retrieved_at": null,
+      "clock_note": "Backing observation shown here. Gate, quote, browser, and other source clocks retain their separate values in the existing handback."
+    }
+  ],
+  "checks": [
+    {
+      "id": "evidence_acceptance",
+      "kind": "review",
+      "required": true,
+      "artifact": "receipt",
+      "status": "accepted",
+      "reviewer": "backing-monitor",
+      "note": "Existing producer-checked handback and receipt reviewed; no recipient assessment implied."
+    },
+    {
+      "id": "exact_scope",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/scope",
+      "expected": "Ethereum fxUSD 0x085780639CC2cACd35E474e71f4d000e2405d8f6"
+    },
+    {
+      "id": "backing_clock",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/selected_backing_clock",
+      "expected": "2026-11-27T05:52:47Z"
+    },
+    {
+      "id": "excerpt_sha256",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/public_excerpt_sha256",
+      "expected": "9f1809f9c75e5add535140d6a246481a6b34c10e8ee985f230731f3ec010b593"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "gate_capacity",
+      "description": "Numeric gate thresholds, effective fees and eligible funded primary execution remain unverified.",
+      "blocking": false,
+      "reopen_when": "Qualified configuration and funded route evidence"
+    },
+    {
+      "id": "secondary",
+      "description": "Sized quotes are indicative. Route settlement and executable capacity remain unverified.",
+      "blocking": false,
+      "reopen_when": "Qualified execution and receiver output evidence"
+    },
+    {
+      "id": "dashboard",
+      "description": "The captured unlisted dashboard served an older backing cut.",
+      "blocking": false,
+      "reopen_when": "Normal source parity and separate registration authorization"
+    }
+  ]
+}

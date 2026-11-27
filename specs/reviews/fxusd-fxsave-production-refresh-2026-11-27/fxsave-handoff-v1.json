@@ -1,0 +1,127 @@
+{
+  "contract_version": 1,
+  "task_id": "fxsave-ethereum-financial-2026-11-27-v1",
+  "summary": "Checked public Ethereum fxsave financial handback",
+  "owner": "backing-monitor",
+  "recipient": "riskAnalyst",
+  "state": "evidence_ready",
+  "authority": {
+    "max_stage": "assessment",
+    "reference": "User requested the existing November 27 financial handbacks be wrapped for the refresh queue. No new collection or publication."
+  },
+  "scope": [
+    {
+      "project": "fx-protocol",
+      "component": "fxsave",
+      "chain_id": "eip155:1",
+      "identifiers": [
+        "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+      ]
+    }
+  ],
+  "evidence_version": "fxsave-ethereum-financial-2026-11-27-v1",
+  "assessment_version": null,
+  "artifacts": [
+    {
+      "id": "summary",
+      "path": "fxsave-public-handback-v1.md",
+      "sha256": "3de75aee28743075cec579ad79867e27c734470ea35459bb409992b268c82df6",
+      "scope": {
+        "project": "fx-protocol",
+        "component": "fxsave",
+        "chain_id": "eip155:1",
+        "identifiers": [
+          "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+        ]
+      },
+      "version": "fxsave-ethereum-financial-2026-11-27-v1",
+      "source_refs": [
+        "https://etherscan.io/block/26503887",
+        "https://etherscan.io/block/26502707",
+        "https://etherscan.io/block/26504098",
+        "https://etherscan.io/block/26479274"
+      ],
+      "observed_at": "2026-11-27T03:34:47Z",
+      "retrieved_at": null,
+      "clock_note": "Backing observation shown here. Gate, quote, browser, and other source clocks retain their separate values in the existing handback."
+    },
+    {
+      "id": "receipt",
+      "path": "fxsave-checked-receipt-v1.json",
+      "sha256": "5a5a7e273acaeca088e5674dcd7ad24c38a0a535db3e3af41a2bdb982c0b19d4",
+      "scope": {
+        "project": "fx-protocol",
+        "component": "fxsave",
+        "chain_id": "eip155:1",
+        "identifiers": [
+          "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+        ]
+      },
+      "version": "fxsave-ethereum-financial-2026-11-27-v1",
+      "source_refs": [
+        "https://etherscan.io/block/26503887",
+        "https://etherscan.io/block/26502707",
+        "https://etherscan.io/block/26504098",
+        "https://etherscan.io/block/26479274"
+      ],
+      "observed_at": "2026-11-27T03:34:47Z",
+      "retrieved_at": null,
+      "clock_note": "Backing observation shown here. Gate, quote, browser, and other source clocks retain their separate values in the existing handback."
+    }
+  ],
+  "checks": [
+    {
+      "id": "evidence_acceptance",
+      "kind": "review",
+      "required": true,
+      "artifact": "receipt",
+      "status": "accepted",
+      "reviewer": "backing-monitor",
+      "note": "Existing producer-checked handback and receipt reviewed; no recipient assessment implied."
+    },
+    {
+      "id": "exact_scope",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/scope",
+      "expected": "Ethereum fxSAVE 0x7743e50F534a7f9F1791DdE7dCD89F7783Eefc39"
+    },
+    {
+      "id": "backing_clock",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/source_clocks/vault",
+      "expected": "2026-11-27T03:34:47Z"
+    },
+    {
+      "id": "excerpt_sha256",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/public_excerpt_sha256",
+      "expected": "3de75aee28743075cec579ad79867e27c734470ea35459bb409992b268c82df6"
+    }
+  ],
+  "gaps": [
+    {
+      "id": "freshness",
+      "description": "Vault freshness warning remained visible at the captured production check.",
+      "blocking": false,
+      "reopen_when": "New qualified vault observation and served parity"
+    },
+    {
+      "id": "valuation",
+      "description": "Independent same-block valuation of both payout tokens remains unavailable.",
+      "blocking": false,
+      "reopen_when": "Aligned qualified marks for fxUSD and USDC"
+    },
+    {
+      "id": "settlement",
+      "description": "Current funded fxSAVE-to-cash execution and global capacity remain unverified. Historical synthetic fxSP results have separate scope.",
+      "blocking": false,
+      "reopen_when": "Qualified current wrapper-to-cash execution evidence"
+    }
+  ]
+}

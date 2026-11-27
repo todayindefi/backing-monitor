@@ -1,0 +1,131 @@
+{
+  "contract_version": 1,
+  "task_id": "92d8c77a-1943-4b2f-9b33-ce5dbff9b48b",
+  "summary": "Exact Ethereum fxSAVE existing production dashboard alignment",
+  "owner": "backing-monitor",
+  "recipient": "riskAnalyst",
+  "state": "published",
+  "authority": {
+    "max_stage": "production",
+    "reference": "User approved refresh of the verified existing Ethereum fxSAVE production dashboard; no first release or new jobs."
+  },
+  "scope": [
+    {
+      "project": "fx-protocol",
+      "component": "fxsave",
+      "chain_id": "eip155:1",
+      "identifiers": [
+        "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+      ]
+    }
+  ],
+  "evidence_version": "fxsave-production-refresh-2026-11-27-v1",
+  "assessment_version": "fxsave-production-refresh-2026-11-27-v1",
+  "artifacts": [
+    {
+      "id": "receipt",
+      "path": "fxsave-production-dashboard-receipt-v1.json",
+      "sha256": "004d30eca8744cddf7214cc9e36fb360ab4fa08a41be1ef992aaee011cbdb951",
+      "scope": {
+        "project": "fx-protocol",
+        "component": "fxsave",
+        "chain_id": "eip155:1",
+        "identifiers": [
+          "0x7743e50f534a7f9f1791dde7dcd89f7783eefc39"
+        ]
+      },
+      "version": "fxsave-production-refresh-2026-11-27-v1",
+      "source_refs": [
+        "https://tidresearch.com/dashboards/?asset=fxsave",
+        "https://etherscan.io/block/26504607"
+      ],
+      "observed_at": "2026-11-27T05:59:35Z",
+      "retrieved_at": null,
+      "clock_note": "Targeted control clock; separate financial, quote, issuer and score clocks pinned in the receipt."
+    }
+  ],
+  "checks": [
+    {
+      "id": "evidence_acceptance",
+      "kind": "review",
+      "required": true,
+      "status": "accepted",
+      "reviewer": "backing-monitor",
+      "artifact": "receipt",
+      "note": "Public assessment wording hash and scoped normal overlays matched."
+    },
+    {
+      "id": "assessment_acceptance",
+      "kind": "review",
+      "required": true,
+      "status": "accepted",
+      "reviewer": "backing-monitor",
+      "artifact": "receipt",
+      "note": "Used the exact RiskAnalyst assessment version; authored grades and clocks held."
+    },
+    {
+      "id": "staging_acceptance",
+      "kind": "review",
+      "required": true,
+      "status": "accepted",
+      "reviewer": "backing-monitor",
+      "artifact": "receipt",
+      "note": "Scoped local release preview passed desktop and mobile in both themes; no staging write was needed."
+    },
+    {
+      "id": "production_acceptance",
+      "kind": "review",
+      "required": true,
+      "status": "accepted",
+      "reviewer": "backing-monitor",
+      "artifact": "receipt",
+      "note": "Existing registration and both normal serving origins verified; eight live browser cases passed."
+    },
+    {
+      "id": "published_before",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/published_before",
+      "expected": true
+    },
+    {
+      "id": "published_after",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/published_after",
+      "expected": true
+    },
+    {
+      "id": "financial_payloads_unchanged_by_release",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/financial_payloads_unchanged_by_release",
+      "expected": true
+    },
+    {
+      "id": "freshness_warning_behavior_retained",
+      "kind": "json_equals",
+      "required": true,
+      "artifact": "receipt",
+      "pointer": "/freshness_warning_behavior_retained",
+      "expected": true
+    }
+  ],
+  "gaps": [
+    {
+      "id": "assurance",
+      "description": "Exact deployed-build tests, full route audit correspondence and exact bounty eligibility remain unverified.",
+      "blocking": false,
+      "reopen_when": "Qualified exact deployment assurance"
+    },
+    {
+      "id": "funded_exit",
+      "description": "Current funded wrapper-to-cash execution and global capacity remain unverified.",
+      "blocking": false,
+      "reopen_when": "Qualified current funded settlement evidence"
+    }
+  ]
+}
